@@ -60,7 +60,7 @@ export function PostSuggester({
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang };
+      const body: any = { lang, platforms, length, contentType };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
