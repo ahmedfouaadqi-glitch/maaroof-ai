@@ -269,20 +269,59 @@ export function PostSuggester({
         </div>
       )}
 
-      {post && (
-        <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-              {t("suggest_result")}
-            </span>
-            <button
-              onClick={copy}
-              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
-            >
-              {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-              {copied ? t("suggest_copied") : t("suggest_copy")}
-            </button>
+      {result && (
+        <div className="mt-5 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-primary"><Gauge className="size-3.5" /> {t("result_geo_score")}</div>
+              <div className="font-display text-3xl font-bold text-gradient">{result.overall_geo_score}<span className="text-sm text-muted-foreground">/100</span></div>
+            </div>
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-3 sm:col-span-2">
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-accent"><TrendingUp className="size-3.5" /> {t("result_expected_reach")}: {t(`reach_${result.expected_reach}` as any)}</div>
+              <div className="text-xs text-foreground">{result.expected_reach_reason}</div>
+            </div>
           </div>
+
+          {result.factual_warnings?.length > 0 && (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-destructive"><AlertTriangle className="size-3.5" /> {t("result_warnings")}</div>
+              <ul className="ms-4 list-disc space-y-1 text-xs text-foreground">
+                {result.factual_warnings.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.improvement_tips?.length > 0 && (
+            <div className="rounded-xl border border-border bg-background/60 p-3">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lightbulb className="size-3.5 text-accent" /> {t("result_tips")}</div>
+              <ul className="ms-4 list-disc space-y-1 text-xs text-muted-foreground">
+                {result.improvement_tips.map((tip, i) => <li key={i}>{tip}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.variants.map((v, i) => (
+            <div key={i} className="rounded-xl border border-border bg-background/60 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-primary">
+                  {v.platform} · GEO {v.geo_score}/100
+                </span>
+                <button
+                  onClick={async () => { await navigator.clipboard.writeText(v.content); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                >
+                  {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                  {copied ? t("suggest_copied") : t("suggest_copy")}
+                </button>
+              </div>
+              <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{v.content}</pre>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!result && post && (
+        <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
           <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{post}</pre>
         </div>
       )}
