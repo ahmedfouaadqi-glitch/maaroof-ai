@@ -146,6 +146,7 @@ const en: Dict = {
   report_keywords: "Detected entities",
   suggest_login_required: "Sign up to use this tool",
   suggest_login_desc: "Post suggestions are available after creating a free account.",
+};
 
 const ar: Dict = {
   brand: "جيو-العراق",
