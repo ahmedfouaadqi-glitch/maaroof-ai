@@ -1,17 +1,6 @@
-// Anonymous trial counter (localStorage)
-const KEY = "geo-trial-count";
-const MAX = 2;
-
-export function getTrialUsed(): number {
-  if (typeof window === "undefined") return 0;
-  return parseInt(localStorage.getItem(KEY) || "0", 10);
-}
-export function getTrialRemaining(): number {
-  return Math.max(0, MAX - getTrialUsed());
-}
-export function bumpTrial(): number {
-  const n = getTrialUsed() + 1;
-  localStorage.setItem(KEY, String(n));
-  return n;
-}
-export const TRIAL_MAX = MAX;
+// Trial removed: free analyses now require email signup + verification.
+// Kept as no-ops for backward compatibility.
+export function getTrialUsed(): number { return 999; }
+export function getTrialRemaining(): number { return 0; }
+export function bumpTrial(): number { return 999; }
+export const TRIAL_MAX = 0;
