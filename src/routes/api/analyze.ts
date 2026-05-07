@@ -122,9 +122,9 @@ export const Route = createFileRoute("/api/analyze")({
               user_id: userId, input_text: text.slice(0, 4000), input_hash: hash,
               lang, score: result.score, authority: result.authority, local_relevance: result.local, citation: result.citation, cached: fromCache,
             });
-            await admin.rpc("noop").catch(() => {});
+            const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
             await admin.from("profiles").update({
-              monthly_analyses_used: (await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single()).data!.monthly_analyses_used + 1,
+              monthly_analyses_used: (cur?.monthly_analyses_used || 0) + 1,
             }).eq("id", userId);
             await admin.from("activity_log").insert({ user_id: userId, action: "analyze", metadata: { score: result.score, cached: fromCache } });
           }
