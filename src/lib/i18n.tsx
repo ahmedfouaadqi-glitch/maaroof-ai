@@ -132,7 +132,20 @@ const en: Dict = {
   limit_reached_title: "Monthly limit reached",
   limit_reached_desc: "You've reached your plan's monthly limit. Upgrade your subscription to continue.",
   limit_view_plans: "View plans",
-};
+  examples_label: "Try an example:",
+  example_1_label: "Iraqi business",
+  example_1_text: "Sellinkco is a Baghdad-based digital agency founded in 2021 specializing in commercial intelligence, GEO and SEO for Iraqi brands. We help companies in Erbil, Basra and Mosul appear inside ChatGPT and Gemini answers.",
+  example_2_label: "Tourism Iraq",
+  example_2_text: "Lalish, located 60 km north of Mosul, is the holiest temple of the Yazidi faith. Visitors can explore stone shrines and sacred springs daily, year-round, free of charge.",
+  example_3_label: "Tech tutorial",
+  example_3_text: "GEO (Generative Engine Optimization) is the practice of optimizing content so large language models cite it. Unlike SEO, GEO targets answer engines like ChatGPT, Gemini and Perplexity.",
+  report_ai_view: "How AI sees your content",
+  report_strengths: "Strengths",
+  report_weaknesses: "Weaknesses",
+  report_recommendations: "Recommendations",
+  report_keywords: "Detected entities",
+  suggest_login_required: "Sign up to use this tool",
+  suggest_login_desc: "Post suggestions are available after creating a free account.",
 
 const ar: Dict = {
   brand: "جيو-العراق",
@@ -262,7 +275,20 @@ const ar: Dict = {
   limit_reached_title: "وصلت للحد الشهري",
   limit_reached_desc: "وصلت للحد الشهري لخطّتك. رقّ اشتراكك للمتابعة.",
   limit_view_plans: "عرض الخطط",
-};
+  examples_label: "جرّب مثالاً:",
+  example_1_label: "شركة عراقية",
+  example_1_text: "سيلينكو وكالة رقمية مقرها بغداد تأسست عام 2021، متخصصة في الذكاء التجاري وتحسين GEO و SEO للعلامات العراقية. نساعد الشركات في أربيل والبصرة والموصل على الظهور داخل إجابات ChatGPT و Gemini.",
+  example_2_label: "سياحة العراق",
+  example_2_text: "لالش، الواقعة على بُعد 60 كم شمال الموصل، هي أقدس معبد للديانة الإيزيدية. يمكن للزوار استكشاف المعابد الحجرية والينابيع المقدسة يومياً طوال العام مجاناً.",
+  example_3_label: "شرح تقني",
+  example_3_text: "GEO (تحسين محركات الذكاء التوليدي) هو ممارسة تحسين المحتوى ليُستشهد به من قِبَل النماذج اللغوية الكبيرة. بخلاف SEO، يستهدف GEO محركات الإجابة مثل ChatGPT و Gemini و Perplexity.",
+  report_ai_view: "كيف يرى الذكاء الاصطناعي محتواك",
+  report_strengths: "نقاط القوة",
+  report_weaknesses: "نقاط الضعف",
+  report_recommendations: "توصيات للتحسين",
+  report_keywords: "الكيانات المكتشفة",
+  suggest_login_required: "سجّل لاستخدام هذه الأداة",
+  suggest_login_desc: "اقتراح المنشورات متاح بعد إنشاء حساب مجاني.",
 
 const ku: Dict = {
   brand: "گێئۆ-عێراق",
@@ -392,7 +418,20 @@ const ku: Dict = {
   limit_reached_title: "گەیشتیتە سنووری مانگانە",
   limit_reached_desc: "گەیشتیتە سنووری مانگانەی خشتەکەت. خشتەکەت بەرزبکەرەوە بۆ بەردەوامبوون.",
   limit_view_plans: "خشتەکان ببینە",
-};
+  examples_label: "نموونەیەک تاقی بکەوە:",
+  example_1_label: "کۆمپانیای عێراقی",
+  example_1_text: "سێلینکۆ ئاژانسێکی دیجیتاڵە لە بەغدا، دامەزراوە لە ٢٠٢١، پسپۆڕە لە زیرەکی بازرگانی و GEO و SEO بۆ براندە عێراقیەکان. یارمەتی کۆمپانیاکان دەدەین لە هەولێر و بەسرە و موسڵ بۆ دەرکەوتن لەناو وەڵامەکانی ChatGPT و Gemini.",
+  example_2_label: "گەشتیاری عێراق",
+  example_2_text: "لالش، ٦٠ کم باکووری موسڵ، پیرۆزترین پەرستگای ئایینی ئێزدییە. سەردانیکەران دەتوانن پەرستگا بەردینەکان و کانیە پیرۆزەکان بەخۆڕایی ببینن.",
+  example_3_label: "ڕاهێنانی تەکنیکی",
+  example_3_text: "GEO (باشترکردنی بزوێنەری زیرەکی دروستکەر) ئەو پراکتیکەیە کە ناوەڕۆک باشتر دەکات تا مۆدێلە زمانییە گەورەکان ئاماژەی پێ بکەن. جیاواز لە SEO، GEO ئامانجی بزوێنەرە وەڵامدەرەکانە وەک ChatGPT و Gemini.",
+  report_ai_view: "زیرەکی دەستکرد چۆن ناوەڕۆکەکەت دەبینێت",
+  report_strengths: "خاڵە بەهێزەکان",
+  report_weaknesses: "خاڵە لاوازەکان",
+  report_recommendations: "ڕاسپاردەکان",
+  report_keywords: "ناسراوە دۆزراوەکان",
+  suggest_login_required: "تۆمار بکە بۆ بەکارهێنانی ئامرازەکە",
+  suggest_login_desc: "پێشنیاری پۆست لە دوای دروستکردنی هەژماری بەخۆڕایی بەردەستە.",
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
 
