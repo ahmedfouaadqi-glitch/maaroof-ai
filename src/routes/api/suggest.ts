@@ -74,13 +74,32 @@ export const Route = createFileRoute("/api/suggest")({
           const lang = langName(body.lang);
           const userParts: any[] = [];
 
-          let instruction = `Write a GEO-optimized post in ${lang}.`;
+          const platforms = (body.platforms || []).filter(Boolean);
+          const length = body.length || "medium";
+          const contentType = body.contentType || "post";
+
+          const lengthGuide =
+            contentType === "article"
+              ? length === "short" ? "~250 words" : length === "long" ? "~1200 words" : "~600 words"
+              : length === "short" ? "~50 words / 2-3 short lines" : length === "long" ? "~250 words" : "~120 words";
+
+          const platformGuide: Record<string, string> = {
+            linkedin: "LinkedIn: professional tone, hook line, 3-5 short paragraphs, 3 hashtags max.",
+            facebook: "Facebook: friendly conversational tone, emojis allowed, end with a question.",
+            tiktok: "TikTok: punchy script for a 30-60s video, scene-by-scene with hook + payoff + CTA.",
+            instagram: "Instagram: visual caption with strong hook, line breaks, 5-10 relevant hashtags.",
+          };
+          const platformBlock = platforms.length
+            ? `\n\nTarget platforms: ${platforms.join(", ")}.\n${platforms.map((p) => "- " + (platformGuide[p] || p)).join("\n")}\nProduce a tailored version for EACH platform, separated by "=== <Platform> ===" headings.`
+            : "";
+
+          let instruction = `Write a GEO-optimized ${contentType} in ${lang}. Target length: ${lengthGuide}.${platformBlock}`;
           if (body.sourceText) {
             instruction += `\n\nThe user already has this content; produce an IMPROVED, more citation-worthy version (do not just rewrite — strengthen authority, add structure, named entities, and Iraq-local relevance):\n\n"""${body.sourceText.slice(0, 4000)}"""`;
           } else if (body.description) {
             instruction += `\n\nTopic / brief from the user:\n"""${body.description.slice(0, 2000)}"""`;
           } else if (body.imageBase64) {
-            instruction += `\n\nThe user uploaded an image. Analyze it and write a compelling, GEO-optimized post about its subject.`;
+            instruction += `\n\nThe user uploaded an image. Analyze it and write compelling, GEO-optimized content about its subject.`;
           } else {
             return Response.json({ error: "Provide description, sourceText, or image" }, { status: 400 });
           }
