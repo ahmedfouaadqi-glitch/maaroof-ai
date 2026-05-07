@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
-import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap } from "lucide-react";
+import { SubscribeModal } from "@/components/SubscribeModal";
+import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: () => (
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/")({
 
 function Page() {
   const { t } = useI18n();
+  const [subOpen, setSubOpen] = useState(false);
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -87,18 +90,28 @@ function Page() {
               <span className="text-gradient">{t("cta_title")}</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">{t("cta_sub")}</p>
-            <a
-              href="#sandbox"
+            <button
+              onClick={() => setSubOpen(true)}
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02]"
             >
               {t("cta_button")} <ArrowRight className="size-4" />
-            </a>
+            </button>
           </div>
         </div>
       </section>
 
+      <SubscribeModal open={subOpen} onClose={() => setSubOpen(false)} />
+
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
-        {t("footer")}
+        <div>{t("footer")}</div>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          <a href="tel:+9647733570130" className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-primary">
+            <Phone className="size-3.5" /> {t("footer_contact")}
+          </a>
+          <Link to="/privacy" className="hover:text-primary">{t("footer_privacy")}</Link>
+          <Link to="/terms" className="hover:text-primary">{t("footer_terms")}</Link>
+          <Link to="/pricing" className="hover:text-primary">{t("footer_pricing")}</Link>
+        </div>
       </footer>
     </div>
   );

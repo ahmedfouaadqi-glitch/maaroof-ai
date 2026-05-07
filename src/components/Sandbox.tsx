@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
 import { supabase } from "@/integrations/supabase/client";
-import { getTrialRemaining, bumpTrial, TRIAL_MAX } from "@/lib/trial";
+
 
 type Result = { score: number; authority: number; local: number; citation: number; cached?: boolean };
 
@@ -27,14 +27,12 @@ export function Sandbox() {
   const [showTrialGate, setShowTrialGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
 
-  const trialRemaining = getTrialRemaining();
-
   const run = async () => {
     if (!text.trim() || running) return;
     setError(null);
     setShowLimit(false);
 
-    if (!user && trialRemaining <= 0) {
+    if (!user) {
       setShowTrialGate(true);
       return;
     }
@@ -70,7 +68,6 @@ export function Sandbox() {
         setError(data.error || "Error");
       } else {
         setResult(data);
-        if (!user) bumpTrial();
         setAskSuggest(true);
         if (auth) auth.refreshProfile();
       }
@@ -113,7 +110,6 @@ export function Sandbox() {
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs font-mono text-muted-foreground">
           {text.trim().length} chars
-          {!user && <span className="ms-3">· {t("trial_remaining").replace("{n}", String(trialRemaining))}/{TRIAL_MAX}</span>}
         </div>
         <button
           onClick={run}
