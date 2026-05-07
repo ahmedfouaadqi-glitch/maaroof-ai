@@ -3,9 +3,19 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram } from "lucide-react";
 
 type Mode = "text" | "image";
+type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
+type Length = "short" | "medium" | "long";
+type ContentType = "post" | "article";
+
+const PLATFORMS: { id: Platform; icon: React.ReactNode; key: string }[] = [
+  { id: "linkedin", icon: <Linkedin className="size-3.5" />, key: "platform_linkedin" },
+  { id: "facebook", icon: <Facebook className="size-3.5" />, key: "platform_facebook" },
+  { id: "tiktok", icon: <span className="text-[10px] font-bold">TT</span>, key: "platform_tiktok" },
+  { id: "instagram", icon: <Instagram className="size-3.5" />, key: "platform_instagram" },
+];
 
 export function PostSuggester({
   initialSourceText,
@@ -28,7 +38,13 @@ export function PostSuggester({
   const [error, setError] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [platforms, setPlatforms] = useState<Platform[]>(["linkedin"]);
+  const [length, setLength] = useState<Length>("medium");
+  const [contentType, setContentType] = useState<ContentType>("post");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const togglePlatform = (p: Platform) =>
+    setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
 
   const handleFile = (f: File) => {
     const reader = new FileReader();
@@ -44,7 +60,7 @@ export function PostSuggester({
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang };
+      const body: any = { lang, platforms, length, contentType };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
@@ -144,6 +160,52 @@ export function PostSuggester({
           </button>
         </div>
       )}
+
+      <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-background/40 p-3">
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_type")}</div>
+          <div className="inline-flex rounded-full border border-border bg-background/60 p-1">
+            {(["post", "article"] as ContentType[]).map((c) => (
+              <button key={c} onClick={() => setContentType(c)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${contentType === c ? "bg-primary/20 text-primary" : "text-muted-foreground"}`}>
+                {t(c === "post" ? "suggest_type_post" : "suggest_type_article")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_length")}</div>
+          <div className="inline-flex rounded-full border border-border bg-background/60 p-1">
+            {(["short", "medium", "long"] as Length[]).map((l) => (
+              <button key={l} onClick={() => setLength(l)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${length === l ? "bg-primary/20 text-primary" : "text-muted-foreground"}`}>
+                {t(`suggest_length_${l}` as any)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_platforms")}</div>
+          <div className="mb-2 text-[11px] text-muted-foreground">{t("suggest_platforms_hint")}</div>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map((p) => {
+              const on = platforms.includes(p.id);
+              return (
+                <button key={p.id} onClick={() => togglePlatform(p.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-primary bg-primary/15 text-primary" : "border-border bg-background/60 text-muted-foreground hover:text-foreground"}`}>
+                  <span className={`grid size-4 place-items-center rounded-sm border ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+                    {on && <Check className="size-3" />}
+                  </span>
+                  {p.icon}
+                  {t(p.key as any)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       <div className="mt-5 flex justify-end">
         <button

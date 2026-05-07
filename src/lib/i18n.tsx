@@ -147,6 +147,19 @@ const en: Dict = {
   report_keywords: "Detected entities",
   suggest_login_required: "Sign up to use this tool",
   suggest_login_desc: "Post suggestions are available after creating a free account.",
+  suggest_platforms: "Target platforms",
+  suggest_platforms_hint: "Pick where you'll publish — we tailor the format and tone.",
+  suggest_length: "Length",
+  suggest_length_short: "Short",
+  suggest_length_medium: "Medium",
+  suggest_length_long: "Long",
+  suggest_type: "Content type",
+  suggest_type_post: "Social post",
+  suggest_type_article: "Article",
+  platform_linkedin: "LinkedIn",
+  platform_facebook: "Facebook",
+  platform_tiktok: "TikTok",
+  platform_instagram: "Instagram",
 };
 
 const ar: Dict = {
@@ -292,6 +305,19 @@ const ar: Dict = {
   report_keywords: "الكيانات المكتشفة",
   suggest_login_required: "سجّل لاستخدام هذه الأداة",
   suggest_login_desc: "اقتراح المنشورات متاح بعد إنشاء حساب مجاني.",
+  suggest_platforms: "المنصات المستهدفة",
+  suggest_platforms_hint: "اختر أين ستنشر — سنُكيّف الصياغة والنبرة.",
+  suggest_length: "الطول",
+  suggest_length_short: "قصير",
+  suggest_length_medium: "متوسط",
+  suggest_length_long: "طويل",
+  suggest_type: "نوع المحتوى",
+  suggest_type_post: "منشور",
+  suggest_type_article: "مقال",
+  platform_linkedin: "لينكدإن",
+  platform_facebook: "فيسبوك",
+  platform_tiktok: "تيك توك",
+  platform_instagram: "إنستغرام",
 };
 
 const ku: Dict = {
@@ -437,6 +463,19 @@ const ku: Dict = {
   report_keywords: "ناسراوە دۆزراوەکان",
   suggest_login_required: "تۆمار بکە بۆ بەکارهێنانی ئامرازەکە",
   suggest_login_desc: "پێشنیاری پۆست لە دوای دروستکردنی هەژماری بەخۆڕایی بەردەستە.",
+  suggest_platforms: "پلاتفۆڕمە ئامانجەکان",
+  suggest_platforms_hint: "هەڵبژێرە لە کوێ بڵاوی دەکەیتەوە — شێواز و ڕەنگی دەگۆڕین.",
+  suggest_length: "درێژی",
+  suggest_length_short: "کورت",
+  suggest_length_medium: "ناوەند",
+  suggest_length_long: "درێژ",
+  suggest_type: "جۆری ناوەڕۆک",
+  suggest_type_post: "پۆست",
+  suggest_type_article: "وتار",
+  platform_linkedin: "لینکدئین",
+  platform_facebook: "فەیسبووک",
+  platform_tiktok: "تیک تۆک",
+  platform_instagram: "ئینستاگرام",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
