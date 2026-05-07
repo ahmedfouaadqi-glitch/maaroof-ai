@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
+import { PostSuggester } from "@/components/PostSuggester";
 import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
