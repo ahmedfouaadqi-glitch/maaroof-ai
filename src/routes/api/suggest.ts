@@ -10,14 +10,28 @@ type Body = {
   platforms?: string[];
   length?: "short" | "medium" | "long";
   contentType?: "post" | "article";
+  goal?: "promotional" | "educational" | "news" | "brand_story" | "personal" | "engagement";
+  audience?: string;
+  brand?: string;
 };
 
 const SYSTEM = `You are an expert GEO (Generative Engine Optimization) copywriter for the Iraqi market.
-Write content optimized so LLMs (ChatGPT, Gemini, Claude) cite it as an authoritative source.
-- Use clear factual claims, named entities, dates, numbers, and citations-friendly structure.
-- Match the requested language exactly. For Arabic/Kurdish, use natural local phrasing.
-- Adapt tone, length, hashtags, and formatting to each requested target platform.
-- Output ONLY the final content (no preamble). If multiple platforms are requested, separate each with a heading like "=== LinkedIn ===".`;
+
+CRITICAL FACTUAL SAFETY RULES (must follow):
+- NEVER invent historical events, dates, statistics, prices, names, quotes, or product features.
+- Use ONLY facts the user provided. If a fact would strengthen the post but you don't have it, write a generic phrasing or insert a clearly marked placeholder like [أضف رقم/تاريخ هنا] / [add stat here].
+- Do NOT add famous historical references (battles, ancient kings, religious dates) unless the user's input explicitly mentions them.
+- If the user's input is too vague to support claims, keep the post abstract and useful — do not fabricate.
+
+WRITING RULES:
+- Match the requested language exactly. Use natural local Iraqi phrasing for Arabic/Kurdish.
+- Adapt tone, length, hashtags, and formatting to each target platform AND the stated goal (promotional vs educational vs news vs brand story vs personal vs engagement).
+- For PROMOTIONAL: clear value proposition, benefit-led hook, soft CTA, no fake testimonials.
+- For EDUCATIONAL: structured, factual, lists/steps, named entities, citation-friendly.
+- For NEWS: lead with the 5W, neutral tone.
+- For BRAND_STORY: emotional but truthful, focus on the brand's actual offering.
+
+OUTPUT: You MUST call the function "generate_geo_content" with structured fields. Do not write free-form text.`;
 
 const langName = (l?: string) =>
   l === "ar" ? "Arabic (العربية)" : l === "ku" ? "Kurdish Sorani (کوردی)" : "English";
