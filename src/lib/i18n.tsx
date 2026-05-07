@@ -51,6 +51,21 @@ const en: Dict = {
   cta_sub: "Join the GEO-Iraq waitlist and lock in early-adopter pricing.",
   cta_button: "Get early access",
   footer: "© 2026 GEO-Iraq · A Marouf Intelligence module. All rights reserved.",
+  suggest_title: "AI Post Studio",
+  suggest_desc: "Describe your idea or upload an image — we'll draft a GEO-ready post.",
+  suggest_tab_text: "From description",
+  suggest_tab_image: "From image",
+  suggest_placeholder: "e.g. A short post about renewable energy projects in Basra...",
+  suggest_cta: "Suggest a post",
+  suggest_running: "Drafting…",
+  suggest_upload: "Click to upload an image",
+  suggest_result: "Suggested post",
+  suggest_copy: "Copy",
+  suggest_copied: "Copied",
+  ask_suggest_title: "Want an improved version?",
+  ask_suggest_desc: "We can draft a stronger, more citation-worthy version of this content.",
+  ask_suggest_yes: "Yes, suggest a better post",
+  ask_suggest_no: "No thanks",
 };
 
 const ar: Dict = {
