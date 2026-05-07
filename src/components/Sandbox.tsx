@@ -128,6 +128,38 @@ export function Sandbox() {
           </div>
         </div>
       )}
+
+      {result && askSuggest && !showSuggester && (
+        <div className="mt-5 flex flex-col items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Wand2 className="mt-0.5 size-5 text-accent" />
+            <div>
+              <div className="text-sm font-semibold text-foreground">{t("ask_suggest_title")}</div>
+              <div className="text-xs text-muted-foreground">{t("ask_suggest_desc")}</div>
+            </div>
+          </div>
+          <div className="flex gap-2 self-end sm:self-auto">
+            <button
+              onClick={() => setAskSuggest(false)}
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+            >
+              <X className="size-3" /> {t("ask_suggest_no")}
+            </button>
+            <button
+              onClick={() => { setShowSuggester(true); setAskSuggest(false); }}
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
+            >
+              <Sparkles className="size-3" /> {t("ask_suggest_yes")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSuggester && (
+        <div className="mt-5">
+          <PostSuggester initialSourceText={text} compact />
+        </div>
+      )}
     </div>
   );
 }
