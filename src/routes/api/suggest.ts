@@ -225,7 +225,7 @@ Then return an overall geo_score (0-100), expected_reach (low/medium/high) with 
           }).eq("id", userId);
           await admin.from("activity_log").insert({ user_id: userId, action: "suggest", metadata: { mode: body.sourceText ? "improve" : body.imageBase64 ? "image" : "text" } });
 
-          return Response.json({ post });
+          return Response.json({ post, ...parsed });
         } catch (e) {
           console.error("suggest error", e);
           return Response.json({ error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
