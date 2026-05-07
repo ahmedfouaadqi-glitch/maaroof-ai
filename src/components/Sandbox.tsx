@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Sparkles, Loader2, ShieldCheck, MapPin, Quote } from "lucide-react";
+import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X } from "lucide-react";
+import { PostSuggester } from "./PostSuggester";
 
 type Result = { score: number; authority: number; local: number; citation: number };
 
@@ -23,11 +24,15 @@ export function Sandbox() {
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(-1);
   const [result, setResult] = useState<Result | null>(null);
+  const [askSuggest, setAskSuggest] = useState(false);
+  const [showSuggester, setShowSuggester] = useState(false);
 
   const run = async () => {
     if (!text.trim() || running) return;
     setRunning(true);
     setResult(null);
+    setShowSuggester(false);
+    setAskSuggest(false);
     for (let i = 0; i < STEPS.length; i++) {
       setStep(i);
       await new Promise((r) => setTimeout(r, 650));
@@ -35,6 +40,7 @@ export function Sandbox() {
     setResult(pseudoScore(text));
     setRunning(false);
     setStep(-1);
+    setAskSuggest(true);
   };
 
   const tier =
@@ -120,6 +126,38 @@ export function Sandbox() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {result && askSuggest && !showSuggester && (
+        <div className="mt-5 flex flex-col items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Wand2 className="mt-0.5 size-5 text-accent" />
+            <div>
+              <div className="text-sm font-semibold text-foreground">{t("ask_suggest_title")}</div>
+              <div className="text-xs text-muted-foreground">{t("ask_suggest_desc")}</div>
+            </div>
+          </div>
+          <div className="flex gap-2 self-end sm:self-auto">
+            <button
+              onClick={() => setAskSuggest(false)}
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+            >
+              <X className="size-3" /> {t("ask_suggest_no")}
+            </button>
+            <button
+              onClick={() => { setShowSuggester(true); setAskSuggest(false); }}
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
+            >
+              <Sparkles className="size-3" /> {t("ask_suggest_yes")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSuggester && (
+        <div className="mt-5">
+          <PostSuggester initialSourceText={text} compact />
         </div>
       )}
     </div>
