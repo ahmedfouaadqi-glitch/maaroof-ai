@@ -24,6 +24,8 @@ export function Sandbox() {
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(-1);
   const [result, setResult] = useState<Result | null>(null);
+  const [askSuggest, setAskSuggest] = useState(false);
+  const [showSuggester, setShowSuggester] = useState(false);
 
   const run = async () => {
     if (!text.trim() || running) return;
