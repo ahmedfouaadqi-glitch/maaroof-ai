@@ -1,50 +1,88 @@
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Link } from "@tanstack/react-router";
+import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
+import { supabase } from "@/integrations/supabase/client";
+import { getTrialRemaining, bumpTrial, TRIAL_MAX } from "@/lib/trial";
 
-type Result = { score: number; authority: number; local: number; citation: number };
+type Result = { score: number; authority: number; local: number; citation: number; cached?: boolean };
 
 const STEPS = ["scan_tokenize", "scan_authority", "scan_local", "scan_citation"] as const;
 
-function pseudoScore(text: string): Result {
-  // deterministic-ish "demo" scoring for the teaser
-  let h = 0;
-  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0;
-  const base = 38 + (h % 45);
-  const lenBonus = Math.min(15, Math.floor(text.trim().split(/\s+/).length / 12));
-  const score = Math.min(96, base + lenBonus);
-  const jitter = (n: number) => Math.max(20, Math.min(98, score + ((h >> n) % 18) - 9));
-  return { score, authority: jitter(3), local: jitter(7), citation: jitter(11) };
-}
-
 export function Sandbox() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  let auth: ReturnType<typeof useAuth> | null = null;
+  try { auth = useAuth(); } catch {}
+  const user = auth?.user;
+
   const [text, setText] = useState("");
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(-1);
   const [result, setResult] = useState<Result | null>(null);
   const [askSuggest, setAskSuggest] = useState(false);
   const [showSuggester, setShowSuggester] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showTrialGate, setShowTrialGate] = useState(false);
+  const [showLimit, setShowLimit] = useState(false);
+
+  const trialRemaining = getTrialRemaining();
 
   const run = async () => {
     if (!text.trim() || running) return;
+    setError(null);
+    setShowLimit(false);
+
+    if (!user && trialRemaining <= 0) {
+      setShowTrialGate(true);
+      return;
+    }
+
     setRunning(true);
     setResult(null);
     setShowSuggester(false);
     setAskSuggest(false);
-    for (let i = 0; i < STEPS.length; i++) {
-      setStep(i);
-      await new Promise((r) => setTimeout(r, 650));
+
+    // animate steps in parallel with the API call
+    const stepTimer = (async () => {
+      for (let i = 0; i < STEPS.length; i++) {
+        setStep(i);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    })();
+
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const session = (await supabase.auth.getSession()).data.session;
+      if (session) headers.Authorization = `Bearer ${session.access_token}`;
+
+      const r = await fetch("/api/analyze", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ text, lang }),
+      });
+      const data = await r.json();
+      await stepTimer;
+      if (r.status === 402 && data.error === "limit") {
+        setShowLimit(true);
+      } else if (!r.ok) {
+        setError(data.error || "Error");
+      } else {
+        setResult(data);
+        if (!user) bumpTrial();
+        setAskSuggest(true);
+        if (auth) auth.refreshProfile();
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setRunning(false);
+      setStep(-1);
     }
-    setResult(pseudoScore(text));
-    setRunning(false);
-    setStep(-1);
-    setAskSuggest(true);
   };
 
-  const tier =
-    !result ? "" : result.score >= 80 ? t("score_high") : result.score >= 55 ? t("score_mid") : t("score_low");
+  const tier = !result ? "" : result.score >= 80 ? t("score_high") : result.score >= 55 ? t("score_mid") : t("score_low");
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-6 shadow-[var(--shadow-elevated)] backdrop-blur-xl md:p-8 glow-border">
@@ -62,6 +100,7 @@ export function Sandbox() {
           onChange={(e) => setText(e.target.value)}
           placeholder={t("sandbox_placeholder")}
           rows={5}
+          maxLength={8000}
           className="w-full resize-none rounded-xl border border-border bg-background/60 p-4 font-mono text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
         />
         {running && (
@@ -74,6 +113,7 @@ export function Sandbox() {
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs font-mono text-muted-foreground">
           {text.trim().length} chars
+          {!user && <span className="ms-3">· {t("trial_remaining").replace("{n}", String(trialRemaining))}/{TRIAL_MAX}</span>}
         </div>
         <button
           onClick={run}
@@ -85,7 +125,6 @@ export function Sandbox() {
         </button>
       </div>
 
-      {/* progress steps */}
       {(running || result) && (
         <div className="mt-6 space-y-2">
           {STEPS.map((s, i) => {
@@ -93,23 +132,36 @@ export function Sandbox() {
             const active = i === step;
             return (
               <div key={s} className="flex items-center gap-3 text-sm">
-                <div
-                  className={`size-2 rounded-full transition ${
-                    done ? "bg-success" : active ? "bg-primary animate-pulse" : "bg-muted"
-                  }`}
-                />
-                <span className={done || active ? "text-foreground" : "text-muted-foreground"}>
-                  {t(s)}
-                </span>
+                <div className={`size-2 rounded-full transition ${done ? "bg-success" : active ? "bg-primary animate-pulse" : "bg-muted"}`} />
+                <span className={done || active ? "text-foreground" : "text-muted-foreground"}>{t(s)}</span>
                 <div className="ms-auto h-1 w-32 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-                    style={{ width: done ? "100%" : active ? "60%" : "0%" }}
-                  />
+                  <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: done ? "100%" : active ? "60%" : "0%" }} />
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {error && <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+
+      {showTrialGate && (
+        <div className="mt-5 flex flex-col items-start gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4">
+          <div className="flex items-center gap-2"><Lock className="size-5 text-primary" /><div className="font-semibold">{t("trial_title")}</div></div>
+          <p className="text-sm text-muted-foreground">{t("trial_desc")}</p>
+          <Link to="/auth" search={{ mode: "signup", redirect: "/" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
+            {t("trial_signup")}
+          </Link>
+        </div>
+      )}
+
+      {showLimit && (
+        <div className="mt-5 flex flex-col items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+          <div className="font-semibold">{t("limit_reached_title")}</div>
+          <p className="text-sm text-muted-foreground">{t("limit_reached_desc")}</p>
+          <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-primary px-5 py-2 text-sm font-semibold text-primary-foreground">
+            {t("limit_view_plans")}
+          </Link>
         </div>
       )}
 
@@ -120,11 +172,6 @@ export function Sandbox() {
             <Metric icon={<ShieldCheck className="size-4" />} label={t("metric_authority")} value={result.authority} />
             <Metric icon={<MapPin className="size-4" />} label={t("metric_local")} value={result.local} />
             <Metric icon={<Quote className="size-4" />} label={t("metric_citation")} value={result.citation} />
-            <div className="sm:col-span-3 md:col-span-1 lg:col-span-3">
-              <button className="w-full rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary transition hover:bg-primary/20">
-                {t("score_unlock")} →
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -139,27 +186,17 @@ export function Sandbox() {
             </div>
           </div>
           <div className="flex gap-2 self-end sm:self-auto">
-            <button
-              onClick={() => setAskSuggest(false)}
-              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
-            >
+            <button onClick={() => setAskSuggest(false)} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
               <X className="size-3" /> {t("ask_suggest_no")}
             </button>
-            <button
-              onClick={() => { setShowSuggester(true); setAskSuggest(false); }}
-              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-            >
+            <button onClick={() => { setShowSuggester(true); setAskSuggest(false); }} className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
               <Sparkles className="size-3" /> {t("ask_suggest_yes")}
             </button>
           </div>
         </div>
       )}
 
-      {showSuggester && (
-        <div className="mt-5">
-          <PostSuggester initialSourceText={text} compact />
-        </div>
-      )}
+      {showSuggester && <div className="mt-5"><PostSuggester initialSourceText={text} compact /></div>}
     </div>
   );
 }
@@ -173,18 +210,9 @@ function Gauge({ value, label, tier }: { value: number; label: string; tier: str
       <div className="relative size-40">
         <svg viewBox="0 0 160 160" className="size-full -rotate-90">
           <circle cx="80" cy="80" r={r} stroke="oklch(0.28 0.03 250)" strokeWidth="10" fill="none" />
-          <circle
-            cx="80" cy="80" r={r}
-            stroke="url(#g)" strokeWidth="10" fill="none" strokeLinecap="round"
-            strokeDasharray={c} strokeDashoffset={offset}
-            style={{ transition: "stroke-dashoffset 1s ease-out" }}
-          />
-          <defs>
-            <linearGradient id="g" x1="0" x2="1">
-              <stop offset="0%" stopColor="oklch(0.78 0.18 195)" />
-              <stop offset="100%" stopColor="oklch(0.62 0.22 295)" />
-            </linearGradient>
-          </defs>
+          <circle cx="80" cy="80" r={r} stroke="url(#g)" strokeWidth="10" fill="none" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 1s ease-out" }} />
+          <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0%" stopColor="oklch(0.78 0.18 195)" /><stop offset="100%" stopColor="oklch(0.62 0.22 295)" /></linearGradient></defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="font-display text-4xl font-bold text-gradient">{value}</div>
@@ -200,17 +228,9 @@ function Gauge({ value, label, tier }: { value: number; label: string; tier: str
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
     <div className="rounded-xl border border-border bg-background/40 p-3">
-      <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="text-primary">{icon}</span>
-        {label}
-      </div>
+      <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><span className="text-primary">{icon}</span>{label}</div>
       <div className="mb-2 font-display text-2xl font-bold text-foreground">{value}</div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
-          style={{ width: `${value}%` }}
-        />
-      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${value}%` }} /></div>
     </div>
   );
 }

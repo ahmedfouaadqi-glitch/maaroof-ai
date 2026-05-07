@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { I18nProvider, useI18n } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
@@ -8,7 +9,9 @@ import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap } from "lucide-react";
 export const Route = createFileRoute("/")({
   component: () => (
     <I18nProvider>
-      <Page />
+      <AuthProvider>
+        <Page />
+      </AuthProvider>
     </I18nProvider>
   ),
 });
