@@ -1,0 +1,178 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
+export type Lang = "en" | "ar" | "ku";
+
+type Dict = Record<string, string>;
+
+const en: Dict = {
+  brand: "GEO-Iraq",
+  ecosystem: "A Marouf Intelligence Module",
+  nav_features: "Features",
+  nav_how: "How it Works",
+  nav_pricing: "Pricing",
+  nav_signin: "Sign in",
+  nav_cta: "Launch Sandbox",
+  hero_badge: "Generative Engine Optimization · Iraq",
+  hero_title: "Become the Source AI Trusts.",
+  hero_sub: "Test, score and optimize your content so ChatGPT, Gemini and Claude cite YOU as the authoritative source — in English, Arabic and Kurdish.",
+  sandbox_title: "Interactive GEO Sandbox",
+  sandbox_desc: "Paste any text or paragraph below. Our engine simulates how leading LLMs evaluate and cite it.",
+  sandbox_placeholder: "Paste an article, product description, or paragraph in English, العربية, or کوردی...",
+  sandbox_cta: "Analyze GEO",
+  sandbox_running: "Scanning…",
+  scan_tokenize: "Tokenizing content",
+  scan_authority: "Evaluating technical authority",
+  scan_local: "Measuring Iraqi context relevance",
+  scan_citation: "Computing citation probability",
+  score_label: "GEO Trust Score",
+  score_low: "Invisible to AI",
+  score_mid: "Recognized Source",
+  score_high: "Authoritative Source",
+  score_unlock: "Unlock the full report — sign up free",
+  metric_authority: "Technical Authority",
+  metric_local: "Local Iraq Relevance",
+  metric_citation: "Citation Probability",
+  why_title: "Why GEO, why now?",
+  why_sub: "Search is being replaced by answers. The brands AI cites win the next decade.",
+  why_1_t: "From SEO to GEO",
+  why_1_d: "Traditional SEO ranks pages. GEO makes large language models name your brand inside their answers.",
+  why_2_t: "Built for Iraq",
+  why_2_d: "Optimized scoring for Arabic, Kurdish (Sorani) and local cultural context that global tools miss.",
+  why_3_t: "Trusted by AI",
+  why_3_d: "Move from ‘invisible to AI’ to ‘authoritative source’ with a gamified roadmap and clear metrics.",
+  how_title: "How it works",
+  how_1_t: "Submit",
+  how_1_d: "Paste text or a URL into the Optimizer.",
+  how_2_t: "Analyze",
+  how_2_d: "Our dual engine (DeepSeek + Gemini) scores authority, locality and citation odds.",
+  how_3_t: "Improve",
+  how_3_d: "Follow the roadmap to climb from invisible to authoritative.",
+  cta_title: "Ready to be cited by AI?",
+  cta_sub: "Join the GEO-Iraq waitlist and lock in early-adopter pricing.",
+  cta_button: "Get early access",
+  footer: "© 2026 GEO-Iraq · A Marouf Intelligence module. All rights reserved.",
+};
+
+const ar: Dict = {
+  brand: "جيو-العراق",
+  ecosystem: "وحدة من منظومة معروف للذكاء التجاري",
+  nav_features: "المزايا",
+  nav_how: "كيف يعمل",
+  nav_pricing: "الأسعار",
+  nav_signin: "تسجيل الدخول",
+  nav_cta: "جرّب الآن",
+  hero_badge: "تحسين محركات الذكاء التوليدي · العراق",
+  hero_title: "كن المصدر الذي يثق به الذكاء الاصطناعي.",
+  hero_sub: "اختبر محتواك وقِسه وحسّنه لتستشهد به ChatGPT و Gemini و Claude كمصدر موثوق — بالعربية والكردية والإنجليزية.",
+  sandbox_title: "صندوق تجربة جيو التفاعلي",
+  sandbox_desc: "الصق أي نص في الأسفل وسيحاكي محركنا طريقة تقييم النماذج اللغوية الكبرى له.",
+  sandbox_placeholder: "الصق مقالاً أو وصفاً أو فقرة بالعربية أو English أو کوردی...",
+  sandbox_cta: "حلّل GEO",
+  sandbox_running: "جارٍ الفحص…",
+  scan_tokenize: "تحليل وحدات النص",
+  scan_authority: "تقييم السلطة التقنية",
+  scan_local: "قياس الصلة بالسياق العراقي",
+  scan_citation: "حساب احتمالية الاستشهاد",
+  score_label: "درجة الثقة في GEO",
+  score_low: "غير مرئي للذكاء الاصطناعي",
+  score_mid: "مصدر معروف",
+  score_high: "مصدر موثوق",
+  score_unlock: "افتح التقرير الكامل — سجّل مجاناً",
+  metric_authority: "السلطة التقنية",
+  metric_local: "الصلة بالعراق محلياً",
+  metric_citation: "احتمالية الاستشهاد",
+  why_title: "لماذا GEO، ولماذا الآن؟",
+  why_sub: "البحث يُستبدل بالإجابات. العلامات التي يستشهد بها الذكاء الاصطناعي تربح العقد القادم.",
+  why_1_t: "من SEO إلى GEO",
+  why_1_d: "السيو يُرتّب الصفحات، أما GEO فيجعل النماذج تذكر علامتك داخل إجاباتها.",
+  why_2_t: "مصمَّم للعراق",
+  why_2_d: "تقييم محسَّن للعربية والكردية (السورانية) والسياق الثقافي الذي تُغفله الأدوات العالمية.",
+  why_3_t: "موثوق من الذكاء الاصطناعي",
+  why_3_d: "انتقل من «غير مرئي» إلى «مصدر موثوق» عبر خارطة طريق محفّزة ومؤشرات واضحة.",
+  how_title: "كيف يعمل",
+  how_1_t: "أرسل",
+  how_1_d: "الصق نصاً أو رابطاً في المُحسِّن.",
+  how_2_t: "حلّل",
+  how_2_d: "محرّكنا الثنائي (DeepSeek + Gemini) يُقيّم السلطة والمحلية واحتمال الاستشهاد.",
+  how_3_t: "حسِّن",
+  how_3_d: "اتبع خارطة الطريق لتصعد من غير مرئي إلى موثوق.",
+  cta_title: "جاهز ليستشهد بك الذكاء الاصطناعي؟",
+  cta_sub: "انضم إلى قائمة الانتظار واحجز سعر المؤسسين.",
+  cta_button: "احصل على وصول مبكر",
+  footer: "© 2026 جيو-العراق · وحدة من منظومة معروف. جميع الحقوق محفوظة.",
+};
+
+const ku: Dict = {
+  brand: "گێئۆ-عێراق",
+  ecosystem: "بەشێک لە سیستەمی زیرەکی بازرگانی مەعروف",
+  nav_features: "تایبەتمەندیەکان",
+  nav_how: "چۆن کار دەکات",
+  nav_pricing: "نرخەکان",
+  nav_signin: "چوونەژوورەوە",
+  nav_cta: "تاقیکردنەوە",
+  hero_badge: "باشترکردنی بزوێنەری زیرەکی دروستکەر · عێراق",
+  hero_title: "ببە ئەو سەرچاوەیەی زیرەکی دەستکرد متمانەی پێ دەکات.",
+  hero_sub: "ناوەڕۆکەکەت تاقی بکەوە و باشتری بکە تاکو ChatGPT و Gemini و Claude وەک سەرچاوەی متمانەپێکراو ئاماژەت پێ بکەن — بە کوردی، عەرەبی و ئینگلیزی.",
+  sandbox_title: "سەندبۆکسی GEO ی کارلێکی",
+  sandbox_desc: "هەر دەقێک لە خوارەوە بلکێنە و مەکینەکەمان شێوەی هەڵسەنگاندنی مۆدێلە گەورەکانی زمان ڕووماڵ دەکات.",
+  sandbox_placeholder: "وتارێک یان وەسفێک یان بڕگەیەک بە کوردی، العربية یان English بلکێنە...",
+  sandbox_cta: "GEO شیبکەوە",
+  sandbox_running: "خەریکی پشکنینە…",
+  scan_tokenize: "شیکردنەوەی وشەکان",
+  scan_authority: "هەڵسەنگاندنی دەسەڵاتی تەکنیکی",
+  scan_local: "پێوانەی پەیوەندی بە ناوخۆی عێراق",
+  scan_citation: "ژمێرکاری ئەگەری ئاماژەپێکردن",
+  score_label: "نمرەی متمانەی GEO",
+  score_low: "نەبینراو لای زیرەکی دەستکرد",
+  score_mid: "سەرچاوەی ناسراو",
+  score_high: "سەرچاوەی متمانەپێکراو",
+  score_unlock: "ڕاپۆرتی تەواو بکەرەوە — بەخۆڕایی تۆمار بکە",
+  metric_authority: "دەسەڵاتی تەکنیکی",
+  metric_local: "پەیوەندی ناوخۆیی عێراق",
+  metric_citation: "ئەگەری ئاماژەپێکردن",
+  why_title: "بۆچی GEO، بۆچی ئێستا؟",
+  why_sub: "گەڕان بە وەڵام جێگۆڕکێ دەکرێت. ئەو براندانەی AI ئاماژەیان پێ دەکات دە ساڵی داهاتوو دەبەنەوە.",
+  why_1_t: "لە SEO بۆ GEO",
+  why_1_d: "SEO پەڕەکان ڕیز دەکات، بەڵام GEO وادەکات مۆدێلەکان ناوی براندەکەت لە وەڵامەکانیاندا بهێنن.",
+  why_2_t: "دروستکراو بۆ عێراق",
+  why_2_d: "هەڵسەنگاندنی تایبەت بۆ کوردی (سۆرانی)، عەرەبی و چوارچێوەی کلتووری ناوخۆ.",
+  why_3_t: "متمانەی AI",
+  why_3_d: "لە «نەبینراو» بۆ «متمانەپێکراو» بگوازەوە بە ڕێگانامەیەکی یاریکراو.",
+  how_title: "چۆن کار دەکات",
+  how_1_t: "بنێرە",
+  how_1_d: "دەق یان لینک بلکێنە لە باشترکەرەکە.",
+  how_2_t: "شی بکەوە",
+  how_2_d: "مەکینەی دووانیمان (DeepSeek + Gemini) دەسەڵات و ناوخۆیی و ئەگەری ئاماژە دەنرخێنێت.",
+  how_3_t: "باشتری بکە",
+  how_3_d: "ڕێگانامەکە بگرە تا دەگەیتە متمانەپێکراو.",
+  cta_title: "ئامادەی AI ئاماژەت پێ بکات؟",
+  cta_sub: "بەشدار بە لە لیستی چاوەڕوانی و نرخی زوو وەربگرە.",
+  cta_button: "دەستپێگەیشتنی زوو",
+  footer: "© 2026 گێئۆ-عێراق · بەشێک لە سیستەمی مەعروف. هەموو مافەکان پارێزراون.",
+};
+
+const dicts: Record<Lang, Dict> = { en, ar, ku };
+
+type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: keyof typeof en) => string; dir: "ltr" | "rtl" };
+const I18nCtx = createContext<Ctx | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLang] = useState<Lang>("en");
+  const dir = lang === "en" ? "ltr" : "rtl";
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = dir;
+    }
+  }, [lang, dir]);
+
+  const t = (k: keyof typeof en) => dicts[lang][k] ?? en[k];
+  return <I18nCtx.Provider value={{ lang, setLang, t, dir }}>{children}</I18nCtx.Provider>;
+}
+
+export function useI18n() {
+  const ctx = useContext(I18nCtx);
+  if (!ctx) throw new Error("useI18n must be used inside I18nProvider");
+  return ctx;
+}
