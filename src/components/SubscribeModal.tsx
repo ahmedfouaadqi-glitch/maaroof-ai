@@ -29,7 +29,7 @@ export function SubscribeModal({ open, onClose }: { open: boolean; onClose: () =
 
         <div className="mt-5 rounded-xl border border-border bg-background/60 p-4 text-center">
           <div className="text-xs uppercase tracking-widest text-muted-foreground">{t("contact_phone")}</div>
-          <div className="mt-1 font-display text-xl font-bold tracking-wider">{display}</div>
+          <div className="mt-1 font-display text-xl font-bold tracking-wider" dir="ltr" style={{ unicodeBidi: "isolate" }}>{display}</div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">

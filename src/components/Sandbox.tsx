@@ -2,12 +2,19 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
-import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock } from "lucide-react";
+import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock, CheckCircle2, AlertCircle, Lightbulb, Bot, Tag } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
 import { supabase } from "@/integrations/supabase/client";
 
-
-type Result = { score: number; authority: number; local: number; citation: number; cached?: boolean };
+type Result = {
+  score: number; authority: number; local: number; citation: number;
+  cached?: boolean;
+  ai_view?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendations?: string[];
+  keywords?: string[];
+};
 
 const STEPS = ["scan_tokenize", "scan_authority", "scan_local", "scan_citation"] as const;
 
@@ -27,6 +34,12 @@ export function Sandbox() {
   const [showTrialGate, setShowTrialGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
 
+  const examples = [
+    { label: t("example_1_label"), text: t("example_1_text") },
+    { label: t("example_2_label"), text: t("example_2_text") },
+    { label: t("example_3_label"), text: t("example_3_text") },
+  ];
+
   const run = async () => {
     if (!text.trim() || running) return;
     setError(null);
@@ -42,7 +55,6 @@ export function Sandbox() {
     setShowSuggester(false);
     setAskSuggest(false);
 
-    // animate steps in parallel with the API call
     const stepTimer = (async () => {
       for (let i = 0; i < STEPS.length; i++) {
         setStep(i);
@@ -56,14 +68,15 @@ export function Sandbox() {
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
 
       const r = await fetch("/api/analyze", {
-        method: "POST",
-        headers,
+        method: "POST", headers,
         body: JSON.stringify({ text, lang }),
       });
       const data = await r.json();
       await stepTimer;
       if (r.status === 402 && data.error === "limit") {
         setShowLimit(true);
+      } else if (r.status === 401) {
+        setShowTrialGate(true);
       } else if (!r.ok) {
         setError(data.error || "Error");
       } else {
@@ -82,14 +95,24 @@ export function Sandbox() {
   const tier = !result ? "" : result.score >= 80 ? t("score_high") : result.score >= 55 ? t("score_mid") : t("score_low");
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-6 shadow-[var(--shadow-elevated)] backdrop-blur-xl md:p-8 glow-border">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-5 shadow-[var(--shadow-elevated)] backdrop-blur-xl sm:p-6 md:p-8 glow-border">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-70" />
 
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         <Sparkles className="size-4 text-primary" />
         <span className="font-mono uppercase tracking-widest text-xs">{t("sandbox_title")}</span>
       </div>
-      <p className="mb-5 text-sm text-muted-foreground">{t("sandbox_desc")}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{t("sandbox_desc")}</p>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">{t("examples_label")}</span>
+        {examples.map((ex) => (
+          <button key={ex.label} onClick={() => setText(ex.text)}
+            className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-foreground/80 transition hover:border-primary hover:text-primary">
+            {ex.label}
+          </button>
+        ))}
+      </div>
 
       <div className="relative">
         <textarea
@@ -108,9 +131,7 @@ export function Sandbox() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-xs font-mono text-muted-foreground">
-          {text.trim().length} chars
-        </div>
+        <div className="text-xs font-mono text-muted-foreground">{text.trim().length} chars</div>
         <button
           onClick={run}
           disabled={running || !text.trim()}
@@ -128,9 +149,9 @@ export function Sandbox() {
             const active = i === step;
             return (
               <div key={s} className="flex items-center gap-3 text-sm">
-                <div className={`size-2 rounded-full transition ${done ? "bg-success" : active ? "bg-primary animate-pulse" : "bg-muted"}`} />
+                <div className={`size-2 shrink-0 rounded-full transition ${done ? "bg-success" : active ? "bg-primary animate-pulse" : "bg-muted"}`} />
                 <span className={done || active ? "text-foreground" : "text-muted-foreground"}>{t(s)}</span>
-                <div className="ms-auto h-1 w-32 overflow-hidden rounded-full bg-muted">
+                <div className="ms-auto h-1 w-20 overflow-hidden rounded-full bg-muted sm:w-32">
                   <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: done ? "100%" : active ? "60%" : "0%" }} />
                 </div>
               </div>
@@ -162,14 +183,58 @@ export function Sandbox() {
       )}
 
       {result && (
-        <div className="mt-7 grid gap-5 md:grid-cols-[200px_1fr]">
-          <Gauge value={result.score} label={t("score_label")} tier={tier} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
-            <Metric icon={<ShieldCheck className="size-4" />} label={t("metric_authority")} value={result.authority} />
-            <Metric icon={<MapPin className="size-4" />} label={t("metric_local")} value={result.local} />
-            <Metric icon={<Quote className="size-4" />} label={t("metric_citation")} value={result.citation} />
+        <>
+          <div className="mt-7 grid gap-5 md:grid-cols-[200px_1fr]">
+            <Gauge value={result.score} label={t("score_label")} tier={tier} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
+              <Metric icon={<ShieldCheck className="size-4" />} label={t("metric_authority")} value={result.authority} />
+              <Metric icon={<MapPin className="size-4" />} label={t("metric_local")} value={result.local} />
+              <Metric icon={<Quote className="size-4" />} label={t("metric_citation")} value={result.citation} />
+            </div>
           </div>
-        </div>
+
+          {result.ai_view && (
+            <div className="mt-5 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-primary">
+                <Bot className="size-4" /> {t("report_ai_view")}
+              </div>
+              <p className="text-sm leading-relaxed text-foreground">{result.ai_view}</p>
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {result.strengths && result.strengths.length > 0 && (
+              <ReportList icon={<CheckCircle2 className="size-4 text-success" />} title={t("report_strengths")} items={result.strengths} tone="success" />
+            )}
+            {result.weaknesses && result.weaknesses.length > 0 && (
+              <ReportList icon={<AlertCircle className="size-4 text-destructive" />} title={t("report_weaknesses")} items={result.weaknesses} tone="destructive" />
+            )}
+          </div>
+
+          {result.recommendations && result.recommendations.length > 0 && (
+            <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-accent">
+                <Lightbulb className="size-4" /> {t("report_recommendations")}
+              </div>
+              <ol className="ms-5 list-decimal space-y-1.5 text-sm text-foreground">
+                {result.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+              </ol>
+            </div>
+          )}
+
+          {result.keywords && result.keywords.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                <Tag className="size-3.5" /> {t("report_keywords")}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {result.keywords.map((k, i) => (
+                  <span key={i} className="rounded-full border border-border bg-background/60 px-2.5 py-0.5 text-xs text-foreground">{k}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {result && askSuggest && !showSuggester && (
@@ -193,6 +258,20 @@ export function Sandbox() {
       )}
 
       {showSuggester && <div className="mt-5"><PostSuggester initialSourceText={text} compact /></div>}
+    </div>
+  );
+}
+
+function ReportList({ icon, title, items, tone }: { icon: React.ReactNode; title: string; items: string[]; tone: "success" | "destructive" }) {
+  const border = tone === "success" ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5";
+  return (
+    <div className={`rounded-xl border p-4 ${border}`}>
+      <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+        {icon} {title}
+      </div>
+      <ul className="space-y-1.5 text-sm text-foreground">
+        {items.map((it, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-current opacity-50" /><span>{it}</span></li>)}
+      </ul>
     </div>
   );
 }

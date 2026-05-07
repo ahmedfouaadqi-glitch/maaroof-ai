@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Link } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock } from "lucide-react";
 
 type Mode = "text" | "image";
 
@@ -12,6 +15,9 @@ export function PostSuggester({
   compact?: boolean;
 }) {
   const { t, lang } = useI18n();
+  let auth: ReturnType<typeof useAuth> | null = null;
+  try { auth = useAuth(); } catch {}
+  const user = auth?.user;
   const [mode, setMode] = useState<Mode>("text");
   const [desc, setDesc] = useState("");
   const [imageData, setImageData] = useState<string | null>(null);
@@ -20,6 +26,8 @@ export function PostSuggester({
   const [post, setPost] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showGate, setShowGate] = useState(false);
+  const [showLimit, setShowLimit] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File) => {
@@ -32,8 +40,8 @@ export function PostSuggester({
   };
 
   const submit = async () => {
-    setError(null);
-    setPost(null);
+    setError(null); setPost(null); setShowGate(false); setShowLimit(false);
+    if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
       const body: any = { lang };
@@ -43,14 +51,16 @@ export function PostSuggester({
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
       }
-      const r = await fetch("/api/suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const session = (await supabase.auth.getSession()).data.session;
+      if (session) headers.Authorization = `Bearer ${session.access_token}`;
+      const r = await fetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
       const data = await r.json();
+      if (r.status === 401) { setShowGate(true); return; }
+      if (r.status === 402 && data.error === "limit") { setShowLimit(true); return; }
       if (!r.ok) throw new Error(data?.error || "Failed");
       setPost(data.post);
+      if (auth) auth.refreshProfile();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -149,6 +159,26 @@ export function PostSuggester({
       {error && (
         <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {showGate && (
+        <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4">
+          <div className="flex items-center gap-2"><Lock className="size-5 text-primary" /><div className="font-semibold">{t("suggest_login_required")}</div></div>
+          <p className="text-sm text-muted-foreground">{t("suggest_login_desc")}</p>
+          <Link to="/auth" search={{ mode: "signup", redirect: "/" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
+            {t("trial_signup")}
+          </Link>
+        </div>
+      )}
+
+      {showLimit && (
+        <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+          <div className="font-semibold">{t("limit_reached_title")}</div>
+          <p className="text-sm text-muted-foreground">{t("limit_reached_desc")}</p>
+          <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-primary px-5 py-2 text-sm font-semibold text-primary-foreground">
+            {t("limit_view_plans")}
+          </Link>
         </div>
       )}
 
