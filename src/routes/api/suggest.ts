@@ -107,13 +107,31 @@ export const Route = createFileRoute("/api/suggest")({
             ? `\n\nTarget platforms: ${platforms.join(", ")}.\n${platforms.map((p) => "- " + (platformGuide[p] || p)).join("\n")}\nProduce a tailored version for EACH platform, separated by "=== <Platform> ===" headings.`
             : "";
 
-          let instruction = `Write a GEO-optimized ${contentType} in ${lang}. Target length: ${lengthGuide}.${platformBlock}`;
+          const goal = body.goal || "engagement";
+          const goalLabel: Record<string, string> = {
+            promotional: "promotional / marketing a product or service",
+            educational: "educational / teaching a concept",
+            news: "news / informational announcement",
+            brand_story: "brand storytelling",
+            personal: "personal opinion / thought leadership",
+            engagement: "engagement / community discussion",
+          };
+
+          let instruction =
+`Goal: ${goalLabel[goal]}.
+${body.brand ? `Brand/author: ${body.brand}.` : ""}
+${body.audience ? `Audience: ${body.audience}.` : ""}
+Content type: ${contentType}. Target length: ${lengthGuide}.${platformBlock}
+
+For each requested platform produce one variant. If no platforms are requested, produce ONE generic variant with platform="generic".
+Then return an overall geo_score (0-100), expected_reach (low/medium/high) with a one-line reason, factual warnings (any claim you were tempted to add but kept generic — list it so the user can fill it in), and 2-3 improvement tips.`;
+
           if (body.sourceText) {
-            instruction += `\n\nThe user already has this content; produce an IMPROVED, more citation-worthy version (do not just rewrite — strengthen authority, add structure, named entities, and Iraq-local relevance):\n\n"""${body.sourceText.slice(0, 4000)}"""`;
+            instruction += `\n\nThe user already has this content; produce an IMPROVED, more citation-worthy version. Do NOT add historical events, dates or statistics that are not in the source:\n\n"""${body.sourceText.slice(0, 4000)}"""`;
           } else if (body.description) {
-            instruction += `\n\nTopic / brief from the user:\n"""${body.description.slice(0, 2000)}"""`;
+            instruction += `\n\nUser brief (use ONLY these facts; do not invent history/numbers):\n"""${body.description.slice(0, 2000)}"""`;
           } else if (body.imageBase64) {
-            instruction += `\n\nThe user uploaded an image. Analyze it and write compelling, GEO-optimized content about its subject.`;
+            instruction += `\n\nThe user uploaded an image. Describe ONLY what you can see; do not invent context, history, or location unless visually evident.`;
           } else {
             return Response.json({ error: "Provide description, sourceText, or image" }, { status: 400 });
           }
@@ -126,6 +144,41 @@ export const Route = createFileRoute("/api/suggest")({
             userParts.push({ type: "image_url", image_url: { url } });
           }
 
+          const tool = {
+            type: "function",
+            function: {
+              name: "generate_geo_content",
+              description: "Return GEO-optimized content with QA metadata.",
+              parameters: {
+                type: "object",
+                properties: {
+                  variants: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        platform: { type: "string" },
+                        content: { type: "string" },
+                        geo_score: { type: "number" },
+                        word_count: { type: "number" },
+                      },
+                      required: ["platform", "content", "geo_score"],
+                      additionalProperties: false,
+                    },
+                  },
+                  overall_geo_score: { type: "number", description: "0-100 GEO citation-worthiness" },
+                  expected_reach: { type: "string", enum: ["low", "medium", "high"] },
+                  expected_reach_reason: { type: "string" },
+                  factual_warnings: { type: "array", items: { type: "string" }, description: "Claims that need user verification or facts the user should add" },
+                  improvement_tips: { type: "array", items: { type: "string" } },
+                  detected_goal: { type: "string" },
+                },
+                required: ["variants", "overall_geo_score", "expected_reach", "expected_reach_reason", "factual_warnings", "improvement_tips"],
+                additionalProperties: false,
+              },
+            },
+          };
+
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -135,6 +188,8 @@ export const Route = createFileRoute("/api/suggest")({
                 { role: "system", content: SYSTEM },
                 { role: "user", content: userParts },
               ],
+              tools: [tool],
+              tool_choice: { type: "function", function: { name: "generate_geo_content" } },
             }),
           });
 
@@ -147,7 +202,14 @@ export const Route = createFileRoute("/api/suggest")({
           }
 
           const data = await resp.json();
-          const post = data?.choices?.[0]?.message?.content ?? "";
+          const call = data?.choices?.[0]?.message?.tool_calls?.[0];
+          let parsed: any = null;
+          try { parsed = call?.function?.arguments ? JSON.parse(call.function.arguments) : null; } catch {}
+          if (!parsed) {
+            const fallback = data?.choices?.[0]?.message?.content ?? "";
+            parsed = { variants: [{ platform: "generic", content: fallback, geo_score: 60 }], overall_geo_score: 60, expected_reach: "medium", expected_reach_reason: "", factual_warnings: [], improvement_tips: [] };
+          }
+          const post = parsed.variants.map((v: any) => `=== ${v.platform} ===\n${v.content}`).join("\n\n");
 
           // Persist + bump
           await admin.from("suggestions").insert({
