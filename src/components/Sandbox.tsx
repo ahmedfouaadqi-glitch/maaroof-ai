@@ -31,6 +31,8 @@ export function Sandbox() {
     if (!text.trim() || running) return;
     setRunning(true);
     setResult(null);
+    setShowSuggester(false);
+    setAskSuggest(false);
     for (let i = 0; i < STEPS.length; i++) {
       setStep(i);
       await new Promise((r) => setTimeout(r, 650));
@@ -38,6 +40,7 @@ export function Sandbox() {
     setResult(pseudoScore(text));
     setRunning(false);
     setStep(-1);
+    setAskSuggest(true);
   };
 
   const tier =
