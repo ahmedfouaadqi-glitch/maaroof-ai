@@ -108,14 +108,18 @@ function UsersTab() {
   const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
   const [admins, setAdmins] = useState<Set<string>>(new Set());
+  const [plans, setPlans] = useState<any[]>([]);
+  const [picker, setPicker] = useState<string | null>(null);
 
   const load = async () => {
-    const [{ data: ps }, { data: rs }] = await Promise.all([
+    const [{ data: ps }, { data: rs }, { data: pl }] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
+      supabase.from("subscription_plans").select("*").eq("active", true).gt("price_iqd", 0).order("sort_order"),
     ]);
     setRows(ps || []);
     setAdmins(new Set((rs || []).map((r: any) => r.user_id)));
+    setPlans(pl || []);
   };
   useEffect(() => { load(); }, []);
 
@@ -128,24 +132,79 @@ function UsersTab() {
     load();
   };
 
+  const subscribe = async (uid: string, plan: any) => {
+    const expires = new Date(Date.now() + plan.duration_days * 86400000).toISOString();
+    await supabase.from("profiles").update({
+      is_subscribed: true,
+      subscription_tier: plan.name,
+      subscription_expires_at: expires,
+      monthly_analyses_used: 0,
+      monthly_suggestions_used: 0,
+      usage_period_start: new Date().toISOString(),
+    }).eq("id", uid);
+    setPicker(null);
+    load();
+  };
+
+  const unsubscribe = async (uid: string) => {
+    await supabase.from("profiles").update({
+      is_subscribed: false,
+      subscription_tier: null,
+      subscription_expires_at: null,
+    }).eq("id", uid);
+    load();
+  };
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card/70 backdrop-blur">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card/70 backdrop-blur">
+      <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
           <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-t border-border">
+            <tr key={r.id} className="border-t border-border align-top">
               <td className="p-3">{r.email}{admins.has(r.id) && <span className="ms-2 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] text-accent">ADMIN</span>}</td>
-              <td className="p-3">{r.is_subscribed ? r.subscription_tier || "Pro" : "—"}</td>
+              <td className="p-3">
+                {r.is_subscribed ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-success/15 px-2 py-0.5 text-xs text-success">{r.subscription_tier || "Pro"}</span>
+                ) : <span className="text-muted-foreground">—</span>}
+                {r.subscription_expires_at && <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(r.subscription_expires_at).toLocaleDateString()}</div>}
+              </td>
               <td className="p-3">{r.monthly_analyses_used}A · {r.monthly_suggestions_used}S</td>
               <td className="p-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
               <td className="p-3 text-end">
-                <button onClick={() => toggleAdmin(r.id)}
-                  className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:border-primary">
-                  {admins.has(r.id) ? <><ShieldMinus className="size-3" />{t("admin_demote")}</> : <><ShieldPlus className="size-3" />{t("admin_promote")}</>}
-                </button>
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {picker === r.id ? (
+                    <div className="flex flex-wrap gap-1">
+                      {plans.map((p) => (
+                        <button key={p.id} onClick={() => subscribe(r.id, p)}
+                          className="rounded-full bg-gradient-to-r from-success to-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:scale-105">
+                          {p.name} · {p.duration_days}d
+                        </button>
+                      ))}
+                      <button onClick={() => setPicker(null)} className="rounded-full border border-border px-2 py-1 text-[11px]">×</button>
+                    </div>
+                  ) : (
+                    <>
+                      {r.is_subscribed ? (
+                        <button onClick={() => unsubscribe(r.id)}
+                          className="rounded-full border border-destructive/40 px-3 py-1 text-xs text-destructive hover:bg-destructive/10">
+                          Unsubscribe
+                        </button>
+                      ) : (
+                        <button onClick={() => setPicker(r.id)}
+                          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-success to-primary px-3 py-1 text-xs font-medium text-primary-foreground">
+                          <Crown className="size-3" /> Subscribe
+                        </button>
+                      )}
+                      <button onClick={() => toggleAdmin(r.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:border-primary">
+                        {admins.has(r.id) ? <><ShieldMinus className="size-3" />{t("admin_demote")}</> : <><ShieldPlus className="size-3" />{t("admin_promote")}</>}
+                      </button>
+                    </>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
