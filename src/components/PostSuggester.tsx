@@ -3,12 +3,22 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge } from "lucide-react";
 
 type Mode = "text" | "image";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
 type Length = "short" | "medium" | "long";
 type ContentType = "post" | "article";
+type Goal = "promotional" | "educational" | "news" | "brand_story" | "personal" | "engagement";
+type Result = {
+  variants: { platform: string; content: string; geo_score: number; word_count?: number }[];
+  overall_geo_score: number;
+  expected_reach: "low" | "medium" | "high";
+  expected_reach_reason: string;
+  factual_warnings: string[];
+  improvement_tips: string[];
+  detected_goal?: string;
+};
 
 const PLATFORMS: { id: Platform; icon: React.ReactNode; key: string }[] = [
   { id: "linkedin", icon: <Linkedin className="size-3.5" />, key: "platform_linkedin" },
