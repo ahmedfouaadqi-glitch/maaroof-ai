@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Link } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock } from "lucide-react";
 
 type Mode = "text" | "image";
 
@@ -12,6 +15,9 @@ export function PostSuggester({
   compact?: boolean;
 }) {
   const { t, lang } = useI18n();
+  let auth: ReturnType<typeof useAuth> | null = null;
+  try { auth = useAuth(); } catch {}
+  const user = auth?.user;
   const [mode, setMode] = useState<Mode>("text");
   const [desc, setDesc] = useState("");
   const [imageData, setImageData] = useState<string | null>(null);
@@ -20,6 +26,8 @@ export function PostSuggester({
   const [post, setPost] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showGate, setShowGate] = useState(false);
+  const [showLimit, setShowLimit] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File) => {
@@ -32,8 +40,8 @@ export function PostSuggester({
   };
 
   const submit = async () => {
-    setError(null);
-    setPost(null);
+    setError(null); setPost(null); setShowGate(false); setShowLimit(false);
+    if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
       const body: any = { lang };
@@ -43,14 +51,16 @@ export function PostSuggester({
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
       }
-      const r = await fetch("/api/suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const session = (await supabase.auth.getSession()).data.session;
+      if (session) headers.Authorization = `Bearer ${session.access_token}`;
+      const r = await fetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
       const data = await r.json();
+      if (r.status === 401) { setShowGate(true); return; }
+      if (r.status === 402 && data.error === "limit") { setShowLimit(true); return; }
       if (!r.ok) throw new Error(data?.error || "Failed");
       setPost(data.post);
+      if (auth) auth.refreshProfile();
     } catch (e: any) {
       setError(e.message);
     } finally {
