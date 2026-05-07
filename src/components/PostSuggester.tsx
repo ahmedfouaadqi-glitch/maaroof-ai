@@ -162,6 +162,26 @@ export function PostSuggester({
         </div>
       )}
 
+      {showGate && (
+        <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4">
+          <div className="flex items-center gap-2"><Lock className="size-5 text-primary" /><div className="font-semibold">{t("suggest_login_required")}</div></div>
+          <p className="text-sm text-muted-foreground">{t("suggest_login_desc")}</p>
+          <Link to="/auth" search={{ mode: "signup", redirect: "/" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
+            {t("trial_signup")}
+          </Link>
+        </div>
+      )}
+
+      {showLimit && (
+        <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+          <div className="font-semibold">{t("limit_reached_title")}</div>
+          <p className="text-sm text-muted-foreground">{t("limit_reached_desc")}</p>
+          <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-primary px-5 py-2 text-sm font-semibold text-primary-foreground">
+            {t("limit_view_plans")}
+          </Link>
+        </div>
+      )}
+
       {post && (
         <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
           <div className="mb-2 flex items-center justify-between">
