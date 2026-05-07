@@ -38,7 +38,13 @@ export function PostSuggester({
   const [error, setError] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [platforms, setPlatforms] = useState<Platform[]>(["linkedin"]);
+  const [length, setLength] = useState<Length>("medium");
+  const [contentType, setContentType] = useState<ContentType>("post");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const togglePlatform = (p: Platform) =>
+    setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
 
   const handleFile = (f: File) => {
     const reader = new FileReader();
