@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Sparkles, Loader2, ShieldCheck, MapPin, Quote } from "lucide-react";
+import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X } from "lucide-react";
+import { PostSuggester } from "./PostSuggester";
 
 type Result = { score: number; authority: number; local: number; citation: number };
 
