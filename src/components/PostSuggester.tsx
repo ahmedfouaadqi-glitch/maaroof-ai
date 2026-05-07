@@ -161,6 +161,52 @@ export function PostSuggester({
         </div>
       )}
 
+      <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-background/40 p-3">
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_type")}</div>
+          <div className="inline-flex rounded-full border border-border bg-background/60 p-1">
+            {(["post", "article"] as ContentType[]).map((c) => (
+              <button key={c} onClick={() => setContentType(c)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${contentType === c ? "bg-primary/20 text-primary" : "text-muted-foreground"}`}>
+                {t(c === "post" ? "suggest_type_post" : "suggest_type_article")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_length")}</div>
+          <div className="inline-flex rounded-full border border-border bg-background/60 p-1">
+            {(["short", "medium", "long"] as Length[]).map((l) => (
+              <button key={l} onClick={() => setLength(l)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${length === l ? "bg-primary/20 text-primary" : "text-muted-foreground"}`}>
+                {t(`suggest_length_${l}` as any)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_platforms")}</div>
+          <div className="mb-2 text-[11px] text-muted-foreground">{t("suggest_platforms_hint")}</div>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map((p) => {
+              const on = platforms.includes(p.id);
+              return (
+                <button key={p.id} onClick={() => togglePlatform(p.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-primary bg-primary/15 text-primary" : "border-border bg-background/60 text-muted-foreground hover:text-foreground"}`}>
+                  <span className={`grid size-4 place-items-center rounded-sm border ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+                    {on && <Check className="size-3" />}
+                  </span>
+                  {p.icon}
+                  {t(p.key as any)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="mt-5 flex justify-end">
         <button
           onClick={submit}
