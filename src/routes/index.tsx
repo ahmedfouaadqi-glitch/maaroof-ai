@@ -39,6 +39,10 @@ function Page() {
           <div id="sandbox" className="mx-auto mt-12 max-w-3xl">
             <Sandbox />
           </div>
+
+          <div id="studio" className="mx-auto mt-8 max-w-3xl">
+            <PostSuggester />
+          </div>
         </div>
       </section>
 
