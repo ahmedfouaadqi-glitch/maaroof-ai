@@ -179,6 +179,21 @@ const ku: Dict = {
   cta_sub: "بەشدار بە لە لیستی چاوەڕوانی و نرخی زوو وەربگرە.",
   cta_button: "دەستپێگەیشتنی زوو",
   footer: "© 2026 گێئۆ-عێراق · بەشێک لە سیستەمی مەعروف. هەموو مافەکان پارێزراون.",
+  suggest_title: "ستۆدیۆی پۆستی AI",
+  suggest_desc: "بیرۆکەکەت بنووسە یان وێنەیەک باربکە — ئێمە پۆستێکی ئامادەی GEO دادەڕێژین.",
+  suggest_tab_text: "لە وەسف",
+  suggest_tab_image: "لە وێنە",
+  suggest_placeholder: "نموونە: پۆستێکی کورت دەربارەی پڕۆژەکانی ووزەی نوێ لە بەسرە...",
+  suggest_cta: "پۆستێک پێشنیار بکە",
+  suggest_running: "خەریکی نووسینە…",
+  suggest_upload: "کلیک بکە بۆ بارکردنی وێنە",
+  suggest_result: "پۆستی پێشنیارکراو",
+  suggest_copy: "لەبەرگرتنەوە",
+  suggest_copied: "لەبەرگیرایەوە",
+  ask_suggest_title: "نوسخەیەکی باشترت دەوێت؟",
+  ask_suggest_desc: "دەتوانین نوسخەیەکی بەهێزتر و شایانی ئاماژەپێکردن دادەڕێژین.",
+  ask_suggest_yes: "بەڵێ، پۆستێکی باشتر پێشنیار بکە",
+  ask_suggest_no: "نا، سوپاس",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
