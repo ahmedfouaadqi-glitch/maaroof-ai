@@ -115,6 +115,21 @@ const ar: Dict = {
   cta_sub: "انضم إلى قائمة الانتظار واحجز سعر المؤسسين.",
   cta_button: "احصل على وصول مبكر",
   footer: "© 2026 جيو-العراق · وحدة من منظومة معروف. جميع الحقوق محفوظة.",
+  suggest_title: "استوديو المنشورات بالذكاء الاصطناعي",
+  suggest_desc: "اشرح فكرتك أو ارفع صورة — وسنصيغ منشوراً جاهزاً لـ GEO.",
+  suggest_tab_text: "من وصف",
+  suggest_tab_image: "من صورة",
+  suggest_placeholder: "مثال: منشور قصير عن مشاريع الطاقة المتجددة في البصرة...",
+  suggest_cta: "اقترح منشوراً",
+  suggest_running: "جارٍ الصياغة…",
+  suggest_upload: "اضغط لرفع صورة",
+  suggest_result: "المنشور المقترح",
+  suggest_copy: "نسخ",
+  suggest_copied: "تم النسخ",
+  ask_suggest_title: "هل تريد نسخة محسّنة؟",
+  ask_suggest_desc: "يمكننا صياغة نسخة أقوى وأكثر قابلية للاستشهاد من هذا المحتوى.",
+  ask_suggest_yes: "نعم، اقترح منشوراً أفضل",
+  ask_suggest_no: "لا، شكراً",
 };
 
 const ku: Dict = {
