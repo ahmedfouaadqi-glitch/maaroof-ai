@@ -3,9 +3,19 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram } from "lucide-react";
 
 type Mode = "text" | "image";
+type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
+type Length = "short" | "medium" | "long";
+type ContentType = "post" | "article";
+
+const PLATFORMS: { id: Platform; icon: React.ReactNode; key: string }[] = [
+  { id: "linkedin", icon: <Linkedin className="size-3.5" />, key: "platform_linkedin" },
+  { id: "facebook", icon: <Facebook className="size-3.5" />, key: "platform_facebook" },
+  { id: "tiktok", icon: <span className="text-[10px] font-bold">TT</span>, key: "platform_tiktok" },
+  { id: "instagram", icon: <Instagram className="size-3.5" />, key: "platform_instagram" },
+];
 
 export function PostSuggester({
   initialSourceText,
