@@ -44,6 +44,7 @@ export function PostSuggester({
   const [imageMime, setImageMime] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [post, setPost] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
@@ -51,6 +52,7 @@ export function PostSuggester({
   const [platforms, setPlatforms] = useState<Platform[]>(["linkedin"]);
   const [length, setLength] = useState<Length>("medium");
   const [contentType, setContentType] = useState<ContentType>("post");
+  const [goal, setGoal] = useState<Goal>("promotional");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (p: Platform) =>
