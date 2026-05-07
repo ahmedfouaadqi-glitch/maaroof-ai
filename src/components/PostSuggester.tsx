@@ -176,6 +176,18 @@ export function PostSuggester({
 
       <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-background/40 p-3">
         <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_goal")}</div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["promotional", "educational", "news", "brand_story", "personal", "engagement"] as Goal[]).map((g) => (
+              <button key={g} onClick={() => setGoal(g)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${goal === g ? "border-primary bg-primary/15 text-primary" : "border-border bg-background/60 text-muted-foreground hover:text-foreground"}`}>
+                {t(`goal_${g}` as any)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_type")}</div>
           <div className="inline-flex rounded-full border border-border bg-background/60 p-1">
             {(["post", "article"] as ContentType[]).map((c) => (
