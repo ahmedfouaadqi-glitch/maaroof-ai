@@ -7,14 +7,17 @@ type Body = {
   imageMime?: string;
   lang?: "en" | "ar" | "ku";
   sourceText?: string;
+  platforms?: string[];
+  length?: "short" | "medium" | "long";
+  contentType?: "post" | "article";
 };
 
 const SYSTEM = `You are an expert GEO (Generative Engine Optimization) copywriter for the Iraqi market.
 Write content optimized so LLMs (ChatGPT, Gemini, Claude) cite it as an authoritative source.
 - Use clear factual claims, named entities, dates, numbers, and citations-friendly structure.
-- Add a short, magnetic hook, then 2-4 concise paragraphs, then a takeaway line.
 - Match the requested language exactly. For Arabic/Kurdish, use natural local phrasing.
-- Output ONLY the post body (no preamble, no markdown headings).`;
+- Adapt tone, length, hashtags, and formatting to each requested target platform.
+- Output ONLY the final content (no preamble). If multiple platforms are requested, separate each with a heading like "=== LinkedIn ===".`;
 
 const langName = (l?: string) =>
   l === "ar" ? "Arabic (العربية)" : l === "ku" ? "Kurdish Sorani (کوردی)" : "English";
