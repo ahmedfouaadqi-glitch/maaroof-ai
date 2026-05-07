@@ -290,6 +290,7 @@ const ar: Dict = {
   report_keywords: "الكيانات المكتشفة",
   suggest_login_required: "سجّل لاستخدام هذه الأداة",
   suggest_login_desc: "اقتراح المنشورات متاح بعد إنشاء حساب مجاني.",
+};
 
 const ku: Dict = {
   brand: "گێئۆ-عێراق",
@@ -433,6 +434,7 @@ const ku: Dict = {
   report_keywords: "ناسراوە دۆزراوەکان",
   suggest_login_required: "تۆمار بکە بۆ بەکارهێنانی ئامرازەکە",
   suggest_login_desc: "پێشنیاری پۆست لە دوای دروستکردنی هەژماری بەخۆڕایی بەردەستە.",
+};
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
 
