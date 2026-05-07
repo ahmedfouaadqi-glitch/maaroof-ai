@@ -68,11 +68,11 @@ export function PostSuggester({
   };
 
   const submit = async () => {
-    setError(null); setPost(null); setShowGate(false); setShowLimit(false);
+    setError(null); setPost(null); setResult(null); setShowGate(false); setShowLimit(false);
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang, platforms, length, contentType };
+      const body: any = { lang, platforms, length, contentType, goal };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
@@ -88,6 +88,7 @@ export function PostSuggester({
       if (r.status === 402 && data.error === "limit") { setShowLimit(true); return; }
       if (!r.ok) throw new Error(data?.error || "Failed");
       setPost(data.post);
+      if (data.variants) setResult(data);
       if (auth) auth.refreshProfile();
     } catch (e: any) {
       setError(e.message);
