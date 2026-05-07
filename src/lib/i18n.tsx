@@ -160,6 +160,20 @@ const en: Dict = {
   platform_facebook: "Facebook",
   platform_tiktok: "TikTok",
   platform_instagram: "Instagram",
+  suggest_goal: "Goal of the post",
+  goal_promotional: "Promotional",
+  goal_educational: "Educational",
+  goal_news: "News",
+  goal_brand_story: "Brand story",
+  goal_personal: "Personal",
+  goal_engagement: "Engagement",
+  result_geo_score: "GEO Score",
+  result_expected_reach: "Expected reach",
+  result_warnings: "Verify before publishing",
+  result_tips: "How to improve",
+  reach_low: "Low",
+  reach_medium: "Medium",
+  reach_high: "High",
 };
 
 const ar: Dict = {
@@ -318,6 +332,20 @@ const ar: Dict = {
   platform_facebook: "فيسبوك",
   platform_tiktok: "تيك توك",
   platform_instagram: "إنستغرام",
+  suggest_goal: "هدف المنشور",
+  goal_promotional: "ترويجي",
+  goal_educational: "تعليمي",
+  goal_news: "خبري",
+  goal_brand_story: "قصة علامة",
+  goal_personal: "شخصي / رأي",
+  goal_engagement: "تفاعلي",
+  result_geo_score: "درجة GEO",
+  result_expected_reach: "النتيجة المتوقعة",
+  result_warnings: "تحقق قبل النشر",
+  result_tips: "كيف تحسّن المنشور",
+  reach_low: "منخفضة",
+  reach_medium: "متوسطة",
+  reach_high: "عالية",
 };
 
 const ku: Dict = {
@@ -476,6 +504,20 @@ const ku: Dict = {
   platform_facebook: "فەیسبووک",
   platform_tiktok: "تیک تۆک",
   platform_instagram: "ئینستاگرام",
+  suggest_goal: "ئامانجی پۆست",
+  goal_promotional: "بازرگانی",
+  goal_educational: "فێرکاری",
+  goal_news: "هەواڵ",
+  goal_brand_story: "چیرۆکی براند",
+  goal_personal: "کەسی / بۆچوون",
+  goal_engagement: "بەشداری",
+  result_geo_score: "نمرەی GEO",
+  result_expected_reach: "ئەنجامی چاوەڕوانکراو",
+  result_warnings: "پێش بڵاوکردنەوە دڵنیابە",
+  result_tips: "چۆن باشتری بکەیت",
+  reach_low: "نزم",
+  reach_medium: "ناوەند",
+  reach_high: "بەرز",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };

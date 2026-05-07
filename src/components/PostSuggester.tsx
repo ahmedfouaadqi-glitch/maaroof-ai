@@ -3,12 +3,22 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge } from "lucide-react";
 
 type Mode = "text" | "image";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
 type Length = "short" | "medium" | "long";
 type ContentType = "post" | "article";
+type Goal = "promotional" | "educational" | "news" | "brand_story" | "personal" | "engagement";
+type Result = {
+  variants: { platform: string; content: string; geo_score: number; word_count?: number }[];
+  overall_geo_score: number;
+  expected_reach: "low" | "medium" | "high";
+  expected_reach_reason: string;
+  factual_warnings: string[];
+  improvement_tips: string[];
+  detected_goal?: string;
+};
 
 const PLATFORMS: { id: Platform; icon: React.ReactNode; key: string }[] = [
   { id: "linkedin", icon: <Linkedin className="size-3.5" />, key: "platform_linkedin" },
@@ -34,6 +44,7 @@ export function PostSuggester({
   const [imageMime, setImageMime] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [post, setPost] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
@@ -41,6 +52,7 @@ export function PostSuggester({
   const [platforms, setPlatforms] = useState<Platform[]>(["linkedin"]);
   const [length, setLength] = useState<Length>("medium");
   const [contentType, setContentType] = useState<ContentType>("post");
+  const [goal, setGoal] = useState<Goal>("promotional");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (p: Platform) =>
@@ -56,11 +68,11 @@ export function PostSuggester({
   };
 
   const submit = async () => {
-    setError(null); setPost(null); setShowGate(false); setShowLimit(false);
+    setError(null); setPost(null); setResult(null); setShowGate(false); setShowLimit(false);
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang, platforms, length, contentType };
+      const body: any = { lang, platforms, length, contentType, goal };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
@@ -76,6 +88,7 @@ export function PostSuggester({
       if (r.status === 402 && data.error === "limit") { setShowLimit(true); return; }
       if (!r.ok) throw new Error(data?.error || "Failed");
       setPost(data.post);
+      if (data.variants) setResult(data);
       if (auth) auth.refreshProfile();
     } catch (e: any) {
       setError(e.message);
@@ -163,6 +176,18 @@ export function PostSuggester({
 
       <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-background/40 p-3">
         <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_goal")}</div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["promotional", "educational", "news", "brand_story", "personal", "engagement"] as Goal[]).map((g) => (
+              <button key={g} onClick={() => setGoal(g)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${goal === g ? "border-primary bg-primary/15 text-primary" : "border-border bg-background/60 text-muted-foreground hover:text-foreground"}`}>
+                {t(`goal_${g}` as any)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_type")}</div>
           <div className="inline-flex rounded-full border border-border bg-background/60 p-1">
             {(["post", "article"] as ContentType[]).map((c) => (
@@ -244,20 +269,59 @@ export function PostSuggester({
         </div>
       )}
 
-      {post && (
-        <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-              {t("suggest_result")}
-            </span>
-            <button
-              onClick={copy}
-              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
-            >
-              {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-              {copied ? t("suggest_copied") : t("suggest_copy")}
-            </button>
+      {result && (
+        <div className="mt-5 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-primary"><Gauge className="size-3.5" /> {t("result_geo_score")}</div>
+              <div className="font-display text-3xl font-bold text-gradient">{result.overall_geo_score}<span className="text-sm text-muted-foreground">/100</span></div>
+            </div>
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-3 sm:col-span-2">
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-accent"><TrendingUp className="size-3.5" /> {t("result_expected_reach")}: {t(`reach_${result.expected_reach}` as any)}</div>
+              <div className="text-xs text-foreground">{result.expected_reach_reason}</div>
+            </div>
           </div>
+
+          {result.factual_warnings?.length > 0 && (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-destructive"><AlertTriangle className="size-3.5" /> {t("result_warnings")}</div>
+              <ul className="ms-4 list-disc space-y-1 text-xs text-foreground">
+                {result.factual_warnings.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.improvement_tips?.length > 0 && (
+            <div className="rounded-xl border border-border bg-background/60 p-3">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lightbulb className="size-3.5 text-accent" /> {t("result_tips")}</div>
+              <ul className="ms-4 list-disc space-y-1 text-xs text-muted-foreground">
+                {result.improvement_tips.map((tip, i) => <li key={i}>{tip}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.variants.map((v, i) => (
+            <div key={i} className="rounded-xl border border-border bg-background/60 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-primary">
+                  {v.platform} · GEO {v.geo_score}/100
+                </span>
+                <button
+                  onClick={async () => { await navigator.clipboard.writeText(v.content); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                >
+                  {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                  {copied ? t("suggest_copied") : t("suggest_copy")}
+                </button>
+              </div>
+              <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{v.content}</pre>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!result && post && (
+        <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
           <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{post}</pre>
         </div>
       )}
