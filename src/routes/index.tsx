@@ -25,6 +25,21 @@ function Page() {
     <div className="min-h-screen">
       <SiteHeader />
 
+      {/* Agent promo banner */}
+      <div className="border-b border-accent/30 bg-gradient-to-r from-accent/15 via-primary/10 to-accent/15">
+        <Link
+          to="/pricing"
+          className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-xs hover:bg-accent/10 md:text-sm"
+        >
+          <Bot className="size-4 text-accent" />
+          <span className="font-semibold text-accent">{t("agent_banner_title")}</span>
+          <span className="text-muted-foreground">— {t("agent_banner_desc")}</span>
+          <span className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">
+            {t("agent_banner_cta")} <ArrowRight className="size-3" />
+          </span>
+        </Link>
+      </div>
+
       {/* HERO */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40" />
