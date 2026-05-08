@@ -335,6 +335,7 @@ const en: Dict = {
   dash_request_cta: "Send subscription request",
   dash_agent_active: "Agent active",
   dash_agent_inactive: "Agent not activated",
+  tool_output_lang: "Output language",
 };
 
 const ar: Dict = {
