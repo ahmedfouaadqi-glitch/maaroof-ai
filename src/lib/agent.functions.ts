@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest, getRequestHeader } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { callAI, checkAndConsume, publishToTelegram, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST, SYSTEM_VISIBILITY } from "@/lib/agent.server";
+import { callAI, checkAndConsume, publishToTelegram, runVisibilityAnalysis, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
 
 type L = "ar" | "en" | "ku";
 const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
@@ -102,24 +101,14 @@ export const runVisibilityCheck = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
+    const userId = context.userId;
     try {
-      const request = getRequest();
-      const authHeader = getRequestHeader("authorization");
-      const base = new URL(request.url).origin;
-      const resp = await fetch(`${base}/api/visibility`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authHeader ? { Authorization: authHeader } : {}),
-        },
-        body: JSON.stringify(data),
+      return await runVisibilityAnalysis({
+        userId,
+        brand: data.brand,
+        keywords: data.keywords,
+        lang: data.lang,
       });
-
-      const payload = await resp.json().catch(() => ({}));
-      if (!resp.ok || !payload?.ok) {
-        return { ok: false, error: payload?.error || `http_${resp.status}` };
-      }
-      return payload;
     } catch (e: any) {
       const msg = e?.message || String(e) || "unknown_error";
       console.error("[runVisibilityCheck] fatal:", msg);
