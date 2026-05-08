@@ -953,6 +953,13 @@ const ku: Dict = {
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
 
+export const PLAN_KEY_BY_NAME: Record<string, string> = {
+  Free: "free", Starter: "starter", Pro: "pro", Business: "business", "Pro Yearly": "yearly",
+};
+export const ADDON_KEY_BY_NAME: Record<string, string> = {
+  "Agent Lite": "lite", "Agent Pro": "pro", "Agent Business": "biz",
+};
+
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: keyof typeof en) => string; dir: "ltr" | "rtl" };
 const I18nCtx = createContext<Ctx | null>(null);
 
