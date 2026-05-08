@@ -218,12 +218,24 @@ function UsersTab() {
 function RequestsTab() {
   const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
+  const [emails, setEmails] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [kind, setKind] = useState<"all" | "plan" | "agent">("all");
+
   const load = async () => {
     const { data } = await supabase
       .from("subscription_requests")
-      .select("*, subscription_plans(name, duration_days, monthly_analyses, monthly_suggestions)")
-      .order("created_at", { ascending: false }).limit(100);
-    setRows(data || []);
+      .select("*, subscription_plans(name, duration_days, monthly_analyses, monthly_suggestions), agent_addons(name, price_iqd, monthly_tasks, max_targets)")
+      .order("created_at", { ascending: false }).limit(200);
+    const list = data || [];
+    setRows(list);
+    const ids = Array.from(new Set(list.map((r: any) => r.user_id)));
+    if (ids.length) {
+      const { data: ps } = await supabase.from("profiles").select("id, email").in("id", ids);
+      const map: Record<string, string> = {};
+      (ps || []).forEach((p: any) => { map[p.id] = p.email; });
+      setEmails(map);
+    }
   };
   useEffect(() => { load(); }, []);
 
@@ -231,38 +243,73 @@ function RequestsTab() {
     await supabase.from("subscription_requests").update({
       status, reviewed_at: new Date().toISOString(),
     }).eq("id", r.id);
-    if (status === "approved" && r.subscription_plans) {
-      const expires = new Date(Date.now() + r.subscription_plans.duration_days * 86400000).toISOString();
-      await supabase.from("profiles").update({
-        is_subscribed: true,
-        subscription_tier: r.subscription_plans.name,
-        subscription_expires_at: expires,
-        monthly_analyses_used: 0,
-        monthly_suggestions_used: 0,
-        usage_period_start: new Date().toISOString(),
-      }).eq("id", r.user_id);
+    if (status === "approved") {
+      if (r.request_type === "plan" && r.subscription_plans) {
+        const expires = new Date(Date.now() + r.subscription_plans.duration_days * 86400000).toISOString();
+        await supabase.from("profiles").update({
+          is_subscribed: true,
+          subscription_tier: r.subscription_plans.name,
+          subscription_expires_at: expires,
+          monthly_analyses_used: 0,
+          monthly_suggestions_used: 0,
+          usage_period_start: new Date().toISOString(),
+        }).eq("id", r.user_id);
+      } else if (r.request_type === "agent" && r.agent_addon_id) {
+        const expires = new Date(Date.now() + 30 * 86400000).toISOString();
+        await supabase.from("user_agent_subscriptions").insert({
+          user_id: r.user_id, addon_id: r.agent_addon_id, status: "active",
+          expires_at: expires, period_start: new Date().toISOString(),
+        });
+      }
     }
     load();
   };
 
+  const filtered = rows.filter((r) =>
+    (filter === "all" || r.status === filter) && (kind === "all" || r.request_type === kind)
+  );
+
   return (
     <div className="space-y-3">
-      {rows.length === 0 && <p className="text-sm text-muted-foreground">No requests.</p>}
-      {rows.map((r) => (
-        <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 p-4">
-          <div>
-            <div className="font-mono text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</div>
-            <div className="font-medium">User: {r.user_id.slice(0, 8)}… · Plan: {r.subscription_plans?.name || "—"}</div>
-            <div className="text-xs text-muted-foreground">Status: <span className={r.status === "pending" ? "text-yellow-400" : r.status === "approved" ? "text-success" : "text-destructive"}>{r.status}</span></div>
-          </div>
-          {r.status === "pending" && (
-            <div className="flex gap-2">
-              <button onClick={() => decide(r, "approved")} className="inline-flex items-center gap-1 rounded-full bg-success/20 px-3 py-1.5 text-xs text-success hover:bg-success/30"><Check className="size-3" />{t("admin_approve")}</button>
-              <button onClick={() => decide(r, "rejected")} className="inline-flex items-center gap-1 rounded-full bg-destructive/20 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/30"><X className="size-3" />{t("admin_reject")}</button>
-            </div>
-          )}
+      <div className="flex flex-wrap gap-2">
+        <div className="flex gap-1 rounded-full border border-border bg-card/60 p-1 text-xs">
+          {(["pending","approved","rejected","all"] as const).map((s) => (
+            <button key={s} onClick={() => setFilter(s)}
+              className={`rounded-full px-3 py-1 ${filter === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{s}</button>
+          ))}
         </div>
-      ))}
+        <div className="flex gap-1 rounded-full border border-border bg-card/60 p-1 text-xs">
+          {(["all","plan","agent"] as const).map((s) => (
+            <button key={s} onClick={() => setKind(s)}
+              className={`rounded-full px-3 py-1 ${kind === s ? "bg-accent text-primary-foreground" : "text-muted-foreground"}`}>{s}</button>
+          ))}
+        </div>
+      </div>
+      {filtered.length === 0 && <p className="text-sm text-muted-foreground">No requests.</p>}
+      {filtered.map((r) => {
+        const item = r.request_type === "agent" ? r.agent_addons : r.subscription_plans;
+        return (
+          <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 p-4">
+            <div>
+              <div className="font-mono text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</div>
+              <div className="font-medium">
+                <span className={`me-2 rounded px-1.5 py-0.5 text-[10px] ${r.request_type === "agent" ? "bg-accent/20 text-accent" : "bg-primary/20 text-primary"}`}>{r.request_type}</span>
+                {emails[r.user_id] || r.user_id.slice(0,8)+"…"} · {item?.name || "—"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Status: <span className={r.status === "pending" ? "text-yellow-400" : r.status === "approved" ? "text-success" : "text-destructive"}>{r.status}</span>
+                {item?.price_iqd != null && <> · {item.price_iqd.toLocaleString()} IQD</>}
+              </div>
+            </div>
+            {r.status === "pending" && (
+              <div className="flex gap-2">
+                <button onClick={() => decide(r, "approved")} className="inline-flex items-center gap-1 rounded-full bg-success/20 px-3 py-1.5 text-xs text-success hover:bg-success/30"><Check className="size-3" />{t("admin_approve")}</button>
+                <button onClick={() => decide(r, "rejected")} className="inline-flex items-center gap-1 rounded-full bg-destructive/20 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/30"><X className="size-3" />{t("admin_reject")}</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
