@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { I18nProvider, useI18n } from "@/lib/i18n";
+import { I18nProvider, useI18n, type Lang } from "@/lib/i18n";
+import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,8 +31,9 @@ const ADMIN_SUB = {
 };
 
 function AgentPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, isAdmin, loading } = useAuth();
+  const [outLang, setOutLang] = useState<Lang>(lang);
   const navigate = useNavigate();
   const [sub, setSub] = useState<any | null>(null);
   const [addon, setAddon] = useState<any | null>(null);
@@ -98,7 +100,7 @@ function AgentPage() {
   const runNow = async (targetId?: string) => {
     setRunningId(targetId || "all");
     try {
-      const res: any = await runNowFn({ data: { targetId } });
+      const res: any = await runNowFn({ data: { targetId, lang: outLang } });
       if (!res?.ok && res?.error) alert(res.error);
     } catch (e: any) {
       alert(e?.message || "error");
@@ -112,7 +114,7 @@ function AgentPage() {
     if (!cmd.trim() || cmdBusy) return;
     setCmdBusy(true); setCmdMsg(null);
     try {
-      const res: any = await runCmdFn({ data: { command: cmd } });
+      const res: any = await runCmdFn({ data: { command: cmd, lang: outLang } });
       if (res?.ok) {
         setCmdMsg({ ok: true, text: t("ag_cmd_ok") });
         setCmd("");
@@ -209,6 +211,9 @@ function AgentPage() {
             <Sparkles className="size-5 text-accent" /> {t("ag_cmd_title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("ag_cmd_desc")}</p>
+          <div className="mt-3 flex justify-end">
+            <ToolLangSelect value={outLang} onChange={setOutLang} />
+          </div>
           <textarea
             value={cmd}
             onChange={(e) => setCmd(e.target.value)}

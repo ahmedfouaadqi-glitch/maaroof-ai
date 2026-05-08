@@ -4,7 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock, CheckCircle2, AlertCircle, Lightbulb, Bot, Tag } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
+import { ToolLangSelect } from "./ToolLangSelect";
 import { supabase } from "@/integrations/supabase/client";
+import type { Lang } from "@/lib/i18n";
 
 type Result = {
   score: number; authority: number; local: number; citation: number;
@@ -33,6 +35,7 @@ export function Sandbox() {
   const [error, setError] = useState<string | null>(null);
   const [showTrialGate, setShowTrialGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [outLang, setOutLang] = useState<Lang>(lang);
 
 
   const run = async () => {
@@ -64,7 +67,7 @@ export function Sandbox() {
 
       const r = await fetch("/api/analyze", {
         method: "POST", headers,
-        body: JSON.stringify({ text, lang }),
+        body: JSON.stringify({ text, lang: outLang }),
       });
       const data = await r.json();
       await stepTimer;
@@ -98,6 +101,10 @@ export function Sandbox() {
         <span className="font-mono uppercase tracking-widest text-xs">{t("sandbox_title")}</span>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("sandbox_desc")}</p>
+
+      <div className="mb-3 flex justify-end">
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
 
       <div className="mb-3 flex items-start gap-2 rounded-lg border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground">
         <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-primary" />

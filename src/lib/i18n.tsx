@@ -335,6 +335,7 @@ const en: Dict = {
   dash_request_cta: "Send subscription request",
   dash_agent_active: "Agent active",
   dash_agent_inactive: "Agent not activated",
+  tool_output_lang: "Output language",
 };
 
 const ar: Dict = {
@@ -660,6 +661,7 @@ const ar: Dict = {
   dash_request_cta: "إرسال طلب اشتراك",
   dash_agent_active: "الوكيل مُفعّل",
   dash_agent_inactive: "الوكيل غير مُفعّل",
+  tool_output_lang: "لغة المخرجات",
 };
 
 const ku: Dict = {
@@ -985,6 +987,7 @@ const ku: Dict = {
   dash_request_cta: "ناردنی داواکاری بەشداربوون",
   dash_agent_active: "ئەجێنت چالاکە",
   dash_agent_inactive: "ئەجێنت چالاک نییە",
+  tool_output_lang: "زمانی دەرەنجام",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Lang } from "@/lib/i18n";
+import { ToolLangSelect } from "./ToolLangSelect";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,7 @@ export function PostSuggester({
   const [length, setLength] = useState<Length>("medium");
   const [contentType, setContentType] = useState<ContentType>("post");
   const [goal, setGoal] = useState<Goal>("promotional");
+  const [outLang, setOutLang] = useState<Lang>(lang);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (p: Platform) =>
@@ -72,7 +74,7 @@ export function PostSuggester({
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang, platforms, length, contentType, goal };
+      const body: any = { lang: outLang, platforms, length, contentType, goal };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
@@ -117,6 +119,10 @@ export function PostSuggester({
         <span className="font-mono uppercase tracking-widest text-xs">{t("suggest_title")}</span>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("suggest_desc")}</p>
+
+      <div className="mb-3 flex justify-end">
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
 
       {!initialSourceText && (
         <div className="mb-4 inline-flex rounded-full border border-border bg-background/60 p-1">

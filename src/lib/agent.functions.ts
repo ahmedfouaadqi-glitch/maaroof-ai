@@ -3,11 +3,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callAI, checkAndConsume, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
 
+type L = "ar" | "en" | "ku";
+const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
+
 export const runAgentNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { targetId?: string };
-    return { targetId: x.targetId };
+    const x = (d || {}) as { targetId?: string; lang?: string };
+    return { targetId: x.targetId, lang: normLang(x.lang) };
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
@@ -29,6 +32,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
           const content = await callAI(
             taskType === "analyze_url" ? SYSTEM_ANALYZE : SYSTEM_SUGGEST,
             subject,
+            data.lang,
           );
           let score: number | null = null;
           if (taskType === "analyze_url") {
@@ -37,7 +41,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
           }
           await supabaseAdmin.from("agent_tasks").insert({
             user_id: userId, target_id: (tg as any).id, task_type: taskType,
-            input: subject, status: "done", result: { summary: content, score },
+            input: subject, status: "done", result: { summary: content, score, lang: data.lang },
           });
           done++;
         } catch (e: any) {
@@ -55,11 +59,11 @@ export const runAgentNow = createServerFn({ method: "POST" })
 export const runAgentCommand = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { command?: string };
+    const x = (d || {}) as { command?: string; lang?: string };
     if (!x.command || typeof x.command !== "string" || x.command.trim().length < 3) {
       throw new Error("command_required");
     }
-    return { command: x.command.trim().slice(0, 2000) };
+    return { command: x.command.trim().slice(0, 2000), lang: normLang(x.lang) };
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
@@ -69,10 +73,10 @@ export const runAgentCommand = createServerFn({ method: "POST" })
       return { ok: false, error: e?.message || "limit" };
     }
     try {
-      const content = await callAI(SYSTEM_AGENT, data.command);
+      const content = await callAI(SYSTEM_AGENT, data.command, data.lang);
       const { data: row } = await supabaseAdmin.from("agent_tasks").insert({
         user_id: userId, task_type: "command",
-        input: data.command, status: "done", result: { summary: content },
+        input: data.command, status: "done", result: { summary: content, lang: data.lang },
       }).select("id").single();
       return { ok: true, taskId: row?.id, summary: content };
     } catch (e: any) {
