@@ -40,6 +40,12 @@ function AgentPage() {
   const [newUrl, setNewUrl] = useState("");
   const [newTopic, setNewTopic] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
+  const [runningId, setRunningId] = useState<string | "all" | null>(null);
+  const [cmd, setCmd] = useState("");
+  const [cmdBusy, setCmdBusy] = useState(false);
+  const [cmdMsg, setCmdMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const runNowFn = useServerFn(runAgentNow);
+  const runCmdFn = useServerFn(runAgentCommand);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/agent" } });
