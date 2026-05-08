@@ -89,6 +89,15 @@ function AgentPage() {
 
     const { data: tk } = await supabase.from("agent_tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     setTasks(tk || []);
+
+    const { data: ch } = await supabase.from("publish_channels").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    setChannels(ch || []);
+
+    const { data: prof } = await supabase.from("profiles").select("brand_name, brand_keywords").eq("id", user.id).maybeSingle();
+    if (prof) {
+      if (!brand && prof.brand_name) setBrand(prof.brand_name);
+      if (!keywords && prof.brand_keywords) setKeywords(prof.brand_keywords);
+    }
     setPageLoading(false);
   };
 
