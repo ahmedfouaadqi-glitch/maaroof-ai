@@ -174,6 +174,10 @@ const en: Dict = {
   reach_low: "Low",
   reach_medium: "Medium",
   reach_high: "High",
+  why_4_t: "🤖 Smart Agent (add-on)",
+  why_4_d: "Executes tasks for you via commands and choices: analyzes your pages daily, suggests ready-to-publish posts, and monitors your visibility in AI. Adds to your subscription from 20,000 IQD/month.",
+  how_4_t: "🤖 Smart Agent (optional)",
+  how_4_d: "After subscribing: pick your site or topic from a list and type commands like (analyze my page / suggest a promo post / monitor GEO weekly). The agent runs automatically. Example: add your store URL → it sends a daily report + 3 ready-to-publish post suggestions.",
 };
 
 const ar: Dict = {
