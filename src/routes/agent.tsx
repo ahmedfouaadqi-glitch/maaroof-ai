@@ -31,8 +31,9 @@ const ADMIN_SUB = {
 };
 
 function AgentPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, isAdmin, loading } = useAuth();
+  const [outLang, setOutLang] = useState<Lang>(lang);
   const navigate = useNavigate();
   const [sub, setSub] = useState<any | null>(null);
   const [addon, setAddon] = useState<any | null>(null);
