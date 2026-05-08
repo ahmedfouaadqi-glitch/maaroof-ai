@@ -19,6 +19,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -70,6 +71,12 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksAgentRunnerRoute =
+  ApiPublicHooksAgentRunnerRouteImport.update({
+    id: '/api/public/hooks/agent-runner',
+    path: '/api/public/hooks/agent-runner',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/suggest': typeof ApiSuggestRoute
+  '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +102,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/suggest': typeof ApiSuggestRoute
+  '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +116,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/suggest': typeof ApiSuggestRoute
+  '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/suggest'
+    | '/api/public/hooks/agent-runner'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/suggest'
+    | '/api/public/hooks/agent-runner'
   id:
     | '__root__'
     | '/'
@@ -145,6 +157,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/suggest'
+    | '/api/public/hooks/agent-runner'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +171,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
+  ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/agent-runner': {
+      id: '/api/public/hooks/agent-runner'
+      path: '/api/public/hooks/agent-runner'
+      fullPath: '/api/public/hooks/agent-runner'
+      preLoaderRoute: typeof ApiPublicHooksAgentRunnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiSuggestRoute: ApiSuggestRoute,
+  ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
