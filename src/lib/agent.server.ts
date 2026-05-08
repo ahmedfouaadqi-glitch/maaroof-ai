@@ -19,16 +19,23 @@ export const SYSTEM_AGENT = `أنت "موظف ذكي" متخصص في تحسين
 - إذا طلب رأي/توصية: قدمها بشكل صريح ومسبب
 ردّ دائماً بالعربية الفصحى الواضحة. كن مباشراً وعملياً. لا تختلق حقائق.`;
 
-export async function callAI(system: string, prompt: string): Promise<string> {
+const LANG_INSTRUCTION: Record<string, string> = {
+  ar: "اكتب الإجابة بالكامل باللغة العربية الفصحى.",
+  en: "Write the entire response in clear English.",
+  ku: "وەڵامەکە بە تەواوی بە کوردی سۆرانی بنووسە.",
+};
+
+export async function callAI(system: string, prompt: string, lang: "ar" | "en" | "ku" = "ar"): Promise<string> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
+  const sysWithLang = `${system}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.ar}`;
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: sysWithLang },
         { role: "user", content: prompt },
       ],
     }),
