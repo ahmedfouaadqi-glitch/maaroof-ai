@@ -67,8 +67,8 @@ function PricingPage() {
     if (selectedKind === "plan") payload.plan_id = selected.id;
     else payload.agent_addon_id = selected.id;
     await supabase.from("subscription_requests").insert(payload);
-    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
-    const msg = `السلام عليكم، أرغب بالاشتراك في ${label} ${selected.name} (${selected.price_iqd.toLocaleString()} د.ع)\nالبريد: ${user.email}`;
+    const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
+    const msg = `${label} ${selected.name} (${selected.price_iqd.toLocaleString()} ${t("pr_iqd")})\n${user.email}`;
     window.open(whatsappLink(msg), "_blank");
     setSelected(null);
   };
@@ -79,10 +79,10 @@ function PricingPage() {
     if (selectedKind === "plan") payload.plan_id = selected.id;
     else payload.agent_addon_id = selected.id;
     await supabase.from("subscription_requests").insert(payload);
-    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
-    const subject = encodeURIComponent(`طلب اشتراك — ${label} ${selected.name}`);
+    const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
+    const subject = encodeURIComponent(`${label} ${selected.name}`);
     const body = encodeURIComponent(
-      `السلام عليكم،\n\nأرغب بتفعيل الاشتراك في ${label}:\n• ${selected.name}\n• السعر: ${selected.price_iqd.toLocaleString()} د.ع\n\nبريدي: ${user.email}\n\nشكراً.`,
+      `${label}:\n• ${selected.name}\n• ${selected.price_iqd.toLocaleString()} ${t("pr_iqd")}\n\n${user.email}`,
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSelected(null);
@@ -94,11 +94,11 @@ function PricingPage() {
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-            <Sparkles className="size-3.5" /> اختر الخطة المناسبة لك
+            <Sparkles className="size-3.5" /> {t("pr_badge")}
           </span>
-          <h1 className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl">الأسعار</h1>
+          <h1 className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl">{t("pr_title")}</h1>
           <p className="mt-3 text-muted-foreground">
-            خطط مبسّطة بأسعار واضحة. عند الاختيار تواصل معنا عبر <b>واتساب</b> أو <b>البريد الإلكتروني</b> ليتم تفعيل الخطة فوراً.
+            {t("pr_intro_1")} <b>{t("pr_whatsapp")}</b> {t("pr_or")} <b>{t("pr_email_word")}</b> {t("pr_intro_2")}
           </p>
         </div>
 
@@ -106,10 +106,12 @@ function PricingPage() {
           <div className="mt-12 flex justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
         ) : (
           <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {plans.map((p, i) => {
+            {plans.map((p) => {
               const isPopular = p.name === "Pro";
               const isYearly = p.name === "Pro Yearly";
-              const ex = EXAMPLES[p.name] ?? { who: "", use: "" };
+              const exKeys = EXAMPLE_KEYS[p.name];
+              const exWho = exKeys ? t(exKeys.who as any) : "";
+              const exUse = exKeys ? t(exKeys.use as any) : "";
               return (
                 <div
                   key={p.id}
@@ -121,12 +123,12 @@ function PricingPage() {
                 >
                   {isPopular && (
                     <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      <Star className="size-3" /> الأكثر اختياراً
+                      <Star className="size-3" /> {t("pr_most_popular")}
                     </span>
                   )}
                   {isYearly && (
                     <span className="absolute -top-3 start-1/2 -translate-x-1/2 rounded-full bg-success px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      وفّر 50,000 د.ع
+                      {t("pr_save_50k")}
                     </span>
                   )}
                   <h3 className="font-display text-xl font-bold">{p.name}</h3>
@@ -136,16 +138,16 @@ function PricingPage() {
                     <span className="font-display text-3xl font-bold text-gradient">
                       {p.price_iqd.toLocaleString()}
                     </span>
-                    <span className="text-xs text-muted-foreground">د.ع</span>
+                    <span className="text-xs text-muted-foreground">{t("pr_iqd")}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {p.duration_days >= 365 ? "سنوياً (لأول مرة)" : "شهرياً"}
+                    {p.duration_days >= 365 ? t("pr_yearly_first") : t("pr_monthly")}
                   </div>
 
-                  {ex.who && (
+                  {exWho && (
                     <div className="mt-4 rounded-lg border border-border/60 bg-background/40 p-3 text-xs">
-                      <div className="font-semibold text-foreground/90">مناسبة لـ: {ex.who}</div>
-                      <div className="mt-1 text-muted-foreground">{ex.use}</div>
+                      <div className="font-semibold text-foreground/90">{t("pr_suited_for")} {exWho}</div>
+                      <div className="mt-1 text-muted-foreground">{exUse}</div>
                     </div>
                   )}
 
@@ -166,7 +168,7 @@ function PricingPage() {
                         : "border border-primary/40 text-primary hover:bg-primary/10"
                     }`}
                   >
-                    {user ? "اختر هذه الخطة" : "سجّل الدخول للاختيار"}
+                    {user ? t("pr_choose_plan") : t("pr_signin_to_choose")}
                   </button>
                 </div>
               );
