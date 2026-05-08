@@ -157,7 +157,7 @@ function PricingPage() {
                     </span>
                   )}
                   <h3 className="font-display text-xl font-bold">{p.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{p.description?.split("(")[0]}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{planDesc(p.name) || p.description?.split("(")[0]}</p>
 
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="font-display text-3xl font-bold text-gradient">
@@ -177,7 +177,7 @@ function PricingPage() {
                   )}
 
                   <ul className="mt-4 flex-1 space-y-2 text-sm">
-                    {(p.features as string[]).slice(0, 4).map((f, idx) => (
+                    {(planFeatures(p.name).length ? planFeatures(p.name) : (p.features as string[])).slice(0, 5).map((f, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <Check className="mt-0.5 size-4 shrink-0 text-success" />
                         <span>{f}</span>
