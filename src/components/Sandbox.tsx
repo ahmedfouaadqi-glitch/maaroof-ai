@@ -35,6 +35,7 @@ export function Sandbox() {
   const [error, setError] = useState<string | null>(null);
   const [showTrialGate, setShowTrialGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [outLang, setOutLang] = useState<Lang>(lang);
 
 
   const run = async () => {
