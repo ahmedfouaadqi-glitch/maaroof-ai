@@ -4,7 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock, CheckCircle2, AlertCircle, Lightbulb, Bot, Tag } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
+import { ToolLangSelect } from "./ToolLangSelect";
 import { supabase } from "@/integrations/supabase/client";
+import type { Lang } from "@/lib/i18n";
 
 type Result = {
   score: number; authority: number; local: number; citation: number;
