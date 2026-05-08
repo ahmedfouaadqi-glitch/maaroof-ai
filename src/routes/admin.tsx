@@ -309,3 +309,134 @@ function PlansTab() {
     </div>
   );
 }
+
+function AgentTab() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [subs, setSubs] = useState<any[]>([]);
+  const [addons, setAddons] = useState<any[]>([]);
+
+  const load = async () => {
+    const [{ data: rq }, { data: sb }, { data: ad }] = await Promise.all([
+      supabase.from("subscription_requests")
+        .select("*, agent_addons(name, price_iqd, monthly_tasks, max_targets)")
+        .eq("request_type", "agent")
+        .order("created_at", { ascending: false }).limit(50),
+      supabase.from("user_agent_subscriptions")
+        .select("*, agent_addons(name)")
+        .order("created_at", { ascending: false }).limit(100),
+      supabase.from("agent_addons").select("*").order("sort_order"),
+    ]);
+    setRequests(rq || []);
+    setSubs(sb || []);
+    setAddons(ad || []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const activate = async (r: any) => {
+    if (!r.agent_addon_id) return;
+    const expires = new Date(Date.now() + 30 * 86400000).toISOString();
+    await supabase.from("user_agent_subscriptions").insert({
+      user_id: r.user_id, addon_id: r.agent_addon_id, status: "active",
+      expires_at: expires, period_start: new Date().toISOString(),
+    });
+    await supabase.from("subscription_requests").update({
+      status: "approved", reviewed_at: new Date().toISOString(),
+    }).eq("id", r.id);
+    load();
+  };
+
+  const reject = async (r: any) => {
+    await supabase.from("subscription_requests").update({
+      status: "rejected", reviewed_at: new Date().toISOString(),
+    }).eq("id", r.id);
+    load();
+  };
+
+  const expire = async (s: any) => {
+    await supabase.from("user_agent_subscriptions").update({ status: "expired" }).eq("id", s.id);
+    load();
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
+          <Bell className="size-4 text-accent" /> طلبات الوكيل المعلّقة
+        </h2>
+        <div className="space-y-2">
+          {requests.filter((r) => r.status === "pending").length === 0 && (
+            <p className="text-sm text-muted-foreground">لا توجد طلبات معلّقة.</p>
+          )}
+          {requests.filter((r) => r.status === "pending").map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 p-4">
+              <div>
+                <div className="font-mono text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</div>
+                <div className="font-medium">User: {r.user_id.slice(0, 8)}… · Addon: {r.agent_addons?.name || "—"}</div>
+                <div className="text-xs text-muted-foreground">
+                  {r.agent_addons && `${r.agent_addons.price_iqd?.toLocaleString()} د.ع · ${r.agent_addons.monthly_tasks} مهمة/شهر · ${r.agent_addons.max_targets} مواقع`}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => activate(r)} className="inline-flex items-center gap-1 rounded-full bg-success/20 px-3 py-1.5 text-xs text-success hover:bg-success/30">
+                  <Check className="size-3" /> تفعيل (30 يوم)
+                </button>
+                <button onClick={() => reject(r)} className="inline-flex items-center gap-1 rounded-full bg-destructive/20 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/30">
+                  <X className="size-3" /> رفض
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
+          <Bot className="size-4 text-accent" /> الاشتراكات النشطة
+        </h2>
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card/70">
+          <table className="w-full min-w-[700px] text-sm">
+            <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
+              <tr><th className="p-3 text-start">User</th><th className="p-3 text-start">Addon</th><th className="p-3 text-start">Status</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">Expires</th><th className="p-3"></th></tr>
+            </thead>
+            <tbody>
+              {subs.map((s) => (
+                <tr key={s.id} className="border-t border-border">
+                  <td className="p-3 font-mono text-xs">{s.user_id.slice(0, 8)}…</td>
+                  <td className="p-3">{s.agent_addons?.name || "—"}</td>
+                  <td className="p-3">
+                    <span className={`rounded px-2 py-0.5 text-[10px] ${
+                      s.status === "active" ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
+                    }`}>{s.status}</span>
+                  </td>
+                  <td className="p-3 text-xs">{s.tasks_used}</td>
+                  <td className="p-3 text-xs text-muted-foreground">{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : "—"}</td>
+                  <td className="p-3 text-end">
+                    {s.status === "active" && (
+                      <button onClick={() => expire(s)} className="rounded-full border border-destructive/40 px-3 py-1 text-xs text-destructive hover:bg-destructive/10">
+                        إيقاف
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 font-display text-lg font-bold">باقات الوكيل</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          {addons.map((a) => (
+            <div key={a.id} className="rounded-xl border border-border bg-card/70 p-4">
+              <div className="font-display font-semibold">{a.name}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{a.description}</div>
+              <div className="mt-2 text-sm">{a.price_iqd.toLocaleString()} د.ع</div>
+              <div className="text-xs text-muted-foreground">{a.monthly_tasks} مهمة/شهر · {a.daily_task_cap} يومي · {a.max_targets} مواقع</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
