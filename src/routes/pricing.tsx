@@ -265,7 +265,7 @@ function PricingPage() {
                     </div>
 
                     <ul className="mt-4 flex-1 space-y-2 text-sm">
-                      {(a.features as string[]).map((f, i) => (
+                      {(addonFeatures(a.name).length ? addonFeatures(a.name) : (a.features as string[])).map((f, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <Check className="mt-0.5 size-4 shrink-0 text-success" />
                           <span>{f}</span>
