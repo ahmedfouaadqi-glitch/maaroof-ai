@@ -14,10 +14,12 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -44,6 +46,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentRoute = AgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -64,10 +71,17 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksAgentRunnerRoute =
+  ApiPublicHooksAgentRunnerRouteImport.update({
+    id: '/api/public/hooks/agent-runner',
+    path: '/api/public/hooks/agent-runner',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
@@ -75,10 +89,12 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/suggest': typeof ApiSuggestRoute
+  '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
@@ -86,11 +102,13 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/suggest': typeof ApiSuggestRoute
+  '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
@@ -98,12 +116,14 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/suggest': typeof ApiSuggestRoute
+  '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
+    | '/agent'
     | '/auth'
     | '/dashboard'
     | '/pricing'
@@ -111,10 +131,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/suggest'
+    | '/api/public/hooks/agent-runner'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/agent'
     | '/auth'
     | '/dashboard'
     | '/pricing'
@@ -122,10 +144,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/suggest'
+    | '/api/public/hooks/agent-runner'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/agent'
     | '/auth'
     | '/dashboard'
     | '/pricing'
@@ -133,11 +157,13 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/suggest'
+    | '/api/public/hooks/agent-runner'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AgentRoute: typeof AgentRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   PricingRoute: typeof PricingRoute
@@ -145,6 +171,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
+  ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent': {
+      id: '/agent'
+      path: '/agent'
+      fullPath: '/agent'
+      preLoaderRoute: typeof AgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -212,12 +246,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/agent-runner': {
+      id: '/api/public/hooks/agent-runner'
+      path: '/api/public/hooks/agent-runner'
+      fullPath: '/api/public/hooks/agent-runner'
+      preLoaderRoute: typeof ApiPublicHooksAgentRunnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AgentRoute: AgentRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   PricingRoute: PricingRoute,
@@ -225,17 +267,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiSuggestRoute: ApiSuggestRoute,
+  ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

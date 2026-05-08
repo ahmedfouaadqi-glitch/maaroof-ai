@@ -38,6 +38,122 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_addons: {
+        Row: {
+          active: boolean
+          created_at: string
+          daily_task_cap: number
+          description: string | null
+          features: Json
+          id: string
+          max_targets: number
+          monthly_tasks: number
+          name: string
+          price_iqd: number
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          daily_task_cap?: number
+          description?: string | null
+          features?: Json
+          id?: string
+          max_targets?: number
+          monthly_tasks?: number
+          name: string
+          price_iqd?: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          daily_task_cap?: number
+          description?: string | null
+          features?: Json
+          id?: string
+          max_targets?: number
+          monthly_tasks?: number
+          name?: string
+          price_iqd?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      agent_targets: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          notes: string | null
+          topic: string | null
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          notes?: string | null
+          topic?: string | null
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          notes?: string | null
+          topic?: string | null
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_tasks: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          input: string | null
+          result: Json | null
+          status: string
+          target_id: string | null
+          task_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: string | null
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+          task_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: string | null
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+          task_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tasks_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "agent_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analyses: {
         Row: {
           authority: number | null
@@ -187,10 +303,12 @@ export type Database = {
       }
       subscription_requests: {
         Row: {
+          agent_addon_id: string | null
           created_at: string
           id: string
           notes: string | null
           plan_id: string | null
+          request_type: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -198,10 +316,12 @@ export type Database = {
           whatsapp_contacted_at: string | null
         }
         Insert: {
+          agent_addon_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           plan_id?: string | null
+          request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -209,10 +329,12 @@ export type Database = {
           whatsapp_contacted_at?: string | null
         }
         Update: {
+          agent_addon_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           plan_id?: string | null
+          request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -220,6 +342,13 @@ export type Database = {
           whatsapp_contacted_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "subscription_requests_agent_addon_id_fkey"
+            columns: ["agent_addon_id"]
+            isOneToOne: false
+            referencedRelation: "agent_addons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subscription_requests_plan_id_fkey"
             columns: ["plan_id"]
@@ -258,6 +387,53 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      user_agent_subscriptions: {
+        Row: {
+          addon_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_run_date: string | null
+          period_start: string
+          status: string
+          tasks_used: number
+          tasks_used_today: number
+          user_id: string
+        }
+        Insert: {
+          addon_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_run_date?: string | null
+          period_start?: string
+          status?: string
+          tasks_used?: number
+          tasks_used_today?: number
+          user_id: string
+        }
+        Update: {
+          addon_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_run_date?: string | null
+          period_start?: string
+          status?: string
+          tasks_used?: number
+          tasks_used_today?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_agent_subscriptions_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "agent_addons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappLink } from "@/lib/whatsapp";
-import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star } from "lucide-react";
+import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/pricing")({
   component: () => (
@@ -26,45 +26,63 @@ const EXAMPLES: Record<string, { who: string; use: string }> = {
   "Pro Yearly": { who: "من يريد توفير 50,000 د.ع", use: "كل مزايا Pro لمدة سنة كاملة بسعر اول مره مخفض" },
 };
 
+const AGENT_EXAMPLES: Record<string, { who: string; use: string }> = {
+  "Agent Lite": { who: "صانع محتوى مستقل", use: "يحلّل موقعك أسبوعياً ويرسل اقتراح منشور جاهز كل أسبوع" },
+  "Agent Pro": { who: "متجر/شركة صغيرة (3 مواقع)", use: "تحليل يومي + اقتراحات منشورات استباقية + تنبيهات بفرص ظهورك في الذكاء الاصطناعي" },
+  "Agent Business": { who: "وكالة تسويق أو فريق", use: "حتى 10 مواقع · تقارير PDF تلقائية · API للوصول الخارجي" },
+};
+
 function PricingPage() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>([]);
+  const [addons, setAddons] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
+  const [selectedKind, setSelectedKind] = useState<"plan" | "agent">("plan");
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
       .then(({ data }) => setPlans(data || []));
+    supabase.from("agent_addons").select("*").eq("active", true).order("sort_order")
+      .then(({ data }) => setAddons(data || []));
   }, []);
 
-  const openSelect = (plan: any) => {
+  const openSelect = (plan: any, kind: "plan" | "agent" = "plan") => {
     if (!user) {
       navigate({ to: "/auth", search: { mode: "signup", redirect: "/pricing" } });
       return;
     }
     setSelected(plan);
+    setSelectedKind(kind);
   };
 
   const sendWhatsapp = async () => {
     if (!selected || !user) return;
-    await supabase.from("subscription_requests").insert({
-      user_id: user.id, plan_id: selected.id, status: "pending",
+    const payload: any = {
+      user_id: user.id, status: "pending",
       whatsapp_contacted_at: new Date().toISOString(),
-    });
-    const msg = `السلام عليكم، أرغب بالاشتراك في خطة ${selected.name} (${selected.price_iqd.toLocaleString()} د.ع)\nالبريد: ${user.email}`;
+      request_type: selectedKind,
+    };
+    if (selectedKind === "plan") payload.plan_id = selected.id;
+    else payload.agent_addon_id = selected.id;
+    await supabase.from("subscription_requests").insert(payload);
+    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
+    const msg = `السلام عليكم، أرغب بالاشتراك في ${label} ${selected.name} (${selected.price_iqd.toLocaleString()} د.ع)\nالبريد: ${user.email}`;
     window.open(whatsappLink(msg), "_blank");
     setSelected(null);
   };
 
   const sendEmail = async () => {
     if (!selected || !user) return;
-    await supabase.from("subscription_requests").insert({
-      user_id: user.id, plan_id: selected.id, status: "pending",
-    });
-    const subject = encodeURIComponent(`طلب اشتراك — خطة ${selected.name}`);
+    const payload: any = { user_id: user.id, status: "pending", request_type: selectedKind };
+    if (selectedKind === "plan") payload.plan_id = selected.id;
+    else payload.agent_addon_id = selected.id;
+    await supabase.from("subscription_requests").insert(payload);
+    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
+    const subject = encodeURIComponent(`طلب اشتراك — ${label} ${selected.name}`);
     const body = encodeURIComponent(
-      `السلام عليكم،\n\nأرغب بتفعيل الاشتراك في خطة:\n• ${selected.name}\n• السعر: ${selected.price_iqd.toLocaleString()} د.ع\n• المدة: ${selected.duration_days} يوم\n\nبريدي: ${user.email}\n\nشكراً.`,
+      `السلام عليكم،\n\nأرغب بتفعيل الاشتراك في ${label}:\n• ${selected.name}\n• السعر: ${selected.price_iqd.toLocaleString()} د.ع\n\nبريدي: ${user.email}\n\nشكراً.`,
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSelected(null);
@@ -156,6 +174,97 @@ function PricingPage() {
           </div>
         )}
 
+        {/* Agent Add-on Section */}
+        {addons.length > 0 && (
+          <div className="mt-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent">
+                <Bot className="size-3.5" /> إضافة اختيارية
+              </span>
+              <h2 className="mt-5 font-display text-3xl font-bold text-gradient md:text-4xl">الوكيل الذكي 🤖</h2>
+              <p className="mt-3 text-muted-foreground">
+                أتمتة كاملة: الوكيل يعمل نيابة عنك يومياً — يحلّل صفحاتك، يقترح منشورات تلقائياً،
+                ويراقب ظهورك في محركات البحث التوليدية. <b>يضاف لاشتراكك الأساسي</b>.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {addons.map((a) => {
+                const isPro = a.name === "Agent Pro";
+                const ex = AGENT_EXAMPLES[a.name] ?? { who: "", use: "" };
+                return (
+                  <div key={a.id}
+                    className={`relative flex flex-col rounded-2xl border p-6 backdrop-blur transition ${
+                      isPro
+                        ? "border-accent/60 bg-card shadow-[var(--shadow-glow)] scale-[1.02]"
+                        : "border-border bg-card/70 hover:border-accent/40"
+                    }`}>
+                    {isPro && (
+                      <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                        <Zap className="size-3" /> الأنسب
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Bot className="size-5 text-accent" />
+                      <h3 className="font-display text-lg font-bold">{a.name}</h3>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
+
+                    <div className="mt-4 flex items-baseline gap-1">
+                      <span className="text-xs text-muted-foreground">+</span>
+                      <span className="font-display text-3xl font-bold text-gradient">
+                        {a.price_iqd.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-muted-foreground">د.ع/شهر</span>
+                    </div>
+
+                    {ex.who && (
+                      <div className="mt-4 rounded-lg border border-border/60 bg-background/40 p-3 text-xs">
+                        <div className="font-semibold text-foreground/90">مناسب لـ: {ex.who}</div>
+                        <div className="mt-1 text-muted-foreground">{ex.use}</div>
+                      </div>
+                    )}
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="rounded-md bg-background/40 px-2 py-1.5 text-center">
+                        <div className="font-bold text-accent">{a.monthly_tasks}</div>
+                        <div className="text-muted-foreground">مهمة/شهر</div>
+                      </div>
+                      <div className="rounded-md bg-background/40 px-2 py-1.5 text-center">
+                        <div className="font-bold text-accent">{a.max_targets}</div>
+                        <div className="text-muted-foreground">{a.max_targets === 1 ? "موقع" : "مواقع"}</div>
+                      </div>
+                    </div>
+
+                    <ul className="mt-4 flex-1 space-y-2 text-sm">
+                      {(a.features as string[]).map((f, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      onClick={() => openSelect(a, "agent")}
+                      className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:scale-[1.02] ${
+                        isPro
+                          ? "bg-gradient-to-r from-accent to-primary text-primary-foreground shadow-[var(--shadow-glow)]"
+                          : "border border-accent/40 text-accent hover:bg-accent/10"
+                      }`}>
+                      {user ? "أضف الوكيل" : "سجّل الدخول للإضافة"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              ⚡ يحتاج اشتراك أساسي فعّال · يبدأ التشغيل خلال 24 ساعة من التفعيل
+            </p>
+          </div>
+        )}
+
         <div className="mt-10 text-center">
           <Link to="/" className="text-sm text-primary hover:underline">← {t("back_home")}</Link>
         </div>
@@ -170,7 +279,7 @@ function PricingPage() {
             </button>
             <h3 className="font-display text-xl font-bold">تأكيد الاشتراك</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              اخترت خطة <b className="text-foreground">{selected.name}</b> بسعر{" "}
+              اخترت {selectedKind === "agent" ? "إضافة الوكيل الذكي" : "خطة"} <b className="text-foreground">{selected.name}</b> بسعر{" "}
               <b className="text-foreground">{selected.price_iqd.toLocaleString()} د.ع</b>. اختر طريقة التواصل لتفعيل اشتراكك:
             </p>
 

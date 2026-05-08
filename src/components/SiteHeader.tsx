@@ -27,6 +27,7 @@ export function SiteHeader() {
           <Link to="/" hash="how" className="hover:text-foreground">{t("nav_how")}</Link>
           <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>
           {auth?.user && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
+          {auth?.user && <Link to="/agent" className="hover:text-foreground">🤖 الوكيل</Link>}
           {auth?.isAdmin && <Link to="/admin" className="text-accent hover:text-foreground">{t("nav_admin")}</Link>}
         </nav>
         <div className="flex items-center gap-2">
