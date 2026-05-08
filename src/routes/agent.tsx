@@ -221,6 +221,7 @@ function AgentPage() {
     }
   };
 
+  if (loading || pageLoading) return (
     <div className="min-h-screen"><SiteHeader />
       <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>
     </div>
