@@ -102,6 +102,10 @@ export function Sandbox() {
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("sandbox_desc")}</p>
 
+      <div className="mb-3 flex justify-end">
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
+
       <div className="mb-3 flex items-start gap-2 rounded-lg border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground">
         <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-primary" />
         <span>{t("hint_paste")}</span>
