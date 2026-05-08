@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { callAI, checkAndConsume, publishToTelegram, runVisibilityAnalysis, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
+import { callAI, checkAndConsume, publishToTelegram, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
 
 type L = "ar" | "en" | "ku";
 const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
@@ -85,41 +85,6 @@ export const runAgentCommand = createServerFn({ method: "POST" })
         input: data.command, status: "failed", error: e?.message || "error",
       });
       return { ok: false, error: e?.message || "error" };
-    }
-  });
-
-// AI Visibility Check — analyzes how the brand appears in AI search engines
-export const runVisibilityCheck = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => {
-    const x = (d || {}) as { brand?: string; keywords?: string; lang?: string };
-    if (!x.brand || x.brand.trim().length < 2) throw new Error("brand_required");
-    return {
-      brand: x.brand.trim().slice(0, 200),
-      keywords: (x.keywords || "").trim().slice(0, 500),
-      lang: normLang(x.lang),
-    };
-  })
-  .handler(async ({ data, context }) => {
-    const userId = context.userId;
-    try {
-      return await runVisibilityAnalysis({
-        userId,
-        brand: data.brand,
-        keywords: data.keywords,
-        lang: data.lang,
-      });
-    } catch (e: any) {
-      const msg = e?.message || String(e) || "unknown_error";
-      console.error("[runVisibilityCheck] fatal:", msg);
-      await supabaseAdmin.from("agent_tasks").insert({
-        user_id: userId,
-        task_type: "ai_visibility",
-        input: data.brand,
-        status: "failed",
-        error: msg,
-      });
-      return { ok: false, error: msg };
     }
   });
 
