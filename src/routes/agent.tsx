@@ -178,7 +178,9 @@ function AgentPage() {
       if (res?.ok) setVisMsg({ ok: true, text: t("ag_vis_ok") });
       else setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${tx(res?.error)}` });
     } catch (e: any) {
-      setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${e?.message || ""}` });
+      const msg = e?.message || e?.toString?.() || "unknown error";
+      console.error("[runVisibility] error:", e);
+      setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${msg}` });
     } finally {
       setVisBusy(false);
       load();

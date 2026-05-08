@@ -102,33 +102,50 @@ export const runVisibilityCheck = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
-    try { await checkAndConsume(userId, 1); }
-    catch (e: any) { return { ok: false, error: e?.message || "limit" }; }
-
-    const prompt = `العلامة التجارية: ${data.brand}\nالكلمات المفتاحية: ${data.keywords || "(غير محددة)"}\nالسوق: العراق`;
     try {
-      const raw = await callAI(SYSTEM_VISIBILITY, prompt, data.lang);
+      try { await checkAndConsume(userId, 1); }
+      catch (e: any) { return { ok: false, error: e?.message || "limit" }; }
+
+      const prompt = `العلامة التجارية: ${data.brand}\nالكلمات المفتاحية: ${data.keywords || "(غير محددة)"}\nالسوق: العراق`;
+      let raw = "";
       let parsed: any = null;
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
+      try {
+        raw = await callAI(SYSTEM_VISIBILITY, prompt, data.lang);
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
+      } catch (e: any) {
+        const msg = e?.message || "ai_error";
+        console.error("[runVisibilityCheck] AI error:", msg);
+        await supabaseAdmin.from("agent_tasks").insert({
+          user_id: userId, task_type: "ai_visibility",
+          input: data.brand, status: "failed", error: msg,
+        });
+        return { ok: false, error: msg };
+      }
 
-      // Save brand to profile for next runs
-      await supabaseAdmin.from("profiles")
-        .update({ brand_name: data.brand, brand_keywords: data.keywords || null })
-        .eq("id", userId);
+      // Save brand to profile (best-effort)
+      try {
+        await supabaseAdmin.from("profiles")
+          .update({ brand_name: data.brand, brand_keywords: data.keywords || null })
+          .eq("id", userId);
+      } catch (e: any) {
+        console.error("[runVisibilityCheck] profile update error:", e?.message);
+      }
 
-      const { data: row } = await supabaseAdmin.from("agent_tasks").insert({
+      const { data: row, error: insErr } = await supabaseAdmin.from("agent_tasks").insert({
         user_id: userId, task_type: "ai_visibility",
         input: data.brand, status: "done",
         result: parsed ? { ...parsed, raw, lang: data.lang } : { summary: raw, lang: data.lang },
       }).select("id").single();
+      if (insErr) {
+        console.error("[runVisibilityCheck] insert error:", insErr.message);
+        return { ok: false, error: `db_${insErr.code || "insert"}: ${insErr.message}` };
+      }
       return { ok: true, taskId: row?.id, result: parsed || { summary: raw } };
     } catch (e: any) {
-      await supabaseAdmin.from("agent_tasks").insert({
-        user_id: userId, task_type: "ai_visibility",
-        input: data.brand, status: "failed", error: e?.message || "error",
-      });
-      return { ok: false, error: e?.message || "error" };
+      const msg = e?.message || String(e) || "unknown_error";
+      console.error("[runVisibilityCheck] fatal:", msg);
+      return { ok: false, error: msg };
     }
   });
 
