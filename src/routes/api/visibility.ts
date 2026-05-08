@@ -1,0 +1,210 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
+
+type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku" };
+
+const LANG_INSTRUCTION: Record<string, string> = {
+  ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
+  en: "Write all string values inside the JSON in clear English.",
+  ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
+};
+
+const SYSTEM = `أنت محلل ظهور علامات تجارية في محركات البحث الذكية (ChatGPT, Gemini, Perplexity, Claude).
+حلّل بحذر وواقعية، وعند نقص المعلومات كن متحفظاً ولا تختلق حقائق أو أرقام مؤكدة.
+أعد JSON صالح فقط بهذا الشكل:
+{
+  "visibility_percent": <0-100>,
+  "sentiment": "positive" | "neutral" | "negative",
+  "appearance_summary": "ملخص قصير من جملة أو جملتين",
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "competitors": ["..."],
+  "recommendations": ["...", "...", "..."]
+}`;
+
+function clamp(n: unknown) {
+  const value = Number.parseInt(String(n ?? 0), 10);
+  if (Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
+function toArray(value: unknown, max = 6) {
+  if (!Array.isArray(value)) return [] as string[];
+  return value
+    .map((item) => String(item ?? "").trim())
+    .filter(Boolean)
+    .slice(0, max)
+    .map((item) => item.slice(0, 220));
+}
+
+function normalizeResult(parsed: any, fallbackText = "") {
+  const sentiment = ["positive", "neutral", "negative"].includes(parsed?.sentiment)
+    ? parsed.sentiment
+    : "neutral";
+
+  return {
+    visibility_percent: clamp(parsed?.visibility_percent),
+    sentiment,
+    appearance_summary: String(parsed?.appearance_summary || fallbackText || "").trim().slice(0, 500),
+    strengths: toArray(parsed?.strengths, 5),
+    weaknesses: toArray(parsed?.weaknesses, 5),
+    competitors: toArray(parsed?.competitors, 5),
+    recommendations: toArray(parsed?.recommendations, 6),
+  };
+}
+
+export const Route = createFileRoute("/api/visibility")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        try {
+          const body = (await request.json()) as Body;
+          const brand = (body.brand || "").trim();
+          const keywords = (body.keywords || "").trim();
+          const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
+
+          if (brand.length < 2) {
+            return Response.json({ error: "brand_required" }, { status: 400 });
+          }
+
+          const apiKey = process.env.LOVABLE_API_KEY;
+          const SUPABASE_URL = process.env.SUPABASE_URL;
+          const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (!apiKey || !SUPABASE_URL || !SERVICE) {
+            return Response.json({ error: "server_not_configured" }, { status: 500 });
+          }
+
+          const admin = createClient(SUPABASE_URL, SERVICE);
+          const auth = request.headers.get("authorization");
+          if (!auth?.startsWith("Bearer ")) {
+            return Response.json({ error: "auth_required" }, { status: 401 });
+          }
+
+          const token = auth.slice(7);
+          const { data: authData } = await admin.auth.getUser(token);
+          const userId = authData.user?.id;
+          if (!userId) {
+            return Response.json({ error: "auth_required" }, { status: 401 });
+          }
+
+          const { data: roleRow } = await admin
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userId)
+            .eq("role", "admin")
+            .maybeSingle();
+
+          if (!roleRow) {
+            const { data: sub } = await admin
+              .from("user_agent_subscriptions")
+              .select("*, agent_addons(*)")
+              .eq("user_id", userId)
+              .eq("status", "active")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (!sub) return Response.json({ error: "no_active_subscription" }, { status: 402 });
+            const addon = (sub as any).agent_addons;
+            if (!addon) return Response.json({ error: "no_addon" }, { status: 402 });
+            if (sub.expires_at && new Date(sub.expires_at) < new Date()) {
+              return Response.json({ error: "subscription_expired" }, { status: 402 });
+            }
+
+            const today = new Date().toISOString().slice(0, 10);
+            const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
+            if (sub.tasks_used + 1 > addon.monthly_tasks) {
+              return Response.json({ error: "monthly_cap_reached" }, { status: 402 });
+            }
+            if (dailyUsed + 1 > addon.daily_task_cap) {
+              return Response.json({ error: "daily_cap_reached" }, { status: 402 });
+            }
+
+            const { error: usageErr } = await admin
+              .from("user_agent_subscriptions")
+              .update({
+                tasks_used: sub.tasks_used + 1,
+                tasks_used_today: dailyUsed + 1,
+                last_run_date: today,
+              })
+              .eq("id", sub.id);
+
+            if (usageErr) {
+              console.error("[api/visibility] usage update failed:", usageErr.message);
+              return Response.json({ error: "usage_update_failed" }, { status: 500 });
+            }
+          }
+
+          const prompt = `العلامة التجارية: ${brand}\nالكلمات المفتاحية: ${keywords || "(غير محددة)"}\nالسوق: العراق`;
+          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}` },
+                { role: "user", content: prompt },
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+
+          if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
+          if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+          if (!resp.ok) {
+            const rawError = await resp.text();
+            console.error("[api/visibility] AI gateway error:", resp.status, rawError);
+            return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
+          }
+
+          const data = await resp.json();
+          const content = String(data?.choices?.[0]?.message?.content || "{}");
+
+          let parsed: any = null;
+          try {
+            parsed = JSON.parse(content);
+          } catch {
+            const match = content.match(/\{[\s\S]*\}/);
+            if (match) {
+              try {
+                parsed = JSON.parse(match[0]);
+              } catch {
+                parsed = null;
+              }
+            }
+          }
+
+          const result = normalizeResult(parsed || {}, content);
+
+          await admin.from("profiles").update({
+            brand_name: brand,
+            brand_keywords: keywords || null,
+          }).eq("id", userId);
+
+          const taskPayload = {
+            user_id: userId,
+            task_type: "ai_visibility",
+            input: brand,
+            status: "done",
+            result: { ...result, raw: content, lang, keywords },
+          };
+
+          const { data: taskRow, error: taskErr } = await admin
+            .from("agent_tasks")
+            .insert(taskPayload)
+            .select("id")
+            .single();
+
+          if (taskErr) {
+            console.error("[api/visibility] task insert failed:", taskErr.message);
+          }
+
+          return Response.json({ ok: true, taskId: taskRow?.id ?? null, result });
+        } catch (error) {
+          console.error("[api/visibility] fatal error:", error);
+          return Response.json({ error: error instanceof Error ? error.message : "unknown_error" }, { status: 500 });
+        }
+      },
+    },
+  },
+});
