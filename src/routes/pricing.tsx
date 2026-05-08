@@ -26,45 +26,63 @@ const EXAMPLES: Record<string, { who: string; use: string }> = {
   "Pro Yearly": { who: "من يريد توفير 50,000 د.ع", use: "كل مزايا Pro لمدة سنة كاملة بسعر اول مره مخفض" },
 };
 
+const AGENT_EXAMPLES: Record<string, { who: string; use: string }> = {
+  "Agent Lite": { who: "صانع محتوى مستقل", use: "يحلّل موقعك أسبوعياً ويرسل اقتراح منشور جاهز كل أسبوع" },
+  "Agent Pro": { who: "متجر/شركة صغيرة (3 مواقع)", use: "تحليل يومي + اقتراحات منشورات استباقية + تنبيهات بفرص ظهورك في الذكاء الاصطناعي" },
+  "Agent Business": { who: "وكالة تسويق أو فريق", use: "حتى 10 مواقع · تقارير PDF تلقائية · API للوصول الخارجي" },
+};
+
 function PricingPage() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>([]);
+  const [addons, setAddons] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
+  const [selectedKind, setSelectedKind] = useState<"plan" | "agent">("plan");
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
       .then(({ data }) => setPlans(data || []));
+    supabase.from("agent_addons").select("*").eq("active", true).order("sort_order")
+      .then(({ data }) => setAddons(data || []));
   }, []);
 
-  const openSelect = (plan: any) => {
+  const openSelect = (plan: any, kind: "plan" | "agent" = "plan") => {
     if (!user) {
       navigate({ to: "/auth", search: { mode: "signup", redirect: "/pricing" } });
       return;
     }
     setSelected(plan);
+    setSelectedKind(kind);
   };
 
   const sendWhatsapp = async () => {
     if (!selected || !user) return;
-    await supabase.from("subscription_requests").insert({
-      user_id: user.id, plan_id: selected.id, status: "pending",
+    const payload: any = {
+      user_id: user.id, status: "pending",
       whatsapp_contacted_at: new Date().toISOString(),
-    });
-    const msg = `السلام عليكم، أرغب بالاشتراك في خطة ${selected.name} (${selected.price_iqd.toLocaleString()} د.ع)\nالبريد: ${user.email}`;
+      request_type: selectedKind,
+    };
+    if (selectedKind === "plan") payload.plan_id = selected.id;
+    else payload.agent_addon_id = selected.id;
+    await supabase.from("subscription_requests").insert(payload);
+    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
+    const msg = `السلام عليكم، أرغب بالاشتراك في ${label} ${selected.name} (${selected.price_iqd.toLocaleString()} د.ع)\nالبريد: ${user.email}`;
     window.open(whatsappLink(msg), "_blank");
     setSelected(null);
   };
 
   const sendEmail = async () => {
     if (!selected || !user) return;
-    await supabase.from("subscription_requests").insert({
-      user_id: user.id, plan_id: selected.id, status: "pending",
-    });
-    const subject = encodeURIComponent(`طلب اشتراك — خطة ${selected.name}`);
+    const payload: any = { user_id: user.id, status: "pending", request_type: selectedKind };
+    if (selectedKind === "plan") payload.plan_id = selected.id;
+    else payload.agent_addon_id = selected.id;
+    await supabase.from("subscription_requests").insert(payload);
+    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
+    const subject = encodeURIComponent(`طلب اشتراك — ${label} ${selected.name}`);
     const body = encodeURIComponent(
-      `السلام عليكم،\n\nأرغب بتفعيل الاشتراك في خطة:\n• ${selected.name}\n• السعر: ${selected.price_iqd.toLocaleString()} د.ع\n• المدة: ${selected.duration_days} يوم\n\nبريدي: ${user.email}\n\nشكراً.`,
+      `السلام عليكم،\n\nأرغب بتفعيل الاشتراك في ${label}:\n• ${selected.name}\n• السعر: ${selected.price_iqd.toLocaleString()} د.ع\n\nبريدي: ${user.email}\n\nشكراً.`,
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSelected(null);
