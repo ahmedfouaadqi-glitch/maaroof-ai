@@ -19,17 +19,17 @@ export const Route = createFileRoute("/pricing")({
 
 const SUPPORT_EMAIL = "ahmedfouaad.qi@gmail.com";
 
-const EXAMPLES: Record<string, { who: string; use: string }> = {
-  Starter: { who: "صانع محتوى أو فريلانسر", use: "تحليل ~1 منشور يومياً + تحسين كتابتك للذكاء الاصطناعي" },
-  Pro: { who: "متجر إلكتروني أو شركة صغيرة", use: "تحليل 4 منشورات يومياً + اقتراح محتوى مستمر لصفحاتك" },
-  Business: { who: "وكالة تسويق أو فريق محتوى", use: "إدارة عدة عملاء + تقارير PDF + تصدير وتحليل بكميات" },
-  "Pro Yearly": { who: "من يريد توفير 50,000 د.ع", use: "كل مزايا Pro لمدة سنة كاملة بسعر اول مره مخفض" },
+const EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
+  Starter: { who: "ex_starter_who", use: "ex_starter_use" },
+  Pro: { who: "ex_pro_who", use: "ex_pro_use" },
+  Business: { who: "ex_business_who", use: "ex_business_use" },
+  "Pro Yearly": { who: "ex_yearly_who", use: "ex_yearly_use" },
 };
 
-const AGENT_EXAMPLES: Record<string, { who: string; use: string }> = {
-  "Agent Lite": { who: "صانع محتوى مستقل", use: "يحلّل موقعك أسبوعياً ويرسل اقتراح منشور جاهز كل أسبوع" },
-  "Agent Pro": { who: "متجر/شركة صغيرة (3 مواقع)", use: "تحليل يومي + اقتراحات منشورات استباقية + تنبيهات بفرص ظهورك في الذكاء الاصطناعي" },
-  "Agent Business": { who: "وكالة تسويق أو فريق", use: "حتى 10 مواقع · تقارير PDF تلقائية · API للوصول الخارجي" },
+const AGENT_EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
+  "Agent Lite": { who: "ex_alite_who", use: "ex_alite_use" },
+  "Agent Pro": { who: "ex_apro_who", use: "ex_apro_use" },
+  "Agent Business": { who: "ex_abiz_who", use: "ex_abiz_use" },
 };
 
 function PricingPage() {
