@@ -120,6 +120,10 @@ export function PostSuggester({
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("suggest_desc")}</p>
 
+      <div className="mb-3 flex justify-end">
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
+
       {!initialSourceText && (
         <div className="mb-4 inline-flex rounded-full border border-border bg-background/60 p-1">
           <button
