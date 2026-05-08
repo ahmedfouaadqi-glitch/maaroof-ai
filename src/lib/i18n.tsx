@@ -661,6 +661,7 @@ const ar: Dict = {
   dash_request_cta: "إرسال طلب اشتراك",
   dash_agent_active: "الوكيل مُفعّل",
   dash_agent_inactive: "الوكيل غير مُفعّل",
+  tool_output_lang: "لغة المخرجات",
 };
 
 const ku: Dict = {
