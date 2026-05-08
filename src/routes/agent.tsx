@@ -6,8 +6,8 @@ import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { runAgentNow, runAgentCommand } from "@/lib/agent.functions";
-import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles } from "lucide-react";
+import { runAgentNow, runAgentCommand, runVisibilityCheck, publishToChannel } from "@/lib/agent.functions";
+import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
   component: () => (
