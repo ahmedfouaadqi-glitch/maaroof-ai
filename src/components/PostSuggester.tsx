@@ -74,7 +74,7 @@ export function PostSuggester({
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang, platforms, length, contentType, goal };
+      const body: any = { lang: outLang, platforms, length, contentType, goal };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
