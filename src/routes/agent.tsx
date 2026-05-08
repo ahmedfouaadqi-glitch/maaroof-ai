@@ -95,6 +95,38 @@ function AgentPage() {
     load();
   };
 
+  const runNow = async (targetId?: string) => {
+    setRunningId(targetId || "all");
+    try {
+      const res: any = await runNowFn({ data: { targetId } });
+      if (!res?.ok && res?.error) alert(res.error);
+    } catch (e: any) {
+      alert(e?.message || "error");
+    } finally {
+      setRunningId(null);
+      load();
+    }
+  };
+
+  const sendCommand = async () => {
+    if (!cmd.trim() || cmdBusy) return;
+    setCmdBusy(true); setCmdMsg(null);
+    try {
+      const res: any = await runCmdFn({ data: { command: cmd } });
+      if (res?.ok) {
+        setCmdMsg({ ok: true, text: t("ag_cmd_ok") });
+        setCmd("");
+      } else {
+        setCmdMsg({ ok: false, text: `${t("ag_cmd_fail")} ${res?.error || ""}` });
+      }
+    } catch (e: any) {
+      setCmdMsg({ ok: false, text: `${t("ag_cmd_fail")} ${e?.message || ""}` });
+    } finally {
+      setCmdBusy(false);
+      load();
+    }
+  };
+
   if (loading || pageLoading) return (
     <div className="min-h-screen"><SiteHeader />
       <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>
