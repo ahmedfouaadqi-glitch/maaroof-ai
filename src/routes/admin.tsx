@@ -49,12 +49,12 @@ function AdminPage() {
         <h1 className="mb-6 font-display text-3xl font-bold text-gradient">{t("admin_title")}</h1>
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users","requests","plans"] as Tab[]).map((k) => (
+          {(["overview","users","requests","plans","agent"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {t(`admin_${k}` as any)}
+              {k === "agent" ? "🤖 الوكيل" : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
@@ -63,6 +63,7 @@ function AdminPage() {
         {tab === "users" && <UsersTab />}
         {tab === "requests" && <RequestsTab />}
         {tab === "plans" && <PlansTab />}
+        {tab === "agent" && <AgentTab />}
       </div>
     </div>
   );
