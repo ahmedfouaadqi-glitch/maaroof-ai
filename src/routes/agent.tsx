@@ -313,8 +313,8 @@ function AgentPage() {
               <div key={tk.id} className="rounded-xl border border-border bg-card/70 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
-                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : <Activity className="size-4 text-primary" />}
-                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type}</span>
+                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : <Activity className="size-4 text-primary" />}
+                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type}</span>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] ${
                       tk.status === "done" ? "bg-success/20 text-success" :
                       tk.status === "failed" ? "bg-destructive/20 text-destructive" :
