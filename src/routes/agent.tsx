@@ -43,6 +43,7 @@ function AgentPage() {
   const [newTopic, setNewTopic] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
   const [runningId, setRunningId] = useState<string | "all" | null>(null);
+  const [runMsg, setRunMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [cmd, setCmd] = useState("");
   const [cmdBusy, setCmdBusy] = useState(false);
   const [cmdMsg, setCmdMsg] = useState<{ ok: boolean; text: string } | null>(null);
