@@ -6,7 +6,7 @@ import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { runAgentNow, runAgentCommand, runVisibilityCheck, publishToChannel } from "@/lib/agent.functions";
+import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.functions";
 import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
@@ -61,7 +61,6 @@ function AgentPage() {
   const [publishingTask, setPublishingTask] = useState<string | null>(null);
   const runNowFn = useServerFn(runAgentNow);
   const runCmdFn = useServerFn(runAgentCommand);
-  const runVisFn = useServerFn(runVisibilityCheck);
   const publishFn = useServerFn(publishToChannel);
 
   useEffect(() => {
@@ -174,9 +173,25 @@ function AgentPage() {
     if (!brand.trim() || visBusy) return;
     setVisBusy(true); setVisMsg(null);
     try {
-      const res: any = await runVisFn({ data: { brand, keywords, lang: outLang } });
-      if (res?.ok) setVisMsg({ ok: true, text: t("ag_vis_ok") });
-      else setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${tx(res?.error)}` });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const session = (await supabase.auth.getSession()).data.session;
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+      const response = await fetch("/api/visibility", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ brand, keywords, lang: outLang }),
+      });
+
+      const res: any = await response.json().catch(() => ({}));
+
+      if (response.status === 401) {
+        setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${tx("auth_required")}` });
+      } else if (response.ok && res?.ok) {
+        setVisMsg({ ok: true, text: t("ag_vis_ok") });
+      } else {
+        setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${tx(res?.error)}` });
+      }
     } catch (e: any) {
       const msg = e?.message || e?.toString?.() || "unknown error";
       console.error("[runVisibility] error:", e);
