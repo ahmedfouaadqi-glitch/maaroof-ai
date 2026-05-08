@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/analyze")({
                 model: "google/gemini-2.5-flash",
                 messages: [
                   { role: "system", content: SYS },
-                  { role: "user", content: `Language: ${lang}\n\nContent:\n"""${text}"""` },
+                  { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) ONLY in language code "${lang}".\n\nContent to analyze:\n"""${text}"""` },
                 ],
                 response_format: { type: "json_object" },
               }),
