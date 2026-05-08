@@ -54,6 +54,7 @@ export function PostSuggester({
   const [length, setLength] = useState<Length>("medium");
   const [contentType, setContentType] = useState<ContentType>("post");
   const [goal, setGoal] = useState<Goal>("promotional");
+  const [outLang, setOutLang] = useState<Lang>(lang);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (p: Platform) =>
