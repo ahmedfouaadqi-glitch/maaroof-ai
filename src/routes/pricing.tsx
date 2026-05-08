@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappLink } from "@/lib/whatsapp";
-import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star } from "lucide-react";
+import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/pricing")({
   component: () => (
