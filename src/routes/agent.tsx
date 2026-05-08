@@ -203,7 +203,55 @@ function AgentPage() {
           </div>
         )}
 
-        {/* Targets */}
+        {/* Command box — give the agent an order */}
+        <div className="mt-8 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 p-5">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
+            <Sparkles className="size-5 text-accent" /> {t("ag_cmd_title")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("ag_cmd_desc")}</p>
+          <textarea
+            value={cmd}
+            onChange={(e) => setCmd(e.target.value)}
+            placeholder={t("ag_cmd_ph")}
+            rows={3}
+            className="mt-3 w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm"
+          />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            {cmdMsg && (
+              <span className={`text-xs ${cmdMsg.ok ? "text-success" : "text-destructive"}`}>{cmdMsg.text}</span>
+            )}
+            <button
+              onClick={sendCommand}
+              disabled={cmdBusy || !cmd.trim()}
+              className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {cmdBusy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              {cmdBusy ? t("ag_running") : t("ag_cmd_send")}
+            </button>
+          </div>
+        </div>
+
+        {/* Autonomy explainer */}
+        <div className="mt-6 rounded-2xl border border-border/60 bg-card/50 p-4">
+          <div className="flex items-start gap-3">
+            <Bot className="mt-0.5 size-5 text-accent shrink-0" />
+            <div>
+              <h3 className="font-display font-bold">{t("ag_autonomy_title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("ag_autonomy_desc")}</p>
+              {targets.length > 0 && (
+                <button
+                  onClick={() => runNow()}
+                  disabled={runningId !== null}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50"
+                >
+                  {runningId === "all" ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
+                  {runningId === "all" ? t("ag_running") : t("ag_run_all")}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
             <Globe className="size-4 text-accent" /> {t("ag_targets_title")}
