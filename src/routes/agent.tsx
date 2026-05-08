@@ -6,8 +6,8 @@ import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { runAgentNow, runAgentCommand } from "@/lib/agent.functions";
-import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles } from "lucide-react";
+import { runAgentNow, runAgentCommand, runVisibilityCheck, publishToChannel } from "@/lib/agent.functions";
+import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
   component: () => (
@@ -47,8 +47,22 @@ function AgentPage() {
   const [cmd, setCmd] = useState("");
   const [cmdBusy, setCmdBusy] = useState(false);
   const [cmdMsg, setCmdMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Visibility
+  const [brand, setBrand] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [visBusy, setVisBusy] = useState(false);
+  const [visMsg, setVisMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Channels
+  const [channels, setChannels] = useState<any[]>([]);
+  const [chKind, setChKind] = useState<"telegram" | "linkedin" | "facebook" | "instagram">("telegram");
+  const [chLabel, setChLabel] = useState("");
+  const [chBotToken, setChBotToken] = useState("");
+  const [chChatId, setChChatId] = useState("");
+  const [publishingTask, setPublishingTask] = useState<string | null>(null);
   const runNowFn = useServerFn(runAgentNow);
   const runCmdFn = useServerFn(runAgentCommand);
+  const runVisFn = useServerFn(runVisibilityCheck);
+  const publishFn = useServerFn(publishToChannel);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/agent" } });
@@ -75,6 +89,15 @@ function AgentPage() {
 
     const { data: tk } = await supabase.from("agent_tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
     setTasks(tk || []);
+
+    const { data: ch } = await supabase.from("publish_channels").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    setChannels(ch || []);
+
+    const { data: prof } = await supabase.from("profiles").select("brand_name, brand_keywords").eq("id", user.id).maybeSingle();
+    if (prof) {
+      if (!brand && prof.brand_name) setBrand(prof.brand_name);
+      if (!keywords && prof.brand_keywords) setKeywords(prof.brand_keywords);
+    }
     setPageLoading(false);
   };
 
@@ -144,6 +167,57 @@ function AgentPage() {
     } finally {
       setCmdBusy(false);
       load();
+    }
+  };
+
+  const runVisibility = async () => {
+    if (!brand.trim() || visBusy) return;
+    setVisBusy(true); setVisMsg(null);
+    try {
+      const res: any = await runVisFn({ data: { brand, keywords, lang: outLang } });
+      if (res?.ok) setVisMsg({ ok: true, text: t("ag_vis_ok") });
+      else setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${tx(res?.error)}` });
+    } catch (e: any) {
+      setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${e?.message || ""}` });
+    } finally {
+      setVisBusy(false);
+      load();
+    }
+  };
+
+  const addChannel = async () => {
+    if (!user) return;
+    if (chKind !== "telegram") {
+      alert(t("ag_ch_soon"));
+      return;
+    }
+    if (!chBotToken.trim() || !chChatId.trim()) {
+      alert(t("ag_ch_required"));
+      return;
+    }
+    await supabase.from("publish_channels").insert({
+      user_id: user.id, kind: chKind, label: chLabel || null,
+      config: { bot_token: chBotToken.trim(), chat_id: chChatId.trim() },
+    });
+    setChLabel(""); setChBotToken(""); setChChatId("");
+    load();
+  };
+
+  const removeChannel = async (id: string) => {
+    await supabase.from("publish_channels").delete().eq("id", id);
+    load();
+  };
+
+  const publishTask = async (taskId: string, text: string, channelId: string) => {
+    setPublishingTask(taskId);
+    try {
+      const res: any = await publishFn({ data: { taskId, text, channelId } });
+      if (res?.ok) alert(t("ag_pub_ok"));
+      else alert(`${t("ag_pub_fail")} ${tx(res?.error)}`);
+    } catch (e: any) {
+      alert(`${t("ag_pub_fail")} ${e?.message || ""}`);
+    } finally {
+      setPublishingTask(null);
     }
   };
 
@@ -278,6 +352,101 @@ function AgentPage() {
           </div>
         </div>
 
+        {/* AI Visibility Check */}
+        <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
+            <Eye className="size-5 text-primary" /> {t("ag_vis_title")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("ag_vis_desc")}</p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <input value={brand} onChange={(e) => setBrand(e.target.value)}
+              placeholder={t("ag_vis_brand_ph")}
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
+              placeholder={t("ag_vis_keywords_ph")}
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            {visMsg && (
+              <span className={`text-xs ${visMsg.ok ? "text-success" : "text-destructive"}`}>{visMsg.text}</span>
+            )}
+            <button onClick={runVisibility} disabled={visBusy || !brand.trim()}
+              className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+              {visBusy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+              {visBusy ? t("ag_running") : t("ag_vis_run")}
+            </button>
+          </div>
+        </div>
+
+        {/* Publishing Channels */}
+        <div className="mt-8 rounded-2xl border border-accent/30 bg-card/70 p-5">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold">
+            <SendIcon className="size-5 text-accent" /> {t("ag_ch_title")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("ag_ch_desc")}</p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(["telegram", "linkedin", "facebook", "instagram"] as const).map((k) => {
+              const Icon = k === "telegram" ? MessageCircle : k === "linkedin" ? Linkedin : k === "facebook" ? Facebook : Instagram;
+              const soon = k !== "telegram";
+              return (
+                <button key={k} type="button" onClick={() => setChKind(k)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    chKind === k ? "border-accent bg-accent/20 text-accent" : "border-border text-muted-foreground"
+                  }`}>
+                  <Icon className="size-3.5" /> {t(`ag_ch_${k}` as any)}
+                  {soon && <span className="ms-1 rounded-full bg-muted px-1.5 text-[9px]">{t("ag_ch_soon_tag")}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {chKind === "telegram" ? (
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
+              <input value={chLabel} onChange={(e) => setChLabel(e.target.value)}
+                placeholder={t("ag_ch_label_ph")}
+                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+              <input value={chBotToken} onChange={(e) => setChBotToken(e.target.value)}
+                placeholder={t("ag_ch_token_ph")} type="password"
+                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+              <input value={chChatId} onChange={(e) => setChChatId(e.target.value)}
+                placeholder={t("ag_ch_chatid_ph")}
+                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            </div>
+          ) : (
+            <div className="mt-3 rounded-lg border border-dashed border-border bg-background/40 p-3 text-xs text-muted-foreground">
+              {t("ag_ch_soon_desc")}
+            </div>
+          )}
+
+          {chKind === "telegram" && (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noreferrer"
+                className="text-xs text-primary underline">{t("ag_ch_help")}</a>
+              <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
+                <Plus className="size-4" /> {t("ag_ch_add")}
+              </button>
+            </div>
+          )}
+
+          {channels.length > 0 && (
+            <ul className="mt-4 divide-y divide-border/60 rounded-lg border border-border bg-background/40">
+              {channels.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-3 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="size-4 text-accent" />
+                    <span className="font-semibold">{c.label || c.kind}</span>
+                    <span className="text-xs text-muted-foreground">({c.kind})</span>
+                  </div>
+                  <button onClick={() => removeChannel(c.id)} className="text-destructive hover:opacity-80">
+                    <Trash2 className="size-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
             <Globe className="size-4 text-accent" /> {t("ag_targets_title")}
@@ -339,8 +508,8 @@ function AgentPage() {
               <div key={tk.id} className="rounded-xl border border-border bg-card/70 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
-                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : <Activity className="size-4 text-primary" />}
-                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type}</span>
+                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : tk.task_type === "ai_visibility" ? <Eye className="size-4 text-primary" /> : <Activity className="size-4 text-primary" />}
+                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type === "ai_visibility" ? t("ag_task_visibility") : tk.task_type}</span>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] ${
                       tk.status === "done" ? "bg-success/20 text-success" :
                       tk.status === "failed" ? "bg-destructive/20 text-destructive" :
@@ -360,6 +529,30 @@ function AgentPage() {
                 )}
                 {tk.result?.score != null && (
                   <div className="mt-2 text-xs">GEO Score: <b className="text-accent">{tk.result.score}/100</b></div>
+                )}
+                {tk.task_type === "ai_visibility" && tk.result?.visibility_percent != null && (
+                  <div className="mt-3 space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+                    <div>{t("ag_vis_score")}: <b className="text-primary">{tk.result.visibility_percent}%</b> · {t("ag_vis_sentiment")}: <b>{tk.result.sentiment}</b></div>
+                    {tk.result.appearance_summary && <p>{tk.result.appearance_summary}</p>}
+                    {tk.result.strengths?.length > 0 && <div>✅ {tk.result.strengths.join(" · ")}</div>}
+                    {tk.result.weaknesses?.length > 0 && <div>⚠️ {tk.result.weaknesses.join(" · ")}</div>}
+                    {tk.result.recommendations?.length > 0 && (
+                      <ol className="ms-4 list-decimal space-y-0.5">{tk.result.recommendations.map((r: string, i: number) => <li key={i}>{r}</li>)}</ol>
+                    )}
+                  </div>
+                )}
+                {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && channels.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
+                    <span className="text-xs text-muted-foreground">{t("ag_pub_to")}:</span>
+                    {channels.filter((c) => c.active).map((c) => (
+                      <button key={c.id} onClick={() => publishTask(tk.id, tk.result.summary, c.id)}
+                        disabled={publishingTask === tk.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50">
+                        {publishingTask === tk.id ? <Loader2 className="size-3 animate-spin" /> : <SendIcon className="size-3" />}
+                        {c.label || c.kind}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             ))}

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { callAI, checkAndConsume, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
+import { callAI, checkAndConsume, publishToTelegram, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST, SYSTEM_VISIBILITY } from "@/lib/agent.server";
 
 type L = "ar" | "en" | "ku";
 const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
@@ -83,6 +83,88 @@ export const runAgentCommand = createServerFn({ method: "POST" })
       await supabaseAdmin.from("agent_tasks").insert({
         user_id: userId, task_type: "command",
         input: data.command, status: "failed", error: e?.message || "error",
+      });
+      return { ok: false, error: e?.message || "error" };
+    }
+  });
+
+// AI Visibility Check — analyzes how the brand appears in AI search engines
+export const runVisibilityCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => {
+    const x = (d || {}) as { brand?: string; keywords?: string; lang?: string };
+    if (!x.brand || x.brand.trim().length < 2) throw new Error("brand_required");
+    return {
+      brand: x.brand.trim().slice(0, 200),
+      keywords: (x.keywords || "").trim().slice(0, 500),
+      lang: normLang(x.lang),
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    try { await checkAndConsume(userId, 1); }
+    catch (e: any) { return { ok: false, error: e?.message || "limit" }; }
+
+    const prompt = `العلامة التجارية: ${data.brand}\nالكلمات المفتاحية: ${data.keywords || "(غير محددة)"}\nالسوق: العراق`;
+    try {
+      const raw = await callAI(SYSTEM_VISIBILITY, prompt, data.lang);
+      let parsed: any = null;
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
+
+      // Save brand to profile for next runs
+      await supabaseAdmin.from("profiles")
+        .update({ brand_name: data.brand, brand_keywords: data.keywords || null })
+        .eq("id", userId);
+
+      const { data: row } = await supabaseAdmin.from("agent_tasks").insert({
+        user_id: userId, task_type: "ai_visibility",
+        input: data.brand, status: "done",
+        result: parsed ? { ...parsed, raw, lang: data.lang } : { summary: raw, lang: data.lang },
+      }).select("id").single();
+      return { ok: true, taskId: row?.id, result: parsed || { summary: raw } };
+    } catch (e: any) {
+      await supabaseAdmin.from("agent_tasks").insert({
+        user_id: userId, task_type: "ai_visibility",
+        input: data.brand, status: "failed", error: e?.message || "error",
+      });
+      return { ok: false, error: e?.message || "error" };
+    }
+  });
+
+// Publish a generated post to a saved channel (Telegram only for now)
+export const publishToChannel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => {
+    const x = (d || {}) as { channelId?: string; text?: string; taskId?: string };
+    if (!x.channelId) throw new Error("channel_required");
+    if (!x.text || x.text.trim().length < 3) throw new Error("text_required");
+    return { channelId: x.channelId, text: x.text.slice(0, 4000), taskId: x.taskId };
+  })
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    const { data: ch, error } = await supabaseAdmin
+      .from("publish_channels").select("*")
+      .eq("id", data.channelId).eq("user_id", userId).maybeSingle();
+    if (error || !ch) return { ok: false, error: "channel_not_found" };
+    if (!ch.active) return { ok: false, error: "channel_inactive" };
+
+    try {
+      if (ch.kind === "telegram") {
+        const cfg = (ch.config || {}) as { bot_token?: string; chat_id?: string };
+        if (!cfg.bot_token || !cfg.chat_id) throw new Error("telegram_config_missing");
+        await publishToTelegram(cfg.bot_token, cfg.chat_id, data.text);
+      } else {
+        throw new Error("channel_kind_not_supported_yet");
+      }
+      await supabaseAdmin.from("publish_log").insert({
+        user_id: userId, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind, status: "sent",
+      });
+      return { ok: true };
+    } catch (e: any) {
+      await supabaseAdmin.from("publish_log").insert({
+        user_id: userId, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind,
+        status: "failed", error: e?.message || "error",
       });
       return { ok: false, error: e?.message || "error" };
     }

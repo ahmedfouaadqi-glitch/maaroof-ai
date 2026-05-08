@@ -243,6 +243,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          brand_keywords: string | null
+          brand_name: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -255,6 +257,8 @@ export type Database = {
           usage_period_start: string
         }
         Insert: {
+          brand_keywords?: string | null
+          brand_name?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -267,6 +271,8 @@ export type Database = {
           usage_period_start?: string
         }
         Update: {
+          brand_keywords?: string | null
+          brand_name?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -277,6 +283,69 @@ export type Database = {
           subscription_expires_at?: string | null
           subscription_tier?: string | null
           usage_period_start?: string
+        }
+        Relationships: []
+      }
+      publish_channels: {
+        Row: {
+          active: boolean
+          config: Json
+          created_at: string
+          id: string
+          kind: string
+          label: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          config?: Json
+          created_at?: string
+          id?: string
+          kind: string
+          label?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          config?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      publish_log: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          status: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          status: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          status?: string
+          task_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
