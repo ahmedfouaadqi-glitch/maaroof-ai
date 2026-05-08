@@ -281,7 +281,17 @@ function AgentPage() {
                     {tg.url && <a href={tg.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline"><ExternalLink className="size-3" />{tg.url}</a>}
                     {tg.topic && <div className="text-muted-foreground">📌 {tg.topic}</div>}
                   </div>
-                  <button onClick={() => removeTarget(tg.id)} className="text-destructive hover:text-destructive/70"><Trash2 className="size-4" /></button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => runNow(tg.id)}
+                      disabled={runningId !== null}
+                      className="inline-flex items-center gap-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50"
+                    >
+                      {runningId === tg.id ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
+                      {runningId === tg.id ? t("ag_running") : t("ag_run_now")}
+                    </button>
+                    <button onClick={() => removeTarget(tg.id)} className="text-destructive hover:text-destructive/70"><Trash2 className="size-4" /></button>
+                  </div>
                 </div>
               ))}
             </div>
