@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { I18nProvider, useI18n } from "@/lib/i18n";
+import { I18nProvider, useI18n, PLAN_KEY_BY_NAME, ADDON_KEY_BY_NAME } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
