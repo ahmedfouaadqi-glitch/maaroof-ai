@@ -236,7 +236,7 @@ function PricingPage() {
                       <Bot className="size-5 text-accent" />
                       <h3 className="font-display text-lg font-bold">{a.name}</h3>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{addonDesc(a.name) || a.description}</p>
 
                     <div className="mt-4 flex items-baseline gap-1">
                       <span className="text-xs text-muted-foreground">+</span>
