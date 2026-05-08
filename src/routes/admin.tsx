@@ -358,130 +358,210 @@ function PlansTab() {
 }
 
 function AgentTab() {
-  const [requests, setRequests] = useState<any[]>([]);
   const [subs, setSubs] = useState<any[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
+  const [emails, setEmails] = useState<Record<string, string>>({});
+  const [globalOn, setGlobalOn] = useState<boolean>(true);
+  const [recentTasks, setRecentTasks] = useState<any[]>([]);
 
   const load = async () => {
-    const [{ data: rq }, { data: sb }, { data: ad }] = await Promise.all([
-      supabase.from("subscription_requests")
-        .select("*, agent_addons(name, price_iqd, monthly_tasks, max_targets)")
-        .eq("request_type", "agent")
-        .order("created_at", { ascending: false }).limit(50),
-      supabase.from("user_agent_subscriptions")
-        .select("*, agent_addons(name)")
-        .order("created_at", { ascending: false }).limit(100),
+    const [{ data: sb }, { data: ad }, { data: st }, { data: tk }] = await Promise.all([
+      supabase.from("user_agent_subscriptions").select("*, agent_addons(name, monthly_tasks)").order("created_at", { ascending: false }).limit(200),
       supabase.from("agent_addons").select("*").order("sort_order"),
+      supabase.from("app_settings").select("value").eq("key", "agent_enabled_global").maybeSingle(),
+      supabase.from("agent_tasks").select("*").order("created_at", { ascending: false }).limit(20),
     ]);
-    setRequests(rq || []);
     setSubs(sb || []);
     setAddons(ad || []);
+    setRecentTasks(tk || []);
+    setGlobalOn(st?.value !== false);
+    const ids = Array.from(new Set((sb || []).map((s: any) => s.user_id)));
+    if (ids.length) {
+      const { data: ps } = await supabase.from("profiles").select("id, email").in("id", ids);
+      const m: Record<string, string> = {};
+      (ps || []).forEach((p: any) => { m[p.id] = p.email; });
+      setEmails(m);
+    }
   };
   useEffect(() => { load(); }, []);
 
-  const activate = async (r: any) => {
-    if (!r.agent_addon_id) return;
-    const expires = new Date(Date.now() + 30 * 86400000).toISOString();
-    await supabase.from("user_agent_subscriptions").insert({
-      user_id: r.user_id, addon_id: r.agent_addon_id, status: "active",
-      expires_at: expires, period_start: new Date().toISOString(),
-    });
-    await supabase.from("subscription_requests").update({
-      status: "approved", reviewed_at: new Date().toISOString(),
-    }).eq("id", r.id);
+  const toggleGlobal = async () => {
+    const next = !globalOn;
+    await supabase.from("app_settings").upsert({ key: "agent_enabled_global", value: next as any, updated_at: new Date().toISOString() });
+    setGlobalOn(next);
+  };
+
+  const extend = async (s: any, days: number) => {
+    const base = s.expires_at && new Date(s.expires_at) > new Date() ? new Date(s.expires_at) : new Date();
+    const exp = new Date(base.getTime() + days * 86400000).toISOString();
+    await supabase.from("user_agent_subscriptions").update({ expires_at: exp, status: "active" }).eq("id", s.id);
+    load();
+  };
+  const resetUsage = async (s: any) => {
+    await supabase.from("user_agent_subscriptions").update({ tasks_used: 0, tasks_used_today: 0, period_start: new Date().toISOString() }).eq("id", s.id);
+    load();
+  };
+  const setStatus = async (s: any, status: string) => {
+    await supabase.from("user_agent_subscriptions").update({ status }).eq("id", s.id);
+    load();
+  };
+  const changeAddon = async (s: any, addonId: string) => {
+    await supabase.from("user_agent_subscriptions").update({ addon_id: addonId }).eq("id", s.id);
     load();
   };
 
-  const reject = async (r: any) => {
-    await supabase.from("subscription_requests").update({
-      status: "rejected", reviewed_at: new Date().toISOString(),
-    }).eq("id", r.id);
+  const toggleAddon = async (a: any) => {
+    await supabase.from("agent_addons").update({ active: !a.active }).eq("id", a.id);
     load();
   };
-
-  const expire = async (s: any) => {
-    await supabase.from("user_agent_subscriptions").update({ status: "expired" }).eq("id", s.id);
+  const updateAddon = async (a: any, patch: any) => {
+    await supabase.from("agent_addons").update(patch).eq("id", a.id);
+    load();
+  };
+  const createAddon = async () => {
+    const name = prompt("Addon name?");
+    if (!name) return;
+    await supabase.from("agent_addons").insert({ name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] });
+    load();
+  };
+  const deleteAddon = async (a: any) => {
+    if (!confirm(`Delete addon "${a.name}"?`)) return;
+    await supabase.from("agent_addons").delete().eq("id", a.id);
     load();
   };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
-          <Bell className="size-4 text-accent" /> طلبات الوكيل المعلّقة
-        </h2>
-        <div className="space-y-2">
-          {requests.filter((r) => r.status === "pending").length === 0 && (
-            <p className="text-sm text-muted-foreground">لا توجد طلبات معلّقة.</p>
-          )}
-          {requests.filter((r) => r.status === "pending").map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 p-4">
-              <div>
-                <div className="font-mono text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</div>
-                <div className="font-medium">User: {r.user_id.slice(0, 8)}… · Addon: {r.agent_addons?.name || "—"}</div>
-                <div className="text-xs text-muted-foreground">
-                  {r.agent_addons && `${r.agent_addons.price_iqd?.toLocaleString()} د.ع · ${r.agent_addons.monthly_tasks} مهمة/شهر · ${r.agent_addons.max_targets} مواقع`}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => activate(r)} className="inline-flex items-center gap-1 rounded-full bg-success/20 px-3 py-1.5 text-xs text-success hover:bg-success/30">
-                  <Check className="size-3" /> تفعيل (30 يوم)
-                </button>
-                <button onClick={() => reject(r)} className="inline-flex items-center gap-1 rounded-full bg-destructive/20 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/30">
-                  <X className="size-3" /> رفض
-                </button>
-              </div>
-            </div>
-          ))}
+      {/* Global control */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/70 p-5">
+        <div className="flex items-center gap-3">
+          <Bot className="size-5 text-accent" />
+          <div>
+            <div className="font-display font-semibold">التحكم العام بالوكيل الذكي</div>
+            <div className="text-xs text-muted-foreground">إيقاف/تشغيل الوكيل لكل المستخدمين فوراً عبر الموقع.</div>
+          </div>
         </div>
+        <button onClick={toggleGlobal}
+          className={`rounded-full px-4 py-2 text-sm font-semibold ${globalOn ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
+          {globalOn ? "● مُفعّل" : "○ متوقف"}
+        </button>
       </div>
 
+      {/* Active subscriptions with full controls */}
       <div>
         <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
-          <Bot className="size-4 text-accent" /> الاشتراكات النشطة
+          <Bot className="size-4 text-accent" /> اشتراكات الوكيل ({subs.length})
         </h2>
         <div className="overflow-x-auto rounded-2xl border border-border bg-card/70">
-          <table className="w-full min-w-[700px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
-              <tr><th className="p-3 text-start">User</th><th className="p-3 text-start">Addon</th><th className="p-3 text-start">Status</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">Expires</th><th className="p-3"></th></tr>
+              <tr>
+                <th className="p-3 text-start">User</th><th className="p-3 text-start">Addon</th>
+                <th className="p-3 text-start">Status</th><th className="p-3 text-start">Used</th>
+                <th className="p-3 text-start">Expires</th><th className="p-3"></th>
+              </tr>
             </thead>
             <tbody>
               {subs.map((s) => (
-                <tr key={s.id} className="border-t border-border">
-                  <td className="p-3 font-mono text-xs">{s.user_id.slice(0, 8)}…</td>
-                  <td className="p-3">{s.agent_addons?.name || "—"}</td>
+                <tr key={s.id} className="border-t border-border align-top">
+                  <td className="p-3 text-xs">{emails[s.user_id] || s.user_id.slice(0,8)+"…"}</td>
+                  <td className="p-3">
+                    <select value={s.addon_id || ""} onChange={(e) => changeAddon(s, e.target.value)}
+                      className="rounded border border-border bg-background/60 px-2 py-1 text-xs">
+                      {addons.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </td>
                   <td className="p-3">
                     <span className={`rounded px-2 py-0.5 text-[10px] ${
-                      s.status === "active" ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
+                      s.status === "active" ? "bg-success/20 text-success" :
+                      s.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                      "bg-muted text-muted-foreground"
                     }`}>{s.status}</span>
                   </td>
-                  <td className="p-3 text-xs">{s.tasks_used}</td>
+                  <td className="p-3 text-xs">{s.tasks_used}/{s.agent_addons?.monthly_tasks || "?"}</td>
                   <td className="p-3 text-xs text-muted-foreground">{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : "—"}</td>
-                  <td className="p-3 text-end">
-                    {s.status === "active" && (
-                      <button onClick={() => expire(s)} className="rounded-full border border-destructive/40 px-3 py-1 text-xs text-destructive hover:bg-destructive/10">
-                        إيقاف
-                      </button>
-                    )}
+                  <td className="p-3">
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      <button onClick={() => extend(s, 30)} className="rounded-full bg-primary/20 px-2.5 py-1 text-[11px] text-primary hover:bg-primary/30">+30 يوم</button>
+                      <button onClick={() => extend(s, 7)} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary">+7</button>
+                      <button onClick={() => resetUsage(s)} className="rounded-full border border-border px-2.5 py-1 text-[11px]">صفّر الاستخدام</button>
+                      {s.status === "active"
+                        ? <button onClick={() => setStatus(s, "expired")} className="rounded-full border border-destructive/40 px-2.5 py-1 text-[11px] text-destructive">إيقاف</button>
+                        : <button onClick={() => setStatus(s, "active")} className="rounded-full bg-success/20 px-2.5 py-1 text-[11px] text-success">تفعيل</button>}
+                    </div>
                   </td>
                 </tr>
               ))}
+              {subs.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد اشتراكات.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Addons CRUD */}
       <div>
-        <h2 className="mb-3 font-display text-lg font-bold">باقات الوكيل</h2>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold">باقات الوكيل</h2>
+          <button onClick={createAddon} className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground">+ باقة جديدة</button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
           {addons.map((a) => (
             <div key={a.id} className="rounded-xl border border-border bg-card/70 p-4">
-              <div className="font-display font-semibold">{a.name}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{a.description}</div>
-              <div className="mt-2 text-sm">{a.price_iqd.toLocaleString()} د.ع</div>
-              <div className="text-xs text-muted-foreground">{a.monthly_tasks} مهمة/شهر · {a.daily_task_cap} يومي · {a.max_targets} مواقع</div>
+              <div className="flex items-center justify-between">
+                <input defaultValue={a.name} onBlur={(e) => updateAddon(a, { name: e.target.value })}
+                  className="bg-transparent font-display font-semibold outline-none" />
+                <div className="flex gap-1">
+                  <button onClick={() => toggleAddon(a)} className={`rounded-full px-2 py-0.5 text-[10px] ${a.active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>{a.active ? "Active" : "Inactive"}</button>
+                  <button onClick={() => deleteAddon(a)} className="rounded-full bg-destructive/20 px-2 py-0.5 text-[10px] text-destructive">×</button>
+                </div>
+              </div>
+              <textarea defaultValue={a.description || ""} onBlur={(e) => updateAddon(a, { description: e.target.value })}
+                className="mt-2 w-full resize-none rounded border border-border bg-background/40 px-2 py-1 text-xs" rows={2} />
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <label>السعر (IQD)
+                  <input type="number" defaultValue={a.price_iqd} onBlur={(e) => updateAddon(a, { price_iqd: parseInt(e.target.value, 10) || 0 })}
+                    className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
+                </label>
+                <label>مهام/شهر
+                  <input type="number" defaultValue={a.monthly_tasks} onBlur={(e) => updateAddon(a, { monthly_tasks: parseInt(e.target.value, 10) || 0 })}
+                    className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
+                </label>
+                <label>حد يومي
+                  <input type="number" defaultValue={a.daily_task_cap} onBlur={(e) => updateAddon(a, { daily_task_cap: parseInt(e.target.value, 10) || 0 })}
+                    className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
+                </label>
+                <label>عدد المواقع
+                  <input type="number" defaultValue={a.max_targets} onBlur={(e) => updateAddon(a, { max_targets: parseInt(e.target.value, 10) || 0 })}
+                    className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
+                </label>
+              </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Recent tasks */}
+      <div>
+        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
+          <Activity className="size-4 text-accent" /> آخر مهام الوكيل
+        </h2>
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card/70">
+          <table className="w-full min-w-[600px] text-sm">
+            <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
+              <tr><th className="p-3 text-start">Time</th><th className="p-3 text-start">User</th><th className="p-3 text-start">Type</th><th className="p-3 text-start">Status</th></tr>
+            </thead>
+            <tbody>
+              {recentTasks.map((t) => (
+                <tr key={t.id} className="border-t border-border">
+                  <td className="p-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
+                  <td className="p-3 text-xs font-mono">{t.user_id.slice(0,8)}…</td>
+                  <td className="p-3 text-xs">{t.task_type}</td>
+                  <td className="p-3 text-xs">{t.status}</td>
+                </tr>
+              ))}
+              {recentTasks.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-xs text-muted-foreground">لا مهام بعد.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
