@@ -91,9 +91,6 @@ function Page() {
         </div>
       </section>
 
-          </div>
-        </div>
-      </section>
 
       {/* CTA */}
       <section id="cta" className="relative border-t border-border/60 py-24">
