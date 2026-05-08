@@ -121,6 +121,7 @@ function AgentPage() {
   };
 
   const errMap: Record<string, string> = {
+    auth_required: t("auth_required"),
     no_targets: t("ag_err_no_targets"),
     no_active_subscription: t("ag_err_no_sub"),
     no_addon: t("ag_err_no_sub"),
