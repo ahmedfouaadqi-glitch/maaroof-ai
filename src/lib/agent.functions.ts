@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest, getRequestHeader } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callAI, checkAndConsume, publishToTelegram, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST, SYSTEM_VISIBILITY } from "@/lib/agent.server";
@@ -102,12 +103,9 @@ export const runVisibilityCheck = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     try {
-      const authHeader = context.headers?.get?.("authorization");
-      const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/does-not-exist`);
-      void response;
-      const origin = process.env.URL || process.env.VITE_APP_URL || "";
-      void origin;
-      const base = context.request?.url ? new URL(context.request.url).origin : "";
+      const request = getRequest();
+      const authHeader = getRequestHeader("authorization");
+      const base = new URL(request.url).origin;
       const resp = await fetch(`${base}/api/visibility`, {
         method: "POST",
         headers: {
