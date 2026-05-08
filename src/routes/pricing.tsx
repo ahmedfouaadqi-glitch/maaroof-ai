@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { I18nProvider, useI18n } from "@/lib/i18n";
+import { I18nProvider, useI18n, PLAN_KEY_BY_NAME, ADDON_KEY_BY_NAME } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,10 +43,35 @@ function PricingPage() {
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
-      .then(({ data }) => setPlans(data || []));
+      .then(({ data }) => {
+        const seen = new Set<string>();
+        setPlans((data || []).filter((p: any) => seen.has(p.name) ? false : (seen.add(p.name), true)));
+      });
     supabase.from("agent_addons").select("*").eq("active", true).order("sort_order")
-      .then(({ data }) => setAddons(data || []));
+      .then(({ data }) => {
+        const seen = new Set<string>();
+        setAddons((data || []).filter((a: any) => seen.has(a.name) ? false : (seen.add(a.name), true)));
+      });
   }, []);
+
+  const planDesc = (name: string) => {
+    const k = PLAN_KEY_BY_NAME[name];
+    return k ? t(`plan_${k}_desc` as any) : "";
+  };
+  const planFeatures = (name: string): string[] => {
+    const k = PLAN_KEY_BY_NAME[name];
+    const s = k ? t(`plan_${k}_features` as any) : "";
+    return s ? s.split("|") : [];
+  };
+  const addonDesc = (name: string) => {
+    const k = ADDON_KEY_BY_NAME[name];
+    return k ? t(`addon_${k}_desc` as any) : "";
+  };
+  const addonFeatures = (name: string): string[] => {
+    const k = ADDON_KEY_BY_NAME[name];
+    const s = k ? t(`addon_${k}_features` as any) : "";
+    return s ? s.split("|") : [];
+  };
 
   const openSelect = (plan: any, kind: "plan" | "agent" = "plan") => {
     if (!user) {
@@ -132,7 +157,7 @@ function PricingPage() {
                     </span>
                   )}
                   <h3 className="font-display text-xl font-bold">{p.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{p.description?.split("(")[0]}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{planDesc(p.name) || p.description?.split("(")[0]}</p>
 
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="font-display text-3xl font-bold text-gradient">
@@ -152,7 +177,7 @@ function PricingPage() {
                   )}
 
                   <ul className="mt-4 flex-1 space-y-2 text-sm">
-                    {(p.features as string[]).slice(0, 4).map((f, idx) => (
+                    {(planFeatures(p.name).length ? planFeatures(p.name) : (p.features as string[])).slice(0, 5).map((f, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <Check className="mt-0.5 size-4 shrink-0 text-success" />
                         <span>{f}</span>
@@ -211,7 +236,7 @@ function PricingPage() {
                       <Bot className="size-5 text-accent" />
                       <h3 className="font-display text-lg font-bold">{a.name}</h3>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{addonDesc(a.name) || a.description}</p>
 
                     <div className="mt-4 flex items-baseline gap-1">
                       <span className="text-xs text-muted-foreground">+</span>
@@ -240,7 +265,7 @@ function PricingPage() {
                     </div>
 
                     <ul className="mt-4 flex-1 space-y-2 text-sm">
-                      {(a.features as string[]).map((f, i) => (
+                      {(addonFeatures(a.name).length ? addonFeatures(a.name) : (a.features as string[])).map((f, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <Check className="mt-0.5 size-4 shrink-0 text-success" />
                           <span>{f}</span>
