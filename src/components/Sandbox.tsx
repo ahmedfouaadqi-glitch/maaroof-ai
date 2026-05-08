@@ -67,7 +67,7 @@ export function Sandbox() {
 
       const r = await fetch("/api/analyze", {
         method: "POST", headers,
-        body: JSON.stringify({ text, lang }),
+        body: JSON.stringify({ text, lang: outLang }),
       });
       const data = await r.json();
       await stepTimer;
