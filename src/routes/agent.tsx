@@ -170,7 +170,57 @@ function AgentPage() {
     }
   };
 
-  if (loading || pageLoading) return (
+  const runVisibility = async () => {
+    if (!brand.trim() || visBusy) return;
+    setVisBusy(true); setVisMsg(null);
+    try {
+      const res: any = await runVisFn({ data: { brand, keywords, lang: outLang } });
+      if (res?.ok) setVisMsg({ ok: true, text: t("ag_vis_ok") });
+      else setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${tx(res?.error)}` });
+    } catch (e: any) {
+      setVisMsg({ ok: false, text: `${t("ag_vis_fail")} ${e?.message || ""}` });
+    } finally {
+      setVisBusy(false);
+      load();
+    }
+  };
+
+  const addChannel = async () => {
+    if (!user) return;
+    if (chKind !== "telegram") {
+      alert(t("ag_ch_soon"));
+      return;
+    }
+    if (!chBotToken.trim() || !chChatId.trim()) {
+      alert(t("ag_ch_required"));
+      return;
+    }
+    await supabase.from("publish_channels").insert({
+      user_id: user.id, kind: chKind, label: chLabel || null,
+      config: { bot_token: chBotToken.trim(), chat_id: chChatId.trim() },
+    });
+    setChLabel(""); setChBotToken(""); setChChatId("");
+    load();
+  };
+
+  const removeChannel = async (id: string) => {
+    await supabase.from("publish_channels").delete().eq("id", id);
+    load();
+  };
+
+  const publishTask = async (taskId: string, text: string, channelId: string) => {
+    setPublishingTask(taskId);
+    try {
+      const res: any = await publishFn({ data: { taskId, text, channelId } });
+      if (res?.ok) alert(t("ag_pub_ok"));
+      else alert(`${t("ag_pub_fail")} ${tx(res?.error)}`);
+    } catch (e: any) {
+      alert(`${t("ag_pub_fail")} ${e?.message || ""}`);
+    } finally {
+      setPublishingTask(null);
+    }
+  };
+
     <div className="min-h-screen"><SiteHeader />
       <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>
     </div>
