@@ -63,11 +63,7 @@ function Page() {
             <Feature icon={<Zap />} title={t("why_1_t")} desc={t("why_1_d")} />
             <Feature icon={<Globe2 />} title={t("why_2_t")} desc={t("why_2_d")} />
             <Feature icon={<ShieldCheck />} title={t("why_3_t")} desc={t("why_3_d")} />
-            <Feature
-              icon={<Bot />}
-              title="🤖 الوكيل الذكي (إضافة)"
-              desc="ينفّذ المهام نيابةً عنك بالأوامر والاختيارات: يحلّل صفحاتك يومياً، يقترح منشورات جاهزة، ويراقب ظهورك في الذكاء الاصطناعي. يضاف لاشتراكك من 20,000 د.ع/شهر."
-            />
+            <Feature icon={<Bot />} title={t("why_4_t")} desc={t("why_4_d")} />
           </div>
         </div>
       </section>
