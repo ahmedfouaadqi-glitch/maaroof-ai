@@ -271,6 +271,9 @@ function AgentPage() {
                   {runningId === "all" ? t("ag_running") : t("ag_run_all")}
                 </button>
               )}
+              {runMsg && (
+                <div className={`mt-2 text-xs ${runMsg.ok ? "text-success" : "text-destructive"}`}>{runMsg.text}</div>
+              )}
             </div>
           </div>
         </div>
