@@ -112,6 +112,13 @@ export const runVisibilityCheck = createServerFn({ method: "POST" })
     } catch (e: any) {
       const msg = e?.message || String(e) || "unknown_error";
       console.error("[runVisibilityCheck] fatal:", msg);
+      await supabaseAdmin.from("agent_tasks").insert({
+        user_id: userId,
+        task_type: "ai_visibility",
+        input: data.brand,
+        status: "failed",
+        error: msg,
+      });
       return { ok: false, error: msg };
     }
   });
