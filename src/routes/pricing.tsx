@@ -279,7 +279,7 @@ function PricingPage() {
             </button>
             <h3 className="font-display text-xl font-bold">تأكيد الاشتراك</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              اخترت خطة <b className="text-foreground">{selected.name}</b> بسعر{" "}
+              اخترت {selectedKind === "agent" ? "إضافة الوكيل الذكي" : "خطة"} <b className="text-foreground">{selected.name}</b> بسعر{" "}
               <b className="text-foreground">{selected.price_iqd.toLocaleString()} د.ع</b>. اختر طريقة التواصل لتفعيل اشتراكك:
             </p>
 
