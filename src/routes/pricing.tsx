@@ -19,17 +19,17 @@ export const Route = createFileRoute("/pricing")({
 
 const SUPPORT_EMAIL = "ahmedfouaad.qi@gmail.com";
 
-const EXAMPLES: Record<string, { who: string; use: string }> = {
-  Starter: { who: "صانع محتوى أو فريلانسر", use: "تحليل ~1 منشور يومياً + تحسين كتابتك للذكاء الاصطناعي" },
-  Pro: { who: "متجر إلكتروني أو شركة صغيرة", use: "تحليل 4 منشورات يومياً + اقتراح محتوى مستمر لصفحاتك" },
-  Business: { who: "وكالة تسويق أو فريق محتوى", use: "إدارة عدة عملاء + تقارير PDF + تصدير وتحليل بكميات" },
-  "Pro Yearly": { who: "من يريد توفير 50,000 د.ع", use: "كل مزايا Pro لمدة سنة كاملة بسعر اول مره مخفض" },
+const EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
+  Starter: { who: "ex_starter_who", use: "ex_starter_use" },
+  Pro: { who: "ex_pro_who", use: "ex_pro_use" },
+  Business: { who: "ex_business_who", use: "ex_business_use" },
+  "Pro Yearly": { who: "ex_yearly_who", use: "ex_yearly_use" },
 };
 
-const AGENT_EXAMPLES: Record<string, { who: string; use: string }> = {
-  "Agent Lite": { who: "صانع محتوى مستقل", use: "يحلّل موقعك أسبوعياً ويرسل اقتراح منشور جاهز كل أسبوع" },
-  "Agent Pro": { who: "متجر/شركة صغيرة (3 مواقع)", use: "تحليل يومي + اقتراحات منشورات استباقية + تنبيهات بفرص ظهورك في الذكاء الاصطناعي" },
-  "Agent Business": { who: "وكالة تسويق أو فريق", use: "حتى 10 مواقع · تقارير PDF تلقائية · API للوصول الخارجي" },
+const AGENT_EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
+  "Agent Lite": { who: "ex_alite_who", use: "ex_alite_use" },
+  "Agent Pro": { who: "ex_apro_who", use: "ex_apro_use" },
+  "Agent Business": { who: "ex_abiz_who", use: "ex_abiz_use" },
 };
 
 function PricingPage() {
@@ -67,8 +67,8 @@ function PricingPage() {
     if (selectedKind === "plan") payload.plan_id = selected.id;
     else payload.agent_addon_id = selected.id;
     await supabase.from("subscription_requests").insert(payload);
-    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
-    const msg = `السلام عليكم، أرغب بالاشتراك في ${label} ${selected.name} (${selected.price_iqd.toLocaleString()} د.ع)\nالبريد: ${user.email}`;
+    const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
+    const msg = `${label} ${selected.name} (${selected.price_iqd.toLocaleString()} ${t("pr_iqd")})\n${user.email}`;
     window.open(whatsappLink(msg), "_blank");
     setSelected(null);
   };
@@ -79,10 +79,10 @@ function PricingPage() {
     if (selectedKind === "plan") payload.plan_id = selected.id;
     else payload.agent_addon_id = selected.id;
     await supabase.from("subscription_requests").insert(payload);
-    const label = selectedKind === "agent" ? "الوكيل الذكي" : "خطة";
-    const subject = encodeURIComponent(`طلب اشتراك — ${label} ${selected.name}`);
+    const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
+    const subject = encodeURIComponent(`${label} ${selected.name}`);
     const body = encodeURIComponent(
-      `السلام عليكم،\n\nأرغب بتفعيل الاشتراك في ${label}:\n• ${selected.name}\n• السعر: ${selected.price_iqd.toLocaleString()} د.ع\n\nبريدي: ${user.email}\n\nشكراً.`,
+      `${label}:\n• ${selected.name}\n• ${selected.price_iqd.toLocaleString()} ${t("pr_iqd")}\n\n${user.email}`,
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSelected(null);
@@ -94,11 +94,11 @@ function PricingPage() {
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-            <Sparkles className="size-3.5" /> اختر الخطة المناسبة لك
+            <Sparkles className="size-3.5" /> {t("pr_badge")}
           </span>
-          <h1 className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl">الأسعار</h1>
+          <h1 className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl">{t("pr_title")}</h1>
           <p className="mt-3 text-muted-foreground">
-            خطط مبسّطة بأسعار واضحة. عند الاختيار تواصل معنا عبر <b>واتساب</b> أو <b>البريد الإلكتروني</b> ليتم تفعيل الخطة فوراً.
+            {t("pr_intro_1")} <b>{t("pr_whatsapp")}</b> {t("pr_or")} <b>{t("pr_email_word")}</b> {t("pr_intro_2")}
           </p>
         </div>
 
@@ -106,10 +106,12 @@ function PricingPage() {
           <div className="mt-12 flex justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
         ) : (
           <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {plans.map((p, i) => {
+            {plans.map((p) => {
               const isPopular = p.name === "Pro";
               const isYearly = p.name === "Pro Yearly";
-              const ex = EXAMPLES[p.name] ?? { who: "", use: "" };
+              const exKeys = EXAMPLE_KEYS[p.name];
+              const exWho = exKeys ? t(exKeys.who as any) : "";
+              const exUse = exKeys ? t(exKeys.use as any) : "";
               return (
                 <div
                   key={p.id}
@@ -121,12 +123,12 @@ function PricingPage() {
                 >
                   {isPopular && (
                     <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      <Star className="size-3" /> الأكثر اختياراً
+                      <Star className="size-3" /> {t("pr_most_popular")}
                     </span>
                   )}
                   {isYearly && (
                     <span className="absolute -top-3 start-1/2 -translate-x-1/2 rounded-full bg-success px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      وفّر 50,000 د.ع
+                      {t("pr_save_50k")}
                     </span>
                   )}
                   <h3 className="font-display text-xl font-bold">{p.name}</h3>
@@ -136,16 +138,16 @@ function PricingPage() {
                     <span className="font-display text-3xl font-bold text-gradient">
                       {p.price_iqd.toLocaleString()}
                     </span>
-                    <span className="text-xs text-muted-foreground">د.ع</span>
+                    <span className="text-xs text-muted-foreground">{t("pr_iqd")}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {p.duration_days >= 365 ? "سنوياً (لأول مرة)" : "شهرياً"}
+                    {p.duration_days >= 365 ? t("pr_yearly_first") : t("pr_monthly")}
                   </div>
 
-                  {ex.who && (
+                  {exWho && (
                     <div className="mt-4 rounded-lg border border-border/60 bg-background/40 p-3 text-xs">
-                      <div className="font-semibold text-foreground/90">مناسبة لـ: {ex.who}</div>
-                      <div className="mt-1 text-muted-foreground">{ex.use}</div>
+                      <div className="font-semibold text-foreground/90">{t("pr_suited_for")} {exWho}</div>
+                      <div className="mt-1 text-muted-foreground">{exUse}</div>
                     </div>
                   )}
 
@@ -166,7 +168,7 @@ function PricingPage() {
                         : "border border-primary/40 text-primary hover:bg-primary/10"
                     }`}
                   >
-                    {user ? "اختر هذه الخطة" : "سجّل الدخول للاختيار"}
+                    {user ? t("pr_choose_plan") : t("pr_signin_to_choose")}
                   </button>
                 </div>
               );
@@ -179,19 +181,20 @@ function PricingPage() {
           <div className="mt-20">
             <div className="mx-auto max-w-2xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent">
-                <Bot className="size-3.5" /> إضافة اختيارية
+                <Bot className="size-3.5" /> {t("pr_optional_addon")}
               </span>
-              <h2 className="mt-5 font-display text-3xl font-bold text-gradient md:text-4xl">الوكيل الذكي 🤖</h2>
+              <h2 className="mt-5 font-display text-3xl font-bold text-gradient md:text-4xl">{t("pr_agent_title")}</h2>
               <p className="mt-3 text-muted-foreground">
-                أتمتة كاملة: الوكيل يعمل نيابة عنك يومياً — يحلّل صفحاتك، يقترح منشورات تلقائياً،
-                ويراقب ظهورك في محركات البحث التوليدية. <b>يضاف لاشتراكك الأساسي</b>.
+                {t("pr_agent_intro")} <b>{t("pr_agent_added_to")}</b>
               </p>
             </div>
 
             <div className="mt-10 grid gap-6 md:grid-cols-3">
               {addons.map((a) => {
                 const isPro = a.name === "Agent Pro";
-                const ex = AGENT_EXAMPLES[a.name] ?? { who: "", use: "" };
+                const exKeys = AGENT_EXAMPLE_KEYS[a.name];
+                const exWho = exKeys ? t(exKeys.who as any) : "";
+                const exUse = exKeys ? t(exKeys.use as any) : "";
                 return (
                   <div key={a.id}
                     className={`relative flex flex-col rounded-2xl border p-6 backdrop-blur transition ${
@@ -201,7 +204,7 @@ function PricingPage() {
                     }`}>
                     {isPro && (
                       <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                        <Zap className="size-3" /> الأنسب
+                        <Zap className="size-3" /> {t("pr_recommended")}
                       </span>
                     )}
                     <div className="flex items-center gap-2">
@@ -215,24 +218,24 @@ function PricingPage() {
                       <span className="font-display text-3xl font-bold text-gradient">
                         {a.price_iqd.toLocaleString()}
                       </span>
-                      <span className="text-xs text-muted-foreground">د.ع/شهر</span>
+                      <span className="text-xs text-muted-foreground">{t("pr_iqd_per_month")}</span>
                     </div>
 
-                    {ex.who && (
+                    {exWho && (
                       <div className="mt-4 rounded-lg border border-border/60 bg-background/40 p-3 text-xs">
-                        <div className="font-semibold text-foreground/90">مناسب لـ: {ex.who}</div>
-                        <div className="mt-1 text-muted-foreground">{ex.use}</div>
+                        <div className="font-semibold text-foreground/90">{t("pr_suited_for")} {exWho}</div>
+                        <div className="mt-1 text-muted-foreground">{exUse}</div>
                       </div>
                     )}
 
                     <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
                       <div className="rounded-md bg-background/40 px-2 py-1.5 text-center">
                         <div className="font-bold text-accent">{a.monthly_tasks}</div>
-                        <div className="text-muted-foreground">مهمة/شهر</div>
+                        <div className="text-muted-foreground">{t("pr_tasks_per_month")}</div>
                       </div>
                       <div className="rounded-md bg-background/40 px-2 py-1.5 text-center">
                         <div className="font-bold text-accent">{a.max_targets}</div>
-                        <div className="text-muted-foreground">{a.max_targets === 1 ? "موقع" : "مواقع"}</div>
+                        <div className="text-muted-foreground">{a.max_targets === 1 ? t("pr_site") : t("pr_sites")}</div>
                       </div>
                     </div>
 
@@ -252,7 +255,7 @@ function PricingPage() {
                           ? "bg-gradient-to-r from-accent to-primary text-primary-foreground shadow-[var(--shadow-glow)]"
                           : "border border-accent/40 text-accent hover:bg-accent/10"
                       }`}>
-                      {user ? "أضف الوكيل" : "سجّل الدخول للإضافة"}
+                      {user ? t("pr_add_agent") : t("pr_signin_to_add")}
                     </button>
                   </div>
                 );
@@ -260,13 +263,13 @@ function PricingPage() {
             </div>
 
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              ⚡ يحتاج اشتراك أساسي فعّال · يبدأ التشغيل خلال 24 ساعة من التفعيل
+              {t("pr_agent_note")}
             </p>
           </div>
         )}
 
         <div className="mt-10 text-center">
-          <Link to="/" className="text-sm text-primary hover:underline">← {t("back_home")}</Link>
+          <Link to="/" className="text-sm text-primary hover:underline">← {t("pr_back_home")}</Link>
         </div>
       </div>
 
@@ -277,10 +280,10 @@ function PricingPage() {
             <button onClick={() => setSelected(null)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
               <X className="size-5" />
             </button>
-            <h3 className="font-display text-xl font-bold">تأكيد الاشتراك</h3>
+            <h3 className="font-display text-xl font-bold">{t("pr_confirm_title")}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              اخترت {selectedKind === "agent" ? "إضافة الوكيل الذكي" : "خطة"} <b className="text-foreground">{selected.name}</b> بسعر{" "}
-              <b className="text-foreground">{selected.price_iqd.toLocaleString()} د.ع</b>. اختر طريقة التواصل لتفعيل اشتراكك:
+              {selectedKind === "agent" ? t("pr_confirm_chose_agent") : t("pr_confirm_chose_plan")} <b className="text-foreground">{selected.name}</b> {t("pr_confirm_at_price")}{" "}
+              <b className="text-foreground">{selected.price_iqd.toLocaleString()} {t("pr_iqd")}</b>. {t("pr_confirm_pick_method")}
             </p>
 
             <div className="mt-5 grid gap-3">
@@ -289,19 +292,19 @@ function PricingPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-success to-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
               >
                 <MessageCircle className="size-4" />
-                واتساب — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>+964 773 357 0130</span>
+                {t("pr_whatsapp")} — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>+964 773 357 0130</span>
               </button>
               <button
                 onClick={sendEmail}
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/40 px-5 py-3 text-sm font-semibold text-primary hover:bg-primary/10"
               >
                 <Mail className="size-4" />
-                بريد إلكتروني — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{SUPPORT_EMAIL}</span>
+                {t("pr_email_word")} — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{SUPPORT_EMAIL}</span>
               </button>
             </div>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
-              يتم تسجيل طلبك تلقائياً وسنفعّل الاشتراك خلال دقائق.
+              {t("pr_confirm_logged")}
             </p>
           </div>
         </div>
