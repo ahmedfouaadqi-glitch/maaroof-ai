@@ -54,7 +54,7 @@ function AdminPage() {
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? "🤖 الوكيل" : t(`admin_${k}` as any)}
+              {k === "agent" ? t("nav_agent") : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
@@ -358,11 +358,18 @@ function PlansTab() {
 }
 
 function AgentTab() {
+  const { t } = useI18n();
   const [subs, setSubs] = useState<any[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [globalOn, setGlobalOn] = useState<boolean>(true);
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
+
+  // Manual grant form state
+  const [grantEmail, setGrantEmail] = useState("");
+  const [grantAddonId, setGrantAddonId] = useState("");
+  const [grantDays, setGrantDays] = useState<number>(30);
+  const [grantMsg, setGrantMsg] = useState<string | null>(null);
 
   const load = async () => {
     const [{ data: sb }, { data: ad }, { data: st }, { data: tk }] = await Promise.all([
@@ -375,6 +382,7 @@ function AgentTab() {
     setAddons(ad || []);
     setRecentTasks(tk || []);
     setGlobalOn(st?.value !== false);
+    if (ad && ad.length && !grantAddonId) setGrantAddonId(ad[0].id);
     const ids = Array.from(new Set((sb || []).map((s: any) => s.user_id)));
     if (ids.length) {
       const { data: ps } = await supabase.from("profiles").select("id, email").in("id", ids);
@@ -389,6 +397,22 @@ function AgentTab() {
     const next = !globalOn;
     await supabase.from("app_settings").upsert({ key: "agent_enabled_global", value: next as any, updated_at: new Date().toISOString() });
     setGlobalOn(next);
+  };
+
+  const grantManual = async () => {
+    setGrantMsg(null);
+    if (!grantEmail || !grantAddonId) return;
+    const { data: prof } = await supabase.from("profiles").select("id").eq("email", grantEmail.trim().toLowerCase()).maybeSingle();
+    if (!prof) { setGrantMsg(t("ad_grant_no_user")); return; }
+    const expires = new Date(Date.now() + (grantDays || 30) * 86400000).toISOString();
+    await supabase.from("user_agent_subscriptions").insert({
+      user_id: prof.id, addon_id: grantAddonId, status: "active",
+      expires_at: expires, period_start: new Date().toISOString(),
+    });
+    setGrantMsg(t("ad_grant_ok"));
+    setGrantEmail("");
+    load();
+    setTimeout(() => setGrantMsg(null), 3000);
   };
 
   const extend = async (s: any, days: number) => {
@@ -437,20 +461,45 @@ function AgentTab() {
         <div className="flex items-center gap-3">
           <Bot className="size-5 text-accent" />
           <div>
-            <div className="font-display font-semibold">التحكم العام بالوكيل الذكي</div>
-            <div className="text-xs text-muted-foreground">إيقاف/تشغيل الوكيل لكل المستخدمين فوراً عبر الموقع.</div>
+            <div className="font-display font-semibold">{t("ad_global_title")}</div>
+            <div className="text-xs text-muted-foreground">{t("ad_global_desc")}</div>
           </div>
         </div>
         <button onClick={toggleGlobal}
           className={`rounded-full px-4 py-2 text-sm font-semibold ${globalOn ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
-          {globalOn ? "● مُفعّل" : "○ متوقف"}
+          {globalOn ? t("ad_global_on") : t("ad_global_off")}
         </button>
+      </div>
+
+      {/* Manual grant */}
+      <div className="rounded-2xl border border-accent/40 bg-card/70 p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Bot className="size-4 text-accent" />
+          <h3 className="font-display font-semibold">{t("ad_grant_title")}</h3>
+        </div>
+        <div className="grid gap-2 md:grid-cols-[2fr_2fr_1fr_auto]">
+          <input value={grantEmail} onChange={(e) => setGrantEmail(e.target.value)}
+            placeholder={t("ad_grant_email")} type="email"
+            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+          <select value={grantAddonId} onChange={(e) => setGrantAddonId(e.target.value)}
+            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm">
+            {addons.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          <input type="number" value={grantDays} onChange={(e) => setGrantDays(parseInt(e.target.value, 10) || 30)}
+            placeholder={t("ad_grant_days")}
+            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+          <button onClick={grantManual}
+            className="rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+            {t("ad_grant_btn")}
+          </button>
+        </div>
+        {grantMsg && <div className={`mt-2 text-xs ${grantMsg === t("ad_grant_ok") ? "text-success" : "text-destructive"}`}>{grantMsg}</div>}
       </div>
 
       {/* Active subscriptions with full controls */}
       <div>
         <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
-          <Bot className="size-4 text-accent" /> اشتراكات الوكيل ({subs.length})
+          <Bot className="size-4 text-accent" /> {t("ad_subs_title")} ({subs.length})
         </h2>
         <div className="overflow-x-auto rounded-2xl border border-border bg-card/70">
           <table className="w-full min-w-[900px] text-sm">
@@ -482,17 +531,17 @@ function AgentTab() {
                   <td className="p-3 text-xs text-muted-foreground">{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : "—"}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap justify-end gap-1.5">
-                      <button onClick={() => extend(s, 30)} className="rounded-full bg-primary/20 px-2.5 py-1 text-[11px] text-primary hover:bg-primary/30">+30 يوم</button>
-                      <button onClick={() => extend(s, 7)} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary">+7</button>
-                      <button onClick={() => resetUsage(s)} className="rounded-full border border-border px-2.5 py-1 text-[11px]">صفّر الاستخدام</button>
+                      <button onClick={() => extend(s, 30)} className="rounded-full bg-primary/20 px-2.5 py-1 text-[11px] text-primary hover:bg-primary/30">{t("ad_extend_30")}</button>
+                      <button onClick={() => extend(s, 7)} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary">{t("ad_extend_7")}</button>
+                      <button onClick={() => resetUsage(s)} className="rounded-full border border-border px-2.5 py-1 text-[11px]">{t("ad_reset_usage")}</button>
                       {s.status === "active"
-                        ? <button onClick={() => setStatus(s, "expired")} className="rounded-full border border-destructive/40 px-2.5 py-1 text-[11px] text-destructive">إيقاف</button>
-                        : <button onClick={() => setStatus(s, "active")} className="rounded-full bg-success/20 px-2.5 py-1 text-[11px] text-success">تفعيل</button>}
+                        ? <button onClick={() => setStatus(s, "expired")} className="rounded-full border border-destructive/40 px-2.5 py-1 text-[11px] text-destructive">{t("ad_pause")}</button>
+                        : <button onClick={() => setStatus(s, "active")} className="rounded-full bg-success/20 px-2.5 py-1 text-[11px] text-success">{t("ad_activate")}</button>}
                     </div>
                   </td>
                 </tr>
               ))}
-              {subs.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد اشتراكات.</td></tr>}
+              {subs.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">{t("ad_no_subs")}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -501,8 +550,8 @@ function AgentTab() {
       {/* Addons CRUD */}
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold">باقات الوكيل</h2>
-          <button onClick={createAddon} className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground">+ باقة جديدة</button>
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold">{t("ad_addons_title")}</h2>
+          <button onClick={createAddon} className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground">{t("ad_new_addon")}</button>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {addons.map((a) => (
@@ -518,19 +567,19 @@ function AgentTab() {
               <textarea defaultValue={a.description || ""} onBlur={(e) => updateAddon(a, { description: e.target.value })}
                 className="mt-2 w-full resize-none rounded border border-border bg-background/40 px-2 py-1 text-xs" rows={2} />
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <label>السعر (IQD)
+                <label>{t("ad_price")}
                   <input type="number" defaultValue={a.price_iqd} onBlur={(e) => updateAddon(a, { price_iqd: parseInt(e.target.value, 10) || 0 })}
                     className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
                 </label>
-                <label>مهام/شهر
+                <label>{t("ad_monthly_tasks")}
                   <input type="number" defaultValue={a.monthly_tasks} onBlur={(e) => updateAddon(a, { monthly_tasks: parseInt(e.target.value, 10) || 0 })}
                     className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
                 </label>
-                <label>حد يومي
+                <label>{t("ad_daily_cap")}
                   <input type="number" defaultValue={a.daily_task_cap} onBlur={(e) => updateAddon(a, { daily_task_cap: parseInt(e.target.value, 10) || 0 })}
                     className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
                 </label>
-                <label>عدد المواقع
+                <label>{t("ad_max_targets")}
                   <input type="number" defaultValue={a.max_targets} onBlur={(e) => updateAddon(a, { max_targets: parseInt(e.target.value, 10) || 0 })}
                     className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
                 </label>
@@ -543,7 +592,7 @@ function AgentTab() {
       {/* Recent tasks */}
       <div>
         <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
-          <Activity className="size-4 text-accent" /> آخر مهام الوكيل
+          <Activity className="size-4 text-accent" /> {t("ad_recent_tasks")}
         </h2>
         <div className="overflow-x-auto rounded-2xl border border-border bg-card/70">
           <table className="w-full min-w-[600px] text-sm">
@@ -551,15 +600,15 @@ function AgentTab() {
               <tr><th className="p-3 text-start">Time</th><th className="p-3 text-start">User</th><th className="p-3 text-start">Type</th><th className="p-3 text-start">Status</th></tr>
             </thead>
             <tbody>
-              {recentTasks.map((t) => (
-                <tr key={t.id} className="border-t border-border">
-                  <td className="p-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
-                  <td className="p-3 text-xs font-mono">{t.user_id.slice(0,8)}…</td>
-                  <td className="p-3 text-xs">{t.task_type}</td>
-                  <td className="p-3 text-xs">{t.status}</td>
+              {recentTasks.map((tk) => (
+                <tr key={tk.id} className="border-t border-border">
+                  <td className="p-3 text-xs text-muted-foreground">{new Date(tk.created_at).toLocaleString()}</td>
+                  <td className="p-3 text-xs font-mono">{tk.user_id.slice(0,8)}…</td>
+                  <td className="p-3 text-xs">{tk.task_type}</td>
+                  <td className="p-3 text-xs">{tk.status}</td>
                 </tr>
               ))}
-              {recentTasks.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-xs text-muted-foreground">لا مهام بعد.</td></tr>}
+              {recentTasks.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-xs text-muted-foreground">{t("ad_no_recent")}</td></tr>}
             </tbody>
           </table>
         </div>
