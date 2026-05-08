@@ -174,6 +174,10 @@ const en: Dict = {
   reach_low: "Low",
   reach_medium: "Medium",
   reach_high: "High",
+  why_4_t: "🤖 Smart Agent (add-on)",
+  why_4_d: "Executes tasks for you via commands and choices: analyzes your pages daily, suggests ready-to-publish posts, and monitors your visibility in AI. Adds to your subscription from 20,000 IQD/month.",
+  how_4_t: "🤖 Smart Agent (optional)",
+  how_4_d: "After subscribing: pick your site or topic from a list and type commands like (analyze my page / suggest a promo post / monitor GEO weekly). The agent runs automatically. Example: add your store URL → it sends a daily report + 3 ready-to-publish post suggestions.",
 };
 
 const ar: Dict = {
@@ -346,6 +350,10 @@ const ar: Dict = {
   reach_low: "منخفضة",
   reach_medium: "متوسطة",
   reach_high: "عالية",
+  why_4_t: "🤖 الوكيل الذكي (إضافة)",
+  why_4_d: "ينفّذ المهام نيابةً عنك بالأوامر والاختيارات: يحلّل صفحاتك يومياً، يقترح منشورات جاهزة، ويراقب ظهورك في الذكاء الاصطناعي. يضاف لاشتراكك من 20,000 د.ع/شهر.",
+  how_4_t: "🤖 الوكيل الذكي (اختياري)",
+  how_4_d: "بعد الاشتراك: تختار موقعك أو موضوعك من قائمة، وتكتب أوامر مثل (حلّل صفحتي / اقترح منشور ترويجي / راقب GEO أسبوعياً). الوكيل ينفّذ تلقائياً. مثال: تضيف رابط متجرك → يرسل لك تقرير يومي + 3 اقتراحات منشورات جاهزة للنشر.",
 };
 
 const ku: Dict = {
@@ -518,6 +526,10 @@ const ku: Dict = {
   reach_low: "نزم",
   reach_medium: "ناوەند",
   reach_high: "بەرز",
+  why_4_t: "🤖 ئەجێنتی زیرەک (زیادکراو)",
+  why_4_d: "ئەرکەکان لە جێگەی تۆ جێبەجێ دەکات بە فەرمان و هەڵبژاردن: ڕۆژانە پەڕەکانت دەشیکارێت، پۆستی ئامادە پێشنیار دەکات، و دەرکەوتنت لە AI چاودێری دەکات. زیاد دەکرێت بۆ بەشداربوونەکەت لە 20,000 د.ع/مانگ.",
+  how_4_t: "🤖 ئەجێنتی زیرەک (دڵخوازی)",
+  how_4_d: "دوای بەشداربوون: ماڵپەڕەکەت یان بابەتەکەت لە لیستێک هەڵدەبژێریت و فەرمان دەنوسیت وەک (پەڕەکەم شیکار بکە / پۆستی بانگەشە پێشنیار بکە / GEO هەفتانە چاودێری بکە). ئەجێنت بە شێوەی ئۆتۆماتیکی جێبەجێ دەکات.",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };

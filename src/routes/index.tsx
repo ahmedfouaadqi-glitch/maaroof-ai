@@ -63,11 +63,7 @@ function Page() {
             <Feature icon={<Zap />} title={t("why_1_t")} desc={t("why_1_d")} />
             <Feature icon={<Globe2 />} title={t("why_2_t")} desc={t("why_2_d")} />
             <Feature icon={<ShieldCheck />} title={t("why_3_t")} desc={t("why_3_d")} />
-            <Feature
-              icon={<Bot />}
-              title="🤖 الوكيل الذكي (إضافة)"
-              desc="ينفّذ المهام نيابةً عنك بالأوامر والاختيارات: يحلّل صفحاتك يومياً، يقترح منشورات جاهزة، ويراقب ظهورك في الذكاء الاصطناعي. يضاف لاشتراكك من 20,000 د.ع/شهر."
-            />
+            <Feature icon={<Bot />} title={t("why_4_t")} desc={t("why_4_d")} />
           </div>
         </div>
       </section>
@@ -82,11 +78,7 @@ function Page() {
             <Step n="01" title={t("how_1_t")} desc={t("how_1_d")} />
             <Step n="02" title={t("how_2_t")} desc={t("how_2_d")} />
             <Step n="03" title={t("how_3_t")} desc={t("how_3_d")} />
-            <Step
-              n="04"
-              title="🤖 الوكيل الذكي (اختياري)"
-              desc="بعد الاشتراك: تختار موقعك أو موضوعك من قائمة، وتكتب أوامر مثل (حلّل صفحتي / اقترح منشور ترويجي / راقب GEO أسبوعياً). الوكيل ينفّذ تلقائياً. مثال: تضيف رابط متجرك → يرسل لك تقرير يومي + 3 اقتراحات منشورات جاهزة للنشر."
-            />
+            <Step n="04" title={t("how_4_t")} desc={t("how_4_d")} />
           </div>
         </div>
       </section>

@@ -15,12 +15,13 @@ Analyze the user's content and return ONLY a compact JSON object with these exac
   "authority": int 0-100 technical authority + named-entity density,
   "local": int 0-100 Iraq local relevance,
   "citation": int 0-100 likelihood an LLM cites this,
-  "ai_view": short paragraph (max 280 chars) in the SAME language as the input, describing how LLMs (ChatGPT, Gemini, Claude) would interpret and use this content,
-  "strengths": array of 2-4 short bullets in the input language,
-  "weaknesses": array of 2-4 short bullets in the input language,
-  "recommendations": array of 3-5 specific, actionable improvements in the input language,
-  "keywords": array of 4-8 high-value entities/keywords detected (in the input language)
+  "ai_view": short paragraph (max 280 chars) in the REPORT language specified by the user, describing how LLMs (ChatGPT, Gemini, Claude) would interpret and use this content,
+  "strengths": array of 2-4 short bullets in the REPORT language,
+  "weaknesses": array of 2-4 short bullets in the REPORT language,
+  "recommendations": array of 3-5 specific, actionable improvements in the REPORT language,
+  "keywords": array of 4-8 high-value entities/keywords detected (kept in their original language)
 }
+The REPORT language MUST be: "en"=English, "ar"=العربية (Arabic), "ku"=کوردی (Kurdish Sorani). Always write the report in that exact language regardless of input text language.
 No prose outside JSON. No markdown.`;
 
 export const Route = createFileRoute("/api/analyze")({
@@ -93,7 +94,7 @@ export const Route = createFileRoute("/api/analyze")({
                 model: "google/gemini-2.5-flash",
                 messages: [
                   { role: "system", content: SYS },
-                  { role: "user", content: `Language: ${lang}\n\nContent:\n"""${text}"""` },
+                  { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) ONLY in language code "${lang}".\n\nContent to analyze:\n"""${text}"""` },
                 ],
                 response_format: { type: "json_object" },
               }),
