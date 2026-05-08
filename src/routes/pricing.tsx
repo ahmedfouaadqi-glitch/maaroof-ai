@@ -43,10 +43,35 @@ function PricingPage() {
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
-      .then(({ data }) => setPlans(data || []));
+      .then(({ data }) => {
+        const seen = new Set<string>();
+        setPlans((data || []).filter((p: any) => seen.has(p.name) ? false : (seen.add(p.name), true)));
+      });
     supabase.from("agent_addons").select("*").eq("active", true).order("sort_order")
-      .then(({ data }) => setAddons(data || []));
+      .then(({ data }) => {
+        const seen = new Set<string>();
+        setAddons((data || []).filter((a: any) => seen.has(a.name) ? false : (seen.add(a.name), true)));
+      });
   }, []);
+
+  const planDesc = (name: string) => {
+    const k = PLAN_KEY_BY_NAME[name];
+    return k ? t(`plan_${k}_desc` as any) : "";
+  };
+  const planFeatures = (name: string): string[] => {
+    const k = PLAN_KEY_BY_NAME[name];
+    const s = k ? t(`plan_${k}_features` as any) : "";
+    return s ? s.split("|") : [];
+  };
+  const addonDesc = (name: string) => {
+    const k = ADDON_KEY_BY_NAME[name];
+    return k ? t(`addon_${k}_desc` as any) : "";
+  };
+  const addonFeatures = (name: string): string[] => {
+    const k = ADDON_KEY_BY_NAME[name];
+    const s = k ? t(`addon_${k}_features` as any) : "";
+    return s ? s.split("|") : [];
+  };
 
   const openSelect = (plan: any, kind: "plan" | "agent" = "plan") => {
     if (!user) {
