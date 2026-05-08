@@ -43,6 +43,7 @@ function AgentPage() {
   const [newTopic, setNewTopic] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
   const [runningId, setRunningId] = useState<string | "all" | null>(null);
+  const [runMsg, setRunMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [cmd, setCmd] = useState("");
   const [cmdBusy, setCmdBusy] = useState(false);
   const [cmdMsg, setCmdMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -97,13 +98,30 @@ function AgentPage() {
     load();
   };
 
+  const errMap: Record<string, string> = {
+    no_targets: t("ag_err_no_targets"),
+    no_active_subscription: t("ag_err_no_sub"),
+    no_addon: t("ag_err_no_sub"),
+    subscription_expired: t("ag_err_expired"),
+    monthly_cap_reached: t("ag_err_monthly_cap"),
+    daily_cap_reached: t("ag_err_daily_cap"),
+    rate_limited: t("ag_err_rate"),
+    credits_exhausted: t("ag_err_credits"),
+  };
+  const tx = (code?: string) => (code && errMap[code]) || code || "";
+
   const runNow = async (targetId?: string) => {
     setRunningId(targetId || "all");
+    setRunMsg(null);
     try {
       const res: any = await runNowFn({ data: { targetId, lang: outLang } });
-      if (!res?.ok && res?.error) alert(res.error);
+      if (res?.ok) {
+        setRunMsg({ ok: true, text: `${t("ag_run_done")} (${res.done || 0})` });
+      } else {
+        setRunMsg({ ok: false, text: `${t("ag_run_failed")} ${tx(res?.error)}` });
+      }
     } catch (e: any) {
-      alert(e?.message || "error");
+      setRunMsg({ ok: false, text: `${t("ag_run_failed")} ${e?.message || ""}` });
     } finally {
       setRunningId(null);
       load();
@@ -252,6 +270,9 @@ function AgentPage() {
                   {runningId === "all" ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
                   {runningId === "all" ? t("ag_running") : t("ag_run_all")}
                 </button>
+              )}
+              {runMsg && (
+                <div className={`mt-2 text-xs ${runMsg.ok ? "text-success" : "text-destructive"}`}>{runMsg.text}</div>
               )}
             </div>
           </div>
