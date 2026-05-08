@@ -66,7 +66,7 @@ function Page() {
             <Feature
               icon={<Bot />}
               title="🤖 الوكيل الذكي (إضافة)"
-              desc="أتمتة كاملة: يحلّل صفحاتك يومياً، يقترح منشورات جاهزة، ويراقب ظهورك في الذكاء الاصطناعي. يضاف لاشتراكك من 20,000 د.ع/شهر."
+              desc="ينفّذ المهام نيابةً عنك بالأوامر والاختيارات (لا دردشة): يحلّل صفحاتك يومياً، يقترح منشورات جاهزة، ويراقب ظهورك في الذكاء الاصطناعي. ولاؤه للمنصة فقط، يضاف لاشتراكك من 20,000 د.ع/شهر."
             />
           </div>
         </div>
@@ -78,13 +78,19 @@ function Page() {
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-bold md:text-4xl">{t("how_title")}</h2>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             <Step n="01" title={t("how_1_t")} desc={t("how_1_d")} />
             <Step n="02" title={t("how_2_t")} desc={t("how_2_d")} />
             <Step n="03" title={t("how_3_t")} desc={t("how_3_d")} />
+            <Step
+              n="04"
+              title="🤖 الوكيل الذكي (اختياري)"
+              desc="بعد الاشتراك: تختار موقعك أو موضوعك من قائمة، وتكتب أوامر مثل (حلّل صفحتي / اقترح منشور ترويجي / راقب GEO أسبوعياً). الوكيل ينفّذ تلقائياً بدون دردشة. مثال: تضيف رابط متجرك → يرسل لك تقرير يومي + 3 اقتراحات منشورات جاهزة للنشر."
+            />
           </div>
         </div>
       </section>
+
 
       {/* CTA */}
       <section id="cta" className="relative border-t border-border/60 py-24">
