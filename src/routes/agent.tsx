@@ -508,8 +508,8 @@ function AgentPage() {
               <div key={tk.id} className="rounded-xl border border-border bg-card/70 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
-                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : <Activity className="size-4 text-primary" />}
-                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type}</span>
+                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : tk.task_type === "ai_visibility" ? <Eye className="size-4 text-primary" /> : <Activity className="size-4 text-primary" />}
+                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type === "ai_visibility" ? t("ag_task_visibility") : tk.task_type}</span>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] ${
                       tk.status === "done" ? "bg-success/20 text-success" :
                       tk.status === "failed" ? "bg-destructive/20 text-destructive" :
@@ -529,6 +529,30 @@ function AgentPage() {
                 )}
                 {tk.result?.score != null && (
                   <div className="mt-2 text-xs">GEO Score: <b className="text-accent">{tk.result.score}/100</b></div>
+                )}
+                {tk.task_type === "ai_visibility" && tk.result?.visibility_percent != null && (
+                  <div className="mt-3 space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+                    <div>{t("ag_vis_score")}: <b className="text-primary">{tk.result.visibility_percent}%</b> · {t("ag_vis_sentiment")}: <b>{tk.result.sentiment}</b></div>
+                    {tk.result.appearance_summary && <p>{tk.result.appearance_summary}</p>}
+                    {tk.result.strengths?.length > 0 && <div>✅ {tk.result.strengths.join(" · ")}</div>}
+                    {tk.result.weaknesses?.length > 0 && <div>⚠️ {tk.result.weaknesses.join(" · ")}</div>}
+                    {tk.result.recommendations?.length > 0 && (
+                      <ol className="ms-4 list-decimal space-y-0.5">{tk.result.recommendations.map((r: string, i: number) => <li key={i}>{r}</li>)}</ol>
+                    )}
+                  </div>
+                )}
+                {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && channels.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
+                    <span className="text-xs text-muted-foreground">{t("ag_pub_to")}:</span>
+                    {channels.filter((c) => c.active).map((c) => (
+                      <button key={c.id} onClick={() => publishTask(tk.id, tk.result.summary, c.id)}
+                        disabled={publishingTask === tk.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50">
+                        {publishingTask === tk.id ? <Loader2 className="size-3 animate-spin" /> : <SendIcon className="size-3" />}
+                        {c.label || c.kind}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             ))}
