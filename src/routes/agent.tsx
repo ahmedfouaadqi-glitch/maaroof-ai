@@ -114,7 +114,7 @@ function AgentPage() {
     if (!cmd.trim() || cmdBusy) return;
     setCmdBusy(true); setCmdMsg(null);
     try {
-      const res: any = await runCmdFn({ data: { command: cmd } });
+      const res: any = await runCmdFn({ data: { command: cmd, lang: outLang } });
       if (res?.ok) {
         setCmdMsg({ ok: true, text: t("ag_cmd_ok") });
         setCmd("");
