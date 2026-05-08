@@ -987,6 +987,7 @@ const ku: Dict = {
   dash_request_cta: "ناردنی داواکاری بەشداربوون",
   dash_agent_active: "ئەجێنت چالاکە",
   dash_agent_inactive: "ئەجێنت چالاک نییە",
+  tool_output_lang: "زمانی دەرەنجام",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
