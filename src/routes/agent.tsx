@@ -211,6 +211,9 @@ function AgentPage() {
             <Sparkles className="size-5 text-accent" /> {t("ag_cmd_title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("ag_cmd_desc")}</p>
+          <div className="mt-3 flex justify-end">
+            <ToolLangSelect value={outLang} onChange={setOutLang} />
+          </div>
           <textarea
             value={cmd}
             onChange={(e) => setCmd(e.target.value)}
