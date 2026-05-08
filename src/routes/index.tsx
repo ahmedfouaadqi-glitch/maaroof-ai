@@ -59,10 +59,15 @@ function Page() {
             <h2 className="font-display text-3xl font-bold md:text-4xl">{t("why_title")}</h2>
             <p className="mt-3 text-muted-foreground">{t("why_sub")}</p>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             <Feature icon={<Zap />} title={t("why_1_t")} desc={t("why_1_d")} />
             <Feature icon={<Globe2 />} title={t("why_2_t")} desc={t("why_2_d")} />
             <Feature icon={<ShieldCheck />} title={t("why_3_t")} desc={t("why_3_d")} />
+            <Feature
+              icon={<Bot />}
+              title="🤖 الوكيل الذكي (إضافة)"
+              desc="أتمتة كاملة: يحلّل صفحاتك يومياً، يقترح منشورات جاهزة، ويراقب ظهورك في الذكاء الاصطناعي. يضاف لاشتراكك من 20,000 د.ع/شهر."
+            />
           </div>
         </div>
       </section>
