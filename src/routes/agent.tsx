@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck } from "lucide-react";
+import { runAgentNow, runAgentCommand } from "@/lib/agent.functions";
+import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
   component: () => (
@@ -38,6 +40,12 @@ function AgentPage() {
   const [newUrl, setNewUrl] = useState("");
   const [newTopic, setNewTopic] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
+  const [runningId, setRunningId] = useState<string | "all" | null>(null);
+  const [cmd, setCmd] = useState("");
+  const [cmdBusy, setCmdBusy] = useState(false);
+  const [cmdMsg, setCmdMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const runNowFn = useServerFn(runAgentNow);
+  const runCmdFn = useServerFn(runAgentCommand);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/agent" } });
@@ -85,6 +93,38 @@ function AgentPage() {
   const removeTarget = async (id: string) => {
     await supabase.from("agent_targets").delete().eq("id", id);
     load();
+  };
+
+  const runNow = async (targetId?: string) => {
+    setRunningId(targetId || "all");
+    try {
+      const res: any = await runNowFn({ data: { targetId } });
+      if (!res?.ok && res?.error) alert(res.error);
+    } catch (e: any) {
+      alert(e?.message || "error");
+    } finally {
+      setRunningId(null);
+      load();
+    }
+  };
+
+  const sendCommand = async () => {
+    if (!cmd.trim() || cmdBusy) return;
+    setCmdBusy(true); setCmdMsg(null);
+    try {
+      const res: any = await runCmdFn({ data: { command: cmd } });
+      if (res?.ok) {
+        setCmdMsg({ ok: true, text: t("ag_cmd_ok") });
+        setCmd("");
+      } else {
+        setCmdMsg({ ok: false, text: `${t("ag_cmd_fail")} ${res?.error || ""}` });
+      }
+    } catch (e: any) {
+      setCmdMsg({ ok: false, text: `${t("ag_cmd_fail")} ${e?.message || ""}` });
+    } finally {
+      setCmdBusy(false);
+      load();
+    }
   };
 
   if (loading || pageLoading) return (
@@ -163,7 +203,55 @@ function AgentPage() {
           </div>
         )}
 
-        {/* Targets */}
+        {/* Command box — give the agent an order */}
+        <div className="mt-8 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 p-5">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
+            <Sparkles className="size-5 text-accent" /> {t("ag_cmd_title")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("ag_cmd_desc")}</p>
+          <textarea
+            value={cmd}
+            onChange={(e) => setCmd(e.target.value)}
+            placeholder={t("ag_cmd_ph")}
+            rows={3}
+            className="mt-3 w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm"
+          />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            {cmdMsg && (
+              <span className={`text-xs ${cmdMsg.ok ? "text-success" : "text-destructive"}`}>{cmdMsg.text}</span>
+            )}
+            <button
+              onClick={sendCommand}
+              disabled={cmdBusy || !cmd.trim()}
+              className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {cmdBusy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              {cmdBusy ? t("ag_running") : t("ag_cmd_send")}
+            </button>
+          </div>
+        </div>
+
+        {/* Autonomy explainer */}
+        <div className="mt-6 rounded-2xl border border-border/60 bg-card/50 p-4">
+          <div className="flex items-start gap-3">
+            <Bot className="mt-0.5 size-5 text-accent shrink-0" />
+            <div>
+              <h3 className="font-display font-bold">{t("ag_autonomy_title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("ag_autonomy_desc")}</p>
+              {targets.length > 0 && (
+                <button
+                  onClick={() => runNow()}
+                  disabled={runningId !== null}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50"
+                >
+                  {runningId === "all" ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
+                  {runningId === "all" ? t("ag_running") : t("ag_run_all")}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
             <Globe className="size-4 text-accent" /> {t("ag_targets_title")}
@@ -193,7 +281,17 @@ function AgentPage() {
                     {tg.url && <a href={tg.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline"><ExternalLink className="size-3" />{tg.url}</a>}
                     {tg.topic && <div className="text-muted-foreground">📌 {tg.topic}</div>}
                   </div>
-                  <button onClick={() => removeTarget(tg.id)} className="text-destructive hover:text-destructive/70"><Trash2 className="size-4" /></button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => runNow(tg.id)}
+                      disabled={runningId !== null}
+                      className="inline-flex items-center gap-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50"
+                    >
+                      {runningId === tg.id ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
+                      {runningId === tg.id ? t("ag_running") : t("ag_run_now")}
+                    </button>
+                    <button onClick={() => removeTarget(tg.id)} className="text-destructive hover:text-destructive/70"><Trash2 className="size-4" /></button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -215,8 +313,8 @@ function AgentPage() {
               <div key={tk.id} className="rounded-xl border border-border bg-card/70 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
-                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : <Activity className="size-4 text-primary" />}
-                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type}</span>
+                    {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : <Activity className="size-4 text-primary" />}
+                    <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type}</span>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] ${
                       tk.status === "done" ? "bg-success/20 text-success" :
                       tk.status === "failed" ? "bg-destructive/20 text-destructive" :
