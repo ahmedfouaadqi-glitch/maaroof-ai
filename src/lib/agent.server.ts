@@ -19,6 +19,33 @@ export const SYSTEM_AGENT = `أنت "موظف ذكي" متخصص في تحسين
 - إذا طلب رأي/توصية: قدمها بشكل صريح ومسبب
 ردّ دائماً بالعربية الفصحى الواضحة. كن مباشراً وعملياً. لا تختلق حقائق.`;
 
+export const SYSTEM_VISIBILITY = `أنت محلل ظهور علامات تجارية في محركات البحث الذكية (ChatGPT, Gemini, Perplexity, Claude).
+سيُعطى لك اسم علامة تجارية وكلمات مفتاحية. حلّل بصدق كيف ستظهر هذه العلامة عند سؤال نموذج ذكي عنها في السوق العراقي.
+أعد JSON صالح فقط (بدون أي نص خارجه) بهذا الشكل بالضبط:
+{
+  "visibility_percent": <0-100>,
+  "sentiment": "positive" | "neutral" | "negative",
+  "appearance_summary": "جملتان عن كيف يُحتمل أن تظهر",
+  "strengths": ["...","..."],
+  "weaknesses": ["...","..."],
+  "competitors": ["...","..."],
+  "recommendations": ["خطوة عملية 1","خطوة عملية 2","خطوة عملية 3"]
+}
+كن صادقاً ومتحفظاً عند نقص المعلومات. لا تختلق أرقاماً.`;
+
+// Telegram publish helper
+export async function publishToTelegram(botToken: string, chatId: string, text: string): Promise<void> {
+  const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: false }),
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`telegram_${resp.status}: ${body.slice(0, 200)}`);
+  }
+}
+
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب الإجابة بالكامل باللغة العربية الفصحى.",
   en: "Write the entire response in clear English.",
