@@ -54,7 +54,7 @@ function AdminPage() {
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? "🤖 الوكيل" : t(`admin_${k}` as any)}
+              {k === "agent" ? t("nav_agent") : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
