@@ -100,7 +100,7 @@ function AgentPage() {
   const runNow = async (targetId?: string) => {
     setRunningId(targetId || "all");
     try {
-      const res: any = await runNowFn({ data: { targetId } });
+      const res: any = await runNowFn({ data: { targetId, lang: outLang } });
       if (!res?.ok && res?.error) alert(res.error);
     } catch (e: any) {
       alert(e?.message || "error");
