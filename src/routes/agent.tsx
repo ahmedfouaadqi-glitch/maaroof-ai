@@ -524,7 +524,7 @@ function AgentPage() {
             )}
             {tasks.map((tk) => (
               <div key={tk.id} className="rounded-xl border border-border bg-card/70 p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm">
                     {tk.task_type === "suggest_post" ? <Lightbulb className="size-4 text-accent" /> : tk.task_type === "command" ? <Sparkles className="size-4 text-accent" /> : tk.task_type === "ai_visibility" ? <Eye className="size-4 text-primary" /> : <Activity className="size-4 text-primary" />}
                     <span className="font-semibold">{tk.task_type === "suggest_post" ? t("ag_task_suggest") : tk.task_type === "analyze_url" ? t("ag_task_analyze") : tk.task_type === "command" ? t("ag_task_command") : tk.task_type === "ai_visibility" ? t("ag_task_visibility") : tk.task_type}</span>
@@ -534,7 +534,20 @@ function AgentPage() {
                       "bg-muted text-muted-foreground"
                     }`}>{tk.status}</span>
                   </div>
-                  <div className="text-xs text-muted-foreground">{new Date(tk.created_at).toLocaleString()}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-muted-foreground">{new Date(tk.created_at).toLocaleString()}</div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(t("hist_confirm_delete"))) return;
+                        await supabase.from("agent_tasks").delete().eq("id", tk.id);
+                        setTasks((cur) => cur.filter((x) => x.id !== tk.id));
+                      }}
+                      title={t("hist_delete")}
+                      className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/10 p-1.5 text-destructive hover:bg-destructive/20"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
                 </div>
                 {tk.input && <div className="mt-2 text-xs text-muted-foreground">📍 {tk.input}</div>}
                 {tk.error && (

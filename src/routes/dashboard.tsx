@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
@@ -145,11 +145,23 @@ function DashboardPage() {
               <ul className="space-y-2">
                 {analyses.map((a) => (
                   <li key={a.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
                       <span className="font-display text-lg font-bold text-primary">{a.score}</span>
                     </div>
                     <p className="mt-1 truncate text-foreground/80">{a.input_text.slice(0, 100)}…</p>
+                    <HistoryActions
+                      text={a.input_text}
+                      onReuse={() => {
+                        window.dispatchEvent(new CustomEvent("geo:reuse-analyze", { detail: { text: a.input_text } }));
+                        document.getElementById("analyze")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      onDelete={async () => {
+                        if (!confirm(t("hist_confirm_delete"))) return;
+                        await supabase.from("analyses").delete().eq("id", a.id);
+                        setAnalyses((cur) => cur.filter((x) => x.id !== a.id));
+                      }}
+                    />
                   </li>
                 ))}
               </ul>
@@ -164,6 +176,18 @@ function DashboardPage() {
                   <li key={s.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
                     <div className="font-mono text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString()} · {s.mode}</div>
                     <p className="mt-1 line-clamp-2 text-foreground/80">{s.output}</p>
+                    <HistoryActions
+                      text={s.output}
+                      onReuse={s.input ? () => {
+                        window.dispatchEvent(new CustomEvent("geo:reuse-suggest", { detail: { text: s.input } }));
+                        document.getElementById("suggest")?.scrollIntoView({ behavior: "smooth" });
+                      } : undefined}
+                      onDelete={async () => {
+                        if (!confirm(t("hist_confirm_delete"))) return;
+                        await supabase.from("suggestions").delete().eq("id", s.id);
+                        setSuggestions((cur) => cur.filter((x) => x.id !== s.id));
+                      }}
+                    />
                   </li>
                 ))}
               </ul>
@@ -187,6 +211,29 @@ function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: strin
       </div>
       <div className="font-display text-3xl font-bold">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+
+function HistoryActions({ text, onReuse, onDelete }: { text: string; onReuse?: () => void; onDelete: () => void }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
+  };
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <button onClick={copy} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/50 px-2.5 py-1 text-[11px] text-foreground/80 hover:bg-background">
+        {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />} {copied ? t("hist_copied") : t("hist_copy")}
+      </button>
+      {onReuse && (
+        <button onClick={onReuse} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20">
+          <RefreshCw className="size-3" /> {t("hist_reuse")}
+        </button>
+      )}
+      <button onClick={onDelete} className="ms-auto inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20">
+        <Trash2 className="size-3" /> {t("hist_delete")}
+      </button>
     </div>
   );
 }
