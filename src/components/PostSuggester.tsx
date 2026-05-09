@@ -54,6 +54,7 @@ export function PostSuggester({
   const [length, setLength] = useState<Length>("medium");
   const [contentType, setContentType] = useState<ContentType>("post");
   const [goal, setGoal] = useState<Goal>("promotional");
+  const [count, setCount] = useState<number>(1);
   const [outLang, setOutLang] = useState<Lang>(lang);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -74,7 +75,7 @@ export function PostSuggester({
     if (!user) { setShowGate(true); return; }
     setLoading(true);
     try {
-      const body: any = { lang: outLang, platforms, length, contentType, goal };
+      const body: any = { lang: outLang, platforms, length, contentType, goal, count };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
       else if (imageData) {
@@ -214,6 +215,22 @@ export function PostSuggester({
                 {t(`suggest_length_${l}` as any)}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_count")}</div>
+          <div className="mb-2 text-[11px] text-muted-foreground">{t("suggest_count_hint")}</div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={1}
+              max={10}
+              value={count}
+              onChange={(e) => setCount(parseInt(e.target.value, 10))}
+              className="flex-1 accent-primary"
+            />
+            <span className="min-w-[2rem] rounded-md border border-border bg-background/60 px-2 py-1 text-center text-xs font-mono text-foreground">{count}</span>
           </div>
         </div>
 
