@@ -215,6 +215,29 @@ function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: strin
   );
 }
 
+function HistoryActions({ text, onReuse, onDelete }: { text: string; onReuse?: () => void; onDelete: () => void }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
+  };
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <button onClick={copy} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/50 px-2.5 py-1 text-[11px] text-foreground/80 hover:bg-background">
+        {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />} {copied ? t("hist_copied") : t("hist_copy")}
+      </button>
+      {onReuse && (
+        <button onClick={onReuse} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20">
+          <RefreshCw className="size-3" /> {t("hist_reuse")}
+        </button>
+      )}
+      <button onClick={onDelete} className="ms-auto inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20">
+        <Trash2 className="size-3" /> {t("hist_delete")}
+      </button>
+    </div>
+  );
+}
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-6 backdrop-blur">
