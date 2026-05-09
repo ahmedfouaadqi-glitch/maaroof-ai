@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
