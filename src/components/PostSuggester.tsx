@@ -58,6 +58,22 @@ export function PostSuggester({
   const [outLang, setOutLang] = useState<Lang>(lang);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const onReuse = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { text?: string } | undefined;
+      if (detail?.text) {
+        setMode("text");
+        setDesc(detail.text);
+        setPost(null);
+        setResult(null);
+        setError(null);
+      }
+    };
+    window.addEventListener("geo:reuse-suggest", onReuse);
+    return () => window.removeEventListener("geo:reuse-suggest", onReuse);
+  }, []);
+
+
   const togglePlatform = (p: Platform) =>
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
 
