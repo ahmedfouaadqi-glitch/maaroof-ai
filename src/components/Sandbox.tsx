@@ -37,6 +37,18 @@ export function Sandbox() {
   const [showLimit, setShowLimit] = useState(false);
   const [outLang, setOutLang] = useState<Lang>(lang);
 
+  useEffect(() => {
+    const onReuse = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { text?: string } | undefined;
+      if (detail?.text) {
+        setText(detail.text);
+        setResult(null);
+        setError(null);
+      }
+    };
+    window.addEventListener("geo:reuse-analyze", onReuse);
+    return () => window.removeEventListener("geo:reuse-analyze", onReuse);
+  }, []);
 
   const run = async () => {
     if (!text.trim() || running) return;
