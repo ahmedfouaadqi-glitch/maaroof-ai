@@ -88,7 +88,7 @@ export const Route = createFileRoute("/api/analyze")({
             }
           }
 
-          const hash = await sha256Hex(`v2::${lang}::${text}`);
+          const hash = await sha256Hex(`v3-strict::${lang}::${text}`);
           const { data: cached } = await admin.from("analysis_cache").select("result, hits").eq("input_hash", hash).maybeSingle();
           let result: any;
           let fromCache = false;
