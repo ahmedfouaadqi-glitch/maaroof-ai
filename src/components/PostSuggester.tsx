@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { useAuth } from "@/lib/auth";
