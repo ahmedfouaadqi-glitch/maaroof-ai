@@ -123,9 +123,10 @@ export const Route = createFileRoute("/api/suggest")({
             tiktok: "TikTok: punchy script for a 30-60s video, scene-by-scene with hook + payoff + CTA.",
             instagram: "Instagram: visual caption with strong hook, line breaks, 5-10 relevant hashtags.",
           };
+          const count = Math.max(1, Math.min(10, parseInt(String(body.count ?? 1), 10) || 1));
           const platformBlock = platforms.length
-            ? `\n\nTarget platforms: ${platforms.join(", ")}.\n${platforms.map((p) => "- " + (platformGuide[p] || p)).join("\n")}\nProduce a tailored version for EACH platform, separated by "=== <Platform> ===" headings.`
-            : "";
+            ? `\n\nTarget platforms: ${platforms.join(", ")}.\n${platforms.map((p) => "- " + (platformGuide[p] || p)).join("\n")}\nProduce ${count} DISTINCT variant(s) for EACH platform (total = ${platforms.length * count}). Each variant must have a different hook angle and structure — do not paraphrase. Label variants with platform name; if multiple per platform, append " #1", " #2", etc.`
+            : `\n\nProduce ${count} DISTINCT generic variant(s) (platform="generic"). Each must use a different hook angle.`;
 
           const goal = body.goal || "engagement";
           const goalLabel: Record<string, string> = {
@@ -143,8 +144,7 @@ ${body.brand ? `Brand/author: ${body.brand}.` : ""}
 ${body.audience ? `Audience: ${body.audience}.` : ""}
 Content type: ${contentType}. Target length: ${lengthGuide}.${platformBlock}
 
-For each requested platform produce one variant. If no platforms are requested, produce ONE generic variant with platform="generic".
-Then return an overall geo_score (0-100), expected_reach (low/medium/high) with a one-line reason, factual warnings (any claim you were tempted to add but kept generic — list it so the user can fill it in), and 2-3 improvement tips.`;
+Score each variant individually with geo_score (0-100) using the strict rubric in the system prompt. Then return overall_geo_score = average of variant scores rounded to integer. Set expected_reach (low/medium/high) for the BEST variant with a concrete one-sentence reason citing the actual hook/format. List factual_warnings (claims you avoided due to lack of source data) and 2-4 improvement_tips a human can act on.`;
 
           if (body.sourceText) {
             instruction += `\n\nThe user already has this content; produce an IMPROVED, more citation-worthy version. Do NOT add historical events, dates or statistics that are not in the source:\n\n"""${body.sourceText.slice(0, 4000)}"""`;
