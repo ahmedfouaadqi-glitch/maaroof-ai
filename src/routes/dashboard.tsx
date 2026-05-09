@@ -145,11 +145,23 @@ function DashboardPage() {
               <ul className="space-y-2">
                 {analyses.map((a) => (
                   <li key={a.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
                       <span className="font-display text-lg font-bold text-primary">{a.score}</span>
                     </div>
                     <p className="mt-1 truncate text-foreground/80">{a.input_text.slice(0, 100)}…</p>
+                    <HistoryActions
+                      text={a.input_text}
+                      onReuse={() => {
+                        window.dispatchEvent(new CustomEvent("geo:reuse-analyze", { detail: { text: a.input_text } }));
+                        document.getElementById("analyze")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      onDelete={async () => {
+                        if (!confirm(t("hist_confirm_delete"))) return;
+                        await supabase.from("analyses").delete().eq("id", a.id);
+                        setAnalyses((cur) => cur.filter((x) => x.id !== a.id));
+                      }}
+                    />
                   </li>
                 ))}
               </ul>
@@ -164,6 +176,18 @@ function DashboardPage() {
                   <li key={s.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
                     <div className="font-mono text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString()} · {s.mode}</div>
                     <p className="mt-1 line-clamp-2 text-foreground/80">{s.output}</p>
+                    <HistoryActions
+                      text={s.output}
+                      onReuse={s.input ? () => {
+                        window.dispatchEvent(new CustomEvent("geo:reuse-suggest", { detail: { text: s.input } }));
+                        document.getElementById("suggest")?.scrollIntoView({ behavior: "smooth" });
+                      } : undefined}
+                      onDelete={async () => {
+                        if (!confirm(t("hist_confirm_delete"))) return;
+                        await supabase.from("suggestions").delete().eq("id", s.id);
+                        setSuggestions((cur) => cur.filter((x) => x.id !== s.id));
+                      }}
+                    />
                   </li>
                 ))}
               </ul>
