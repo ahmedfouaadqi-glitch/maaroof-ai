@@ -5,6 +5,8 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock, CheckCircle2, AlertCircle, Lightbulb, Bot, Tag } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
 import { ToolLangSelect } from "./ToolLangSelect";
+import { ExportButtons } from "./ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
 
