@@ -5,6 +5,8 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock, CheckCircle2, AlertCircle, Lightbulb, Bot, Tag } from "lucide-react";
 import { PostSuggester } from "./PostSuggester";
 import { ToolLangSelect } from "./ToolLangSelect";
+import { ExportButtons } from "./ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
 
@@ -193,7 +195,26 @@ export function Sandbox() {
 
       {result && (
         <>
-          <div className="mt-7 grid gap-5 md:grid-cols-[200px_1fr]">
+          <div className="mt-7 flex justify-end">
+            <ExportButtons size="xs" build={(): ExportPayload => ({
+              title: t("export_analysis_title"),
+              sections: [
+                { kind: "kv", heading: t("score_label"), rows: [
+                  [t("score_label"), `${result.score}/100`],
+                  [t("metric_authority"), result.authority],
+                  [t("metric_local"), result.local],
+                  [t("metric_citation"), result.citation],
+                ]},
+                ...(result.ai_view ? [{ kind: "text" as const, heading: t("report_ai_view"), text: result.ai_view }] : []),
+                ...(result.strengths?.length ? [{ kind: "list" as const, heading: t("report_strengths"), list: result.strengths }] : []),
+                ...(result.weaknesses?.length ? [{ kind: "list" as const, heading: t("report_weaknesses"), list: result.weaknesses }] : []),
+                ...(result.recommendations?.length ? [{ kind: "list" as const, heading: t("report_recommendations"), list: result.recommendations }] : []),
+                ...(result.keywords?.length ? [{ kind: "list" as const, heading: t("report_keywords"), list: result.keywords }] : []),
+                { kind: "text", heading: t("col_input"), text },
+              ],
+            })} />
+          </div>
+          <div className="mt-3 grid gap-5 md:grid-cols-[200px_1fr]">
             <Gauge value={result.score} label={t("score_label")} tier={tier} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
               <Metric icon={<ShieldCheck className="size-4" />} label={t("metric_authority")} value={result.authority} />

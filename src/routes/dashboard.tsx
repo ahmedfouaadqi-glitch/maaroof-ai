@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
+import { CompetitorCompare } from "@/components/CompetitorCompare";
+import { ExportButtons } from "@/components/ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check } from "lucide-react";
 
@@ -135,10 +138,25 @@ function DashboardPage() {
         <div id="suggest" className="mt-8 scroll-mt-24">
           <PostSuggester />
         </div>
+        <div id="compare" className="mt-8 scroll-mt-24">
+          <CompetitorCompare />
+        </div>
+
+        {/* Activity & summary export */}
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Activity className="size-4 text-primary" />
+            <span className="font-semibold">{t("export_summary")}</span>
+            <span className="text-xs text-muted-foreground">— {t("export_activity_title")}</span>
+          </div>
+          <ExportButtons build={() => buildActivityExport(t, profile, analyses, suggestions)} />
+        </div>
 
         {/* History */}
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <Card title={`${t("dashboard_history")} — ${t("dashboard_analyses")}`}>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <Card title={`${t("dashboard_history")} — ${t("dashboard_analyses")}`} actions={
+            analyses.length > 0 ? <ExportButtons size="xs" build={() => buildAnalysesExport(t, analyses)} /> : null
+          }>
             {analyses.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("dashboard_no_history")}</p>
             ) : (
@@ -167,7 +185,9 @@ function DashboardPage() {
               </ul>
             )}
           </Card>
-          <Card title={`${t("dashboard_history")} — ${t("dashboard_suggestions")}`}>
+          <Card title={`${t("dashboard_history")} — ${t("dashboard_suggestions")}`} actions={
+            suggestions.length > 0 ? <ExportButtons size="xs" build={() => buildSuggestionsExport(t, suggestions)} /> : null
+          }>
             {suggestions.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("dashboard_no_history")}</p>
             ) : (
@@ -238,13 +258,74 @@ function HistoryActions({ text, onReuse, onDelete }: { text: string; onReuse?: (
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children, actions }: { title: string; children: React.ReactNode; actions?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-6 backdrop-blur">
-      <h2 className="mb-4 font-display text-lg font-semibold">{title}</h2>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold">{title}</h2>
+        {actions}
+      </div>
       {children}
     </div>
   );
+}
+
+function buildActivityExport(t: (k: string) => string, profile: any, analyses: any[], suggestions: any[]): ExportPayload {
+  return {
+    title: t("export_activity_title"),
+    subtitle: profile?.email || "",
+    sections: [
+      {
+        kind: "kv", heading: t("dashboard_subscription"),
+        rows: [
+          [t("dashboard_analyses"), profile?.monthly_analyses_used ?? 0],
+          [t("dashboard_suggestions"), profile?.monthly_suggestions_used ?? 0],
+          [t("dashboard_subscription"), profile?.is_subscribed ? (profile.subscription_tier || "Pro") : "Free"],
+          [t("dashboard_expires"), profile?.subscription_expires_at ? new Date(profile.subscription_expires_at).toLocaleDateString() : "—"],
+        ],
+      },
+      {
+        kind: "table", heading: `${t("dashboard_history")} — ${t("dashboard_analyses")}`,
+        table: {
+          columns: [t("col_date"), t("col_score"), t("col_input")],
+          data: analyses.map((a) => [new Date(a.created_at).toLocaleString(), a.score ?? "-", String(a.input_text || "").slice(0, 200)]),
+        },
+      },
+      {
+        kind: "table", heading: `${t("dashboard_history")} — ${t("dashboard_suggestions")}`,
+        table: {
+          columns: [t("col_date"), t("col_mode"), t("col_output")],
+          data: suggestions.map((s) => [new Date(s.created_at).toLocaleString(), s.mode || "-", String(s.output || "").slice(0, 300)]),
+        },
+      },
+    ],
+  };
+}
+
+function buildAnalysesExport(t: (k: string) => string, analyses: any[]): ExportPayload {
+  return {
+    title: t("export_analyses_title"),
+    sections: [{
+      kind: "table", heading: t("export_analyses_title"),
+      table: {
+        columns: [t("col_date"), t("col_score"), t("col_input")],
+        data: analyses.map((a) => [new Date(a.created_at).toLocaleString(), a.score ?? "-", String(a.input_text || "")]),
+      },
+    }],
+  };
+}
+
+function buildSuggestionsExport(t: (k: string) => string, suggestions: any[]): ExportPayload {
+  return {
+    title: t("export_suggestions_title"),
+    sections: [{
+      kind: "table", heading: t("export_suggestions_title"),
+      table: {
+        columns: [t("col_date"), t("col_mode"), t("col_output")],
+        data: suggestions.map((s) => [new Date(s.created_at).toLocaleString(), s.mode || "-", String(s.output || "")]),
+      },
+    }],
+  };
 }
 
 function ToolCard({

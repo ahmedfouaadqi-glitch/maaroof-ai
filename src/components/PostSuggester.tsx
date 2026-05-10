@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge } from "lucide-react";
+import { ExportButtons } from "./ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
 
 type Mode = "text" | "image";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
@@ -310,6 +312,25 @@ export function PostSuggester({
 
       {result && (
         <div className="mt-5 space-y-4">
+          <div className="flex justify-end">
+            <ExportButtons size="xs" build={(): ExportPayload => ({
+              title: t("export_suggestions_set_title"),
+              subtitle: `GEO ${result.overall_geo_score}/100 · ${t(`reach_${result.expected_reach}` as any)}`,
+              sections: [
+                { kind: "kv", heading: t("result_geo_score"), rows: [
+                  [t("result_geo_score"), `${result.overall_geo_score}/100`],
+                  [t("result_expected_reach"), t(`reach_${result.expected_reach}` as any)],
+                  ["Reason", result.expected_reach_reason],
+                ]},
+                { kind: "table", heading: t("export_suggestions_set_title"), table: {
+                  columns: [t("col_platform"), t("col_geo"), t("col_content")],
+                  data: result.variants.map(v => [v.platform, `${v.geo_score}/100`, v.content]),
+                }},
+                ...(result.factual_warnings?.length ? [{ kind: "list" as const, heading: t("result_warnings"), list: result.factual_warnings }] : []),
+                ...(result.improvement_tips?.length ? [{ kind: "list" as const, heading: t("result_tips"), list: result.improvement_tips }] : []),
+              ],
+            })} />
+          </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-primary"><Gauge className="size-3.5" /> {t("result_geo_score")}</div>
