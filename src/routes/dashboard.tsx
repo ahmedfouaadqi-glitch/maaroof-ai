@@ -9,7 +9,7 @@ import { CompetitorCompare } from "@/components/CompetitorCompare";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, Users } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
