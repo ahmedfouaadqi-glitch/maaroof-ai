@@ -515,9 +515,24 @@ function AgentPage() {
 
         {/* Tasks */}
         <div className="mt-8">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
-            <Activity className="size-4 text-accent" /> {t("ag_tasks_title")}
-          </h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-display text-lg font-bold">
+              <Activity className="size-4 text-accent" /> {t("ag_tasks_title")}
+            </h2>
+            {tasks.length > 0 && (
+              <ExportButtons size="xs" build={(): ExportPayload => ({
+                title: t("export_tasks_title"),
+                sections: [{ kind: "table", heading: t("export_tasks_title"), table: {
+                  columns: [t("col_date"), t("col_type"), t("col_status"), t("col_input"), t("col_summary")],
+                  data: tasks.map((tk) => [
+                    new Date(tk.created_at).toLocaleString(),
+                    tk.task_type, tk.status, String(tk.input || ""),
+                    String(tk.result?.summary || tk.result?.appearance_summary || tk.error || ""),
+                  ]),
+                }}],
+              })} />
+            )}
+          </div>
           <div className="space-y-2">
             {tasks.length === 0 && (
               <div className="rounded-2xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground">
