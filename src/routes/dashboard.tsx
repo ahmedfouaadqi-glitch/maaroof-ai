@@ -185,7 +185,9 @@ function DashboardPage() {
               </ul>
             )}
           </Card>
-          <Card title={`${t("dashboard_history")} — ${t("dashboard_suggestions")}`}>
+          <Card title={`${t("dashboard_history")} — ${t("dashboard_suggestions")}`} actions={
+            suggestions.length > 0 ? <ExportButtons size="xs" build={() => buildSuggestionsExport(t, suggestions)} /> : null
+          }>
             {suggestions.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("dashboard_no_history")}</p>
             ) : (
