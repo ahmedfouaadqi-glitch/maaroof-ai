@@ -19,6 +19,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
+import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 
@@ -72,6 +73,11 @@ const ApiSuggestRoute = ApiSuggestRouteImport.update({
   path: '/api/suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCompareRoute = ApiCompareRouteImport.update({
+  id: '/api/compare',
+  path: '/api/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/compare': typeof ApiCompareRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/compare': typeof ApiCompareRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/compare': typeof ApiCompareRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/compare'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/compare'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/compare'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiCompareRoute: typeof ApiCompareRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/compare': {
+      id: '/api/compare'
+      path: '/api/compare'
+      fullPath: '/api/compare'
+      preLoaderRoute: typeof ApiCompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analyze': {
       id: '/api/analyze'
       path: '/api/analyze'
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiCompareRoute: ApiCompareRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
@@ -293,3 +314,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
