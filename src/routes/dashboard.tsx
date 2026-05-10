@@ -258,13 +258,74 @@ function HistoryActions({ text, onReuse, onDelete }: { text: string; onReuse?: (
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children, actions }: { title: string; children: React.ReactNode; actions?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-6 backdrop-blur">
-      <h2 className="mb-4 font-display text-lg font-semibold">{title}</h2>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold">{title}</h2>
+        {actions}
+      </div>
       {children}
     </div>
   );
+}
+
+function buildActivityExport(t: (k: string) => string, profile: any, analyses: any[], suggestions: any[]): ExportPayload {
+  return {
+    title: t("export_activity_title"),
+    subtitle: profile?.email || "",
+    sections: [
+      {
+        kind: "kv", heading: t("dashboard_subscription"),
+        rows: [
+          [t("dashboard_analyses"), profile?.monthly_analyses_used ?? 0],
+          [t("dashboard_suggestions"), profile?.monthly_suggestions_used ?? 0],
+          [t("dashboard_subscription"), profile?.is_subscribed ? (profile.subscription_tier || "Pro") : "Free"],
+          [t("dashboard_expires"), profile?.subscription_expires_at ? new Date(profile.subscription_expires_at).toLocaleDateString() : "—"],
+        ],
+      },
+      {
+        kind: "table", heading: `${t("dashboard_history")} — ${t("dashboard_analyses")}`,
+        table: {
+          columns: [t("col_date"), t("col_score"), t("col_input")],
+          data: analyses.map((a) => [new Date(a.created_at).toLocaleString(), a.score ?? "-", String(a.input_text || "").slice(0, 200)]),
+        },
+      },
+      {
+        kind: "table", heading: `${t("dashboard_history")} — ${t("dashboard_suggestions")}`,
+        table: {
+          columns: [t("col_date"), t("col_mode"), t("col_output")],
+          data: suggestions.map((s) => [new Date(s.created_at).toLocaleString(), s.mode || "-", String(s.output || "").slice(0, 300)]),
+        },
+      },
+    ],
+  };
+}
+
+function buildAnalysesExport(t: (k: string) => string, analyses: any[]): ExportPayload {
+  return {
+    title: t("export_analyses_title"),
+    sections: [{
+      kind: "table", heading: t("export_analyses_title"),
+      table: {
+        columns: [t("col_date"), t("col_score"), t("col_input")],
+        data: analyses.map((a) => [new Date(a.created_at).toLocaleString(), a.score ?? "-", String(a.input_text || "")]),
+      },
+    }],
+  };
+}
+
+function buildSuggestionsExport(t: (k: string) => string, suggestions: any[]): ExportPayload {
+  return {
+    title: t("export_suggestions_title"),
+    sections: [{
+      kind: "table", heading: t("export_suggestions_title"),
+      table: {
+        columns: [t("col_date"), t("col_mode"), t("col_output")],
+        data: suggestions.map((s) => [new Date(s.created_at).toLocaleString(), s.mode || "-", String(s.output || "")]),
+      },
+    }],
+  };
 }
 
 function ToolCard({
