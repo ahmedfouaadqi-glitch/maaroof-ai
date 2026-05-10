@@ -138,10 +138,25 @@ function DashboardPage() {
         <div id="suggest" className="mt-8 scroll-mt-24">
           <PostSuggester />
         </div>
+        <div id="compare" className="mt-8 scroll-mt-24">
+          <CompetitorCompare />
+        </div>
+
+        {/* Activity & summary export */}
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Activity className="size-4 text-primary" />
+            <span className="font-semibold">{t("export_summary")}</span>
+            <span className="text-xs text-muted-foreground">— {t("export_activity_title")}</span>
+          </div>
+          <ExportButtons build={() => buildActivityExport(t, profile, analyses, suggestions)} />
+        </div>
 
         {/* History */}
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <Card title={`${t("dashboard_history")} — ${t("dashboard_analyses")}`}>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <Card title={`${t("dashboard_history")} — ${t("dashboard_analyses")}`} actions={
+            analyses.length > 0 ? <ExportButtons size="xs" build={() => buildAnalysesExport(t, analyses)} /> : null
+          }>
             {analyses.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("dashboard_no_history")}</p>
             ) : (
