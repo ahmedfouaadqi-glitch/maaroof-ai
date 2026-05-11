@@ -139,7 +139,10 @@ export const Route = createFileRoute("/api/suggest")({
           };
 
           let instruction =
-`Goal: ${goalLabel[goal]}.
+`REPORT_LANGUAGE: ${body.lang || "en"} (${lang})
+WRITE EVERY variant.content, expected_reach_reason, factual_warnings, improvement_tips and detected_goal STRICTLY in ${lang}. Do NOT mix languages. Match the requested language regardless of the source text language.
+
+Goal: ${goalLabel[goal]}.
 ${body.brand ? `Brand/author: ${body.brand}.` : ""}
 ${body.audience ? `Audience: ${body.audience}.` : ""}
 Content type: ${contentType}. Target length: ${lengthGuide}.${platformBlock}
