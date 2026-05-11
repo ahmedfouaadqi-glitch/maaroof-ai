@@ -390,7 +390,7 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
       price_iqd: Number(f.price_iqd) || 0, duration_days: Number(f.duration_days) || 30,
       monthly_analyses: Number(f.monthly_analyses) || 0, monthly_suggestions: Number(f.monthly_suggestions) || 0,
       sort_order: Number(f.sort_order) || 0,
-      features: f.features.split("\n").map((x) => x.trim()).filter(Boolean),
+      features: f.features.split("\n").map((x: string) => x.trim()).filter(Boolean),
     });
     setEdit(false);
   };
