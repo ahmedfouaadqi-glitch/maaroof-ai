@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku" };
 
@@ -20,12 +21,14 @@ const SYSTEM = `أنت محلل GEO خبير. ستُعطى علامة تجاري
       "visibility_percent": <0-100>,
       "geo_score": <0-100>,
       "sentiment": "positive" | "neutral" | "negative",
+      "platform_presence": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100> },
       "strengths": ["...","..."],
       "weaknesses": ["...","..."]
     }
   ],
   "winner": "اسم العلامة الأقوى ظهوراً",
   "overview": "فقرة قصيرة (3-4 جمل) تقارن المشهد العام",
+  "content_gaps": ["موضوع/زاوية يفتقدها المنافسون يمكن للعلامة الرئيسية أن تستحوذ عليه","..."],
   "recommendations": ["خطوة عملية للعلامة الرئيسية لتجاوز المنافسين 1","...","..."]
 }`;
 
@@ -81,7 +84,8 @@ export const Route = createFileRoute("/api/compare")({
             await admin.from("user_agent_subscriptions").update({ tasks_used: sub.tasks_used + 1, tasks_used_today: dailyUsed + 1, last_run_date: today }).eq("id", sub.id);
           }
 
-          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق: العراق\nقيّم جميع العلامات (الرئيسية + المنافسين).`;
+          const userCtx = await getUserContext(admin, userId);
+          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق: العراق\nقيّم جميع العلامات (الرئيسية + المنافسين). قدّر platform_presence لكل محرك بناءً على ما تعرفه عن طريقة استشهاد كل محرك بالمصادر العراقية.${specialtyHint(userCtx, lang as any)}`;
 
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
@@ -113,16 +117,21 @@ export const Route = createFileRoute("/api/compare")({
           }
           parsed = parsed || {};
 
+          const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral"] as const;
           const allBrandNames = [brand, ...competitors];
           const brands = Array.isArray(parsed.brands) ? parsed.brands.slice(0, 5) : [];
           const normalizedBrands = allBrandNames.map((n) => {
             const found = brands.find((b: any) => String(b?.name || "").toLowerCase().trim() === n.toLowerCase().trim()) || {};
+            const pp: Record<string, number> = {};
+            const src = (found.platform_presence && typeof found.platform_presence === "object") ? found.platform_presence : {};
+            for (const p of PLATFORMS) pp[p] = clamp(src[p]);
             return {
               name: n,
               is_main: n === brand,
               visibility_percent: clamp(found.visibility_percent),
               geo_score: clamp(found.geo_score),
               sentiment: ["positive", "neutral", "negative"].includes(found.sentiment) ? found.sentiment : "neutral",
+              platform_presence: pp,
               strengths: arr(found.strengths, 4),
               weaknesses: arr(found.weaknesses, 4),
             };
@@ -132,7 +141,9 @@ export const Route = createFileRoute("/api/compare")({
             brands: normalizedBrands,
             winner: String(parsed.winner || normalizedBrands[0]?.name || brand).slice(0, 120),
             overview: String(parsed.overview || "").slice(0, 600),
+            content_gaps: arr(parsed.content_gaps, 6),
             recommendations: arr(parsed.recommendations, 6),
+            specialty: userCtx.specialty,
           };
 
           await admin.from("agent_tasks").insert({

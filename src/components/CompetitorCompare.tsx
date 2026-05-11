@@ -13,6 +13,7 @@ type Brand = {
   visibility_percent: number;
   geo_score: number;
   sentiment: "positive" | "neutral" | "negative";
+  platform_presence?: Record<string, number>;
   strengths: string[];
   weaknesses: string[];
 };
@@ -20,8 +21,12 @@ type Result = {
   brands: Brand[];
   winner: string;
   overview: string;
+  content_gaps?: string[];
   recommendations: string[];
+  specialty?: string | null;
 };
+
+const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral"] as const;
 
 export function CompetitorCompare() {
   const { t, lang } = useI18n();
@@ -97,7 +102,12 @@ export function CompetitorCompare() {
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
-      <p className="mb-4 text-sm text-muted-foreground">{t("compare_desc")}</p>
+      <p className="mb-2 text-sm text-muted-foreground">{t("compare_desc")}</p>
+      {(auth?.profile as any)?.specialty && (
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
+          <Sparkles className="size-3" /> {t("specialty_active")}: <b>{(auth?.profile as any).specialty}</b>
+        </div>
+      )}
 
       <div className="grid gap-3 md:grid-cols-3">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("compare_brand")}
@@ -146,6 +156,22 @@ export function CompetitorCompare() {
                   <Bar label={t("col_visibility")} value={b.visibility_percent} />
                   <Bar label={t("col_geo")} value={b.geo_score} />
                 </div>
+                {b.platform_presence && Object.values(b.platform_presence).some((v) => v > 0) && (
+                  <div className="mb-3 rounded-lg border border-border/60 bg-background/40 p-2">
+                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">{t("compare_platform_presence")}</div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {PLATFORMS.map((p) => (
+                        <div key={p} className="flex items-center gap-1.5 text-[10px]">
+                          <span className="w-16 truncate capitalize text-muted-foreground">{p}</span>
+                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${b.platform_presence?.[p] || 0}%` }} />
+                          </div>
+                          <span className="w-7 text-end font-mono text-foreground/80">{b.platform_presence?.[p] || 0}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {b.strengths.length > 0 && (
                   <div className="text-xs"><b className="text-success">✓ {t("col_strengths")}:</b> {b.strengths.join(" · ")}</div>
                 )}
@@ -155,6 +181,17 @@ export function CompetitorCompare() {
               </div>
             ))}
           </div>
+
+          {result.content_gaps && result.content_gaps.length > 0 && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-primary">
+                <Sparkles className="size-4" /> {t("compare_content_gaps")}
+              </div>
+              <ul className="ms-5 list-disc space-y-1 text-sm">
+                {result.content_gaps.map((g, i) => <li key={i}>{g}</li>)}
+              </ul>
+            </div>
+          )}
 
           {result.recommendations.length > 0 && (
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">

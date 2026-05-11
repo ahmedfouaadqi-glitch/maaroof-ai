@@ -12,6 +12,7 @@ import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
+import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
@@ -151,8 +152,13 @@ function DashboardPage() {
           </Link>
         </div>
 
+        {/* Specialty banner — anchors all tools to user's industry */}
+        <div className="mt-8">
+          <SpecialtyBanner />
+        </div>
+
         {/* Embedded tools */}
-        <div id="analyze" className="mt-12 scroll-mt-24">
+        <div id="analyze" className="mt-8 scroll-mt-24">
           <Sandbox />
         </div>
         <div id="suggest" className="mt-8 scroll-mt-24">

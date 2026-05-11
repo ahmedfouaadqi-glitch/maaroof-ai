@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Search, Loader2, ExternalLink } from "lucide-react";
+import { Search, Loader2, ExternalLink, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 
 export function SmartResearch() {
   const { t, lang } = useI18n();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
+  const specialty = (profile as any)?.specialty || "";
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [out, setOut] = useState<any>(null);
@@ -16,9 +17,10 @@ export function SmartResearch() {
     if (!q.trim()) return;
     setLoading(true); setErr(""); setOut(null);
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await fetch("/api/research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers,
         body: JSON.stringify({ query: q, lang, scope: (profile as any)?.geo_scope }),
       });
       const j = await res.json();
@@ -34,6 +36,11 @@ export function SmartResearch() {
         <Search className="size-5 text-primary" /> {t("research_title")}
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">{t("research_desc")}</p>
+      {specialty && (
+        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
+          <Sparkles className="size-3" /> {t("specialty_active")}: <b>{specialty}</b>
+        </div>
+      )}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("research_ph")}
           className="flex-1 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
@@ -46,16 +53,28 @@ export function SmartResearch() {
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {out && (
         <div className="mt-4 space-y-3" id="research-result">
-          {out.answer && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm whitespace-pre-wrap">{out.answer}</div>}
+          {out.answer && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm whitespace-pre-wrap leading-relaxed">{out.answer}</div>
+          )}
+          {out.key_findings?.length > 0 && (
+            <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-sm">
+              <div className="mb-1 text-xs font-semibold text-accent">{t("research_findings")}</div>
+              <ul className="ms-5 list-disc space-y-1">
+                {out.key_findings.map((k: string, i: number) => <li key={i}>{k}</li>)}
+              </ul>
+            </div>
+          )}
           {out.sources?.length > 0 && (
             <div>
-              <div className="mb-2 text-xs font-semibold text-muted-foreground">{t("research_sources")}</div>
-              <ul className="space-y-1">
+              <div className="mb-2 text-xs font-semibold text-muted-foreground">{t("research_sources")} ({out.sources.length})</div>
+              <ul className="space-y-1.5">
                 {out.sources.map((s: any, i: number) => (
-                  <li key={i} className="text-xs">
-                    <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                  <li key={i} className="rounded-lg border border-border bg-background/40 p-2 text-xs">
+                    <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
                       [{i + 1}] {s.title} <ExternalLink className="size-3" />
                     </a>
+                    {s.domain && <div className="mt-0.5 text-[10px] text-muted-foreground">{s.domain}</div>}
+                    {s.description && <div className="mt-1 text-foreground/80">{s.description.slice(0, 200)}</div>}
                   </li>
                 ))}
               </ul>
@@ -64,7 +83,8 @@ export function SmartResearch() {
           <ExportButtons size="xs" build={() => ({
             title: t("research_title"), subtitle: q,
             sections: [
-              { kind: "kv", heading: t("research_answer"), rows: [["", out.answer || ""]] },
+              { kind: "kv", heading: t("research_answer"), rows: [["", out.answer || ""]] as [string, string | number][] },
+              ...(out.key_findings?.length ? [{ kind: "list" as const, heading: t("research_findings"), list: out.key_findings }] : []),
               { kind: "table", heading: t("research_sources"),
                 table: { columns: ["#", t("col_title"), "URL"], data: (out.sources || []).map((s: any, i: number) => [i + 1, s.title, s.url]) } },
             ],
