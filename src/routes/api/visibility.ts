@@ -226,7 +226,9 @@ export const Route = createFileRoute("/api/visibility")({
             }
           }
 
-          const prompt = `REPORT_LANGUAGE: ${lang}\nBrand: ${brand}\nKeywords: ${keywords || "(unspecified)"}\nMarket: Iraq\n\nReturn the JSON now. All text fields MUST be in language code "${lang}".`;
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
+          const prompt = `REPORT_LANGUAGE: ${lang}\nBrand: ${brand}\nKeywords: ${keywords || "(unspecified)"}\nMarket: ${market.region}\n\nReturn the JSON now. All text fields MUST be in language code "${lang}".`;
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
