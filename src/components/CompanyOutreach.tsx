@@ -4,6 +4,7 @@ import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
+import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 
 type Mode = "search" | "email" | "brand";
 
