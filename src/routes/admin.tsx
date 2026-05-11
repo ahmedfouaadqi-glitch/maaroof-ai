@@ -810,17 +810,24 @@ function AccessTab() {
                                 onChange={(e) => upsert(activePlan, td.key, { enabled: e.target.checked })} />
                             </td>
                             <td className="p-2">
-                              <input type="number" min={0} value={r?.monthly_quota ?? ""}
+                              <input
+                                key={`m-${activePlan}-${td.key}-${r?.id || "new"}-${r?.monthly_quota ?? ""}`}
+                                type="number"
+                                min={0}
                                 placeholder="—"
+                                defaultValue={r?.monthly_quota ?? ""}
                                 onBlur={(e) => upsert(activePlan, td.key, {
                                   monthly_quota: e.target.value === "" ? null : parseInt(e.target.value, 10),
                                 })}
-                                defaultValue={r?.monthly_quota ?? ""}
                                 className="w-20 rounded border border-border bg-background/60 px-2 py-1 text-xs" />
                             </td>
                             <td className="p-2">
-                              <input type="number" min={0} defaultValue={r?.daily_quota ?? ""}
+                              <input
+                                key={`d-${activePlan}-${td.key}-${r?.id || "new"}-${r?.daily_quota ?? ""}`}
+                                type="number"
+                                min={0}
                                 placeholder="—"
+                                defaultValue={r?.daily_quota ?? ""}
                                 onBlur={(e) => upsert(activePlan, td.key, {
                                   daily_quota: e.target.value === "" ? null : parseInt(e.target.value, 10),
                                 })}
