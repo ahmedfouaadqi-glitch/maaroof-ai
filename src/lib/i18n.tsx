@@ -497,6 +497,8 @@ const en: Dict = {
   geo_scope_title: "Geographic scope",
   geo_scope_world: "World", geo_scope_country: "Country", geo_scope_province: "Province", geo_scope_city: "City",
   geo_country_ph: "Country (e.g. Iraq)", geo_city_ph: "City / Province (e.g. Baghdad)",
+  geo_scope_per_tool: "Per-tool", geo_scope_global_inherit: "Inherits global", geo_scope_use_global: "Use global",
+  admin_quota_override: "Quota override", admin_reset_usage: "Reset usage counters",
   profile_title: "My Profile", profile_full_name: "Full name", profile_brand_name: "Brand name",
   profile_brand_keywords: "Brand keywords", profile_specialty: "Specialty / Industry",
   profile_save: "Save changes", profile_email_locked: "Email cannot be changed here.",
