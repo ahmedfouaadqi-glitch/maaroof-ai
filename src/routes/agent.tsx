@@ -587,6 +587,24 @@ function AgentPage() {
                     {tk.result.recommendations?.length > 0 && (
                       <ol className="ms-4 list-decimal space-y-0.5">{tk.result.recommendations.map((r: string, i: number) => <li key={i}>{r}</li>)}</ol>
                     )}
+                    {Array.isArray(tk.result.platforms) && tk.result.platforms.length > 0 && (
+                      <div className="mt-2 space-y-1.5 border-t border-primary/20 pt-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-widest text-primary/80">{t("ag_vis_platforms")}</div>
+                        <div className="grid gap-1.5 md:grid-cols-2">
+                          {tk.result.platforms.map((p: any, i: number) => (
+                            <div key={i} className="rounded border border-border bg-background/40 p-2">
+                              <div className="flex items-center justify-between">
+                                <b>{p.name}</b>
+                                <span className="font-mono text-primary">{p.score}/100</span>
+                              </div>
+                              <div className="mt-0.5 text-[10px] text-muted-foreground">{t("ag_vis_citation")}: <b className={p.citation_likelihood === "high" ? "text-success" : p.citation_likelihood === "low" ? "text-destructive" : "text-accent"}>{p.citation_likelihood}</b> · {t("ag_vis_trust")}: {p.trust_signal}</div>
+                              {p.why && <div className="mt-1 text-[11px] text-foreground/80">{p.why}</div>}
+                              {p.action && <div className="mt-0.5 text-[11px] text-accent">▶ {p.action}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && channels.length > 0 && (

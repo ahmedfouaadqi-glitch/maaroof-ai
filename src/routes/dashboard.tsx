@@ -6,10 +6,12 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
 import { CompetitorCompare } from "@/components/CompetitorCompare";
+import { FeasibilityStudy } from "@/components/FeasibilityStudy";
+import { BizDev } from "@/components/BizDev";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
@@ -103,6 +105,20 @@ function DashboardPage() {
               badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")}
               badgeOk={!!agentSub}
             />
+            <ToolCard
+              icon={<ClipboardList className="size-5" />}
+              title={t("dash_tool_feas_t")}
+              desc={t("dash_tool_feas_d")}
+              cta={t("dash_open_feas")}
+              href="#feasibility"
+            />
+            <ToolCard
+              icon={<TrendingUp className="size-5" />}
+              title={t("dash_tool_biz_t")}
+              desc={t("dash_tool_biz_d")}
+              cta={t("dash_open_biz")}
+              href="#bizdev"
+            />
           </div>
         </div>
 
@@ -140,6 +156,12 @@ function DashboardPage() {
         </div>
         <div id="compare" className="mt-8 scroll-mt-24">
           <CompetitorCompare />
+        </div>
+        <div id="feasibility" className="mt-8 scroll-mt-24">
+          <FeasibilityStudy />
+        </div>
+        <div id="bizdev" className="mt-8 scroll-mt-24">
+          <BizDev />
         </div>
 
         {/* Activity & summary export */}
