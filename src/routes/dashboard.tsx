@@ -8,6 +8,10 @@ import { PostSuggester } from "@/components/PostSuggester";
 import { CompetitorCompare } from "@/components/CompetitorCompare";
 import { FeasibilityStudy } from "@/components/FeasibilityStudy";
 import { BizDev } from "@/components/BizDev";
+import { SmartResearch } from "@/components/SmartResearch";
+import { CompanyOutreach } from "@/components/CompanyOutreach";
+import { BrandBoostAgent } from "@/components/BrandBoostAgent";
+import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
@@ -162,6 +166,18 @@ function DashboardPage() {
         </div>
         <div id="bizdev" className="mt-8 scroll-mt-24">
           <BizDev />
+        </div>
+        <div className="mt-8">
+          <GeoScopeSelector />
+        </div>
+        <div id="research" className="mt-8 scroll-mt-24">
+          <SmartResearch />
+        </div>
+        <div id="outreach" className="mt-8 scroll-mt-24">
+          <CompanyOutreach />
+        </div>
+        <div id="boost" className="mt-8 scroll-mt-24">
+          <BrandBoostAgent />
         </div>
 
         {/* Activity & summary export */}
