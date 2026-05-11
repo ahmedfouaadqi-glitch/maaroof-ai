@@ -177,18 +177,21 @@ export const Route = createFileRoute("/api/bizdev")({
             }
           }
 
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
           const userPrompt = `REPORT_LANGUAGE: ${lang}
 Business name: ${name}
 Stage: ${body.stage || "(unspecified)"}
 Sector: ${body.sector || "(unspecified)"}
-City / Region (Iraq): ${body.city || "(unspecified)"}
-Current monthly revenue (IQD): ${body.current_revenue_iqd ?? "(unspecified)"}
+Target market: ${market.region}
+City / Region: ${body.city || "(unspecified)"}
+Current monthly revenue: ${body.current_revenue_iqd ?? "(unspecified)"}
 Monthly active customers: ${body.monthly_customers ?? "(unspecified)"}
 Team size: ${body.team_size ?? "(unspecified)"}
 Current marketing channels: ${body.channels || "(unspecified)"}
 12-month goals: ${body.goals || "(unspecified)"}
 Top challenges right now: ${body.challenges || "(unspecified)"}
-Available growth budget (IQD/month): ${body.budget_iqd ?? "(unspecified)"}
+Available growth budget (per month): ${body.budget_iqd ?? "(unspecified)"}
 Extra notes: ${body.notes || "(none)"}
 
 Return the JSON business-development plan now. All string fields MUST be in language "${lang}".`;
