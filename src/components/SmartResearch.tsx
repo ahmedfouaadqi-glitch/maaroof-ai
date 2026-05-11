@@ -90,14 +90,37 @@ export function SmartResearch() {
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {out && (
         <div className="mt-4 space-y-3" id="research-result">
+          {out.sge_summary && (
+            <div className="rounded-lg border border-accent/40 bg-gradient-to-br from-accent/10 to-primary/5 p-3">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-accent font-bold">
+                <Zap className="size-3.5" /> {t("research_sge")}
+                <span title={t("research_sge_tooltip")} className="cursor-help text-muted-foreground">ⓘ</span>
+              </div>
+              <div className="text-sm leading-relaxed whitespace-pre-wrap">{out.sge_summary}</div>
+            </div>
+          )}
           {out.answer && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm whitespace-pre-wrap leading-relaxed">{out.answer}</div>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm whitespace-pre-wrap leading-relaxed">
+              <div className="mb-1 text-[10px] uppercase tracking-widest text-primary font-semibold">{t("research_answer")}</div>
+              {out.answer}
+            </div>
           )}
           {out.key_findings?.length > 0 && (
             <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-sm">
               <div className="mb-1 text-xs font-semibold text-accent">{t("research_findings")}</div>
               <ul className="ms-5 list-disc space-y-1">
                 {out.key_findings.map((k: string, i: number) => <li key={i}>{k}</li>)}
+              </ul>
+            </div>
+          )}
+          {out.visibility_opportunities?.length > 0 && (
+            <div className="rounded-lg border border-success/40 bg-success/5 p-3 text-sm">
+              <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-success">
+                <TrendingUp className="size-3.5" /> {t("research_opportunities")}
+                <span title={t("research_opportunities_tooltip")} className="cursor-help text-muted-foreground">ⓘ</span>
+              </div>
+              <ul className="ms-5 list-decimal space-y-1">
+                {out.visibility_opportunities.map((k: string, i: number) => <li key={i}>{k}</li>)}
               </ul>
             </div>
           )}
