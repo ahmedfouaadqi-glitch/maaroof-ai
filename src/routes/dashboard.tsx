@@ -167,6 +167,18 @@ function DashboardPage() {
         <div id="bizdev" className="mt-8 scroll-mt-24">
           <BizDev />
         </div>
+        <div className="mt-8">
+          <GeoScopeSelector />
+        </div>
+        <div id="research" className="mt-8 scroll-mt-24">
+          <SmartResearch />
+        </div>
+        <div id="outreach" className="mt-8 scroll-mt-24">
+          <CompanyOutreach />
+        </div>
+        <div id="boost" className="mt-8 scroll-mt-24">
+          <BrandBoostAgent />
+        </div>
 
         {/* Activity & summary export */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
