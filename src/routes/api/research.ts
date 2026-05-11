@@ -27,8 +27,24 @@ export const Route = createFileRoute("/api/research")({
 
           const geo = scope?.country ? ` ${scope.country}` : "";
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
+          const body = await (async () => { try { return await request.clone().json(); } catch { return {}; } })();
+          const includeChannels: boolean = !!body?.include_channels;
+          const channelTypes: string[] = Array.isArray(body?.channel_types) && body.channel_types.length
+            ? body.channel_types : ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"];
+
           const sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang });
-          const results = (sr?.data || sr?.web || []).slice(0, 8).map((r: any) => ({
+          // Firecrawl v2 returns { data: { web: [...], news: [...] } } OR legacy { data: [...] }
+          const pickArr = (v: any): any[] => {
+            if (Array.isArray(v)) return v;
+            if (v && typeof v === "object") {
+              return [...(Array.isArray(v.web) ? v.web : []), ...(Array.isArray(v.news) ? v.news : [])];
+            }
+            return [];
+          };
+          const rawList: any[] = pickArr(sr?.data).length ? pickArr(sr.data)
+            : pickArr(sr?.web).length ? pickArr(sr.web)
+            : Array.isArray(sr?.results) ? sr.results : [];
+          const results = rawList.slice(0, 8).map((r: any) => ({
             title: r.title || r.url,
             url: r.url,
             description: r.description || "",
