@@ -56,10 +56,15 @@ export function CompanyOutreach() {
 
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-5 backdrop-blur">
-      <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-        <Building2 className="size-5 text-primary" /> {t("outreach_title")}
-      </h2>
-      <p className="mt-1 text-xs text-muted-foreground">{t("outreach_desc")}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+            <Building2 className="size-5 text-primary" /> {t("outreach_title")}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t("outreach_desc")}</p>
+        </div>
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
 
       {specialty && (
         <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
