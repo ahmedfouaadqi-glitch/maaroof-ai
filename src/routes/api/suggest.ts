@@ -211,7 +211,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [
-                { role: "system", content: SYSTEM },
+                { role: "system", content: buildSystem(describeMarket(body.scope)) },
                 { role: "user", content: userParts },
               ],
               tools: [tool],
