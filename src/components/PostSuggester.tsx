@@ -207,6 +207,7 @@ export function PostSuggester({
         <span className="font-mono uppercase tracking-widest text-xs">{t("suggest_title")}</span>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("suggest_desc")}</p>
+      <ToolHelpBanner toolKey="suggest" />
 
       <div className="mb-3 flex justify-end">
         <ToolLangSelect value={outLang} onChange={setOutLang} />
