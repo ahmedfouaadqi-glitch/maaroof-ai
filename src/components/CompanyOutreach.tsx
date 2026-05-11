@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
+import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 
 type Mode = "search" | "email" | "brand";
 
