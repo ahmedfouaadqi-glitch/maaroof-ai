@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
 import { ExportButtons } from "@/components/ExportButtons";
+import { ToolLangSelect } from "@/components/ToolLangSelect";
 import type { ExportPayload } from "@/lib/exports";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,6 +11,7 @@ const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
+  const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
