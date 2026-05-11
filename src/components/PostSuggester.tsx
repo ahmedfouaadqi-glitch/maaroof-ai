@@ -208,10 +208,10 @@ export function PostSuggester({
       </div>
 
       {!initialSourceText && (
-        <div className="mb-4 inline-flex rounded-full border border-border bg-background/60 p-1">
+        <div className="mb-4 flex w-full flex-wrap gap-1 rounded-2xl border border-border bg-background/60 p-1 sm:inline-flex sm:w-auto">
           <button
             onClick={() => setMode("text")}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition sm:flex-none ${
               mode === "text" ? "bg-primary/20 text-primary" : "text-muted-foreground"
             }`}
           >
@@ -219,11 +219,19 @@ export function PostSuggester({
           </button>
           <button
             onClick={() => setMode("image")}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition sm:flex-none ${
               mode === "image" ? "bg-primary/20 text-primary" : "text-muted-foreground"
             }`}
           >
             <ImageIcon className="size-3.5" /> {t("suggest_tab_image")}
+          </button>
+          <button
+            onClick={() => setMode("video")}
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition sm:flex-none ${
+              mode === "video" ? "bg-primary/20 text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <VideoIcon className="size-3.5" /> {t("suggest_tab_video")}
           </button>
         </div>
       )}
@@ -257,6 +265,45 @@ export function PostSuggester({
               <>
                 <Upload className="size-6" />
                 <span>{t("suggest_upload")}</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {!initialSourceText && mode === "video" && (
+        <div>
+          <input
+            ref={videoRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleVideoFile(e.target.files[0])}
+          />
+          <button
+            onClick={() => videoRef.current?.click()}
+            disabled={videoBusy}
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background/40 p-6 text-sm text-muted-foreground transition hover:border-accent/50 hover:text-foreground disabled:opacity-60"
+          >
+            {videoUrl ? (
+              <div className="flex w-full flex-col items-center gap-2">
+                <video src={videoUrl} controls className="max-h-56 w-full max-w-md rounded-lg bg-black" />
+                {videoDuration != null && (
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    {Math.round(videoDuration)}s · {imageData ? "✓" : "…"}
+                  </span>
+                )}
+              </div>
+            ) : videoBusy ? (
+              <>
+                <Loader2 className="size-6 animate-spin" />
+                <span>{t("suggest_video_processing")}</span>
+              </>
+            ) : (
+              <>
+                <VideoIcon className="size-6" />
+                <span>{t("suggest_upload_video")}</span>
+                <span className="text-[11px] text-muted-foreground/80">{t("suggest_video_hint")}</span>
               </>
             )}
           </button>
