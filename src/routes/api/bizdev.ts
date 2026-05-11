@@ -1,25 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 
 type Body = {
   business_name?: string;
-  stage?: string; // idea / mvp / early-revenue / growth / scale
+  stage?: string;
   sector?: string;
   city?: string;
   current_revenue_iqd?: string | number;
   monthly_customers?: string | number;
   team_size?: string | number;
-  channels?: string; // current marketing channels
-  goals?: string; // 12-month goals
+  channels?: string;
+  goals?: string;
   challenges?: string;
   budget_iqd?: string | number;
   notes?: string;
   lang?: "en" | "ar" | "ku";
+  scope?: GeoScope;
 };
 
-const SYSTEM = `You are a senior business-development strategist for the Iraqi market. Build a realistic, sequenced 12-month growth plan.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a senior business-development strategist for ${m.market}. Build a realistic, sequenced 12-month growth plan.
 
-Be concrete and conservative. Use Iraqi context: WhatsApp & Instagram dominance, FastPay/Zain Cash/Asia Hawala for payments, the realities of B2B sales cycles in Iraq, the importance of trust networks in Baghdad/Erbil/Basra, Arabic + Kurdish content needs. NEVER fabricate exact partner names, KPIs, or government statistics. When inputs are weak, say so and recommend discovery steps before tactics.
+Be concrete and conservative. LOCALIZATION CONTEXT: ${m.contextHint} NEVER fabricate exact partner names, KPIs, or government statistics. When inputs are weak, say so and recommend discovery steps before tactics.
 
 Return ONLY valid JSON in this exact shape (all text fields in REPORT language):
 {
@@ -175,18 +177,21 @@ export const Route = createFileRoute("/api/bizdev")({
             }
           }
 
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
           const userPrompt = `REPORT_LANGUAGE: ${lang}
 Business name: ${name}
 Stage: ${body.stage || "(unspecified)"}
 Sector: ${body.sector || "(unspecified)"}
-City / Region (Iraq): ${body.city || "(unspecified)"}
-Current monthly revenue (IQD): ${body.current_revenue_iqd ?? "(unspecified)"}
+Target market: ${market.region}
+City / Region: ${body.city || "(unspecified)"}
+Current monthly revenue: ${body.current_revenue_iqd ?? "(unspecified)"}
 Monthly active customers: ${body.monthly_customers ?? "(unspecified)"}
 Team size: ${body.team_size ?? "(unspecified)"}
 Current marketing channels: ${body.channels || "(unspecified)"}
 12-month goals: ${body.goals || "(unspecified)"}
 Top challenges right now: ${body.challenges || "(unspecified)"}
-Available growth budget (IQD/month): ${body.budget_iqd ?? "(unspecified)"}
+Available growth budget (per month): ${body.budget_iqd ?? "(unspecified)"}
 Extra notes: ${body.notes || "(none)"}
 
 Return the JSON business-development plan now. All string fields MUST be in language "${lang}".`;

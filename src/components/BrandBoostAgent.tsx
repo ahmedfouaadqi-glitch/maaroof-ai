@@ -3,7 +3,7 @@ import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
-import { GeoScopeSelector } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -79,7 +79,7 @@ export function BrandBoostAgent() {
     try {
       const res = await fetch("/api/brand-boost", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang, scope: getEffectiveScope(profile, "brand") }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "failed");

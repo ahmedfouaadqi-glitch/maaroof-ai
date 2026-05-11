@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 
 type Body = {
   project_name?: string;
@@ -15,11 +16,12 @@ type Body = {
   competitors?: string;
   notes?: string;
   lang?: "en" | "ar" | "ku";
+  scope?: GeoScope;
 };
 
-const SYSTEM = `You are a STRICT, evidence-based feasibility-study analyst for the Iraqi market (Baghdad, Erbil, Basra, Mosul, Najaf, Kirkuk, Sulaymaniyah, etc.).
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a STRICT, evidence-based feasibility-study analyst for ${m.market}.
 
-Analyze the project conservatively and realistically. Use Iraqi market context: dinar (IQD), local salary ranges, real cost of rent/utilities/marketing in Iraq, the realities of payment infrastructure (cash-heavy, FastPay/Zain Cash/Asia Hawala), telecom & internet quality, regulatory environment, and import/customs friction. NEVER fabricate exact statistics, partner names, or government numbers. When unsure, say so and assign lower confidence.
+Analyze the project conservatively and realistically. LOCALIZATION CONTEXT: ${m.contextHint} Use realistic local cost of rent/utilities/marketing, payment infrastructure, telecom & internet quality, regulatory environment, and import/customs friction for ${m.region}. NEVER fabricate exact statistics, partner names, or government numbers. When unsure, say so and assign lower confidence.
 
 Return ONLY valid JSON with this exact shape (all text fields in REPORT language):
 {
@@ -169,14 +171,17 @@ export const Route = createFileRoute("/api/feasibility")({
             }
           }
 
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
           const userPrompt = `REPORT_LANGUAGE: ${lang}
 Project name: ${project}
 Sector: ${body.sector || "(unspecified)"}
-City / Region (Iraq): ${body.city || "(unspecified)"}
+Target market: ${market.region}
+City / Region: ${body.city || "(unspecified)"}
 Target audience: ${body.target_audience || "(unspecified)"}
 Problem solved: ${body.problem || "(unspecified)"}
 Proposed solution: ${body.solution || "(unspecified)"}
-Total budget (IQD): ${body.budget_iqd ?? "(unspecified)"}
+Total budget: ${body.budget_iqd ?? "(unspecified)"}
 Initial team size: ${body.team_size ?? "(unspecified)"}
 Planned timeline (months): ${body.timeline_months ?? "(unspecified)"}
 Revenue model: ${body.revenue_model || "(unspecified)"}

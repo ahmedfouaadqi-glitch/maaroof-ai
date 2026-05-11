@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
+import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 
-type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku" };
+type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -10,7 +11,8 @@ const LANG_INSTRUCTION: Record<string, string> = {
   ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
 };
 
-const SYSTEM = `أنت محلل GEO خبير. ستُعطى علامة تجارية رئيسية و حتى 4 منافسين والسوق العراق.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `أنت محلل GEO خبير. ستُعطى علامة تجارية رئيسية و حتى 4 منافسين والسوق المستهدف هو: ${m.region} (${m.market}).
+السياق المحلي: ${m.contextHint}
 قيّم كل علامة بشكل واقعي ومتحفّظ — لا تختلق أرقاماً مؤكدة.
 أعد JSON صالح فقط بهذا الشكل بالضبط:
 {
@@ -97,7 +99,9 @@ export const Route = createFileRoute("/api/compare")({
           }
 
           const userCtx = await getUserContext(admin, userId);
-          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق: العراق\nقيّم جميع العلامات (الرئيسية + المنافسين). قدّر platform_presence لكل محرك بناءً على ما تعرفه عن طريقة استشهاد كل محرك بالمصادر العراقية.${specialtyHint(userCtx, lang as any)}`;
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
+          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين). قدّر platform_presence لكل محرك بناءً على ما تعرفه عن طريقة استشهاد كل محرك بالمصادر المتعلقة بـ ${market.region}.${specialtyHint(userCtx, lang as any)}`;
 
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",

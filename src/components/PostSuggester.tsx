@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge, Video as VideoIcon } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
-import { GeoScopeSelector } from "./GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 
 type Mode = "text" | "image" | "video";
@@ -172,6 +172,7 @@ export function PostSuggester({
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
+      (body as any).scope = getEffectiveScope(auth?.profile, "suggest");
       const r = await fetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
       const data = await r.json();
       if (r.status === 401) { setShowGate(true); return; }

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 
-type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku" };
+type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -9,8 +10,10 @@ const LANG_INSTRUCTION: Record<string, string> = {
   ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
 };
 
-const SYSTEM = `You are a STRICT, evidence-based AI Visibility analyst for the Iraqi market.
-Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral) is to mention or cite this brand when answering Iraqi user queries — and explain HOW each engine evaluates trust/citation differently.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a STRICT, evidence-based AI Visibility analyst for ${m.market}.
+Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
+
+LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
 Be conservative. If signals are weak or unknown, return low scores and say so. NEVER fabricate facts, numbers, awards, or partnerships. When you have no evidence, say "no public signals detected" instead of inventing facts.
 
@@ -223,7 +226,9 @@ export const Route = createFileRoute("/api/visibility")({
             }
           }
 
-          const prompt = `REPORT_LANGUAGE: ${lang}\nBrand: ${brand}\nKeywords: ${keywords || "(unspecified)"}\nMarket: Iraq\n\nReturn the JSON now. All text fields MUST be in language code "${lang}".`;
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
+          const prompt = `REPORT_LANGUAGE: ${lang}\nBrand: ${brand}\nKeywords: ${keywords || "(unspecified)"}\nMarket: ${market.region}\n\nReturn the JSON now. All text fields MUST be in language code "${lang}".`;
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

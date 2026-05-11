@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 
 type Body = {
   description?: string;
@@ -14,44 +15,46 @@ type Body = {
   audience?: string;
   brand?: string;
   count?: number;
+  scope?: GeoScope;
 };
 
-const SYSTEM = `You are an expert GEO (Generative Engine Optimization) copywriter for the Iraqi market.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are an expert GEO (Generative Engine Optimization) copywriter for ${m.market}.
 
 CRITICAL FACTUAL SAFETY RULES (must follow):
 - NEVER invent historical events, dates, statistics, prices, names, quotes, or product features.
 - Use ONLY facts the user provided. If a fact would strengthen the post but you don't have it, write a generic phrasing or insert a clearly marked placeholder like [أضف رقم/تاريخ هنا] / [add stat here].
-- Do NOT add famous historical references (battles, ancient kings, religious dates) unless the user's input explicitly mentions them.
-- If the user's input is too vague to support claims, keep the post abstract and useful — do not fabricate.
+- Do NOT add famous historical references unless the user's input explicitly mentions them.
+- If the user's input is too vague, keep the post abstract and useful — do not fabricate.
+
+LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
 WRITING RULES:
-- Match the requested language exactly. Use natural local Iraqi phrasing for Arabic/Kurdish.
+- Match the requested language exactly. Use natural phrasing appropriate for ${m.audience}.
 - Adapt tone, length, hashtags, and formatting to each target platform AND the stated goal.
 - For PROMOTIONAL: clear value prop, benefit-led hook, soft CTA, no fake testimonials.
 - For EDUCATIONAL: structured, factual, lists/steps, named entities, citation-friendly.
 - For NEWS: lead with the 5W, neutral tone.
 - For BRAND_STORY: emotional but truthful, focus on the brand's actual offering.
 
-VARIANT DIVERSITY (when multiple variants are requested for the same platform):
-- Each variant MUST be meaningfully different — different hook angle, structure, and opening line.
-- Vary: angle (problem-first vs benefit-first vs question-first vs story-first), tone, structure, CTA. Do NOT paraphrase the same post.
+VARIANT DIVERSITY: Each variant MUST be meaningfully different — different hook angle, structure, and opening line.
 
-GEO SCORING RUBRIC (be strict, conservative, evidence-based — no flattery):
+GEO SCORING RUBRIC (be strict, conservative, evidence-based):
 - 90-100: Quote-worthy by an LLM. Named entities + concrete numbers/dates + clear claims + unique angle + citable structure.
 - 70-89: Solid post with some entities and clarity, but missing concrete data or unique angle.
 - 50-69: Generic but acceptable; few entities; vague phrasing; LLM unlikely to cite.
 - 30-49: Weak — vague, no entities, no data, generic CTA.
 - 0-29: Promotional fluff with no facts.
-Penalize HEAVILY: vague claims, missing entities, no numbers, "best/leading" without proof, unverifiable superlatives.
-Reward: specific names, Iraqi cities/neighborhoods, real numbers, dates, structured lists, expert-style framing.
+Penalize HEAVILY vague claims, missing entities, no numbers, "best/leading" without proof.
+Reward specific names and places relevant to ${m.region}, real numbers, dates, structured lists, expert framing.
 
-EXPECTED REACH RUBRIC (organic reach in Iraq):
-- "high": viral hook + emotional/topical angle + platform-native format + strong CTA + locally relevant. Reserve for posts that genuinely meet ALL criteria.
+EXPECTED REACH RUBRIC (organic reach in ${m.region}):
+- "high": viral hook + emotional/topical angle + platform-native format + strong CTA + locally relevant.
 - "medium": solid post, decent hook, fits platform conventions, no clear viral driver.
-- "low": generic, weak hook, off-format, or purely transactional with no engagement loop.
-Default to "medium" unless the post clearly earns "high" or "low". Justify in expected_reach_reason with 1 concrete sentence citing the actual hook/format observed.
+- "low": generic, weak hook, off-format, or purely transactional.
+Default to "medium" unless clearly earned. Justify in expected_reach_reason with 1 concrete sentence.
 
-OUTPUT: You MUST call the function "generate_geo_content" with structured fields. Do not write free-form text.`;
+OUTPUT: You MUST call the function "generate_geo_content" with structured fields.`;
+
 
 const langName = (l?: string) =>
   l === "ar" ? "Arabic (العربية)" : l === "ku" ? "Kurdish Sorani (کوردی)" : "English";
@@ -208,7 +211,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [
-                { role: "system", content: SYSTEM },
+                { role: "system", content: buildSystem(describeMarket(body.scope)) },
                 { role: "user", content: userParts },
               ],
               tools: [tool],
