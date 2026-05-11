@@ -182,7 +182,8 @@ export function PostSuggester({
   };
 
   const canSubmit =
-    !!initialSourceText || (mode === "text" ? desc.trim().length > 0 : !!imageData);
+    !!initialSourceText ||
+    (mode === "text" ? desc.trim().length > 0 : !!imageData && !videoBusy);
 
   const copy = async () => {
     if (!post) return;
