@@ -994,6 +994,8 @@ const ar: Dict = {
   col_title: "العنوان", col_subject: "الموضوع", col_body: "النص",
   dash_daily_label: "اليوم", dash_monthly_label: "هذا الشهر",
   admin_reset_fp: "تصفير قفل الجهاز", admin_fp_locked: "مقفل بالجهاز",
+  admin_reset_fp_confirm: "تصفير قفل الجهاز لهذا المستخدم؟",
+  admin_send_reset: "إرسال إعادة تعيين كلمة السر", admin_reset_sent: "تم إرسال البريد",
   admin_edit_plan: "تعديل", admin_save: "حفظ",
   admin_plan_name: "الاسم", admin_plan_desc: "الوصف", admin_plan_price: "السعر (د.ع)",
   admin_plan_analyses: "تحاليل شهرية", admin_plan_suggestions: "اقتراحات شهرية",
