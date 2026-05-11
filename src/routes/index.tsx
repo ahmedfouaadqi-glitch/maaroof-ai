@@ -20,7 +20,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Page() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const [subOpen, setSubOpen] = useState(false);
   return (
     <div className="min-h-screen">
