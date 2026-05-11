@@ -77,6 +77,7 @@ export function BizDev() {
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("biz_desc")}</p>
+      <ToolHelpBanner toolKey="bizdev" />
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field label={t("biz_f_name")} value={form.business_name} onChange={upd("business_name")} />
