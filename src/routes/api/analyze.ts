@@ -65,6 +65,8 @@ export const Route = createFileRoute("/api/analyze")({
           const body = (await request.json()) as Body;
           const text = (body.text || "").trim();
           const lang = body.lang || "en";
+          const scope = body.scope;
+          const scopeKey = scope ? `${scope.scope}:${scope.country || ""}:${scope.city || ""}` : "iq";
           if (text.length < 20) return Response.json({ error: "Text too short" }, { status: 400 });
           if (text.length > 8000) return Response.json({ error: "Text too long" }, { status: 400 });
 
