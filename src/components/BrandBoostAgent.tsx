@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
 import { ExportButtons } from "@/components/ExportButtons";
+import { ToolLangSelect } from "@/components/ToolLangSelect";
 import type { ExportPayload } from "@/lib/exports";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,6 +11,7 @@ const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
+  const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
@@ -75,7 +77,7 @@ export function BrandBoostAgent() {
     try {
       const res = await fetch("/api/brand-boost", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "failed");
@@ -89,11 +91,16 @@ export function BrandBoostAgent() {
 
   return (
     <div className="rounded-2xl border border-accent/30 bg-card/70 p-5 backdrop-blur">
-      <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-        <Megaphone className="size-5 text-accent" /> {t("boost_title")}
-      </h2>
-      <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
-      <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+            <Megaphone className="size-5 text-accent" /> {t("boost_title")}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
+          <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
+        </div>
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("boost_brand")}

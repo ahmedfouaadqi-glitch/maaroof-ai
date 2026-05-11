@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Building2, Loader2, Mail, Copy, Check, Search, Sparkles, ExternalLink } from "lucide-react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
+import { ToolLangSelect } from "@/components/ToolLangSelect";
 
 type Mode = "search" | "email" | "brand";
 
 export function CompanyOutreach() {
   const { t, lang } = useI18n();
+  const [outLang, setOutLang] = useState<Lang>(lang);
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
   const specialty = (auth?.profile as any)?.specialty || "";
@@ -31,7 +33,7 @@ export function CompanyOutreach() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await fetch("/api/company-email", {
         method: "POST", headers,
-        body: JSON.stringify({ company, sector, goal, notes, lang, mode }),
+        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");
@@ -54,10 +56,15 @@ export function CompanyOutreach() {
 
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-5 backdrop-blur">
-      <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-        <Building2 className="size-5 text-primary" /> {t("outreach_title")}
-      </h2>
-      <p className="mt-1 text-xs text-muted-foreground">{t("outreach_desc")}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+            <Building2 className="size-5 text-primary" /> {t("outreach_title")}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t("outreach_desc")}</p>
+        </div>
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
 
       {specialty && (
         <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">

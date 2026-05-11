@@ -27,6 +27,7 @@ const SYSTEM = `أنت محلل GEO خبير. ستُعطى علامة تجاري
     }
   ],
   "winner": "اسم العلامة الأقوى ظهوراً",
+  "winner_reason": "جملة قصيرة (سطرين كحد أقصى) تشرح لماذا هذه العلامة هي الفائزة استناداً إلى الأرقام والمؤشرات",
   "overview": "فقرة قصيرة (3-4 جمل) تقارن المشهد العام",
   "content_gaps": ["موضوع/زاوية يفتقدها المنافسون يمكن للعلامة الرئيسية أن تستحوذ عليه","..."],
   "recommendations": ["خطوة عملية للعلامة الرئيسية لتجاوز المنافسين 1","...","..."]
@@ -137,9 +138,16 @@ export const Route = createFileRoute("/api/compare")({
             };
           });
 
+          // Rank brands by composite score (visibility + GEO) for fair ordering
+          const ranked = [...normalizedBrands]
+            .map((b) => ({ ...b, _composite: b.visibility_percent * 0.6 + b.geo_score * 0.4 }))
+            .sort((a, b) => b._composite - a._composite)
+            .map((b, i) => ({ ...b, rank: i + 1 }));
+
           const result = {
-            brands: normalizedBrands,
-            winner: String(parsed.winner || normalizedBrands[0]?.name || brand).slice(0, 120),
+            brands: ranked.map(({ _composite, ...rest }) => rest),
+            winner: String(parsed.winner || ranked[0]?.name || brand).slice(0, 120),
+            winner_reason: String(parsed.winner_reason || "").slice(0, 320),
             overview: String(parsed.overview || "").slice(0, 600),
             content_gaps: arr(parsed.content_gaps, 6),
             recommendations: arr(parsed.recommendations, 6),

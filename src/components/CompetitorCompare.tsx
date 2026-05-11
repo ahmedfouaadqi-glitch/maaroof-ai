@@ -16,10 +16,12 @@ type Brand = {
   platform_presence?: Record<string, number>;
   strengths: string[];
   weaknesses: string[];
+  rank?: number;
 };
 type Result = {
   brands: Brand[];
   winner: string;
+  winner_reason?: string;
   overview: string;
   content_gaps?: string[];
   recommendations: string[];
@@ -131,11 +133,14 @@ export function CompetitorCompare() {
       {result && (
         <div className="mt-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
-            <div className="flex items-center gap-2">
-              <Trophy className="size-5 text-accent" />
+            <div className="flex items-start gap-2">
+              <Trophy className="size-5 text-accent shrink-0 mt-0.5" />
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("compare_winner")}</div>
                 <div className="font-display text-lg font-bold text-gradient">{result.winner}</div>
+                {result.winner_reason && (
+                  <div className="mt-1 text-xs text-muted-foreground max-w-md">{result.winner_reason}</div>
+                )}
               </div>
             </div>
             <ExportButtons build={buildExport} />
@@ -148,8 +153,14 @@ export function CompetitorCompare() {
           <div className="grid gap-3 md:grid-cols-2">
             {result.brands.map((b, i) => (
               <div key={i} className={`rounded-xl border p-4 ${b.is_main ? "border-primary/50 bg-primary/5" : "border-border bg-background/40"}`}>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="font-semibold">{b.name} {b.is_main && <span className="ms-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">★</span>}</div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    {b.rank && (
+                      <span className={`inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold ${b.rank === 1 ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>{b.rank}</span>
+                    )}
+                    {b.name}
+                    {b.is_main && <span className="ms-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">★</span>}
+                  </div>
                   <div className="text-xs text-muted-foreground">{b.sentiment}</div>
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2">
