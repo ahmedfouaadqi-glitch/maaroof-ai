@@ -152,8 +152,13 @@ function DashboardPage() {
           </Link>
         </div>
 
+        {/* Specialty banner — anchors all tools to user's industry */}
+        <div className="mt-8">
+          <SpecialtyBanner />
+        </div>
+
         {/* Embedded tools */}
-        <div id="analyze" className="mt-12 scroll-mt-24">
+        <div id="analyze" className="mt-8 scroll-mt-24">
           <Sandbox />
         </div>
         <div id="suggest" className="mt-8 scroll-mt-24">
