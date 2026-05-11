@@ -337,9 +337,11 @@ export type Database = {
           is_subscribed: boolean
           monthly_analyses_used: number
           monthly_suggestions_used: number
+          quota_overrides: Json
           specialty: string | null
           subscription_expires_at: string | null
           subscription_tier: string | null
+          tool_geo_scopes: Json
           usage_day_start: string
           usage_period_start: string
         }
@@ -358,9 +360,11 @@ export type Database = {
           is_subscribed?: boolean
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          quota_overrides?: Json
           specialty?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          tool_geo_scopes?: Json
           usage_day_start?: string
           usage_period_start?: string
         }
@@ -379,9 +383,11 @@ export type Database = {
           is_subscribed?: boolean
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          quota_overrides?: Json
           specialty?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          tool_geo_scopes?: Json
           usage_day_start?: string
           usage_period_start?: string
         }
