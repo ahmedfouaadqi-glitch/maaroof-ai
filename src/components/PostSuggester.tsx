@@ -92,6 +92,57 @@ export function PostSuggester({
     reader.readAsDataURL(f);
   };
 
+  const handleVideoFile = async (f: File) => {
+    setError(null);
+    setVideoBusy(true);
+    setImageData(null);
+    setImageMime(null);
+    setVideoUrl(null);
+    setVideoDuration(null);
+    try {
+      const url = URL.createObjectURL(f);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.muted = true;
+      v.playsInline = true;
+      v.src = url;
+      await new Promise<void>((resolve, reject) => {
+        v.onloadedmetadata = () => resolve();
+        v.onerror = () => reject(new Error("video_load_failed"));
+      });
+      const duration = v.duration;
+      if (!isFinite(duration) || duration > 60.5) {
+        URL.revokeObjectURL(url);
+        setError(t("suggest_video_too_long"));
+        return;
+      }
+      // seek to middle and capture frame
+      await new Promise<void>((resolve, reject) => {
+        v.onseeked = () => resolve();
+        v.onerror = () => reject(new Error("seek_failed"));
+        try { v.currentTime = Math.min(duration / 2, Math.max(0, duration - 0.1)); } catch { resolve(); }
+      });
+      const w = v.videoWidth || 640;
+      const h = v.videoHeight || 360;
+      const scale = Math.min(1, 1024 / Math.max(w, h));
+      const cw = Math.max(1, Math.round(w * scale));
+      const ch = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = cw; canvas.height = ch;
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.drawImage(v, 0, 0, cw, ch);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      setImageData(dataUrl);
+      setImageMime("image/jpeg");
+      setVideoUrl(url);
+      setVideoDuration(duration);
+    } catch (e: any) {
+      setError(e?.message || "video_failed");
+    } finally {
+      setVideoBusy(false);
+    }
+  };
+
   const submit = async () => {
     setError(null); setPost(null); setResult(null); setShowGate(false); setShowLimit(false);
     if (!user) { setShowGate(true); return; }
@@ -100,6 +151,14 @@ export function PostSuggester({
       const body: any = { lang: outLang, platforms, length, contentType, goal, count };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
+      else if (mode === "video" && imageData) {
+        body.imageBase64 = imageData;
+        body.imageMime = imageMime;
+        const dur = videoDuration ? Math.round(videoDuration) : null;
+        body.description = dur
+          ? `محتوى مأخوذ من فيديو مدّته ${dur} ثانية. اعتمد على الإطار المرفق وصف ما يظهر فيه بصرياً ثم استخدم ذلك لصياغة المنشور. لا تخترع أحداثاً أو حواراً غير ظاهر.`
+          : "محتوى من فيديو قصير - اعتمد على الإطار المرفق فقط.";
+      }
       else if (imageData) {
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
