@@ -84,8 +84,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Generative Engine Optimization for Iraq. Part Of A Marouf Intellige,Test, score and optimize your content so ChatGPT, Gemini and Claude cite you  in EN, AR, KU." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/1de2c0c7-afc6-4e67-b025-5e324daf8445" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/1de2c0c7-afc6-4e67-b025-5e324daf8445" },
+      { name: "theme-color", content: "#0b0f1a" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "GEO-Iraq" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/icon-512.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/icon-512.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
