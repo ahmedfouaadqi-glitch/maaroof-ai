@@ -73,7 +73,7 @@ function toArray(value: unknown, max = 6) {
 }
 
 function normalizePlatforms(value: unknown): Array<any> {
-  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot"];
+  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral"];
   const arr = Array.isArray(value) ? value : [];
   const byName = new Map<string, any>();
   for (const item of arr) {
@@ -82,16 +82,24 @@ function normalizePlatforms(value: unknown): Array<any> {
       if (name) byName.set(name, item);
     }
   }
+  const enumOrDefault = (v: any, vals: string[], d: string) => (vals.includes(v) ? v : d);
   return NAMES.map((name) => {
     const p: any = byName.get(name) || {};
-    const lik = ["high", "medium", "low"].includes(p.citation_likelihood) ? p.citation_likelihood : "low";
+    const factors = Array.isArray(p.authority_factors)
+      ? p.authority_factors.slice(0, 4).map((x: any) => String(x ?? "").slice(0, 90)).filter(Boolean)
+      : [];
     return {
       name,
       score: clamp(p.score),
-      citation_likelihood: lik,
+      citation_likelihood: enumOrDefault(p.citation_likelihood, ["high", "medium", "low"], "low"),
+      citation_method: String(p.citation_method || "").trim().slice(0, 100),
+      evidence_basis: String(p.evidence_basis || "").trim().slice(0, 240),
+      authority_factors: factors,
       trust_signal: String(p.trust_signal || "").trim().slice(0, 120),
+      freshness_weight: enumOrDefault(p.freshness_weight, ["high", "medium", "low"], "medium"),
       why: String(p.why || "").trim().slice(0, 360),
       action: String(p.action || "").trim().slice(0, 220),
+      priority: enumOrDefault(p.priority, ["high", "medium", "low"], "medium"),
     };
   });
 }
