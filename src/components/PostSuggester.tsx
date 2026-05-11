@@ -155,13 +155,17 @@ export function PostSuggester({
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
         const dur = videoDuration ? Math.round(videoDuration) : null;
-        body.description = dur
+        const userNote = desc.trim();
+        const base = dur
           ? `محتوى مأخوذ من فيديو مدّته ${dur} ثانية. اعتمد على الإطار المرفق وصف ما يظهر فيه بصرياً ثم استخدم ذلك لصياغة المنشور. لا تخترع أحداثاً أو حواراً غير ظاهر.`
           : "محتوى من فيديو قصير - اعتمد على الإطار المرفق فقط.";
+        body.description = userNote ? `${base}\n\nملاحظات المستخدم: ${userNote}` : base;
       }
       else if (imageData) {
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
+        const userNote = desc.trim();
+        if (userNote) body.description = userNote;
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
