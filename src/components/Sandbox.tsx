@@ -6,6 +6,7 @@ import { Sparkles, Loader2, ShieldCheck, MapPin, Quote, Wand2, X, Lock, CheckCir
 import { PostSuggester } from "./PostSuggester";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
+import { ToolHelpBanner } from "./ToolHelpBanner";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
@@ -115,6 +116,7 @@ export function Sandbox() {
         <span className="font-mono uppercase tracking-widest text-xs">{t("sandbox_title")}</span>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("sandbox_desc")}</p>
+      <ToolHelpBanner toolKey="analyze" />
 
       <div className="mb-3 flex justify-end">
         <ToolLangSelect value={outLang} onChange={setOutLang} />

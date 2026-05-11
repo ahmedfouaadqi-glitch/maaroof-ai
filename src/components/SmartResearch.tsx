@@ -3,6 +3,7 @@ import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp } from 
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
+import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 
 const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
@@ -49,6 +50,7 @@ export function SmartResearch() {
         <Search className="size-5 text-primary" /> {t("research_title")}
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">{t("research_desc")}</p>
+      <ToolHelpBanner toolKey="research" />
       {specialty && (
         <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
           <Sparkles className="size-3" /> {t("specialty_active")}: <b>{specialty}</b>

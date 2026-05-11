@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, ClipboardList, AlertTriangle, Target } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
+import { ToolHelpBanner } from "./ToolHelpBanner";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 
 type Result = any;
@@ -101,6 +102,7 @@ export function FeasibilityStudy() {
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("feas_desc")}</p>
+      <ToolHelpBanner toolKey="feasibility" />
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field label={t("feas_f_name")} value={form.project_name} onChange={upd("project_name")} />

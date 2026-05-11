@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge, Video as VideoIcon } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
+import { ToolHelpBanner } from "./ToolHelpBanner";
 import type { ExportPayload } from "@/lib/exports";
 
 type Mode = "text" | "image" | "video";
@@ -206,6 +207,7 @@ export function PostSuggester({
         <span className="font-mono uppercase tracking-widest text-xs">{t("suggest_title")}</span>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("suggest_desc")}</p>
+      <ToolHelpBanner toolKey="suggest" />
 
       <div className="mb-3 flex justify-end">
         <ToolLangSelect value={outLang} onChange={setOutLang} />

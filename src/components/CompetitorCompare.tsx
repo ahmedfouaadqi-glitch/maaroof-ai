@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Trophy, Users, Sparkles, Lightbulb } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
+import { ToolHelpBanner } from "./ToolHelpBanner";
 import type { ExportPayload } from "@/lib/exports";
 
 type Brand = {
@@ -105,6 +106,7 @@ export function CompetitorCompare() {
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
       <p className="mb-2 text-sm text-muted-foreground">{t("compare_desc")}</p>
+      <ToolHelpBanner toolKey="compare" />
       {(auth?.profile as any)?.specialty && (
         <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
           <Sparkles className="size-3" /> {t("specialty_active")}: <b>{(auth?.profile as any).specialty}</b>

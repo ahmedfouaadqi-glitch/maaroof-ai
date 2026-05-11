@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
+import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import type { ExportPayload } from "@/lib/exports";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -98,6 +99,7 @@ export function BrandBoostAgent() {
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
           <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
+          <ToolHelpBanner toolKey="brand" />
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
