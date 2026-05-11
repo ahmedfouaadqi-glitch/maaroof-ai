@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
-type Body = { text: string; lang?: "en" | "ar" | "ku" };
+type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
+type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
 async function sha256Hex(s: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
