@@ -79,7 +79,7 @@ export function BrandBoostAgent() {
     try {
       const res = await fetch("/api/brand-boost", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang, scope: getEffectiveScope(profile, "brand") }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "failed");
