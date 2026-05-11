@@ -3,6 +3,7 @@ import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp } from 
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
+import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 
 const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
