@@ -102,7 +102,12 @@ export function CompetitorCompare() {
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
-      <p className="mb-4 text-sm text-muted-foreground">{t("compare_desc")}</p>
+      <p className="mb-2 text-sm text-muted-foreground">{t("compare_desc")}</p>
+      {(auth?.profile as any)?.specialty && (
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
+          <Sparkles className="size-3" /> {t("specialty_active")}: <b>{(auth?.profile as any).specialty}</b>
+        </div>
+      )}
 
       <div className="grid gap-3 md:grid-cols-3">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("compare_brand")}
