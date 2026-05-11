@@ -497,6 +497,8 @@ const en: Dict = {
   col_title: "Title", col_subject: "Subject", col_body: "Body",
   dash_daily_label: "Today", dash_monthly_label: "This month",
   admin_reset_fp: "Reset device lock", admin_fp_locked: "Device-locked",
+  admin_reset_fp_confirm: "Reset device lock for this user?",
+  admin_send_reset: "Send password reset", admin_reset_sent: "Password reset email sent",
   admin_edit_plan: "Edit", admin_save: "Save",
   admin_plan_name: "Name", admin_plan_desc: "Description", admin_plan_price: "Price (IQD)",
   admin_plan_analyses: "Monthly analyses", admin_plan_suggestions: "Monthly suggestions",
