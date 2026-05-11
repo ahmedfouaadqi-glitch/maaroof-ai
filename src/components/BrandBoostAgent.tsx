@@ -101,6 +101,7 @@ export function BrandBoostAgent() {
           <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
           <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
           <ToolHelpBanner toolKey="brand" />
+          <div className="mt-3"><GeoScopeSelector compact toolKey="brand" /></div>
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
