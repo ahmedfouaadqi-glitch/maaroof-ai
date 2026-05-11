@@ -171,14 +171,17 @@ export const Route = createFileRoute("/api/feasibility")({
             }
           }
 
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
           const userPrompt = `REPORT_LANGUAGE: ${lang}
 Project name: ${project}
 Sector: ${body.sector || "(unspecified)"}
-City / Region (Iraq): ${body.city || "(unspecified)"}
+Target market: ${market.region}
+City / Region: ${body.city || "(unspecified)"}
 Target audience: ${body.target_audience || "(unspecified)"}
 Problem solved: ${body.problem || "(unspecified)"}
 Proposed solution: ${body.solution || "(unspecified)"}
-Total budget (IQD): ${body.budget_iqd ?? "(unspecified)"}
+Total budget: ${body.budget_iqd ?? "(unspecified)"}
 Initial team size: ${body.team_size ?? "(unspecified)"}
 Planned timeline (months): ${body.timeline_months ?? "(unspecified)"}
 Revenue model: ${body.revenue_model || "(unspecified)"}
