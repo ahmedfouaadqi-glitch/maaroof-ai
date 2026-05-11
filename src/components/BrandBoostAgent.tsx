@@ -42,6 +42,34 @@ export function BrandBoostAgent() {
     await load();
   };
 
+  const remove = async (id: string) => {
+    if (!confirm(t("boost_delete_confirm"))) return;
+    await supabase.from("brand_boost_jobs").delete().eq("id", id);
+    setReport(null);
+    await load();
+  };
+
+  const buildExport = (j: any): ExportPayload => ({
+    title: t("boost_export_title"),
+    subtitle: j.brand_name,
+    sections: [
+      ...(report?.summary ? [{ heading: t("boost_summary"), kind: "text" as const, text: String(report.summary) }] : []),
+      {
+        heading: t("boost_title"),
+        kind: "table" as const,
+        table: {
+          columns: [t("boost_platform"), t("boost_signal"), t("boost_actions")],
+          data: (report?.plan || []).map((p: any) => [
+            String(p.platform || ""),
+            String(p.current_signal || ""),
+            (p.recommended_actions || []).join(" • "),
+          ]),
+        },
+      },
+    ],
+  });
+
+
   const runNow = async (j: any) => {
     setRunning(j.id); setErr(""); setReport(null);
     try {
