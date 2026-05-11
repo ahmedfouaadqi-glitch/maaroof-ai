@@ -4,11 +4,11 @@ import { ToolLangSelect } from "./ToolLangSelect";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge, Video as VideoIcon } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 
-type Mode = "text" | "image";
+type Mode = "text" | "image" | "video";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
 type Length = "short" | "medium" | "long";
 type ContentType = "post" | "article";
@@ -45,6 +45,9 @@ export function PostSuggester({
   const [desc, setDesc] = useState("");
   const [imageData, setImageData] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [videoBusy, setVideoBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [post, setPost] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -59,6 +62,7 @@ export function PostSuggester({
   const [count, setCount] = useState<number>(1);
   const [outLang, setOutLang] = useState<Lang>(lang);
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onReuse = (e: Event) => {
@@ -88,6 +92,57 @@ export function PostSuggester({
     reader.readAsDataURL(f);
   };
 
+  const handleVideoFile = async (f: File) => {
+    setError(null);
+    setVideoBusy(true);
+    setImageData(null);
+    setImageMime(null);
+    setVideoUrl(null);
+    setVideoDuration(null);
+    try {
+      const url = URL.createObjectURL(f);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.muted = true;
+      v.playsInline = true;
+      v.src = url;
+      await new Promise<void>((resolve, reject) => {
+        v.onloadedmetadata = () => resolve();
+        v.onerror = () => reject(new Error("video_load_failed"));
+      });
+      const duration = v.duration;
+      if (!isFinite(duration) || duration > 60.5) {
+        URL.revokeObjectURL(url);
+        setError(t("suggest_video_too_long"));
+        return;
+      }
+      // seek to middle and capture frame
+      await new Promise<void>((resolve, reject) => {
+        v.onseeked = () => resolve();
+        v.onerror = () => reject(new Error("seek_failed"));
+        try { v.currentTime = Math.min(duration / 2, Math.max(0, duration - 0.1)); } catch { resolve(); }
+      });
+      const w = v.videoWidth || 640;
+      const h = v.videoHeight || 360;
+      const scale = Math.min(1, 1024 / Math.max(w, h));
+      const cw = Math.max(1, Math.round(w * scale));
+      const ch = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = cw; canvas.height = ch;
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.drawImage(v, 0, 0, cw, ch);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      setImageData(dataUrl);
+      setImageMime("image/jpeg");
+      setVideoUrl(url);
+      setVideoDuration(duration);
+    } catch (e: any) {
+      setError(e?.message || "video_failed");
+    } finally {
+      setVideoBusy(false);
+    }
+  };
+
   const submit = async () => {
     setError(null); setPost(null); setResult(null); setShowGate(false); setShowLimit(false);
     if (!user) { setShowGate(true); return; }
@@ -96,6 +151,14 @@ export function PostSuggester({
       const body: any = { lang: outLang, platforms, length, contentType, goal, count };
       if (initialSourceText) body.sourceText = initialSourceText;
       else if (mode === "text") body.description = desc;
+      else if (mode === "video" && imageData) {
+        body.imageBase64 = imageData;
+        body.imageMime = imageMime;
+        const dur = videoDuration ? Math.round(videoDuration) : null;
+        body.description = dur
+          ? `محتوى مأخوذ من فيديو مدّته ${dur} ثانية. اعتمد على الإطار المرفق وصف ما يظهر فيه بصرياً ثم استخدم ذلك لصياغة المنشور. لا تخترع أحداثاً أو حواراً غير ظاهر.`
+          : "محتوى من فيديو قصير - اعتمد على الإطار المرفق فقط.";
+      }
       else if (imageData) {
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
@@ -119,7 +182,8 @@ export function PostSuggester({
   };
 
   const canSubmit =
-    !!initialSourceText || (mode === "text" ? desc.trim().length > 0 : !!imageData);
+    !!initialSourceText ||
+    (mode === "text" ? desc.trim().length > 0 : !!imageData && !videoBusy);
 
   const copy = async () => {
     if (!post) return;
@@ -144,10 +208,10 @@ export function PostSuggester({
       </div>
 
       {!initialSourceText && (
-        <div className="mb-4 inline-flex rounded-full border border-border bg-background/60 p-1">
+        <div className="mb-4 flex w-full flex-wrap gap-1 rounded-2xl border border-border bg-background/60 p-1 sm:inline-flex sm:w-auto">
           <button
             onClick={() => setMode("text")}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition sm:flex-none ${
               mode === "text" ? "bg-primary/20 text-primary" : "text-muted-foreground"
             }`}
           >
@@ -155,11 +219,19 @@ export function PostSuggester({
           </button>
           <button
             onClick={() => setMode("image")}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition sm:flex-none ${
               mode === "image" ? "bg-primary/20 text-primary" : "text-muted-foreground"
             }`}
           >
             <ImageIcon className="size-3.5" /> {t("suggest_tab_image")}
+          </button>
+          <button
+            onClick={() => setMode("video")}
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition sm:flex-none ${
+              mode === "video" ? "bg-primary/20 text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <VideoIcon className="size-3.5" /> {t("suggest_tab_video")}
           </button>
         </div>
       )}
@@ -193,6 +265,45 @@ export function PostSuggester({
               <>
                 <Upload className="size-6" />
                 <span>{t("suggest_upload")}</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {!initialSourceText && mode === "video" && (
+        <div>
+          <input
+            ref={videoRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleVideoFile(e.target.files[0])}
+          />
+          <button
+            onClick={() => videoRef.current?.click()}
+            disabled={videoBusy}
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background/40 p-6 text-sm text-muted-foreground transition hover:border-accent/50 hover:text-foreground disabled:opacity-60"
+          >
+            {videoUrl ? (
+              <div className="flex w-full flex-col items-center gap-2">
+                <video src={videoUrl} controls className="max-h-56 w-full max-w-md rounded-lg bg-black" />
+                {videoDuration != null && (
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    {Math.round(videoDuration)}s · {imageData ? "✓" : "…"}
+                  </span>
+                )}
+              </div>
+            ) : videoBusy ? (
+              <>
+                <Loader2 className="size-6 animate-spin" />
+                <span>{t("suggest_video_processing")}</span>
+              </>
+            ) : (
+              <>
+                <VideoIcon className="size-6" />
+                <span>{t("suggest_upload_video")}</span>
+                <span className="text-[11px] text-muted-foreground/80">{t("suggest_video_hint")}</span>
               </>
             )}
           </button>
