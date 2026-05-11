@@ -28,6 +28,8 @@ export function SiteHeader() {
           <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>
           {auth?.user && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
           {auth?.user && <Link to="/agent" className="hover:text-foreground">{t("nav_agent")}</Link>}
+          {auth?.user && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
+          <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>
           {auth?.isAdmin && <Link to="/admin" className="text-accent hover:text-foreground">{t("nav_admin")}</Link>}
         </nav>
         <div className="flex items-center gap-2">
