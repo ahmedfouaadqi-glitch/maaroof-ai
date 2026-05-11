@@ -7,7 +7,7 @@ import { PostSuggester } from "./PostSuggester";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
-import { GeoScopeSelector } from "./GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
@@ -83,7 +83,7 @@ export function Sandbox() {
 
       const r = await fetch("/api/analyze", {
         method: "POST", headers,
-        body: JSON.stringify({ text, lang: outLang }),
+        body: JSON.stringify({ text, lang: outLang, scope: getEffectiveScope(auth?.profile, "analyze") }),
       });
       const data = await r.json();
       await stepTimer;
