@@ -58,7 +58,7 @@ export function CompetitorCompare() {
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
       const r = await fetch("/api/compare", {
         method: "POST", headers,
-        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang }),
+        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare") }),
       });
       const data = await r.json();
       if (!r.ok) { setError(data?.error || "error"); return; }
