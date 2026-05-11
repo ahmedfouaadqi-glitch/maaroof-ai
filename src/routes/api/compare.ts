@@ -99,7 +99,9 @@ export const Route = createFileRoute("/api/compare")({
           }
 
           const userCtx = await getUserContext(admin, userId);
-          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق: العراق\nقيّم جميع العلامات (الرئيسية + المنافسين). قدّر platform_presence لكل محرك بناءً على ما تعرفه عن طريقة استشهاد كل محرك بالمصادر العراقية.${specialtyHint(userCtx, lang as any)}`;
+          const market = describeMarket(body.scope);
+          const SYSTEM = buildSystem(market);
+          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين). قدّر platform_presence لكل محرك بناءً على ما تعرفه عن طريقة استشهاد كل محرك بالمصادر المتعلقة بـ ${market.region}.${specialtyHint(userCtx, lang as any)}`;
 
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
