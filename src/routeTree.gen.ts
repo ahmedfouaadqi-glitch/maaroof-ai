@@ -21,6 +21,7 @@ import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
+import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 
@@ -84,6 +85,11 @@ const ApiCompareRoute = ApiCompareRouteImport.update({
   path: '/api/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBizdevRoute = ApiBizdevRouteImport.update({
+  id: '/api/bizdev',
+  path: '/api/bizdev',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/bizdev': typeof ApiBizdevRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/bizdev': typeof ApiBizdevRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/bizdev': typeof ApiBizdevRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/bizdev'
     | '/api/compare'
     | '/api/feasibility'
     | '/api/suggest'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/bizdev'
     | '/api/compare'
     | '/api/feasibility'
     | '/api/suggest'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/bizdev'
     | '/api/compare'
     | '/api/feasibility'
     | '/api/suggest'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiBizdevRoute: typeof ApiBizdevRoute
   ApiCompareRoute: typeof ApiCompareRoute
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCompareRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bizdev': {
+      id: '/api/bizdev'
+      path: '/api/bizdev'
+      fullPath: '/api/bizdev'
+      preLoaderRoute: typeof ApiBizdevRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analyze': {
       id: '/api/analyze'
       path: '/api/analyze'
@@ -326,6 +346,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiBizdevRoute: ApiBizdevRoute,
   ApiCompareRoute: ApiCompareRoute,
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiSuggestRoute: ApiSuggestRoute,
