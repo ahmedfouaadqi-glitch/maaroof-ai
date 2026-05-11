@@ -55,13 +55,22 @@ export const Route = createFileRoute("/api/research")({
           const lovableKey = process.env.LOVABLE_API_KEY;
           let answer = "";
           let key_findings: string[] = [];
+          let sge_summary = "";
+          let visibility_opportunities: string[] = [];
           if (lovableKey) {
-            const sys = `You are a precise research assistant. Write the answer STRICTLY in language code: ${lang}.
+            const brandLine = userCtx.brand_name ? `\nUser brand to position: ${userCtx.brand_name}${userCtx.brand_keywords ? ` (${userCtx.brand_keywords})` : ""}` : "";
+            const sys = `You are a precise research assistant that mimics a Generative Search Experience (SGE). Write STRICTLY in language code: ${lang}.
 Rules:
 - Cite EVERY non-trivial claim inline as [1], [2] matching the source list order.
 - If sources contradict, say so explicitly.
 - Never invent facts not present in the snippets.
-- Output JSON: { "answer": string (300-500 words, with [n] citations), "key_findings": string[] (3-6 short bullets, each with at least one [n]) }${specialtyHint(userCtx, lang as any)}`;
+- Output JSON with these keys EXACTLY:
+  {
+    "sge_summary": string (60-90 words, the kind of compact AI overview Google/Bing show on top of search; plain prose with [n] citations, no bullets),
+    "answer": string (300-500 words, deeper answer with [n] citations),
+    "key_findings": string[] (3-6 short bullets, each with at least one [n]),
+    "visibility_opportunities": string[] (3-5 concrete actions the user/brand can take to BE CITED by AI engines on this topic — content angles, missing entities, structured-data ideas, channels to publish on)
+  }${specialtyHint(userCtx, lang as any)}${brandLine}`;
             const ctx = results.map((r: any, i: number) => `[${i + 1}] ${r.title} — ${r.domain} (${r.url})\n${r.snippet}`).join("\n\n");
             const ai = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
               method: "POST",
@@ -80,8 +89,10 @@ Rules:
               const raw = j?.choices?.[0]?.message?.content || "{}";
               try {
                 const p = JSON.parse(raw);
+                sge_summary = String(p.sge_summary || "").slice(0, 1200);
                 answer = String(p.answer || "").slice(0, 4000);
                 key_findings = Array.isArray(p.key_findings) ? p.key_findings.slice(0, 6).map((s: any) => String(s).slice(0, 240)) : [];
+                visibility_opportunities = Array.isArray(p.visibility_opportunities) ? p.visibility_opportunities.slice(0, 5).map((s: any) => String(s).slice(0, 280)) : [];
               } catch { answer = raw; }
             }
           }
@@ -124,7 +135,7 @@ Rules:
             } catch { /* non-fatal */ }
           }
 
-          return Response.json({ query: limited, answer, key_findings, sources: results, channels, specialty: userCtx.specialty });
+          return Response.json({ query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty });
         } catch (e: any) {
           return Response.json({ error: e?.message || "research failed" }, { status: 500 });
         }

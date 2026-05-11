@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Loader2, ExternalLink, Sparkles, Radio } from "lucide-react";
+import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -90,8 +90,20 @@ export function SmartResearch() {
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {out && (
         <div className="mt-4 space-y-3" id="research-result">
+          {out.sge_summary && (
+            <div className="rounded-lg border border-accent/40 bg-gradient-to-br from-accent/10 to-primary/5 p-3">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-accent font-bold">
+                <Zap className="size-3.5" /> {t("research_sge")}
+                <span title={t("research_sge_tooltip")} className="cursor-help text-muted-foreground">ⓘ</span>
+              </div>
+              <div className="text-sm leading-relaxed whitespace-pre-wrap">{out.sge_summary}</div>
+            </div>
+          )}
           {out.answer && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm whitespace-pre-wrap leading-relaxed">{out.answer}</div>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm whitespace-pre-wrap leading-relaxed">
+              <div className="mb-1 text-[10px] uppercase tracking-widest text-primary font-semibold">{t("research_answer")}</div>
+              {out.answer}
+            </div>
           )}
           {out.key_findings?.length > 0 && (
             <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-sm">
@@ -99,6 +111,40 @@ export function SmartResearch() {
               <ul className="ms-5 list-disc space-y-1">
                 {out.key_findings.map((k: string, i: number) => <li key={i}>{k}</li>)}
               </ul>
+            </div>
+          )}
+          {out.visibility_opportunities?.length > 0 && (
+            <div className="rounded-lg border border-success/40 bg-success/5 p-3 text-sm">
+              <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-success">
+                <TrendingUp className="size-3.5" /> {t("research_opportunities")}
+                <span title={t("research_opportunities_tooltip")} className="cursor-help text-muted-foreground">ⓘ</span>
+              </div>
+              <ul className="ms-5 list-decimal space-y-1">
+                {out.visibility_opportunities.map((k: string, i: number) => <li key={i}>{k}</li>)}
+              </ul>
+            </div>
+          )}
+          {/* Chain to other tools */}
+          {(out.sge_summary || out.answer) && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  const txt = `${q}\n\n${out.sge_summary || out.answer}`;
+                  window.dispatchEvent(new CustomEvent("geo:reuse-suggest", { detail: { text: txt } }));
+                  document.getElementById("suggest")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20">
+                <Sparkles className="size-3" /> {t("research_send_suggest")}
+              </button>
+              <button
+                onClick={() => {
+                  const txt = out.answer || out.sge_summary;
+                  window.dispatchEvent(new CustomEvent("geo:reuse-analyze", { detail: { text: txt } }));
+                  document.getElementById("analyze")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent hover:bg-accent/20">
+                <Zap className="size-3" /> {t("research_send_analyze")}
+              </button>
             </div>
           )}
           {includeChannels && (
@@ -142,8 +188,10 @@ export function SmartResearch() {
           <ExportButtons size="xs" build={() => ({
             title: t("research_title"), subtitle: q,
             sections: [
+              ...(out.sge_summary ? [{ kind: "kv" as const, heading: t("research_sge"), rows: [["", out.sge_summary]] as [string, string | number][] }] : []),
               { kind: "kv", heading: t("research_answer"), rows: [["", out.answer || ""]] as [string, string | number][] },
               ...(out.key_findings?.length ? [{ kind: "list" as const, heading: t("research_findings"), list: out.key_findings }] : []),
+              ...(out.visibility_opportunities?.length ? [{ kind: "list" as const, heading: t("research_opportunities"), list: out.visibility_opportunities }] : []),
               ...(out.channels?.length ? [{ kind: "table" as const, heading: t("research_channels"),
                 table: { columns: [t("col_type") || "Type", t("col_title") || "Label", "URL"], data: out.channels.map((c: any) => [t(`ch_${c.type}`) || c.type, c.label, c.url]) } }] : []),
               { kind: "table", heading: t("research_sources"),
