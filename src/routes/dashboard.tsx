@@ -105,6 +105,20 @@ function DashboardPage() {
               badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")}
               badgeOk={!!agentSub}
             />
+            <ToolCard
+              icon={<ClipboardList className="size-5" />}
+              title={t("dash_tool_feas_t")}
+              desc={t("dash_tool_feas_d")}
+              cta={t("dash_open_feas")}
+              href="#feasibility"
+            />
+            <ToolCard
+              icon={<TrendingUp className="size-5" />}
+              title={t("dash_tool_biz_t")}
+              desc={t("dash_tool_biz_d")}
+              cta={t("dash_open_biz")}
+              href="#bizdev"
+            />
           </div>
         </div>
 
