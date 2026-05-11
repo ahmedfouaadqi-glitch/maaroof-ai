@@ -6,7 +6,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
 import { SubscribeModal } from "@/components/SubscribeModal";
-import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot } from "lucide-react";
+import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench } from "lucide-react";
+import { TOOL_CATALOG } from "@/lib/tool-catalog";
 
 export const Route = createFileRoute("/")({
   component: () => (
