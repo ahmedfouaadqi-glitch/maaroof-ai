@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Building2, Loader2, Mail, Copy, Check, Search, Sparkles, ExternalLink } from "lucide-react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
+import { ToolLangSelect } from "@/components/ToolLangSelect";
 
 type Mode = "search" | "email" | "brand";
 
 export function CompanyOutreach() {
   const { t, lang } = useI18n();
+  const [outLang, setOutLang] = useState<Lang>(lang);
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
   const specialty = (auth?.profile as any)?.specialty || "";
