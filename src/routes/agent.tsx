@@ -553,6 +553,32 @@ function AgentPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-xs text-muted-foreground">{new Date(tk.created_at).toLocaleString()}</div>
+                    <ExportButtons size="xs" build={(): ExportPayload => {
+                      const sections: ExportPayload["sections"] = [];
+                      if (tk.input) sections.push({ kind: "kv", heading: t("col_input"), rows: [[t("col_input"), String(tk.input)]] });
+                      if (tk.result?.summary) sections.push({ kind: "text", heading: t("col_summary"), text: String(tk.result.summary) });
+                      if (tk.result?.appearance_summary) sections.push({ kind: "text", heading: t("ag_vis_title"), text: String(tk.result.appearance_summary) });
+                      if (tk.result?.score != null) sections.push({ kind: "kv", heading: "GEO", rows: [["GEO Score", `${tk.result.score}/100`]] });
+                      if (tk.task_type === "ai_visibility" && Array.isArray(tk.result?.platforms) && tk.result.platforms.length) {
+                        sections.push({
+                          kind: "table", heading: t("ag_vis_platforms"),
+                          table: {
+                            columns: [t("boost_platform") || "Platform", t("ag_vis_score"), t("ag_vis_citation"), t("ag_vis_trust"), "Why"],
+                            data: tk.result.platforms.map((p: any) => [String(p.name||""), `${p.score ?? ""}/100`, String(p.citation_likelihood||""), String(p.trust_signal||""), String(p.why||"")]),
+                          },
+                        });
+                      }
+                      if (Array.isArray(tk.result?.recommendations) && tk.result.recommendations.length) {
+                        sections.push({ kind: "list", heading: "Recommendations", list: tk.result.recommendations.map((r: any) => String(r)) });
+                      }
+                      if (tk.error) sections.push({ kind: "text", heading: "Error", text: String(tk.error) });
+                      if (sections.length === 0) sections.push({ kind: "text", heading: t("col_summary"), text: "—" });
+                      return {
+                        title: tk.task_type === "ai_visibility" ? t("ag_vis_title") : t("ag_tasks_title"),
+                        subtitle: `${tk.task_type} · ${new Date(tk.created_at).toLocaleString()}`,
+                        sections,
+                      };
+                    }} />
                     <button
                       onClick={async () => {
                         if (!confirm(t("hist_confirm_delete"))) return;
