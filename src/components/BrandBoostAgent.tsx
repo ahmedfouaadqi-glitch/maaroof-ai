@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Megaphone, Loader2, Plus, Power } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
+import { ExportButtons } from "@/components/ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +41,34 @@ export function BrandBoostAgent() {
     await supabase.from("brand_boost_jobs").update({ active: !active }).eq("id", id);
     await load();
   };
+
+  const remove = async (id: string) => {
+    if (!confirm(t("boost_delete_confirm"))) return;
+    await supabase.from("brand_boost_jobs").delete().eq("id", id);
+    setReport(null);
+    await load();
+  };
+
+  const buildExport = (j: any): ExportPayload => ({
+    title: t("boost_export_title"),
+    subtitle: j.brand_name,
+    sections: [
+      ...(report?.summary ? [{ heading: t("boost_summary"), kind: "text" as const, text: String(report.summary) }] : []),
+      {
+        heading: t("boost_title"),
+        kind: "table" as const,
+        table: {
+          columns: [t("boost_platform"), t("boost_signal"), t("boost_actions")],
+          data: (report?.plan || []).map((p: any) => [
+            String(p.platform || ""),
+            String(p.current_signal || ""),
+            (p.recommended_actions || []).join(" • "),
+          ]),
+        },
+      },
+    ],
+  });
+
 
   const runNow = async (j: any) => {
     setRunning(j.id); setErr(""); setReport(null);
@@ -111,6 +141,10 @@ export function BrandBoostAgent() {
                   className="rounded-md bg-primary/15 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50">
                   {running === j.id ? <Loader2 className="inline size-3 animate-spin" /> : t("boost_run_now")}
                 </button>
+                <button onClick={() => remove(j.id)} title={t("boost_delete")}
+                  className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/20">
+                  <Trash2 className="inline size-3" />
+                </button>
               </div>
             </div>
           ))}
@@ -120,6 +154,9 @@ export function BrandBoostAgent() {
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {report && (
         <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-end">
+            <ExportButtons build={() => buildExport(jobs[0] || { brand_name: brand })} />
+          </div>
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs">
