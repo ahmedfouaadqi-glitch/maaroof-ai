@@ -241,47 +241,148 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_boost_jobs: {
+        Row: {
+          active: boolean
+          approved: boolean
+          brand_keywords: string | null
+          brand_name: string
+          config: Json
+          created_at: string
+          frequency: string
+          id: string
+          last_run_at: string | null
+          next_run_at: string | null
+          platforms: string[]
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          approved?: boolean
+          brand_keywords?: string | null
+          brand_name: string
+          config?: Json
+          created_at?: string
+          frequency?: string
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          platforms?: string[]
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          approved?: boolean
+          brand_keywords?: string | null
+          brand_name?: string
+          config?: Json
+          created_at?: string
+          frequency?: string
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          platforms?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      brand_boost_runs: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          report: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          report?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          report?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_runs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "brand_boost_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           brand_keywords: string | null
           brand_name: string | null
           created_at: string
+          daily_analyses_used: number
+          daily_suggestions_used: number
+          device_fingerprint: string | null
+          device_locked_at: string | null
           email: string | null
           full_name: string | null
+          geo_scope: Json
           id: string
           is_subscribed: boolean
           monthly_analyses_used: number
           monthly_suggestions_used: number
+          specialty: string | null
           subscription_expires_at: string | null
           subscription_tier: string | null
+          usage_day_start: string
           usage_period_start: string
         }
         Insert: {
           brand_keywords?: string | null
           brand_name?: string | null
           created_at?: string
+          daily_analyses_used?: number
+          daily_suggestions_used?: number
+          device_fingerprint?: string | null
+          device_locked_at?: string | null
           email?: string | null
           full_name?: string | null
+          geo_scope?: Json
           id: string
           is_subscribed?: boolean
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          specialty?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          usage_day_start?: string
           usage_period_start?: string
         }
         Update: {
           brand_keywords?: string | null
           brand_name?: string | null
           created_at?: string
+          daily_analyses_used?: number
+          daily_suggestions_used?: number
+          device_fingerprint?: string | null
+          device_locked_at?: string | null
           email?: string | null
           full_name?: string | null
+          geo_scope?: Json
           id?: string
           is_subscribed?: boolean
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          specialty?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          usage_day_start?: string
           usage_period_start?: string
         }
         Relationships: []
