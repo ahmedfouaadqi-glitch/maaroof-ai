@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Megaphone, Loader2, Plus, Power } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
+import { ExportButtons } from "@/components/ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
