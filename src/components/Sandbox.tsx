@@ -116,6 +116,7 @@ export function Sandbox() {
         <span className="font-mono uppercase tracking-widest text-xs">{t("sandbox_title")}</span>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("sandbox_desc")}</p>
+      <ToolHelpBanner toolKey="analyze" />
 
       <div className="mb-3 flex justify-end">
         <ToolLangSelect value={outLang} onChange={setOutLang} />
