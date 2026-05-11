@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, TrendingUp, Target, Rocket } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
+import { ToolHelpBanner } from "./ToolHelpBanner";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 
 export function BizDev() {
