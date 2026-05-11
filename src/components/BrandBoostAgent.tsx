@@ -141,6 +141,10 @@ export function BrandBoostAgent() {
                   className="rounded-md bg-primary/15 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50">
                   {running === j.id ? <Loader2 className="inline size-3 animate-spin" /> : t("boost_run_now")}
                 </button>
+                <button onClick={() => remove(j.id)} title={t("boost_delete")}
+                  className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/20">
+                  <Trash2 className="inline size-3" />
+                </button>
               </div>
             </div>
           ))}
