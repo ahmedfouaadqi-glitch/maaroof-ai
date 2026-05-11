@@ -16,10 +16,12 @@ type Brand = {
   platform_presence?: Record<string, number>;
   strengths: string[];
   weaknesses: string[];
+  rank?: number;
 };
 type Result = {
   brands: Brand[];
   winner: string;
+  winner_reason?: string;
   overview: string;
   content_gaps?: string[];
   recommendations: string[];
