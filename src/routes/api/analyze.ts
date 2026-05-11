@@ -98,14 +98,19 @@ export const Route = createFileRoute("/api/analyze")({
             fromCache = true;
             await admin.from("analysis_cache").update({ hits: ((cached as any).hits || 0) + 1 }).eq("input_hash", hash);
           } else {
+            const langGuide: Record<string, string> = {
+              ar: "اكتب جميع القيم النصية باللغة العربية الفصحى فقط.",
+              en: "Write all string fields in clear English only.",
+              ku: "هەموو دەقەکان تەنها بە کوردی سۆرانی بنووسە.",
+            };
             const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
               method: "POST",
               headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
               body: JSON.stringify({
                 model: "google/gemini-2.5-flash",
                 messages: [
-                  { role: "system", content: SYS },
-                  { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) ONLY in language code "${lang}".\n\nContent to analyze:\n"""${text}"""` },
+                  { role: "system", content: `${SYS}\n\n${langGuide[lang] || langGuide.en}` },
+                  { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) STRICTLY in language code "${lang}". Do not mix languages, even if the source text below is in a different language.\n\nContent to analyze:\n"""${text}"""` },
                 ],
                 response_format: { type: "json_object" },
               }),
