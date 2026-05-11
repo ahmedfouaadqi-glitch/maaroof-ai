@@ -11,7 +11,8 @@ const LANG_INSTRUCTION: Record<string, string> = {
   ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
 };
 
-const SYSTEM = `أنت محلل GEO خبير. ستُعطى علامة تجارية رئيسية و حتى 4 منافسين والسوق العراق.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `أنت محلل GEO خبير. ستُعطى علامة تجارية رئيسية و حتى 4 منافسين والسوق المستهدف هو: ${m.region} (${m.market}).
+السياق المحلي: ${m.contextHint}
 قيّم كل علامة بشكل واقعي ومتحفّظ — لا تختلق أرقاماً مؤكدة.
 أعد JSON صالح فقط بهذا الشكل بالضبط:
 {
