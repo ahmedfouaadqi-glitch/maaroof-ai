@@ -461,7 +461,16 @@ export function PostSuggester({
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-              <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-primary"><Gauge className="size-3.5" /> {t("result_geo_score")}</div>
+              <div className="mb-1 flex items-center justify-between gap-2 text-[11px] uppercase tracking-widest text-primary">
+                <span className="inline-flex items-center gap-1.5"><Gauge className="size-3.5" /> {t("result_geo_score")}</span>
+                <details className="group relative">
+                  <summary className="cursor-pointer list-none rounded-full border border-primary/40 px-2 py-0.5 text-[10px] font-mono text-primary/80 transition hover:bg-primary/10">?</summary>
+                  <div className="absolute end-0 z-20 mt-1 w-72 rounded-lg border border-border bg-popover p-3 text-[11px] normal-case leading-relaxed tracking-normal text-foreground shadow-lg">
+                    <div className="mb-1 font-semibold text-primary">{t("suggest_geo_what")}</div>
+                    <p className="text-muted-foreground">{t("suggest_geo_explain")}</p>
+                  </div>
+                </details>
+              </div>
               <div className="font-display text-3xl font-bold text-gradient">{result.overall_geo_score}<span className="text-sm text-muted-foreground">/100</span></div>
             </div>
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-3 sm:col-span-2">
