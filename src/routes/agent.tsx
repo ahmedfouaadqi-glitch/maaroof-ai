@@ -598,8 +598,13 @@ function AgentPage() {
                                 <span className="font-mono text-primary">{p.score}/100</span>
                               </div>
                               <div className="mt-0.5 text-[10px] text-muted-foreground">{t("ag_vis_citation")}: <b className={p.citation_likelihood === "high" ? "text-success" : p.citation_likelihood === "low" ? "text-destructive" : "text-accent"}>{p.citation_likelihood}</b> · {t("ag_vis_trust")}: {p.trust_signal}</div>
+                              {p.citation_method && <div className="mt-0.5 text-[10px] text-primary/80">⚙ {p.citation_method}</div>}
+                              {p.evidence_basis && <div className="mt-0.5 text-[11px] text-foreground/70">📊 {p.evidence_basis}</div>}
+                              {Array.isArray(p.authority_factors) && p.authority_factors.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">{p.authority_factors.map((f: string, j: number) => <span key={j} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{f}</span>)}</div>
+                              )}
                               {p.why && <div className="mt-1 text-[11px] text-foreground/80">{p.why}</div>}
-                              {p.action && <div className="mt-0.5 text-[11px] text-accent">▶ {p.action}</div>}
+                              {p.action && <div className="mt-0.5 text-[11px] text-accent">▶ {p.action}{p.priority ? ` · ${p.priority}` : ""}</div>}
                             </div>
                           ))}
                         </div>
