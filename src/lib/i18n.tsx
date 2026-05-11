@@ -1226,6 +1226,15 @@ const ar: Dict = {
 
 const ku: Dict = {
   research_findings: "گرنگترین ئەنجامەکان",
+  research_sge: "کورتەی AI (توليدی)",
+  research_sge_tooltip: "کورتەیەکی کورت لە AI-وە لە سەرچاوەکان دروستکراوە — وەک SGE ی گووگڵ. بەکاری بهێنە بۆ تێڕوانینێکی خێرا.",
+  research_opportunities: "دەرفەتی دەرکەوتن بۆ تۆ",
+  research_opportunities_tooltip: "هەنگاوی کاری بۆ ئەوەی نیشانەکەت لە بزوێنەرە AI-یەکاندا ئاماژەی پێ بکرێت.",
+  research_send_suggest: "ناردن بۆ دروستکەری پۆست",
+  research_send_analyze: "ناردن بۆ شیکاری GEO",
+  dash_customize: "تایبەتکردنی ئامرازەکان",
+  dash_customize_hint: "ئامرازەکانی نیشاندان لە داشبۆردەکەت دیاری بکە.",
+  dash_hidden_count: "شاراوە",
   outreach_run_search: "گەڕان بۆ کۆمپانیا", outreach_run_brand: "ناسینی نیشانە",
   outreach_mode_search: "تەنها گەڕان", outreach_mode_email: "نووسینی ئیمەیڵ", outreach_mode_brand: "نیشانەی بازرگانی",
   outreach_mode_search_desc: "گەڕان لە ئینتەرنێت بۆ کۆمپانیایەکی ڕاستی — پوختە، ماڵپەڕی فەرمی، سۆشیال میدیا و ناوی پەیوەندیدارەکان ئەگەر هەبن.",
