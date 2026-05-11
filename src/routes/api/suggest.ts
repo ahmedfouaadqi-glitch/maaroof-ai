@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/suggest")({
             if (prof.is_subscribed) {
               const { data: plan } = await admin.from("subscription_plans")
                 .select("monthly_suggestions").eq("name", prof.subscription_tier).maybeSingle();
-              limit = plan?.monthly_suggestions || 50;
+              limit = Math.max(plan?.monthly_suggestions || 50, Number((prof as any)?.quota_overrides?.monthly_suggestions || 0));
               if (prof.subscription_expires_at && new Date(prof.subscription_expires_at) < new Date()) {
                 await admin.from("profiles").update({ is_subscribed: false }).eq("id", userId);
                 limit = 2;

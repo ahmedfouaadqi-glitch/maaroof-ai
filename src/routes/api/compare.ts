@@ -74,11 +74,12 @@ export const Route = createFileRoute("/api/compare")({
           const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
           if (!roleRow) {
             // Allow active plan subscribers (counts against monthly_analyses)
-            const { data: prof } = await admin.from("profiles").select("is_subscribed, subscription_tier, subscription_expires_at, monthly_analyses_used, usage_period_start").eq("id", userId).maybeSingle();
+            const { data: prof } = await admin.from("profiles").select("is_subscribed, subscription_tier, subscription_expires_at, monthly_analyses_used, usage_period_start, quota_overrides").eq("id", userId).maybeSingle();
             const planActive = !!prof?.is_subscribed && (!prof.subscription_expires_at || new Date(prof.subscription_expires_at) >= new Date());
             if (planActive) {
               const { data: plan } = await admin.from("subscription_plans").select("monthly_analyses").eq("name", prof!.subscription_tier).maybeSingle();
-              const limit = plan?.monthly_analyses || 200;
+              const override = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
+              const limit = Math.max(plan?.monthly_analyses || 200, override);
               if ((prof!.monthly_analyses_used || 0) >= limit) return Response.json({ error: "limit", limit }, { status: 402 });
               await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId);
             } else {

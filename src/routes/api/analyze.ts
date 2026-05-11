@@ -77,7 +77,7 @@ export const Route = createFileRoute("/api/analyze")({
             if (prof.is_subscribed) {
               const { data: plan } = await admin.from("subscription_plans")
                 .select("monthly_analyses").eq("name", prof.subscription_tier).maybeSingle();
-              limit = plan?.monthly_analyses || 200;
+              limit = Math.max(plan?.monthly_analyses || 200, Number((prof as any)?.quota_overrides?.monthly_analyses || 0));
               if (prof.subscription_expires_at && new Date(prof.subscription_expires_at) < new Date()) {
                 await admin.from("profiles").update({ is_subscribed: false }).eq("id", userId);
                 limit = 2;
