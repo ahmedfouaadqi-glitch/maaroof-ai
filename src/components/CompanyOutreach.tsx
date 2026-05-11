@@ -192,7 +192,7 @@ export function CompanyOutreach() {
             sections: [
               { kind: "kv", heading: t("outreach_brief"), rows: [["", out.company_brief || ""]] },
               ...(out.email_subject || out.email_body ? [{ kind: "kv" as const, heading: t("outreach_email"),
-                rows: [[t("col_subject"), out.email_subject || ""], [t("col_body"), out.email_body || ""]] }] : []),
+                rows: [[t("col_subject"), out.email_subject || ""], [t("col_body"), out.email_body || ""]] as [string, string | number][] }] : []),
             ],
           })} />
         </div>
