@@ -107,6 +107,23 @@ function AuthPage() {
               className="w-full bg-transparent outline-none"
             />
           </Field>
+          {!isSignup && (
+            <div className="text-end">
+              <button
+                type="button"
+                onClick={async () => {
+                  setError(null); setInfo(null);
+                  const e = email.trim();
+                  if (!e) { setError(t("auth_enter_email_first")); return; }
+                  const { error } = await supabase.auth.resetPasswordForEmail(e, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                  });
+                  if (error) setError(error.message); else setInfo(t("auth_reset_sent"));
+                }}
+                className="text-xs text-primary hover:underline"
+              >{t("auth_forgot")}</button>
+            </div>
+          )}
           {error && <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
           {info && <div className="rounded-lg border border-success/40 bg-success/10 p-3 text-sm text-success">{info}</div>}
           <button

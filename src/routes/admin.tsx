@@ -203,6 +203,15 @@ function UsersTab() {
                         className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:border-primary">
                         {admins.has(r.id) ? <><ShieldMinus className="size-3" />{t("admin_demote")}</> : <><ShieldPlus className="size-3" />{t("admin_promote")}</>}
                       </button>
+                      <button onClick={async () => {
+                        if (!r.email) return;
+                        const { error } = await supabase.auth.resetPasswordForEmail(r.email, {
+                          redirectTo: `${window.location.origin}/reset-password`,
+                        });
+                        alert(error ? error.message : t("admin_reset_sent"));
+                      }} className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/5 px-3 py-1 text-xs text-accent hover:bg-accent/10">
+                        <Lock className="size-3" /> {t("admin_send_reset")}
+                      </button>
                     </>
                   )}
                 </div>

@@ -185,13 +185,18 @@ Extra notes: ${body.notes || "(none)"}
 
 Return the JSON feasibility report now. All string fields MUST be in language "${lang}".`;
 
+          const langGuide: Record<string, string> = {
+            ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
+            en: "Write all string values inside the JSON in clear English.",
+            ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
+          };
           const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [
-                { role: "system", content: SYSTEM },
+                { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
                 { role: "user", content: userPrompt },
               ],
               response_format: { type: "json_object" },
