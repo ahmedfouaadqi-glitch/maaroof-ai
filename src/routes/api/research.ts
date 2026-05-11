@@ -8,7 +8,8 @@ export const Route = createFileRoute("/api/research")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { query, lang = "en", scope } = await request.json();
+          const reqBody = await request.json();
+          const { query, lang = "en", scope } = reqBody;
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });
           const limited = String(query).slice(0, 300);
 
@@ -27,8 +28,23 @@ export const Route = createFileRoute("/api/research")({
 
           const geo = scope?.country ? ` ${scope.country}` : "";
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
+          const includeChannels: boolean = !!reqBody?.include_channels;
+          const channelTypes: string[] = Array.isArray(reqBody?.channel_types) && reqBody.channel_types.length
+            ? reqBody.channel_types : ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"];
+
           const sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang });
-          const results = (sr?.data || sr?.web || []).slice(0, 8).map((r: any) => ({
+          // Firecrawl v2 returns { data: { web: [...], news: [...] } } OR legacy { data: [...] }
+          const pickArr = (v: any): any[] => {
+            if (Array.isArray(v)) return v;
+            if (v && typeof v === "object") {
+              return [...(Array.isArray(v.web) ? v.web : []), ...(Array.isArray(v.news) ? v.news : [])];
+            }
+            return [];
+          };
+          const rawList: any[] = pickArr(sr?.data).length ? pickArr(sr.data)
+            : pickArr(sr?.web).length ? pickArr(sr.web)
+            : Array.isArray(sr?.results) ? sr.results : [];
+          const results = rawList.slice(0, 8).map((r: any) => ({
             title: r.title || r.url,
             url: r.url,
             description: r.description || "",
@@ -69,7 +85,46 @@ Rules:
               } catch { answer = raw; }
             }
           }
-          return Response.json({ query: limited, answer, key_findings, sources: results, specialty: userCtx.specialty });
+
+          // Optional: discover communication channels related to the topic
+          let channels: Array<{ type: string; label: string; url: string; source?: string }> = [];
+          if (includeChannels) {
+            try {
+              const domainMap: Record<string, string> = {
+                linkedin: "linkedin.com", twitter: "x.com OR twitter.com", instagram: "instagram.com",
+                facebook: "facebook.com", youtube: "youtube.com", telegram: "t.me", whatsapp: "wa.me OR whatsapp.com",
+              };
+              const queries: Array<{ type: string; q: string }> = [];
+              for (const t of channelTypes) {
+                if (t === "website") queries.push({ type: "website", q: `${limited}${specBoost} official website${geo}` });
+                else if (t === "email") queries.push({ type: "email", q: `${limited}${specBoost} contact email${geo}` });
+                else if (domainMap[t]) queries.push({ type: t, q: `${limited}${specBoost} site:${domainMap[t]}` });
+              }
+              const seen = new Set<string>();
+              const settled = await Promise.allSettled(queries.map((q) => fcSearch(q.q, { limit: 4, lang })));
+              settled.forEach((s, idx) => {
+                if (s.status !== "fulfilled") return;
+                const list = (() => {
+                  const v: any = (s.value as any)?.data;
+                  if (Array.isArray(v)) return v;
+                  if (v && typeof v === "object") return [...(v.web || []), ...(v.news || [])];
+                  return [];
+                })();
+                for (const r of list.slice(0, 3)) {
+                  const url = r?.url; if (!url || seen.has(url)) continue; seen.add(url);
+                  channels.push({ type: queries[idx].type, label: r.title || url, url, source: (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } })() });
+                }
+              });
+              // Extract emails from snippets if email channel requested
+              if (channelTypes.includes("email")) {
+                const blob = results.map((r: any) => r.snippet || "").join("\n");
+                const emails = Array.from(new Set((blob.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || []))).slice(0, 5);
+                for (const e of emails) channels.push({ type: "email", label: e, url: `mailto:${e}` });
+              }
+            } catch { /* non-fatal */ }
+          }
+
+          return Response.json({ query: limited, answer, key_findings, sources: results, channels, specialty: userCtx.specialty });
         } catch (e: any) {
           return Response.json({ error: e?.message || "research failed" }, { status: 500 });
         }
