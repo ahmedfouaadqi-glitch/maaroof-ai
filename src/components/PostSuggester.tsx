@@ -314,6 +314,19 @@ export function PostSuggester({
         </div>
       )}
 
+      {!initialSourceText && (mode === "image" || mode === "video") && (
+        <div className="mt-3">
+          <label className="mb-1.5 block text-xs font-semibold text-foreground">{t("suggest_media_desc_label")}</label>
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            placeholder={t("suggest_media_desc_placeholder")}
+            rows={3}
+            className="w-full resize-none rounded-xl border border-border bg-background/60 p-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+          />
+        </div>
+      )}
+
       <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-background/40 p-3">
         <div>
           <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_goal")}</div>
