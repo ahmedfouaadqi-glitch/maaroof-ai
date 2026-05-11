@@ -151,6 +151,22 @@ export function CompetitorCompare() {
                   <Bar label={t("col_visibility")} value={b.visibility_percent} />
                   <Bar label={t("col_geo")} value={b.geo_score} />
                 </div>
+                {b.platform_presence && Object.values(b.platform_presence).some((v) => v > 0) && (
+                  <div className="mb-3 rounded-lg border border-border/60 bg-background/40 p-2">
+                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">{t("compare_platform_presence")}</div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {PLATFORMS.map((p) => (
+                        <div key={p} className="flex items-center gap-1.5 text-[10px]">
+                          <span className="w-16 truncate capitalize text-muted-foreground">{p}</span>
+                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${b.platform_presence?.[p] || 0}%` }} />
+                          </div>
+                          <span className="w-7 text-end font-mono text-foreground/80">{b.platform_presence?.[p] || 0}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {b.strengths.length > 0 && (
                   <div className="text-xs"><b className="text-success">✓ {t("col_strengths")}:</b> {b.strengths.join(" · ")}</div>
                 )}
@@ -160,6 +176,17 @@ export function CompetitorCompare() {
               </div>
             ))}
           </div>
+
+          {result.content_gaps && result.content_gaps.length > 0 && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-primary">
+                <Sparkles className="size-4" /> {t("compare_content_gaps")}
+              </div>
+              <ul className="ms-5 list-disc space-y-1 text-sm">
+                {result.content_gaps.map((g, i) => <li key={i}>{g}</li>)}
+              </ul>
+            </div>
+          )}
 
           {result.recommendations.length > 0 && (
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
