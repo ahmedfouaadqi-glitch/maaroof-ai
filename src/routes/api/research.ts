@@ -8,7 +8,8 @@ export const Route = createFileRoute("/api/research")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { query, lang = "en", scope } = await request.json();
+          const reqBody = await request.json();
+          const { query, lang = "en", scope } = reqBody;
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });
           const limited = String(query).slice(0, 300);
 
