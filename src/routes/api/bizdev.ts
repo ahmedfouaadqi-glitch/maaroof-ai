@@ -1,0 +1,244 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
+
+type Body = {
+  business_name?: string;
+  stage?: string; // idea / mvp / early-revenue / growth / scale
+  sector?: string;
+  city?: string;
+  current_revenue_iqd?: string | number;
+  monthly_customers?: string | number;
+  team_size?: string | number;
+  channels?: string; // current marketing channels
+  goals?: string; // 12-month goals
+  challenges?: string;
+  budget_iqd?: string | number;
+  notes?: string;
+  lang?: "en" | "ar" | "ku";
+};
+
+const SYSTEM = `You are a senior business-development strategist for the Iraqi market. Build a realistic, sequenced 12-month growth plan.
+
+Be concrete and conservative. Use Iraqi context: WhatsApp & Instagram dominance, FastPay/Zain Cash/Asia Hawala for payments, the realities of B2B sales cycles in Iraq, the importance of trust networks in Baghdad/Erbil/Basra, Arabic + Kurdish content needs. NEVER fabricate exact partner names, KPIs, or government statistics. When inputs are weak, say so and recommend discovery steps before tactics.
+
+Return ONLY valid JSON in this exact shape (all text fields in REPORT language):
+{
+  "growth_score": <0-100, current readiness>,
+  "stage_assessment": "1-3 sentence honest take on where the business actually is",
+  "north_star_metric": "the ONE metric this business should obsess over for the next 12 months",
+  "swot": {
+    "strengths": ["...", "..."],
+    "weaknesses": ["...", "..."],
+    "opportunities": ["...", "..."],
+    "threats": ["...", "..."]
+  },
+  "growth_levers": [
+    {
+      "title": "lever name (e.g. 'Activate WhatsApp Catalog')",
+      "impact": "high" | "medium" | "low",
+      "effort": "high" | "medium" | "low",
+      "expected_outcome": "concrete outcome (e.g. '+15-25% inbound leads in 60 days')",
+      "how_to": ["step 1", "step 2", "step 3"]
+    }
+  ],
+  "channel_plan": [
+    {
+      "channel": "channel name (Instagram, WhatsApp, TikTok, Google Ads, B2B outbound, Events, etc.)",
+      "fit": "high" | "medium" | "low",
+      "monthly_budget_iqd": "estimated IQD range",
+      "primary_kpi": "single KPI",
+      "first_action": "first concrete action this week"
+    }
+  ],
+  "partnerships": [
+    { "type": "type of partner (e.g. 'Local logistics', 'University club')", "value": "what they bring", "approach": "how to reach out" }
+  ],
+  "roadmap": {
+    "month_1_3": ["initiative 1", "..."],
+    "month_4_6": ["initiative 1", "..."],
+    "month_7_12": ["initiative 1", "..."]
+  },
+  "risks": [
+    { "risk": "specific risk", "severity": "high" | "medium" | "low", "mitigation": "concrete mitigation" }
+  ],
+  "kpis": [
+    { "name": "KPI", "target_3m": "target at 3 months", "target_12m": "target at 12 months" }
+  ],
+  "quick_wins": ["actionable win achievable in <14 days", "...", "..."]
+}
+
+Rules:
+- growth_score reflects ACTUAL readiness given the inputs, not aspiration.
+- Every recommendation must reference the specific business stage, sector, and city given.
+- Quick wins must be doable with existing resources.
+- Avoid generic phrases like "improve marketing" — be specific.`;
+
+function clamp(n: unknown) {
+  const v = Number.parseInt(String(n ?? 0), 10);
+  if (Number.isNaN(v)) return 0;
+  return Math.max(0, Math.min(100, v));
+}
+function arr(v: unknown, max = 8): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((x) => String(x ?? "").trim()).filter(Boolean).slice(0, max).map((s) => s.slice(0, 280));
+}
+const sev = (v: any) => (["high", "medium", "low"].includes(v) ? v : "medium");
+
+function normalize(parsed: any) {
+  const swot = parsed?.swot || {};
+  return {
+    growth_score: clamp(parsed?.growth_score),
+    stage_assessment: String(parsed?.stage_assessment || "").slice(0, 600),
+    north_star_metric: String(parsed?.north_star_metric || "").slice(0, 200),
+    swot: {
+      strengths: arr(swot.strengths, 6),
+      weaknesses: arr(swot.weaknesses, 6),
+      opportunities: arr(swot.opportunities, 6),
+      threats: arr(swot.threats, 6),
+    },
+    growth_levers: (Array.isArray(parsed?.growth_levers) ? parsed.growth_levers : []).slice(0, 6).map((l: any) => ({
+      title: String(l?.title || "").slice(0, 160),
+      impact: sev(l?.impact),
+      effort: sev(l?.effort),
+      expected_outcome: String(l?.expected_outcome || "").slice(0, 240),
+      how_to: arr(l?.how_to, 6),
+    })).filter((l: any) => l.title),
+    channel_plan: (Array.isArray(parsed?.channel_plan) ? parsed.channel_plan : []).slice(0, 8).map((c: any) => ({
+      channel: String(c?.channel || "").slice(0, 80),
+      fit: sev(c?.fit),
+      monthly_budget_iqd: String(c?.monthly_budget_iqd || "").slice(0, 120),
+      primary_kpi: String(c?.primary_kpi || "").slice(0, 120),
+      first_action: String(c?.first_action || "").slice(0, 240),
+    })).filter((c: any) => c.channel),
+    partnerships: (Array.isArray(parsed?.partnerships) ? parsed.partnerships : []).slice(0, 6).map((p: any) => ({
+      type: String(p?.type || "").slice(0, 120),
+      value: String(p?.value || "").slice(0, 200),
+      approach: String(p?.approach || "").slice(0, 240),
+    })).filter((p: any) => p.type),
+    roadmap: {
+      month_1_3: arr(parsed?.roadmap?.month_1_3, 6),
+      month_4_6: arr(parsed?.roadmap?.month_4_6, 6),
+      month_7_12: arr(parsed?.roadmap?.month_7_12, 6),
+    },
+    risks: (Array.isArray(parsed?.risks) ? parsed.risks : []).slice(0, 6).map((r: any) => ({
+      risk: String(r?.risk || "").slice(0, 240), severity: sev(r?.severity), mitigation: String(r?.mitigation || "").slice(0, 240),
+    })).filter((r: any) => r.risk),
+    kpis: (Array.isArray(parsed?.kpis) ? parsed.kpis : []).slice(0, 8).map((k: any) => ({
+      name: String(k?.name || "").slice(0, 120),
+      target_3m: String(k?.target_3m || "").slice(0, 120),
+      target_12m: String(k?.target_12m || "").slice(0, 120),
+    })).filter((k: any) => k.name),
+    quick_wins: arr(parsed?.quick_wins, 8),
+  };
+}
+
+export const Route = createFileRoute("/api/bizdev")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        try {
+          const body = (await request.json()) as Body;
+          const name = (body.business_name || "").trim();
+          const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
+          if (name.length < 2) return Response.json({ error: "business_required" }, { status: 400 });
+
+          const apiKey = process.env.LOVABLE_API_KEY;
+          const SUPABASE_URL = process.env.SUPABASE_URL;
+          const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (!apiKey || !SUPABASE_URL || !SERVICE) return Response.json({ error: "server_not_configured" }, { status: 500 });
+
+          const admin = createClient(SUPABASE_URL, SERVICE);
+          const auth = request.headers.get("authorization");
+          if (!auth?.startsWith("Bearer ")) return Response.json({ error: "auth_required" }, { status: 401 });
+          const { data: authData } = await admin.auth.getUser(auth.slice(7));
+          const userId = authData.user?.id;
+          if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+
+          const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
+          if (prof) {
+            const periodStart = new Date(prof.usage_period_start);
+            if (Date.now() - periodStart.getTime() > 30 * 86400000) {
+              await admin.from("profiles").update({
+                monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString(),
+              }).eq("id", userId);
+              prof.monthly_analyses_used = 0;
+            }
+            let limit = 2;
+            if (prof.is_subscribed) {
+              const { data: plan } = await admin.from("subscription_plans")
+                .select("monthly_analyses").eq("name", prof.subscription_tier).maybeSingle();
+              limit = plan?.monthly_analyses || 200;
+              if (prof.subscription_expires_at && new Date(prof.subscription_expires_at) < new Date()) limit = 2;
+            }
+            if ((prof.monthly_analyses_used || 0) >= limit) {
+              return Response.json({ error: "limit", limit }, { status: 402 });
+            }
+          }
+
+          const userPrompt = `REPORT_LANGUAGE: ${lang}
+Business name: ${name}
+Stage: ${body.stage || "(unspecified)"}
+Sector: ${body.sector || "(unspecified)"}
+City / Region (Iraq): ${body.city || "(unspecified)"}
+Current monthly revenue (IQD): ${body.current_revenue_iqd ?? "(unspecified)"}
+Monthly active customers: ${body.monthly_customers ?? "(unspecified)"}
+Team size: ${body.team_size ?? "(unspecified)"}
+Current marketing channels: ${body.channels || "(unspecified)"}
+12-month goals: ${body.goals || "(unspecified)"}
+Top challenges right now: ${body.challenges || "(unspecified)"}
+Available growth budget (IQD/month): ${body.budget_iqd ?? "(unspecified)"}
+Extra notes: ${body.notes || "(none)"}
+
+Return the JSON business-development plan now. All string fields MUST be in language "${lang}".`;
+
+          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: SYSTEM },
+                { role: "user", content: userPrompt },
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+
+          if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
+          if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+          if (!resp.ok) {
+            console.error("[api/bizdev] gateway error", resp.status, await resp.text());
+            return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
+          }
+
+          const data = await resp.json();
+          const content = String(data?.choices?.[0]?.message?.content || "{}");
+          let parsed: any = null;
+          try { parsed = JSON.parse(content); } catch {
+            const m = content.match(/\{[\s\S]*\}/); if (m) try { parsed = JSON.parse(m[0]); } catch {}
+          }
+          const result = normalize(parsed || {});
+
+          const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
+          await admin.from("profiles").update({
+            monthly_analyses_used: (cur?.monthly_analyses_used || 0) + 1,
+          }).eq("id", userId);
+
+          await admin.from("agent_tasks").insert({
+            user_id: userId,
+            task_type: "bizdev",
+            input: name,
+            status: "done",
+            result: { ...result, lang, inputs: body },
+          });
+          await admin.from("activity_log").insert({ user_id: userId, action: "bizdev", metadata: { name, score: result.growth_score } });
+
+          return Response.json({ ok: true, result });
+        } catch (e) {
+          console.error("[api/bizdev] fatal", e);
+          return Response.json({ error: e instanceof Error ? e.message : "unknown" }, { status: 500 });
+        }
+      },
+    },
+  },
+});

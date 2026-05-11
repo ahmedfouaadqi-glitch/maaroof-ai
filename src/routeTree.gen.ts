@@ -19,7 +19,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
+import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
+import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 
@@ -73,9 +75,19 @@ const ApiSuggestRoute = ApiSuggestRouteImport.update({
   path: '/api/suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
+  id: '/api/feasibility',
+  path: '/api/feasibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCompareRoute = ApiCompareRouteImport.update({
   id: '/api/compare',
   path: '/api/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBizdevRoute = ApiBizdevRouteImport.update({
+  id: '/api/bizdev',
+  path: '/api/bizdev',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
@@ -100,7 +112,9 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/bizdev': typeof ApiBizdevRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -115,7 +129,9 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/bizdev': typeof ApiBizdevRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -131,7 +147,9 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/bizdev': typeof ApiBizdevRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -148,7 +166,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/bizdev'
     | '/api/compare'
+    | '/api/feasibility'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -163,7 +183,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/bizdev'
     | '/api/compare'
+    | '/api/feasibility'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -178,7 +200,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/api/analyze'
+    | '/api/bizdev'
     | '/api/compare'
+    | '/api/feasibility'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -194,7 +218,9 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiBizdevRoute: typeof ApiBizdevRoute
   ApiCompareRoute: typeof ApiCompareRoute
+  ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
@@ -272,11 +298,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/feasibility': {
+      id: '/api/feasibility'
+      path: '/api/feasibility'
+      fullPath: '/api/feasibility'
+      preLoaderRoute: typeof ApiFeasibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/compare': {
       id: '/api/compare'
       path: '/api/compare'
       fullPath: '/api/compare'
       preLoaderRoute: typeof ApiCompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bizdev': {
+      id: '/api/bizdev'
+      path: '/api/bizdev'
+      fullPath: '/api/bizdev'
+      preLoaderRoute: typeof ApiBizdevRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analyze': {
@@ -306,7 +346,9 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiBizdevRoute: ApiBizdevRoute,
   ApiCompareRoute: ApiCompareRoute,
+  ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
@@ -314,13 +356,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
