@@ -8,10 +8,14 @@ import { PostSuggester } from "@/components/PostSuggester";
 import { CompetitorCompare } from "@/components/CompetitorCompare";
 import { FeasibilityStudy } from "@/components/FeasibilityStudy";
 import { BizDev } from "@/components/BizDev";
+import { SmartResearch } from "@/components/SmartResearch";
+import { CompanyOutreach } from "@/components/CompanyOutreach";
+import { BrandBoostAgent } from "@/components/BrandBoostAgent";
+import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Globe } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
