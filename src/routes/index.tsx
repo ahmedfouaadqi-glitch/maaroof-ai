@@ -76,21 +76,63 @@ function Page() {
       {/* HERO */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[500px] max-w-5xl rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[600px] max-w-5xl rounded-full bg-primary/15 blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
+        <div className="absolute end-1/4 top-40 -z-0 size-72 rounded-full bg-accent/20 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-14 md:px-6 md:pb-24 md:pt-20">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-              <Sparkles className="size-3.5" /> {t("hero_badge")}
+              <Sparkles className="size-3.5 animate-pulse" /> {t("hero_badge")}
             </span>
-            <h1 className="mt-6 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl">
+
+            <div className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-accent/90">
+              {t("hero_kicker")}
+            </div>
+
+            <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl">
               <span className="text-gradient">{t("hero_title")}</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
               {t("hero_sub")}
             </p>
+
+            {/* Engine logos strip */}
+            <div className="mx-auto mt-7 flex max-w-2xl flex-wrap items-center justify-center gap-2">
+              {ENGINES.map((e) => (
+                <span
+                  key={e.name}
+                  className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-gradient-to-br ${e.grad} px-3 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur transition hover:scale-105 hover:border-primary/40`}
+                >
+                  <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                  {e.name}
+                </span>
+              ))}
+            </div>
+
+            {/* Quick chips */}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Sparkles className="size-3 text-primary" />{t("hero_chip_engines")}</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Globe2 className="size-3 text-primary" />{t("hero_chip_langs")}</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Bot className="size-3 text-accent" />{t("hero_chip_agent")}</span>
+            </div>
+
+            {/* CTAs */}
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="#sandbox"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]"
+              >
+                {t("hero_cta_primary")} <ArrowRight className="size-4" />
+              </a>
+              <a
+                href="#how"
+                className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80"
+              >
+                {t("hero_cta_secondary")}
+              </a>
+            </div>
           </div>
 
-          <div id="sandbox" className="mx-auto mt-12 max-w-3xl">
+          <div id="sandbox" className="mx-auto mt-14 max-w-3xl">
             <Sandbox />
           </div>
 
