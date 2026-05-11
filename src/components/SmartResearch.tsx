@@ -165,8 +165,10 @@ export function SmartResearch() {
           <ExportButtons size="xs" build={() => ({
             title: t("research_title"), subtitle: q,
             sections: [
+              ...(out.sge_summary ? [{ kind: "kv" as const, heading: t("research_sge"), rows: [["", out.sge_summary]] as [string, string | number][] }] : []),
               { kind: "kv", heading: t("research_answer"), rows: [["", out.answer || ""]] as [string, string | number][] },
               ...(out.key_findings?.length ? [{ kind: "list" as const, heading: t("research_findings"), list: out.key_findings }] : []),
+              ...(out.visibility_opportunities?.length ? [{ kind: "list" as const, heading: t("research_opportunities"), list: out.visibility_opportunities }] : []),
               ...(out.channels?.length ? [{ kind: "table" as const, heading: t("research_channels"),
                 table: { columns: [t("col_type") || "Type", t("col_title") || "Label", "URL"], data: out.channels.map((c: any) => [t(`ch_${c.type}`) || c.type, c.label, c.url]) } }] : []),
               { kind: "table", heading: t("research_sources"),
