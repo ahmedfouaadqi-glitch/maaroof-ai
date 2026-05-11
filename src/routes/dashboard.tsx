@@ -12,6 +12,7 @@ import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
+import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
