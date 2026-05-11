@@ -699,3 +699,144 @@ function AgentTab() {
     </div>
   );
 }
+
+function AccessTab() {
+  const { t, lang } = useI18n();
+  const [plans, setPlans] = useState<any[]>([]);
+  const [rows, setRows] = useState<any[]>([]);
+  const [activePlan, setActivePlan] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const load = async () => {
+    const [{ data: p }, { data: r }] = await Promise.all([
+      supabase.from("subscription_plans").select("*").order("sort_order"),
+      supabase.from("tool_plan_access").select("*"),
+    ]);
+    setPlans(p || []);
+    setRows(r || []);
+    if (p && p.length && !activePlan) setActivePlan(p[0].id);
+  };
+  useEffect(() => { load(); }, []);
+
+  const get = (planId: string, toolKey: string) =>
+    rows.find((r) => r.plan_id === planId && r.tool_key === toolKey);
+
+  const upsert = async (planId: string, toolKey: string, patch: any) => {
+    setBusy(true); setMsg("");
+    const existing = get(planId, toolKey);
+    const payload = {
+      plan_id: planId,
+      tool_key: toolKey,
+      enabled: existing?.enabled ?? true,
+      monthly_quota: existing?.monthly_quota ?? null,
+      daily_quota: existing?.daily_quota ?? null,
+      ...patch,
+    };
+    if (existing) {
+      await supabase.from("tool_plan_access").update(payload).eq("id", existing.id);
+    } else {
+      await supabase.from("tool_plan_access").insert(payload);
+    }
+    await load();
+    setMsg(t("ad_access_saved"));
+    setBusy(false);
+    setTimeout(() => setMsg(""), 1500);
+  };
+
+  const enableAll = async (planId: string, on: boolean) => {
+    for (const td of TOOL_CATALOG) await upsert(planId, td.key, { enabled: on });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border bg-card/70 p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <KeySquare className="size-5 text-primary" />
+          <h2 className="font-display text-lg font-semibold">{t("ad_access_title")}</h2>
+          {msg && <span className="ms-auto text-xs text-success">{msg}</span>}
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">{t("ad_access_desc")}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {plans.map((p) => (
+            <button key={p.id} onClick={() => setActivePlan(p.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold border ${
+                activePlan === p.id ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+              }`}>
+              {p.name}
+            </button>
+          ))}
+        </div>
+
+        {activePlan && (
+          <>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button disabled={busy} onClick={() => enableAll(activePlan, true)}
+                className="rounded-md border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                {t("ad_access_enable_all")}
+              </button>
+              <button disabled={busy} onClick={() => enableAll(activePlan, false)}
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
+                {t("ad_access_disable_all")}
+              </button>
+            </div>
+
+            {(["tools", "agent"] as const).map((grp) => (
+              <div key={grp} className="mt-5">
+                <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
+                  {grp === "tools" ? t("ad_access_group_tools") : t("ad_access_group_agent")}
+                </h3>
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-background/40 text-xs">
+                      <tr>
+                        <th className="p-2 text-start">{t("ad_access_tool")}</th>
+                        <th className="p-2">{t("ad_access_cost")}</th>
+                        <th className="p-2">{t("ad_access_enabled")}</th>
+                        <th className="p-2">{t("ad_access_monthly")}</th>
+                        <th className="p-2">{t("ad_access_daily")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {TOOL_CATALOG.filter((td) => td.group === grp).map((td) => {
+                        const r = get(activePlan, td.key);
+                        return (
+                          <tr key={td.key} className="border-t border-border/60">
+                            <td className="p-2 font-medium">{td.labels[lang as "ar"|"en"|"ku"] || td.labels.ar}</td>
+                            <td className="p-2 text-center font-mono text-xs">{td.costPerRun}×</td>
+                            <td className="p-2 text-center">
+                              <input type="checkbox" checked={r?.enabled ?? false}
+                                onChange={(e) => upsert(activePlan, td.key, { enabled: e.target.checked })} />
+                            </td>
+                            <td className="p-2">
+                              <input type="number" min={0} value={r?.monthly_quota ?? ""}
+                                placeholder="—"
+                                onBlur={(e) => upsert(activePlan, td.key, {
+                                  monthly_quota: e.target.value === "" ? null : parseInt(e.target.value, 10),
+                                })}
+                                defaultValue={r?.monthly_quota ?? ""}
+                                className="w-20 rounded border border-border bg-background/60 px-2 py-1 text-xs" />
+                            </td>
+                            <td className="p-2">
+                              <input type="number" min={0} defaultValue={r?.daily_quota ?? ""}
+                                placeholder="—"
+                                onBlur={(e) => upsert(activePlan, td.key, {
+                                  daily_quota: e.target.value === "" ? null : parseInt(e.target.value, 10),
+                                })}
+                                className="w-20 rounded border border-border bg-background/60 px-2 py-1 text-xs" />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
