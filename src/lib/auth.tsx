@@ -40,6 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
     setProfile(p as Profile | null);
     setIsAdmin(!!roles?.some((r: any) => r.role === "admin"));
+
+    // Device fingerprint enforcement
+    try {
+      const fp = await computeFingerprint();
+      const stored = (p as any)?.device_fingerprint as string | null | undefined;
+      if (!stored && fp) {
+        await supabase.from("profiles").update({ device_fingerprint: fp, device_locked_at: new Date().toISOString() }).eq("id", uid);
+      } else if (stored && fp && stored !== fp) {
+        alert("This account is locked to another device. Please contact support to reset.");
+        await supabase.auth.signOut();
+      }
+    } catch {}
   };
 
   const refreshProfile = async () => {
