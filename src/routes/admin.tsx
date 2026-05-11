@@ -344,34 +344,97 @@ function PlansTab() {
     await supabase.from("subscription_plans").update({ active: !p.active }).eq("id", p.id);
     load();
   };
-  const updatePrice = async (p: any, price: number) => {
-    await supabase.from("subscription_plans").update({ price_iqd: price }).eq("id", p.id);
+  const save = async (p: any, patch: any) => {
+    await supabase.from("subscription_plans").update(patch).eq("id", p.id);
+    load();
+  };
+  const del = async (p: any) => {
+    if (!confirm(`Delete plan "${p.name}"?`)) return;
+    await supabase.from("subscription_plans").delete().eq("id", p.id);
+    load();
+  };
+  const create = async () => {
+    const name = prompt("Plan name?");
+    if (!name) return;
+    await supabase.from("subscription_plans").insert({
+      name, description: "", price_iqd: 0, duration_days: 30,
+      monthly_analyses: 50, monthly_suggestions: 30, active: false, sort_order: 99, features: [],
+    });
     load();
   };
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <button onClick={create} className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground">+ New plan</button>
+      </div>
       {rows.map((p) => (
-        <div key={p.id} className="rounded-xl border border-border bg-card/70 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-display text-lg font-semibold">{p.name}</div>
-              <div className="text-xs text-muted-foreground">{p.description}</div>
-            </div>
-            <button onClick={() => toggle(p)} className={`rounded-full px-3 py-1 text-xs ${p.active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>
-              {p.active ? "Active" : "Inactive"}
-            </button>
-          </div>
-          <div className="mt-3 flex items-center gap-3 text-sm">
-            <label className="flex items-center gap-2">Price (IQD):
-              <input type="number" defaultValue={p.price_iqd} onBlur={(e) => updatePrice(p, parseInt(e.target.value, 10) || 0)}
-                className="w-32 rounded-md border border-border bg-background/60 px-2 py-1" />
-            </label>
-            <span className="text-muted-foreground">· {p.duration_days}d · {p.monthly_analyses}A/{p.monthly_suggestions}S</span>
-          </div>
-        </div>
+        <PlanRow key={p.id} plan={p} onToggle={() => toggle(p)} onSave={(patch) => save(p, patch)} onDelete={() => del(p)} />
       ))}
     </div>
+  );
+}
+
+function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: () => void; onSave: (patch: any) => void; onDelete: () => void }) {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({
+    name: plan.name, description: plan.description || "",
+    price_iqd: plan.price_iqd, duration_days: plan.duration_days,
+    monthly_analyses: plan.monthly_analyses, monthly_suggestions: plan.monthly_suggestions,
+    sort_order: plan.sort_order,
+    features: Array.isArray(plan.features) ? plan.features.join("\n") : "",
+  });
+  const submit = () => {
+    onSave({
+      name: f.name, description: f.description,
+      price_iqd: Number(f.price_iqd) || 0, duration_days: Number(f.duration_days) || 30,
+      monthly_analyses: Number(f.monthly_analyses) || 0, monthly_suggestions: Number(f.monthly_suggestions) || 0,
+      sort_order: Number(f.sort_order) || 0,
+      features: f.features.split("\n").map((x) => x.trim()).filter(Boolean),
+    });
+    setEdit(false);
+  };
+  return (
+    <div className="rounded-xl border border-border bg-card/70 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="font-display text-lg font-semibold">{plan.name}</div>
+          <div className="text-xs text-muted-foreground">{plan.description}</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onToggle} className={`rounded-full px-3 py-1 text-xs ${plan.active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>{plan.active ? "Active" : "Inactive"}</button>
+          <button onClick={() => setEdit((v) => !v)} className="rounded-full border border-border px-3 py-1 text-xs">{edit ? "Close" : "Edit"}</button>
+          <button onClick={onDelete} className="rounded-full border border-destructive/40 px-3 py-1 text-xs text-destructive">Delete</button>
+        </div>
+      </div>
+      {!edit ? (
+        <div className="mt-2 text-sm text-muted-foreground">{plan.price_iqd.toLocaleString()} IQD · {plan.duration_days}d · {plan.monthly_analyses}A / {plan.monthly_suggestions}S</div>
+      ) : (
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={inp} /></Field>
+          <Field label="Sort order"><input type="number" value={f.sort_order} onChange={(e) => setF({ ...f, sort_order: e.target.value as any })} className={inp} /></Field>
+          <Field label="Description" full><textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} className={`${inp} h-20`} /></Field>
+          <Field label="Price (IQD)"><input type="number" value={f.price_iqd} onChange={(e) => setF({ ...f, price_iqd: e.target.value as any })} className={inp} /></Field>
+          <Field label="Duration (days)"><input type="number" value={f.duration_days} onChange={(e) => setF({ ...f, duration_days: e.target.value as any })} className={inp} /></Field>
+          <Field label="Monthly analyses"><input type="number" value={f.monthly_analyses} onChange={(e) => setF({ ...f, monthly_analyses: e.target.value as any })} className={inp} /></Field>
+          <Field label="Monthly suggestions"><input type="number" value={f.monthly_suggestions} onChange={(e) => setF({ ...f, monthly_suggestions: e.target.value as any })} className={inp} /></Field>
+          <Field label="Features (one per line)" full><textarea value={f.features} onChange={(e) => setF({ ...f, features: e.target.value })} className={`${inp} h-24`} /></Field>
+          <div className="md:col-span-2 flex justify-end">
+            <button onClick={submit} className="rounded-full bg-gradient-to-r from-success to-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">Save</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const inp = "w-full rounded-md border border-border bg-background/60 px-2 py-1 text-sm";
+function Field({ label, full, children }: { label: string; full?: boolean; children: React.ReactNode }) {
+  return (
+    <label className={`${full ? "md:col-span-2" : ""} block`}>
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      {children}
+    </label>
   );
 }
 
