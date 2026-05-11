@@ -63,6 +63,7 @@ export function CompanyOutreach() {
             <Building2 className="size-5 text-primary" /> {t("outreach_title")}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">{t("outreach_desc")}</p>
+          <ToolHelpBanner toolKey="outreach" />
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>
