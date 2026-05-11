@@ -135,7 +135,7 @@ Rules:
             } catch { /* non-fatal */ }
           }
 
-          return Response.json({ query: limited, answer, key_findings, sources: results, channels, specialty: userCtx.specialty });
+          return Response.json({ query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty });
         } catch (e: any) {
           return Response.json({ error: e?.message || "research failed" }, { status: 500 });
         }
