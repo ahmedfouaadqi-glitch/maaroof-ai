@@ -78,6 +78,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Realtime: keep profile (usage counters, quota_overrides, subscription) live
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase
+      .channel(`profile:${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, (payload: any) => {
+        setProfile((prev) => ({ ...(prev as any), ...(payload.new as any) }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };

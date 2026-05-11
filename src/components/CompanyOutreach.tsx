@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
+import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 
 type Mode = "search" | "email" | "brand";
 
@@ -64,6 +65,7 @@ export function CompanyOutreach() {
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">{t("outreach_desc")}</p>
           <ToolHelpBanner toolKey="outreach" />
+          <div className="mt-3"><GeoScopeSelector compact toolKey="outreach" /></div>
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} />
       </div>

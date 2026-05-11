@@ -6,6 +6,7 @@ import { Loader2, Sparkles, TrendingUp, Target, Rocket } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
+import { GeoScopeSelector } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 
 export function BizDev() {
@@ -78,6 +79,7 @@ export function BizDev() {
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("biz_desc")}</p>
       <ToolHelpBanner toolKey="bizdev" />
+      <div className="mt-3"><GeoScopeSelector compact toolKey="bizdev" /></div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field label={t("biz_f_name")} value={form.business_name} onChange={upd("business_name")} />

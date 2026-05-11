@@ -162,7 +162,7 @@ function UsersTab() {
     <div className="overflow-x-auto rounded-2xl border border-border bg-card/70 backdrop-blur">
       <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
-          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
+          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
@@ -175,6 +175,48 @@ function UsersTab() {
                 {r.subscription_expires_at && <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(r.subscription_expires_at).toLocaleDateString()}</div>}
               </td>
               <td className="p-3">{r.monthly_analyses_used}A · {r.monthly_suggestions_used}S</td>
+              <td className="p-3">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    key={`qa-${r.id}-${(r.quota_overrides?.monthly_analyses) ?? ""}`}
+                    type="number" min={0}
+                    defaultValue={r.quota_overrides?.monthly_analyses ?? ""}
+                    placeholder="A"
+                    onBlur={async (e) => {
+                      const v = e.target.value === "" ? null : Number(e.target.value);
+                      const next = { ...(r.quota_overrides || {}) };
+                      if (v == null) delete next.monthly_analyses; else next.monthly_analyses = v;
+                      await supabase.from("profiles").update({ quota_overrides: next }).eq("id", r.id);
+                      load();
+                    }}
+                    className="w-16 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
+                  />
+                  <input
+                    key={`qs-${r.id}-${(r.quota_overrides?.monthly_suggestions) ?? ""}`}
+                    type="number" min={0}
+                    defaultValue={r.quota_overrides?.monthly_suggestions ?? ""}
+                    placeholder="S"
+                    onBlur={async (e) => {
+                      const v = e.target.value === "" ? null : Number(e.target.value);
+                      const next = { ...(r.quota_overrides || {}) };
+                      if (v == null) delete next.monthly_suggestions; else next.monthly_suggestions = v;
+                      await supabase.from("profiles").update({ quota_overrides: next }).eq("id", r.id);
+                      load();
+                    }}
+                    className="w-16 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
+                  />
+                  {((r.quota_overrides?.monthly_analyses) || (r.quota_overrides?.monthly_suggestions)) && (
+                    <button
+                      onClick={async () => {
+                        await supabase.from("profiles").update({ monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString() }).eq("id", r.id);
+                        load();
+                      }}
+                      title={t("admin_reset_usage")}
+                      className="rounded border border-border px-1.5 py-0.5 text-[10px] hover:border-primary"
+                    >↺</button>
+                  )}
+                </div>
+              </td>
               <td className="p-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
               <td className="p-3 text-end">
                 <div className="flex flex-wrap justify-end gap-1.5">
