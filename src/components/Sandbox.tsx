@@ -83,7 +83,7 @@ export function Sandbox() {
 
       const r = await fetch("/api/analyze", {
         method: "POST", headers,
-        body: JSON.stringify({ text, lang: outLang }),
+        body: JSON.stringify({ text, lang: outLang, scope: getEffectiveScope(auth?.profile, "analyze") }),
       });
       const data = await r.json();
       await stepTimer;
