@@ -124,6 +124,29 @@ export function SmartResearch() {
               </ul>
             </div>
           )}
+          {/* Chain to other tools */}
+          {(out.sge_summary || out.answer) && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  const txt = `${q}\n\n${out.sge_summary || out.answer}`;
+                  window.dispatchEvent(new CustomEvent("geo:reuse-suggest", { detail: { text: txt } }));
+                  document.getElementById("suggest")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20">
+                <Sparkles className="size-3" /> {t("research_send_suggest")}
+              </button>
+              <button
+                onClick={() => {
+                  const txt = out.answer || out.sge_summary;
+                  window.dispatchEvent(new CustomEvent("geo:reuse-analyze", { detail: { text: txt } }));
+                  document.getElementById("analyze")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent hover:bg-accent/20">
+                <Zap className="size-3" /> {t("research_send_analyze")}
+              </button>
+            </div>
+          )}
           {includeChannels && (
             <div>
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
