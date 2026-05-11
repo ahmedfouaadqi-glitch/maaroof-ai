@@ -33,7 +33,7 @@ export function CompanyOutreach() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await fetch("/api/company-email", {
         method: "POST", headers,
-        body: JSON.stringify({ company, sector, goal, notes, lang, mode }),
+        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");
