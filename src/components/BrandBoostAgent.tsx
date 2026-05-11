@@ -3,7 +3,7 @@ import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
-import { GeoScopeSelector } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
