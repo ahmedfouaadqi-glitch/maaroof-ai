@@ -30,18 +30,6 @@ import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as GuideRouteImport } from './routes/guide'
-import { Route as ApiResearchRouteImport } from './routes/api/research'
-import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
-import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
-
-const ProfileRoute = ProfileRouteImport.update({ id: '/profile', path: '/profile', getParentRoute: () => rootRouteImport } as any)
-const GuideRoute = GuideRouteImport.update({ id: '/guide', path: '/guide', getParentRoute: () => rootRouteImport } as any)
-const ApiResearchRoute = ApiResearchRouteImport.update({ id: '/api/research', path: '/api/research', getParentRoute: () => rootRouteImport } as any)
-const ApiCompanyEmailRoute = ApiCompanyEmailRouteImport.update({ id: '/api/company-email', path: '/api/company-email', getParentRoute: () => rootRouteImport } as any)
-const ApiBrandBoostRoute = ApiBrandBoostRouteImport.update({ id: '/api/brand-boost', path: '/api/brand-boost', getParentRoute: () => rootRouteImport } as any)
-
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
