@@ -155,13 +155,17 @@ export function PostSuggester({
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
         const dur = videoDuration ? Math.round(videoDuration) : null;
-        body.description = dur
+        const userNote = desc.trim();
+        const base = dur
           ? `محتوى مأخوذ من فيديو مدّته ${dur} ثانية. اعتمد على الإطار المرفق وصف ما يظهر فيه بصرياً ثم استخدم ذلك لصياغة المنشور. لا تخترع أحداثاً أو حواراً غير ظاهر.`
           : "محتوى من فيديو قصير - اعتمد على الإطار المرفق فقط.";
+        body.description = userNote ? `${base}\n\nملاحظات المستخدم: ${userNote}` : base;
       }
       else if (imageData) {
         body.imageBase64 = imageData;
         body.imageMime = imageMime;
+        const userNote = desc.trim();
+        if (userNote) body.description = userNote;
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
@@ -310,6 +314,19 @@ export function PostSuggester({
         </div>
       )}
 
+      {!initialSourceText && (mode === "image" || mode === "video") && (
+        <div className="mt-3">
+          <label className="mb-1.5 block text-xs font-semibold text-foreground">{t("suggest_media_desc_label")}</label>
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            placeholder={t("suggest_media_desc_placeholder")}
+            rows={3}
+            className="w-full resize-none rounded-xl border border-border bg-background/60 p-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+          />
+        </div>
+      )}
+
       <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-background/40 p-3">
         <div>
           <div className="mb-1.5 text-xs font-semibold text-foreground">{t("suggest_goal")}</div>
@@ -444,7 +461,16 @@ export function PostSuggester({
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-              <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-primary"><Gauge className="size-3.5" /> {t("result_geo_score")}</div>
+              <div className="mb-1 flex items-center justify-between gap-2 text-[11px] uppercase tracking-widest text-primary">
+                <span className="inline-flex items-center gap-1.5"><Gauge className="size-3.5" /> {t("result_geo_score")}</span>
+                <details className="group relative">
+                  <summary className="cursor-pointer list-none rounded-full border border-primary/40 px-2 py-0.5 text-[10px] font-mono text-primary/80 transition hover:bg-primary/10">?</summary>
+                  <div className="absolute end-0 z-20 mt-1 w-72 rounded-lg border border-border bg-popover p-3 text-[11px] normal-case leading-relaxed tracking-normal text-foreground shadow-lg">
+                    <div className="mb-1 font-semibold text-primary">{t("suggest_geo_what")}</div>
+                    <p className="text-muted-foreground">{t("suggest_geo_explain")}</p>
+                  </div>
+                </details>
+              </div>
               <div className="font-display text-3xl font-bold text-gradient">{result.overall_geo_score}<span className="text-sm text-muted-foreground">/100</span></div>
             </div>
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-3 sm:col-span-2">
