@@ -1115,6 +1115,8 @@ const ar: Dict = {
   geo_scope_title: "النطاق الجغرافي",
   geo_scope_world: "العالم", geo_scope_country: "دولة", geo_scope_province: "محافظة", geo_scope_city: "مدينة",
   geo_country_ph: "الدولة (مثال: العراق)", geo_city_ph: "المدينة / المحافظة (مثال: بغداد)",
+  geo_scope_per_tool: "خاص بالأداة", geo_scope_global_inherit: "يتبع النطاق العام", geo_scope_use_global: "استخدم العام",
+  admin_quota_override: "حصة مخصصة", admin_reset_usage: "تصفير عدّاد الاستهلاك",
   profile_title: "ملفي الشخصي", profile_full_name: "الاسم الكامل", profile_brand_name: "اسم العلامة التجارية",
   profile_brand_keywords: "كلمات العلامة التجارية", profile_specialty: "التخصص / القطاع",
   profile_save: "حفظ التغييرات", profile_email_locked: "لا يمكن تغيير البريد الإلكتروني هنا.",
