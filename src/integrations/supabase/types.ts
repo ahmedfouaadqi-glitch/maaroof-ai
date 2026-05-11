@@ -579,6 +579,50 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_plan_access: {
+        Row: {
+          created_at: string
+          daily_quota: number | null
+          enabled: boolean
+          id: string
+          monthly_quota: number | null
+          notes: string | null
+          plan_id: string
+          tool_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_quota?: number | null
+          enabled?: boolean
+          id?: string
+          monthly_quota?: number | null
+          notes?: string | null
+          plan_id: string
+          tool_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_quota?: number | null
+          enabled?: boolean
+          id?: string
+          monthly_quota?: number | null
+          notes?: string | null
+          plan_id?: string
+          tool_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_plan_access_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_agent_subscriptions: {
         Row: {
           addon_id: string | null
