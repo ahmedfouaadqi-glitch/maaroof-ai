@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock, Linkedin, Facebook, Instagram, AlertTriangle, TrendingUp, Lightbulb, Gauge, Video as VideoIcon } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
+import { ToolHelpBanner } from "./ToolHelpBanner";
 import type { ExportPayload } from "@/lib/exports";
 
 type Mode = "text" | "image" | "video";
