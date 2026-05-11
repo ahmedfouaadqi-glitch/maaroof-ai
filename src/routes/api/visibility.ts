@@ -62,19 +62,50 @@ function toArray(value: unknown, max = 6) {
     .map((item) => item.slice(0, 220));
 }
 
+function normalizePlatforms(value: unknown): Array<any> {
+  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot"];
+  const arr = Array.isArray(value) ? value : [];
+  const byName = new Map<string, any>();
+  for (const item of arr) {
+    if (item && typeof item === "object") {
+      const name = String((item as any).name || "").trim();
+      if (name) byName.set(name, item);
+    }
+  }
+  return NAMES.map((name) => {
+    const p: any = byName.get(name) || {};
+    const lik = ["high", "medium", "low"].includes(p.citation_likelihood) ? p.citation_likelihood : "low";
+    return {
+      name,
+      score: clamp(p.score),
+      citation_likelihood: lik,
+      trust_signal: String(p.trust_signal || "").trim().slice(0, 120),
+      why: String(p.why || "").trim().slice(0, 360),
+      action: String(p.action || "").trim().slice(0, 220),
+    };
+  });
+}
+
 function normalizeResult(parsed: any, fallbackText = "") {
   const sentiment = ["positive", "neutral", "negative"].includes(parsed?.sentiment)
     ? parsed.sentiment
     : "neutral";
 
+  const platforms = normalizePlatforms(parsed?.platforms);
+  const platformAvg = platforms.length
+    ? Math.round(platforms.reduce((s, p) => s + (p.score || 0), 0) / platforms.length)
+    : clamp(parsed?.visibility_percent);
+  const visibility_percent = clamp(parsed?.visibility_percent) || platformAvg;
+
   return {
-    visibility_percent: clamp(parsed?.visibility_percent),
+    visibility_percent,
     sentiment,
     appearance_summary: String(parsed?.appearance_summary || fallbackText || "").trim().slice(0, 500),
     strengths: toArray(parsed?.strengths, 5),
     weaknesses: toArray(parsed?.weaknesses, 5),
     competitors: toArray(parsed?.competitors, 5),
     recommendations: toArray(parsed?.recommendations, 6),
+    platforms,
   };
 }
 
