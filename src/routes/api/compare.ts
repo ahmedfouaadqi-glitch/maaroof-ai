@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
+import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 
-type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku" };
+type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
