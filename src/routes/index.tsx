@@ -6,8 +6,11 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
 import { SubscribeModal } from "@/components/SubscribeModal";
-import { ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench } from "lucide-react";
-import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import {
+  ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench,
+  Search, Lightbulb, PenSquare, Megaphone, LineChart, Coins,
+} from "lucide-react";
+import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 
 export const Route = createFileRoute("/")({
   component: () => (
@@ -19,10 +22,38 @@ export const Route = createFileRoute("/")({
   ),
 });
 
+const ENGINES = [
+  { name: "ChatGPT",    grad: "from-emerald-400/30 to-emerald-500/10" },
+  { name: "Gemini",     grad: "from-blue-400/30 to-violet-500/10" },
+  { name: "Claude",     grad: "from-orange-400/30 to-amber-500/10" },
+  { name: "Perplexity", grad: "from-cyan-400/30 to-teal-500/10" },
+  { name: "Copilot",    grad: "from-indigo-400/30 to-sky-500/10" },
+  { name: "Grok",       grad: "from-zinc-300/30 to-zinc-500/10" },
+  { name: "Mistral",    grad: "from-fuchsia-400/30 to-rose-500/10" },
+];
+
 function Page() {
   const { t, lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const [subOpen, setSubOpen] = useState(false);
+
+  const howtoKey = (k: ToolKey) => {
+    const map: Record<ToolKey, string> = {
+      analyze: "guide_how_analyze",
+      suggest: "guide_how_suggest",
+      compare: "guide_how_compare",
+      feasibility: "guide_how_feasibility",
+      bizdev: "guide_how_bizdev",
+      research: "guide_how_research",
+      brand_boost: "guide_how_brand_boost",
+      company_email: "guide_how_company_email",
+      "agent.command": "guide_how_agent_command",
+      "agent.run_targets": "guide_how_agent_targets",
+      "agent.visibility": "guide_how_agent_visibility",
+    };
+    return map[k];
+  };
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -69,38 +100,94 @@ function Page() {
         </div>
       </section>
 
-      {/* WHY GEO */}
-      <section id="features" className="relative border-t border-border/60 py-20">
+      {/* AI ENGINES */}
+      <section id="engines" className="relative border-t border-border/60 py-20">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-display text-3xl font-bold md:text-4xl">{t("why_title")}</h2>
-            <p className="mt-3 text-muted-foreground">{t("why_sub")}</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent">
+              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">7</span>
+              AI Engines
+            </span>
+            <h2 className="mt-4 font-display text-3xl font-bold md:text-4xl">{t("engines_title")}</h2>
+            <p className="mt-3 text-muted-foreground">{t("engines_sub")}</p>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            <Feature icon={<Zap />} title={t("why_1_t")} desc={t("why_1_d")} />
-            <Feature icon={<Globe2 />} title={t("why_2_t")} desc={t("why_2_d")} />
-            <Feature icon={<ShieldCheck />} title={t("why_3_t")} desc={t("why_3_d")} />
-            <Feature icon={<Bot />} title={t("why_4_t")} desc={t("why_4_d")} />
+
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+            {ENGINES.map((e) => (
+              <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.grad} p-4 text-center transition hover:scale-[1.03] hover:border-primary/40`}>
+                <div className="mx-auto mb-2 grid size-10 place-items-center rounded-xl bg-background/60 backdrop-blur">
+                  <span className="font-mono text-xs font-bold text-foreground/80">{e.name.slice(0, 2).toUpperCase()}</span>
+                </div>
+                <div className="font-display text-sm font-semibold">{e.name}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <FeedStep n="1" icon={<Search className="size-4" />} text={t("engines_how_1")} />
+            <FeedStep n="2" icon={<LineChart className="size-4" />} text={t("engines_how_2")} />
+            <FeedStep n="3" icon={<Bot className="size-4" />} text={t("engines_how_3")} />
           </div>
         </div>
       </section>
 
-      {/* HOW */}
+      {/* WHY GEO / WHY NOW */}
+      <section id="features" className="relative border-t border-border/60 py-20">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-bold md:text-4xl">
+              <span className="text-gradient">{t("why_now_title")}</span>
+            </h2>
+            <p className="mt-3 text-muted-foreground">{t("why_now_sub")}</p>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <Feature icon={<Zap />}         title={t("why_now_1_t")} desc={t("why_now_1_d")} />
+            <Feature icon={<Globe2 />}      title={t("why_now_2_t")} desc={t("why_now_2_d")} />
+            <Feature icon={<Bot />}         title={t("why_now_3_t")} desc={t("why_now_3_d")} />
+            <Feature icon={<ShieldCheck />} title={t("why_now_4_t")} desc={t("why_now_4_d")} />
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS (with consumption) */}
       <section id="how" className="relative border-t border-border/60 py-20">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-bold md:text-4xl">{t("how_title")}</h2>
+            <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary">
+              <Coins className="size-3.5" />
+              <span className="font-semibold">{t("home_consume_title")}</span>
+              <span className="text-primary/80">·</span>
+              <span className="font-mono">{t("home_consume_legend")}</span>
+            </div>
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            <Step n="01" title={t("how_1_t")} desc={t("how_1_d")} />
-            <Step n="02" title={t("how_2_t")} desc={t("how_2_d")} />
-            <Step n="03" title={t("how_3_t")} desc={t("how_3_d")} />
-            <Step n="04" title={t("how_4_t")} desc={t("how_4_d")} />
+            <Step n="01" cost="1×" title={t("how_1_t")} desc={t("how_1_d")} />
+            <Step n="02" cost="1-2×" title={t("how_2_t")} desc={t("how_2_d")} />
+            <Step n="03" cost="1-3×" title={t("how_3_t")} desc={t("how_3_d")} />
+            <Step n="04" cost="auto" title={t("how_4_t")} desc={t("how_4_d")} />
           </div>
         </div>
       </section>
 
-      {/* TOOLS CATALOG */}
+      {/* HOW TOOLS ARE LINKED */}
+      <section id="link-tools" className="relative border-t border-border/60 py-20">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-bold md:text-4xl">{t("link_tools_title")}</h2>
+            <p className="mt-3 text-muted-foreground">{t("link_tools_sub")}</p>
+          </div>
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <FlowCard icon={<Search />}     title={t("link_step_1_t")} desc={t("link_step_1_d")} />
+            <FlowCard icon={<Lightbulb />}  title={t("link_step_2_t")} desc={t("link_step_2_d")} />
+            <FlowCard icon={<PenSquare />}  title={t("link_step_3_t")} desc={t("link_step_3_d")} />
+            <FlowCard icon={<Megaphone />}  title={t("link_step_4_t")} desc={t("link_step_4_d")} />
+            <FlowCard icon={<LineChart />}  title={t("link_step_5_t")} desc={t("link_step_5_d")} />
+          </div>
+        </div>
+      </section>
+
+      {/* TOOLS CATALOG with descriptions */}
       <section id="tools" className="relative border-t border-border/60 py-20">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
@@ -111,7 +198,7 @@ function Page() {
           </div>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {TOOL_CATALOG.map((td) => (
-              <div key={td.key} className="rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40">
+              <div key={td.key} className="group rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
                 <div className="flex items-center gap-2">
                   <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
                     {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
@@ -121,6 +208,9 @@ function Page() {
                     {td.costPerRun}×
                   </span>
                 </div>
+                <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                  {t(howtoKey(td.key) as any)}
+                </p>
               </div>
             ))}
           </div>
@@ -178,12 +268,45 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
   );
 }
 
-function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
+function Step({ n, cost, title, desc }: { n: string; cost?: string; title: string; desc: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card/40 p-6">
-      <div className="font-mono text-xs text-primary">{n}</div>
+      <div className="flex items-center justify-between">
+        <div className="font-mono text-xs text-primary">{n}</div>
+        {cost && (
+          <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-primary">
+            {cost}
+          </span>
+        )}
+      </div>
       <h3 className="mt-2 font-display text-lg font-semibold">{title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
+    </div>
+  );
+}
+
+function FeedStep({ n, icon, text }: { n: string; icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/40 p-4">
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
+        {icon}
+      </span>
+      <div>
+        <div className="font-mono text-xs text-primary">{n}</div>
+        <p className="mt-1 text-sm text-foreground/85 leading-relaxed">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function FlowCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+  return (
+    <div className="relative rounded-2xl border border-border bg-card/60 p-5 transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
+      <div className="mb-3 inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
+        {icon}
+      </div>
+      <h3 className="font-display text-base font-semibold">{title}</h3>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{desc}</p>
     </div>
   );
 }
