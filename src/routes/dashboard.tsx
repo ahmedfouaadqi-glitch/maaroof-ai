@@ -182,34 +182,39 @@ function DashboardPage() {
           <SpecialtyBanner />
         </div>
 
-        {/* Embedded tools */}
-        <div id="analyze" className="mt-8 scroll-mt-24">
-          <Sandbox />
+        {/* Customize toolbar */}
+        <div className="mt-8 rounded-2xl border border-border bg-card/40 p-3 backdrop-blur">
+          <button onClick={() => setShowCustomize((s) => !s)} className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
+            <Settings2 className="size-4" /> {t("dash_customize")} {hidden.length > 0 && <span className="text-xs text-muted-foreground">({t("dash_hidden_count")}: {hidden.length})</span>}
+          </button>
+          {showCustomize && (
+            <>
+              <p className="mt-2 text-xs text-muted-foreground">{t("dash_customize_hint")}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {TOOL_SLOTS.map((s) => {
+                  const visible = isVisible(s.key);
+                  return (
+                    <button key={s.key} onClick={() => toggleTool(s.key)}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${visible ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-background/40 text-muted-foreground"}`}>
+                      {visible ? <Eye className="size-3" /> : <EyeOff className="size-3" />} {t(s.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
-        <div id="suggest" className="mt-8 scroll-mt-24">
-          <PostSuggester />
-        </div>
-        <div id="compare" className="mt-8 scroll-mt-24">
-          <CompetitorCompare />
-        </div>
-        <div id="feasibility" className="mt-8 scroll-mt-24">
-          <FeasibilityStudy />
-        </div>
-        <div id="bizdev" className="mt-8 scroll-mt-24">
-          <BizDev />
-        </div>
-        <div className="mt-8">
-          <GeoScopeSelector />
-        </div>
-        <div id="research" className="mt-8 scroll-mt-24">
-          <SmartResearch />
-        </div>
-        <div id="outreach" className="mt-8 scroll-mt-24">
-          <CompanyOutreach />
-        </div>
-        <div id="boost" className="mt-8 scroll-mt-24">
-          <BrandBoostAgent />
-        </div>
+
+        {/* Embedded tools (filtered by visibility) */}
+        {isVisible("analyze") && <div id="analyze" className="mt-8 scroll-mt-24"><Sandbox /></div>}
+        {isVisible("suggest") && <div id="suggest" className="mt-8 scroll-mt-24"><PostSuggester /></div>}
+        {isVisible("compare") && <div id="compare" className="mt-8 scroll-mt-24"><CompetitorCompare /></div>}
+        {isVisible("feasibility") && <div id="feasibility" className="mt-8 scroll-mt-24"><FeasibilityStudy /></div>}
+        {isVisible("bizdev") && <div id="bizdev" className="mt-8 scroll-mt-24"><BizDev /></div>}
+        <div className="mt-8"><GeoScopeSelector /></div>
+        {isVisible("research") && <div id="research" className="mt-8 scroll-mt-24"><SmartResearch /></div>}
+        {isVisible("outreach") && <div id="outreach" className="mt-8 scroll-mt-24"><CompanyOutreach /></div>}
+        {isVisible("boost") && <div id="boost" className="mt-8 scroll-mt-24"><BrandBoostAgent /></div>}
 
         {/* Activity & summary export */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
