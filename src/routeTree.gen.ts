@@ -20,8 +20,11 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
+import { Route as ApiResearchRouteImport } from './routes/api/research'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
+import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
+import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
@@ -81,6 +84,11 @@ const ApiSuggestRoute = ApiSuggestRouteImport.update({
   path: '/api/suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResearchRoute = ApiResearchRouteImport.update({
+  id: '/api/research',
+  path: '/api/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
   id: '/api/feasibility',
   path: '/api/feasibility',
@@ -89,6 +97,16 @@ const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
 const ApiCompareRoute = ApiCompareRouteImport.update({
   id: '/api/compare',
   path: '/api/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompanyEmailRoute = ApiCompanyEmailRouteImport.update({
+  id: '/api/company-email',
+  path: '/api/company-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandBoostRoute = ApiBrandBoostRouteImport.update({
+  id: '/api/brand-boost',
+  path: '/api/brand-boost',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBizdevRoute = ApiBizdevRouteImport.update({
@@ -120,8 +138,11 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/bizdev': typeof ApiBizdevRoute
+  '/api/brand-boost': typeof ApiBrandBoostRoute
+  '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
+  '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -138,8 +159,11 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/bizdev': typeof ApiBizdevRoute
+  '/api/brand-boost': typeof ApiBrandBoostRoute
+  '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
+  '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -157,8 +181,11 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/bizdev': typeof ApiBizdevRoute
+  '/api/brand-boost': typeof ApiBrandBoostRoute
+  '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
+  '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -177,8 +204,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/bizdev'
+    | '/api/brand-boost'
+    | '/api/company-email'
     | '/api/compare'
     | '/api/feasibility'
+    | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -195,8 +225,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/bizdev'
+    | '/api/brand-boost'
+    | '/api/company-email'
     | '/api/compare'
     | '/api/feasibility'
+    | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -213,8 +246,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/bizdev'
+    | '/api/brand-boost'
+    | '/api/company-email'
     | '/api/compare'
     | '/api/feasibility'
+    | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -232,8 +268,11 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
+  ApiBrandBoostRoute: typeof ApiBrandBoostRoute
+  ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
   ApiCompareRoute: typeof ApiCompareRoute
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
+  ApiResearchRoute: typeof ApiResearchRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
@@ -318,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/research': {
+      id: '/api/research'
+      path: '/api/research'
+      fullPath: '/api/research'
+      preLoaderRoute: typeof ApiResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/feasibility': {
       id: '/api/feasibility'
       path: '/api/feasibility'
@@ -330,6 +376,20 @@ declare module '@tanstack/react-router' {
       path: '/api/compare'
       fullPath: '/api/compare'
       preLoaderRoute: typeof ApiCompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/company-email': {
+      id: '/api/company-email'
+      path: '/api/company-email'
+      fullPath: '/api/company-email'
+      preLoaderRoute: typeof ApiCompanyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-boost': {
+      id: '/api/brand-boost'
+      path: '/api/brand-boost'
+      fullPath: '/api/brand-boost'
+      preLoaderRoute: typeof ApiBrandBoostRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bizdev': {
@@ -368,8 +428,11 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiBizdevRoute: ApiBizdevRoute,
+  ApiBrandBoostRoute: ApiBrandBoostRoute,
+  ApiCompanyEmailRoute: ApiCompanyEmailRoute,
   ApiCompareRoute: ApiCompareRoute,
   ApiFeasibilityRoute: ApiFeasibilityRoute,
+  ApiResearchRoute: ApiResearchRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
