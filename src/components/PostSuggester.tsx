@@ -172,6 +172,7 @@ export function PostSuggester({
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
+      (body as any).scope = getEffectiveScope(auth?.profile, "suggest");
       const r = await fetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
       const data = await r.json();
       if (r.status === 401) { setShowGate(true); return; }
