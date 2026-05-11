@@ -154,6 +154,9 @@ export function BrandBoostAgent() {
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {report && (
         <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-end">
+            <ExportButtons build={() => buildExport(jobs[0] || { brand_name: brand })} />
+          </div>
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs">
