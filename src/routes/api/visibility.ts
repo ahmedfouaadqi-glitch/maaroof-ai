@@ -115,14 +115,17 @@ function normalizeResult(parsed: any, fallbackText = "") {
     : clamp(parsed?.visibility_percent);
   const visibility_percent = clamp(parsed?.visibility_percent) || platformAvg;
 
+  const confidence = ["high", "medium", "low"].includes(parsed?.confidence) ? parsed.confidence : "medium";
+
   return {
     visibility_percent,
+    confidence,
     sentiment,
     appearance_summary: String(parsed?.appearance_summary || fallbackText || "").trim().slice(0, 500),
-    strengths: toArray(parsed?.strengths, 5),
-    weaknesses: toArray(parsed?.weaknesses, 5),
-    competitors: toArray(parsed?.competitors, 5),
-    recommendations: toArray(parsed?.recommendations, 6),
+    strengths: toArray(parsed?.strengths, 6),
+    weaknesses: toArray(parsed?.weaknesses, 6),
+    competitors: toArray(parsed?.competitors, 6),
+    recommendations: toArray(parsed?.recommendations, 8),
     platforms,
   };
 }
