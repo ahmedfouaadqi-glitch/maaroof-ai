@@ -32,7 +32,7 @@ export function BizDev() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
-      const r = await fetch("/api/bizdev", { method: "POST", headers, body: JSON.stringify({ ...form, lang: outLang }) });
+      const r = await fetch("/api/bizdev", { method: "POST", headers, body: JSON.stringify({ ...form, lang: outLang, scope: getEffectiveScope(auth?.profile, "bizdev") }) });
       const data = await r.json();
       if (!r.ok) { setError(data?.error || "error"); return; }
       setResult(data.result);
