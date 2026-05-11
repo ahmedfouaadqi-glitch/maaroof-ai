@@ -16,7 +16,19 @@ import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Settings2, Eye, EyeOff } from "lucide-react";
+
+const TOOL_SLOTS = [
+  { key: "analyze",     id: "analyze",     labelKey: "dash_tool_analyze_t" },
+  { key: "suggest",     id: "suggest",     labelKey: "dash_tool_suggest_t" },
+  { key: "compare",     id: "compare",     labelKey: "compare_title" },
+  { key: "feasibility", id: "feasibility", labelKey: "dash_tool_feas_t" },
+  { key: "bizdev",      id: "bizdev",      labelKey: "dash_tool_biz_t" },
+  { key: "research",    id: "research",    labelKey: "research_title" },
+  { key: "outreach",    id: "outreach",    labelKey: "outreach_title" },
+  { key: "boost",       id: "boost",       labelKey: "boost_title" },
+] as const;
+const STORAGE_KEY = "geo:hidden-tools";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
