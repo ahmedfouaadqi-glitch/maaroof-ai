@@ -91,11 +91,16 @@ export function BrandBoostAgent() {
 
   return (
     <div className="rounded-2xl border border-accent/30 bg-card/70 p-5 backdrop-blur">
-      <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-        <Megaphone className="size-5 text-accent" /> {t("boost_title")}
-      </h2>
-      <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
-      <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+            <Megaphone className="size-5 text-accent" /> {t("boost_title")}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
+          <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
+        </div>
+        <ToolLangSelect value={outLang} onChange={setOutLang} />
+      </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("boost_brand")}
