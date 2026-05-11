@@ -6,7 +6,7 @@ import { Loader2, Sparkles, TrendingUp, Target, Rocket } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
-import { GeoScopeSelector } from "./GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 
 export function BizDev() {
