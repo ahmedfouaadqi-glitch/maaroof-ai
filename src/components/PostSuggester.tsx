@@ -45,6 +45,9 @@ export function PostSuggester({
   const [desc, setDesc] = useState("");
   const [imageData, setImageData] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [videoBusy, setVideoBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [post, setPost] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -59,6 +62,7 @@ export function PostSuggester({
   const [count, setCount] = useState<number>(1);
   const [outLang, setOutLang] = useState<Lang>(lang);
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onReuse = (e: Event) => {
