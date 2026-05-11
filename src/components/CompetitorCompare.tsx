@@ -13,6 +13,7 @@ type Brand = {
   visibility_percent: number;
   geo_score: number;
   sentiment: "positive" | "neutral" | "negative";
+  platform_presence?: Record<string, number>;
   strengths: string[];
   weaknesses: string[];
 };
@@ -20,8 +21,12 @@ type Result = {
   brands: Brand[];
   winner: string;
   overview: string;
+  content_gaps?: string[];
   recommendations: string[];
+  specialty?: string | null;
 };
+
+const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral"] as const;
 
 export function CompetitorCompare() {
   const { t, lang } = useI18n();
