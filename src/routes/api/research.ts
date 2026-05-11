@@ -28,10 +28,9 @@ export const Route = createFileRoute("/api/research")({
 
           const geo = scope?.country ? ` ${scope.country}` : "";
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
-          const body = await (async () => { try { return await request.clone().json(); } catch { return {}; } })();
-          const includeChannels: boolean = !!body?.include_channels;
-          const channelTypes: string[] = Array.isArray(body?.channel_types) && body.channel_types.length
-            ? body.channel_types : ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"];
+          const includeChannels: boolean = !!reqBody?.include_channels;
+          const channelTypes: string[] = Array.isArray(reqBody?.channel_types) && reqBody.channel_types.length
+            ? reqBody.channel_types : ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"];
 
           const sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang });
           // Firecrawl v2 returns { data: { web: [...], news: [...] } } OR legacy { data: [...] }
