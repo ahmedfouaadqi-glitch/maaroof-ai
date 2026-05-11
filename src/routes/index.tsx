@@ -100,6 +100,35 @@ function Page() {
         </div>
       </section>
 
+      {/* TOOLS CATALOG */}
+      <section id="tools" className="relative border-t border-border/60 py-20">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-bold md:text-4xl flex items-center justify-center gap-2">
+              <Wrench className="size-7 text-primary" /> {t("home_tools_title")}
+            </h2>
+            <p className="mt-3 text-muted-foreground">{t("home_tools_sub")}</p>
+          </div>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {TOOL_CATALOG.map((td) => (
+              <div key={td.key} className="rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40">
+                <div className="flex items-center gap-2">
+                  <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
+                    {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
+                  </span>
+                  <h3 className="font-display text-base font-semibold">{td.labels[L]}</h3>
+                  <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-primary">
+                    {td.costPerRun}×
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 text-center">
+            <Link to="/guide" className="text-sm text-primary hover:underline">{t("guide_title")} →</Link>
+          </div>
+        </div>
+      </section>
 
       {/* CTA */}
       <section id="cta" className="relative border-t border-border/60 py-24">
