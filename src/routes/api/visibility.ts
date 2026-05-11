@@ -172,43 +172,53 @@ export const Route = createFileRoute("/api/visibility")({
             .maybeSingle();
 
           if (!roleRow) {
-            const { data: sub } = await admin
-              .from("user_agent_subscriptions")
-              .select("*, agent_addons(*)")
-              .eq("user_id", userId)
-              .eq("status", "active")
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+            // Allow active plan subscribers (counts against monthly_analyses)
+            const { data: prof } = await admin.from("profiles").select("is_subscribed, subscription_tier, subscription_expires_at, monthly_analyses_used").eq("id", userId).maybeSingle();
+            const planActive = !!prof?.is_subscribed && (!prof.subscription_expires_at || new Date(prof.subscription_expires_at) >= new Date());
+            if (planActive) {
+              const { data: plan } = await admin.from("subscription_plans").select("monthly_analyses").eq("name", prof!.subscription_tier).maybeSingle();
+              const limit = plan?.monthly_analyses || 200;
+              if ((prof!.monthly_analyses_used || 0) >= limit) return Response.json({ error: "limit", limit }, { status: 402 });
+              await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId);
+            } else {
+              const { data: sub } = await admin
+                .from("user_agent_subscriptions")
+                .select("*, agent_addons(*)")
+                .eq("user_id", userId)
+                .eq("status", "active")
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            if (!sub) return Response.json({ error: "no_active_subscription" }, { status: 402 });
-            const addon = (sub as any).agent_addons;
-            if (!addon) return Response.json({ error: "no_addon" }, { status: 402 });
-            if (sub.expires_at && new Date(sub.expires_at) < new Date()) {
-              return Response.json({ error: "subscription_expired" }, { status: 402 });
-            }
+              if (!sub) return Response.json({ error: "no_active_subscription" }, { status: 402 });
+              const addon = (sub as any).agent_addons;
+              if (!addon) return Response.json({ error: "no_addon" }, { status: 402 });
+              if (sub.expires_at && new Date(sub.expires_at) < new Date()) {
+                return Response.json({ error: "subscription_expired" }, { status: 402 });
+              }
 
-            const today = new Date().toISOString().slice(0, 10);
-            const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
-            if (sub.tasks_used + 1 > addon.monthly_tasks) {
-              return Response.json({ error: "monthly_cap_reached" }, { status: 402 });
-            }
-            if (dailyUsed + 1 > addon.daily_task_cap) {
-              return Response.json({ error: "daily_cap_reached" }, { status: 402 });
-            }
+              const today = new Date().toISOString().slice(0, 10);
+              const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
+              if (sub.tasks_used + 1 > addon.monthly_tasks) {
+                return Response.json({ error: "monthly_cap_reached" }, { status: 402 });
+              }
+              if (dailyUsed + 1 > addon.daily_task_cap) {
+                return Response.json({ error: "daily_cap_reached" }, { status: 402 });
+              }
 
-            const { error: usageErr } = await admin
-              .from("user_agent_subscriptions")
-              .update({
-                tasks_used: sub.tasks_used + 1,
-                tasks_used_today: dailyUsed + 1,
-                last_run_date: today,
-              })
-              .eq("id", sub.id);
+              const { error: usageErr } = await admin
+                .from("user_agent_subscriptions")
+                .update({
+                  tasks_used: sub.tasks_used + 1,
+                  tasks_used_today: dailyUsed + 1,
+                  last_run_date: today,
+                })
+                .eq("id", sub.id);
 
-            if (usageErr) {
-              console.error("[api/visibility] usage update failed:", usageErr.message);
-              return Response.json({ error: "usage_update_failed" }, { status: 500 });
+              if (usageErr) {
+                console.error("[api/visibility] usage update failed:", usageErr.message);
+                return Response.json({ error: "usage_update_failed" }, { status: 500 });
+              }
             }
           }
 
