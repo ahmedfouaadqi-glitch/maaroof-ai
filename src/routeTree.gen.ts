@@ -19,6 +19,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
+import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
@@ -73,6 +74,11 @@ const ApiSuggestRoute = ApiSuggestRouteImport.update({
   path: '/api/suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
+  id: '/api/feasibility',
+  path: '/api/feasibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCompareRoute = ApiCompareRouteImport.update({
   id: '/api/compare',
   path: '/api/compare',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/compare'
+    | '/api/feasibility'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/compare'
+    | '/api/feasibility'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/analyze'
     | '/api/compare'
+    | '/api/feasibility'
     | '/api/suggest'
     | '/api/visibility'
     | '/api/public/hooks/agent-runner'
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiCompareRoute: typeof ApiCompareRoute
+  ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/feasibility': {
+      id: '/api/feasibility'
+      path: '/api/feasibility'
+      fullPath: '/api/feasibility'
+      preLoaderRoute: typeof ApiFeasibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/compare': {
       id: '/api/compare'
       path: '/api/compare'
@@ -307,6 +327,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiCompareRoute: ApiCompareRoute,
+  ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
@@ -314,3 +335,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
