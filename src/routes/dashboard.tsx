@@ -47,6 +47,19 @@ function DashboardPage() {
   const [analyses, setAnalyses] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [agentSub, setAgentSub] = useState<any | null>(null);
+  const [hidden, setHidden] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  });
+  const [showCustomize, setShowCustomize] = useState(false);
+  const toggleTool = (k: string) => {
+    setHidden((cur) => {
+      const next = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k];
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const isVisible = (k: string) => !hidden.includes(k);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/dashboard" } });
