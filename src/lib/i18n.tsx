@@ -1173,6 +1173,23 @@ const ar: Dict = {
 };
 
 const ku: Dict = {
+  research_findings: "گرنگترین ئەنجامەکان",
+  outreach_run_search: "گەڕان بۆ کۆمپانیا", outreach_run_brand: "ناسینی نیشانە",
+  outreach_mode_search: "تەنها گەڕان", outreach_mode_email: "نووسینی ئیمەیڵ", outreach_mode_brand: "نیشانەی بازرگانی",
+  outreach_mode_search_desc: "گەڕان لە ئینتەرنێت بۆ کۆمپانیایەکی ڕاستی — پوختە، ماڵپەڕی فەرمی، سۆشیال میدیا و ناوی پەیوەندیدارەکان ئەگەر هەبن.",
+  outreach_mode_email_desc: "هەمان گەڕان، لەگەڵ ئیمەیڵێکی ئامادە بۆ ناردن.",
+  outreach_mode_brand_desc: "بە نیشانە یان بەرهەم سەیری بکە. پۆزیشنینگ، ڕکابەر و دەرفەتی گەشە وەربگرە.",
+  outreach_brand_ph: "ناوی نیشانە یان بەرهەم",
+  outreach_key_points: "گرنگترین خاڵەکان",
+  outreach_competitors: "ڕکابەران", outreach_opportunities: "دەرفەت بۆ تۆ",
+  specialty_active: "بوارەکەت", specialty_change: "گۆڕین",
+  specialty_set_now: "بواری خۆت دیاری بکە",
+  specialty_banner_active: "لە ناو بواری خۆتدا کاردەکەیت",
+  specialty_banner_desc: "هەموو ئامرازەکان، وەکیلی AI و ڕاپۆرتەکان لەسەر ئەم بوارە ڕێکخراون.",
+  specialty_banner_empty_title: "بواری تایبەتیت دیاری بکە بۆ تایبەتمەندکردنی پلاتفۆرمەکە",
+  specialty_banner_empty_desc: "ئامراز و ڕاپۆرت و وەکیلەکە دەگونجێن لەگەڵ بوارەکەت — ئەنجامی ورد و کەمتر گشتی.",
+  compare_platform_presence: "ئامادەبوون لە هەر پلاتفۆرمێکی AI", compare_content_gaps: "بۆشاییەکانی ناوەڕۆک",
+
   brand: "گێئۆ-عێراق",
   ecosystem: "بەشێک لە سیستەمی مەعروف",
   nav_features: "تایبەتمەندیەکان",
