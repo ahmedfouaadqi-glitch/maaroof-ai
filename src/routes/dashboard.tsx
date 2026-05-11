@@ -157,6 +157,12 @@ function DashboardPage() {
         <div id="compare" className="mt-8 scroll-mt-24">
           <CompetitorCompare />
         </div>
+        <div id="feasibility" className="mt-8 scroll-mt-24">
+          <FeasibilityStudy />
+        </div>
+        <div id="bizdev" className="mt-8 scroll-mt-24">
+          <BizDev />
+        </div>
 
         {/* Activity & summary export */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
