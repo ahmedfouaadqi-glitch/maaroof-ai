@@ -212,6 +212,15 @@ function UsersTab() {
                       }} className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/5 px-3 py-1 text-xs text-accent hover:bg-accent/10">
                         <Lock className="size-3" /> {t("admin_send_reset")}
                       </button>
+                      {r.device_fingerprint && (
+                        <button onClick={async () => {
+                          if (!confirm(t("admin_reset_fp_confirm"))) return;
+                          await supabase.from("profiles").update({ device_fingerprint: null, device_locked_at: null }).eq("id", r.id);
+                          load();
+                        }} className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/5 px-3 py-1 text-xs text-warning hover:bg-warning/10">
+                          <Smartphone className="size-3" /> {t("admin_reset_fp")}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
