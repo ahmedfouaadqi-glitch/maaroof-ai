@@ -6,7 +6,7 @@ import { Loader2, Trophy, Users, Sparkles, Lightbulb } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
-import { GeoScopeSelector } from "./GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 
 type Brand = {
