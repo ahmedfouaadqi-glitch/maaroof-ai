@@ -57,10 +57,11 @@ Return ONLY valid JSON in this exact shape:
     { "name": "Perplexity", ... },
     { "name": "Copilot", ... },
     { "name": "Grok", ... },
-    { "name": "Mistral", ... }
+    { "name": "Mistral", ... },
+    { "name": "DeepSeek", ... }
   ]
 }
-visibility_percent MUST be the weighted average of the 7 platform scores (rounded). All text fields MUST be in REPORT language.`;
+visibility_percent MUST be the weighted average of the 8 platform scores (rounded). All text fields MUST be in REPORT language.`;
 
 function clamp(n: unknown) {
   const value = Number.parseInt(String(n ?? 0), 10);
