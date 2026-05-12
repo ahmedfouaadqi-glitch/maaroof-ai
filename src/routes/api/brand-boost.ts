@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 
@@ -55,10 +55,12 @@ export const Route = createFileRoute("/api/brand-boost")({
               ? "هەموو بەهای دەقی ناو JSON بە کوردی سۆرانی بنووسە."
               : "Write all string values inside the JSON in clear English only.";
 
-          const sys = `You are a brand visibility strategist for ${market.market}.
+          const sys = `${FACTUAL_SAFETY_PROMPT}
+
+You are a brand visibility strategist for ${market.market}.
 LOCALIZATION CONTEXT: ${market.contextHint}
 ${langInstr}
-For each AI platform listed, return an action plan to improve brand citation likelihood specifically for ${market.audience}.
+For each AI platform listed, return an action plan to improve brand citation likelihood specifically for ${market.audience}. Do not claim current signals unless the user supplied evidence; otherwise write "evidence missing" and recommend how to create verifiable signals.
 Return ONLY valid JSON in this exact shape:
 {
   "summary": "1-2 sentence overview in REPORT language",
