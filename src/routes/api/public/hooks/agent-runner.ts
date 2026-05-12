@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 const SYSTEM_ANALYZE = `You are a GEO (Generative Engine Optimization) auditor for the Iraqi market.
 Given a URL or topic, give a CONCISE summary (2-3 sentences in Arabic) of how to improve its visibility in AI search engines.
@@ -17,7 +17,7 @@ async function callAI(apiKey: string, system: string, prompt: string) {
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-lite",
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: `${FACTUAL_SAFETY_PROMPT}\n\n${system}` },
         { role: "user", content: prompt },
       ],
     }),
