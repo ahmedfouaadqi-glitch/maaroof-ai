@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,8 @@ import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 type Result = any;
 
@@ -36,6 +38,15 @@ export function FeasibilityStudy() {
     notes: "",
   });
   const upd = (k: keyof typeof form) => (e: any) => setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  useEffect(() => {
+    const apply = (txt: string) => setForm((p) => ({ ...p, notes: (p.notes ? p.notes + "\n\n" : "") + txt.slice(0, 4000) }));
+    const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) apply(String(txt)); };
+    window.addEventListener("geo:reuse-feasibility", onReuse);
+    const pending = consumeHandoff("feasibility");
+    if (pending) apply(pending);
+    return () => window.removeEventListener("geo:reuse-feasibility", onReuse);
+  }, []);
 
   const run = async () => {
     setError(null); setResult(null);
@@ -209,6 +220,8 @@ export function FeasibilityStudy() {
               <ul className="ms-4 list-disc space-y-0.5">{result.kpis.map((k: string, i: number) => <li key={i}>{k}</li>)}</ul>
             </div>
           )}
+
+          <HandoffMenu source="feasibility" getText={() => `${form.project_name}\n${result.executive_summary || ""}\n\n${(result.next_steps || []).join("\n")}`} />
         </div>
       )}
     </div>

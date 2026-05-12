@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
@@ -23,6 +25,17 @@ export function SmartResearch() {
 
   const toggleChannel = (c: string) =>
     setChannelTypes((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
+
+  useEffect(() => {
+    const onReuse = (e: Event) => {
+      const txt = (e as CustomEvent).detail?.text;
+      if (txt) { setQ(String(txt).slice(0, 500)); setOut(null); setErr(""); }
+    };
+    window.addEventListener("geo:reuse-research", onReuse);
+    const pending = consumeHandoff("research");
+    if (pending) { setQ(pending.slice(0, 500)); setOut(null); setErr(""); }
+    return () => window.removeEventListener("geo:reuse-research", onReuse);
+  }, []);
 
   const run = async () => {
     if (!q.trim()) return;
@@ -202,6 +215,7 @@ export function SmartResearch() {
                 table: { columns: ["#", t("col_title"), "URL"], data: (out.sources || []).map((s: any, i: number) => [i + 1, s.title, s.url]) } },
             ],
           })} />
+          <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
         </div>
       )}
     </div>
