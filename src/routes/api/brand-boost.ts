@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral"];
 
@@ -69,9 +70,9 @@ Return ONLY valid JSON in this exact shape:
           const userMsg = `Brand: ${brand_name}\nKeywords: ${brand_keywords || "-"}\nTarget market: ${market.region}\nPlatforms: ${platforms.join(", ")}`;
 
           const callModel = (model: string) =>
-            fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
+              headers: lovableAiHeaders(lovableKey),
               body: JSON.stringify({
                 model,
                 messages: [

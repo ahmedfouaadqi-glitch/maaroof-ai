@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Mode = "search" | "email" | "brand";
 
@@ -53,9 +54,9 @@ export const Route = createFileRoute("/api/company-email")({
           const sys = `You write STRICTLY in language code: ${lang}. ${modeInstruction} Output a single JSON object only.${specialtyHint(userCtx, lang as any)}`;
           const user = `Company / Brand: ${company}\nSector: ${sector || "-"}\nGoal: ${goal || "-"}\nUser notes: ${notes || "-"}\n\nSources:\n${ctx || "(no sources found)"}`;
 
-          const ai = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const ai = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
+            headers: lovableAiHeaders(lovableKey),
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [{ role: "system", content: sys }, { role: "user", content: user }]

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 export const SYSTEM_ANALYZE = `أنت خبير GEO (Generative Engine Optimization) للسوق العراقي.
 بالنظر إلى رابط أو موضوع، قدم:
@@ -56,9 +57,9 @@ export async function callAI(system: string, prompt: string, lang: "ar" | "en" |
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
   const sysWithLang = `${system}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.ar}`;
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: lovableAiHeaders(apiKey),
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
