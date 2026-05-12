@@ -8,6 +8,13 @@ export function lovableAiHeaders(apiKey: string) {
   } as const;
 }
 
+export const FACTUAL_SAFETY_PROMPT = `Factual safety rules:
+- Results must be evidence-based and conservative.
+- Never invent or estimate facts, statistics, dates, prices, sources, rankings, awards, partners, contacts, or named entities.
+- Use only facts provided by the user or visible in supplied source snippets.
+- If evidence is missing, say that evidence is missing, lower confidence/scores, and ask for the exact source or value needed.
+- Do not present assumptions, model knowledge, or placeholders as real facts.`;
+
 export function extractJsonObject<T = any>(raw: unknown): T | null {
   const text = String(raw || "").trim();
   if (!text) return null;
