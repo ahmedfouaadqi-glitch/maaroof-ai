@@ -118,7 +118,8 @@ function scoreColor(n: number) {
   return "text-destructive border-destructive/40 bg-destructive/10";
 }
 
-function PillarCard({ icon, title, p, t }: { icon: React.ReactNode; title: string; p: Pillar; t: typeof LBL["ar"] }) {
+type Labels = (typeof LBL)[keyof typeof LBL];
+function PillarCard({ icon, title, p, t }: { icon: React.ReactNode; title: string; p: Pillar; t: Labels }) {
   return (
     <div className="rounded-xl border border-border bg-background/50 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
