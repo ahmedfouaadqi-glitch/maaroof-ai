@@ -143,9 +143,6 @@ function Page() {
             <PostSuggester />
           </div>
 
-          <div id="applied-ranking" className="mx-auto mt-8 max-w-3xl">
-            <AppliedRanking />
-          </div>
         </div>
       </section>
 
