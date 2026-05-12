@@ -7,6 +7,7 @@ import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
+import { apiFetch } from "@/lib/api-client";
 
 const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
@@ -43,7 +44,7 @@ export function SmartResearch() {
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-      const res = await fetch("/api/research", {
+      const res = await apiFetch("/api/research", {
         method: "POST", headers,
         body: JSON.stringify({
           query: q, lang, scope: getEffectiveScope(profile, "research"),
