@@ -24,7 +24,7 @@ const buildSystem = (m: ReturnType<typeof describeMarket>) => `أنت محلل G
       "visibility_percent": <0-100>,
       "geo_score": <0-100>,
       "sentiment": "positive" | "neutral" | "negative",
-      "platform_presence": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100> },
+      "platform_presence": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100> },
       "strengths": ["...","..."],
       "weaknesses": ["...","..."]
     }
