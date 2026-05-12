@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral"];
+const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 
 export const Route = createFileRoute("/api/brand-boost")({
   server: {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,8 @@ import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 type Brand = {
   name: string;
@@ -30,7 +32,7 @@ type Result = {
   specialty?: string | null;
 };
 
-const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral"] as const;
+const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
 
 export function CompetitorCompare() {
   const { t, lang } = useI18n();
@@ -44,6 +46,14 @@ export function CompetitorCompare() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+
+  useEffect(() => {
+    const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) setBrand(String(txt).split("\n")[0].slice(0, 100)); };
+    window.addEventListener("geo:reuse-compare", onReuse);
+    const pending = consumeHandoff("compare");
+    if (pending) setBrand(pending.split("\n")[0].slice(0, 100));
+    return () => window.removeEventListener("geo:reuse-compare", onReuse);
+  }, []);
 
   const run = async () => {
     setError(null); setResult(null);
@@ -218,6 +228,8 @@ export function CompetitorCompare() {
               </ol>
             </div>
           )}
+
+          <HandoffMenu source="compare" getText={() => `${brand} vs ${competitors}\n${result.overview || ""}\n\n${(result.recommendations || []).join("\n")}`} />
         </div>
       )}
     </div>

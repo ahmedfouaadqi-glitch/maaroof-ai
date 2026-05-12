@@ -8,8 +8,9 @@ import type { ExportPayload } from "@/lib/exports";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { HandoffMenu } from "@/components/HandoffMenu";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral"];
+const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
@@ -181,6 +182,7 @@ export function BrandBoostAgent() {
               </ul>
             </div>
           ))}
+          <HandoffMenu source="boost" getText={() => `${brand}\n${report.summary || ""}\n\n${(report.plan || []).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).join(", ")}`).join("\n")}`} />
         </div>
       )}
     </div>
