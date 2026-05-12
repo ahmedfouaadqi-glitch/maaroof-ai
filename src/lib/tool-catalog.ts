@@ -10,6 +10,7 @@ export type ToolKey =
   | "research"
   | "brand_boost"
   | "company_email"
+  | "applied_ranking"
   | "agent.command"
   | "agent.run_targets"
   | "agent.visibility";
