@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { fcSearch } from "@/lib/firecrawl";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
@@ -12,9 +13,11 @@ const LANG_INSTRUCTION: Record<string, string> = {
   ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
 };
 
-const buildSystem = (m: ReturnType<typeof describeMarket>) => `أنت محلل GEO خبير. ستُعطى علامة تجارية رئيسية و حتى 4 منافسين والسوق المستهدف هو: ${m.region} (${m.market}).
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
+
+أنت محلل GEO خبير. ستُعطى علامة تجارية رئيسية و حتى 4 منافسين والسوق المستهدف هو: ${m.region} (${m.market}).
 السياق المحلي: ${m.contextHint}
-قيّم كل علامة بشكل واقعي ومتحفّظ — لا تختلق أرقاماً مؤكدة.
+قيّم كل علامة بشكل واقعي ومتحفّظ اعتماداً على المصادر المرفقة فقط. إذا لم تجد دليلاً لعلامة معينة، أعطها درجة منخفضة واكتب أن الإشارات العامة غير متوفرة.
 أعد JSON صالح فقط بهذا الشكل بالضبط:
 {
   "brands": [
@@ -102,7 +105,19 @@ export const Route = createFileRoute("/api/compare")({
           const userCtx = await getUserContext(admin, userId);
           const market = describeMarket(body.scope);
           const SYSTEM = buildSystem(market);
-          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين). قدّر platform_presence لكل محرك بناءً على ما تعرفه عن طريقة استشهاد كل محرك بالمصادر المتعلقة بـ ${market.region}.${specialtyHint(userCtx, lang as any)}`;
+          let sources: any[] = [];
+          try {
+            const queries = [brand, ...competitors].map((n) => `${n} ${keywords} ${market.region}`.trim());
+            const settled = await Promise.allSettled(queries.map((q) => fcSearch(q, { limit: 3, lang })));
+            sources = settled.flatMap((s, idx) => {
+              if (s.status !== "fulfilled") return [];
+              const data: any = (s.value as any)?.data;
+              const rows = Array.isArray(data) ? data : [...(data?.web || []), ...(data?.news || [])];
+              return rows.slice(0, 3).map((r: any) => ({ brand: queries[idx], title: r.title, url: r.url, snippet: (r.markdown || r.description || "").slice(0, 500) }));
+            }).slice(0, 15);
+          } catch {}
+          const sourceBlock = sources.map((s, i) => `[${i + 1}] ${s.brand}: ${s.title} (${s.url})\n${s.snippet}`).join("\n\n") || "(no live sources available)";
+          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين) اعتماداً على المصادر أدناه فقط. لا تستخدم معرفة غير موثقة. قدّر platform_presence بشكل محافظ من قوة الأدلة المتاحة لكل محرك، وليس كحقيقة مؤكدة.${specialtyHint(userCtx, lang as any)}\n\nSources:\n${sourceBlock}`;
 
           const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
@@ -162,6 +177,7 @@ export const Route = createFileRoute("/api/compare")({
             content_gaps: arr(parsed.content_gaps, 6),
             recommendations: arr(parsed.recommendations, 6),
             specialty: userCtx.specialty,
+            sources,
           };
 
           await admin.from("agent_tasks").insert({
