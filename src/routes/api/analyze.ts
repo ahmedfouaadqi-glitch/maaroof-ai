@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -127,9 +128,9 @@ export const Route = createFileRoute("/api/analyze")({
               en: "Write all string fields in clear English only.",
               ku: "هەموو دەقەکان تەنها بە کوردی سۆرانی بنووسە.",
             };
-            const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
               method: "POST",
-              headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+              headers: lovableAiHeaders(apiKey),
               body: JSON.stringify({
                 model: "google/gemini-2.5-flash",
                 messages: [

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 export const Route = createFileRoute("/api/research")({
   server: {
@@ -73,9 +74,9 @@ Rules:
     "visibility_opportunities": string[] (3-5 concrete actions the user/brand can take to BE CITED by AI engines on this topic — content angles, missing entities, structured-data ideas, channels to publish on)
   }${specialtyHint(userCtx, lang as any)}${brandLine}`;
             const ctx = results.map((r: any, i: number) => `[${i + 1}] ${r.title} — ${r.domain} (${r.url})\n${r.snippet}`).join("\n\n");
-            const ai = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            const ai = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
+              headers: lovableAiHeaders(lovableKey),
               body: JSON.stringify({
                 model: "google/gemini-2.5-flash",
                 messages: [

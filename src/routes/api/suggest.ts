@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = {
   description?: string;
@@ -205,9 +206,9 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             },
           };
 
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = {
   project_name?: string;
@@ -195,9 +196,9 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
             en: "Write all string values inside the JSON in clear English.",
             ku: "هەموو بەهای دەقی ناو JSON ـەکە بە کوردی سۆرانی بنووسە.",
           };
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
               messages: [

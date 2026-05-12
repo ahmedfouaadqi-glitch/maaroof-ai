@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 const SYSTEM_ANALYZE = `You are a GEO (Generative Engine Optimization) auditor for the Iraqi market.
 Given a URL or topic, give a CONCISE summary (2-3 sentences in Arabic) of how to improve its visibility in AI search engines.
@@ -10,9 +11,9 @@ Given a topic or URL, write ONE short engaging social post (60-100 words) in Ara
 Add 2-3 relevant hashtags. Never invent statistics, dates, or historical events.`;
 
 async function callAI(apiKey: string, system: string, prompt: string) {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: lovableAiHeaders(apiKey),
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
