@@ -158,6 +158,39 @@ export function Sandbox() {
         )}
       </div>
 
+      {text.trim().length >= 20 && showAudit && (() => {
+        const checks = auditText(text);
+        const passed = checks.filter((c) => c.passed).length;
+        const tone = passed >= 5 ? "border-success/40 bg-success/10" : passed >= 3 ? "border-accent/40 bg-accent/10" : "border-destructive/40 bg-destructive/10";
+        const titleTxt = L === "ar" ? "تدقيق قبل التحليل" : L === "ku" ? "پشکنین پێش شیکاری" : "Pre-analysis audit";
+        const subTxt = L === "ar" ? `${passed} من ${checks.length} عناصر موجودة. أضف الناقص لرفع الدرجة قبل التحليل.` : L === "ku" ? `${passed}/${checks.length} ئامادەیە. ئەوانی نوێ زیاد بکە.` : `${passed} of ${checks.length} elements present. Add missing items to lift your score before analyzing.`;
+        const skipTxt = L === "ar" ? "تخطّى التدقيق" : L === "ku" ? "بازی پێ بدە" : "Skip audit";
+        return (
+          <div className={`mt-4 rounded-xl border p-3 ${tone}`}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest">
+                <ListChecks className="size-3.5" /> {titleTxt} <span className="font-mono text-[11px] opacity-70">{passed}/{checks.length}</span>
+              </div>
+              <button onClick={() => setShowAudit(false)} className="text-[11px] text-muted-foreground hover:text-foreground">{skipTxt}</button>
+            </div>
+            <p className="mb-2 text-[11px] text-muted-foreground">{subTxt}</p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {checks.map((c) => (
+                <div key={c.key} className="flex items-start gap-2 rounded-lg bg-background/50 p-2">
+                  {c.passed
+                    ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-success" />
+                    : <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-destructive" />}
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-semibold text-foreground">{c.label[L]}</div>
+                    {!c.passed && <div className="text-[11px] leading-snug text-muted-foreground">{c.hint[L]}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs font-mono text-muted-foreground">{text.trim().length} chars</div>
         <button
