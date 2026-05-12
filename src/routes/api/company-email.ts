@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
+import { describeMarket } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Mode = "search" | "email" | "brand";
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/api/company-email")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { company, sector, notes, lang = "en", goal, mode } = await request.json();
+          const { company, sector, notes, lang = "en", goal, mode, scope } = await request.json();
           if (!company) return Response.json({ error: "company required" }, { status: 400 });
           const m: Mode = (mode === "search" || mode === "email" || mode === "brand") ? mode : "email";
 
@@ -28,8 +29,9 @@ export const Route = createFileRoute("/api/company-email")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const userCtx = await getUserContext(admin, userId);
 
+          const market = describeMarket(scope);
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
-          const q = `${company} ${sector || ""} ${notes || ""}${specBoost}`.slice(0, 300);
+          const q = `${company} ${sector || ""} ${notes || ""}${specBoost} ${market.region}`.slice(0, 300);
           let sources: any[] = [];
           try {
             const sr = await fcSearch(q, { limit: 6, lang });
@@ -54,7 +56,7 @@ export const Route = createFileRoute("/api/company-email")({
           const sys = `${FACTUAL_SAFETY_PROMPT}
 
 You write STRICTLY in language code: ${lang}. ${modeInstruction} Use only the supplied Sources and user notes; if sources are empty, say evidence is missing and do not invent company details. Output a single JSON object only.${specialtyHint(userCtx, lang as any)}`;
-          const user = `Company / Brand: ${company}\nSector: ${sector || "-"}\nGoal: ${goal || "-"}\nUser notes: ${notes || "-"}\n\nSources:\n${ctx || "(no sources found)"}`;
+          const user = `Company / Brand: ${company}\nSector: ${sector || "-"}\nGoal: ${goal || "-"}\nTarget market: ${market.region}\nUser notes: ${notes || "-"}\n\nSources:\n${ctx || "(no sources found)"}`;
 
           const ai = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
