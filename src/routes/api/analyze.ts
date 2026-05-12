@@ -53,7 +53,8 @@ OUTPUT — return ONLY a compact JSON object with these exact keys:
   "strengths": array of 2-4 short bullets in REPORT language,
   "weaknesses": array of 2-4 short bullets in REPORT language — each must name a CONCRETE missing element,
   "recommendations": array of 3-5 actionable improvements in REPORT language — tailored to ${target},
-  "keywords": array of 4-8 high-value entities/keywords actually present (kept in their original language; do NOT invent any)
+  "keywords": array of 4-8 high-value entities/keywords actually present (kept in their original language; do NOT invent any),
+  "platform_views": array of EXACTLY 8 objects — one per engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek). Each: { "name": engine name, "score": int 0-100 estimating how likely THIS engine cites this content for ${target}, "verdict": short label in REPORT language (e.g. "likely to cite", "rarely cites", "ignored"), "benefit": one sentence in REPORT language describing how the user benefits if they optimize this content specifically for THIS engine }
 }
 The REPORT language MUST be: "en"=English, "ar"=العربية, "ku"=کوردی. No prose outside JSON. No markdown.`;
 }
