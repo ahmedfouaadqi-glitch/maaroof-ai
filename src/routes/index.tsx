@@ -49,6 +49,7 @@ function Page() {
       research: "guide_how_research",
       brand_boost: "guide_how_brand_boost",
       company_email: "guide_how_company_email",
+      applied_ranking: "guide_how_company_email",
       "agent.command": "guide_how_agent_command",
       "agent.run_targets": "guide_how_agent_targets",
       "agent.visibility": "guide_how_agent_visibility",
