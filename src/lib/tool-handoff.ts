@@ -9,21 +9,23 @@ export type HandoffTarget =
   | "bizdev"
   | "compare"
   | "outreach"
-  | "boost";
+  | "boost"
+  | "applied";
 
 export const HANDOFF_TARGETS: HandoffTarget[] = [
-  "analyze", "suggest", "research", "feasibility", "bizdev", "compare", "outreach", "boost",
+  "analyze", "suggest", "research", "feasibility", "bizdev", "compare", "outreach", "boost", "applied",
 ];
 
 export const HANDOFF_LABELS: Record<HandoffTarget, { ar: string; en: string; ku: string }> = {
-  analyze:     { ar: "تحليل GEO",        en: "GEO Analysis",     ku: "شیکاری GEO" },
-  suggest:     { ar: "مولّد المنشورات",  en: "Post Generator",   ku: "دروستکەری پۆست" },
-  research:    { ar: "بحث ذكي",          en: "Smart Research",   ku: "گەڕانی زیرەک" },
-  feasibility: { ar: "دراسة جدوى",       en: "Feasibility",      ku: "لێکۆڵینەوە" },
-  bizdev:      { ar: "تطوير الأعمال",    en: "BizDev",           ku: "گەشەپێدانی کار" },
-  compare:     { ar: "مقارنة المنافسين", en: "Compare",          ku: "بەراوردکردن" },
-  outreach:    { ar: "إيميل شركات",      en: "Company Outreach", ku: "ئیمەیڵ" },
-  boost:       { ar: "تعزيز العلامة",    en: "Brand Boost",      ku: "بەهێزکردن" },
+  analyze:     { ar: "تحليل GEO",          en: "GEO Analysis",     ku: "شیکاری GEO" },
+  suggest:     { ar: "مولّد المنشورات",    en: "Post Generator",   ku: "دروستکەری پۆست" },
+  research:    { ar: "بحث ذكي",            en: "Smart Research",   ku: "گەڕانی زیرەک" },
+  feasibility: { ar: "دراسة جدوى",         en: "Feasibility",      ku: "لێکۆڵینەوە" },
+  bizdev:      { ar: "تطوير الأعمال",      en: "BizDev",           ku: "گەشەپێدانی کار" },
+  compare:     { ar: "مقارنة المنافسين",   en: "Compare",          ku: "بەراوردکردن" },
+  outreach:    { ar: "إيميل شركات",        en: "Company Outreach", ku: "ئیمەیڵ" },
+  boost:       { ar: "تعزيز العلامة",      en: "Brand Boost",      ku: "بەهێزکردن" },
+  applied:     { ar: "الترتيب التطبيقي",   en: "Applied Ranking",  ku: "ڕیزبەندی جێبەجێکراو" },
 };
 
 const STORAGE_PREFIX = "geo:handoff:";

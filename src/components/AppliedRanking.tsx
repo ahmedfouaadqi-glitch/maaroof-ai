@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import { ToolLangSelect } from "./ToolLangSelect";
+import { HandoffMenu } from "./HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 import { Layers, Globe2, Smartphone, Tag, Loader2, Sparkles, CheckCircle2, AlertCircle, Lock } from "lucide-react";
 import type { Lang } from "@/lib/i18n";
 
@@ -175,6 +177,20 @@ export function AppliedRanking() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
 
+  useEffect(() => {
+    const apply = (text: string) => {
+      const firstLine = (text.split("\n")[0] || "").trim().slice(0, 120);
+      if (firstLine && !brand) setBrand(firstLine);
+      setNotes((cur) => (cur ? `${cur}\n\n${text}` : text).slice(0, 4000));
+    };
+    const onReuse = (e: any) => { const txt = e?.detail?.text; if (txt) apply(String(txt)); };
+    window.addEventListener("geo:reuse-applied", onReuse);
+    const pending = consumeHandoff("applied");
+    if (pending) apply(pending);
+    return () => window.removeEventListener("geo:reuse-applied", onReuse);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const run = async () => {
     setError(null);
     if (!user) { setError(t.needLogin); return; }
@@ -308,6 +324,21 @@ export function AppliedRanking() {
               </ul>
             </div>
           )}
+
+          <HandoffMenu
+            source="applied"
+            getText={() => {
+              if (!result) return brand;
+              const lines = [
+                `${brand} — Applied Ranking ${result.overall}/100 (${result.scope})`,
+                `Website ${result.pillars.website.score} · App ${result.pillars.mobile_app.score} · Brand ${result.pillars.brand.score}`,
+                "",
+                "Priority actions:",
+                ...result.priority_actions.map((a, i) => `${i + 1}. ${a}`),
+              ];
+              return lines.join("\n");
+            }}
+          />
         </div>
       )}
     </div>

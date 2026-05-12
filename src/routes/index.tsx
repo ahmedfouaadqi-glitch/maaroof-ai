@@ -5,7 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
-import { AppliedRanking } from "@/components/AppliedRanking";
+
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
   ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench,
@@ -143,9 +143,6 @@ function Page() {
             <PostSuggester />
           </div>
 
-          <div id="applied-ranking" className="mx-auto mt-8 max-w-3xl">
-            <AppliedRanking />
-          </div>
         </div>
       </section>
 

@@ -452,6 +452,7 @@ const en: Dict = {
   dash_tool_feas_d: "Evaluate any project idea for the Iraqi market — market, financials, operations and risks with a clear go / pivot / no-go verdict.",
   dash_open_feas: "Open Feasibility",
   dash_tool_biz_t: "5) Business Development",
+  dash_tool_applied_t: "9) Applied Ranking",
   dash_tool_biz_d: "Get a 12-month growth plan: SWOT, growth levers, channel mix and a phased roadmap tailored to your stage.",
   dash_open_biz: "Open BizDev",
 
@@ -1070,6 +1071,7 @@ const ar: Dict = {
   dash_tool_feas_t: "4) دراسة الجدوى",
   dash_tool_feas_d: "قيّم أي فكرة مشروع للسوق العراقي — السوق، المالية، التشغيل، والمخاطر مع حُكم واضح: ابدأ / غيّر المسار / لا تبدأ.",
   dash_open_feas: "فتح دراسة الجدوى",
+  dash_tool_applied_t: "9) الترتيب التطبيقي",
   dash_tool_biz_t: "5) تطوير الأعمال",
   dash_tool_biz_d: "احصل على خطة نمو ١٢ شهراً: SWOT، روافع نمو، خطة قنوات، وخارطة طريق مرحلية مفصّلة على وضعك.",
   dash_open_biz: "فتح تطوير الأعمال",
@@ -1699,6 +1701,7 @@ const ku: Dict = {
 
   dash_tool_feas_t: "4) لێکۆڵینەوەی شیاوبوون",
   dash_tool_feas_d: "هەر بیرۆکەیەکی پڕۆژە بۆ بازاڕی عێراق هەڵبسەنگێنە — بازاڕ، دارایی، کارگێڕی، و مەترسی بە بڕیارێکی ڕوون: بڕۆ / گۆڕانکاری / مەکە.",
+  dash_tool_applied_t: "9) ڕیزبەندی جێبەجێکراو",
   dash_open_feas: "کردنەوەی شیاوبوون",
   dash_tool_biz_t: "5) گەشەپێدانی بازرگانی",
   dash_tool_biz_d: "پلانی گەشەی ١٢ مانگ: SWOT، بزوێنەرەکان، پلانی کەناڵ، و نەخشەڕێی قۆناغی.",

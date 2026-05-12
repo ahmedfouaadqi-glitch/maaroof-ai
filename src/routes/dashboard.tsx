@@ -11,6 +11,7 @@ import { BizDev } from "@/components/BizDev";
 import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
+import { AppliedRanking } from "@/components/AppliedRanking";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -27,6 +28,7 @@ const TOOL_SLOTS = [
   { key: "research",    id: "research",    labelKey: "research_title" },
   { key: "outreach",    id: "outreach",    labelKey: "outreach_title" },
   { key: "boost",       id: "boost",       labelKey: "boost_title" },
+  { key: "applied",     id: "applied",     labelKey: "dash_tool_applied_t" },
 ] as const;
 const STORAGE_KEY = "geo:hidden-tools";
 
@@ -215,6 +217,7 @@ function DashboardPage() {
         {isVisible("research") && <div id="research" className="mt-8 scroll-mt-24"><SmartResearch /></div>}
         {isVisible("outreach") && <div id="outreach" className="mt-8 scroll-mt-24"><CompanyOutreach /></div>}
         {isVisible("boost") && <div id="boost" className="mt-8 scroll-mt-24"><BrandBoostAgent /></div>}
+        {isVisible("applied") && <div id="applied" className="mt-8 scroll-mt-24"><AppliedRanking /></div>}
 
         {/* Activity & summary export */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
