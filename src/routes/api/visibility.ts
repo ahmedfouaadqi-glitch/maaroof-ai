@@ -12,7 +12,7 @@ const LANG_INSTRUCTION: Record<string, string> = {
 };
 
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a STRICT, evidence-based AI Visibility analyst for ${m.market}.
-Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
+Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
 
 LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
@@ -26,6 +26,7 @@ Each AI platform uses a DIFFERENT citation mechanism — name it explicitly:
 - Copilot (Microsoft): Bing index + LinkedIn graph + Microsoft 365 graph. Favors LinkedIn presence, Bing-indexed pages, B2B content. citation_method = "bing_index + linkedin_graph".
 - Grok (xAI): real-time X (Twitter) signal + general web. Favors brand presence on X, recent buzz, viral mentions, news. citation_method = "x_realtime + web_search".
 - Mistral (Le Chat): web search via Brave/SerpAPI partners, training corpus. Favors EU-friendly sources, multilingual content, structured pages. citation_method = "training_corpus + brave_search".
+- DeepSeek: efficient reasoning model with web tool. Favors technical docs, GitHub/Stack Overflow content, structured factual pages, multilingual sources (Chinese + English strong). citation_method = "training_corpus + web_search".
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -56,10 +57,11 @@ Return ONLY valid JSON in this exact shape:
     { "name": "Perplexity", ... },
     { "name": "Copilot", ... },
     { "name": "Grok", ... },
-    { "name": "Mistral", ... }
+    { "name": "Mistral", ... },
+    { "name": "DeepSeek", ... }
   ]
 }
-visibility_percent MUST be the weighted average of the 7 platform scores (rounded). All text fields MUST be in REPORT language.`;
+visibility_percent MUST be the weighted average of the 8 platform scores (rounded). All text fields MUST be in REPORT language.`;
 
 function clamp(n: unknown) {
   const value = Number.parseInt(String(n ?? 0), 10);
@@ -77,7 +79,7 @@ function toArray(value: unknown, max = 6) {
 }
 
 function normalizePlatforms(value: unknown): Array<any> {
-  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral"];
+  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek"];
   const arr = Array.isArray(value) ? value : [];
   const byName = new Map<string, any>();
   for (const item of arr) {

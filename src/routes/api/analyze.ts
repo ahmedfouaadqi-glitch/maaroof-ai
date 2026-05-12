@@ -53,7 +53,8 @@ OUTPUT — return ONLY a compact JSON object with these exact keys:
   "strengths": array of 2-4 short bullets in REPORT language,
   "weaknesses": array of 2-4 short bullets in REPORT language — each must name a CONCRETE missing element,
   "recommendations": array of 3-5 actionable improvements in REPORT language — tailored to ${target},
-  "keywords": array of 4-8 high-value entities/keywords actually present (kept in their original language; do NOT invent any)
+  "keywords": array of 4-8 high-value entities/keywords actually present (kept in their original language; do NOT invent any),
+  "platform_views": array of EXACTLY 8 objects — one per engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek). Each: { "name": engine name, "score": int 0-100 estimating how likely THIS engine cites this content for ${target}, "verdict": short label in REPORT language (e.g. "likely to cite", "rarely cites", "ignored"), "benefit": one sentence in REPORT language describing how the user benefits if they optimize this content specifically for THIS engine }
 }
 The REPORT language MUST be: "en"=English, "ar"=العربية, "ku"=کوردی. No prose outside JSON. No markdown.`;
 }
@@ -151,6 +152,17 @@ export const Route = createFileRoute("/api/analyze")({
             if (parsed) {
               const clamp = (n: any) => Math.max(0, Math.min(100, parseInt(n, 10) || 0));
               const arr = (a: any) => Array.isArray(a) ? a.slice(0, 8).map((x) => String(x).slice(0, 240)) : [];
+              const ENGINES = ["ChatGPT","Gemini","Claude","Perplexity","Copilot","Grok","Mistral","DeepSeek"];
+              const rawViews = Array.isArray(parsed.platform_views) ? parsed.platform_views : [];
+              const platform_views = ENGINES.map((name) => {
+                const found = rawViews.find((v: any) => String(v?.name || "").toLowerCase() === name.toLowerCase()) || {};
+                return {
+                  name,
+                  score: clamp(found.score),
+                  verdict: String(found.verdict || "").slice(0, 80),
+                  benefit: String(found.benefit || "").slice(0, 240),
+                };
+              });
               result = {
                 score: clamp(parsed.score),
                 authority: clamp(parsed.authority),
@@ -161,6 +173,7 @@ export const Route = createFileRoute("/api/analyze")({
                 weaknesses: arr(parsed.weaknesses),
                 recommendations: arr(parsed.recommendations),
                 keywords: arr(parsed.keywords),
+                platform_views,
               };
             } else {
               console.error("[api/analyze] parse failed", content.slice(0, 500));
