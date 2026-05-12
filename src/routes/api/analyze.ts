@@ -180,8 +180,8 @@ export const Route = createFileRoute("/api/analyze")({
 
           return Response.json({ ...result, cached: fromCache });
         } catch (e) {
-          console.error(e);
-          return Response.json({ error: e instanceof Error ? e.message : "Unknown" }, { status: 500 });
+          console.error("[api/analyze] failed", e);
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

@@ -241,7 +241,7 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
           return Response.json({ ok: true, result });
         } catch (e) {
           console.error("[api/feasibility] fatal", e);
-          return Response.json({ error: e instanceof Error ? e.message : "unknown" }, { status: 500 });
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

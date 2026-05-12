@@ -295,7 +295,7 @@ export const Route = createFileRoute("/api/visibility")({
           return Response.json({ ok: true, taskId: taskRow?.id ?? null, result });
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
-          return Response.json({ error: error instanceof Error ? error.message : "unknown_error" }, { status: 500 });
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

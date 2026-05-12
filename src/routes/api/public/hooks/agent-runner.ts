@@ -34,8 +34,19 @@ export const Route = createFileRoute("/api/public/hooks/agent-runner")({
           const apiKey = process.env.LOVABLE_API_KEY;
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const HOOK_SECRET = process.env.RUNNER_HOOK_SECRET;
           if (!apiKey || !SUPABASE_URL || !SERVICE) {
             return Response.json({ error: "not_configured" }, { status: 500 });
+          }
+          // Closed by default: require shared secret header so anonymous
+          // callers cannot drain AI credits or corrupt usage counters.
+          if (!HOOK_SECRET) {
+            console.error("[agent-runner] RUNNER_HOOK_SECRET is not set — endpoint is disabled");
+            return Response.json({ error: "disabled" }, { status: 503 });
+          }
+          const provided = request.headers.get("x-hook-secret");
+          if (!provided || provided !== HOOK_SECRET) {
+            return Response.json({ error: "unauthorized" }, { status: 401 });
           }
           const admin = createClient(SUPABASE_URL, SERVICE);
           const today = new Date().toISOString().slice(0, 10);
@@ -131,9 +142,9 @@ export const Route = createFileRoute("/api/public/hooks/agent-runner")({
           }
 
           return Response.json({ ok: true, processed, skipped });
-        } catch (e: any) {
+        } catch (e) {
           console.error("agent-runner", e);
-          return Response.json({ error: e?.message || "error" }, { status: 500 });
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },
