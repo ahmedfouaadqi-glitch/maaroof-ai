@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
+import { AppliedRanking } from "@/components/AppliedRanking";
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
   ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench,
@@ -48,6 +49,7 @@ function Page() {
       research: "guide_how_research",
       brand_boost: "guide_how_brand_boost",
       company_email: "guide_how_company_email",
+      applied_ranking: "guide_how_company_email",
       "agent.command": "guide_how_agent_command",
       "agent.run_targets": "guide_how_agent_targets",
       "agent.visibility": "guide_how_agent_visibility",
@@ -139,6 +141,10 @@ function Page() {
 
           <div id="studio" className="mx-auto mt-8 max-w-3xl">
             <PostSuggester />
+          </div>
+
+          <div id="applied-ranking" className="mx-auto mt-8 max-w-3xl">
+            <AppliedRanking />
           </div>
         </div>
       </section>

@@ -10,6 +10,7 @@ export type ToolKey =
   | "research"
   | "brand_boost"
   | "company_email"
+  | "applied_ranking"
   | "agent.command"
   | "agent.run_targets"
   | "agent.visibility";
@@ -30,6 +31,7 @@ export const TOOL_CATALOG: ToolDef[] = [
   { key: "research",       group: "tools", costPerRun: 2, labels: { ar: "بحث ذكي",               en: "Smart Research",      ku: "گەڕانی زیرەک" } },
   { key: "brand_boost",    group: "tools", costPerRun: 3, labels: { ar: "تعزيز العلامة",          en: "Brand Boost",         ku: "بەهێزکردنی براند" } },
   { key: "company_email",  group: "tools", costPerRun: 1, labels: { ar: "إيميل شركات",           en: "Company Outreach",    ku: "ئیمەیڵی کۆمپانیا" } },
+  { key: "applied_ranking",group: "tools", costPerRun: 2, labels: { ar: "الترتيب التطبيقي",       en: "Applied Ranking",     ku: "ڕیزبەندی جێبەجێکراو" } },
   { key: "agent.command",      group: "agent", costPerRun: 1, labels: { ar: "أمر مباشر للوكيل",      en: "Agent Command",     ku: "فەرمانی ئاراستە" } },
   { key: "agent.run_targets",  group: "agent", costPerRun: 2, labels: { ar: "تشغيل الأهداف تلقائياً", en: "Run Targets",       ku: "جێبەجێکردنی ئامانجەکان" } },
   { key: "agent.visibility",   group: "agent", costPerRun: 1, labels: { ar: "فحص الظهور في AI",     en: "AI Visibility",     ku: "پشکنینی دەرکەوتن" } },
