@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Mode = "search" | "email" | "brand";
 
@@ -69,8 +69,7 @@ export const Route = createFileRoute("/api/company-email")({
             return Response.json({ error: "ai_error" }, { status: 500 });
           }
           const j: any = await ai.json();
-          let parsed: any = {};
-          try { parsed = JSON.parse(j?.choices?.[0]?.message?.content || "{}"); } catch {}
+          const parsed: any = extractJsonObject(j?.choices?.[0]?.message?.content) || {};
           return Response.json({ ...parsed, mode: m, sources, specialty: userCtx.specialty });
         } catch (e) {
           console.error("[api/company-email] failed", e);

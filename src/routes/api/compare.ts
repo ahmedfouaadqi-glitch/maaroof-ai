@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
@@ -126,12 +126,7 @@ export const Route = createFileRoute("/api/compare")({
 
           const data = await resp.json();
           const content = String(data?.choices?.[0]?.message?.content || "{}");
-          let parsed: any = null;
-          try { parsed = JSON.parse(content); } catch {
-            const m = content.match(/\{[\s\S]*\}/);
-            if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
-          }
-          parsed = parsed || {};
+          const parsed: any = extractJsonObject(content) || {};
 
           const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral"] as const;
           const allBrandNames = [brand, ...competitors];

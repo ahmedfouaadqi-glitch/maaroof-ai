@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = {
   project_name?: string;
@@ -217,11 +217,7 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
 
           const data = await resp.json();
           const content = String(data?.choices?.[0]?.message?.content || "{}");
-          let parsed: any = null;
-          try { parsed = JSON.parse(content); } catch {
-            const m = content.match(/\{[\s\S]*\}/); if (m) try { parsed = JSON.parse(m[0]); } catch {}
-          }
-          const result = normalize(parsed || {});
+          const result = normalize(extractJsonObject(content) || {});
 
           // increment quota
           const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();

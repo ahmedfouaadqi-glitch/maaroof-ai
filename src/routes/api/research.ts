@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 export const Route = createFileRoute("/api/research")({
   server: {
@@ -89,7 +89,7 @@ Rules:
               const j: any = await ai.json();
               const raw = j?.choices?.[0]?.message?.content || "{}";
               try {
-                const p = JSON.parse(raw);
+                const p = extractJsonObject(raw) || {};
                 sge_summary = String(p.sge_summary || "").slice(0, 1200);
                 answer = String(p.answer || "").slice(0, 4000);
                 key_findings = Array.isArray(p.key_findings) ? p.key_findings.slice(0, 6).map((s: any) => String(s).slice(0, 240)) : [];
