@@ -152,6 +152,17 @@ export const Route = createFileRoute("/api/analyze")({
             if (parsed) {
               const clamp = (n: any) => Math.max(0, Math.min(100, parseInt(n, 10) || 0));
               const arr = (a: any) => Array.isArray(a) ? a.slice(0, 8).map((x) => String(x).slice(0, 240)) : [];
+              const ENGINES = ["ChatGPT","Gemini","Claude","Perplexity","Copilot","Grok","Mistral","DeepSeek"];
+              const rawViews = Array.isArray(parsed.platform_views) ? parsed.platform_views : [];
+              const platform_views = ENGINES.map((name) => {
+                const found = rawViews.find((v: any) => String(v?.name || "").toLowerCase() === name.toLowerCase()) || {};
+                return {
+                  name,
+                  score: clamp(found.score),
+                  verdict: String(found.verdict || "").slice(0, 80),
+                  benefit: String(found.benefit || "").slice(0, 240),
+                };
+              });
               result = {
                 score: clamp(parsed.score),
                 authority: clamp(parsed.authority),
@@ -162,6 +173,7 @@ export const Route = createFileRoute("/api/analyze")({
                 weaknesses: arr(parsed.weaknesses),
                 recommendations: arr(parsed.recommendations),
                 keywords: arr(parsed.keywords),
+                platform_views,
               };
             } else {
               console.error("[api/analyze] parse failed", content.slice(0, 500));
