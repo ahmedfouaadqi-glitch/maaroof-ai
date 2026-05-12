@@ -135,8 +135,7 @@ export const Route = createFileRoute("/api/analyze")({
                 messages: [
                   { role: "system", content: `${buildSys(scope)}\n\n${langGuide[lang] || langGuide.en}` },
                   { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) STRICTLY in language code "${lang}". Do not mix languages, even if the source text below is in a different language.\n\nContent to analyze:\n"""${text}"""` },
-                ],
-                response_format: { type: "json_object" },
+                ]
               }),
             });
             if (resp.status === 429) return Response.json({ error: "rate_limit" }, { status: 429 });

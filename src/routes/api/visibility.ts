@@ -237,8 +237,7 @@ export const Route = createFileRoute("/api/visibility")({
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}` },
                 { role: "user", content: prompt },
-              ],
-              response_format: { type: "json_object" },
+              ]
             }),
           });
 

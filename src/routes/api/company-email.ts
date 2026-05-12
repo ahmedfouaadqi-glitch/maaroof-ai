@@ -58,8 +58,7 @@ export const Route = createFileRoute("/api/company-email")({
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
-              messages: [{ role: "system", content: sys }, { role: "user", content: user }],
-              response_format: { type: "json_object" },
+              messages: [{ role: "system", content: sys }, { role: "user", content: user }]
             }),
           });
           if (ai.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
