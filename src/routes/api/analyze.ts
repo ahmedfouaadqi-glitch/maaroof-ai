@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -147,8 +147,8 @@ export const Route = createFileRoute("/api/analyze")({
             }
             const data = await resp.json();
             const content = data?.choices?.[0]?.message?.content || "{}";
-            try {
-              const parsed = JSON.parse(content);
+            const parsed = extractJsonObject(content);
+            if (parsed) {
               const clamp = (n: any) => Math.max(0, Math.min(100, parseInt(n, 10) || 0));
               const arr = (a: any) => Array.isArray(a) ? a.slice(0, 8).map((x) => String(x).slice(0, 240)) : [];
               result = {
@@ -162,8 +162,9 @@ export const Route = createFileRoute("/api/analyze")({
                 recommendations: arr(parsed.recommendations),
                 keywords: arr(parsed.keywords),
               };
-            } catch {
-              return Response.json({ error: "parse_error" }, { status: 500 });
+            } else {
+              console.error("[api/analyze] parse failed", content.slice(0, 500));
+              return Response.json({ error: "ai_format_error" }, { status: 200 });
             }
             await admin.from("analysis_cache").insert({ input_hash: hash, lang, result });
           }
