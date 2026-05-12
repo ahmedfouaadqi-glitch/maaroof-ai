@@ -177,6 +177,20 @@ export function AppliedRanking() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
 
+  useEffect(() => {
+    const apply = (text: string) => {
+      const firstLine = (text.split("\n")[0] || "").trim().slice(0, 120);
+      if (firstLine && !brand) setBrand(firstLine);
+      setNotes((cur) => (cur ? `${cur}\n\n${text}` : text).slice(0, 4000));
+    };
+    const onReuse = (e: any) => { const txt = e?.detail?.text; if (txt) apply(String(txt)); };
+    window.addEventListener("geo:reuse-applied", onReuse);
+    const pending = consumeHandoff("applied");
+    if (pending) apply(pending);
+    return () => window.removeEventListener("geo:reuse-applied", onReuse);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const run = async () => {
     setError(null);
     if (!user) { setError(t.needLogin); return; }
