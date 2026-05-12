@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
@@ -253,19 +253,7 @@ export const Route = createFileRoute("/api/visibility")({
           const data = await resp.json();
           const content = String(data?.choices?.[0]?.message?.content || "{}");
 
-          let parsed: any = null;
-          try {
-            parsed = JSON.parse(content);
-          } catch {
-            const match = content.match(/\{[\s\S]*\}/);
-            if (match) {
-              try {
-                parsed = JSON.parse(match[0]);
-              } catch {
-                parsed = null;
-              }
-            }
-          }
+          const parsed = extractJsonObject(content);
 
           const result = normalizeResult(parsed || {}, content);
 
