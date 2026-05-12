@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = {
   description?: string;
@@ -19,11 +19,13 @@ type Body = {
   scope?: GeoScope;
 };
 
-const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are an expert GEO (Generative Engine Optimization) copywriter for ${m.market}.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
+
+You are an expert GEO (Generative Engine Optimization) copywriter for ${m.market}.
 
 CRITICAL FACTUAL SAFETY RULES (must follow):
 - NEVER invent historical events, dates, statistics, prices, names, quotes, or product features.
-- Use ONLY facts the user provided. If a fact would strengthen the post but you don't have it, write a generic phrasing or insert a clearly marked placeholder like [أضف رقم/تاريخ هنا] / [add stat here].
+- Use ONLY facts the user provided. If a fact would strengthen the post but you don't have it, write a generic phrasing or insert a clearly marked placeholder like [أضف رقماً موثقاً هنا] / [add verified stat here].
 - Do NOT add famous historical references unless the user's input explicitly mentions them.
 - If the user's input is too vague, keep the post abstract and useful — do not fabricate.
 
