@@ -324,6 +324,21 @@ export function AppliedRanking() {
               </ul>
             </div>
           )}
+
+          <HandoffMenu
+            source="applied"
+            getText={() => {
+              if (!result) return brand;
+              const lines = [
+                `${brand} — Applied Ranking ${result.overall}/100 (${result.scope})`,
+                `Website ${result.pillars.website.score} · App ${result.pillars.mobile_app.score} · Brand ${result.pillars.brand.score}`,
+                "",
+                "Priority actions:",
+                ...result.priority_actions.map((a, i) => `${i + 1}. ${a}`),
+              ];
+              return lines.join("\n");
+            }}
+          />
         </div>
       )}
     </div>
