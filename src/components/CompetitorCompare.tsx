@@ -10,6 +10,7 @@ import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
+import { apiFetch } from "@/lib/api-client";
 
 type Brand = {
   name: string;
@@ -66,7 +67,7 @@ export function CompetitorCompare() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
-      const r = await fetch("/api/compare", {
+      const r = await apiFetch("/api/compare", {
         method: "POST", headers,
         body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare") }),
       });

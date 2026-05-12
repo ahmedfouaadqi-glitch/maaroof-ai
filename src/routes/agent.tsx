@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.functions";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
+import { apiFetch } from "@/lib/api-client";
 import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
@@ -180,7 +181,7 @@ function AgentPage() {
       const session = (await supabase.auth.getSession()).data.session;
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
-      const response = await fetch("/api/visibility", {
+      const response = await apiFetch("/api/visibility", {
         method: "POST",
         headers,
         body: JSON.stringify({ brand, keywords, lang: outLang }),

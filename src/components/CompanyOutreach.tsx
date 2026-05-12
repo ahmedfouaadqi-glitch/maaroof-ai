@@ -8,6 +8,7 @@ import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
+import { apiFetch } from "@/lib/api-client";
 
 type Mode = "search" | "email" | "brand";
 
@@ -43,7 +44,7 @@ export function CompanyOutreach() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (auth as any)?.session;
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-      const res = await fetch("/api/company-email", {
+      const res = await apiFetch("/api/company-email", {
         method: "POST", headers,
         body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode }),
       });
