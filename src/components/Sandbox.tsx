@@ -274,6 +274,29 @@ export function Sandbox() {
               </div>
             </div>
           )}
+
+          {result.platform_views && result.platform_views.length > 0 && (
+            <div className="mt-5">
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                <Bot className="size-3.5" /> {t("report_platform_views") || "How each AI engine sees this"}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {result.platform_views.map((p) => (
+                  <div key={p.name} className="rounded-xl border border-border bg-background/50 p-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-foreground">{p.name}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{p.score}/100</span>
+                    </div>
+                    <div className="mb-1 h-1.5 w-full rounded-full bg-muted/40">
+                      <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${p.score}%` }} />
+                    </div>
+                    {p.verdict && <div className="text-[11px] uppercase tracking-wide text-accent">{p.verdict}</div>}
+                    {p.benefit && <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{p.benefit}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
