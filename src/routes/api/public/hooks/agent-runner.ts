@@ -15,7 +15,7 @@ async function callAI(apiKey: string, system: string, prompt: string) {
     method: "POST",
     headers: lovableAiHeaders(apiKey),
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-flash-lite",
       messages: [
         { role: "system", content: system },
         { role: "user", content: prompt },

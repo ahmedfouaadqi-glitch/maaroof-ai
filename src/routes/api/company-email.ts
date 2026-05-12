@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/company-email")({
             method: "POST",
             headers: lovableAiHeaders(lovableKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-2.5-flash-lite",
               messages: [{ role: "system", content: sys }, { role: "user", content: user }]
             }),
           });

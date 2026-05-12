@@ -82,7 +82,7 @@ Return ONLY valid JSON in this exact shape:
               }),
             });
 
-          let ai = await callModel("google/gemini-2.5-flash");
+          let ai = await callModel("google/gemini-2.5-flash-lite");
           if (!ai.ok && ai.status !== 429 && ai.status !== 402) {
             const errText = await ai.text().catch(() => "");
             console.error("[api/brand-boost] gateway error", ai.status, errText);

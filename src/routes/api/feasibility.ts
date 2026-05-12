@@ -200,7 +200,7 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-2.5-flash-lite",
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
                 { role: "user", content: userPrompt },

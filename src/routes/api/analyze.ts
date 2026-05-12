@@ -132,7 +132,7 @@ export const Route = createFileRoute("/api/analyze")({
               method: "POST",
               headers: lovableAiHeaders(apiKey),
               body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
+                model: "google/gemini-2.5-flash-lite",
                 messages: [
                   { role: "system", content: `${buildSys(scope)}\n\n${langGuide[lang] || langGuide.en}` },
                   { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) STRICTLY in language code "${lang}". Do not mix languages, even if the source text below is in a different language.\n\nContent to analyze:\n"""${text}"""` },

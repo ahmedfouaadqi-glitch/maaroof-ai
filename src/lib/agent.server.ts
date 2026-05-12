@@ -61,7 +61,7 @@ export async function callAI(system: string, prompt: string, lang: "ar" | "en" |
     method: "POST",
     headers: lovableAiHeaders(apiKey),
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-flash-lite",
       messages: [
         { role: "system", content: sysWithLang },
         { role: "user", content: prompt },
