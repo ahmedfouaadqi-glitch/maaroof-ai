@@ -28,6 +28,7 @@ const TOOL_SLOTS = [
   { key: "research",    id: "research",    labelKey: "research_title" },
   { key: "outreach",    id: "outreach",    labelKey: "outreach_title" },
   { key: "boost",       id: "boost",       labelKey: "boost_title" },
+  { key: "applied",     id: "applied",     labelKey: "dash_tool_applied_t" },
 ] as const;
 const STORAGE_KEY = "geo:hidden-tools";
 
