@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
+import { apiFetch } from "@/lib/api-client";
 
 type Result = {
   score: number; authority: number; local: number; citation: number;
@@ -85,7 +86,7 @@ export function Sandbox() {
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
 
-      const r = await fetch("/api/analyze", {
+      const r = await apiFetch("/api/analyze", {
         method: "POST", headers,
         body: JSON.stringify({ text, lang: outLang, scope: getEffectiveScope(auth?.profile, "analyze") }),
       });
