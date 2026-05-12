@@ -11,6 +11,7 @@ import { BizDev } from "@/components/BizDev";
 import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
+import { AppliedRanking } from "@/components/AppliedRanking";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
