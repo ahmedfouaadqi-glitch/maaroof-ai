@@ -9,6 +9,7 @@ import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { HandoffMenu } from "@/components/HandoffMenu";
+import { apiFetch } from "@/lib/api-client";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 
@@ -81,7 +82,7 @@ export function BrandBoostAgent() {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-      const res = await fetch("/api/brand-boost", {
+      const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
         body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang, scope: getEffectiveScope(profile, "brand") }),
       });
