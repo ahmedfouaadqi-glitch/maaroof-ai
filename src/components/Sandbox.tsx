@@ -337,6 +337,127 @@ export function Sandbox() {
               </div>
             </div>
           )}
+
+          {(() => {
+            const reasons = explainScoreDrops({
+              authority: result.authority, local: result.local, citation: result.citation,
+              weaknesses: result.weaknesses, recommendations: result.recommendations, lang: L,
+            });
+            const titleTxt = L === "ar" ? "لماذا تم تخفيض الدرجة؟" : L === "ku" ? "بۆچی خاڵەکە کەم کرایەوە؟" : "Why was the score reduced?";
+            const subTxt = L === "ar" ? "تفصيل الفقد في كل بند مع اقتراحات مبنية على نصك الحالي." : L === "ku" ? "وردەکاری لە هەر بەشێک." : "Per-metric breakdown with suggestions based on your current text.";
+            const metricLbl = (m: string) => m === "authority" ? (L === "ar" ? "السلطة" : L === "ku" ? "دەسەڵات" : "Authority") : m === "citation" ? (L === "ar" ? "الاستشهاد" : L === "ku" ? "وەرگرتنەوە" : "Citation") : (L === "ar" ? "الصلة المحلية" : L === "ku" ? "ناوخۆیی" : "Local");
+            return (
+              <div className="mt-5 rounded-xl border border-border bg-background/40 p-4">
+                <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                  <AlertCircle className="size-3.5 text-destructive" /> {titleTxt}
+                </div>
+                <p className="mb-3 text-[11px] text-muted-foreground">{subTxt}</p>
+                <div className="space-y-2.5">
+                  {reasons.map((r) => (
+                    <div key={r.metric} className="rounded-lg border border-border/60 bg-card/40 p-3">
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <div className="text-[12px] font-semibold text-foreground">{metricLbl(r.metric)} <span className="ml-1 text-[10px] text-muted-foreground">({r.weight}%)</span></div>
+                      </div>
+                      <ul className="ms-4 list-disc space-y-1 text-[12px] leading-snug text-foreground/90">
+                        {r.reasons.map((s, i) => <li key={i}>{s}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const titleTxt = L === "ar" ? "تحويل إلى GEO قابل للاستشهاد" : L === "ku" ? "گۆڕین بۆ GEO" : "Convert to citable GEO";
+            const descTxt = L === "ar" ? "يحوّل النص إلى نسخة أطول مليئة بالأرقام والكيانات والمصادر، ثم يُعيد حساب الدرجة فوراً." : L === "ku" ? "دەقەکە دەگۆڕێت بۆ وەشانێکی زۆرتر." : "Rewrites your text into a longer version rich with numbers, entities and sources, then re-scores it instantly.";
+            const ctaTxt = L === "ar" ? "تحويل وإعادة التقييم" : L === "ku" ? "گۆڕین و دووبارە هەژماردن" : "Rewrite & rescore";
+            const newScoreTxt = L === "ar" ? "الدرجة الجديدة" : L === "ku" ? "خاڵی نوێ" : "New score";
+            const addedTxt = L === "ar" ? "ما تمّت إضافته" : L === "ku" ? "ئەوەی زیاد کرا" : "What was added";
+            const verifyTxt = L === "ar" ? "تحقّق قبل النشر" : L === "ku" ? "پشکنین پێش بڵاوکردنەوە" : "Verify before publishing";
+            const copyTxt = L === "ar" ? "نسخ النص الجديد" : L === "ku" ? "لەبەرگرتنەوە" : "Copy rewritten text";
+            const useAnalyzeTxt = L === "ar" ? "استبدال النص بالنسخة الجديدة" : L === "ku" ? "گۆڕینی دەق" : "Replace text with rewrite";
+
+            const doRewrite = async () => {
+              setRewriteErr(null); setRewriteData(null); setRewriteBusy(true);
+              try {
+                const headers: Record<string, string> = { "Content-Type": "application/json" };
+                const session = (await supabase.auth.getSession()).data.session;
+                if (session) headers.Authorization = `Bearer ${session.access_token}`;
+                const r = await apiFetch("/api/geo-rewrite", {
+                  method: "POST", headers,
+                  body: JSON.stringify({ text, lang: outLang, scope: getEffectiveScope(auth?.profile, "analyze") }),
+                });
+                const data = await r.json();
+                if (!r.ok || data.error) {
+                  setRewriteErr(data.error || "error");
+                  if (r.status === 402 && data.error === "limit") setShowLimit(true);
+                  return;
+                }
+                setRewriteData(data);
+                if (auth) auth.refreshProfile();
+              } catch (e: any) { setRewriteErr(e.message); }
+              finally { setRewriteBusy(false); }
+            };
+
+            return (
+              <div className="mt-4 rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Wand className="size-4 text-primary" /> {titleTxt}
+                    </div>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{descTxt}</p>
+                  </div>
+                  <button onClick={doRewrite} disabled={rewriteBusy}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-accent px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-glow)] disabled:opacity-50">
+                    {rewriteBusy ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />} {ctaTxt}
+                  </button>
+                </div>
+                {rewriteErr && <div className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive">{rewriteErr}</div>}
+                {rewriteData && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-success/30 bg-success/5 p-3">
+                      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{newScoreTxt}:</div>
+                      <div className="font-display text-2xl font-bold text-gradient">{rewriteData.score}<span className="text-xs font-normal text-muted-foreground">/100</span></div>
+                      <div className="ms-auto flex gap-2 text-[11px] font-mono text-muted-foreground">
+                        <span>A {rewriteData.authority}</span><span>L {rewriteData.local}</span><span>C {rewriteData.citation}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-background/60 p-3">
+                      <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-relaxed text-foreground">{rewriteData.rewritten}</pre>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button onClick={async () => { await navigator.clipboard.writeText(rewriteData.rewritten); setRewriteCopied(true); setTimeout(() => setRewriteCopied(false), 1500); }}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold text-foreground hover:bg-primary/10">
+                          {rewriteCopied ? <CheckCircle2 className="size-3 text-success" /> : <CopyIcon className="size-3" />} {copyTxt}
+                        </button>
+                        <button onClick={() => { setText(rewriteData.rewritten); setResult(null); setRewriteData(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-[11px] font-semibold text-primary-foreground">
+                          <Sparkles className="size-3" /> {useAnalyzeTxt}
+                        </button>
+                      </div>
+                    </div>
+                    {rewriteData.added_elements?.length > 0 && (
+                      <div>
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-accent">{addedTxt}</div>
+                        <ul className="ms-4 list-disc space-y-0.5 text-[12px] text-foreground/90">
+                          {rewriteData.added_elements.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {rewriteData.verify_notes?.length > 0 && (
+                      <div className="rounded-lg border border-accent/30 bg-accent/5 p-2.5">
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-accent">{verifyTxt}</div>
+                        <ul className="ms-4 list-disc space-y-0.5 text-[12px] text-foreground/90">
+                          {rewriteData.verify_notes.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 
