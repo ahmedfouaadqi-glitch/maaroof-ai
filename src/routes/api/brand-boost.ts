@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 
@@ -99,15 +99,7 @@ Return ONLY valid JSON in this exact shape:
 
           const j: any = await ai.json();
           const content = String(j?.choices?.[0]?.message?.content || "{}");
-          let parsed: any = {};
-          try {
-            parsed = JSON.parse(content);
-          } catch {
-            const match = content.match(/\{[\s\S]*\}/);
-            if (match) {
-              try { parsed = JSON.parse(match[0]); } catch {}
-            }
-          }
+          let parsed: any = extractJsonObject(content) || {};
           if (!parsed || typeof parsed !== "object") parsed = {};
           if (!Array.isArray(parsed.plan)) parsed.plan = [];
 
