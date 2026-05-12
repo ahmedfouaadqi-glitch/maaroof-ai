@@ -29,6 +29,7 @@ import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
 import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
+import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 
@@ -132,6 +133,11 @@ const ApiBizdevRoute = ApiBizdevRouteImport.update({
   path: '/api/bizdev',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAppliedRankingRoute = ApiAppliedRankingRouteImport.update({
+  id: '/api/applied-ranking',
+  path: '/api/applied-ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   id: '/api/analyze',
   path: '/api/analyze',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/api/analyze': typeof ApiAnalyzeRoute
+  '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/api/analyze'
+    | '/api/applied-ranking'
     | '/api/bizdev'
     | '/api/brand-boost'
     | '/api/company-email'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/api/analyze'
+    | '/api/applied-ranking'
     | '/api/bizdev'
     | '/api/brand-boost'
     | '/api/company-email'
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/api/analyze'
+    | '/api/applied-ranking'
     | '/api/bizdev'
     | '/api/brand-boost'
     | '/api/company-email'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
+  ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
   ApiBrandBoostRoute: typeof ApiBrandBoostRoute
   ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
@@ -459,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBizdevRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/applied-ranking': {
+      id: '/api/applied-ranking'
+      path: '/api/applied-ranking'
+      fullPath: '/api/applied-ranking'
+      preLoaderRoute: typeof ApiAppliedRankingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analyze': {
       id: '/api/analyze'
       path: '/api/analyze'
@@ -489,6 +509,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
+  ApiAppliedRankingRoute: ApiAppliedRankingRoute,
   ApiBizdevRoute: ApiBizdevRoute,
   ApiBrandBoostRoute: ApiBrandBoostRoute,
   ApiCompanyEmailRoute: ApiCompanyEmailRoute,
@@ -503,13 +524,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
