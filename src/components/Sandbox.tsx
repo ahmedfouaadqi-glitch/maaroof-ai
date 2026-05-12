@@ -23,6 +23,7 @@ type Result = {
   weaknesses?: string[];
   recommendations?: string[];
   keywords?: string[];
+  platform_views?: { name: string; score: number; verdict: string; benefit: string }[];
 };
 
 const STEPS = ["scan_tokenize", "scan_authority", "scan_local", "scan_citation"] as const;
