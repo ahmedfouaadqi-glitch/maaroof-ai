@@ -79,7 +79,7 @@ function toArray(value: unknown, max = 6) {
 }
 
 function normalizePlatforms(value: unknown): Array<any> {
-  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral"];
+  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek"];
   const arr = Array.isArray(value) ? value : [];
   const byName = new Map<string, any>();
   for (const item of arr) {
