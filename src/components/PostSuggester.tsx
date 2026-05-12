@@ -11,6 +11,7 @@ import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
+import { apiFetch } from "@/lib/api-client";
 
 type Mode = "text" | "image" | "video";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
@@ -177,7 +178,7 @@ export function PostSuggester({
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
       (body as any).scope = getEffectiveScope(auth?.profile, "suggest");
-      const r = await fetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
+      const r = await apiFetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
       const data = await r.json();
       if (r.status === 401) { setShowGate(true); return; }
       if (r.status === 402 && data.error === "limit") { setShowLimit(true); return; }
