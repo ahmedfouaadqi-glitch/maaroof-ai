@@ -159,7 +159,8 @@ export function Sandbox() {
       </div>
 
       {text.trim().length >= 20 && showAudit && (() => {
-        const checks = auditText(text);
+        const effectiveScope = getEffectiveScope(auth?.profile, "analyze");
+        const checks = auditText(text, effectiveScope);
         const passed = checks.filter((c) => c.passed).length;
         const tone = passed >= 5 ? "border-success/40 bg-success/10" : passed >= 3 ? "border-accent/40 bg-accent/10" : "border-destructive/40 bg-destructive/10";
         const titleTxt = L === "ar" ? "تدقيق قبل التحليل" : L === "ku" ? "پشکنین پێش شیکاری" : "Pre-analysis audit";
@@ -370,7 +371,7 @@ export function Sandbox() {
 
           {(() => {
             const titleTxt = L === "ar" ? "تحويل إلى GEO قابل للاستشهاد" : L === "ku" ? "گۆڕین بۆ GEO" : "Convert to citable GEO";
-            const descTxt = L === "ar" ? "يحوّل النص إلى نسخة أطول مليئة بالأرقام والكيانات والمصادر، ثم يُعيد حساب الدرجة فوراً." : L === "ku" ? "دەقەکە دەگۆڕێت بۆ وەشانێکی زۆرتر." : "Rewrites your text into a longer version rich with numbers, entities and sources, then re-scores it instantly.";
+            const descTxt = L === "ar" ? "يحوّل النص إلى نسخة أطول منظمة فقط بالحقائق التي زودتها، ويقترح أماكن واضحة لإضافة الأرقام والمصادر الناقصة، ثم يُعيد حساب الدرجة." : L === "ku" ? "دەقەکە بە تەنها ڕاستییە دراوەکان ڕێک دەخات و شوێنی ژمارە/سەرچاوەی کەمبوو نیشان دەدات." : "Rewrites your text using only provided facts, marks missing numbers/sources as fields to fill, then re-scores it.";
             const ctaTxt = L === "ar" ? "تحويل وإعادة التقييم" : L === "ku" ? "گۆڕین و دووبارە هەژماردن" : "Rewrite & rescore";
             const newScoreTxt = L === "ar" ? "الدرجة الجديدة" : L === "ku" ? "خاڵی نوێ" : "New score";
             const addedTxt = L === "ar" ? "ما تمّت إضافته" : L === "ku" ? "ئەوەی زیاد کرا" : "What was added";

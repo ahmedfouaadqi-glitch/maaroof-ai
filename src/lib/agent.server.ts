@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 export const SYSTEM_ANALYZE = `أنت خبير GEO (Generative Engine Optimization) للسوق العراقي.
 بالنظر إلى رابط أو موضوع، قدم:
@@ -56,7 +56,7 @@ const LANG_INSTRUCTION: Record<string, string> = {
 export async function callAI(system: string, prompt: string, lang: "ar" | "en" | "ku" = "ar"): Promise<string> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-  const sysWithLang = `${system}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.ar}`;
+  const sysWithLang = `${FACTUAL_SAFETY_PROMPT}\n\n${system}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.ar}`;
   const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: lovableAiHeaders(apiKey),

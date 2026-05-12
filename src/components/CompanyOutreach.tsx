@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
-import { GeoScopeSelector } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
@@ -46,7 +46,7 @@ export function CompanyOutreach() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/company-email", {
         method: "POST", headers,
-        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode }),
+        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: getEffectiveScope(auth?.profile, "outreach") }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");

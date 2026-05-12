@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = {
   project_name?: string;
@@ -20,9 +20,11 @@ type Body = {
   scope?: GeoScope;
 };
 
-const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a STRICT, evidence-based feasibility-study analyst for ${m.market}.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
-Analyze the project conservatively and realistically. LOCALIZATION CONTEXT: ${m.contextHint} Use realistic local cost of rent/utilities/marketing, payment infrastructure, telecom & internet quality, regulatory environment, and import/customs friction for ${m.region}. NEVER fabricate exact statistics, partner names, or government numbers. When unsure, say so and assign lower confidence.
+You are a STRICT, evidence-based feasibility-study analyst for ${m.market}.
+
+Analyze the project conservatively and realistically. LOCALIZATION CONTEXT: ${m.contextHint} If costs or market sizes are not provided by the user, return qualitative guidance or explicitly label required user inputs; do not invent ranges. When unsure, say so and assign lower confidence.
 
 Return ONLY valid JSON with this exact shape (all text fields in REPORT language):
 {
@@ -31,15 +33,15 @@ Return ONLY valid JSON with this exact shape (all text fields in REPORT language
   "confidence": "high" | "medium" | "low",
   "executive_summary": "3-5 sentence honest summary",
   "market": {
-    "size_estimate": "qualitative + range, e.g. 'Small but growing in Baghdad/Erbil — est. 50k-150k addressable users'",
+    "size_estimate": "qualitative assessment based on provided inputs; if no sourced size is provided, say insufficient data",
     "demand_signals": ["concrete signal 1", "..."],
     "barriers": ["concrete barrier 1", "..."],
     "score": <0-100>
   },
   "financial": {
-    "startup_cost_iqd": "estimated IQD range (e.g. 25M-40M IQD)",
-    "monthly_burn_iqd": "estimated IQD range",
-    "breakeven_months": "estimate (e.g. '14-20 months')",
+    "startup_cost_iqd": "provided value or 'insufficient data — add real startup budget'",
+    "monthly_burn_iqd": "provided value or 'insufficient data — add rent/payroll/marketing costs'",
+    "breakeven_months": "calculated only if enough provided inputs exist, otherwise 'insufficient data'",
     "revenue_assumptions": ["assumption 1", "..."],
     "score": <0-100>
   },

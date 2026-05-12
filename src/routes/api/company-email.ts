@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { describeMarket } from "@/lib/geo-scope.server";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Mode = "search" | "email" | "brand";
 
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/api/company-email")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { company, sector, notes, lang = "en", goal, mode } = await request.json();
+          const { company, sector, notes, lang = "en", goal, mode, scope } = await request.json();
           if (!company) return Response.json({ error: "company required" }, { status: 400 });
           const m: Mode = (mode === "search" || mode === "email" || mode === "brand") ? mode : "email";
 
@@ -28,8 +29,9 @@ export const Route = createFileRoute("/api/company-email")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const userCtx = await getUserContext(admin, userId);
 
+          const market = describeMarket(scope);
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
-          const q = `${company} ${sector || ""} ${notes || ""}${specBoost}`.slice(0, 300);
+          const q = `${company} ${sector || ""} ${notes || ""}${specBoost} ${market.region}`.slice(0, 300);
           let sources: any[] = [];
           try {
             const sr = await fcSearch(q, { limit: 6, lang });
@@ -51,8 +53,10 @@ export const Route = createFileRoute("/api/company-email")({
               ? `Mode: BRAND LOOKUP. Treat "${company}" as a BRAND/PRODUCT NAME (not a corporate buyer). Return JSON: company_brief (what the brand sells, positioning, tone), key_points (5-8 bullets — products, target audience, USPs, weaknesses visible online), competitors (3-6 short names), opportunities (3-5 actionable ideas in user's specialty). DO NOT write an outreach email.`
               : `Mode: OUTREACH EMAIL. Return JSON: company_brief (concise), key_points (3-5 bullets a sender should know), email_subject, email_body (professional, under 180 words, addressed to the company, references one concrete fact from the brief).`;
 
-          const sys = `You write STRICTLY in language code: ${lang}. ${modeInstruction} Output a single JSON object only.${specialtyHint(userCtx, lang as any)}`;
-          const user = `Company / Brand: ${company}\nSector: ${sector || "-"}\nGoal: ${goal || "-"}\nUser notes: ${notes || "-"}\n\nSources:\n${ctx || "(no sources found)"}`;
+          const sys = `${FACTUAL_SAFETY_PROMPT}
+
+You write STRICTLY in language code: ${lang}. ${modeInstruction} Use only the supplied Sources and user notes; if sources are empty, say evidence is missing and do not invent company details. Output a single JSON object only.${specialtyHint(userCtx, lang as any)}`;
+          const user = `Company / Brand: ${company}\nSector: ${sector || "-"}\nGoal: ${goal || "-"}\nTarget market: ${market.region}\nUser notes: ${notes || "-"}\n\nSources:\n${ctx || "(no sources found)"}`;
 
           const ai = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",

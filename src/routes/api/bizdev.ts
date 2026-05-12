@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type Body = {
   business_name?: string;
@@ -20,9 +20,11 @@ type Body = {
   scope?: GeoScope;
 };
 
-const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a senior business-development strategist for ${m.market}. Build a realistic, sequenced 12-month growth plan.
+const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
-Be concrete and conservative. LOCALIZATION CONTEXT: ${m.contextHint} NEVER fabricate exact partner names, KPIs, or government statistics. When inputs are weak, say so and recommend discovery steps before tactics.
+You are a senior business-development strategist for ${m.market}. Build a realistic, sequenced 12-month growth plan.
+
+Be concrete and conservative. LOCALIZATION CONTEXT: ${m.contextHint} NEVER fabricate exact partner names, KPI targets, budgets, contacts, or government statistics. If inputs are weak, say so and recommend discovery steps before tactics.
 
 Return ONLY valid JSON in this exact shape (all text fields in REPORT language):
 {
@@ -40,7 +42,7 @@ Return ONLY valid JSON in this exact shape (all text fields in REPORT language):
       "title": "lever name (e.g. 'Activate WhatsApp Catalog')",
       "impact": "high" | "medium" | "low",
       "effort": "high" | "medium" | "low",
-      "expected_outcome": "concrete outcome (e.g. '+15-25% inbound leads in 60 days')",
+      "expected_outcome": "concrete outcome only if supported by provided data; otherwise say what to measure first",
       "how_to": ["step 1", "step 2", "step 3"]
     }
   ],
@@ -48,7 +50,7 @@ Return ONLY valid JSON in this exact shape (all text fields in REPORT language):
     {
       "channel": "channel name (Instagram, WhatsApp, TikTok, Google Ads, B2B outbound, Events, etc.)",
       "fit": "high" | "medium" | "low",
-      "monthly_budget_iqd": "estimated IQD range",
+      "monthly_budget_iqd": "provided budget allocation or 'insufficient data — add monthly budget'",
       "primary_kpi": "single KPI",
       "first_action": "first concrete action this week"
     }
@@ -65,7 +67,7 @@ Return ONLY valid JSON in this exact shape (all text fields in REPORT language):
     { "risk": "specific risk", "severity": "high" | "medium" | "low", "mitigation": "concrete mitigation" }
   ],
   "kpis": [
-    { "name": "KPI", "target_3m": "target at 3 months", "target_12m": "target at 12 months" }
+    { "name": "KPI", "target_3m": "target at 3 months if calculable, otherwise baseline needed", "target_12m": "target at 12 months if calculable, otherwise baseline needed" }
   ],
   "quick_wins": ["actionable win achievable in <14 days", "...", "..."]
 }

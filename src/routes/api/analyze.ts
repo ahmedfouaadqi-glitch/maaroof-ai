@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -30,7 +30,9 @@ function buildSys(scope?: GeoScope) {
       localGuide = `local (0-100): ${place} hyper-local context — neighborhoods/districts of ${place}, local landmarks, local businesses, street/area names, dialect, city-specific events. No city signal = 0-15. Country-level only = 20-40. Mentions ${place} entities = 55-75. Deeply hyper-local to ${place} = 85-100.`;
     }
   }
-  return `You are a STRICT, evidence-based GEO (Generative Engine Optimization) analysis engine for ${target}.
+  return `${FACTUAL_SAFETY_PROMPT}
+
+You are a STRICT, evidence-based GEO (Generative Engine Optimization) analysis engine for ${target}.
 
 YOUR JOB: Audit the content as if you were ChatGPT/Gemini/Claude deciding whether to cite it when answering ${target} user queries. Be conservative, realistic, and brutally honest. Do NOT inflate scores to be polite.
 
@@ -40,8 +42,8 @@ SCORING RUBRIC (apply consistently — never round up to flatter the user):
 - ${localGuide}
 - citation (0-100): Likelihood an LLM quotes this in an answer — must have unique facts, clear claims, and an extractable answer to a real user question. Generic marketing fluff = 0-30. Mixed = 40-60. Quotable, specific, well-structured = 70-100.
 
-PENALIZE HEAVILY: superlatives without proof, vague claims, no entities, no numbers, ad copy, keyword stuffing, broken structure.
-REWARD: specific names/places relevant to ${target}, concrete numbers and dates, structured Q&A or lists, source mentions, expert tone.
+PENALIZE HEAVILY: superlatives without proof, vague claims, no entities, no verifiable numbers, ad copy, keyword stuffing, broken structure.
+REWARD: specific names/places relevant to ${target}, concrete numbers and dates present in the text, structured Q&A or lists, source mentions, expert tone.
 
 OUTPUT — return ONLY a compact JSON object with these exact keys:
 {

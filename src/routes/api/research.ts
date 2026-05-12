@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 export const Route = createFileRoute("/api/research")({
   server: {
@@ -61,7 +61,9 @@ export const Route = createFileRoute("/api/research")({
           let visibility_opportunities: string[] = [];
           if (lovableKey) {
             const brandLine = userCtx.brand_name ? `\nUser brand to position: ${userCtx.brand_name}${userCtx.brand_keywords ? ` (${userCtx.brand_keywords})` : ""}` : "";
-            const sys = `You are a precise research assistant that mimics a Generative Search Experience (SGE). Write STRICTLY in language code: ${lang}.
+            const sys = `${FACTUAL_SAFETY_PROMPT}
+
+You are a precise research assistant that mimics a Generative Search Experience (SGE). Write STRICTLY in language code: ${lang}.
 Rules:
 - Cite EVERY non-trivial claim inline as [1], [2] matching the source list order.
 - If sources contradict, say so explicitly.
