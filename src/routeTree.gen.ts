@@ -23,6 +23,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
+import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
@@ -101,6 +102,11 @@ const ApiResearchRoute = ApiResearchRouteImport.update({
   path: '/api/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGeoRewriteRoute = ApiGeoRewriteRouteImport.update({
+  id: '/api/geo-rewrite',
+  path: '/api/geo-rewrite',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
   id: '/api/feasibility',
   path: '/api/feasibility',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
+  '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
+  '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
+  '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/api/company-email'
     | '/api/compare'
     | '/api/feasibility'
+    | '/api/geo-rewrite'
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/api/company-email'
     | '/api/compare'
     | '/api/feasibility'
+    | '/api/geo-rewrite'
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/api/company-email'
     | '/api/compare'
     | '/api/feasibility'
+    | '/api/geo-rewrite'
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
   ApiCompareRoute: typeof ApiCompareRoute
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
+  ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
@@ -404,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/geo-rewrite': {
+      id: '/api/geo-rewrite'
+      path: '/api/geo-rewrite'
+      fullPath: '/api/geo-rewrite'
+      preLoaderRoute: typeof ApiGeoRewriteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/feasibility': {
       id: '/api/feasibility'
       path: '/api/feasibility'
@@ -474,6 +494,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCompanyEmailRoute: ApiCompanyEmailRoute,
   ApiCompareRoute: ApiCompareRoute,
   ApiFeasibilityRoute: ApiFeasibilityRoute,
+  ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
