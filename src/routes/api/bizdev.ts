@@ -209,8 +209,7 @@ Return the JSON business-development plan now. All string fields MUST be in lang
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
                 { role: "user", content: userPrompt },
-              ],
-              response_format: { type: "json_object" },
+              ]
             }),
           });
 

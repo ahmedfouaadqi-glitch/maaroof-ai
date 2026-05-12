@@ -203,8 +203,7 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
                 { role: "user", content: userPrompt },
-              ],
-              response_format: { type: "json_object" },
+              ]
             }),
           });
 

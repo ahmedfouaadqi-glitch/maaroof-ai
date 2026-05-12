@@ -81,8 +81,7 @@ Rules:
                 messages: [
                   { role: "system", content: sys },
                   { role: "user", content: `Question: ${limited}\n\nSources:\n${ctx}\n\nReturn the JSON object now.` },
-                ],
-                response_format: { type: "json_object" },
+                ]
               }),
             });
             if (ai.ok) {
