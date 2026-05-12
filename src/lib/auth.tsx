@@ -78,16 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Realtime: keep profile (usage counters, quota_overrides, subscription) live
+  // Poll profile every 60s to keep usage counters / quota / subscription fresh.
+  // (Replaced realtime postgres_changes subscription to avoid broadcasting profile
+  // change events through the Realtime publication.)
   useEffect(() => {
     if (!user?.id) return;
-    const ch = supabase
-      .channel(`profile:${user.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, (payload: any) => {
-        setProfile((prev) => ({ ...(prev as any), ...(payload.new as any) }));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const iv = setInterval(() => { loadProfile(user.id); }, 60000);
+    const onFocus = () => loadProfile(user.id);
+    window.addEventListener("focus", onFocus);
+    return () => { clearInterval(iv); window.removeEventListener("focus", onFocus); };
   }, [user?.id]);
 
   const signOut = async () => {
