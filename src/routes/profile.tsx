@@ -7,6 +7,7 @@ import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { Loader2, Save, Lock, ShieldCheck } from "lucide-react";
+import { ToolLinksManager } from "@/components/ToolLinksManager";
 
 export const Route = createFileRoute("/profile")({
   component: () => (
@@ -106,6 +107,8 @@ function ProfilePage() {
             {locking ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />} {t("profile_device_lock_enable")}
           </button>
         </div>
+
+        <ToolLinksManager />
 
         <div className="mt-8 text-center"><Link to="/dashboard" className="text-sm text-primary hover:underline">← {t("nav_dashboard")}</Link></div>
       </div>
