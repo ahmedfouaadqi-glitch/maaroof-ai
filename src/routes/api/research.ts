@@ -13,18 +13,19 @@ export const Route = createFileRoute("/api/research")({
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });
           const limited = String(query).slice(0, 300);
 
-          // Resolve user context (specialty / brand) for prompt anchoring
+          // Mandatory auth — endpoint consumes paid Firecrawl + AI gateway credits
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-          let userCtx = { specialty: null, brand_name: null, brand_keywords: null } as any;
-          if (SUPABASE_URL && SERVICE) {
-            const admin = createClient(SUPABASE_URL, SERVICE);
-            const auth = request.headers.get("authorization");
-            if (auth?.startsWith("Bearer ")) {
-              const { data } = await admin.auth.getUser(auth.slice(7));
-              if (data.user?.id) userCtx = await getUserContext(admin, data.user.id);
-            }
+          if (!SUPABASE_URL || !SERVICE) return Response.json({ error: "internal_error" }, { status: 500 });
+          const admin = createClient(SUPABASE_URL, SERVICE);
+          const authHeader = request.headers.get("authorization");
+          if (!authHeader?.startsWith("Bearer ")) {
+            return Response.json({ error: "auth_required" }, { status: 401 });
           }
+          const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
+          const userId = userData?.user?.id;
+          if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const userCtx = await getUserContext(admin, userId);
 
           const geo = scope?.country ? ` ${scope.country}` : "";
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
@@ -136,8 +137,9 @@ Rules:
           }
 
           return Response.json({ query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty });
-        } catch (e: any) {
-          return Response.json({ error: e?.message || "research failed" }, { status: 500 });
+        } catch (e) {
+          console.error("[api/research] failed", e);
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

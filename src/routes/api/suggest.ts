@@ -254,7 +254,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           return Response.json({ post, ...parsed });
         } catch (e) {
           console.error("suggest error", e);
-          return Response.json({ error: e instanceof Error ? e.message : "Unknown error" }, { status: 500 });
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

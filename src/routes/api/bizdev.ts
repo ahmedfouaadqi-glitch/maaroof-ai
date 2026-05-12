@@ -246,7 +246,7 @@ Return the JSON business-development plan now. All string fields MUST be in lang
           return Response.json({ ok: true, result });
         } catch (e) {
           console.error("[api/bizdev] fatal", e);
-          return Response.json({ error: e instanceof Error ? e.message : "unknown" }, { status: 500 });
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

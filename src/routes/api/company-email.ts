@@ -16,15 +16,16 @@ export const Route = createFileRoute("/api/company-email")({
 
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-          let userCtx = { specialty: null, brand_name: null, brand_keywords: null } as any;
-          if (SUPABASE_URL && SERVICE) {
-            const admin = createClient(SUPABASE_URL, SERVICE);
-            const auth = request.headers.get("authorization");
-            if (auth?.startsWith("Bearer ")) {
-              const { data } = await admin.auth.getUser(auth.slice(7));
-              if (data.user?.id) userCtx = await getUserContext(admin, data.user.id);
-            }
+          if (!SUPABASE_URL || !SERVICE) return Response.json({ error: "internal_error" }, { status: 500 });
+          const admin = createClient(SUPABASE_URL, SERVICE);
+          const authHeader = request.headers.get("authorization");
+          if (!authHeader?.startsWith("Bearer ")) {
+            return Response.json({ error: "auth_required" }, { status: 401 });
           }
+          const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
+          const userId = userData?.user?.id;
+          if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const userCtx = await getUserContext(admin, userId);
 
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
           const q = `${company} ${sector || ""} ${notes || ""}${specBoost}`.slice(0, 300);
@@ -61,13 +62,19 @@ export const Route = createFileRoute("/api/company-email")({
               response_format: { type: "json_object" },
             }),
           });
-          if (!ai.ok) return Response.json({ error: `AI ${ai.status}` }, { status: 500 });
+          if (ai.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
+          if (ai.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+          if (!ai.ok) {
+            console.error("[api/company-email] gateway error", ai.status, await ai.text().catch(() => ""));
+            return Response.json({ error: "ai_error" }, { status: 500 });
+          }
           const j: any = await ai.json();
           let parsed: any = {};
           try { parsed = JSON.parse(j?.choices?.[0]?.message?.content || "{}"); } catch {}
           return Response.json({ ...parsed, mode: m, sources, specialty: userCtx.specialty });
-        } catch (e: any) {
-          return Response.json({ error: e?.message || "failed" }, { status: 500 });
+        } catch (e) {
+          console.error("[api/company-email] failed", e);
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },

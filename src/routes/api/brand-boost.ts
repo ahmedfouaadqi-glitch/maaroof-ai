@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral"];
@@ -8,10 +9,42 @@ export const Route = createFileRoute("/api/brand-boost")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const lovableKey = process.env.LOVABLE_API_KEY;
+          const SUPABASE_URL = process.env.SUPABASE_URL;
+          const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (!lovableKey || !SUPABASE_URL || !SERVICE) {
+            return Response.json({ error: "internal_error" }, { status: 500 });
+          }
+          const admin = createClient(SUPABASE_URL, SERVICE);
+
+          // Mandatory auth
+          const auth = request.headers.get("authorization");
+          if (!auth?.startsWith("Bearer ")) {
+            return Response.json({ error: "auth_required" }, { status: 401 });
+          }
+          const { data: userData, error: userErr } = await admin.auth.getUser(auth.slice(7));
+          const userId = userData?.user?.id;
+          if (userErr || !userId) return Response.json({ error: "auth_required" }, { status: 401 });
+
+          // Quota enforcement (uses monthly_analyses budget; brand_boost is premium add-on)
+          const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
+          if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });
+          let allowed = false;
+          if ((prof as any).is_subscribed) {
+            if ((prof as any).subscription_expires_at && new Date((prof as any).subscription_expires_at) < new Date()) {
+              await admin.from("profiles").update({ is_subscribed: false }).eq("id", userId);
+            } else {
+              allowed = true;
+            }
+          }
+          // Allow override quota even without subscription
+          const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
+          if (!allowed && overrideLimit <= ((prof as any).monthly_analyses_used || 0)) {
+            return Response.json({ error: "subscription_required" }, { status: 402 });
+          }
+
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = await request.json();
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
-          const lovableKey = process.env.LOVABLE_API_KEY;
-          if (!lovableKey) return Response.json({ error: "AI not configured" }, { status: 500 });
 
           const market = describeMarket(scope);
           const langInstr =
@@ -53,7 +86,6 @@ Return ONLY valid JSON in this exact shape:
           if (!ai.ok && ai.status !== 429 && ai.status !== 402) {
             const errText = await ai.text().catch(() => "");
             console.error("[api/brand-boost] gateway error", ai.status, errText);
-            // retry once on lite
             ai = await callModel("google/gemini-2.5-flash-lite");
           }
 
@@ -62,7 +94,7 @@ Return ONLY valid JSON in this exact shape:
           if (!ai.ok) {
             const errText = await ai.text().catch(() => "");
             console.error("[api/brand-boost] gateway error (final)", ai.status, errText);
-            return Response.json({ error: `ai_${ai.status}`, details: errText.slice(0, 200) }, { status: 500 });
+            return Response.json({ error: "ai_error" }, { status: 500 });
           }
 
           const j: any = await ai.json();
@@ -78,10 +110,18 @@ Return ONLY valid JSON in this exact shape:
           }
           if (!parsed || typeof parsed !== "object") parsed = {};
           if (!Array.isArray(parsed.plan)) parsed.plan = [];
+
+          // Track usage
+          const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
+          await admin.from("profiles").update({
+            monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + 1,
+          }).eq("id", userId);
+          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name } });
+
           return Response.json(parsed);
-        } catch (e: any) {
+        } catch (e) {
           console.error("[api/brand-boost] failed", e);
-          return Response.json({ error: e?.message || "failed" }, { status: 500 });
+          return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
     },
