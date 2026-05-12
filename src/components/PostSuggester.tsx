@@ -531,6 +531,10 @@ export function PostSuggester({
           <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{post}</pre>
         </div>
       )}
+
+      {(result || post) && (
+        <HandoffMenu source="suggest" getText={() => result?.variants?.map((v) => v.content).join("\n\n---\n\n") || post || ""} />
+      )}
     </div>
   );
 }
