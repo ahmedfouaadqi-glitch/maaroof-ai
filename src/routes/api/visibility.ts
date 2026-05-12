@@ -12,7 +12,7 @@ const LANG_INSTRUCTION: Record<string, string> = {
 };
 
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `You are a STRICT, evidence-based AI Visibility analyst for ${m.market}.
-Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
+Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
 
 LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
