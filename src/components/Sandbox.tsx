@@ -45,6 +45,12 @@ export function Sandbox() {
   const [showTrialGate, setShowTrialGate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
   const [outLang, setOutLang] = useState<Lang>(lang);
+  const [showAudit, setShowAudit] = useState(true);
+  const [rewriteBusy, setRewriteBusy] = useState(false);
+  const [rewriteData, setRewriteData] = useState<null | { rewritten: string; score: number; authority: number; local: number; citation: number; added_elements: string[]; verify_notes: string[] }>(null);
+  const [rewriteErr, setRewriteErr] = useState<string | null>(null);
+  const [rewriteCopied, setRewriteCopied] = useState(false);
+  const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
 
   useEffect(() => {
     const onReuse = (e: Event) => {
