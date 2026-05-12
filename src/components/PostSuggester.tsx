@@ -9,6 +9,8 @@ import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 type Mode = "text" | "image" | "video";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
@@ -78,6 +80,8 @@ export function PostSuggester({
       }
     };
     window.addEventListener("geo:reuse-suggest", onReuse);
+    const pending = consumeHandoff("suggest");
+    if (pending) { setMode("text"); setDesc(pending); setPost(null); setResult(null); setError(null); }
     return () => window.removeEventListener("geo:reuse-suggest", onReuse);
   }, []);
 

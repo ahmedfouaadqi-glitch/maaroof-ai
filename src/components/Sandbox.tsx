@@ -11,6 +11,8 @@ import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 type Result = {
   score: number; authority: number; local: number; citation: number;
@@ -51,6 +53,8 @@ export function Sandbox() {
       }
     };
     window.addEventListener("geo:reuse-analyze", onReuse);
+    const pending = consumeHandoff("analyze");
+    if (pending) { setText(pending); setResult(null); setError(null); }
     return () => window.removeEventListener("geo:reuse-analyze", onReuse);
   }, []);
 
@@ -292,6 +296,8 @@ export function Sandbox() {
       )}
 
       {showSuggester && <div className="mt-5"><PostSuggester initialSourceText={text} compact /></div>}
+
+      {result && <HandoffMenu source="analyze" getText={() => [result.ai_view, ...(result.recommendations || [])].filter(Boolean).join("\n\n") || text} />}
     </div>
   );
 }
