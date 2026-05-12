@@ -78,7 +78,6 @@ Return ONLY valid JSON in this exact shape:
                   { role: "system", content: sys },
                   { role: "user", content: userMsg },
                 ],
-                response_format: { type: "json_object" },
               }),
             });
 
