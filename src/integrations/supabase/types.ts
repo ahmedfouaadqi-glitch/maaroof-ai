@@ -585,6 +585,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_links: {
+        Row: {
+          created_at: string
+          id: string
+          source_tool: string
+          target_tool: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_tool: string
+          target_tool: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_tool?: string
+          target_tool?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tool_plan_access: {
         Row: {
           created_at: string

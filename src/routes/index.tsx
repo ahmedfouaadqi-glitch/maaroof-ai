@@ -30,6 +30,7 @@ const ENGINES = [
   { name: "Copilot",    grad: "from-indigo-400/30 to-sky-500/10" },
   { name: "Grok",       grad: "from-zinc-300/30 to-zinc-500/10" },
   { name: "Mistral",    grad: "from-fuchsia-400/30 to-rose-500/10" },
+  { name: "DeepSeek",   grad: "from-sky-400/30 to-blue-600/10" },
 ];
 
 function Page() {
@@ -147,14 +148,14 @@ function Page() {
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent">
-              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">7</span>
+              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">8</span>
               AI Engines
             </span>
             <h2 className="mt-4 font-display text-3xl font-bold md:text-4xl">{t("engines_title")}</h2>
             <p className="mt-3 text-muted-foreground">{t("engines_sub")}</p>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
             {ENGINES.map((e) => (
               <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.grad} p-4 text-center transition hover:scale-[1.03] hover:border-primary/40`}>
                 <div className="mx-auto mb-2 grid size-10 place-items-center rounded-xl bg-background/60 backdrop-blur">

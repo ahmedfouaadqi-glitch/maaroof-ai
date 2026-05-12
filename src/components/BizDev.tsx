@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,8 @@ import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 export function BizDev() {
   const { t, lang } = useI18n();
@@ -23,6 +25,15 @@ export function BizDev() {
     channels: "", goals: "", challenges: "", budget_iqd: "", notes: "",
   });
   const upd = (k: keyof typeof form) => (e: any) => setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  useEffect(() => {
+    const apply = (txt: string) => setForm((p) => ({ ...p, notes: (p.notes ? p.notes + "\n\n" : "") + txt.slice(0, 4000) }));
+    const onReuse = (e: Event) => { const t = (e as CustomEvent).detail?.text; if (t) apply(String(t)); };
+    window.addEventListener("geo:reuse-bizdev", onReuse);
+    const pending = consumeHandoff("bizdev");
+    if (pending) apply(pending);
+    return () => window.removeEventListener("geo:reuse-bizdev", onReuse);
+  }, []);
 
   const run = async () => {
     setError(null); setResult(null);
@@ -173,6 +184,8 @@ export function BizDev() {
               <ol className="ms-5 list-decimal space-y-1 text-sm">{result.quick_wins.map((s: string, i: number) => <li key={i}>{s}</li>)}</ol>
             </div>
           )}
+
+          <HandoffMenu source="bizdev" getText={() => `${form.business_name}\n${result.stage_assessment || ""}\n\n${(result.quick_wins || []).join("\n")}`} />
         </div>
       )}
     </div>

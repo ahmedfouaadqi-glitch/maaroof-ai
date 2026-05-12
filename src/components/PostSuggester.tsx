@@ -9,6 +9,8 @@ import { ExportButtons } from "./ExportButtons";
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 type Mode = "text" | "image" | "video";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
@@ -78,6 +80,8 @@ export function PostSuggester({
       }
     };
     window.addEventListener("geo:reuse-suggest", onReuse);
+    const pending = consumeHandoff("suggest");
+    if (pending) { setMode("text"); setDesc(pending); setPost(null); setResult(null); setError(null); }
     return () => window.removeEventListener("geo:reuse-suggest", onReuse);
   }, []);
 
@@ -526,6 +530,10 @@ export function PostSuggester({
         <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
           <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{post}</pre>
         </div>
+      )}
+
+      {(result || post) && (
+        <HandoffMenu source="suggest" getText={() => result?.variants?.map((v) => v.content).join("\n\n---\n\n") || post || ""} />
       )}
     </div>
   );

@@ -206,7 +206,7 @@ Return the JSON business-development plan now. All string fields MUST be in lang
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-2.5-flash-lite",
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
                 { role: "user", content: userPrompt },

@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral"];
+const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 
 export const Route = createFileRoute("/api/brand-boost")({
   server: {
@@ -82,7 +82,7 @@ Return ONLY valid JSON in this exact shape:
               }),
             });
 
-          let ai = await callModel("google/gemini-2.5-flash");
+          let ai = await callModel("google/gemini-2.5-flash-lite");
           if (!ai.ok && ai.status !== 429 && ai.status !== 402) {
             const errText = await ai.text().catch(() => "");
             console.error("[api/brand-boost] gateway error", ai.status, errText);

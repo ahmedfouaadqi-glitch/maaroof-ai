@@ -78,7 +78,7 @@ Rules:
               method: "POST",
               headers: lovableAiHeaders(lovableKey),
               body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
+                model: "google/gemini-2.5-flash-lite",
                 messages: [
                   { role: "system", content: sys },
                   { role: "user", content: `Question: ${limited}\n\nSources:\n${ctx}\n\nReturn the JSON object now.` },

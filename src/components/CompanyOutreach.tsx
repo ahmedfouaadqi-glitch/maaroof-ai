@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2, Loader2, Mail, Copy, Check, Search, Sparkles, ExternalLink } from "lucide-react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -6,6 +6,8 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
+import { HandoffMenu } from "@/components/HandoffMenu";
+import { consumeHandoff } from "@/lib/tool-handoff";
 
 type Mode = "search" | "email" | "brand";
 
@@ -25,6 +27,14 @@ export function CompanyOutreach() {
   const [out, setOut] = useState<any>(null);
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) { const lines = String(txt).split("\n"); setCompany(lines[0].slice(0, 100)); setNotes(lines.slice(1).join("\n").slice(0, 2000)); } };
+    window.addEventListener("geo:reuse-outreach", onReuse);
+    const pending = consumeHandoff("outreach");
+    if (pending) { const lines = pending.split("\n"); setCompany(lines[0].slice(0, 100)); setNotes(lines.slice(1).join("\n").slice(0, 2000)); }
+    return () => window.removeEventListener("geo:reuse-outreach", onReuse);
+  }, []);
 
   const run = async () => {
     if (!company.trim()) return;
@@ -206,6 +216,8 @@ export function CompanyOutreach() {
                 rows: [[t("col_subject"), out.email_subject || ""], [t("col_body"), out.email_body || ""]] as [string, string | number][] }] : []),
             ],
           })} />
+
+          <HandoffMenu source="outreach" getText={() => `${company}\n${out.company_brief || ""}\n\n${out.email_body || ""}`} />
         </div>
       )}
     </div>

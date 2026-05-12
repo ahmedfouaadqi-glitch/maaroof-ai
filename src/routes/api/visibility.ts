@@ -234,7 +234,7 @@ export const Route = createFileRoute("/api/visibility")({
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-2.5-flash-lite",
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}` },
                 { role: "user", content: prompt },
