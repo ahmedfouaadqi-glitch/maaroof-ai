@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
 export const SYSTEM_ANALYZE = `أنت خبير GEO (Generative Engine Optimization) للسوق العراقي.
 بالنظر إلى رابط أو موضوع، قدم:
@@ -102,19 +102,7 @@ export async function runVisibilityAnalysis(params: {
   const prompt = `العلامة التجارية: ${params.brand}\nالكلمات المفتاحية: ${params.keywords || "(غير محددة)"}\nالسوق: العراق`;
   const raw = await callAI(SYSTEM_VISIBILITY, prompt, lang);
 
-  let parsed: any = null;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        parsed = JSON.parse(match[0]);
-      } catch {
-        parsed = null;
-      }
-    }
-  }
+  const parsed: any = extractJsonObject(raw);
 
   const result = {
     visibility_percent: clampPercent(parsed?.visibility_percent),
