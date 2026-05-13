@@ -163,7 +163,7 @@ function UsersTab() {
     <div className="overflow-x-auto rounded-2xl border border-border bg-card/70 backdrop-blur">
       <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
-          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
+          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Devices</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
@@ -218,6 +218,43 @@ function UsersTab() {
                   )}
                 </div>
               </td>
+              <td className="p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <input
+                      key={`md-${r.id}-${r.max_devices ?? 1}`}
+                      type="number" min={1} max={20}
+                      defaultValue={r.max_devices ?? 1}
+                      title="Max devices allowed"
+                      onBlur={async (e) => {
+                        const v = Math.max(1, Number(e.target.value || 1));
+                        await supabase.from("profiles").update({ max_devices: v }).eq("id", r.id);
+                        load();
+                      }}
+                      className="w-12 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground">dev</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      key={`fee-${r.id}-${r.extra_device_fee_iqd ?? 0}`}
+                      type="number" min={0} step={1000}
+                      defaultValue={r.extra_device_fee_iqd ?? 0}
+                      title="Extra fee per additional device (IQD)"
+                      onBlur={async (e) => {
+                        const v = Math.max(0, Number(e.target.value || 0));
+                        await supabase.from("profiles").update({ extra_device_fee_iqd: v }).eq("id", r.id);
+                        load();
+                      }}
+                      className="w-20 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground">IQD</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {Array.isArray(r.device_fingerprints) ? r.device_fingerprints.length : (r.device_fingerprint ? 1 : 0)}/{r.max_devices ?? 1} used
+                  </div>
+                </div>
+              </td>
               <td className="p-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
               <td className="p-3 text-end">
                 <div className="flex flex-wrap justify-end gap-1.5">
@@ -257,10 +294,10 @@ function UsersTab() {
                       }} className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/5 px-3 py-1 text-xs text-accent hover:bg-accent/10">
                         <Lock className="size-3" /> {t("admin_send_reset")}
                       </button>
-                      {r.device_fingerprint && (
+                      {(r.device_fingerprint || (Array.isArray(r.device_fingerprints) && r.device_fingerprints.length > 0)) && (
                         <button onClick={async () => {
                           if (!confirm(t("admin_reset_fp_confirm"))) return;
-                          await supabase.from("profiles").update({ device_fingerprint: null, device_locked_at: null }).eq("id", r.id);
+                          await supabase.from("profiles").update({ device_fingerprint: null, device_locked_at: null, device_fingerprints: [] }).eq("id", r.id);
                           load();
                         }} className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/5 px-3 py-1 text-xs text-warning hover:bg-warning/10">
                           <Smartphone className="size-3" /> {t("admin_reset_fp")}

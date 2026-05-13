@@ -41,14 +41,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p as Profile | null);
     setIsAdmin(!!roles?.some((r: any) => r.role === "admin"));
 
-    // Device fingerprint enforcement
+    // Multi-device fingerprint enforcement (admin-controlled limit)
     try {
       const fp = await computeFingerprint();
-      const stored = (p as any)?.device_fingerprint as string | null | undefined;
-      if (!stored && fp) {
-        await supabase.from("profiles").update({ device_fingerprint: fp, device_locked_at: new Date().toISOString() }).eq("id", uid);
-      } else if (stored && fp && stored !== fp) {
-        alert("This account is locked to another device. Please contact support to reset.");
+      if (!fp) return;
+      const prof: any = p || {};
+      const maxDevices = Math.max(1, Number(prof.max_devices ?? 1));
+      const legacy = prof.device_fingerprint as string | null | undefined;
+      let list: string[] = Array.isArray(prof.device_fingerprints)
+        ? prof.device_fingerprints.filter((x: any) => typeof x === "string")
+        : [];
+      // migrate legacy single fp into the array
+      if (legacy && !list.includes(legacy)) list = [legacy, ...list];
+
+      if (list.includes(fp)) return; // already authorized
+
+      if (list.length < maxDevices) {
+        const next = [...list, fp];
+        await supabase.from("profiles").update({
+          device_fingerprints: next,
+          device_fingerprint: legacy || fp,
+          device_locked_at: prof.device_locked_at || new Date().toISOString(),
+        }).eq("id", uid);
+      } else {
+        alert("This account has reached its device limit. Please contact support to add more devices.");
         await supabase.auth.signOut();
       }
     } catch {}

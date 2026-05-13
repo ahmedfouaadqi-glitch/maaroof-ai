@@ -329,12 +329,15 @@ export type Database = {
           daily_analyses_used: number
           daily_suggestions_used: number
           device_fingerprint: string | null
+          device_fingerprints: Json
           device_locked_at: string | null
           email: string | null
+          extra_device_fee_iqd: number
           full_name: string | null
           geo_scope: Json
           id: string
           is_subscribed: boolean
+          max_devices: number
           monthly_analyses_used: number
           monthly_suggestions_used: number
           quota_overrides: Json
@@ -352,12 +355,15 @@ export type Database = {
           daily_analyses_used?: number
           daily_suggestions_used?: number
           device_fingerprint?: string | null
+          device_fingerprints?: Json
           device_locked_at?: string | null
           email?: string | null
+          extra_device_fee_iqd?: number
           full_name?: string | null
           geo_scope?: Json
           id: string
           is_subscribed?: boolean
+          max_devices?: number
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
           quota_overrides?: Json
@@ -375,12 +381,15 @@ export type Database = {
           daily_analyses_used?: number
           daily_suggestions_used?: number
           device_fingerprint?: string | null
+          device_fingerprints?: Json
           device_locked_at?: string | null
           email?: string | null
+          extra_device_fee_iqd?: number
           full_name?: string | null
           geo_scope?: Json
           id?: string
           is_subscribed?: boolean
+          max_devices?: number
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
           quota_overrides?: Json
