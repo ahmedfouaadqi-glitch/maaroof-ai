@@ -69,6 +69,14 @@ export const Route = createFileRoute("/api/brand-boost")({
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
 
+          // Admin-controlled overrides via app_settings.brand_boost:
+          //   { enabled_platforms?: Platform[], probe_prompt?: string, probe_system?: string }
+          let adminCfg: any = {};
+          try {
+            const { data: setting } = await admin.from("app_settings").select("value").eq("key", "brand_boost").maybeSingle();
+            if (setting?.value && typeof setting.value === "object") adminCfg = setting.value;
+          } catch {}
+
           const market = describeMarket(scope);
           const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish (Sorani)" : "English";
           const langInstr =
