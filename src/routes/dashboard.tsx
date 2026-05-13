@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -18,7 +18,14 @@ import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Settings2, Eye, EyeOff } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X } from "lucide-react";
+
+type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied";
+const TOOL_COST: Record<ToolKey, number> = {
+  analyze: 1, suggest: 1, compare: 1, feasibility: 2, bizdev: 2,
+  research: 2, outreach: 1, boost: 3, applied: 2,
+};
 
 const TOOL_SLOTS = [
   { key: "analyze",     id: "analyze",     labelKey: "dash_tool_analyze_t" },
