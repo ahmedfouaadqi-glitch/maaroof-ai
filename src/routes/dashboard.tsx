@@ -427,3 +427,42 @@ function FlowStep({ n, text }: { n: number; text: string }) {
     </li>
   );
 }
+
+function toolTitle(k: ToolKey, t: (k: string) => string): string {
+  const map: Record<ToolKey, string> = {
+    analyze: t("dash_tool_analyze_t"),
+    suggest: t("dash_tool_suggest_t"),
+    compare: t("compare_title"),
+    feasibility: t("dash_tool_feas_t"),
+    bizdev: t("dash_tool_biz_t"),
+    research: t("research_title"),
+    outreach: t("outreach_title"),
+    boost: t("boost_title"),
+    applied: t("dash_tool_applied_t"),
+  };
+  return map[k] || k;
+}
+
+function ToolGridCard({ icon, title, desc, cost, onOpen }: { icon: React.ReactNode; title: string; desc: string; cost: number; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group block w-full rounded-2xl border border-border bg-card/70 p-5 text-start transition hover:border-primary/40 hover:shadow-[var(--shadow-glow)]"
+    >
+      <div className="flex items-center justify-between">
+        <div className="inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
+          {icon}
+        </div>
+        <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+          {cost} {cost === 1 ? "وحدة" : "وحدات"}
+        </span>
+      </div>
+      <h3 className="mt-3 font-display text-base font-bold">أداة · {title.replace(/^\d+\)\s*/, "").replace(/^أداة\s*/, "")}</h3>
+      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{desc}</p>
+      <div className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary group-hover:gap-2 transition-all">
+        فتح الأداة <ArrowRight className="size-3.5" />
+      </div>
+    </button>
+  );
+}
