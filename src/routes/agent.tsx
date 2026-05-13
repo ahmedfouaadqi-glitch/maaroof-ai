@@ -100,6 +100,7 @@ function AgentPage() {
     if (prof) {
       if (!brand && prof.brand_name) setBrand(prof.brand_name);
       if (!keywords && prof.brand_keywords) setKeywords(prof.brand_keywords);
+      if ((prof as any).geo_scope) setAgentScope((prof as any).geo_scope);
     }
     setPageLoading(false);
   };
