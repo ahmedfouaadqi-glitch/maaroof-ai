@@ -53,6 +53,7 @@ function AgentPage() {
   // Visibility
   const [brand, setBrand] = useState("");
   const [keywords, setKeywords] = useState("");
+  const [agentScope, setAgentScope] = useState<any>(null);
   const [visBusy, setVisBusy] = useState(false);
   const [visMsg, setVisMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // Channels
