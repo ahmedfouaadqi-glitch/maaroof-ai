@@ -186,7 +186,7 @@ function AgentPage() {
       const response = await apiFetch("/api/visibility", {
         method: "POST",
         headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang }),
+        body: JSON.stringify({ brand, keywords, lang: outLang, scope: agentScope || undefined }),
       });
 
       const res: any = await response.json().catch(() => ({}));
