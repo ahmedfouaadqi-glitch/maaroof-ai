@@ -1,9 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
+import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
+const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"] as const;
+type Platform = typeof PLATFORMS[number];
+
+// Map each user-facing AI engine to the closest model available on the Lovable AI Gateway.
+// `proxy: true` means we cannot probe the engine directly; we use a similar-family model and
+// disclose it transparently to the user.
+const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
+  chatgpt:    { model: "openai/gpt-5-mini",            proxy: false },
+  gemini:     { model: "google/gemini-2.5-flash",      proxy: false },
+  copilot:    { model: "openai/gpt-5-nano",            proxy: true  }, // Bing/Copilot ≈ OpenAI family
+  perplexity: { model: "google/gemini-2.5-flash",      proxy: true  }, // grounded via real Firecrawl evidence
+  claude:     { model: "openai/gpt-5-mini",            proxy: true  },
+  grok:       { model: "openai/gpt-5-nano",            proxy: true  },
+  mistral:    { model: "google/gemini-2.5-flash-lite", proxy: true  },
+  deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
+};
+
+async function callGateway(apiKey: string, model: string, messages: any[]) {
+  const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    headers: lovableAiHeaders(apiKey),
+    body: JSON.stringify({ model, messages }),
+  });
+  return r;
+}
 
 export const Route = createFileRoute("/api/brand-boost")({
   server: {
@@ -20,14 +45,11 @@ export const Route = createFileRoute("/api/brand-boost")({
 
           // Mandatory auth
           const auth = request.headers.get("authorization");
-          if (!auth?.startsWith("Bearer ")) {
-            return Response.json({ error: "auth_required" }, { status: 401 });
-          }
+          if (!auth?.startsWith("Bearer ")) return Response.json({ error: "auth_required" }, { status: 401 });
           const { data: userData, error: userErr } = await admin.auth.getUser(auth.slice(7));
           const userId = userData?.user?.id;
           if (userErr || !userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
-          // Quota enforcement (uses monthly_analyses budget; brand_boost is premium add-on)
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });
           let allowed = false;
@@ -38,81 +60,140 @@ export const Route = createFileRoute("/api/brand-boost")({
               allowed = true;
             }
           }
-          // Allow override quota even without subscription
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
           if (!allowed && overrideLimit <= ((prof as any).monthly_analyses_used || 0)) {
             return Response.json({ error: "subscription_required" }, { status: 402 });
           }
 
-          const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = await request.json();
+          const body = await request.json();
+          const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
 
           const market = describeMarket(scope);
+          const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish (Sorani)" : "English";
           const langInstr =
-            lang === "ar"
-              ? "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى فقط."
-              : lang === "ku"
-              ? "هەموو بەهای دەقی ناو JSON بە کوردی سۆرانی بنووسە."
-              : "Write all string values inside the JSON in clear English only.";
+            lang === "ar" ? "اكتب جميع القيم النصية في JSON بالعربية الفصحى فقط."
+            : lang === "ku" ? "هەموو دەقەکانی ناو JSON بە کوردی سۆرانی بنووسە."
+            : "Write all string values inside the JSON in clear English only.";
 
-          const sys = `${FACTUAL_SAFETY_PROMPT}
+          // ── Step 1: gather real public evidence (the "feeding") via Firecrawl
+          let evidence: { title: string; url: string; snippet: string }[] = [];
+          try {
+            const q = `${brand_name} ${brand_keywords || ""} ${market.region}`.trim();
+            const sr: any = await fcSearch(q, { limit: 6, lang });
+            const results = sr?.data?.web || sr?.web || sr?.data || [];
+            evidence = (Array.isArray(results) ? results : []).slice(0, 6).map((r: any) => ({
+              title: String(r?.title || r?.url || "").slice(0, 160),
+              url: String(r?.url || ""),
+              snippet: String(r?.description || r?.markdown || "").slice(0, 400),
+            })).filter((e: any) => e.url);
+          } catch (e) {
+            console.warn("[brand-boost] firecrawl failed", e);
+          }
+          const evidenceBlock = evidence.length
+            ? evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.snippet}`).join("\n\n")
+            : "(no public evidence retrieved)";
 
-You are a brand visibility strategist for ${market.market}.
+          // ── Step 2: probe each selected platform with its mapped model
+          const targets = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
+          const probeSys = `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
+If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`;
+          const probeUser = `What do you know about the brand "${brand_name}"${brand_keywords ? ` (topics: ${brand_keywords})` : ""} in the context of ${market.region}? Mention concrete facts only.`;
+
+          const probes = await Promise.all(
+            targets.map(async (p) => {
+              const cfg = PLATFORM_MODEL[p];
+              try {
+                const r = await callGateway(lovableKey, cfg.model, [
+                  { role: "system", content: probeSys },
+                  { role: "user", content: probeUser },
+                ]);
+                if (r.status === 429) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "rate_limited" };
+                if (r.status === 402) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "credits_exhausted" };
+                if (!r.ok) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: `http_${r.status}` };
+                const j: any = await r.json();
+                const ans = String(j?.choices?.[0]?.message?.content || "").trim();
+                return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: ans };
+              } catch (e: any) {
+                return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: e?.message || "probe_failed" };
+              }
+            })
+          );
+
+          // ── Step 3: per-platform improvement plan grounded on probe + evidence
+          const planSys = `${FACTUAL_SAFETY_PROMPT}
+You are a senior GEO/AI-visibility strategist for ${market.market}.
 LOCALIZATION CONTEXT: ${market.contextHint}
 ${langInstr}
-For each AI platform listed, return an action plan to improve brand citation likelihood specifically for ${market.audience}. Do not claim current signals unless the user supplied evidence; otherwise write "evidence missing" and recommend how to create verifiable signals.
+You receive: (a) the brand info, (b) what each AI engine actually said about it just now, (c) real public evidence retrieved from the open web.
+For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2] when used; say "no signal" if the engine had nothing), 3-6 concrete recommended actions to increase the chance the engine will cite the brand, and 2-4 publishable content pieces. Be specific to the platform's known retrieval style (e.g. Perplexity = web-grounded, ChatGPT = training+browse, Copilot = Bing index, Gemini = Google index, Claude = curated training, Grok = X/social, Mistral/DeepSeek = open-web training). Never invent facts.
 Return ONLY valid JSON in this exact shape:
 {
-  "summary": "1-2 sentence overview in REPORT language",
+  "summary": "1-2 sentence overall read in REPORT language",
   "plan": [
-    { "platform": "<platform key>", "current_signal": "short status", "recommended_actions": ["action 1","action 2"], "content_pieces": ["idea 1","idea 2"] }
+    { "platform": "<key>", "current_signal": "...", "feeding_basis": "what the engine appears to be feeding on (cite [n] or 'no signal')", "recommended_actions": ["..."], "feed_strategy": "1-2 sentences on HOW to feed this engine specifically", "content_pieces": ["..."] }
   ]
 }`;
 
-          const userMsg = `Brand: ${brand_name}\nKeywords: ${brand_keywords || "-"}\nTarget market: ${market.region}\nPlatforms: ${platforms.join(", ")}`;
+          const probesBlock = probes.map((p) =>
+            `### ${p.platform} (model used: ${p.model_used}${p.is_proxy ? " — proxy" : ""})\n${p.error ? `[error: ${p.error}]` : (p.current_answer || "(empty)")}`
+          ).join("\n\n");
 
-          const callModel = (model: string) =>
-            fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-              method: "POST",
-              headers: lovableAiHeaders(lovableKey),
-              body: JSON.stringify({
-                model,
-                messages: [
-                  { role: "system", content: sys },
-                  { role: "user", content: userMsg },
-                ],
-              }),
-            });
+          const planUser = `Brand: ${brand_name}
+Keywords: ${brand_keywords || "-"}
+Target market: ${market.region}
+Platforms: ${targets.join(", ")}
 
-          let ai = await callModel("google/gemini-2.5-flash-lite");
-          if (!ai.ok && ai.status !== 429 && ai.status !== 402) {
-            const errText = await ai.text().catch(() => "");
-            console.error("[api/brand-boost] gateway error", ai.status, errText);
-            ai = await callModel("google/gemini-2.5-flash-lite");
-          }
+WHAT EACH ENGINE ACTUALLY SAID JUST NOW:
+${probesBlock}
 
-          if (ai.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
-          if (ai.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
-          if (!ai.ok) {
-            const errText = await ai.text().catch(() => "");
-            console.error("[api/brand-boost] gateway error (final)", ai.status, errText);
+REAL PUBLIC EVIDENCE (numbered):
+${evidenceBlock}`;
+
+          let planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
+            { role: "system", content: planSys },
+            { role: "user", content: planUser },
+          ]);
+          if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
+          if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+          if (!planRes.ok) {
+            console.error("[brand-boost] plan failed", planRes.status, await planRes.text().catch(() => ""));
             return Response.json({ error: "ai_error" }, { status: 500 });
           }
+          const planJ: any = await planRes.json();
+          const planParsed: any = extractJsonObject(String(planJ?.choices?.[0]?.message?.content || "{}")) || {};
+          const planByPlat = new Map<string, any>();
+          for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
 
-          const j: any = await ai.json();
-          const content = String(j?.choices?.[0]?.message?.content || "{}");
-          let parsed: any = extractJsonObject(content) || {};
-          if (!parsed || typeof parsed !== "object") parsed = {};
-          if (!Array.isArray(parsed.plan)) parsed.plan = [];
+          // ── Merge probe + plan per platform
+          const merged = probes.map((p) => {
+            const pl = planByPlat.get(p.platform) || {};
+            return {
+              platform: p.platform,
+              model_used: p.model_used,
+              is_proxy: p.is_proxy,
+              current_answer: p.current_answer,
+              probe_error: (p as any).error || null,
+              current_signal: pl.current_signal || (p.current_answer ? "answered" : "no signal"),
+              feeding_basis: pl.feeding_basis || "no signal",
+              recommended_actions: Array.isArray(pl.recommended_actions) ? pl.recommended_actions : [],
+              feed_strategy: pl.feed_strategy || "",
+              content_pieces: Array.isArray(pl.content_pieces) ? pl.content_pieces : [],
+            };
+          });
 
           // Track usage
           const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
           await admin.from("profiles").update({
             monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + 1,
           }).eq("id", userId);
-          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name } });
+          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name, platforms: targets } });
 
-          return Response.json(parsed);
+          return Response.json({
+            summary: planParsed.summary || "",
+            evidence,
+            plan: merged,
+          });
         } catch (e) {
           console.error("[api/brand-boost] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
