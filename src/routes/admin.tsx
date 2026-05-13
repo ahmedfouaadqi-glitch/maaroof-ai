@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost";
+type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content";
 
 function AdminPage() {
   const { t } = useI18n();
@@ -50,12 +50,12 @@ function AdminPage() {
         <h1 className="mb-6 font-display text-3xl font-bold text-gradient">{t("admin_title")}</h1>
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users","requests","plans","agent","access","boost"] as Tab[]).map((k) => (
+          {(["overview","users","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : t(`admin_${k}` as any)}
+              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
@@ -67,6 +67,7 @@ function AdminPage() {
         {tab === "agent" && <AgentTab />}
         {tab === "access" && <AccessTab />}
         {tab === "boost" && <BoostTab />}
+        {tab === "content" && <ContentTab />}
       </div>
     </div>
   );
@@ -1018,6 +1019,144 @@ function BoostTab() {
           className="mt-4 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">
           {busy ? "..." : "حفظ"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ============= Site Content Editor =============
+function ContentTab() {
+  const [editLang, setEditLang] = useState<"ar" | "en" | "ku">("ar");
+  const [overrides, setOverrides] = useState<Record<string, Record<string, string>>>({});
+  const [filter, setFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string>("");
+  const [SITE_DICTS, setDicts] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const mod = await import("@/lib/i18n");
+      setDicts((mod as any).SITE_DICTS);
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "site_text").maybeSingle();
+      if (data?.value && typeof data.value === "object") setOverrides(data.value as any);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading || !SITE_DICTS) return <div className="p-6 text-muted-foreground">Loading…</div>;
+
+  const baseDict = SITE_DICTS[editLang] || SITE_DICTS.en;
+  const allKeys = Object.keys(SITE_DICTS.en);
+  const f = filter.trim().toLowerCase();
+  const visible = allKeys.filter((k) => {
+    if (!f) return true;
+    return k.toLowerCase().includes(f)
+      || String(baseDict[k] || "").toLowerCase().includes(f)
+      || String(overrides[editLang]?.[k] || "").toLowerCase().includes(f);
+  });
+
+  const setVal = (k: string, v: string) => {
+    setOverrides((prev) => {
+      const next = { ...prev, [editLang]: { ...(prev[editLang] || {}) } };
+      if (v.trim() === "" || v === baseDict[k]) {
+        delete next[editLang][k];
+        if (Object.keys(next[editLang]).length === 0) delete next[editLang];
+      } else {
+        next[editLang][k] = v;
+      }
+      return next;
+    });
+  };
+
+  const save = async () => {
+    setSaving(true); setMsg("");
+    const { error } = await supabase.from("app_settings").upsert({
+      key: "site_text",
+      value: overrides as any,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "key" });
+    if (error) setMsg("✗ " + error.message);
+    else {
+      setMsg("✓ Saved · refresh page to see changes");
+      try { localStorage.setItem("geo-site-text", JSON.stringify(overrides)); } catch {}
+    }
+    setSaving(false);
+  };
+
+  const overrideCount = Object.values(overrides).reduce((a, b) => a + Object.keys(b || {}).length, 0);
+
+  return (
+    <div className="rounded-2xl border border-border bg-card/70 p-4 backdrop-blur">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <h2 className="font-display text-xl font-bold">Site Content Editor</h2>
+        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">{overrideCount} custom override(s)</span>
+        <div className="ms-auto flex items-center gap-2">
+          <select value={editLang} onChange={(e) => setEditLang(e.target.value as any)}
+            className="rounded-md border border-border bg-background/60 px-3 py-1.5 text-sm">
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+            <option value="ku">Kurdish</option>
+          </select>
+          <button onClick={save} disabled={saving}
+            className="rounded-md bg-gradient-to-r from-primary to-accent px-4 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">
+            {saving ? "Saving…" : "Save All Changes"}
+          </button>
+        </div>
+      </div>
+
+      <input
+        type="search"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter by key or text…"
+        className="mb-4 w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm"
+      />
+
+      {msg && <div className="mb-3 rounded-md border border-border bg-background/40 p-2 text-xs">{msg}</div>}
+
+      <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-[11px] text-warning mb-3">
+        ⚠ Editing {visible.length} of {allKeys.length} keys. Empty field or default value clears the override. Changes affect ALL visitors.
+      </div>
+
+      <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-2">
+        {visible.map((k) => {
+          const def = String(baseDict[k] ?? "");
+          const ov = overrides[editLang]?.[k];
+          const val = ov ?? def;
+          const isMultiline = def.length > 80;
+          return (
+            <div key={k} className={`rounded-md border p-2 ${ov ? "border-primary/40 bg-primary/5" : "border-border bg-background/30"}`}>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <code className="text-[11px] font-mono text-accent">{k}</code>
+                {ov && <span className="text-[10px] text-primary">customized</span>}
+              </div>
+              {isMultiline ? (
+                <textarea
+                  value={val}
+                  onChange={(e) => setVal(k, e.target.value)}
+                  rows={Math.min(6, Math.ceil(val.length / 80))}
+                  className="w-full rounded border border-border bg-background/60 px-2 py-1 text-sm"
+                  dir={editLang === "en" ? "ltr" : "rtl"}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={val}
+                  onChange={(e) => setVal(k, e.target.value)}
+                  className="w-full rounded border border-border bg-background/60 px-2 py-1 text-sm"
+                  dir={editLang === "en" ? "ltr" : "rtl"}
+                />
+              )}
+              {ov && (
+                <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>Default: {def.slice(0, 100)}{def.length > 100 ? "…" : ""}</span>
+                  <button onClick={() => setVal(k, "")} className="text-destructive hover:underline">Reset</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
