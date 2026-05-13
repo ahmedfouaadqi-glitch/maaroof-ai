@@ -3,7 +3,16 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Policy · GEO-Iraq" }] }),
+  head: () => ({
+    meta: [
+      { title: "Privacy Policy · GEO-Iraq" },
+      { name: "description", content: "How GEO-Iraq collects, uses and protects your data across the platform and AI Agent." },
+      { property: "og:title", content: "Privacy Policy · GEO-Iraq" },
+      { property: "og:description", content: "How GEO-Iraq handles your data." },
+      { property: "og:url", content: "https://geoiraq.com/privacy" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/privacy" }],
+  }),
   component: () => (
     <I18nProvider>
       <Page />
