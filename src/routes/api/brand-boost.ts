@@ -69,6 +69,14 @@ export const Route = createFileRoute("/api/brand-boost")({
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
 
+          // Admin-controlled overrides via app_settings.brand_boost:
+          //   { enabled_platforms?: Platform[], probe_prompt?: string, probe_system?: string }
+          let adminCfg: any = {};
+          try {
+            const { data: setting } = await admin.from("app_settings").select("value").eq("key", "brand_boost").maybeSingle();
+            if (setting?.value && typeof setting.value === "object") adminCfg = setting.value;
+          } catch {}
+
           const market = describeMarket(scope);
           const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish (Sorani)" : "English";
           const langInstr =
@@ -95,10 +103,19 @@ export const Route = createFileRoute("/api/brand-boost")({
             : "(no public evidence retrieved)";
 
           // ── Step 2: probe each selected platform with its mapped model
-          const targets = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
-          const probeSys = `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
-If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`;
-          const probeUser = `What do you know about the brand "${brand_name}"${brand_keywords ? ` (topics: ${brand_keywords})` : ""} in the context of ${market.region}? Mention concrete facts only.`;
+          // Allow admin to restrict the platform set globally
+          const adminAllowed: Platform[] | null = Array.isArray(adminCfg.enabled_platforms) && adminCfg.enabled_platforms.length
+            ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
+            : null;
+          const requested = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
+          const targets = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
+          const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
+If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
+          const probeUserTpl = String(adminCfg.probe_prompt || `What do you know about the brand "{brand}"{keywords} in the context of {market}? Mention concrete facts only.`);
+          const probeUser = probeUserTpl
+            .replace("{brand}", brand_name)
+            .replace("{keywords}", brand_keywords ? ` (topics: ${brand_keywords})` : "")
+            .replace("{market}", market.region);
 
           const probes = await Promise.all(
             targets.map(async (p) => {
