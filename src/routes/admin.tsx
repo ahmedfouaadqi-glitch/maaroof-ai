@@ -890,3 +890,98 @@ function AccessTab() {
     </div>
   );
 }
+
+const ALL_PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
+
+function BoostTab() {
+  const [enabled, setEnabled] = useState<string[]>([...ALL_PLATFORMS]);
+  const [probePrompt, setProbePrompt] = useState<string>("");
+  const [probeSystem, setProbeSystem] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "brand_boost").maybeSingle();
+      const v: any = data?.value || {};
+      if (Array.isArray(v.enabled_platforms)) setEnabled(v.enabled_platforms);
+      if (typeof v.probe_prompt === "string") setProbePrompt(v.probe_prompt);
+      if (typeof v.probe_system === "string") setProbeSystem(v.probe_system);
+    })();
+  }, []);
+
+  const toggle = (p: string) =>
+    setEnabled((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+
+  const save = async () => {
+    setBusy(true); setMsg("");
+    const value: any = { enabled_platforms: enabled };
+    if (probePrompt.trim()) value.probe_prompt = probePrompt.trim();
+    if (probeSystem.trim()) value.probe_system = probeSystem.trim();
+    const { data: existing } = await supabase.from("app_settings").select("key").eq("key", "brand_boost").maybeSingle();
+    if (existing) {
+      await supabase.from("app_settings").update({ value, updated_at: new Date().toISOString() }).eq("key", "brand_boost");
+    } else {
+      await supabase.from("app_settings").insert({ key: "brand_boost", value });
+    }
+    setBusy(false);
+    setMsg("✓ تم الحفظ");
+    setTimeout(() => setMsg(""), 1500);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border bg-card/70 p-5">
+        <div className="flex items-center gap-3">
+          <Bot className="size-5 text-primary" />
+          <h2 className="font-display text-lg font-semibold">إعدادات أداة تعزيز العلامة</h2>
+          {msg && <span className="ms-auto text-xs text-success">{msg}</span>}
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          تحكم بالمنصات المتاحة وصياغة الفحص (probe) المُرسل لكل منصة ذكاء.
+        </p>
+
+        <div className="mt-4">
+          <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">المنصات المُفعّلة</h3>
+          <div className="flex flex-wrap gap-2">
+            {ALL_PLATFORMS.map((p) => {
+              const on = enabled.includes(p);
+              return (
+                <button key={p} onClick={() => toggle(p)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${
+                    on ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"
+                  }`}>
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">قالب probe (سؤال للمنصة) — متغيرات: {"{brand}"} {"{keywords}"} {"{market}"}</label>
+            <textarea
+              value={probePrompt} onChange={(e) => setProbePrompt(e.target.value)}
+              rows={3}
+              placeholder='What do you know about "{brand}"{keywords} in the context of {market}?'
+              className="mt-1 w-full rounded-lg border border-border bg-background/60 p-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">رسالة النظام للـ probe (اختياري)</label>
+            <textarea
+              value={probeSystem} onChange={(e) => setProbeSystem(e.target.value)}
+              rows={3}
+              placeholder="(يُترك فارغاً لاستخدام الافتراضي)"
+              className="mt-1 w-full rounded-lg border border-border bg-background/60 p-2 text-sm" />
+          </div>
+        </div>
+
+        <button onClick={save} disabled={busy}
+          className="mt-4 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">
+          {busy ? "..." : "حفظ"}
+        </button>
+      </div>
+    </div>
+  );
+}
