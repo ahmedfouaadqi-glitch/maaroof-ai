@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost";
+type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content";
 
 function AdminPage() {
   const { t } = useI18n();
