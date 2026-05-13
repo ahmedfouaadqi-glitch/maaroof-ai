@@ -1807,6 +1807,8 @@ export const ADDON_KEY_BY_NAME: Record<string, string> = {
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: keyof typeof en) => string; dir: "ltr" | "rtl" };
 const I18nCtx = createContext<Ctx | null>(null);
 
+type Overrides = Partial<Record<Lang, Record<string, string>>>;
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     if (typeof window !== "undefined") {
@@ -1814,6 +1816,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       if (saved === "en" || saved === "ar" || saved === "ku") return saved;
     }
     return "ar";
+  });
+  const [overrides, setOverrides] = useState<Overrides>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("geo-site-text") || "{}"); } catch { return {}; }
   });
   const setLang = (l: Lang) => {
     setLangState(l);
@@ -1828,7 +1834,28 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [lang, dir]);
 
-  const t = (k: keyof typeof en) => dicts[lang][k] ?? en[k];
+  // Load admin text overrides from app_settings (cheap public select; no auth required for read)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase.from("app_settings").select("value").eq("key", "site_text").maybeSingle();
+        const v = (data as any)?.value;
+        if (!cancelled && v && typeof v === "object") {
+          setOverrides(v as Overrides);
+          if (typeof window !== "undefined") localStorage.setItem("geo-site-text", JSON.stringify(v));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const t = (k: keyof typeof en) => {
+    const ov = overrides[lang]?.[k as string];
+    if (ov) return ov;
+    return dicts[lang][k] ?? en[k];
+  };
   return <I18nCtx.Provider value={{ lang, setLang, t, dir }}>{children}</I18nCtx.Provider>;
 }
 
