@@ -218,6 +218,43 @@ function UsersTab() {
                   )}
                 </div>
               </td>
+              <td className="p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <input
+                      key={`md-${r.id}-${r.max_devices ?? 1}`}
+                      type="number" min={1} max={20}
+                      defaultValue={r.max_devices ?? 1}
+                      title="Max devices allowed"
+                      onBlur={async (e) => {
+                        const v = Math.max(1, Number(e.target.value || 1));
+                        await supabase.from("profiles").update({ max_devices: v }).eq("id", r.id);
+                        load();
+                      }}
+                      className="w-12 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground">dev</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      key={`fee-${r.id}-${r.extra_device_fee_iqd ?? 0}`}
+                      type="number" min={0} step={1000}
+                      defaultValue={r.extra_device_fee_iqd ?? 0}
+                      title="Extra fee per additional device (IQD)"
+                      onBlur={async (e) => {
+                        const v = Math.max(0, Number(e.target.value || 0));
+                        await supabase.from("profiles").update({ extra_device_fee_iqd: v }).eq("id", r.id);
+                        load();
+                      }}
+                      className="w-20 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground">IQD</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {Array.isArray(r.device_fingerprints) ? r.device_fingerprints.length : (r.device_fingerprint ? 1 : 0)}/{r.max_devices ?? 1} used
+                  </div>
+                </div>
+              </td>
               <td className="p-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
               <td className="p-3 text-end">
                 <div className="flex flex-wrap justify-end gap-1.5">
