@@ -5,6 +5,16 @@ import { BookOpen, Wrench, Bot, Globe2, User } from "lucide-react";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 
 export const Route = createFileRoute("/guide")({
+  head: () => ({
+    meta: [
+      { title: "Guide · GEO-Iraq" },
+      { name: "description", content: "How to use every GEO-Iraq tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more." },
+      { property: "og:title", content: "Guide · GEO-Iraq" },
+      { property: "og:description", content: "How to use every GEO-Iraq tool and the AI Agent." },
+      { property: "og:url", content: "https://geoiraq.com/guide" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/guide" }],
+  }),
   component: () => <I18nProvider><GuidePage /></I18nProvider>,
 });
 
