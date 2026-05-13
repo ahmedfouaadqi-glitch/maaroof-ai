@@ -163,7 +163,7 @@ function UsersTab() {
     <div className="overflow-x-auto rounded-2xl border border-border bg-card/70 backdrop-blur">
       <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
-          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
+          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Devices</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
