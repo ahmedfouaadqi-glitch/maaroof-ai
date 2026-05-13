@@ -8,6 +8,16 @@ import { whatsappLink } from "@/lib/whatsapp";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/pricing")({
+  head: () => ({
+    meta: [
+      { title: "Pricing · GEO-Iraq" },
+      { name: "description", content: "Plans and add-ons for GEO-Iraq — analyze, generate and publish AI-cited content. Starter, Pro, Business and Agent tiers." },
+      { property: "og:title", content: "Pricing · GEO-Iraq" },
+      { property: "og:description", content: "Plans and add-ons for GEO-Iraq — analyze, generate and publish AI-cited content." },
+      { property: "og:url", content: "https://geoiraq.com/pricing" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/pricing" }],
+  }),
   component: () => (
     <I18nProvider>
       <AuthProvider>

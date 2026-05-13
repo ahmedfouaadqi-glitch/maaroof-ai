@@ -3,7 +3,16 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({ meta: [{ title: "Terms of Use · GEO-Iraq" }] }),
+  head: () => ({
+    meta: [
+      { title: "Terms of Use · GEO-Iraq" },
+      { name: "description", content: "Terms governing use of GEO-Iraq tools, AI Agent and subscriptions." },
+      { property: "og:title", content: "Terms of Use · GEO-Iraq" },
+      { property: "og:description", content: "Terms of use for GEO-Iraq." },
+      { property: "og:url", content: "https://geoiraq.com/terms" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/terms" }],
+  }),
   component: () => (
     <I18nProvider>
       <Page />

@@ -14,6 +14,29 @@ import {
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "GEO-Iraq · Become the Source AI Trusts" },
+      { name: "description", content: "Score, optimize and publish content so ChatGPT, Gemini and Claude cite your brand. Built for Iraq, in EN, AR, KU." },
+      { property: "og:title", content: "GEO-Iraq · Become the Source AI Trusts" },
+      { property: "og:description", content: "Score, optimize and publish content so ChatGPT, Gemini and Claude cite your brand. Built for Iraq, in EN, AR, KU." },
+      { property: "og:url", content: "https://geoiraq.com/" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/" }],
+    scripts: [{
+      type: "application/ld+json",
+      children: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: "GEO-Iraq",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        url: "https://geoiraq.com/",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        description: "Generative Engine Optimization toolkit for Iraq — analyze, score, generate and publish content optimized for AI search engines.",
+      }),
+    }],
+  }),
   component: () => (
     <I18nProvider>
       <AuthProvider>
