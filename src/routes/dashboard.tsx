@@ -12,6 +12,7 @@ import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
 import { AppliedRanking } from "@/components/AppliedRanking";
+import { BrandPulseGauges } from "@/components/BrandPulseGauges";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -107,6 +108,9 @@ function DashboardPage() {
             sub={profile?.is_subscribed ? `${t("dashboard_expires")}: ${expires}` : ""}
           />
         </div>
+
+        {/* Real-time gauges */}
+        <div className="mt-6"><BrandPulseGauges /></div>
 
         {/* Tools intro */}
         <div className="mt-10">

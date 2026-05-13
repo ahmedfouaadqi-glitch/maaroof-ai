@@ -175,14 +175,55 @@ export function BrandBoostAgent() {
           </div>
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
-            <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs">
-              <strong className="text-foreground">{p.platform}</strong>
-              <div className="mt-1 text-muted-foreground">{p.current_signal}</div>
-              <ul className="mt-2 list-inside list-disc">
-                {(p.recommended_actions || []).map((a: string, j: number) => <li key={j}>{a}</li>)}
-              </ul>
+            <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <strong className="text-foreground uppercase">{p.platform}</strong>
+                <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
+                {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
+                <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
+              </div>
+              {p.current_answer ? (
+                <div className="rounded-md border border-border bg-card/50 p-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "ما قاله المحرك الآن" : lang === "ku" ? "وەڵامی ئێستا" : "What the engine said just now"}</div>
+                  <div className="mt-1 whitespace-pre-wrap text-foreground/90">{p.current_answer}</div>
+                </div>
+              ) : (
+                <div className="text-muted-foreground italic">{p.probe_error ? `(${p.probe_error})` : (lang === "ar" ? "(لا توجد إشارة)" : "(no signal)")}</div>
+              )}
+              {p.feeding_basis && (
+                <div className="text-muted-foreground"><span className="font-semibold text-foreground/80">{lang === "ar" ? "كيف تمت تغذيته:" : lang === "ku" ? "چۆن خوێندراوەتەوە:" : "How it was fed:"}</span> {p.feeding_basis}</div>
+              )}
+              {p.feed_strategy && (
+                <div><span className="font-semibold text-foreground/80">{lang === "ar" ? "استراتيجية التغذية:" : lang === "ku" ? "ستراتیژی خواردن:" : "Feed strategy:"}</span> {p.feed_strategy}</div>
+              )}
+              {(p.recommended_actions || []).length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "إجراءات التحسين" : lang === "ku" ? "کردارەکانی باشترکردن" : "Improvement actions"}</div>
+                  <ul className="mt-1 list-inside list-disc">
+                    {(p.recommended_actions || []).map((a: string, j: number) => <li key={j}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+              {(p.content_pieces || []).length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "محتوى مقترح" : lang === "ku" ? "ناوەڕۆکی پێشنیار" : "Content pieces"}</div>
+                  <ul className="mt-1 list-inside list-disc">
+                    {(p.content_pieces || []).map((c: string, j: number) => <li key={j}>{c}</li>)}
+                  </ul>
+                </div>
+              )}
             </div>
           ))}
+          {Array.isArray(report.evidence) && report.evidence.length > 0 && (
+            <div className="rounded-lg border border-border bg-background/40 p-3 text-xs">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "الأدلة العامة المُستخدَمة في التغذية" : lang === "ku" ? "بەڵگە گشتییەکانی خواردن" : "Public evidence used as feeding"}</div>
+              <ol className="mt-1 list-inside list-decimal space-y-1">
+                {report.evidence.map((e: any, j: number) => (
+                  <li key={j}><a href={e.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{e.title || e.url}</a></li>
+                ))}
+              </ol>
+            </div>
+          )}
           <HandoffMenu source="boost" getText={() => `${brand}\n${report.summary || ""}\n\n${(report.plan || []).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).join(", ")}`).join("\n")}`} />
         </div>
       )}
