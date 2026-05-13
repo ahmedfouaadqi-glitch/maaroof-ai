@@ -117,49 +117,42 @@ function DashboardPage() {
         {/* Real-time gauges */}
         <div className="mt-6"><BrandPulseGauges /></div>
 
-        {/* Tools intro */}
+        {/* Units balance — live */}
+        <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap className="size-5 text-primary" />
+              <span className="font-display text-base font-bold">{t("units_title") || "رصيد الوحدات"}</span>
+            </div>
+            <div className="text-sm">
+              <span className="font-mono text-lg font-bold text-primary">{unitsLeft}</span>
+              <span className="text-muted-foreground"> / {unitsLimit} {t("units_left") || "متبقّية"}</span>
+            </div>
+          </div>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-background/60">
+            <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all" style={{ width: `${unitsPct}%` }} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("units_hint") || "كل أداة تستهلك عدداً من الوحدات حسب نوعها — الخصم لحظي."}
+          </p>
+        </div>
+
+        {/* Tools — card grid; click opens modal */}
         <div className="mt-10">
           <h2 className="font-display text-2xl font-bold">{t("dash_tools_title")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{t("dash_tools_intro")}</p>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <ToolCard
-              icon={<Activity className="size-5" />}
-              title={t("dash_tool_analyze_t")}
-              desc={t("dash_tool_analyze_d")}
-              cta={t("dash_open_analyze")}
-              href="#analyze"
-            />
-            <ToolCard
-              icon={<Sparkles className="size-5" />}
-              title={t("dash_tool_suggest_t")}
-              desc={t("dash_tool_suggest_d")}
-              cta={t("dash_open_suggest")}
-              href="#suggest"
-            />
-            <ToolCard
-              icon={<Bot className="size-5" />}
-              title={t("dash_tool_agent_t")}
-              desc={t("dash_tool_agent_d")}
-              cta={t("dash_open_agent")}
-              to="/agent"
-              badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")}
-              badgeOk={!!agentSub}
-            />
-            <ToolCard
-              icon={<ClipboardList className="size-5" />}
-              title={t("dash_tool_feas_t")}
-              desc={t("dash_tool_feas_d")}
-              cta={t("dash_open_feas")}
-              href="#feasibility"
-            />
-            <ToolCard
-              icon={<TrendingUp className="size-5" />}
-              title={t("dash_tool_biz_t")}
-              desc={t("dash_tool_biz_d")}
-              cta={t("dash_open_biz")}
-              href="#bizdev"
-            />
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} cost={TOOL_COST.analyze} onOpen={() => setOpenTool("analyze")} />
+            <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} cost={TOOL_COST.suggest} onOpen={() => setOpenTool("suggest")} />
+            <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} cost={TOOL_COST.compare} onOpen={() => setOpenTool("compare")} />
+            <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} cost={TOOL_COST.feasibility} onOpen={() => setOpenTool("feasibility")} />
+            <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} cost={TOOL_COST.bizdev} onOpen={() => setOpenTool("bizdev")} />
+            <ToolGridCard icon={<Search className="size-5" />} title={t("research_title")} desc={t("research_desc") || ""} cost={TOOL_COST.research} onOpen={() => setOpenTool("research")} />
+            <ToolGridCard icon={<Mail className="size-5" />} title={t("outreach_title")} desc={t("outreach_desc") || ""} cost={TOOL_COST.outreach} onOpen={() => setOpenTool("outreach")} />
+            <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} cost={TOOL_COST.boost} onOpen={() => setOpenTool("boost")} />
+            <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} cost={TOOL_COST.applied} onOpen={() => setOpenTool("applied")} />
+            <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />
           </div>
         </div>
 
@@ -176,57 +169,37 @@ function DashboardPage() {
           <p className="mt-4 text-xs text-muted-foreground">{t("dash_flow_solo")}</p>
         </div>
 
-        {/* Request subscription panel */}
         <div className="mt-10 rounded-2xl border border-primary/40 bg-card/70 p-6 shadow-[var(--shadow-glow)]">
           <h3 className="font-display text-lg font-bold text-gradient">{t("dash_request_title")}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{t("dash_request_desc")}</p>
-          <Link
-            to="/pricing"
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground"
-          >
+          <Link to="/pricing" className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground">
             {t("dash_request_cta")} <ArrowRight className="size-4" />
           </Link>
         </div>
 
-        {/* Specialty banner — anchors all tools to user's industry */}
-        <div className="mt-8">
-          <SpecialtyBanner />
-        </div>
-
-        {/* Customize toolbar */}
-        <div className="mt-8 rounded-2xl border border-border bg-card/40 p-3 backdrop-blur">
-          <button onClick={() => setShowCustomize((s) => !s)} className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
-            <Settings2 className="size-4" /> {t("dash_customize")} {hidden.length > 0 && <span className="text-xs text-muted-foreground">({t("dash_hidden_count")}: {hidden.length})</span>}
-          </button>
-          {showCustomize && (
-            <>
-              <p className="mt-2 text-xs text-muted-foreground">{t("dash_customize_hint")}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {TOOL_SLOTS.map((s) => {
-                  const visible = isVisible(s.key);
-                  return (
-                    <button key={s.key} onClick={() => toggleTool(s.key)}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${visible ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-background/40 text-muted-foreground"}`}>
-                      {visible ? <Eye className="size-3" /> : <EyeOff className="size-3" />} {t(s.labelKey)}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Embedded tools (filtered by visibility) */}
-        {isVisible("analyze") && <div id="analyze" className="mt-8 scroll-mt-24"><Sandbox /></div>}
-        {isVisible("suggest") && <div id="suggest" className="mt-8 scroll-mt-24"><PostSuggester /></div>}
-        {isVisible("compare") && <div id="compare" className="mt-8 scroll-mt-24"><CompetitorCompare /></div>}
-        {isVisible("feasibility") && <div id="feasibility" className="mt-8 scroll-mt-24"><FeasibilityStudy /></div>}
-        {isVisible("bizdev") && <div id="bizdev" className="mt-8 scroll-mt-24"><BizDev /></div>}
+        <div className="mt-8"><SpecialtyBanner /></div>
         <div className="mt-8"><GeoScopeSelector /></div>
-        {isVisible("research") && <div id="research" className="mt-8 scroll-mt-24"><SmartResearch /></div>}
-        {isVisible("outreach") && <div id="outreach" className="mt-8 scroll-mt-24"><CompanyOutreach /></div>}
-        {isVisible("boost") && <div id="boost" className="mt-8 scroll-mt-24"><BrandBoostAgent /></div>}
-        {isVisible("applied") && <div id="applied" className="mt-8 scroll-mt-24"><AppliedRanking /></div>}
+
+        {/* Tool modal */}
+        <Dialog open={openTool !== null} onOpenChange={(o) => !o && setOpenTool(null)}>
+          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{openTool ? toolTitle(openTool, t) : ""}</DialogTitle>
+            </DialogHeader>
+            <div className="mt-2">
+              {openTool === "analyze" && <Sandbox />}
+              {openTool === "suggest" && <PostSuggester />}
+              {openTool === "compare" && <CompetitorCompare />}
+              {openTool === "feasibility" && <FeasibilityStudy />}
+              {openTool === "bizdev" && <BizDev />}
+              {openTool === "research" && <SmartResearch />}
+              {openTool === "outreach" && <CompanyOutreach />}
+              {openTool === "boost" && <BrandBoostAgent />}
+              {openTool === "applied" && <AppliedRanking />}
+            </div>
+          </DialogContent>
+        </Dialog>
+
 
         {/* Activity & summary export */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-4">
