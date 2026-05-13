@@ -107,14 +107,27 @@ export const Route = createFileRoute("/api/compare")({
           const SYSTEM = buildSystem(market);
           let sources: any[] = [];
           try {
-            const queries = [brand, ...competitors].map((n) => `${n} ${keywords} ${market.region}`.trim());
-            const settled = await Promise.allSettled(queries.map((q) => fcSearch(q, { limit: 3, lang })));
+            const allBrands = [brand, ...competitors];
+            // Real multi-signal probe: general, reviews, news, social — gives the AI authentic
+            // cross-platform evidence per brand instead of one shallow query.
+            const queries = allBrands.flatMap((n) => [
+              { brand: n, q: `${n} ${keywords} ${market.region}`.trim(), kind: "general" },
+              { brand: n, q: `${n} reviews OR رأي OR تقييم ${market.region}`.trim(), kind: "reviews" },
+              { brand: n, q: `${n} news ${market.region}`.trim(), kind: "news" },
+            ]);
+            const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: 2, lang })));
             sources = settled.flatMap((s, idx) => {
               if (s.status !== "fulfilled") return [];
               const data: any = (s.value as any)?.data;
               const rows = Array.isArray(data) ? data : [...(data?.web || []), ...(data?.news || [])];
-              return rows.slice(0, 3).map((r: any) => ({ brand: queries[idx], title: r.title, url: r.url, snippet: (r.markdown || r.description || "").slice(0, 500) }));
-            }).slice(0, 15);
+              return rows.slice(0, 2).map((r: any) => ({
+                brand: queries[idx].brand,
+                kind: queries[idx].kind,
+                title: r.title,
+                url: r.url,
+                snippet: (r.markdown || r.description || "").slice(0, 400),
+              }));
+            }).slice(0, 24);
           } catch {}
           const sourceBlock = sources.map((s, i) => `[${i + 1}] ${s.brand}: ${s.title} (${s.url})\n${s.snippet}`).join("\n\n") || "(no live sources available)";
           const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين) اعتماداً على المصادر أدناه فقط. لا تستخدم معرفة غير موثقة. استنتج platform_presence بشكل محافظ من قوة الأدلة المتاحة لكل محرك، وليس كحقيقة مؤكدة.${specialtyHint(userCtx, lang as any)}\n\nSources:\n${sourceBlock}`;
