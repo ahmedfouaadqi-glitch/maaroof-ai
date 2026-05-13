@@ -1796,6 +1796,8 @@ const ku: Dict = {
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
+export const SITE_DICTS = dicts;
+export type SiteTextKey = keyof typeof en;
 
 export const PLAN_KEY_BY_NAME: Record<string, string> = {
   Free: "free", Starter: "starter", Pro: "pro", Business: "business", "Pro Yearly": "yearly",
