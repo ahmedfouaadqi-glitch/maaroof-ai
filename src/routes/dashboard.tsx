@@ -27,18 +27,6 @@ const TOOL_COST: Record<ToolKey, number> = {
   research: 2, outreach: 1, boost: 3, applied: 2,
 };
 
-const TOOL_SLOTS = [
-  { key: "analyze",     id: "analyze",     labelKey: "dash_tool_analyze_t" },
-  { key: "suggest",     id: "suggest",     labelKey: "dash_tool_suggest_t" },
-  { key: "compare",     id: "compare",     labelKey: "compare_title" },
-  { key: "feasibility", id: "feasibility", labelKey: "dash_tool_feas_t" },
-  { key: "bizdev",      id: "bizdev",      labelKey: "dash_tool_biz_t" },
-  { key: "research",    id: "research",    labelKey: "research_title" },
-  { key: "outreach",    id: "outreach",    labelKey: "outreach_title" },
-  { key: "boost",       id: "boost",       labelKey: "boost_title" },
-  { key: "applied",     id: "applied",     labelKey: "dash_tool_applied_t" },
-] as const;
-const STORAGE_KEY = "geo:hidden-tools";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
