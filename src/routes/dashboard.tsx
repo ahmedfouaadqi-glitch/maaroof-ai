@@ -57,19 +57,17 @@ function DashboardPage() {
   const [analyses, setAnalyses] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [agentSub, setAgentSub] = useState<any | null>(null);
-  const [hidden, setHidden] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
-  });
-  const [showCustomize, setShowCustomize] = useState(false);
-  const toggleTool = (k: string) => {
-    setHidden((cur) => {
-      const next = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k];
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
-  const isVisible = (k: string) => !hidden.includes(k);
+  const [openTool, setOpenTool] = useState<ToolKey | null>(null);
+
+  // Units balance: derived from quota_overrides.monthly_analyses (admin-controlled) and monthly_analyses_used.
+  const unitsLimit = useMemo(() => {
+    const override = Number((profile as any)?.quota_overrides?.monthly_analyses || 0);
+    if (override > 0) return override;
+    return profile?.is_subscribed ? 100 : 5;
+  }, [profile]);
+  const unitsUsed = profile?.monthly_analyses_used ?? 0;
+  const unitsLeft = Math.max(0, unitsLimit - unitsUsed);
+  const unitsPct = Math.min(100, Math.round((unitsUsed / Math.max(1, unitsLimit)) * 100));
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/dashboard" } });
