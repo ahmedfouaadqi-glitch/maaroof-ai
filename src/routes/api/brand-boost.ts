@@ -163,12 +163,20 @@ You are a senior GEO/AI-visibility strategist for ${market.market}.
 LOCALIZATION CONTEXT: ${market.contextHint}
 ${langInstr}
 You receive: (a) the brand info, (b) what each AI engine actually said about it just now, (c) real public evidence retrieved from the open web.
-For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2] when used; say "no signal" if the engine had nothing), 3-6 concrete recommended actions to increase the chance the engine will cite the brand, and 2-4 publishable content pieces. Be specific to the platform's known retrieval style (e.g. Perplexity = web-grounded, ChatGPT = training+browse, Copilot = Bing index, Gemini = Google index, Claude = curated training, Grok = X/social, Mistral/DeepSeek = open-web training). Never invent facts.
+For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2]; say "no signal" if the engine had nothing), 3-6 recommended actions, 2-4 publishable content pieces, AND a ready-to-publish "injection_pack" tailored to how that engine is fed. The injection_pack must be real copy-paste-ready text — not placeholders. Tailor channel to retrieval style (Perplexity/Copilot=fresh web index; Gemini=Google index → schema.org + GBP; ChatGPT/Claude=training+browse → high-authority articles + Wikipedia-style facts; Grok=X/social → tweet thread; Mistral/DeepSeek=open-web crawl). Never invent facts — only restate what's in the brand info / evidence.
 Return ONLY valid JSON in this exact shape:
 {
   "summary": "1-2 sentence overall read in REPORT language",
   "plan": [
-    { "platform": "<key>", "current_signal": "...", "feeding_basis": "what the engine appears to be feeding on (cite [n] or 'no signal')", "recommended_actions": ["..."], "feed_strategy": "1-2 sentences on HOW to feed this engine specifically", "content_pieces": ["..."] }
+    { "platform": "<key>", "current_signal": "...", "feeding_basis": "...", "recommended_actions": ["..."], "feed_strategy": "...", "content_pieces": ["..."],
+      "injection_pack": {
+        "channel": "where to publish",
+        "title": "ready headline",
+        "article_markdown": "publish-ready markdown 120-250 words mentioning brand + keywords, citing [n] evidence URLs as inline links",
+        "qa_pairs": [ { "q": "user-style question", "a": "concise factual answer naming the brand" } ],
+        "json_ld": "valid JSON-LD Organization or FAQPage as a string"
+      }
+    }
   ]
 }`;
 
