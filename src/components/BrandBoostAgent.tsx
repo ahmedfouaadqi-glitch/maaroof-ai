@@ -212,6 +212,41 @@ export function BrandBoostAgent() {
                   </ul>
                 </div>
               )}
+              {p.injection_pack && (
+                <div className="rounded-md border border-accent/30 bg-accent/5 p-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">{lang === "ar" ? "حقنة جاهزة للنشر" : lang === "ku" ? "پاکێجی ئامادە بۆ بڵاوکردنەوە" : "Ready-to-publish injection"}</span>
+                    {p.injection_pack.channel && <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">{p.injection_pack.channel}</span>}
+                  </div>
+                  {p.injection_pack.title && <div className="font-semibold text-foreground">{p.injection_pack.title}</div>}
+                  {p.injection_pack.article_markdown && (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase text-muted-foreground">Article</span>
+                        <button onClick={() => navigator.clipboard.writeText(String(p.injection_pack.article_markdown))} className="text-[10px] underline text-primary">copy</button>
+                      </div>
+                      <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-[11px] text-foreground/90">{p.injection_pack.article_markdown}</pre>
+                    </div>
+                  )}
+                  {Array.isArray(p.injection_pack.qa_pairs) && p.injection_pack.qa_pairs.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-[10px] uppercase text-muted-foreground">Q&amp;A</div>
+                      {p.injection_pack.qa_pairs.map((qa: any, k: number) => (
+                        <div key={k} className="rounded bg-background/60 p-2 text-[11px]"><strong>Q:</strong> {qa.q}<br/><strong>A:</strong> {qa.a}</div>
+                      ))}
+                    </div>
+                  )}
+                  {p.injection_pack.json_ld && (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase text-muted-foreground">JSON-LD</span>
+                        <button onClick={() => navigator.clipboard.writeText(String(p.injection_pack.json_ld))} className="text-[10px] underline text-primary">copy</button>
+                      </div>
+                      <pre className="mt-1 max-h-32 overflow-auto rounded bg-background/60 p-2 text-[10px] font-mono text-foreground/80">{p.injection_pack.json_ld}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {Array.isArray(report.evidence) && report.evidence.length > 0 && (
