@@ -52,8 +52,13 @@ export const Route = createFileRoute("/api/brand-boost")({
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });
-          let allowed = false;
-          if ((prof as any).is_subscribed) {
+          // Per-user super-admin toggle for Brand Boost: quota_overrides.brand_boost = "on" | "off" | undefined
+          const bbToggle = String((prof as any)?.quota_overrides?.brand_boost || "").toLowerCase();
+          if (bbToggle === "off") {
+            return Response.json({ error: "tool_disabled_by_admin" }, { status: 403 });
+          }
+          let allowed = bbToggle === "on";
+          if (!allowed && (prof as any).is_subscribed) {
             if ((prof as any).subscription_expires_at && new Date((prof as any).subscription_expires_at) < new Date()) {
               await admin.from("profiles").update({ is_subscribed: false }).eq("id", userId);
             } else {
