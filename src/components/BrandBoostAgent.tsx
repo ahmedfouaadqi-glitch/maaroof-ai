@@ -86,8 +86,10 @@ export function BrandBoostAgent() {
         method: "POST", headers,
         body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang, scope: getEffectiveScope(profile, "brand") }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "failed");
+      const text = await res.text();
+      let data: any = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0, 200) || `http_${res.status}` }; }
+      if (!res.ok) throw new Error(data.error || `http_${res.status}`);
       setReport(data);
       await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, status: "done", report: data });
       await supabase.from("brand_boost_jobs").update({ last_run_at: new Date().toISOString() }).eq("id", j.id);
