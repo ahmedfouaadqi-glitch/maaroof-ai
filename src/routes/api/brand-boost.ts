@@ -92,14 +92,29 @@ export const Route = createFileRoute("/api/brand-boost")({
           // ── Step 1: gather real public evidence (the "feeding") via Firecrawl
           let evidence: { title: string; url: string; snippet: string }[] = [];
           try {
-            const q = `${brand_name} ${brand_keywords || ""} ${market.region}`.trim();
-            const sr: any = await fcSearch(q, { limit: 6, lang });
-            const results = sr?.data?.web || sr?.web || sr?.data || [];
-            evidence = (Array.isArray(results) ? results : []).slice(0, 6).map((r: any) => ({
-              title: String(r?.title || r?.url || "").slice(0, 160),
-              url: String(r?.url || ""),
-              snippet: String(r?.description || r?.markdown || "").slice(0, 400),
-            })).filter((e: any) => e.url);
+            const queries = [
+              `${brand_name} ${brand_keywords || ""} ${market.region}`.trim(),
+              `"${brand_name}" reviews OR about OR official ${market.region}`.trim(),
+            ];
+            const seen = new Set<string>();
+            for (const q of queries) {
+              try {
+                const sr: any = await fcSearch(q, { limit: 6, lang });
+                const results = sr?.data?.web || sr?.web || sr?.data || [];
+                for (const r of (Array.isArray(results) ? results : [])) {
+                  const url = String(r?.url || "");
+                  if (!url || seen.has(url)) continue;
+                  seen.add(url);
+                  evidence.push({
+                    title: String(r?.title || url).slice(0, 160),
+                    url,
+                    snippet: String(r?.description || r?.markdown || "").slice(0, 400),
+                  });
+                  if (evidence.length >= 10) break;
+                }
+              } catch {}
+              if (evidence.length >= 10) break;
+            }
           } catch (e) {
             console.warn("[brand-boost] firecrawl failed", e);
           }
