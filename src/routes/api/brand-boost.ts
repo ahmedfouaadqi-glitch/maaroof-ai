@@ -52,8 +52,13 @@ export const Route = createFileRoute("/api/brand-boost")({
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });
-          let allowed = false;
-          if ((prof as any).is_subscribed) {
+          // Per-user super-admin toggle for Brand Boost: quota_overrides.brand_boost = "on" | "off" | undefined
+          const bbToggle = String((prof as any)?.quota_overrides?.brand_boost || "").toLowerCase();
+          if (bbToggle === "off") {
+            return Response.json({ error: "tool_disabled_by_admin" }, { status: 403 });
+          }
+          let allowed = bbToggle === "on";
+          if (!allowed && (prof as any).is_subscribed) {
             if ((prof as any).subscription_expires_at && new Date((prof as any).subscription_expires_at) < new Date()) {
               await admin.from("profiles").update({ is_subscribed: false }).eq("id", userId);
             } else {
@@ -87,14 +92,29 @@ export const Route = createFileRoute("/api/brand-boost")({
           // ── Step 1: gather real public evidence (the "feeding") via Firecrawl
           let evidence: { title: string; url: string; snippet: string }[] = [];
           try {
-            const q = `${brand_name} ${brand_keywords || ""} ${market.region}`.trim();
-            const sr: any = await fcSearch(q, { limit: 6, lang });
-            const results = sr?.data?.web || sr?.web || sr?.data || [];
-            evidence = (Array.isArray(results) ? results : []).slice(0, 6).map((r: any) => ({
-              title: String(r?.title || r?.url || "").slice(0, 160),
-              url: String(r?.url || ""),
-              snippet: String(r?.description || r?.markdown || "").slice(0, 400),
-            })).filter((e: any) => e.url);
+            const queries = [
+              `${brand_name} ${brand_keywords || ""} ${market.region}`.trim(),
+              `"${brand_name}" reviews OR about OR official ${market.region}`.trim(),
+            ];
+            const seen = new Set<string>();
+            for (const q of queries) {
+              try {
+                const sr: any = await fcSearch(q, { limit: 6, lang });
+                const results = sr?.data?.web || sr?.web || sr?.data || [];
+                for (const r of (Array.isArray(results) ? results : [])) {
+                  const url = String(r?.url || "");
+                  if (!url || seen.has(url)) continue;
+                  seen.add(url);
+                  evidence.push({
+                    title: String(r?.title || url).slice(0, 160),
+                    url,
+                    snippet: String(r?.description || r?.markdown || "").slice(0, 400),
+                  });
+                  if (evidence.length >= 10) break;
+                }
+              } catch {}
+              if (evidence.length >= 10) break;
+            }
           } catch (e) {
             console.warn("[brand-boost] firecrawl failed", e);
           }
@@ -143,12 +163,20 @@ You are a senior GEO/AI-visibility strategist for ${market.market}.
 LOCALIZATION CONTEXT: ${market.contextHint}
 ${langInstr}
 You receive: (a) the brand info, (b) what each AI engine actually said about it just now, (c) real public evidence retrieved from the open web.
-For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2] when used; say "no signal" if the engine had nothing), 3-6 concrete recommended actions to increase the chance the engine will cite the brand, and 2-4 publishable content pieces. Be specific to the platform's known retrieval style (e.g. Perplexity = web-grounded, ChatGPT = training+browse, Copilot = Bing index, Gemini = Google index, Claude = curated training, Grok = X/social, Mistral/DeepSeek = open-web training). Never invent facts.
+For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2]; say "no signal" if the engine had nothing), 3-6 recommended actions, 2-4 publishable content pieces, AND a ready-to-publish "injection_pack" tailored to how that engine is fed. The injection_pack must be real copy-paste-ready text — not placeholders. Tailor channel to retrieval style (Perplexity/Copilot=fresh web index; Gemini=Google index → schema.org + GBP; ChatGPT/Claude=training+browse → high-authority articles + Wikipedia-style facts; Grok=X/social → tweet thread; Mistral/DeepSeek=open-web crawl). Never invent facts — only restate what's in the brand info / evidence.
 Return ONLY valid JSON in this exact shape:
 {
   "summary": "1-2 sentence overall read in REPORT language",
   "plan": [
-    { "platform": "<key>", "current_signal": "...", "feeding_basis": "what the engine appears to be feeding on (cite [n] or 'no signal')", "recommended_actions": ["..."], "feed_strategy": "1-2 sentences on HOW to feed this engine specifically", "content_pieces": ["..."] }
+    { "platform": "<key>", "current_signal": "...", "feeding_basis": "...", "recommended_actions": ["..."], "feed_strategy": "...", "content_pieces": ["..."],
+      "injection_pack": {
+        "channel": "where to publish",
+        "title": "ready headline",
+        "article_markdown": "publish-ready markdown 120-250 words mentioning brand + keywords, citing [n] evidence URLs as inline links",
+        "qa_pairs": [ { "q": "user-style question", "a": "concise factual answer naming the brand" } ],
+        "json_ld": "valid JSON-LD Organization or FAQPage as a string"
+      }
+    }
   ]
 }`;
 
@@ -196,6 +224,7 @@ ${evidenceBlock}`;
               recommended_actions: Array.isArray(pl.recommended_actions) ? pl.recommended_actions : [],
               feed_strategy: pl.feed_strategy || "",
               content_pieces: Array.isArray(pl.content_pieces) ? pl.content_pieces : [],
+              injection_pack: pl.injection_pack && typeof pl.injection_pack === "object" ? pl.injection_pack : null,
             };
           });
 

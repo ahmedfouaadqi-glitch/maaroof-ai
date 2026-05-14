@@ -218,6 +218,25 @@ function UsersTab() {
                     >↺</button>
                   )}
                 </div>
+                {(() => {
+                  const bb = String(r.quota_overrides?.brand_boost || "auto");
+                  const next = bb === "auto" ? "on" : bb === "on" ? "off" : "auto";
+                  const cls = bb === "on" ? "border-success text-success bg-success/10"
+                    : bb === "off" ? "border-destructive text-destructive bg-destructive/10"
+                    : "border-border text-muted-foreground";
+                  return (
+                    <button
+                      title="Brand Boost access (auto / on / off)"
+                      onClick={async () => {
+                        const ov = { ...(r.quota_overrides || {}) };
+                        if (next === "auto") delete ov.brand_boost; else ov.brand_boost = next;
+                        await supabase.from("profiles").update({ quota_overrides: ov }).eq("id", r.id);
+                        load();
+                      }}
+                      className={`mt-1 rounded-full border px-2 py-0.5 text-[10px] ${cls}`}
+                    >BB: {bb}</button>
+                  );
+                })()}
               </td>
               <td className="p-3">
                 <div className="flex flex-col gap-1">
