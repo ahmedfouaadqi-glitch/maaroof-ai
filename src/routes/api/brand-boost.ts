@@ -224,6 +224,7 @@ ${evidenceBlock}`;
               recommended_actions: Array.isArray(pl.recommended_actions) ? pl.recommended_actions : [],
               feed_strategy: pl.feed_strategy || "",
               content_pieces: Array.isArray(pl.content_pieces) ? pl.content_pieces : [],
+              injection_pack: pl.injection_pack && typeof pl.injection_pack === "object" ? pl.injection_pack : null,
             };
           });
 
