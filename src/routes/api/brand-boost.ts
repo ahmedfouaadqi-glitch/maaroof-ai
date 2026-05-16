@@ -250,15 +250,20 @@ ${probesBlock}
 REAL PUBLIC EVIDENCE (numbered):
 ${evidenceBlock}`;
 
-          let planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
-            { role: "system", content: planSys },
-            { role: "user", content: planUser },
-          ], 18000);
-          if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
-          if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
-          const planText = planRes.ok ? await readGatewayMessage(planRes) : { content: "", error: await planRes.text().catch(() => `http_${planRes.status}`) };
-          if (!planRes.ok) console.error("[brand-boost] plan failed", planRes.status, planText.error);
-          let planParsed: any = extractJsonObject(String(planText.content || "{}")) || {};
+          let planParsed: any = {};
+          try {
+            const planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
+              { role: "system", content: planSys },
+              { role: "user", content: planUser },
+            ], 18000);
+            if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
+            if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+            const planText = planRes.ok ? await readGatewayMessage(planRes) : { content: "", error: await planRes.text().catch(() => `http_${planRes.status}`) };
+            if (!planRes.ok) console.error("[brand-boost] plan failed", planRes.status, planText.error);
+            planParsed = extractJsonObject(String(planText.content || "{}")) || {};
+          } catch (e) {
+            console.error("[brand-boost] plan timeout/fallback", e);
+          }
           if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
