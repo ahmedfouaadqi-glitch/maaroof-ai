@@ -12,6 +12,7 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
+const MAX_PLATFORMS_PER_RUN = 5;
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
@@ -21,7 +22,7 @@ export function BrandBoostAgent() {
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
   const [kw, setKw] = useState((profile as any)?.brand_keywords || "");
   const [freq, setFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
-  const [sel, setSel] = useState<string[]>(PLATFORMS);
+  const [sel, setSel] = useState<string[]>(PLATFORMS.slice(0, MAX_PLATFORMS_PER_RUN));
   const [approved, setApproved] = useState(false);
   const [running, setRunning] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
@@ -36,9 +37,10 @@ export function BrandBoostAgent() {
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
+    const platforms = sel.slice(0, MAX_PLATFORMS_PER_RUN);
     await supabase.from("brand_boost_jobs").insert({
       user_id: user.id, brand_name: brand, brand_keywords: kw,
-      platforms: sel, frequency: freq, approved: true, active: true,
+      platforms, frequency: freq, approved: true, active: true,
     });
     await load();
   };
