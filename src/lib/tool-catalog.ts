@@ -29,7 +29,7 @@ export const TOOL_CATALOG: ToolDef[] = [
   { key: "feasibility",    group: "tools", costPerRun: 2, labels: { ar: "دراسة جدوى",            en: "Feasibility Study",   ku: "لێکۆڵینەوەی شیاو" } },
   { key: "bizdev",         group: "tools", costPerRun: 2, labels: { ar: "تطوير الأعمال",          en: "BizDev",              ku: "گەشەپێدانی کار" } },
   { key: "research",       group: "tools", costPerRun: 2, labels: { ar: "بحث ذكي",               en: "Smart Research",      ku: "گەڕانی زیرەک" } },
-  { key: "brand_boost",    group: "tools", costPerRun: 3, labels: { ar: "تعزيز العلامة",          en: "Brand Boost",         ku: "بەهێزکردنی براند" } },
+  { key: "brand_boost",    group: "tools", costPerRun: 5, labels: { ar: "تعزيز العلامة",          en: "Brand Boost",         ku: "بەهێزکردنی براند" } },
   { key: "company_email",  group: "tools", costPerRun: 1, labels: { ar: "إيميل شركات",           en: "Company Outreach",    ku: "ئیمەیڵی کۆمپانیا" } },
   { key: "applied_ranking",group: "tools", costPerRun: 2, labels: { ar: "الترتيب التطبيقي",       en: "Applied Ranking",     ku: "ڕیزبەندی جێبەجێکراو" } },
   { key: "agent.command",      group: "agent", costPerRun: 1, labels: { ar: "أمر مباشر للوكيل",      en: "Agent Command",     ku: "فەرمانی ئاراستە" } },
