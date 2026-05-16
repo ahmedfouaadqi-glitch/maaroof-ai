@@ -24,7 +24,7 @@ import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2,
 type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied";
 const TOOL_COST: Record<ToolKey, number> = {
   analyze: 1, suggest: 1, compare: 1, feasibility: 2, bizdev: 2,
-  research: 2, outreach: 1, boost: 3, applied: 2,
+  research: 2, outreach: 1, boost: 5, applied: 2,
 };
 
 
