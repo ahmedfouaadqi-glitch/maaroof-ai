@@ -191,7 +191,7 @@ export function BrandBoostAgent() {
               {p.current_answer ? (
                 <div className="rounded-md border border-border bg-card/50 p-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "ما قاله المحرك الآن" : lang === "ku" ? "وەڵامی ئێستا" : "What the engine said just now"}</div>
-                  <div className="mt-1 whitespace-pre-wrap text-foreground/90">{p.current_answer}</div>
+                  <div className="mt-1 whitespace-pre-wrap break-words text-foreground/90">{p.current_answer}</div>
                 </div>
               ) : (
                 <div className="text-muted-foreground italic">{p.probe_error ? `(${p.probe_error})` : (lang === "ar" ? "(لا توجد إشارة)" : "(no signal)")}</div>
@@ -205,7 +205,7 @@ export function BrandBoostAgent() {
               {(p.recommended_actions || []).length > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "إجراءات التحسين" : lang === "ku" ? "کردارەکانی باشترکردن" : "Improvement actions"}</div>
-                  <ul className="mt-1 list-inside list-disc">
+                  <ul className="mt-1 list-inside list-disc break-words">
                     {(p.recommended_actions || []).map((a: string, j: number) => <li key={j}>{a}</li>)}
                   </ul>
                 </div>
@@ -213,7 +213,7 @@ export function BrandBoostAgent() {
               {(p.content_pieces || []).length > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "محتوى مقترح" : lang === "ku" ? "ناوەڕۆکی پێشنیار" : "Content pieces"}</div>
-                  <ul className="mt-1 list-inside list-disc">
+                  <ul className="mt-1 list-inside list-disc break-words">
                     {(p.content_pieces || []).map((c: string, j: number) => <li key={j}>{c}</li>)}
                   </ul>
                 </div>
@@ -231,14 +231,14 @@ export function BrandBoostAgent() {
                         <span className="text-[10px] uppercase text-muted-foreground">Article</span>
                         <button onClick={() => navigator.clipboard.writeText(String(p.injection_pack.article_markdown))} className="text-[10px] underline text-primary">copy</button>
                       </div>
-                      <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-[11px] text-foreground/90">{p.injection_pack.article_markdown}</pre>
+                      <pre className="mt-1 max-h-48 max-w-full overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-foreground/90">{p.injection_pack.article_markdown}</pre>
                     </div>
                   )}
                   {Array.isArray(p.injection_pack.qa_pairs) && p.injection_pack.qa_pairs.length > 0 && (
                     <div className="space-y-1">
                       <div className="text-[10px] uppercase text-muted-foreground">Q&amp;A</div>
                       {p.injection_pack.qa_pairs.map((qa: any, k: number) => (
-                        <div key={k} className="rounded bg-background/60 p-2 text-[11px]"><strong>Q:</strong> {qa.q}<br/><strong>A:</strong> {qa.a}</div>
+                        <div key={k} className="break-words rounded bg-background/60 p-2 text-[11px]"><strong>Q:</strong> {qa.q}<br/><strong>A:</strong> {qa.a}</div>
                       ))}
                     </div>
                   )}
@@ -248,7 +248,7 @@ export function BrandBoostAgent() {
                         <span className="text-[10px] uppercase text-muted-foreground">JSON-LD</span>
                         <button onClick={() => navigator.clipboard.writeText(String(p.injection_pack.json_ld))} className="text-[10px] underline text-primary">copy</button>
                       </div>
-                      <pre className="mt-1 max-h-32 overflow-auto rounded bg-background/60 p-2 text-[10px] font-mono text-foreground/80">{p.injection_pack.json_ld}</pre>
+                      <pre className="mt-1 max-h-32 max-w-full overflow-auto whitespace-pre-wrap break-all rounded bg-background/60 p-2 text-[10px] font-mono text-foreground/80">{p.injection_pack.json_ld}</pre>
                     </div>
                   )}
                 </div>
