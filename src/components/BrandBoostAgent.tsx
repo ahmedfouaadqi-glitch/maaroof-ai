@@ -101,10 +101,10 @@ export function BrandBoostAgent() {
   };
 
   return (
-    <div className="rounded-2xl border border-accent/30 bg-card/70 p-5 backdrop-blur">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+    <div className="max-w-full overflow-hidden rounded-2xl border border-accent/30 bg-card/70 p-3 backdrop-blur sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold sm:text-lg">
             <Megaphone className="size-5 text-accent" /> {t("boost_title")}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
@@ -112,7 +112,7 @@ export function BrandBoostAgent() {
           <ToolHelpBanner toolKey="brand" />
           <div className="mt-3"><GeoScopeSelector compact toolKey="brand" /></div>
         </div>
-        <ToolLangSelect value={outLang} onChange={setOutLang} />
+        <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -123,8 +123,9 @@ export function BrandBoostAgent() {
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {PLATFORMS.map((p) => (
-          <button key={p} onClick={() => setSel(sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p])}
-            className={`rounded-full border px-2.5 py-1 text-xs ${sel.includes(p) ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"}`}>
+          <button key={p} onClick={() => setSel(sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p].slice(0, MAX_PLATFORMS_PER_RUN))}
+            className={`rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${sel.includes(p) ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"}`}
+            disabled={!sel.includes(p) && sel.length >= MAX_PLATFORMS_PER_RUN}>
             {p}
           </button>
         ))}
