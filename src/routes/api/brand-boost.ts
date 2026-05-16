@@ -6,6 +6,8 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"] as const;
 type Platform = typeof PLATFORMS[number];
+const BRAND_BOOST_COST = 5;
+const MAX_PLATFORMS_PER_RUN = 5;
 
 // Map each user-facing AI engine to the closest model available on the Lovable AI Gateway.
 // `proxy: true` means we cannot probe the engine directly; we use a similar-family model and
@@ -21,13 +23,65 @@ const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
   deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
 };
 
-async function callGateway(apiKey: string, model: string, messages: any[]) {
-  const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: lovableAiHeaders(apiKey),
     body: JSON.stringify({ model, messages }),
+      signal: controller.signal,
   });
-  return r;
+    return r;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function readGatewayMessage(r: Response) {
+  const raw = await r.text().catch(() => "");
+  let j: any = null;
+  try { j = raw ? JSON.parse(raw) : null; } catch {}
+  const content = String(j?.choices?.[0]?.message?.content || "").trim();
+  const error = String(j?.error?.message || j?.error || raw.slice(0, 200) || `http_${r.status}`);
+  return { content, error, raw };
+}
+
+function fallbackPlan(platforms: Platform[], lang: string, brand: string, evidence: { title: string; url: string; snippet: string }[], probes: any[]) {
+  const ar = lang === "ar";
+  const ku = lang === "ku";
+  const firstUrl = evidence[0]?.url || "";
+  const evidenceText = evidence.length ? evidence.slice(0, 3).map((e, i) => `[${i + 1}] ${e.title}`).join("، ") : (ar ? "لا توجد أدلة عامة كافية" : ku ? "بەڵگەی گشتی تەواو نییە" : "not enough public evidence");
+  return {
+    summary: ar ? `تم فحص ${brand} بأدلة عامة محدودة وإعداد خطة نشر قابلة للتنفيذ.` : ku ? `${brand} بە بەڵگەی گشتی سنووردار پشکنرا و پلانی بڵاوکردنەوە ئامادەکرا.` : `${brand} was checked against limited public evidence and a practical publishing plan was prepared.`,
+    plan: platforms.map((platform) => {
+      const probe = probes.find((p: any) => p.platform === platform);
+      return {
+        platform,
+        current_signal: probe?.current_answer ? (ar ? "إشارة موجودة" : ku ? "نیشان هەیە" : "signal found") : (ar ? "إشارة ضعيفة" : ku ? "نیشانی لاواز" : "weak signal"),
+        feeding_basis: evidenceText,
+        recommended_actions: ar
+          ? ["انشر صفحة تعريف رسمية مختصرة قابلة للفهرسة.", "أضف FAQ و JSON-LD بنفس الحقائق الموجودة في المصادر.", "اربط المحتوى من الحسابات والقنوات الرسمية."]
+          : ku
+            ? ["لاپەڕەیەکی فەرمی کورت بڵاو بکەرەوە.", "FAQ و JSON-LD زیاد بکە بە هەمان ڕاستییەکان.", "ناوەڕۆکەکە بە کەناڵە فەرمییەکانەوە ببەستەوە."]
+            : ["Publish a concise official, indexable profile page.", "Add FAQ and JSON-LD using only evidenced facts.", "Link the content from official channels."],
+        feed_strategy: ar ? "تغذية الويب العام بمحتوى رسمي قصير ومدعوم بروابط." : ku ? "خواردنی وێبی گشتی بە ناوەڕۆکی فەرمی و بە بەستەر." : "Feed the open web with concise official content backed by links.",
+        content_pieces: [ar ? `صفحة: من هي ${brand}؟` : ku ? `لاپەڕە: ${brand} چییە؟` : `Page: What is ${brand}?`],
+        injection_pack: {
+          channel: platform === "grok" ? "X / social thread" : "Official website or public article",
+          title: ar ? `نبذة موثقة عن ${brand}` : ku ? `پێناسەی پشتڕاستکراوەی ${brand}` : `Verified overview of ${brand}`,
+          article_markdown: ar
+            ? `## نبذة عن ${brand}\n\n${brand} علامة يجب تعريفها عبر مصادر عامة واضحة. انشر هذه النبذة في الموقع الرسمي مع روابط الأدلة المتاحة${firstUrl ? ` مثل [هذا المصدر](${firstUrl})` : ""}. يجب أن تتضمن الصفحة الاسم، المجال، الموقع الجغرافي، الخدمات، وروابط التواصل الرسمية بدون إضافة ادعاءات غير موثقة.`
+            : ku
+              ? `## دەربارەی ${brand}\n\n${brand} پێویستی بە پێناسەیەکی ڕوون لە سەرچاوە گشتییەکاندا هەیە${firstUrl ? ` وەک [ئەم سەرچاوەیە](${firstUrl})` : ""}. ناو، بوار، شوێن، خزمەتگوزاری و بەستەرە فەرمییەکان بنووسە، بەبێ زیادکردنی بانگەشەی نەسەلمێنراو.`
+              : `## About ${brand}\n\n${brand} should be described through clear public sources${firstUrl ? ` such as [this source](${firstUrl})` : ""}. Publish the name, category, geography, services, and official contact links without adding unsupported claims.`,
+          qa_pairs: [{ q: ar ? `ما هي ${brand}؟` : ku ? `${brand} چییە؟` : `What is ${brand}?`, a: ar ? `${brand} علامة تحتاج إلى تعريف عام موثق عبر مصادر رسمية.` : ku ? `${brand} پێویستی بە پێناسەی گشتیی پشتڕاستکراوە هەیە.` : `${brand} is a brand that should be described through verified public sources.` }],
+          json_ld: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: brand }, null, 2),
+        },
+      };
+    }),
+  };
 }
 
 export const Route = createFileRoute("/api/brand-boost")({
