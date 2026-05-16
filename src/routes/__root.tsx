@@ -142,8 +142,25 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function usePreviewAwareManifest() {
+  useEffect(() => {
+    const existing = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const token = new URLSearchParams(window.location.search).get("__lovable_token");
+    const href = token ? `/manifest.webmanifest?__lovable_token=${encodeURIComponent(token)}` : "/manifest.webmanifest";
+    if (existing) {
+      existing.href = href;
+      return;
+    }
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = href;
+    document.head.appendChild(link);
+  }, []);
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  usePreviewAwareManifest();
 
   return (
     <QueryClientProvider client={queryClient}>
