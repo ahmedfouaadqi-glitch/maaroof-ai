@@ -253,15 +253,13 @@ ${evidenceBlock}`;
           let planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
             { role: "system", content: planSys },
             { role: "user", content: planUser },
-          ]);
+          ], 18000);
           if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
-          if (!planRes.ok) {
-            console.error("[brand-boost] plan failed", planRes.status, await planRes.text().catch(() => ""));
-            return Response.json({ error: "ai_error" }, { status: 500 });
-          }
-          const planJ: any = await planRes.json();
-          const planParsed: any = extractJsonObject(String(planJ?.choices?.[0]?.message?.content || "{}")) || {};
+          const planText = planRes.ok ? await readGatewayMessage(planRes) : { content: "", error: await planRes.text().catch(() => `http_${planRes.status}`) };
+          if (!planRes.ok) console.error("[brand-boost] plan failed", planRes.status, planText.error);
+          let planParsed: any = extractJsonObject(String(planText.content || "{}")) || {};
+          if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
 
@@ -286,9 +284,9 @@ ${evidenceBlock}`;
           // Track usage
           const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
           await admin.from("profiles").update({
-            monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + 1,
+            monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + BRAND_BOOST_COST,
           }).eq("id", userId);
-          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name, platforms: targets } });
+          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name, platforms: targets, cost: BRAND_BOOST_COST } });
 
           return Response.json({
             summary: planParsed.summary || "",
