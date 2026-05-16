@@ -120,7 +120,8 @@ export const Route = createFileRoute("/api/brand-boost")({
             }
           }
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
-          if (!allowed && overrideLimit <= ((prof as any).monthly_analyses_used || 0)) {
+          const used = Number((prof as any).monthly_analyses_used || 0);
+          if (!allowed && overrideLimit - used < BRAND_BOOST_COST) {
             return Response.json({ error: "subscription_required" }, { status: 402 });
           }
 
@@ -182,7 +183,8 @@ export const Route = createFileRoute("/api/brand-boost")({
             ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
             : null;
           const requested = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
-          const targets = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
+          const targets = (adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested).slice(0, MAX_PLATFORMS_PER_RUN);
+          if (!targets.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
           const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
 If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
           const probeUserTpl = String(adminCfg.probe_prompt || `What do you know about the brand "{brand}"{keywords} in the context of {market}? Mention concrete facts only.`);
@@ -198,12 +200,11 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
                 const r = await callGateway(lovableKey, cfg.model, [
                   { role: "system", content: probeSys },
                   { role: "user", content: probeUser },
-                ]);
+                ], 12000);
                 if (r.status === 429) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "rate_limited" };
                 if (r.status === 402) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "credits_exhausted" };
                 if (!r.ok) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: `http_${r.status}` };
-                const j: any = await r.json();
-                const ans = String(j?.choices?.[0]?.message?.content || "").trim();
+                const { content: ans } = await readGatewayMessage(r);
                 return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: ans };
               } catch (e: any) {
                 return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: e?.message || "probe_failed" };
