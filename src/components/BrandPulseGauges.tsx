@@ -13,7 +13,7 @@ function Speedo({ value, label, hint, accent }: { value: number; label: string; 
   const cx = 100, cy = 90, r = 70;
   const nx = cx + r * Math.cos(rad);
   const ny = cy - r * Math.sin(rad);
-  const tone = v >= 75 ? "text-emerald-500" : v >= 45 ? "text-amber-500" : "text-rose-500";
+  const tone = v >= 75 ? "text-success" : v >= 45 ? "text-warning" : "text-destructive";
   return (
     <div className="rounded-2xl border border-border bg-background/40 p-4">
       <div className="flex items-center gap-2">
@@ -23,9 +23,9 @@ function Speedo({ value, label, hint, accent }: { value: number; label: string; 
       <svg viewBox="0 0 200 110" className="mt-2 w-full">
         <defs>
           <linearGradient id={`g-${label}`} x1="0" x2="1">
-            <stop offset="0%" stopColor="hsl(0 80% 55%)" />
-            <stop offset="50%" stopColor="hsl(45 90% 55%)" />
-            <stop offset="100%" stopColor="hsl(150 70% 45%)" />
+            <stop offset="0%" stopColor="var(--destructive)" />
+            <stop offset="50%" stopColor="var(--warning)" />
+            <stop offset="100%" stopColor="var(--success)" />
           </linearGradient>
         </defs>
         <path d="M30 90 A70 70 0 0 1 170 90" fill="none" stroke={`url(#g-${label})`} strokeWidth="14" strokeLinecap="round" opacity="0.85" />
@@ -40,7 +40,7 @@ function Speedo({ value, label, hint, accent }: { value: number; label: string; 
         <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-foreground transition-all duration-700" />
         <circle cx={cx} cy={cy} r="5" className="fill-foreground" />
       </svg>
-      <div className="mt-1 flex items-baseline justify-between">
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
         <div className={`font-mono text-2xl font-bold ${tone}`}>{v}</div>
         <div className="text-[11px] text-muted-foreground">{hint}</div>
       </div>

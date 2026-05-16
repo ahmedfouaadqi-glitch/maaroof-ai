@@ -6,6 +6,8 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"] as const;
 type Platform = typeof PLATFORMS[number];
+const BRAND_BOOST_COST = 5;
+const MAX_PLATFORMS_PER_RUN = 5;
 
 // Map each user-facing AI engine to the closest model available on the Lovable AI Gateway.
 // `proxy: true` means we cannot probe the engine directly; we use a similar-family model and
@@ -21,13 +23,65 @@ const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
   deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
 };
 
-async function callGateway(apiKey: string, model: string, messages: any[]) {
-  const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: lovableAiHeaders(apiKey),
     body: JSON.stringify({ model, messages }),
+      signal: controller.signal,
   });
-  return r;
+    return r;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function readGatewayMessage(r: Response) {
+  const raw = await r.text().catch(() => "");
+  let j: any = null;
+  try { j = raw ? JSON.parse(raw) : null; } catch {}
+  const content = String(j?.choices?.[0]?.message?.content || "").trim();
+  const error = String(j?.error?.message || j?.error || raw.slice(0, 200) || `http_${r.status}`);
+  return { content, error, raw };
+}
+
+function fallbackPlan(platforms: Platform[], lang: string, brand: string, evidence: { title: string; url: string; snippet: string }[], probes: any[]) {
+  const ar = lang === "ar";
+  const ku = lang === "ku";
+  const firstUrl = evidence[0]?.url || "";
+  const evidenceText = evidence.length ? evidence.slice(0, 3).map((e, i) => `[${i + 1}] ${e.title}`).join("، ") : (ar ? "لا توجد أدلة عامة كافية" : ku ? "بەڵگەی گشتی تەواو نییە" : "not enough public evidence");
+  return {
+    summary: ar ? `تم فحص ${brand} بأدلة عامة محدودة وإعداد خطة نشر قابلة للتنفيذ.` : ku ? `${brand} بە بەڵگەی گشتی سنووردار پشکنرا و پلانی بڵاوکردنەوە ئامادەکرا.` : `${brand} was checked against limited public evidence and a practical publishing plan was prepared.`,
+    plan: platforms.map((platform) => {
+      const probe = probes.find((p: any) => p.platform === platform);
+      return {
+        platform,
+        current_signal: probe?.current_answer ? (ar ? "إشارة موجودة" : ku ? "نیشان هەیە" : "signal found") : (ar ? "إشارة ضعيفة" : ku ? "نیشانی لاواز" : "weak signal"),
+        feeding_basis: evidenceText,
+        recommended_actions: ar
+          ? ["انشر صفحة تعريف رسمية مختصرة قابلة للفهرسة.", "أضف FAQ و JSON-LD بنفس الحقائق الموجودة في المصادر.", "اربط المحتوى من الحسابات والقنوات الرسمية."]
+          : ku
+            ? ["لاپەڕەیەکی فەرمی کورت بڵاو بکەرەوە.", "FAQ و JSON-LD زیاد بکە بە هەمان ڕاستییەکان.", "ناوەڕۆکەکە بە کەناڵە فەرمییەکانەوە ببەستەوە."]
+            : ["Publish a concise official, indexable profile page.", "Add FAQ and JSON-LD using only evidenced facts.", "Link the content from official channels."],
+        feed_strategy: ar ? "تغذية الويب العام بمحتوى رسمي قصير ومدعوم بروابط." : ku ? "خواردنی وێبی گشتی بە ناوەڕۆکی فەرمی و بە بەستەر." : "Feed the open web with concise official content backed by links.",
+        content_pieces: [ar ? `صفحة: من هي ${brand}؟` : ku ? `لاپەڕە: ${brand} چییە؟` : `Page: What is ${brand}?`],
+        injection_pack: {
+          channel: platform === "grok" ? "X / social thread" : "Official website or public article",
+          title: ar ? `نبذة موثقة عن ${brand}` : ku ? `پێناسەی پشتڕاستکراوەی ${brand}` : `Verified overview of ${brand}`,
+          article_markdown: ar
+            ? `## نبذة عن ${brand}\n\n${brand} علامة يجب تعريفها عبر مصادر عامة واضحة. انشر هذه النبذة في الموقع الرسمي مع روابط الأدلة المتاحة${firstUrl ? ` مثل [هذا المصدر](${firstUrl})` : ""}. يجب أن تتضمن الصفحة الاسم، المجال، الموقع الجغرافي، الخدمات، وروابط التواصل الرسمية بدون إضافة ادعاءات غير موثقة.`
+            : ku
+              ? `## دەربارەی ${brand}\n\n${brand} پێویستی بە پێناسەیەکی ڕوون لە سەرچاوە گشتییەکاندا هەیە${firstUrl ? ` وەک [ئەم سەرچاوەیە](${firstUrl})` : ""}. ناو، بوار، شوێن، خزمەتگوزاری و بەستەرە فەرمییەکان بنووسە، بەبێ زیادکردنی بانگەشەی نەسەلمێنراو.`
+              : `## About ${brand}\n\n${brand} should be described through clear public sources${firstUrl ? ` such as [this source](${firstUrl})` : ""}. Publish the name, category, geography, services, and official contact links without adding unsupported claims.`,
+          qa_pairs: [{ q: ar ? `ما هي ${brand}؟` : ku ? `${brand} چییە؟` : `What is ${brand}?`, a: ar ? `${brand} علامة تحتاج إلى تعريف عام موثق عبر مصادر رسمية.` : ku ? `${brand} پێویستی بە پێناسەی گشتیی پشتڕاستکراوە هەیە.` : `${brand} is a brand that should be described through verified public sources.` }],
+          json_ld: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: brand }, null, 2),
+        },
+      };
+    }),
+  };
 }
 
 export const Route = createFileRoute("/api/brand-boost")({
@@ -66,7 +120,8 @@ export const Route = createFileRoute("/api/brand-boost")({
             }
           }
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
-          if (!allowed && overrideLimit <= ((prof as any).monthly_analyses_used || 0)) {
+          const used = Number((prof as any).monthly_analyses_used || 0);
+          if (!allowed && overrideLimit - used < BRAND_BOOST_COST) {
             return Response.json({ error: "subscription_required" }, { status: 402 });
           }
 
@@ -128,7 +183,8 @@ export const Route = createFileRoute("/api/brand-boost")({
             ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
             : null;
           const requested = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
-          const targets = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
+          const targets = (adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested).slice(0, MAX_PLATFORMS_PER_RUN);
+          if (!targets.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
           const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
 If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
           const probeUserTpl = String(adminCfg.probe_prompt || `What do you know about the brand "{brand}"{keywords} in the context of {market}? Mention concrete facts only.`);
@@ -144,12 +200,11 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
                 const r = await callGateway(lovableKey, cfg.model, [
                   { role: "system", content: probeSys },
                   { role: "user", content: probeUser },
-                ]);
+                ], 12000);
                 if (r.status === 429) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "rate_limited" };
                 if (r.status === 402) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "credits_exhausted" };
                 if (!r.ok) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: `http_${r.status}` };
-                const j: any = await r.json();
-                const ans = String(j?.choices?.[0]?.message?.content || "").trim();
+                const { content: ans } = await readGatewayMessage(r);
                 return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: ans };
               } catch (e: any) {
                 return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: e?.message || "probe_failed" };
@@ -195,18 +250,21 @@ ${probesBlock}
 REAL PUBLIC EVIDENCE (numbered):
 ${evidenceBlock}`;
 
-          let planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
-            { role: "system", content: planSys },
-            { role: "user", content: planUser },
-          ]);
-          if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
-          if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
-          if (!planRes.ok) {
-            console.error("[brand-boost] plan failed", planRes.status, await planRes.text().catch(() => ""));
-            return Response.json({ error: "ai_error" }, { status: 500 });
+          let planParsed: any = {};
+          try {
+            const planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
+              { role: "system", content: planSys },
+              { role: "user", content: planUser },
+            ], 18000);
+            if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
+            if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+            const planText = planRes.ok ? await readGatewayMessage(planRes) : { content: "", error: await planRes.text().catch(() => `http_${planRes.status}`) };
+            if (!planRes.ok) console.error("[brand-boost] plan failed", planRes.status, planText.error);
+            planParsed = extractJsonObject(String(planText.content || "{}")) || {};
+          } catch (e) {
+            console.error("[brand-boost] plan timeout/fallback", e);
           }
-          const planJ: any = await planRes.json();
-          const planParsed: any = extractJsonObject(String(planJ?.choices?.[0]?.message?.content || "{}")) || {};
+          if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
 
@@ -231,9 +289,9 @@ ${evidenceBlock}`;
           // Track usage
           const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
           await admin.from("profiles").update({
-            monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + 1,
+            monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + BRAND_BOOST_COST,
           }).eq("id", userId);
-          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name, platforms: targets } });
+          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name, platforms: targets, cost: BRAND_BOOST_COST } });
 
           return Response.json({
             summary: planParsed.summary || "",

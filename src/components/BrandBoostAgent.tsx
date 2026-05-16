@@ -12,6 +12,7 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
+const MAX_PLATFORMS_PER_RUN = 5;
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
@@ -21,7 +22,7 @@ export function BrandBoostAgent() {
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
   const [kw, setKw] = useState((profile as any)?.brand_keywords || "");
   const [freq, setFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
-  const [sel, setSel] = useState<string[]>(PLATFORMS);
+  const [sel, setSel] = useState<string[]>(PLATFORMS.slice(0, MAX_PLATFORMS_PER_RUN));
   const [approved, setApproved] = useState(false);
   const [running, setRunning] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
@@ -36,9 +37,10 @@ export function BrandBoostAgent() {
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
+    const platforms = sel.slice(0, MAX_PLATFORMS_PER_RUN);
     await supabase.from("brand_boost_jobs").insert({
       user_id: user.id, brand_name: brand, brand_keywords: kw,
-      platforms: sel, frequency: freq, approved: true, active: true,
+      platforms, frequency: freq, approved: true, active: true,
     });
     await load();
   };
@@ -84,7 +86,7 @@ export function BrandBoostAgent() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang, scope: getEffectiveScope(profile, "brand") }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand") }),
       });
       const text = await res.text();
       let data: any = {};
@@ -99,10 +101,10 @@ export function BrandBoostAgent() {
   };
 
   return (
-    <div className="rounded-2xl border border-accent/30 bg-card/70 p-5 backdrop-blur">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+    <div className="max-w-full overflow-hidden rounded-2xl border border-accent/30 bg-card/70 p-3 backdrop-blur sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold sm:text-lg">
             <Megaphone className="size-5 text-accent" /> {t("boost_title")}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
@@ -110,7 +112,7 @@ export function BrandBoostAgent() {
           <ToolHelpBanner toolKey="brand" />
           <div className="mt-3"><GeoScopeSelector compact toolKey="brand" /></div>
         </div>
-        <ToolLangSelect value={outLang} onChange={setOutLang} />
+        <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -121,8 +123,9 @@ export function BrandBoostAgent() {
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {PLATFORMS.map((p) => (
-          <button key={p} onClick={() => setSel(sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p])}
-            className={`rounded-full border px-2.5 py-1 text-xs ${sel.includes(p) ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"}`}>
+          <button key={p} onClick={() => setSel(sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p].slice(0, MAX_PLATFORMS_PER_RUN))}
+            className={`rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${sel.includes(p) ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"}`}
+            disabled={!sel.includes(p) && sel.length >= MAX_PLATFORMS_PER_RUN}>
             {p}
           </button>
         ))}
@@ -138,7 +141,8 @@ export function BrandBoostAgent() {
           <input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />
           {t("boost_approve")}
         </label>
-        <button disabled={!approved || !brand.trim()} onClick={create}
+        <span className="text-[11px] text-muted-foreground">{sel.length}/{MAX_PLATFORMS_PER_RUN} · 5 credits</span>
+        <button disabled={!approved || !brand.trim() || sel.length === 0} onClick={create}
           className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
           <Plus className="size-3.5" /> {t("boost_create")}
         </button>
@@ -149,10 +153,10 @@ export function BrandBoostAgent() {
           {jobs.map((j) => (
             <div key={j.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <strong>{j.brand_name}</strong>
+                <strong className="max-w-full break-words">{j.brand_name}</strong>
                 <span className="text-xs text-muted-foreground">· {j.frequency}</span>
-                <span className="text-[10px] text-muted-foreground">{j.platforms?.join(", ")}</span>
-                <button onClick={() => toggle(j.id, j.active)} className="ms-auto inline-flex items-center gap-1 text-xs">
+                <span className="max-w-full break-words text-[10px] text-muted-foreground">{j.platforms?.slice(0, MAX_PLATFORMS_PER_RUN).join(", ")}</span>
+                <button onClick={() => toggle(j.id, j.active)} className="sm:ms-auto inline-flex items-center gap-1 text-xs">
                   <Power className="size-3" /> {j.active ? t("boost_pause") : t("boost_resume")}
                 </button>
                 <button disabled={running === j.id} onClick={() => runNow(j)}
@@ -180,28 +184,28 @@ export function BrandBoostAgent() {
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <strong className="text-foreground uppercase">{p.platform}</strong>
-                <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
+                <span className="max-w-full break-all rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
                 {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
                 <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
               </div>
               {p.current_answer ? (
                 <div className="rounded-md border border-border bg-card/50 p-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "ما قاله المحرك الآن" : lang === "ku" ? "وەڵامی ئێستا" : "What the engine said just now"}</div>
-                  <div className="mt-1 whitespace-pre-wrap text-foreground/90">{p.current_answer}</div>
+                  <div className="mt-1 whitespace-pre-wrap break-words text-foreground/90">{p.current_answer}</div>
                 </div>
               ) : (
                 <div className="text-muted-foreground italic">{p.probe_error ? `(${p.probe_error})` : (lang === "ar" ? "(لا توجد إشارة)" : "(no signal)")}</div>
               )}
               {p.feeding_basis && (
-                <div className="text-muted-foreground"><span className="font-semibold text-foreground/80">{lang === "ar" ? "كيف تمت تغذيته:" : lang === "ku" ? "چۆن خوێندراوەتەوە:" : "How it was fed:"}</span> {p.feeding_basis}</div>
+                 <div className="break-words text-muted-foreground"><span className="font-semibold text-foreground/80">{lang === "ar" ? "كيف تمت تغذيته:" : lang === "ku" ? "چۆن خوێندراوەتەوە:" : "How it was fed:"}</span> {p.feeding_basis}</div>
               )}
               {p.feed_strategy && (
-                <div><span className="font-semibold text-foreground/80">{lang === "ar" ? "استراتيجية التغذية:" : lang === "ku" ? "ستراتیژی خواردن:" : "Feed strategy:"}</span> {p.feed_strategy}</div>
+                 <div className="break-words"><span className="font-semibold text-foreground/80">{lang === "ar" ? "استراتيجية التغذية:" : lang === "ku" ? "ستراتیژی خواردن:" : "Feed strategy:"}</span> {p.feed_strategy}</div>
               )}
               {(p.recommended_actions || []).length > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "إجراءات التحسين" : lang === "ku" ? "کردارەکانی باشترکردن" : "Improvement actions"}</div>
-                  <ul className="mt-1 list-inside list-disc">
+                  <ul className="mt-1 list-inside list-disc break-words">
                     {(p.recommended_actions || []).map((a: string, j: number) => <li key={j}>{a}</li>)}
                   </ul>
                 </div>
@@ -209,7 +213,7 @@ export function BrandBoostAgent() {
               {(p.content_pieces || []).length > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "محتوى مقترح" : lang === "ku" ? "ناوەڕۆکی پێشنیار" : "Content pieces"}</div>
-                  <ul className="mt-1 list-inside list-disc">
+                  <ul className="mt-1 list-inside list-disc break-words">
                     {(p.content_pieces || []).map((c: string, j: number) => <li key={j}>{c}</li>)}
                   </ul>
                 </div>
@@ -227,14 +231,14 @@ export function BrandBoostAgent() {
                         <span className="text-[10px] uppercase text-muted-foreground">Article</span>
                         <button onClick={() => navigator.clipboard.writeText(String(p.injection_pack.article_markdown))} className="text-[10px] underline text-primary">copy</button>
                       </div>
-                      <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-[11px] text-foreground/90">{p.injection_pack.article_markdown}</pre>
+                      <pre className="mt-1 max-h-48 max-w-full overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-foreground/90">{p.injection_pack.article_markdown}</pre>
                     </div>
                   )}
                   {Array.isArray(p.injection_pack.qa_pairs) && p.injection_pack.qa_pairs.length > 0 && (
                     <div className="space-y-1">
                       <div className="text-[10px] uppercase text-muted-foreground">Q&amp;A</div>
                       {p.injection_pack.qa_pairs.map((qa: any, k: number) => (
-                        <div key={k} className="rounded bg-background/60 p-2 text-[11px]"><strong>Q:</strong> {qa.q}<br/><strong>A:</strong> {qa.a}</div>
+                        <div key={k} className="break-words rounded bg-background/60 p-2 text-[11px]"><strong>Q:</strong> {qa.q}<br/><strong>A:</strong> {qa.a}</div>
                       ))}
                     </div>
                   )}
@@ -244,7 +248,7 @@ export function BrandBoostAgent() {
                         <span className="text-[10px] uppercase text-muted-foreground">JSON-LD</span>
                         <button onClick={() => navigator.clipboard.writeText(String(p.injection_pack.json_ld))} className="text-[10px] underline text-primary">copy</button>
                       </div>
-                      <pre className="mt-1 max-h-32 overflow-auto rounded bg-background/60 p-2 text-[10px] font-mono text-foreground/80">{p.injection_pack.json_ld}</pre>
+                      <pre className="mt-1 max-h-32 max-w-full overflow-auto whitespace-pre-wrap break-all rounded bg-background/60 p-2 text-[10px] font-mono text-foreground/80">{p.injection_pack.json_ld}</pre>
                     </div>
                   )}
                 </div>

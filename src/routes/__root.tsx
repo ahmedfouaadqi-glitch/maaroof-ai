@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -92,7 +93,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
-      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/icon-512.png", type: "image/png" },
       { rel: "apple-touch-icon", href: "/icon-512.png" },
       {
@@ -128,7 +128,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
-function RootShell({ children }: { children: React.ReactNode }) {
+function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -142,8 +142,25 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function usePreviewAwareManifest() {
+  useEffect(() => {
+    const existing = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const token = new URLSearchParams(window.location.search).get("__lovable_token");
+    const href = token ? `/manifest.webmanifest?__lovable_token=${encodeURIComponent(token)}` : "/manifest.webmanifest";
+    if (existing) {
+      existing.href = href;
+      return;
+    }
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = href;
+    document.head.appendChild(link);
+  }, []);
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  usePreviewAwareManifest();
 
   return (
     <QueryClientProvider client={queryClient}>
