@@ -87,11 +87,11 @@ function DashboardPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
-        <h1 className="font-display text-3xl font-bold text-gradient">{t("dash_welcome")}, {profile?.full_name || profile?.email}</h1>
+          <h1 className="break-words font-display text-2xl font-bold text-gradient sm:text-3xl">{t("dash_welcome")}, {profile?.full_name || profile?.email}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{profile?.email}</p>
 
         {/* Stats */}
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Stat icon={<Activity />} label={t("dashboard_analyses")} value={profile?.monthly_analyses_used ?? 0} />
           <Stat icon={<Sparkles />} label={t("dashboard_suggestions")} value={profile?.monthly_suggestions_used ?? 0} />
           <Stat
@@ -106,7 +106,7 @@ function DashboardPage() {
         <div className="mt-6"><BrandPulseGauges /></div>
 
         {/* Units balance — live */}
-        <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-5">
+          <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Zap className="size-5 text-primary" />
@@ -130,7 +130,7 @@ function DashboardPage() {
           <h2 className="font-display text-2xl font-bold">{t("dash_tools_title")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{t("dash_tools_intro")}</p>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} cost={TOOL_COST.analyze} onOpen={() => setOpenTool("analyze")} />
             <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} cost={TOOL_COST.suggest} onOpen={() => setOpenTool("suggest")} />
             <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} cost={TOOL_COST.compare} onOpen={() => setOpenTool("compare")} />
@@ -170,7 +170,7 @@ function DashboardPage() {
 
         {/* Tool modal */}
         <Dialog open={openTool !== null} onOpenChange={(o) => !o && setOpenTool(null)}>
-          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogContent className="max-h-[92dvh] w-[calc(100vw-1rem)] max-w-5xl overflow-y-auto p-3 sm:w-[calc(100vw-2rem)] sm:p-6">
             <DialogHeader>
               <DialogTitle>{openTool ? toolTitle(openTool, t) : ""}</DialogTitle>
             </DialogHeader>
