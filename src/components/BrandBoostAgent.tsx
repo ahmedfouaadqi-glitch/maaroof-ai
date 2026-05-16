@@ -86,7 +86,7 @@ export function BrandBoostAgent() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: j.platforms, lang: outLang, scope: getEffectiveScope(profile, "brand") }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand") }),
       });
       const text = await res.text();
       let data: any = {};
@@ -184,7 +184,7 @@ export function BrandBoostAgent() {
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <strong className="text-foreground uppercase">{p.platform}</strong>
-                <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
+                <span className="max-w-full break-all rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
                 {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
                 <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
               </div>
@@ -197,10 +197,10 @@ export function BrandBoostAgent() {
                 <div className="text-muted-foreground italic">{p.probe_error ? `(${p.probe_error})` : (lang === "ar" ? "(لا توجد إشارة)" : "(no signal)")}</div>
               )}
               {p.feeding_basis && (
-                <div className="text-muted-foreground"><span className="font-semibold text-foreground/80">{lang === "ar" ? "كيف تمت تغذيته:" : lang === "ku" ? "چۆن خوێندراوەتەوە:" : "How it was fed:"}</span> {p.feeding_basis}</div>
+                 <div className="break-words text-muted-foreground"><span className="font-semibold text-foreground/80">{lang === "ar" ? "كيف تمت تغذيته:" : lang === "ku" ? "چۆن خوێندراوەتەوە:" : "How it was fed:"}</span> {p.feeding_basis}</div>
               )}
               {p.feed_strategy && (
-                <div><span className="font-semibold text-foreground/80">{lang === "ar" ? "استراتيجية التغذية:" : lang === "ku" ? "ستراتیژی خواردن:" : "Feed strategy:"}</span> {p.feed_strategy}</div>
+                 <div className="break-words"><span className="font-semibold text-foreground/80">{lang === "ar" ? "استراتيجية التغذية:" : lang === "ku" ? "ستراتیژی خواردن:" : "Feed strategy:"}</span> {p.feed_strategy}</div>
               )}
               {(p.recommended_actions || []).length > 0 && (
                 <div>
