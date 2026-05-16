@@ -141,7 +141,8 @@ export function BrandBoostAgent() {
           <input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />
           {t("boost_approve")}
         </label>
-        <button disabled={!approved || !brand.trim()} onClick={create}
+        <span className="text-[11px] text-muted-foreground">{sel.length}/{MAX_PLATFORMS_PER_RUN} · 5 credits</span>
+        <button disabled={!approved || !brand.trim() || sel.length === 0} onClick={create}
           className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
           <Plus className="size-3.5" /> {t("boost_create")}
         </button>
@@ -152,10 +153,10 @@ export function BrandBoostAgent() {
           {jobs.map((j) => (
             <div key={j.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <strong>{j.brand_name}</strong>
+                <strong className="max-w-full break-words">{j.brand_name}</strong>
                 <span className="text-xs text-muted-foreground">· {j.frequency}</span>
-                <span className="text-[10px] text-muted-foreground">{j.platforms?.join(", ")}</span>
-                <button onClick={() => toggle(j.id, j.active)} className="ms-auto inline-flex items-center gap-1 text-xs">
+                <span className="max-w-full break-words text-[10px] text-muted-foreground">{j.platforms?.slice(0, MAX_PLATFORMS_PER_RUN).join(", ")}</span>
+                <button onClick={() => toggle(j.id, j.active)} className="sm:ms-auto inline-flex items-center gap-1 text-xs">
                   <Power className="size-3" /> {j.active ? t("boost_pause") : t("boost_resume")}
                 </button>
                 <button disabled={running === j.id} onClick={() => runNow(j)}
