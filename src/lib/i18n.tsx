@@ -1820,6 +1820,104 @@ const ku: Dict = {
   orbit_tagline_sub: "یەک پلاتفۆرم. یەک سیگنال. هەشت بزوێنەر، هەموو زمانەکان.",
   orbit_cta_guide: "ببینە چۆن هەر ئامرازێک کار دەکات",
   orbit_cta_pricing: "ئێستا دەستپێبکە",
+
+  // Admin
+  admin_addon_targets: "زۆرترین ئامانج",
+  admin_addon_tasks_daily: "ئەرکی ڕۆژانە",
+  admin_edit_plan: "دەستکاری",
+  admin_plan_analyses: "شیکارییە مانگانەکان",
+  admin_plan_name: "ناو",
+  admin_quota_override: "گۆڕینی بەشە",
+  admin_reset_fp: "ڕێسێتکردنی قفڵی ئامێر",
+  admin_reset_fp_confirm: "قفڵی ئامێری ئەم بەکارهێنەرە ڕێسێت بکرێت؟",
+  admin_send_reset: "ناردنی ڕێسێتی وشەی نهێنی",
+
+  // Agent channels
+  ag_ch_add: "زیادکردنی کەناڵ",
+  ag_ch_chatid_ph: "ID ی چات یان @کەناڵ",
+  ag_ch_desc: "کەناڵێک ببەستەوە و ئەجێنت پۆستە پەسەندکراوەکان لە جێگەی تۆ بڵاودەکاتەوە.",
+  ag_ch_facebook: "Facebook",
+  ag_ch_help: "چۆن بۆتی Telegram دروست بکەیت ←",
+  ag_ch_instagram: "Instagram",
+  ag_ch_label_ph: "ناونیشان (نموونە: کەناڵی من)",
+  ag_ch_linkedin: "LinkedIn",
+  ag_ch_required: "تۆکنی بۆت و ID ی چات پێویستن.",
+  ag_ch_soon: "بەم زووانە — لەژێر گەشەپێدانی بەردەوامدایە.",
+  ag_ch_soon_desc: "یەکخستنی OAuth بۆ ئەم پلاتفۆرمە لەژێر گەشەپێدانی بەردەوامدایە.",
+  ag_ch_soon_tag: "بەم زووانە",
+  ag_ch_telegram: "Telegram",
+  ag_ch_title: "کەناڵەکانی بڵاوکردنەوە",
+  ag_ch_token_ph: "تۆکنی بۆت (لە @BotFather)",
+  ag_pub_fail: "بڵاوکردنەوە سەرکەوتوو نەبوو:",
+  ag_pub_ok: "بە سەرکەوتوویی بڵاوکرایەوە ✅",
+  ag_pub_to: "بڵاوکردنەوە بۆ",
+  ag_task_visibility: "دیارییەتی AI",
+  ag_vis_brand_ph: "ناوی براندەکەت",
+  ag_vis_desc: "ببینە براندەکەت چۆن لە بزوێنەرەکانی AI دەردەکەوێت (ChatGPT, Gemini, Perplexity).",
+  ag_vis_fail: "شیکاری دیارییەتی سەرکەوتوو نەبوو:",
+  ag_vis_keywords_ph: "کلیلوشە (کەرت، شار، خزمەتگوزارییەکان)",
+  ag_vis_ok: "شیکاری دیارییەتی تەواوبوو.",
+  ag_vis_run: "شیکاری دیارییەتی",
+  ag_vis_score: "دیارییەتی",
+  ag_vis_sentiment: "هەست",
+  ag_vis_title: "پشکنینی دیارییەتی AI",
+
+  // Brand Boost
+  boost_addon_note: "زیادکراو: تێچوونی زیاد بەپێی پلاتفۆرم و دووبارەبوونەوە مانگانە دەدرێت.",
+  boost_approve: "ڕێگە بە ئەجێنت دەدەم لە جێگەی من کار بکات",
+  boost_brand: "ناوی براند",
+  boost_create: "دروستکردنی ئەرک",
+  boost_delete: "سڕینەوە",
+  boost_export_title: "دیارییەتی براند لە پلاتفۆرمەکانی AI",
+  boost_freq_daily: "ڕۆژانە",
+  boost_summary: "کورتە",
+  boost_title: "گەشەی براند لە پلاتفۆرمەکانی AI",
+
+  // Channels & misc
+  ch_facebook: "Facebook",
+  ch_website: "ماڵپەڕ",
+  col_title: "ناونیشان",
+  continuous_dev: "گەشەپێدانی بەردەوام — تواناکانی نوێ بەردەوام دێن.",
+  dash_daily_label: "ئەمڕۆ",
+  device_locked_error: "ئەم هەژمارە بۆ ئامێرێکی تر قفڵکراوە. پەیوەندی بە پشتگیریەوە بکە.",
+
+  // Geo scope
+  geo_country_ph: "وڵات (نموونە: عێراق)",
+  geo_scope_per_tool: "بۆ هەر ئامرازێک",
+  geo_scope_title: "بەشی جوگرافی",
+  geo_scope_world: "جیهان",
+
+  nav_profile: "پرۆفایل",
+
+  // Outreach
+  outreach_company: "ناوی کۆمپانیا",
+  outreach_goal: "ئامانجی پەیوەندی (هاوبەشی، فرۆشتن، ناساندن…)",
+  outreach_run: "گەڕان و نووسینی ئیمەیڵ",
+  outreach_title: "گەڕان و پەیوەندی بە کۆمپانیاکان",
+
+  print_title: "ڕاپۆرتی دیارییەتی GEO",
+
+  // Profile
+  profile_brand_keywords: "کلیلوشەی براند",
+  profile_device_lock_enable: "قفڵکردن بۆ ئامێری ئێستا",
+  profile_device_lock_title: "قفڵکردنی هەژمار بۆ ئەم ئامێرە",
+  profile_locked: "قفڵکراو",
+  profile_save: "پاشکەوتکردنی گۆڕانکارییەکان",
+  profile_saved: "پاشکەوتکرا",
+  profile_specialty_ph: "نموونە: پزیشکی، خانووبەرە، بنیاتنان…",
+  profile_subscription_locked: "بەشدارییەکە لەلایەن پشتگیرییەوە بەڕێوەدەبرێت.",
+  profile_title: "پرۆفایلی من",
+
+  // Research
+  research_channels: "کەناڵەکانی پەیوەندی",
+  research_channels_hint: "کەناڵانە هەڵبژێرە کە گرنگن بۆت — لینکە فەرمییەکانی دۆزراوە لە سەرچاوەکان دەردەخەین.",
+  research_no_channels: "هیچ کەناڵێک نەدۆزرایەوە بۆ جۆرە هەڵبژێردراوەکان.",
+  research_ph: "هەر شتێک بپرسە…",
+  research_title: "گەڕانی زیرەک بە سەرچاوەکان",
+
+  // Why differ
+  why_diff_body: "ئەنجامەکان جیاوازن کاتێک زمان دەگۆڕیت یان دووبارە کار دەکەیت، چونکە (١) بزوێنەرەکانی AI هەر زمانێک وەک سیگناڵێکی جیاواز دەبینن، (٢) ئەگەری ناونیشانکردنی ڕاستەوخۆ پشت بە داتای زیندوو دەبەستێت، (٣) مۆدێلە جێنەراتیڤەکان گۆڕانکاری بچوکیان هەیە. ئێمە چەند سیگناڵێک تێکەڵ دەکەین بۆ پاراستنی ئاراستەی جێگیر.",
+  why_diff_btn: "بۆچی ئەنجامەکان جیاوازن؟",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };
