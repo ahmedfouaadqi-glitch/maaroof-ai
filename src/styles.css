@@ -126,3 +126,27 @@
 }
 .animate-scan { animation: scan 2s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+
+/* Engines orbit */
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orbit-spin-reverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes beam-pulse {
+  0%, 100% { opacity: 0.15; stroke-dasharray: 2 8; }
+  50%      { opacity: 0.9;  stroke-dasharray: 6 4; }
+}
+.orbit-spin { animation: orbit-spin 28s linear infinite; }
+.orbit-spin-reverse { animation: orbit-spin-reverse 28s linear infinite; }
+.orbit-beams line {
+  stroke-dasharray: 2 8;
+  animation: beam-pulse 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-spin, .orbit-spin-reverse { animation: none; }
+  .orbit-beams line { animation: none; opacity: 0.5; }
+}
