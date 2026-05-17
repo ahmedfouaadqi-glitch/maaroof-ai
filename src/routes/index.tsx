@@ -3,14 +3,13 @@ import { useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Sandbox } from "@/components/Sandbox";
-import { PostSuggester } from "@/components/PostSuggester";
 
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
-  ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot,
+  ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench,
   Search, Lightbulb, PenSquare, Megaphone, LineChart, Coins,
 } from "lucide-react";
+import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
 
 export const Route = createFileRoute("/")({
@@ -58,9 +57,27 @@ const ENGINES = [
 ];
 
 function Page() {
-  const { t, lang: _lang } = useI18n();
+  const { t, lang } = useI18n();
+  const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const [subOpen, setSubOpen] = useState(false);
-  void _lang;
+
+  const howtoKey = (k: ToolKey) => {
+    const map: Record<ToolKey, string> = {
+      analyze: "guide_how_analyze",
+      suggest: "guide_how_suggest",
+      compare: "guide_how_compare",
+      feasibility: "guide_how_feasibility",
+      bizdev: "guide_how_bizdev",
+      research: "guide_how_research",
+      brand_boost: "guide_how_brand_boost",
+      company_email: "guide_how_company_email",
+      applied_ranking: "guide_how_company_email",
+      "agent.command": "guide_how_agent_command",
+      "agent.run_targets": "guide_how_agent_targets",
+      "agent.visibility": "guide_how_agent_visibility",
+    };
+    return map[k];
+  };
 
   return (
     <div className="min-h-screen">
@@ -140,12 +157,8 @@ function Page() {
             </div>
           </div>
 
-          <div id="sandbox" className="mx-auto mt-14 max-w-3xl">
-            <Sandbox />
-          </div>
-
-          <div id="studio" className="mx-auto mt-8 max-w-3xl">
-            <PostSuggester />
+          <div id="sandbox" className="mt-10">
+            <EnginesOrbit />
           </div>
 
         </div>
@@ -238,8 +251,38 @@ function Page() {
         </div>
       </section>
 
-      {/* ENGINES ORBIT — replaces the previous tools catalog grid */}
-      <EnginesOrbit />
+      {/* TOOLS CATALOG with descriptions */}
+      <section id="tools" className="relative border-t border-border/60 py-20">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-bold md:text-4xl flex items-center justify-center gap-2">
+              <Wrench className="size-7 text-primary" /> {t("home_tools_title")}
+            </h2>
+            <p className="mt-3 text-muted-foreground">{t("home_tools_sub")}</p>
+          </div>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {TOOL_CATALOG.map((td) => (
+              <div key={td.key} className="group rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
+                <div className="flex items-center gap-2">
+                  <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
+                    {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
+                  </span>
+                  <h3 className="font-display text-base font-semibold">{td.labels[L]}</h3>
+                  <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-primary">
+                    {td.costPerRun}×
+                  </span>
+                </div>
+                <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                  {t(howtoKey(td.key) as any)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 text-center">
+            <Link to="/guide" className="text-sm text-primary hover:underline">{t("guide_title")} →</Link>
+          </div>
+        </div>
+      </section>
 
       {/* CTA */}
       <section id="cta" className="relative border-t border-border/60 py-24">
