@@ -8,9 +8,10 @@ import { PostSuggester } from "@/components/PostSuggester";
 
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
-  ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot,
+  ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench,
   Search, Lightbulb, PenSquare, Megaphone, LineChart, Coins,
 } from "lucide-react";
+import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
 
 export const Route = createFileRoute("/")({
@@ -58,9 +59,27 @@ const ENGINES = [
 ];
 
 function Page() {
-  const { t, lang: _lang } = useI18n();
+  const { t, lang } = useI18n();
+  const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const [subOpen, setSubOpen] = useState(false);
-  void _lang;
+
+  const howtoKey = (k: ToolKey) => {
+    const map: Record<ToolKey, string> = {
+      analyze: "guide_how_analyze",
+      suggest: "guide_how_suggest",
+      compare: "guide_how_compare",
+      feasibility: "guide_how_feasibility",
+      bizdev: "guide_how_bizdev",
+      research: "guide_how_research",
+      brand_boost: "guide_how_brand_boost",
+      company_email: "guide_how_company_email",
+      applied_ranking: "guide_how_company_email",
+      "agent.command": "guide_how_agent_command",
+      "agent.run_targets": "guide_how_agent_targets",
+      "agent.visibility": "guide_how_agent_visibility",
+    };
+    return map[k];
+  };
 
   return (
     <div className="min-h-screen">
@@ -140,12 +159,8 @@ function Page() {
             </div>
           </div>
 
-          <div id="sandbox" className="mx-auto mt-14 max-w-3xl">
-            <Sandbox />
-          </div>
-
-          <div id="studio" className="mx-auto mt-8 max-w-3xl">
-            <PostSuggester />
+          <div id="sandbox" className="mt-10">
+            <EnginesOrbit />
           </div>
 
         </div>
