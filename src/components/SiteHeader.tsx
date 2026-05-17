@@ -1,17 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@tanstack/react-router";
-import { Cpu, LogOut, Menu, X } from "lucide-react";
+import { Cpu, LogOut, Menu, X, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
 export function SiteHeader() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [sound, setSound] = useState(true);
+  useEffect(() => { setSound(isSoundEnabled()); }, []);
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch { /* not in provider */ }
 
   const close = () => setOpen(false);
+  const toggleSound = () => {
+    const next = !sound;
+    setSound(next);
+    setSoundEnabled(next);
+    if (next) playClick();
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -37,6 +46,15 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher />
+          <button
+            type="button"
+            onClick={toggleSound}
+            aria-label={sound ? t("sound_off") : t("sound_on")}
+            title={sound ? t("sound_off") : t("sound_on")}
+            className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground"
+          >
+            {sound ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
+          </button>
           {auth?.user ? (
             <button onClick={() => auth!.signOut()} className="hidden items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:inline-flex">
               <LogOut className="size-3" /> {t("nav_signout")}
