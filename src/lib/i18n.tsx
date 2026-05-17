@@ -630,6 +630,15 @@ const en: Dict = {
   home_consume_title: "Fair, transparent consumption",
   home_consume_sub: "Every run consumes credits from your plan. Cost is shown on every tool card.",
   home_consume_legend: "1× simple · 2× research-heavy · 3× autonomous boost",
+  sound_on: "Enable sounds",
+  sound_off: "Mute sounds",
+  orbit_badge: "Where intelligence meets simplicity",
+  orbit_title: "8 AI engines. One source they all cite.",
+  orbit_sub: "While others chase keywords, we make the engines themselves point to your brand.",
+  orbit_tagline: "If the idea is smart — it stays simple.",
+  orbit_tagline_sub: "One platform. One signal. Eight engines, every language, every search.",
+  orbit_cta_guide: "See how each tool works",
+  orbit_cta_pricing: "Start now",
 };
 
 const ar: Dict = {
@@ -1252,6 +1261,15 @@ const ar: Dict = {
   home_consume_title: "استهلاك عادل وشفّاف",
   home_consume_sub: "كل تشغيل يستهلك وحدات من خطتك. التكلفة ظاهرة على بطاقة كل أداة.",
   home_consume_legend: "1× بسيط · 2× بحثي · 3× تعزيز تلقائي",
+  sound_on: "تفعيل الأصوات",
+  sound_off: "كتم الأصوات",
+  orbit_badge: "حين يلتقي الذكاء بالبساطة",
+  orbit_title: "٨ محركات ذكاء. مصدرٌ واحد تستشهد به جميعها.",
+  orbit_sub: "بينما يطارد الآخرون الكلمات المفتاحية، نجعل محركات الذكاء نفسها تشير إلى علامتك.",
+  orbit_tagline: "إن كانت الفكرة ذكية — فستبقى بسيطة.",
+  orbit_tagline_sub: "منصة واحدة. إشارة واحدة. ثمانية محركات، كل اللغات، كل عمليات البحث.",
+  orbit_cta_guide: "اكتشف كيف تعمل كل أداة",
+  orbit_cta_pricing: "ابدأ الآن",
 };
 
 const ku: Dict = {
@@ -1793,6 +1811,15 @@ const ku: Dict = {
   home_consume_title: "بەکارهێنانی ڕوون",
   home_consume_sub: "هەر کارپێکردنێک یەکە لە پلانەکەت بەکاردەهێنێت.",
   home_consume_legend: "١× سادە · ٢× لێکۆڵینەوە · ٣× خۆکار",
+  sound_on: "چالاککردنی دەنگەکان",
+  sound_off: "بێدەنگکردن",
+  orbit_badge: "کاتێک ژیری دەگاتە سادەیی",
+  orbit_title: "٨ بزوێنەری AI. یەک سەرچاوە کە هەموویان ئاماژەی پێ دەکەن.",
+  orbit_sub: "لە کاتێکدا ئەوانی تر بەدوای کلیلوشەکاندا دەگەڕێن، ئێمە وادەکەین بزوێنەرەکان خۆیان ئاماژە بە نیشانەکەت بکەن.",
+  orbit_tagline: "ئەگەر بیرۆکەکە ژیر بێت — سادە دەمێنێتەوە.",
+  orbit_tagline_sub: "یەک پلاتفۆرم. یەک سیگنال. هەشت بزوێنەر، هەموو زمانەکان.",
+  orbit_cta_guide: "ببینە چۆن هەر ئامرازێک کار دەکات",
+  orbit_cta_pricing: "ئێستا دەستپێبکە",
 };
 
 const dicts: Record<Lang, Dict> = { en, ar, ku };

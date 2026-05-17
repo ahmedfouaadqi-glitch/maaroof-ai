@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { attachGlobalClickSound } from "@/lib/sound";
 
 function NotFoundComponent() {
   return (
@@ -161,6 +162,7 @@ function usePreviewAwareManifest() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   usePreviewAwareManifest();
+  useEffect(() => { attachGlobalClickSound(); }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
