@@ -3,8 +3,6 @@ import { useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Sandbox } from "@/components/Sandbox";
-import { PostSuggester } from "@/components/PostSuggester";
 
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
