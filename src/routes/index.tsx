@@ -308,9 +308,9 @@ function Page() {
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
         <div>{t("footer")}</div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <a href="tel:+9647733570130" className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-primary">
-            <Phone className="size-3.5" /> <span dir="ltr" style={{ unicodeBidi: "isolate" }}>+964 773 357 0130</span>
-          </a>
+          <Link to="/contact" className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-primary">
+            <Phone className="size-3.5" /> {t("nav_contact")}
+          </Link>
           <Link to="/privacy" className="hover:text-primary">{t("footer_privacy")}</Link>
           <Link to="/terms" className="hover:text-primary">{t("footer_terms")}</Link>
           <Link to="/pricing" className="hover:text-primary">{t("footer_pricing")}</Link>

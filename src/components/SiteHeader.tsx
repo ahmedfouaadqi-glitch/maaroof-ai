@@ -42,6 +42,7 @@ export function SiteHeader() {
           {auth?.user && <Link to="/agent" className="hover:text-foreground">{t("nav_agent")}</Link>}
           {auth?.user && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>
+          <Link to="/contact" className="hover:text-foreground">{t("nav_contact")}</Link>
           {auth?.isAdmin && <Link to="/admin" className="text-accent hover:text-foreground">{t("nav_admin")}</Link>}
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -85,6 +86,7 @@ export function SiteHeader() {
             {auth?.user && <Link to="/agent" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_agent")}</Link>}
             {auth?.user && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>
+            <Link to="/contact" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_contact")}</Link>
             {auth?.isAdmin && <Link to="/admin" onClick={close} className="rounded-md px-2 py-2 text-accent hover:bg-muted/40">{t("nav_admin")}</Link>}
             {auth?.user && (
               <button onClick={() => { auth!.signOut(); close(); }} className="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-2 text-start text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground sm:hidden">

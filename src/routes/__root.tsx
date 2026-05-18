@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { attachGlobalClickSound } from "@/lib/sound";
+import { attachDevtoolsGuard } from "@/lib/devtools-guard";
 
 function NotFoundComponent() {
   return (
@@ -162,7 +163,7 @@ function usePreviewAwareManifest() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   usePreviewAwareManifest();
-  useEffect(() => { attachGlobalClickSound(); }, []);
+  useEffect(() => { attachGlobalClickSound(); attachDevtoolsGuard(); }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
