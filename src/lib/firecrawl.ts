@@ -24,11 +24,12 @@ export async function fcSearch(query: string, opts: { limit?: number; lang?: str
   return res.json();
 }
 
-export async function fcScrape(url: string) {
+export async function fcScrape(url: string, opts: { deep?: boolean } = {}) {
+  const formats = opts.deep ? ["markdown", "html", "links"] : ["markdown"];
   const res = await fetch(`${BASE}/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getKey()}` },
-    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+    body: JSON.stringify({ url, formats, onlyMainContent: !opts.deep }),
   });
   if (!res.ok) throw new Error(`Firecrawl scrape failed: ${res.status}`);
   return res.json();
