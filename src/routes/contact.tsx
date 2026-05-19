@@ -28,7 +28,7 @@ function ContactPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-4 py-16">
+      <section className="mx-auto max-w-2xl px-4 py-16">
         <h1 className="font-display text-3xl font-bold text-gradient">{t("nav_contact")}</h1>
         <p className="mt-3 text-sm text-muted-foreground">{t("subscribe_modal_desc")}</p>
 
