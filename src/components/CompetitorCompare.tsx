@@ -380,11 +380,11 @@ export function CompetitorCompare() {
   );
 }
 
-function Bar({ label, value }: { label: string; value: number }) {
+function Bar({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
-    <div>
+    <div title={hint}>
       <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
-        <span>{label}</span><span className="font-mono text-foreground">{value}</span>
+        <span>{label}{hint ? " ⓘ" : ""}</span><span className="font-mono text-foreground">{value}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${value}%` }} />
@@ -392,3 +392,4 @@ function Bar({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
