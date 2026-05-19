@@ -314,6 +314,7 @@ export const Route = createFileRoute("/api/compare")({
             sources,
             official_sites: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, v.url])),
             seo_sge: seoSgeReports,
+            platform_measured: platformMeasured,
           };
 
           await admin.from("agent_tasks").insert({
