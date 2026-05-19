@@ -260,11 +260,13 @@ export function CompetitorCompare() {
                   </div>
                 )}
                 {b.strengths.length > 0 && (
-                  <div className="text-xs"><b className="text-success">✓ {t("col_strengths")}:</b> {b.strengths.join(" · ")}</div>
+                  <div className="text-xs"><b className="text-success">✓ {t("col_strengths")}:</b> {b.strengths.map((s) => s.startsWith("sw_") ? t(s) : s).join(" · ")}</div>
                 )}
                 {b.weaknesses.length > 0 && (
-                  <div className="mt-1 text-xs"><b className="text-destructive">⚠ {t("col_weaknesses")}:</b> {b.weaknesses.join(" · ")}</div>
+                  <div className="mt-1 text-xs"><b className="text-destructive">⚠ {t("col_weaknesses")}:</b> {b.weaknesses.map((s) => s.startsWith("sw_") ? t(s) : s).join(" · ")}</div>
                 )}
+                <div className="mt-1 text-[10px] text-muted-foreground">● {t("sw_signal_badge")}</div>
+
               </div>
             ))}
           </div>
