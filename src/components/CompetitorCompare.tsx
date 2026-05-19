@@ -31,6 +31,8 @@ type Result = {
   content_gaps?: string[];
   recommendations: string[];
   specialty?: string | null;
+  sources?: { brand: string; kind: string; title: string; url: string; snippet: string }[];
+  official_sites?: Record<string, string>;
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
