@@ -29,6 +29,13 @@ const TOOL_COST: Record<ToolKey, number> = {
 
 
 export const Route = createFileRoute("/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Dashboard · GEO-Iraq" },
+      { name: "description", content: "Your GEO-Iraq workspace — run tools, view scores and manage your AI visibility tasks." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: () => (
     <I18nProvider>
       <AuthProvider>

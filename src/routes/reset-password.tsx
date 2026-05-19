@@ -6,6 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/reset-password")({
+  head: () => ({
+    meta: [
+      { title: "Reset password · GEO-Iraq" },
+      { name: "description", content: "Set a new password for your GEO-Iraq account." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: () => (
     <I18nProvider>
       <ResetPage />

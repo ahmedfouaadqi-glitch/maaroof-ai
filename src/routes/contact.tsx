@@ -9,8 +9,12 @@ export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
       { title: "Contact · GEO-Iraq" },
-      { name: "description", content: "Contact GEO-Iraq via WhatsApp or phone." },
+      { name: "description", content: "Contact GEO-Iraq via WhatsApp or phone for support, demos and partnerships." },
+      { property: "og:title", content: "Contact · GEO-Iraq" },
+      { property: "og:description", content: "Reach the GEO-Iraq team via WhatsApp or phone." },
+      { property: "og:url", content: "https://geoiraq.com/contact" },
     ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/contact" }],
   }),
   component: () => (
     <I18nProvider><AuthProvider><ContactPage /></AuthProvider></I18nProvider>
@@ -24,7 +28,7 @@ function ContactPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-4 py-16">
+      <section className="mx-auto max-w-2xl px-4 py-16">
         <h1 className="font-display text-3xl font-bold text-gradient">{t("nav_contact")}</h1>
         <p className="mt-3 text-sm text-muted-foreground">{t("subscribe_modal_desc")}</p>
 
@@ -52,7 +56,7 @@ function ContactPage() {
         <div className="mt-8 text-center">
           <Link to="/" className="text-sm text-primary hover:underline">← {t("brand")}</Link>
         </div>
-      </main>
+      </section>
     </div>
   );
 }
