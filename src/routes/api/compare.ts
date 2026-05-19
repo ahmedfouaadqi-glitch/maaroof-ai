@@ -267,6 +267,23 @@ export const Route = createFileRoute("/api/compare")({
             };
           });
 
+          // Layer B: REAL platform queries via Lovable Gateway (Gemini + ChatGPT)
+          const platformMeasured: Record<string, string[]> = {};
+          try {
+            const probed = await Promise.all(
+              normalizedBrands.map((b) => probePlatforms(b.name, lang as any, market.region, apiKey)),
+            );
+            normalizedBrands.forEach((b, i) => {
+              const r = probed[i];
+              const measured: string[] = [];
+              if (typeof r.gemini === "number") { b.platform_presence.gemini = r.gemini; measured.push("gemini"); }
+              if (typeof r.chatgpt === "number") { b.platform_presence.chatgpt = r.chatgpt; measured.push("chatgpt"); }
+              if (measured.length) platformMeasured[b.name] = measured;
+            });
+          } catch (e) {
+            console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
+          }
+
           const ranked = [...normalizedBrands]
             .map((b) => ({ ...b, _composite: b.visibility_percent * 0.6 + b.geo_score * 0.4 }))
             .sort((a, b) => b._composite - a._composite)
