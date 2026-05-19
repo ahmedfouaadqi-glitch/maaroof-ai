@@ -106,31 +106,61 @@ export const Route = createFileRoute("/api/compare")({
           const market = describeMarket(body.scope);
           const SYSTEM = buildSystem(market);
           let sources: any[] = [];
+          const officialSites: Record<string, { url: string; content: string }> = {};
           try {
             const allBrands = [brand, ...competitors];
-            // Real multi-signal probe: general, reviews, news, social — gives the AI authentic
-            // cross-platform evidence per brand instead of one shallow query.
+            // Multi-signal probe: general, official site, reviews, news, geo presence
             const queries = allBrands.flatMap((n) => [
               { brand: n, q: `${n} ${keywords} ${market.region}`.trim(), kind: "general" },
-              { brand: n, q: `${n} reviews OR رأي OR تقييم ${market.region}`.trim(), kind: "reviews" },
-              { brand: n, q: `${n} news ${market.region}`.trim(), kind: "news" },
+              { brand: n, q: `"${n}" official site OR موقع رسمي OR website`.trim(), kind: "official" },
+              { brand: n, q: `"${n}" reviews OR رأي OR تقييم ${market.region}`.trim(), kind: "reviews" },
+              { brand: n, q: `"${n}" news ${market.region}`.trim(), kind: "news" },
+              { brand: n, q: `"${n}" ${market.region} address OR عنوان OR location`.trim(), kind: "geo" },
             ]);
-            const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: 2, lang })));
+            const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: 5, lang })));
             sources = settled.flatMap((s, idx) => {
               if (s.status !== "fulfilled") return [];
               const data: any = (s.value as any)?.data;
               const rows = Array.isArray(data) ? data : [...(data?.web || []), ...(data?.news || [])];
-              return rows.slice(0, 2).map((r: any) => ({
+              return rows.slice(0, 5).map((r: any) => ({
                 brand: queries[idx].brand,
                 kind: queries[idx].kind,
                 title: r.title,
                 url: r.url,
                 snippet: (r.markdown || r.description || "").slice(0, 400),
               }));
-            }).slice(0, 24);
+            }).slice(0, 60);
+
+            // Auto-detect official website per brand: first "official" result with brand name in domain,
+            // or first general result with brand-matching hostname
+            const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+            for (const n of allBrands) {
+              const nNorm = norm(n);
+              if (!nNorm) continue;
+              const candidates = sources.filter((s) => s.brand === n);
+              const found = candidates.find((s) => {
+                try {
+                  const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
+                  const root = host.split(".")[0];
+                  return root.includes(nNorm.slice(0, Math.min(6, nNorm.length))) || nNorm.includes(root);
+                } catch { return false; }
+              });
+              if (found?.url) {
+                try {
+                  const scraped: any = await fcScrape(found.url);
+                  const md = String(scraped?.data?.markdown || scraped?.markdown || "").slice(0, 1500);
+                  if (md) officialSites[n] = { url: found.url, content: md };
+                } catch {}
+              }
+            }
           } catch {}
+
           const sourceBlock = sources.map((s, i) => `[${i + 1}] (${s.kind || "general"}) ${s.brand}: ${s.title} (${s.url})\n${s.snippet}`).join("\n\n") || "(no live sources available)";
-          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين) اعتماداً على المصادر أدناه فقط. لا تستخدم معرفة غير موثقة. استنتج platform_presence بشكل محافظ من قوة الأدلة المتاحة لكل محرك، وليس كحقيقة مؤكدة.${specialtyHint(userCtx, lang as any)}\n\nSources:\n${sourceBlock}`;
+          const officialBlock = Object.entries(officialSites)
+            .map(([n, o]) => `=== Official site of ${n} (${o.url}) ===\n${o.content}`)
+            .join("\n\n") || "(no official sites verified)";
+          const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين) اعتماداً على المصادر أدناه فقط (محتوى الموقع الرسمي ونتائج البحث). لا تستخدم معرفة غير موثقة. استنتج platform_presence بشكل محافظ من قوة الأدلة المتاحة لكل محرك، وليس كحقيقة مؤكدة.${specialtyHint(userCtx, lang as any)}\n\nOfficial site content:\n${officialBlock}\n\nSearch sources:\n${sourceBlock}`;
+
 
           const callModel = async (model: string) => fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
