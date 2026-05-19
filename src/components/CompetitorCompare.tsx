@@ -42,6 +42,7 @@ type Result = {
   sources?: { brand: string; kind: string; title: string; url: string; snippet: string }[];
   official_sites?: Record<string, string>;
   seo_sge?: Record<string, SeoSge>;
+  platform_measured?: Record<string, string[]>;
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
@@ -233,17 +234,28 @@ export function CompetitorCompare() {
                 </div>
                 {b.platform_presence && Object.values(b.platform_presence).some((v) => v > 0) && (
                   <div className="mb-3 rounded-lg border border-border/60 bg-background/40 p-2">
-                    <div className="mb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">{t("compare_platform_presence")}</div>
+                    <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <span>{t("compare_platform_presence")}</span>
+                      <span className="flex items-center gap-2 normal-case tracking-normal">
+                        <span className="inline-flex items-center gap-1"><span className="size-1.5 rounded-full bg-success" />{t("platform_measured")}</span>
+                        <span className="inline-flex items-center gap-1"><span className="size-1.5 rounded-full bg-muted-foreground/60" />{t("platform_inferred")}</span>
+                      </span>
+                    </div>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {PLATFORMS.map((p) => (
-                        <div key={p} className="flex items-center gap-1.5 text-[10px]">
-                          <span className="w-16 truncate capitalize text-muted-foreground">{p}</span>
-                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-                            <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${b.platform_presence?.[p] || 0}%` }} />
+                      {PLATFORMS.map((p) => {
+                        const isMeasured = result.platform_measured?.[b.name]?.includes(p);
+                        return (
+                          <div key={p} className="flex items-center gap-1.5 text-[10px]" title={isMeasured ? t("platform_measured_hint") : t("platform_inferred_hint")}>
+                            <span className={`size-1.5 shrink-0 rounded-full ${isMeasured ? "bg-success" : "bg-muted-foreground/40"}`} />
+                            <span className="w-14 truncate capitalize text-muted-foreground">{p}</span>
+                            <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                              <div className={`h-full rounded-full ${isMeasured ? "bg-gradient-to-r from-success to-primary" : "bg-gradient-to-r from-primary to-accent"}`} style={{ width: `${b.platform_presence?.[p] || 0}%` }} />
+                            </div>
+                            <span className="w-7 text-end font-mono text-foreground/80">{b.platform_presence?.[p] || 0}</span>
                           </div>
-                          <span className="w-7 text-end font-mono text-foreground/80">{b.platform_presence?.[p] || 0}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
+
                     </div>
                   </div>
                 )}

@@ -5,6 +5,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcSearch, fcScrape } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { probePlatforms } from "@/lib/platform-probe.server";
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
@@ -266,6 +267,23 @@ export const Route = createFileRoute("/api/compare")({
             };
           });
 
+          // Layer B: REAL platform queries via Lovable Gateway (Gemini + ChatGPT)
+          const platformMeasured: Record<string, string[]> = {};
+          try {
+            const probed = await Promise.all(
+              normalizedBrands.map((b) => probePlatforms(b.name, lang as any, market.region, apiKey)),
+            );
+            normalizedBrands.forEach((b, i) => {
+              const r = probed[i];
+              const measured: string[] = [];
+              if (typeof r.gemini === "number") { b.platform_presence.gemini = r.gemini; measured.push("gemini"); }
+              if (typeof r.chatgpt === "number") { b.platform_presence.chatgpt = r.chatgpt; measured.push("chatgpt"); }
+              if (measured.length) platformMeasured[b.name] = measured;
+            });
+          } catch (e) {
+            console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
+          }
+
           const ranked = [...normalizedBrands]
             .map((b) => ({ ...b, _composite: b.visibility_percent * 0.6 + b.geo_score * 0.4 }))
             .sort((a, b) => b._composite - a._composite)
@@ -296,6 +314,7 @@ export const Route = createFileRoute("/api/compare")({
             sources,
             official_sites: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, v.url])),
             seo_sge: seoSgeReports,
+            platform_measured: platformMeasured,
           };
 
           await admin.from("agent_tasks").insert({
