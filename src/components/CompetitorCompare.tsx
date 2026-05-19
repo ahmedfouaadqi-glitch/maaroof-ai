@@ -54,10 +54,25 @@ export function CompetitorCompare() {
   const [brand, setBrand] = useState("");
   const [competitors, setCompetitors] = useState("");
   const [keywords, setKeywords] = useState("");
+  const [websitesText, setWebsitesText] = useState("");
   const [outLang, setOutLang] = useState<Lang>(lang);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+
+  const parseWebsites = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const raw of websitesText.split(/\n+/)) {
+      const line = raw.trim();
+      if (!line) continue;
+      const idx = line.indexOf("=");
+      if (idx <= 0) continue;
+      const name = line.slice(0, idx).trim();
+      const url = line.slice(idx + 1).trim();
+      if (name && /^https?:\/\//i.test(url)) out[name] = url;
+    }
+    return out;
+  };
 
   useEffect(() => {
     const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) setBrand(String(txt).split("\n")[0].slice(0, 100)); };
