@@ -227,8 +227,9 @@ export function CompetitorCompare() {
                   <div className="text-xs text-muted-foreground">{b.sentiment}</div>
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2">
-                  <Bar label={t("col_visibility")} value={b.visibility_percent} />
-                  <Bar label={t("col_geo")} value={b.geo_score} />
+                  <Bar label={t("col_visibility")} value={b.visibility_percent} hint={t("compare_how_visibility")} />
+                  <Bar label={t("col_geo")} value={b.geo_score} hint={t("compare_how_geo")} />
+
                 </div>
                 {b.platform_presence && Object.values(b.platform_presence).some((v) => v > 0) && (
                   <div className="mb-3 rounded-lg border border-border/60 bg-background/40 p-2">
