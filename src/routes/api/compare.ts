@@ -269,12 +269,14 @@ export const Route = createFileRoute("/api/compare")({
 
           // Layer B: REAL platform queries via Lovable Gateway (Gemini + ChatGPT)
           const platformMeasured: Record<string, string[]> = {};
+          const platformMeasuredScores: Record<string, { gemini: number | null; chatgpt: number | null }> = {};
           try {
             const probed = await Promise.all(
               normalizedBrands.map((b) => probePlatforms(b.name, lang as any, market.region, apiKey)),
             );
             normalizedBrands.forEach((b, i) => {
               const r = probed[i];
+              platformMeasuredScores[b.name] = r;
               const measured: string[] = [];
               if (typeof r.gemini === "number") { b.platform_presence.gemini = r.gemini; measured.push("gemini"); }
               if (typeof r.chatgpt === "number") { b.platform_presence.chatgpt = r.chatgpt; measured.push("chatgpt"); }
@@ -283,6 +285,24 @@ export const Route = createFileRoute("/api/compare")({
           } catch (e) {
             console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
           }
+
+          // Layer C: REAL strengths/weaknesses derived from gathered signals (not model fabrications)
+          for (const b of normalizedBrands) {
+            const nKey = b.name.toLowerCase().trim();
+            const sw = deriveStrengthsWeaknesses({
+              seo: seoSgeReports[b.name] || null,
+              evidenceByKind: evidenceByKind[nKey] || {},
+              totalEvidence: evidenceCount[nKey] || 0,
+              hasOfficialSite: !!officialSites[b.name],
+              platformMeasured: platformMeasuredScores[b.name] || {},
+            });
+            // Use derived if we have any signal; otherwise fallback to model output
+            if (sw.strengths.length > 0 || sw.weaknesses.length > 0) {
+              b.strengths = sw.strengths.length > 0 ? sw.strengths : b.strengths;
+              b.weaknesses = sw.weaknesses.length > 0 ? sw.weaknesses : b.weaknesses;
+            }
+          }
+
 
           const ranked = [...normalizedBrands]
             .map((b) => ({ ...b, _composite: b.visibility_percent * 0.6 + b.geo_score * 0.4 }))
