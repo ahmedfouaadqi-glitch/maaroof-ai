@@ -108,6 +108,8 @@ export const Route = createFileRoute("/api/compare")({
           const SYSTEM = buildSystem(market);
           let sources: any[] = [];
           const officialSites: Record<string, { url: string; content: string }> = {};
+          const seoSgeReports: Record<string, SeoSgeReport> = {};
+          const userWebsites = body.websites || {};
           try {
             const allBrands = [brand, ...competitors];
             // Multi-signal probe: general, official site, reviews, news, geo presence
@@ -132,29 +134,42 @@ export const Route = createFileRoute("/api/compare")({
               }));
             }).slice(0, 60);
 
-            // Auto-detect official website per brand: first "official" result with brand name in domain,
-            // or first general result with brand-matching hostname
+            // Auto-detect or use user-provided official website per brand, then DEEP scrape for SEO/SGE
             const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-            for (const n of allBrands) {
+            await Promise.all(allBrands.map(async (n) => {
               const nNorm = norm(n);
-              if (!nNorm) continue;
-              const candidates = sources.filter((s) => s.brand === n);
-              const found = candidates.find((s) => {
-                try {
-                  const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
-                  const root = host.split(".")[0];
-                  return root.includes(nNorm.slice(0, Math.min(6, nNorm.length))) || nNorm.includes(root);
-                } catch { return false; }
-              });
-              if (found?.url) {
-                try {
-                  const scraped: any = await fcScrape(found.url);
-                  const md = String(scraped?.data?.markdown || scraped?.markdown || "").slice(0, 1500);
-                  if (md) officialSites[n] = { url: found.url, content: md };
-                } catch {}
+              let chosenUrl: string | null = (userWebsites[n] || "").trim() || null;
+              if (!chosenUrl && nNorm) {
+                const candidates = sources.filter((s) => s.brand === n);
+                const found = candidates.find((s) => {
+                  try {
+                    const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
+                    const root = host.split(".")[0];
+                    return root.includes(nNorm.slice(0, Math.min(6, nNorm.length))) || nNorm.includes(root);
+                  } catch { return false; }
+                });
+                chosenUrl = found?.url || null;
               }
-            }
-          } catch {}
+              if (!chosenUrl) return;
+              try {
+                const scraped: any = await fcScrape(chosenUrl, { deep: true });
+                const root = scraped?.data || scraped;
+                const md = String(root?.markdown || "").slice(0, 1500);
+                if (md) officialSites[n] = { url: chosenUrl, content: md };
+                seoSgeReports[n] = analyzeSeoSge({
+                  url: chosenUrl,
+                  html: root?.html || "",
+                  markdown: root?.markdown || "",
+                  links: Array.isArray(root?.links) ? root.links : [],
+                  metadata: root?.metadata || {},
+                });
+              } catch (e) {
+                console.warn("[api/compare] scrape failed for", n, chosenUrl, e instanceof Error ? e.message : e);
+              }
+            }));
+          } catch (e) {
+            console.warn("[api/compare] sources gather failed:", e instanceof Error ? e.message : e);
+          }
 
           const sourceBlock = sources.map((s, i) => `[${i + 1}] (${s.kind || "general"}) ${s.brand}: ${s.title} (${s.url})\n${s.snippet}`).join("\n\n") || "(no live sources available)";
           const officialBlock = Object.entries(officialSites)
