@@ -23,6 +23,14 @@ type Brand = {
   weaknesses: string[];
   rank?: number;
 };
+type SeoSge = {
+  url: string;
+  seo_score: number;
+  sge_score: number;
+  signals: Record<string, any>;
+  issues: string[];
+  platform_tips: Record<string, string>;
+};
 type Result = {
   brands: Brand[];
   winner: string;
@@ -33,6 +41,7 @@ type Result = {
   specialty?: string | null;
   sources?: { brand: string; kind: string; title: string; url: string; snippet: string }[];
   official_sites?: Record<string, string>;
+  seo_sge?: Record<string, SeoSge>;
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
