@@ -1,40 +1,68 @@
-## الفكرة
-بوابة Lovable AI لا توفّر Perplexity مباشرة — توفّر **Google Gemini** و **OpenAI GPT** فقط. لذلك نحوّل طبقة B إلى ما يلي:
+## المشكلة
+في `src/routes/api/compare.ts` نقاط القوة/الضعف تُؤخذ مباشرة من ردّ النموذج (`found.strengths`, `found.weaknesses`)، فيُولّدها بصياغة عامة حتى عند وجود موقع رسمي — لأن الأدلّة الحقيقية (تقرير `seo_sge`، شارات Firecrawl، درجات المنصّات المقاسة) لا تُغذّى لاستخراجها.
 
-| المنصّة | المصدر | الحالة |
-|---|---|---|
-| Gemini | Lovable Gateway → `google/gemini-3-flash-preview` | **مقاسة فعلياً** |
-| ChatGPT | Lovable Gateway → `openai/gpt-5-mini` | **مقاسة فعلياً** (وكيل لعائلة GPT/ChatGPT) |
-| Perplexity, Claude, Grok, Copilot, DeepSeek, Mistral | مستنتجة من طبقة الأدلة الحقيقية (Firecrawl) | مستنتجة بوضوح |
+## الحل
+اشتقاق نقاط القوة/الضعف **حتمياً من نفس الإشارات الحقيقية** التي نجمعها الآن، بدون أي مفتاح إضافي.
 
-النتيجة: منصّتان من الـ8 تنتقلان من «مستنتج» إلى «مقاس فعلياً» بدون أي مفتاح إضافي من المستخدم.
+## التنفيذ
 
-## ما سيُنفّذ
+### 1) `src/lib/seo-sge.server.ts` (إضافة دالة)
+```ts
+deriveStrengthsWeaknesses({
+  brand, seo, evidenceByKind, totalEvidence,
+  hasOfficialSite, platformMeasured,
+}) => { strengths: string[]; weaknesses: string[] }
+```
+يُرجع **مفاتيح i18n** (لا نصوص ثابتة) مبنية على:
 
-1. **`src/lib/platform-probe.server.ts` (جديد)**
-   - دالّة `probeGemini(brand, lang)` و `probeChatGPT(brand, lang)` تُرسل سؤالاً موحّداً («ماذا تعرف عن `<brand>`؟ اذكر مصادر وحقائق») عبر Lovable Gateway.
-   - تحسب درجة ظهور 0-100 من: طول الإجابة الواقعية، ذِكر اسم العلامة، استشهاد URLs، تأكيد المعرفة vs «لا أعرف».
-   - تُعالج 402/429 بإرجاع `null` (تسقط بصمت إلى الاستنتاج).
+| الإشارة → نقطة قوة | الإشارة → نقطة ضعف |
+|---|---|
+| `seo.signals.has_jsonld` + `has_org_schema` | غياب JSON-LD أو Organization schema |
+| `seo.signals.word_count ≥ 800` | محتوى ضعيف (< 300 كلمة) |
+| `seo.signals.has_faq_schema` | غياب FAQ schema (مهم لـ SGE) |
+| `has_og` + `has_twitter` | غياب Open Graph |
+| نسبة `images_with_alt ≥ 0.7` | نقص alt على الصور |
+| `internal_links ≥ 10` | روابط داخلية شحيحة |
+| `external_links ≥ 5` (يدعم Perplexity/Claude) | لا استشهادات خارجية |
+| `evidenceByKind.news ≥ 3` (تغطية إخبارية) | لا تغطية إخبارية في السوق |
+| `evidenceByKind.reviews ≥ 3` | لا مراجعات/تقييمات منظورة |
+| `evidenceByKind.geo ≥ 2` (حضور جغرافي) | لا إشارات حضور جغرافي محلي |
+| `hasOfficialSite` (موقع موثّق) | لم يُكتشف موقع رسمي |
+| `platformMeasured.gemini ≥ 60` ظهور قوي في Gemini | ظهور ضعيف في Gemini/ChatGPT المقاس |
+| `has_canonical` + `has_lang` + `has_viewport` كاملة | نقص تهيئة تقنية أساسية |
 
-2. **`src/routes/api/compare.ts`**
-   - استدعاء `probeGemini` و `probeChatGPT` لكل علامة بالتوازي.
-   - عند توفّر نتيجة → استبدال قيمة المنصّة في `platform_presence` بالقيمة المقاسة وتعليمها بـ `measured: true`.
-   - عند الفشل → الإبقاء على القيمة المستنتجة الحالية.
-   - إضافة حقل `platform_measured: Record<string, string[]>` (لكل علامة قائمة المنصّات المقاسة).
+يُرتّب القائمتين حسب الأهمية ويُقتطعان لـ 4 عناصر كحد أقصى.
 
-3. **`src/components/CompetitorCompare.tsx`**
-   - بجانب كل شريط منصّة، شارة صغيرة:
-     - `● مقاس` (أخضر) للمنصّات المقاسة فعلياً (Gemini, ChatGPT).
-     - `○ مستنتج` (رمادي) للباقي.
-   - تحديث بطاقة «كيف تُحسَب المؤشرات» لتعكس أنّ منصّتين أصبحتا مقاستين عبر بوابة Lovable.
+### 2) `src/routes/api/compare.ts`
+- بعد بناء `pp` و `seo` و `platformMeasured` لكل علامة، استدعاء `deriveStrengthsWeaknesses(...)`.
+- استبدال:
+  ```ts
+  strengths: arr(found.strengths, 4),
+  weaknesses: arr(found.weaknesses, 4),
+  ```
+  بـ:
+  ```ts
+  const sw = deriveStrengthsWeaknesses({ ... });
+  strengths: sw.strengths,           // مفاتيح i18n حتمية من الأدلّة
+  weaknesses: sw.weaknesses,
+  ```
+- في حال غياب أي إشارة (لا موقع رسمي + 0 أدلّة) نُبقي على ردّ النموذج كاحتياط مع وسم `inferred`.
 
-4. **`src/lib/i18n.tsx`**
-   - مفاتيح جديدة بالعربية/الإنجليزية/الكردية: `platform_measured`, `platform_inferred`, `compare_how_platforms_v2`.
+### 3) `src/lib/i18n.tsx`
+إضافة المفاتيح الـ ~24 (قوة/ضعف) بالعربية/الإنجليزية/الكردية، مثل:
+- `sw_strong_schema` = "بنية بيانات منظمة كاملة (JSON-LD + Organization)"
+- `sw_weak_thin_content` = "محتوى ضعيف على الموقع الرسمي (أقل من 300 كلمة)"
+- `sw_strong_news_coverage` = "تغطية إخبارية واضحة في السوق المستهدف"
+- `sw_weak_no_official_site` = "لم يُعثر على موقع رسمي موثّق"
+- … إلخ.
 
-## الملاحظات
-- لا حاجة لأي مفتاح من المستخدم — `LOVABLE_API_KEY` مهيّأ تلقائياً.
-- التكلفة: استدعاءان لكل علامة (Gemini + GPT) — لـ 5 علامات = 10 طلبات لكل تشغيل (مقبولة، Gemini Flash و GPT-mini رخيصان).
-- وقت إضافي ~2-4 ثوانٍ لكل تشغيل (متوازٍ).
-- إذا أراد المستخدم لاحقاً تفعيل Perplexity حقيقياً، يكفي إضافة الموصّل وسأضيف `probePerplexity` بنفس النمط.
+### 4) `src/components/CompetitorCompare.tsx`
+- عند عرض كل عنصر strengths/weaknesses: إن كان النص يبدأ بـ `sw_` نمرّره عبر `t()`، وإلا نعرضه كما هو (الـ fallback من النموذج).
+- إضافة شارة صغيرة `● مقاسة من أدلّة الموقع` على بطاقة نقاط القوة/الضعف لتوضيح أنها حتمية لا تخمينية.
 
-هل أُنفّذ؟
+## النتيجة
+- نقاط القوة/الضعف تصبح **منعكسة فعلياً عن محتوى الموقع وروابطه وأدلّة البحث** — متى أضاف المستخدم رابطاً، تتغيّر القائمة فوراً بناءً على ما اكتُشف.
+- لا حاجة لأي مفتاح API جديد. يعتمد فقط على Firecrawl (الموجود) و Lovable Gateway (المهيّأ).
+- النصّ النموذجي يبقى احتياطاً عند انعدام الإشارات.
+
+موافق على التنفيذ؟

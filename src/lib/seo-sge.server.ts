@@ -319,3 +319,98 @@ export function derivePlatformPresence(args: {
 
   return { chatgpt, gemini, claude, perplexity, copilot, grok, mistral, deepseek };
 }
+
+// Derive REAL strengths/weaknesses from gathered signals.
+// Returns i18n keys (prefixed `sw_`) so the UI can localize.
+export function deriveStrengthsWeaknesses(args: {
+  seo?: SeoSgeReport | null;
+  evidenceByKind?: Record<string, number>;
+  totalEvidence?: number;
+  hasOfficialSite?: boolean;
+  platformMeasured?: { gemini?: number | null; chatgpt?: number | null };
+}): { strengths: string[]; weaknesses: string[] } {
+  const s = args.seo?.signals;
+  const ev = args.evidenceByKind || {};
+  const total = args.totalEvidence || 0;
+  const pm = args.platformMeasured || {};
+
+  type Item = { key: string; weight: number };
+  const strong: Item[] = [];
+  const weak: Item[] = [];
+
+  // Official site
+  if (args.hasOfficialSite) strong.push({ key: "sw_strong_official_site", weight: 9 });
+  else weak.push({ key: "sw_weak_no_official_site", weight: 10 });
+
+  if (s) {
+    // Structured data
+    if (s.has_jsonld && s.has_org_schema) strong.push({ key: "sw_strong_schema", weight: 9 });
+    else if (!s.has_jsonld) weak.push({ key: "sw_weak_no_jsonld", weight: 9 });
+    else if (!s.has_org_schema) weak.push({ key: "sw_weak_no_org_schema", weight: 7 });
+
+    if (s.has_faq_schema) strong.push({ key: "sw_strong_faq_schema", weight: 7 });
+    else weak.push({ key: "sw_weak_no_faq_schema", weight: 6 });
+
+    if (s.has_article_schema) strong.push({ key: "sw_strong_article_schema", weight: 5 });
+
+    // Content depth
+    if (s.word_count >= 1200) strong.push({ key: "sw_strong_deep_content", weight: 8 });
+    else if (s.word_count >= 800) strong.push({ key: "sw_strong_good_content", weight: 6 });
+    else if (s.word_count < 300) weak.push({ key: "sw_weak_thin_content", weight: 9 });
+
+    // OG / Twitter
+    if (s.has_og && s.has_twitter) strong.push({ key: "sw_strong_social_meta", weight: 5 });
+    else if (!s.has_og) weak.push({ key: "sw_weak_no_og", weight: 7 });
+
+    // Alt text
+    if (s.image_count > 0) {
+      const altRatio = s.images_with_alt / s.image_count;
+      if (altRatio >= 0.7) strong.push({ key: "sw_strong_alt", weight: 4 });
+      else if (altRatio < 0.4) weak.push({ key: "sw_weak_alt", weight: 5 });
+    }
+
+    // Links
+    if (s.internal_links >= 10) strong.push({ key: "sw_strong_internal_links", weight: 4 });
+    else if (s.internal_links < 3) weak.push({ key: "sw_weak_internal_links", weight: 5 });
+
+    if (s.external_links >= 5) strong.push({ key: "sw_strong_external_citations", weight: 5 });
+    else if (s.external_links < 2) weak.push({ key: "sw_weak_no_citations", weight: 5 });
+
+    // Technical
+    if (s.has_canonical && s.has_lang && s.has_viewport) strong.push({ key: "sw_strong_tech_basics", weight: 4 });
+    else {
+      if (!s.has_canonical) weak.push({ key: "sw_weak_no_canonical", weight: 4 });
+      if (!s.has_lang) weak.push({ key: "sw_weak_no_lang", weight: 3 });
+    }
+
+    if (!s.has_h1) weak.push({ key: "sw_weak_no_h1", weight: 6 });
+  }
+
+  // Evidence signals (Firecrawl)
+  if ((ev.news || 0) >= 3) strong.push({ key: "sw_strong_news", weight: 8 });
+  else if ((ev.news || 0) === 0 && total > 0) weak.push({ key: "sw_weak_no_news", weight: 7 });
+
+  if ((ev.reviews || 0) >= 3) strong.push({ key: "sw_strong_reviews", weight: 7 });
+  else if ((ev.reviews || 0) === 0 && total > 0) weak.push({ key: "sw_weak_no_reviews", weight: 6 });
+
+  if ((ev.geo || 0) >= 2) strong.push({ key: "sw_strong_geo", weight: 7 });
+  else if ((ev.geo || 0) === 0 && total > 0) weak.push({ key: "sw_weak_no_geo", weight: 6 });
+
+  if (total === 0) weak.push({ key: "sw_weak_no_evidence", weight: 10 });
+
+  // Measured platforms
+  if (typeof pm.gemini === "number") {
+    if (pm.gemini >= 60) strong.push({ key: "sw_strong_gemini_recall", weight: 8 });
+    else if (pm.gemini <= 20) weak.push({ key: "sw_weak_gemini_recall", weight: 8 });
+  }
+  if (typeof pm.chatgpt === "number") {
+    if (pm.chatgpt >= 60) strong.push({ key: "sw_strong_chatgpt_recall", weight: 8 });
+    else if (pm.chatgpt <= 20) weak.push({ key: "sw_weak_chatgpt_recall", weight: 8 });
+  }
+
+  const pick = (arr: Item[]) =>
+    arr.sort((a, b) => b.weight - a.weight).slice(0, 4).map((x) => x.key);
+
+  return { strengths: pick(strong), weaknesses: pick(weak) };
+}
+
