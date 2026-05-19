@@ -256,7 +256,6 @@ export function CompetitorCompare() {
                         );
                       })}
 
-                      ))}
                     </div>
                   </div>
                 )}
