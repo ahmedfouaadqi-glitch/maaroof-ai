@@ -76,7 +76,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "GEO-Iraq · Become the Source AI Trusts" },
-      { name: "description", content: "Generative Engine Optimization for Iraq. Part of Marouf Intelligence. Test, score and optimize your content so ChatGPT, Gemini and Claude cite you in EN, AR, KU." },
+      { name: "description", content: "Generative Engine Optimization for Iraq. Score and optimize content so ChatGPT, Gemini and Claude cite you — EN, AR, KU." },
       { name: "author", content: "Marouf Intelligence" },
       { property: "og:site_name", content: "GEO-Iraq" },
       { property: "og:title", content: "GEO-Iraq · Become the Source AI Trusts" },
