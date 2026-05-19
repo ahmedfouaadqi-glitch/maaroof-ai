@@ -23,6 +23,14 @@ type Brand = {
   weaknesses: string[];
   rank?: number;
 };
+type SeoSge = {
+  url: string;
+  seo_score: number;
+  sge_score: number;
+  signals: Record<string, any>;
+  issues: string[];
+  platform_tips: Record<string, string>;
+};
 type Result = {
   brands: Brand[];
   winner: string;
@@ -33,6 +41,7 @@ type Result = {
   specialty?: string | null;
   sources?: { brand: string; kind: string; title: string; url: string; snippet: string }[];
   official_sites?: Record<string, string>;
+  seo_sge?: Record<string, SeoSge>;
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
@@ -45,10 +54,25 @@ export function CompetitorCompare() {
   const [brand, setBrand] = useState("");
   const [competitors, setCompetitors] = useState("");
   const [keywords, setKeywords] = useState("");
+  const [websitesText, setWebsitesText] = useState("");
   const [outLang, setOutLang] = useState<Lang>(lang);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+
+  const parseWebsites = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const raw of websitesText.split(/\n+/)) {
+      const line = raw.trim();
+      if (!line) continue;
+      const idx = line.indexOf("=");
+      if (idx <= 0) continue;
+      const name = line.slice(0, idx).trim();
+      const url = line.slice(idx + 1).trim();
+      if (name && /^https?:\/\//i.test(url)) out[name] = url;
+    }
+    return out;
+  };
 
   useEffect(() => {
     const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) setBrand(String(txt).split("\n")[0].slice(0, 100)); };
@@ -71,7 +95,7 @@ export function CompetitorCompare() {
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
       const r = await apiFetch("/api/compare", {
         method: "POST", headers,
-        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare") }),
+        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare"), websites: parseWebsites() }),
       });
       const data = await r.json();
       if (!r.ok) { setError(data?.error || "error"); return; }
@@ -135,6 +159,12 @@ export function CompetitorCompare() {
           className="rounded-xl border border-border bg-background/60 p-3 text-sm outline-none focus:border-primary md:col-span-2" />
         <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder={t("compare_keywords")}
           className="rounded-xl border border-border bg-background/60 p-3 text-sm outline-none focus:border-primary md:col-span-3" />
+        <div className="md:col-span-3">
+          <label className="mb-1 block text-[11px] text-muted-foreground">{t("compare_websites_label")}</label>
+          <textarea value={websitesText} onChange={(e) => setWebsitesText(e.target.value)} rows={2}
+            placeholder={t("compare_websites_placeholder")}
+            className="w-full rounded-xl border border-border bg-background/60 p-3 text-xs font-mono outline-none focus:border-primary" />
+        </div>
       </div>
 
       <div className="mt-4 flex justify-end">
@@ -266,6 +296,60 @@ export function CompetitorCompare() {
                           ))}
                         </ol>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {result.seo_sge && Object.keys(result.seo_sge).length > 0 && (
+            <div className="space-y-3">
+              <div className="text-xs font-semibold uppercase tracking-widest text-primary">
+                🔍 {t("compare_seo_sge_title")}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[brand, ...competitors.split(/[,،\n]/).map(s => s.trim()).filter(Boolean)].map((bName) => {
+                  const r = result.seo_sge?.[bName];
+                  if (!r) return (
+                    <div key={bName} className="rounded-xl border border-dashed border-border p-3 text-xs text-muted-foreground">
+                      <strong className="block text-foreground">{bName}</strong>
+                      {t("compare_no_site_scanned")}
+                    </div>
+                  );
+                  return (
+                    <div key={bName} className="rounded-xl border border-border bg-background/50 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <strong className="text-sm">{bName}</strong>
+                        <a href={r.url} target="_blank" rel="noreferrer" className="truncate text-[10px] text-primary hover:underline max-w-[60%]">{r.url}</a>
+                      </div>
+                      <div className="mb-3 grid grid-cols-2 gap-2">
+                        <Bar label={t("compare_seo_score")} value={r.seo_score} />
+                        <Bar label={t("compare_sge_score")} value={r.sge_score} />
+                      </div>
+                      {r.issues.length > 0 && (
+                        <div className="mb-2">
+                          <div className="mb-1 text-[10px] uppercase tracking-widest text-destructive">⚠ {t("compare_issues_to_fix")}</div>
+                          <ul className="ms-4 list-disc space-y-0.5 text-[11px]">
+                            {r.issues.slice(0, 6).map((k, i) => <li key={i}>{t(`issue_${k}` as any) || k}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <div className="mb-1 text-[10px] uppercase tracking-widest text-accent">💡 {t("compare_platform_tips")}</div>
+                        <div className="grid grid-cols-1 gap-0.5 text-[11px]">
+                          {PLATFORMS.map((p) => {
+                            const tipKey = r.platform_tips?.[p];
+                            if (!tipKey) return null;
+                            return (
+                              <div key={p} className="flex gap-1.5">
+                                <span className="w-16 shrink-0 capitalize text-muted-foreground">{p}:</span>
+                                <span className="flex-1">{t(tipKey as any) || tipKey}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

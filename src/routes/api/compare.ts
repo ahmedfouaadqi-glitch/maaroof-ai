@@ -3,9 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcSearch, fcScrape } from "@/lib/firecrawl";
+import { analyzeSeoSge, derivePlatformPresence, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 
-type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
+type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -107,6 +108,8 @@ export const Route = createFileRoute("/api/compare")({
           const SYSTEM = buildSystem(market);
           let sources: any[] = [];
           const officialSites: Record<string, { url: string; content: string }> = {};
+          const seoSgeReports: Record<string, SeoSgeReport> = {};
+          const userWebsites = body.websites || {};
           try {
             const allBrands = [brand, ...competitors];
             // Multi-signal probe: general, official site, reviews, news, geo presence
@@ -131,29 +134,42 @@ export const Route = createFileRoute("/api/compare")({
               }));
             }).slice(0, 60);
 
-            // Auto-detect official website per brand: first "official" result with brand name in domain,
-            // or first general result with brand-matching hostname
+            // Auto-detect or use user-provided official website per brand, then DEEP scrape for SEO/SGE
             const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-            for (const n of allBrands) {
+            await Promise.all(allBrands.map(async (n) => {
               const nNorm = norm(n);
-              if (!nNorm) continue;
-              const candidates = sources.filter((s) => s.brand === n);
-              const found = candidates.find((s) => {
-                try {
-                  const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
-                  const root = host.split(".")[0];
-                  return root.includes(nNorm.slice(0, Math.min(6, nNorm.length))) || nNorm.includes(root);
-                } catch { return false; }
-              });
-              if (found?.url) {
-                try {
-                  const scraped: any = await fcScrape(found.url);
-                  const md = String(scraped?.data?.markdown || scraped?.markdown || "").slice(0, 1500);
-                  if (md) officialSites[n] = { url: found.url, content: md };
-                } catch {}
+              let chosenUrl: string | null = (userWebsites[n] || "").trim() || null;
+              if (!chosenUrl && nNorm) {
+                const candidates = sources.filter((s) => s.brand === n);
+                const found = candidates.find((s) => {
+                  try {
+                    const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
+                    const root = host.split(".")[0];
+                    return root.includes(nNorm.slice(0, Math.min(6, nNorm.length))) || nNorm.includes(root);
+                  } catch { return false; }
+                });
+                chosenUrl = found?.url || null;
               }
-            }
-          } catch {}
+              if (!chosenUrl) return;
+              try {
+                const scraped: any = await fcScrape(chosenUrl, { deep: true });
+                const root = scraped?.data || scraped;
+                const md = String(root?.markdown || "").slice(0, 1500);
+                if (md) officialSites[n] = { url: chosenUrl, content: md };
+                seoSgeReports[n] = analyzeSeoSge({
+                  url: chosenUrl,
+                  html: root?.html || "",
+                  markdown: root?.markdown || "",
+                  links: Array.isArray(root?.links) ? root.links : [],
+                  metadata: root?.metadata || {},
+                });
+              } catch (e) {
+                console.warn("[api/compare] scrape failed for", n, chosenUrl, e instanceof Error ? e.message : e);
+              }
+            }));
+          } catch (e) {
+            console.warn("[api/compare] sources gather failed:", e instanceof Error ? e.message : e);
+          }
 
           const sourceBlock = sources.map((s, i) => `[${i + 1}] (${s.kind || "general"}) ${s.brand}: ${s.title} (${s.url})\n${s.snippet}`).join("\n\n") || "(no live sources available)";
           const officialBlock = Object.entries(officialSites)
@@ -202,37 +218,47 @@ export const Route = createFileRoute("/api/compare")({
           const allBrandNames = [brand, ...competitors];
           const brands = Array.isArray(parsed.brands) ? parsed.brands.slice(0, 5) : [];
 
+          // Per-brand evidence counts by kind
           const evidenceCount: Record<string, number> = {};
+          const evidenceByKind: Record<string, Record<string, number>> = {};
           for (const s of sources) {
             const k = String(s.brand || "").toLowerCase().trim();
             evidenceCount[k] = (evidenceCount[k] || 0) + 1;
+            const kind = String(s.kind || "general");
+            evidenceByKind[k] = evidenceByKind[k] || {};
+            evidenceByKind[k][kind] = (evidenceByKind[k][kind] || 0) + 1;
           }
           const totalEv = Math.max(1, sources.length);
 
           const normalizedBrands = allBrandNames.map((n) => {
             const found = brands.find((b: any) => String(b?.name || "").toLowerCase().trim() === n.toLowerCase().trim()) || {};
-            const pp: Record<string, number> = {};
-            const src = (found.platform_presence && typeof found.platform_presence === "object") ? found.platform_presence : {};
-            let ppHasValue = false;
-            for (const p of PLATFORMS) {
-              pp[p] = clamp(src[p]);
-              if (pp[p] > 0) ppHasValue = true;
-            }
-            const evRatio = (evidenceCount[n.toLowerCase().trim()] || 0) / totalEv; // 0..1
+            const nKey = n.toLowerCase().trim();
+            const seo = seoSgeReports[n] || null;
+            const evRatio = (evidenceCount[nKey] || 0) / totalEv; // 0..1
             const evScore = Math.round(20 + evRatio * 70); // 20..90 floor based on share of evidence
+
+            // REAL signal-driven platform presence (overrides model estimate)
+            const pp = derivePlatformPresence({
+              evidenceByKind: evidenceByKind[nKey] || {},
+              totalEvidence: evidenceCount[nKey] || 0,
+              seo,
+            });
+
             let vis = clamp(found.visibility_percent);
             let geo = clamp(found.geo_score);
             if (vis === 0) vis = evScore;
             if (geo === 0) geo = Math.max(15, evScore - 10);
-            // If platform presence empty, distribute evScore across platforms with mild variation
-            if (!ppHasValue) {
-              PLATFORMS.forEach((p, i) => { pp[p] = Math.max(0, Math.min(100, evScore - 5 + ((i * 7) % 15) - 7)); });
+            // If we have a real SEO report, blend it into visibility (signals matter more than model)
+            if (seo) {
+              vis = Math.round(vis * 0.4 + seo.seo_score * 0.4 + seo.sge_score * 0.2);
+              geo = Math.round(geo * 0.5 + seo.seo_score * 0.5);
             }
+
             return {
               name: n,
               is_main: n === brand,
-              visibility_percent: vis,
-              geo_score: geo,
+              visibility_percent: clamp(vis),
+              geo_score: clamp(geo),
               sentiment: ["positive", "neutral", "negative"].includes(found.sentiment) ? found.sentiment : "neutral",
               platform_presence: pp,
               strengths: arr(found.strengths, 4),
@@ -269,6 +295,7 @@ export const Route = createFileRoute("/api/compare")({
             specialty: userCtx.specialty,
             sources,
             official_sites: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, v.url])),
+            seo_sge: seoSgeReports,
           };
 
           await admin.from("agent_tasks").insert({
