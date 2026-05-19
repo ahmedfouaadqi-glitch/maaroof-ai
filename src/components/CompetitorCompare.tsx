@@ -341,8 +341,9 @@ export function CompetitorCompare() {
                         <a href={r.url} target="_blank" rel="noreferrer" className="truncate text-[10px] text-primary hover:underline max-w-[60%]">{r.url}</a>
                       </div>
                       <div className="mb-3 grid grid-cols-2 gap-2">
-                        <Bar label={t("compare_seo_score")} value={r.seo_score} />
-                        <Bar label={t("compare_sge_score")} value={r.sge_score} />
+                        <Bar label={t("compare_seo_score")} value={r.seo_score} hint={t("compare_how_seo")} />
+                        <Bar label={t("compare_sge_score")} value={r.sge_score} hint={t("compare_how_sge")} />
+
                       </div>
                       {r.issues.length > 0 && (
                         <div className="mb-2">
