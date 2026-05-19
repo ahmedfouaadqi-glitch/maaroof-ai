@@ -218,37 +218,47 @@ export const Route = createFileRoute("/api/compare")({
           const allBrandNames = [brand, ...competitors];
           const brands = Array.isArray(parsed.brands) ? parsed.brands.slice(0, 5) : [];
 
+          // Per-brand evidence counts by kind
           const evidenceCount: Record<string, number> = {};
+          const evidenceByKind: Record<string, Record<string, number>> = {};
           for (const s of sources) {
             const k = String(s.brand || "").toLowerCase().trim();
             evidenceCount[k] = (evidenceCount[k] || 0) + 1;
+            const kind = String(s.kind || "general");
+            evidenceByKind[k] = evidenceByKind[k] || {};
+            evidenceByKind[k][kind] = (evidenceByKind[k][kind] || 0) + 1;
           }
           const totalEv = Math.max(1, sources.length);
 
           const normalizedBrands = allBrandNames.map((n) => {
             const found = brands.find((b: any) => String(b?.name || "").toLowerCase().trim() === n.toLowerCase().trim()) || {};
-            const pp: Record<string, number> = {};
-            const src = (found.platform_presence && typeof found.platform_presence === "object") ? found.platform_presence : {};
-            let ppHasValue = false;
-            for (const p of PLATFORMS) {
-              pp[p] = clamp(src[p]);
-              if (pp[p] > 0) ppHasValue = true;
-            }
-            const evRatio = (evidenceCount[n.toLowerCase().trim()] || 0) / totalEv; // 0..1
+            const nKey = n.toLowerCase().trim();
+            const seo = seoSgeReports[n] || null;
+            const evRatio = (evidenceCount[nKey] || 0) / totalEv; // 0..1
             const evScore = Math.round(20 + evRatio * 70); // 20..90 floor based on share of evidence
+
+            // REAL signal-driven platform presence (overrides model estimate)
+            const pp = derivePlatformPresence({
+              evidenceByKind: evidenceByKind[nKey] || {},
+              totalEvidence: evidenceCount[nKey] || 0,
+              seo,
+            });
+
             let vis = clamp(found.visibility_percent);
             let geo = clamp(found.geo_score);
             if (vis === 0) vis = evScore;
             if (geo === 0) geo = Math.max(15, evScore - 10);
-            // If platform presence empty, distribute evScore across platforms with mild variation
-            if (!ppHasValue) {
-              PLATFORMS.forEach((p, i) => { pp[p] = Math.max(0, Math.min(100, evScore - 5 + ((i * 7) % 15) - 7)); });
+            // If we have a real SEO report, blend it into visibility (signals matter more than model)
+            if (seo) {
+              vis = Math.round(vis * 0.4 + seo.seo_score * 0.4 + seo.sge_score * 0.2);
+              geo = Math.round(geo * 0.5 + seo.seo_score * 0.5);
             }
+
             return {
               name: n,
               is_main: n === brand,
-              visibility_percent: vis,
-              geo_score: geo,
+              visibility_percent: clamp(vis),
+              geo_score: clamp(geo),
               sentiment: ["positive", "neutral", "negative"].includes(found.sentiment) ? found.sentiment : "neutral",
               platform_presence: pp,
               strengths: arr(found.strengths, 4),
