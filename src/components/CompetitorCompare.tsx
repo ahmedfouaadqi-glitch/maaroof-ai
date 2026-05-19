@@ -167,6 +167,22 @@ export function CompetitorCompare() {
         </div>
       </div>
 
+      <details className="mt-4 rounded-xl border border-border/60 bg-background/40 p-3 text-xs">
+        <summary className="cursor-pointer select-none font-semibold text-foreground/90">
+          ℹ️ {t("compare_how_it_works")}
+        </summary>
+        <ul className="mt-3 space-y-2 text-muted-foreground leading-relaxed">
+          <li><b className="text-foreground">% {t("col_visibility")}:</b> {t("compare_how_visibility")}</li>
+          <li><b className="text-foreground">{t("col_geo")}:</b> {t("compare_how_geo")}</li>
+          <li><b className="text-foreground">{t("compare_platform_presence")}:</b> {t("compare_how_platforms")}</li>
+          <li><b className="text-foreground">{t("compare_seo_score")}:</b> {t("compare_how_seo")}</li>
+          <li><b className="text-foreground">{t("compare_sge_score")}:</b> {t("compare_how_sge")}</li>
+          <li><b className="text-foreground">{t("specialty_active")}:</b> {t("compare_how_profile")}</li>
+          <li><b className="text-foreground">⟳</b> {t("compare_how_live")}</li>
+        </ul>
+      </details>
+
+
       <div className="mt-4 flex justify-end">
         <button onClick={run} disabled={busy}
           className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02] disabled:opacity-50">
@@ -211,8 +227,9 @@ export function CompetitorCompare() {
                   <div className="text-xs text-muted-foreground">{b.sentiment}</div>
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2">
-                  <Bar label={t("col_visibility")} value={b.visibility_percent} />
-                  <Bar label={t("col_geo")} value={b.geo_score} />
+                  <Bar label={t("col_visibility")} value={b.visibility_percent} hint={t("compare_how_visibility")} />
+                  <Bar label={t("col_geo")} value={b.geo_score} hint={t("compare_how_geo")} />
+
                 </div>
                 {b.platform_presence && Object.values(b.platform_presence).some((v) => v > 0) && (
                   <div className="mb-3 rounded-lg border border-border/60 bg-background/40 p-2">
@@ -324,8 +341,9 @@ export function CompetitorCompare() {
                         <a href={r.url} target="_blank" rel="noreferrer" className="truncate text-[10px] text-primary hover:underline max-w-[60%]">{r.url}</a>
                       </div>
                       <div className="mb-3 grid grid-cols-2 gap-2">
-                        <Bar label={t("compare_seo_score")} value={r.seo_score} />
-                        <Bar label={t("compare_sge_score")} value={r.sge_score} />
+                        <Bar label={t("compare_seo_score")} value={r.seo_score} hint={t("compare_how_seo")} />
+                        <Bar label={t("compare_sge_score")} value={r.sge_score} hint={t("compare_how_sge")} />
+
                       </div>
                       {r.issues.length > 0 && (
                         <div className="mb-2">
@@ -364,11 +382,11 @@ export function CompetitorCompare() {
   );
 }
 
-function Bar({ label, value }: { label: string; value: number }) {
+function Bar({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
-    <div>
+    <div title={hint}>
       <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
-        <span>{label}</span><span className="font-mono text-foreground">{value}</span>
+        <span>{label}{hint ? " ⓘ" : ""}</span><span className="font-mono text-foreground">{value}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${value}%` }} />
@@ -376,3 +394,4 @@ function Bar({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
