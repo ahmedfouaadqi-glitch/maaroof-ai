@@ -159,6 +159,12 @@ export function CompetitorCompare() {
           className="rounded-xl border border-border bg-background/60 p-3 text-sm outline-none focus:border-primary md:col-span-2" />
         <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder={t("compare_keywords")}
           className="rounded-xl border border-border bg-background/60 p-3 text-sm outline-none focus:border-primary md:col-span-3" />
+        <div className="md:col-span-3">
+          <label className="mb-1 block text-[11px] text-muted-foreground">{t("compare_websites_label")}</label>
+          <textarea value={websitesText} onChange={(e) => setWebsitesText(e.target.value)} rows={2}
+            placeholder={t("compare_websites_placeholder")}
+            className="w-full rounded-xl border border-border bg-background/60 p-3 text-xs font-mono outline-none focus:border-primary" />
+        </div>
       </div>
 
       <div className="mt-4 flex justify-end">
