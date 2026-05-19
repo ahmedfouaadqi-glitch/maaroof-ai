@@ -8,13 +8,6 @@ import { Loader2, Mail, Lock, User as UserIcon } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
-      { title: "Sign in · GEO-Iraq" },
-      { name: "description", content: "Sign in or create your GEO-Iraq account to access tools, the AI Agent and your dashboard." },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
-  }),
   validateSearch: (s: Record<string, unknown>) => ({
     mode: (s.mode as string) === "signup" ? "signup" : "signin",
     redirect: (s.redirect as string) || "/dashboard",

@@ -13,13 +13,6 @@ import { apiFetch } from "@/lib/api-client";
 import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
-  head: () => ({
-    meta: [
-      { title: "AI Agent · GEO-Iraq" },
-      { name: "description", content: "Run the GEO-Iraq AI Agent — automate visibility checks, content and publishing across your targets." },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
-  }),
   component: () => (
     <I18nProvider>
       <AuthProvider>

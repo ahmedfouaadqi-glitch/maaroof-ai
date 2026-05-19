@@ -8,13 +8,6 @@ import { Loader2, Users, Activity, Bell, Crown, Check, X, ShieldPlus, ShieldMinu
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({
-    meta: [
-      { title: "Admin · GEO-Iraq" },
-      { name: "description", content: "GEO-Iraq admin console — users, plans and agent operations." },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
-  }),
   component: () => (
     <I18nProvider>
       <AuthProvider>
