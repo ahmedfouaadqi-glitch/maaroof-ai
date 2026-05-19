@@ -232,6 +232,47 @@ export function CompetitorCompare() {
             </div>
           )}
 
+          {result.sources && result.sources.length > 0 && (
+            <div className="rounded-xl border border-border bg-background/40 p-4">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {t("compare_sources_used")} · {result.sources.length}
+              </div>
+              <div className="space-y-3">
+                {[brand, ...competitors.split(/[,،\n]/).map(s => s.trim()).filter(Boolean)].map((bName) => {
+                  const brandSources = result.sources!.filter((s) => s.brand === bName);
+                  const officialUrl = result.official_sites?.[bName];
+                  return (
+                    <div key={bName} className="rounded-lg border border-border/60 bg-card/40 p-3">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <strong className="text-sm">{bName}</strong>
+                        <span className="text-[10px] text-muted-foreground">{brandSources.length} {t("compare_sources_for")}</span>
+                        {officialUrl && (
+                          <a href={officialUrl} target="_blank" rel="noreferrer"
+                            className="rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] text-success hover:underline">
+                            ✓ {t("compare_official_site")}
+                          </a>
+                        )}
+                      </div>
+                      {brandSources.length === 0 ? (
+                        <div className="text-xs italic text-muted-foreground">{t("compare_no_evidence")}</div>
+                      ) : (
+                        <ol className="space-y-1 text-xs">
+                          {brandSources.slice(0, 8).map((s, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="mt-0.5 rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase text-muted-foreground">{s.kind}</span>
+                              <a href={s.url} target="_blank" rel="noreferrer"
+                                className="flex-1 break-all text-primary hover:underline">{s.title || s.url}</a>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <HandoffMenu source="compare" getText={() => `${brand} vs ${competitors}\n${result.overview || ""}\n\n${(result.recommendations || []).join("\n")}`} />
         </div>
       )}
