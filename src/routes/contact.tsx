@@ -56,7 +56,7 @@ function ContactPage() {
         <div className="mt-8 text-center">
           <Link to="/" className="text-sm text-primary hover:underline">← {t("brand")}</Link>
         </div>
-      </main>
+      </section>
     </div>
   );
 }
