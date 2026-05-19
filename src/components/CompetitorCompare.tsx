@@ -303,6 +303,60 @@ export function CompetitorCompare() {
             </div>
           )}
 
+          {result.seo_sge && Object.keys(result.seo_sge).length > 0 && (
+            <div className="space-y-3">
+              <div className="text-xs font-semibold uppercase tracking-widest text-primary">
+                🔍 {t("compare_seo_sge_title")}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[brand, ...competitors.split(/[,،\n]/).map(s => s.trim()).filter(Boolean)].map((bName) => {
+                  const r = result.seo_sge?.[bName];
+                  if (!r) return (
+                    <div key={bName} className="rounded-xl border border-dashed border-border p-3 text-xs text-muted-foreground">
+                      <strong className="block text-foreground">{bName}</strong>
+                      {t("compare_no_site_scanned")}
+                    </div>
+                  );
+                  return (
+                    <div key={bName} className="rounded-xl border border-border bg-background/50 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <strong className="text-sm">{bName}</strong>
+                        <a href={r.url} target="_blank" rel="noreferrer" className="truncate text-[10px] text-primary hover:underline max-w-[60%]">{r.url}</a>
+                      </div>
+                      <div className="mb-3 grid grid-cols-2 gap-2">
+                        <Bar label={t("compare_seo_score")} value={r.seo_score} />
+                        <Bar label={t("compare_sge_score")} value={r.sge_score} />
+                      </div>
+                      {r.issues.length > 0 && (
+                        <div className="mb-2">
+                          <div className="mb-1 text-[10px] uppercase tracking-widest text-destructive">⚠ {t("compare_issues_to_fix")}</div>
+                          <ul className="ms-4 list-disc space-y-0.5 text-[11px]">
+                            {r.issues.slice(0, 6).map((k, i) => <li key={i}>{t(`issue_${k}` as any) || k}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <div className="mb-1 text-[10px] uppercase tracking-widest text-accent">💡 {t("compare_platform_tips")}</div>
+                        <div className="grid grid-cols-1 gap-0.5 text-[11px]">
+                          {PLATFORMS.map((p) => {
+                            const tipKey = r.platform_tips?.[p];
+                            if (!tipKey) return null;
+                            return (
+                              <div key={p} className="flex gap-1.5">
+                                <span className="w-16 shrink-0 capitalize text-muted-foreground">{p}:</span>
+                                <span className="flex-1">{t(tipKey as any) || tipKey}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <HandoffMenu source="compare" getText={() => `${brand} vs ${competitors}\n${result.overview || ""}\n\n${(result.recommendations || []).join("\n")}`} />
         </div>
       )}
