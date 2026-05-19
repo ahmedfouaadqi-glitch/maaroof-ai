@@ -167,6 +167,22 @@ export function CompetitorCompare() {
         </div>
       </div>
 
+      <details className="mt-4 rounded-xl border border-border/60 bg-background/40 p-3 text-xs">
+        <summary className="cursor-pointer select-none font-semibold text-foreground/90">
+          ℹ️ {t("compare_how_it_works")}
+        </summary>
+        <ul className="mt-3 space-y-2 text-muted-foreground leading-relaxed">
+          <li><b className="text-foreground">% {t("col_visibility")}:</b> {t("compare_how_visibility")}</li>
+          <li><b className="text-foreground">{t("col_geo")}:</b> {t("compare_how_geo")}</li>
+          <li><b className="text-foreground">{t("compare_platform_presence")}:</b> {t("compare_how_platforms")}</li>
+          <li><b className="text-foreground">{t("compare_seo_score")}:</b> {t("compare_how_seo")}</li>
+          <li><b className="text-foreground">{t("compare_sge_score")}:</b> {t("compare_how_sge")}</li>
+          <li><b className="text-foreground">{t("specialty_active")}:</b> {t("compare_how_profile")}</li>
+          <li><b className="text-foreground">⟳</b> {t("compare_how_live")}</li>
+        </ul>
+      </details>
+
+
       <div className="mt-4 flex justify-end">
         <button onClick={run} disabled={busy}
           className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02] disabled:opacity-50">
