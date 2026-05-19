@@ -42,6 +42,7 @@ type Result = {
   sources?: { brand: string; kind: string; title: string; url: string; snippet: string }[];
   official_sites?: Record<string, string>;
   seo_sge?: Record<string, SeoSge>;
+  platform_measured?: Record<string, string[]>;
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
