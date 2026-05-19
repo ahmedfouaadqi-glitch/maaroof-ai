@@ -268,6 +268,7 @@ export const Route = createFileRoute("/api/compare")({
             recommendations: arr(parsed.recommendations, 6),
             specialty: userCtx.specialty,
             sources,
+            official_sites: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, v.url])),
           };
 
           await admin.from("agent_tasks").insert({
