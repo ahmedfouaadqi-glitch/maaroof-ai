@@ -9,8 +9,12 @@ export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
       { title: "Contact · GEO-Iraq" },
-      { name: "description", content: "Contact GEO-Iraq via WhatsApp or phone." },
+      { name: "description", content: "Contact GEO-Iraq via WhatsApp or phone for support, demos and partnerships." },
+      { property: "og:title", content: "Contact · GEO-Iraq" },
+      { property: "og:description", content: "Reach the GEO-Iraq team via WhatsApp or phone." },
+      { property: "og:url", content: "https://geoiraq.com/contact" },
     ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/contact" }],
   }),
   component: () => (
     <I18nProvider><AuthProvider><ContactPage /></AuthProvider></I18nProvider>
