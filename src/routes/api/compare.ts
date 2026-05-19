@@ -132,11 +132,12 @@ export const Route = createFileRoute("/api/compare")({
           const sourceBlock = sources.map((s, i) => `[${i + 1}] (${s.kind || "general"}) ${s.brand}: ${s.title} (${s.url})\n${s.snippet}`).join("\n\n") || "(no live sources available)";
           const prompt = `العلامة الرئيسية: ${brand}\nالمنافسون: ${competitors.join(" / ")}\nالكلمات المفتاحية / المجال: ${keywords || "(غير محدد)"}\nالسوق المستهدف: ${market.region}\nقيّم جميع العلامات (الرئيسية + المنافسين) اعتماداً على المصادر أدناه فقط. لا تستخدم معرفة غير موثقة. استنتج platform_presence بشكل محافظ من قوة الأدلة المتاحة لكل محرك، وليس كحقيقة مؤكدة.${specialtyHint(userCtx, lang as any)}\n\nSources:\n${sourceBlock}`;
 
-          const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+          const callModel = async (model: string) => fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
+              model,
+              response_format: { type: "json_object" },
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}` },
                 { role: "user", content: prompt },
@@ -144,6 +145,7 @@ export const Route = createFileRoute("/api/compare")({
             }),
           });
 
+          let resp = await callModel("google/gemini-2.5-flash");
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           if (!resp.ok) {
@@ -152,23 +154,47 @@ export const Route = createFileRoute("/api/compare")({
             return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
           }
 
-          const data = await resp.json();
-          const content = String(data?.choices?.[0]?.message?.content || "{}");
-          const parsed: any = extractJsonObject(content) || {};
+          let data = await resp.json();
+          let content = String(data?.choices?.[0]?.message?.content || "{}");
+          let parsed: any = extractJsonObject(content) || {};
+
+          // Retry once with stronger model if parse failed or brands missing
+          if (!Array.isArray(parsed.brands) || parsed.brands.length === 0) {
+            const retry = await callModel("google/gemini-2.5-pro");
+            if (retry.ok) {
+              data = await retry.json();
+              content = String(data?.choices?.[0]?.message?.content || "{}");
+              parsed = extractJsonObject(content) || parsed;
+            }
+          }
 
           const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
           const allBrandNames = [brand, ...competitors];
           const brands = Array.isArray(parsed.brands) ? parsed.brands.slice(0, 5) : [];
+
+          // Count evidence per brand from real sources — used as a floor so scores are never random/empty
+          const evidenceCount: Record<string, number> = {};
+          for (const s of sources) {
+            const k = String(s.brand || "").toLowerCase().trim();
+            evidenceCount[k] = (evidenceCount[k] || 0) + 1;
+          }
+          const maxEv = Math.max(1, ...Object.values(evidenceCount));
+
           const normalizedBrands = allBrandNames.map((n) => {
             const found = brands.find((b: any) => String(b?.name || "").toLowerCase().trim() === n.toLowerCase().trim()) || {};
             const pp: Record<string, number> = {};
             const src = (found.platform_presence && typeof found.platform_presence === "object") ? found.platform_presence : {};
             for (const p of PLATFORMS) pp[p] = clamp(src[p]);
+            const evFloor = Math.round((evidenceCount[n.toLowerCase().trim()] || 0) / maxEv * 60);
+            let vis = clamp(found.visibility_percent);
+            let geo = clamp(found.geo_score);
+            // If model returned nothing, derive a conservative score from evidence
+            if (vis === 0 && geo === 0) { vis = evFloor; geo = Math.max(10, evFloor - 10); }
             return {
               name: n,
               is_main: n === brand,
-              visibility_percent: clamp(found.visibility_percent),
-              geo_score: clamp(found.geo_score),
+              visibility_percent: vis,
+              geo_score: geo,
               sentiment: ["positive", "neutral", "negative"].includes(found.sentiment) ? found.sentiment : "neutral",
               platform_presence: pp,
               strengths: arr(found.strengths, 4),
@@ -182,10 +208,19 @@ export const Route = createFileRoute("/api/compare")({
             .sort((a, b) => b._composite - a._composite)
             .map((b, i) => ({ ...b, rank: i + 1 }));
 
+          // Sanitize winner — reject vague / "can't determine" strings
+          const rawWinner = String(parsed.winner || "").trim();
+          const badWinner = !rawWinner || /لا يمكن|لم يتم|غير محدد|unknown|undetermined|cannot|n\/a/i.test(rawWinner)
+            || !allBrandNames.some((n) => rawWinner.toLowerCase().includes(n.toLowerCase()));
+          const winner = badWinner ? (ranked[0]?.name || brand) : rawWinner.slice(0, 120);
+          const winnerReason = badWinner
+            ? `${winner} يتصدّر بناءً على مزيج الظهور (${ranked[0]?.visibility_percent}%) ودرجة GEO (${ranked[0]?.geo_score}/100).`
+            : String(parsed.winner_reason || "").slice(0, 320);
+
           const result = {
             brands: ranked.map(({ _composite, ...rest }) => rest),
-            winner: String(parsed.winner || ranked[0]?.name || brand).slice(0, 120),
-            winner_reason: String(parsed.winner_reason || "").slice(0, 320),
+            winner,
+            winner_reason: winnerReason,
             overview: String(parsed.overview || "").slice(0, 600),
             content_gaps: arr(parsed.content_gaps, 6),
             recommendations: arr(parsed.recommendations, 6),
