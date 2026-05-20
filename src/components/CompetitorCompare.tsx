@@ -227,7 +227,19 @@ export function CompetitorCompare() {
                     {b.name}
                     {b.is_main && <span className="ms-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">★</span>}
                   </div>
-                  <div className="text-xs text-muted-foreground">{b.sentiment}</div>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    {b.confidence && (
+                      <span className={`rounded-full px-1.5 py-0.5 ${b.confidence === "high" ? "bg-success/15 text-success" : b.confidence === "medium" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                        {t("compare_confidence")}: {t(`compare_confidence_${b.confidence}`)}
+                      </span>
+                    )}
+                    {typeof b.evidence_count === "number" && (
+                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground" title={t("compare_evidence_count_hint")}>
+                        {b.evidence_count} {t("compare_sources_for")}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground">{b.sentiment}</span>
+                  </div>
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2">
                   <Bar label={t("col_visibility")} value={b.visibility_percent} hint={t("compare_how_visibility")} />
