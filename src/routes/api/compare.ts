@@ -5,7 +5,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcSearch, fcScrape } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-import { probeAllPlatformsBatch, PLATFORMS_8 } from "@/lib/platform-probe.server";
+// platform-probe deliberately not used: deterministic derivation is more honest and saves credits
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
