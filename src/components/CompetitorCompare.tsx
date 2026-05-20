@@ -22,6 +22,8 @@ type Brand = {
   strengths: string[];
   weaknesses: string[];
   rank?: number;
+  evidence_count?: number;
+  confidence?: "high" | "medium" | "low";
 };
 type SeoSge = {
   url: string;
