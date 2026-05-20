@@ -310,35 +310,14 @@ export const Route = createFileRoute("/api/compare")({
             };
           });
 
-          // Layer B: ONE batched AI call grading all 8 platforms for all brands
-          const platformMeasured: Record<string, string[]> = {};
+          // Platforms: derived deterministically from real evidence (no extra AI call → saves credits, no hallucination)
+          const platformMeasured: Record<string, string[]> = {}; // empty = all "inferred from evidence"
           const platformMeasuredScores: Record<string, { gemini?: number | null; chatgpt?: number | null }> = {};
-          try {
-            const batchInput = normalizedBrands.map((b) => {
-              const k = b.name.toLowerCase().trim();
-              return {
-                name: b.name,
-                hasOfficialSite: !!officialSites[b.name],
-                evidenceByKind: evidenceByKind[k] || {},
-                totalEvidence: evidenceCount[k] || 0,
-              };
-            });
-            const probed = await probeAllPlatformsBatch(batchInput, lang as any, market.region, apiKey);
-            if (probed) {
-              for (const b of normalizedBrands) {
-                const scores = probed[b.name];
-                if (!scores) continue;
-                const measured: string[] = [];
-                for (const p of PLATFORMS_8) {
-                  (b.platform_presence as any)[p] = scores[p];
-                  measured.push(p);
-                }
-                if (measured.length) platformMeasured[b.name] = measured;
-                platformMeasuredScores[b.name] = { gemini: scores.gemini, chatgpt: scores.chatgpt };
-              }
-            }
-          } catch (e) {
-            console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
+          for (const b of normalizedBrands) {
+            platformMeasuredScores[b.name] = {
+              gemini: b.platform_presence?.gemini ?? null,
+              chatgpt: b.platform_presence?.chatgpt ?? null,
+            };
           }
 
           // Layer C: strengths/weaknesses from REAL signals — always populate
@@ -369,6 +348,13 @@ export const Route = createFileRoute("/api/compare")({
               if (fallback.length === 0) fallback.push("sw_weak_limited_signals");
               b.weaknesses = fallback;
             }
+
+            // Confidence + evidence count surfaced to UI
+            const ev = evidenceCount[nKey] || 0;
+            const hasSeo = !!seoSgeReports[b.name];
+            const confidence = (hasSeo && ev >= 5) ? "high" : (hasSeo || ev >= 3) ? "medium" : "low";
+            (b as any).evidence_count = ev;
+            (b as any).confidence = confidence;
           }
 
 
