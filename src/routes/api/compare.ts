@@ -136,34 +136,85 @@ export const Route = createFileRoute("/api/compare")({
             }).slice(0, 60);
 
             // Auto-detect or use user-provided official website per brand, then DEEP scrape for SEO/SGE
+            const NON_OFFICIAL = /(facebook|instagram|x\.com|twitter|linkedin|youtube|tiktok|wikipedia|wikiwand|yelp|tripadvisor|crunchbase|bloomberg|reuters|aljazeera|alarabiya|cnn|bbc|forbes|pinterest|reddit|medium|maps\.google|goo\.gl|bing\.com|yahoo|amazon\.|noon\.com|souq|opensooq|dubizzle|olx|trustpilot|glassdoor|indeed|google\.com|apple\.com\/store|play\.google)/i;
             const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+            // simple translit for Arabic to latin to help match a hostname
+            const AR_MAP: Record<string,string> = { "ا":"a","أ":"a","إ":"a","آ":"a","ب":"b","ت":"t","ث":"th","ج":"j","ح":"h","خ":"kh","د":"d","ذ":"d","ر":"r","ز":"z","س":"s","ش":"sh","ص":"s","ض":"d","ط":"t","ظ":"z","ع":"a","غ":"gh","ف":"f","ق":"q","ك":"k","ل":"l","م":"m","ن":"n","ه":"h","و":"w","ي":"y","ى":"a","ء":"","ؤ":"o","ئ":"y","ة":"h"," ":"" };
+            const translit = (s: string) => s.split("").map((c) => AR_MAP[c] ?? c).join("").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const hostMatches = (host: string, name: string, kwSlug: string) => {
+              const root = host.split(".")[0];
+              const slugs = [norm(name), translit(name), kwSlug].filter((s) => s && s.length >= 3);
+              return slugs.some((slug) => root.includes(slug.slice(0, Math.min(8, slug.length))) || slug.includes(root.slice(0, Math.min(8, root.length))));
+            };
+            const kwSlug = norm(keywords).slice(0, 12);
+
             await Promise.all(allBrands.map(async (n) => {
-              const nNorm = norm(n);
               let chosenUrl: string | null = (userWebsites[n] || "").trim() || null;
-              if (!chosenUrl && nNorm) {
-                const candidates = sources.filter((s) => s.brand === n);
-                const found = candidates.find((s) => {
+
+              if (!chosenUrl) {
+                // 1) Look in sources already gathered (prefer "official" kind)
+                const pool = sources.filter((s) => s.brand === n);
+                const officialFirst = [...pool.filter((s) => s.kind === "official"), ...pool];
+                const found = officialFirst.find((s) => {
                   try {
                     const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
-                    const root = host.split(".")[0];
-                    return root.includes(nNorm.slice(0, Math.min(6, nNorm.length))) || nNorm.includes(root);
+                    if (NON_OFFICIAL.test(host)) return false;
+                    return hostMatches(host, n, kwSlug);
                   } catch { return false; }
                 });
                 chosenUrl = found?.url || null;
               }
+
+              if (!chosenUrl) {
+                // 2) Dedicated search: "<brand>" official site
+                try {
+                  const q = `"${n}" ${keywords} official site OR موقع رسمي ${market.region}`.trim().slice(0, 240);
+                  const sr: any = await fcSearch(q, { limit: 5, lang });
+                  const rows = (sr?.data?.web || sr?.data || sr?.web || []) as any[];
+                  for (const r of rows) {
+                    try {
+                      const host = new URL(r.url).hostname.replace(/^www\./, "").toLowerCase();
+                      if (NON_OFFICIAL.test(host)) continue;
+                      if (hostMatches(host, n, kwSlug)) { chosenUrl = r.url; break; }
+                    } catch {}
+                  }
+                  // fallback: first non-blacklisted result
+                  if (!chosenUrl) {
+                    for (const r of rows) {
+                      try {
+                        const host = new URL(r.url).hostname.replace(/^www\./, "").toLowerCase();
+                        if (!NON_OFFICIAL.test(host)) { chosenUrl = r.url; break; }
+                      } catch {}
+                    }
+                  }
+                } catch (e) { console.warn("[api/compare] official lookup failed", n, (e as Error).message); }
+              }
+
               if (!chosenUrl) return;
               try {
                 const scraped: any = await fcScrape(chosenUrl, { deep: true });
                 const root = scraped?.data || scraped;
                 const md = String(root?.markdown || "").slice(0, 1500);
-                if (md) officialSites[n] = { url: chosenUrl, content: md };
-                seoSgeReports[n] = analyzeSeoSge({
-                  url: chosenUrl,
-                  html: root?.html || "",
-                  markdown: root?.markdown || "",
-                  links: Array.isArray(root?.links) ? root.links : [],
-                  metadata: root?.metadata || {},
-                });
+                const title = String(root?.metadata?.title || "").toLowerCase();
+                const desc = String(root?.metadata?.description || "").toLowerCase();
+                // Sanity-check: page must reference the brand somehow
+                const slugs = [norm(n), translit(n)].filter(Boolean);
+                const pageOk = slugs.some((slug) =>
+                  title.includes(slug.slice(0, 6)) ||
+                  desc.includes(slug.slice(0, 6)) ||
+                  md.toLowerCase().includes(n.toLowerCase()) ||
+                  md.toLowerCase().includes(slug)
+                );
+                if (md && pageOk) officialSites[n] = { url: chosenUrl, content: md };
+                if (pageOk) {
+                  seoSgeReports[n] = analyzeSeoSge({
+                    url: chosenUrl,
+                    html: root?.html || "",
+                    markdown: root?.markdown || "",
+                    links: Array.isArray(root?.links) ? root.links : [],
+                    metadata: root?.metadata || {},
+                  });
+                }
               } catch (e) {
                 console.warn("[api/compare] scrape failed for", n, chosenUrl, e instanceof Error ? e.message : e);
               }
