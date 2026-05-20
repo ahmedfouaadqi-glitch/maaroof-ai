@@ -5,7 +5,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcSearch, fcScrape } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-import { probePlatforms } from "@/lib/platform-probe.server";
+import { probeAllPlatformsBatch, PLATFORMS_8 } from "@/lib/platform-probe.server";
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
@@ -191,29 +191,21 @@ export const Route = createFileRoute("/api/compare")({
             }),
           });
 
-          let resp = await callModel("google/gemini-2.5-pro");
+          // Single cheap call (saves credits)
+          let resp = await callModel("google/gemini-2.5-flash");
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           if (!resp.ok) {
             const txt = await resp.text();
             console.error("[api/compare] AI error", resp.status, txt);
-            // Fallback to flash if pro fails
-            resp = await callModel("google/gemini-2.5-flash");
-            if (!resp.ok) return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
+            return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
           }
 
           let data = await resp.json();
           let content = String(data?.choices?.[0]?.message?.content || "{}");
           let parsed: any = extractJsonObject(content) || {};
 
-          if (!Array.isArray(parsed.brands) || parsed.brands.length === 0) {
-            const retry = await callModel("google/gemini-2.5-flash");
-            if (retry.ok) {
-              data = await retry.json();
-              content = String(data?.choices?.[0]?.message?.content || "{}");
-              parsed = extractJsonObject(content) || parsed;
-            }
-          }
+          // (no retry — save credits; deterministic layers will fill the gaps)
 
           const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
           const allBrandNames = [brand, ...competitors];
@@ -267,26 +259,38 @@ export const Route = createFileRoute("/api/compare")({
             };
           });
 
-          // Layer B: REAL platform queries via Lovable Gateway (Gemini + ChatGPT)
+          // Layer B: ONE batched AI call grading all 8 platforms for all brands
           const platformMeasured: Record<string, string[]> = {};
-          const platformMeasuredScores: Record<string, { gemini: number | null; chatgpt: number | null }> = {};
+          const platformMeasuredScores: Record<string, { gemini?: number | null; chatgpt?: number | null }> = {};
           try {
-            const probed = await Promise.all(
-              normalizedBrands.map((b) => probePlatforms(b.name, lang as any, market.region, apiKey)),
-            );
-            normalizedBrands.forEach((b, i) => {
-              const r = probed[i];
-              platformMeasuredScores[b.name] = r;
-              const measured: string[] = [];
-              if (typeof r.gemini === "number") { b.platform_presence.gemini = r.gemini; measured.push("gemini"); }
-              if (typeof r.chatgpt === "number") { b.platform_presence.chatgpt = r.chatgpt; measured.push("chatgpt"); }
-              if (measured.length) platformMeasured[b.name] = measured;
+            const batchInput = normalizedBrands.map((b) => {
+              const k = b.name.toLowerCase().trim();
+              return {
+                name: b.name,
+                hasOfficialSite: !!officialSites[b.name],
+                evidenceByKind: evidenceByKind[k] || {},
+                totalEvidence: evidenceCount[k] || 0,
+              };
             });
+            const probed = await probeAllPlatformsBatch(batchInput, lang as any, market.region, apiKey);
+            if (probed) {
+              for (const b of normalizedBrands) {
+                const scores = probed[b.name];
+                if (!scores) continue;
+                const measured: string[] = [];
+                for (const p of PLATFORMS_8) {
+                  (b.platform_presence as any)[p] = scores[p];
+                  measured.push(p);
+                }
+                if (measured.length) platformMeasured[b.name] = measured;
+                platformMeasuredScores[b.name] = { gemini: scores.gemini, chatgpt: scores.chatgpt };
+              }
+            }
           } catch (e) {
             console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
           }
 
-          // Layer C: REAL strengths/weaknesses derived from gathered signals (not model fabrications)
+          // Layer C: strengths/weaknesses from REAL signals — always populate
           for (const b of normalizedBrands) {
             const nKey = b.name.toLowerCase().trim();
             const sw = deriveStrengthsWeaknesses({
@@ -296,10 +300,23 @@ export const Route = createFileRoute("/api/compare")({
               hasOfficialSite: !!officialSites[b.name],
               platformMeasured: platformMeasuredScores[b.name] || {},
             });
-            // Use derived if we have any signal; otherwise fallback to model output
-            if (sw.strengths.length > 0 || sw.weaknesses.length > 0) {
-              b.strengths = sw.strengths.length > 0 ? sw.strengths : b.strengths;
-              b.weaknesses = sw.weaknesses.length > 0 ? sw.weaknesses : b.weaknesses;
+            // Merge: prefer derived, fill gaps with model output
+            const modelS = arr((b as any).strengths, 4);
+            const modelW = arr((b as any).weaknesses, 4);
+            b.strengths = sw.strengths.length > 0 ? sw.strengths : modelS;
+            b.weaknesses = sw.weaknesses.length > 0 ? sw.weaknesses : modelW;
+            // Guaranteed baselines so the UI is never empty
+            if (b.strengths.length === 0) {
+              b.strengths = officialSites[b.name]
+                ? ["sw_strong_official_site"]
+                : ["sw_strong_brand_listed"];
+            }
+            if (b.weaknesses.length === 0) {
+              const fallback: string[] = [];
+              if (!officialSites[b.name]) fallback.push("sw_weak_no_official_site");
+              if ((evidenceCount[nKey] || 0) === 0) fallback.push("sw_weak_no_evidence");
+              if (fallback.length === 0) fallback.push("sw_weak_limited_signals");
+              b.weaknesses = fallback;
             }
           }
 
