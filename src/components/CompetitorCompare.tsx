@@ -19,6 +19,8 @@ type Brand = {
   geo_score: number;
   sentiment: "positive" | "neutral" | "negative";
   platform_presence?: Record<string, number>;
+  platform_reasons?: Record<string, string>;
+  platform_basis?: Record<string, string>;
   strengths: string[];
   weaknesses: string[];
   rank?: number;
