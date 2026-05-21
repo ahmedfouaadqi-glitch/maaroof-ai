@@ -5,7 +5,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcSearch, fcScrape } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-// platform-probe deliberately not used: deterministic derivation is more honest and saves credits
+import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
@@ -274,15 +274,67 @@ export const Route = createFileRoute("/api/compare")({
           }
           const totalEv = Math.max(1, sources.length);
 
+          // Build evidence input per brand for the per-platform probe
+          const topSourcesByBrand: Record<string, { kind: string; title: string; url: string }[]> = {};
+          for (const s of sources) {
+            const key = String(s.brand || "").toLowerCase().trim();
+            (topSourcesByBrand[key] ||= []).push({ kind: s.kind || "general", title: s.title || s.url, url: s.url });
+          }
+
+          const probeInputs: BrandEvidenceInput[] = allBrandNames.map((n) => {
+            const nKey = n.toLowerCase().trim();
+            const seo = seoSgeReports[n] || null;
+            return {
+              name: n,
+              hasOfficialSite: !!officialSites[n],
+              officialUrl: officialSites[n]?.url || null,
+              evidenceByKind: evidenceByKind[nKey] || {},
+              totalEvidence: evidenceCount[nKey] || 0,
+              topSources: topSourcesByBrand[nKey] || [],
+              seoSignals: seo
+                ? {
+                    seo_score: seo.seo_score,
+                    sge_score: seo.sge_score,
+                    has_jsonld: seo.signals.has_jsonld,
+                    has_org_schema: seo.signals.has_org_schema,
+                    has_faq_schema: seo.signals.has_faq_schema,
+                    has_article_schema: seo.signals.has_article_schema,
+                    has_og: seo.signals.has_og,
+                    word_count: seo.signals.word_count,
+                    h2_count: seo.signals.h2_count,
+                    h3_count: seo.signals.h3_count,
+                    external_links: seo.signals.external_links,
+                    internal_links: seo.signals.internal_links,
+                    has_lang: seo.signals.has_lang,
+                  }
+                : null,
+            };
+          });
+
+          // Per-brand, per-platform AI simulation (1 call per brand). Uses the
+          // gathered evidence as ground truth — no generic hallucinations.
+          let perPlatform: Record<string, Awaited<ReturnType<typeof probeBrandsPerPlatform>>[string]> = {};
+          try {
+            perPlatform = await probeBrandsPerPlatform(probeInputs, {
+              lang: lang as any,
+              market: market.region,
+              apiKey,
+              model: "google/gemini-2.5-flash",
+            });
+          } catch (e) {
+            console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
+          }
+
           const normalizedBrands = allBrandNames.map((n) => {
             const found = brands.find((b: any) => String(b?.name || "").toLowerCase().trim() === n.toLowerCase().trim()) || {};
             const nKey = n.toLowerCase().trim();
             const seo = seoSgeReports[n] || null;
-            const evRatio = (evidenceCount[nKey] || 0) / totalEv; // 0..1
-            const evScore = Math.round(20 + evRatio * 70); // 20..90 floor based on share of evidence
+            const evRatio = (evidenceCount[nKey] || 0) / totalEv;
+            const evScore = Math.round(20 + evRatio * 70);
 
-            // REAL signal-driven platform presence (overrides model estimate)
-            const pp = derivePlatformPresence({
+            // Prefer the per-platform AI probe; fall back to deterministic derivation
+            const probe = perPlatform[n];
+            const pp = probe?.scores || derivePlatformPresence({
               evidenceByKind: evidenceByKind[nKey] || {},
               totalEvidence: evidenceCount[nKey] || 0,
               seo,
@@ -292,9 +344,14 @@ export const Route = createFileRoute("/api/compare")({
             let geo = clamp(found.geo_score);
             if (vis === 0) vis = evScore;
             if (geo === 0) geo = Math.max(15, evScore - 10);
-            // If we have a real SEO report, blend it into visibility (signals matter more than model)
+            // Blend in measured platform average so visibility reflects probe results
+            const ppValues = Object.values(pp);
+            if (ppValues.length) {
+              const ppAvg = Math.round(ppValues.reduce((a, b) => a + b, 0) / ppValues.length);
+              vis = Math.round(vis * 0.5 + ppAvg * 0.5);
+            }
             if (seo) {
-              vis = Math.round(vis * 0.4 + seo.seo_score * 0.4 + seo.sge_score * 0.2);
+              vis = Math.round(vis * 0.6 + seo.seo_score * 0.25 + seo.sge_score * 0.15);
               geo = Math.round(geo * 0.5 + seo.seo_score * 0.5);
             }
 
@@ -305,15 +362,20 @@ export const Route = createFileRoute("/api/compare")({
               geo_score: clamp(geo),
               sentiment: ["positive", "neutral", "negative"].includes(found.sentiment) ? found.sentiment : "neutral",
               platform_presence: pp,
+              platform_reasons: probe?.reasons || {},
+              platform_basis: probe?.basis || {},
               strengths: arr(found.strengths, 4),
               weaknesses: arr(found.weaknesses, 4),
             };
           });
 
-          // Platforms: derived deterministically from real evidence (no extra AI call → saves credits, no hallucination)
-          const platformMeasured: Record<string, string[]> = {}; // empty = all "inferred from evidence"
+          // Mark all 8 as measured for brands where the probe succeeded
+          const platformMeasured: Record<string, string[]> = {};
           const platformMeasuredScores: Record<string, { gemini?: number | null; chatgpt?: number | null }> = {};
           for (const b of normalizedBrands) {
+            if (perPlatform[b.name]) {
+              platformMeasured[b.name] = [...PLATFORMS_8];
+            }
             platformMeasuredScores[b.name] = {
               gemini: b.platform_presence?.gemini ?? null,
               chatgpt: b.platform_presence?.chatgpt ?? null,

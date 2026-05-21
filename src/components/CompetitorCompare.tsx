@@ -19,6 +19,8 @@ type Brand = {
   geo_score: number;
   sentiment: "positive" | "neutral" | "negative";
   platform_presence?: Record<string, number>;
+  platform_reasons?: Record<string, string>;
+  platform_basis?: Record<string, string>;
   strengths: string[];
   weaknesses: string[];
   rank?: number;
@@ -258,8 +260,10 @@ export function CompetitorCompare() {
                     <div className="grid grid-cols-2 gap-1.5">
                       {PLATFORMS.map((p) => {
                         const isMeasured = result.platform_measured?.[b.name]?.includes(p);
+                        const reason = b.platform_reasons?.[p] || "";
+                        const tip = reason || (isMeasured ? t("platform_measured_hint") : t("platform_inferred_hint"));
                         return (
-                          <div key={p} className="flex items-center gap-1.5 text-[10px]" title={isMeasured ? t("platform_measured_hint") : t("platform_inferred_hint")}>
+                          <div key={p} className="flex items-center gap-1.5 text-[10px]" title={tip}>
                             <span className={`size-1.5 shrink-0 rounded-full ${isMeasured ? "bg-success" : "bg-muted-foreground/40"}`} />
                             <span className="w-14 truncate capitalize text-muted-foreground">{p}</span>
                             <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
