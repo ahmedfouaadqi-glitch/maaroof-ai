@@ -88,6 +88,7 @@ export const Route = createFileRoute("/api/compare")({
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
+          let chargeUsage: (() => Promise<void>) | null = null;
           const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
           if (!roleRow) {
             // Allow active plan subscribers (counts against monthly_analyses)
@@ -98,7 +99,7 @@ export const Route = createFileRoute("/api/compare")({
               const override = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
               const limit = Math.max(plan?.monthly_analyses || 200, override);
               if ((prof!.monthly_analyses_used || 0) >= limit) return Response.json({ error: "limit", limit }, { status: 402 });
-              await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId);
+              chargeUsage = async () => { await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId); };
             } else {
               const { data: sub } = await admin.from("user_agent_subscriptions").select("*, agent_addons(*)").eq("user_id", userId).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
               if (!sub) return Response.json({ error: "no_active_subscription" }, { status: 402 });
@@ -109,7 +110,7 @@ export const Route = createFileRoute("/api/compare")({
               const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
               if (sub.tasks_used + 1 > addon.monthly_tasks) return Response.json({ error: "monthly_cap_reached" }, { status: 402 });
               if (dailyUsed + 1 > addon.daily_task_cap) return Response.json({ error: "daily_cap_reached" }, { status: 402 });
-              await admin.from("user_agent_subscriptions").update({ tasks_used: sub.tasks_used + 1, tasks_used_today: dailyUsed + 1, last_run_date: today }).eq("id", sub.id);
+              chargeUsage = async () => { await admin.from("user_agent_subscriptions").update({ tasks_used: sub.tasks_used + 1, tasks_used_today: dailyUsed + 1, last_run_date: today }).eq("id", sub.id); };
             }
           }
 
