@@ -306,7 +306,7 @@ export const Route = createFileRoute("/api/compare")({
           });
 
           // Single cheap call (saves credits)
-          let resp = await callModel("google/gemini-2.5-flash");
+          let resp = await callModel("google/gemini-3-flash-preview");
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           if (!resp.ok) {
@@ -384,7 +384,7 @@ export const Route = createFileRoute("/api/compare")({
               lang: lang as any,
               market: market.region,
               apiKey,
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-3-flash-preview",
             });
           } catch (e) {
             console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
