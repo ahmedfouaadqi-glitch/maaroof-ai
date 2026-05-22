@@ -524,6 +524,8 @@ export const Route = createFileRoute("/api/compare")({
             },
           };
 
+          if (chargeUsage) await chargeUsage();
+
           await admin.from("agent_tasks").insert({
             user_id: userId,
             task_type: "competitor_compare",
