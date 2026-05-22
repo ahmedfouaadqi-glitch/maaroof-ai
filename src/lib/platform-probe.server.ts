@@ -147,6 +147,7 @@ Return the JSON now. Remember: different engines MUST score differently when the
       headers: lovableAiHeaders(apiKey),
       body: JSON.stringify({
         model,
+        max_tokens: 4096,
         messages: [
           { role: "system", content: sys },
           { role: "user", content: user },
