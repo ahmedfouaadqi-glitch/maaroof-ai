@@ -384,7 +384,7 @@ export const Route = createFileRoute("/api/compare")({
               lang: lang as any,
               market: market.region,
               apiKey,
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-3-flash-preview",
             });
           } catch (e) {
             console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);
