@@ -330,9 +330,11 @@ export const Route = createFileRoute("/api/compare")({
               name: n,
               hasOfficialSite: !!officialSites[n],
               officialUrl: officialSites[n]?.url || null,
+              officialStatus: (officialSites[n]?.status as any) || "missing",
               evidenceByKind: evidenceByKind[nKey] || {},
               totalEvidence: evidenceCount[nKey] || 0,
               topSources: topSourcesByBrand[nKey] || [],
+              platformEvidence: platformEvidence[n] || {},
               seoSignals: seo
                 ? {
                     seo_score: seo.seo_score,
