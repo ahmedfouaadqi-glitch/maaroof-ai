@@ -493,6 +493,7 @@ export const Route = createFileRoute("/api/compare")({
             specialty: userCtx.specialty,
             sources,
             official_sites: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, v.url])),
+            official_site_status: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, { status: v.status, reason: v.reason }])),
             seo_sge: seoSgeReports,
             platform_measured: platformMeasured,
           };
