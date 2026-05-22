@@ -48,6 +48,7 @@ type Result = {
   official_site_status?: Record<string, { status: "confirmed" | "candidate" | "user" | "missing"; reason: string }>;
   seo_sge?: Record<string, SeoSge>;
   platform_measured?: Record<string, string[]>;
+  live_search?: { ok: boolean; sources_count: number; failed_queries: number };
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
@@ -80,6 +81,11 @@ export function CompetitorCompare() {
     return out;
   };
 
+  const errorText = (code: string) => {
+    const key = `error_${code}` as any;
+    return t(key) || code;
+  };
+
   useEffect(() => {
     const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) setBrand(String(txt).split("\n")[0].slice(0, 100)); };
     window.addEventListener("geo:reuse-compare", onReuse);
@@ -104,7 +110,7 @@ export function CompetitorCompare() {
         body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare"), websites: parseWebsites() }),
       });
       const data = await r.json();
-      if (!r.ok) { setError(data?.error || "error"); return; }
+      if (!r.ok) { setError(errorText(data?.error || "error")); return; }
       setResult(data.result);
       if (auth) auth.refreshProfile();
     } catch (e: any) {
@@ -201,6 +207,13 @@ export function CompetitorCompare() {
 
       {result && (
         <div className="mt-6 space-y-4">
+          {result.live_search && (
+            <div className="rounded-xl border border-border bg-background/50 p-3 text-xs text-muted-foreground">
+              <b className="text-foreground">{t("compare_live_search_status")}:</b>{" "}
+              {t("compare_live_search_ok")} · {result.live_search.sources_count} {t("compare_sources_for")}
+              {result.live_search.failed_queries > 0 && ` · ${result.live_search.failed_queries} ${t("compare_live_search_failed_queries")}`}
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
             <div className="flex items-start gap-2">
               <Trophy className="size-5 text-accent shrink-0 mt-0.5" />

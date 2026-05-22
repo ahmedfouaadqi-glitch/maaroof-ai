@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { fcSearch, fcScrape } from "@/lib/firecrawl";
+import { fcSearch, fcScrape, isFirecrawlError } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
@@ -51,6 +51,15 @@ function arr(v: unknown, max = 5) {
   return v.map((x) => String(x ?? "").trim()).filter(Boolean).slice(0, max).map((s) => s.slice(0, 220));
 }
 
+function liveSearchErrorFrom(errors: unknown[]) {
+  const fc = errors.filter(isFirecrawlError);
+  if (fc.some((e) => e.status === 402)) return { error: "live_search_credits_exhausted", status: 402 };
+  if (fc.some((e) => e.status === 429)) return { error: "live_search_rate_limited", status: 429 };
+  if (fc.length > 0) return { error: "live_search_unavailable", status: 503 };
+  if (errors.length > 0) return { error: "live_search_unavailable", status: 503 };
+  return null;
+}
+
 export const Route = createFileRoute("/api/compare")({
   server: {
     handlers: {
@@ -79,6 +88,7 @@ export const Route = createFileRoute("/api/compare")({
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
+          let chargeUsage: (() => Promise<void>) | null = null;
           const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
           if (!roleRow) {
             // Allow active plan subscribers (counts against monthly_analyses)
@@ -89,7 +99,7 @@ export const Route = createFileRoute("/api/compare")({
               const override = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
               const limit = Math.max(plan?.monthly_analyses || 200, override);
               if ((prof!.monthly_analyses_used || 0) >= limit) return Response.json({ error: "limit", limit }, { status: 402 });
-              await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId);
+              chargeUsage = async () => { await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId); };
             } else {
               const { data: sub } = await admin.from("user_agent_subscriptions").select("*, agent_addons(*)").eq("user_id", userId).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
               if (!sub) return Response.json({ error: "no_active_subscription" }, { status: 402 });
@@ -100,7 +110,7 @@ export const Route = createFileRoute("/api/compare")({
               const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
               if (sub.tasks_used + 1 > addon.monthly_tasks) return Response.json({ error: "monthly_cap_reached" }, { status: 402 });
               if (dailyUsed + 1 > addon.daily_task_cap) return Response.json({ error: "daily_cap_reached" }, { status: 402 });
-              await admin.from("user_agent_subscriptions").update({ tasks_used: sub.tasks_used + 1, tasks_used_today: dailyUsed + 1, last_run_date: today }).eq("id", sub.id);
+              chargeUsage = async () => { await admin.from("user_agent_subscriptions").update({ tasks_used: sub.tasks_used + 1, tasks_used_today: dailyUsed + 1, last_run_date: today }).eq("id", sub.id); };
             }
           }
 
@@ -112,6 +122,7 @@ export const Route = createFileRoute("/api/compare")({
           const seoSgeReports: Record<string, SeoSgeReport> = {};
           const platformEvidence: Record<string, Record<string, number>> = {};
           const userWebsites = body.websites || {};
+          const liveSearchFailures: unknown[] = [];
           try {
             const allBrands = [brand, ...competitors];
             // Multi-signal probe: general/official/reviews/news/geo + per-platform signals
@@ -129,6 +140,7 @@ export const Route = createFileRoute("/api/compare")({
               { brand: n, q: `site:youtube.com "${n}"`, kind: "youtube", limit: 2 },
             ]);
             const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: x.limit, lang })));
+            liveSearchFailures.push(...settled.filter((s) => s.status === "rejected").map((s) => (s as PromiseRejectedResult).reason));
             sources = settled.flatMap((s, idx) => {
               if (s.status !== "fulfilled") return [];
               const data: any = (s.value as any)?.data;
@@ -142,6 +154,11 @@ export const Route = createFileRoute("/api/compare")({
                 snippet: (r.markdown || r.description || "").slice(0, 400),
               }));
             }).slice(0, 140);
+
+            const liveSearchError = liveSearchErrorFrom(liveSearchFailures);
+            if (liveSearchError && sources.length === 0) {
+              return Response.json({ error: liveSearchError.error }, { status: liveSearchError.status });
+            }
 
             // Per-platform evidence counts (real, varying per brand)
             for (const n of allBrands) {
@@ -221,7 +238,10 @@ export const Route = createFileRoute("/api/compare")({
                       cands.push({ url: r.url, host, score: sc });
                     } catch {}
                   }
-                } catch (e) { console.warn("[api/compare] official lookup failed", n, (e as Error).message); }
+                } catch (e) {
+                  liveSearchFailures.push(e);
+                  console.warn("[api/compare] official lookup failed", n, (e as Error).message);
+                }
               }
               if (cands.length === 0) return;
               const byHost = new Map<string, Cand>();
@@ -277,6 +297,7 @@ export const Route = createFileRoute("/api/compare")({
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
               model,
+              max_tokens: 4096,
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\n\nمهم جداً: أعد JSON صالحاً فقط دون أي نص قبله أو بعده ودون علامات markdown.` },
                 { role: "user", content: prompt },
@@ -418,7 +439,7 @@ export const Route = createFileRoute("/api/compare")({
           const platformMeasuredScores: Record<string, { gemini?: number | null; chatgpt?: number | null }> = {};
           for (const b of normalizedBrands) {
             if (perPlatform[b.name]) {
-              platformMeasured[b.name] = [...PLATFORMS_8];
+              platformMeasured[b.name] = PLATFORMS_8.filter((p) => perPlatform[b.name]?.basis?.[p] === "measured_simulation");
             }
             platformMeasuredScores[b.name] = {
               gemini: b.platform_presence?.gemini ?? null,
@@ -496,7 +517,14 @@ export const Route = createFileRoute("/api/compare")({
             official_site_status: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, { status: v.status, reason: v.reason }])),
             seo_sge: seoSgeReports,
             platform_measured: platformMeasured,
+            live_search: {
+              ok: sources.length > 0,
+              sources_count: sources.length,
+              failed_queries: liveSearchFailures.length,
+            },
           };
+
+          if (chargeUsage) await chargeUsage();
 
           await admin.from("agent_tasks").insert({
             user_id: userId,
