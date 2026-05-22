@@ -231,6 +231,19 @@ export function CompetitorCompare() {
                     {b.is_main && <span className="ms-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] text-primary">★</span>}
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px]">
+                    {(() => {
+                      const st = result.official_site_status?.[b.name];
+                      const url = result.official_sites?.[b.name];
+                      if (!st && !url) {
+                        return <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-destructive" title={t("compare_official_missing_hint")}>{t("compare_official_missing")}</span>;
+                      }
+                      const s = st?.status || "candidate";
+                      const cls = s === "confirmed" || s === "user" ? "bg-success/15 text-success" : "bg-primary/15 text-primary";
+                      const label = s === "confirmed" ? t("compare_official_confirmed") : s === "user" ? t("compare_official_user") : t("compare_official_candidate");
+                      return url ? (
+                        <a href={url} target="_blank" rel="noreferrer" className={`rounded-full px-1.5 py-0.5 hover:underline ${cls}`} title={st?.reason || ""}>✓ {label}</a>
+                      ) : null;
+                    })()}
                     {b.confidence && (
                       <span className={`rounded-full px-1.5 py-0.5 ${b.confidence === "high" ? "bg-success/15 text-success" : b.confidence === "medium" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                         {t("compare_confidence")}: {t(`compare_confidence_${b.confidence}`)}
