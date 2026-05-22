@@ -45,7 +45,7 @@ type Result = {
   specialty?: string | null;
   sources?: { brand: string; kind: string; title: string; url: string; snippet: string }[];
   official_sites?: Record<string, string>;
-  seo_sge?: Record<string, SeoSge>;
+  official_site_status?: Record<string, { status: "confirmed" | "candidate" | "user" | "missing"; reason: string }>;
   platform_measured?: Record<string, string[]>;
 };
 
