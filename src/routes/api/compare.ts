@@ -56,6 +56,7 @@ function liveSearchErrorFrom(errors: unknown[]) {
   if (fc.some((e) => e.status === 402)) return { error: "live_search_credits_exhausted", status: 402 };
   if (fc.some((e) => e.status === 429)) return { error: "live_search_rate_limited", status: 429 };
   if (fc.length > 0) return { error: "live_search_unavailable", status: 503 };
+  if (errors.length > 0) return { error: "live_search_unavailable", status: 503 };
   return null;
 }
 
