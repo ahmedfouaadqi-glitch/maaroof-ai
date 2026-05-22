@@ -236,7 +236,10 @@ export const Route = createFileRoute("/api/compare")({
                       cands.push({ url: r.url, host, score: sc });
                     } catch {}
                   }
-                } catch (e) { console.warn("[api/compare] official lookup failed", n, (e as Error).message); }
+                } catch (e) {
+                  liveSearchFailures.push(e);
+                  console.warn("[api/compare] official lookup failed", n, (e as Error).message);
+                }
               }
               if (cands.length === 0) return;
               const byHost = new Map<string, Cand>();
