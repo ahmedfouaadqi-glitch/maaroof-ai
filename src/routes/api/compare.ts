@@ -292,6 +292,7 @@ export const Route = createFileRoute("/api/compare")({
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
               model,
+              max_tokens: 4096,
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\n\nمهم جداً: أعد JSON صالحاً فقط دون أي نص قبله أو بعده ودون علامات markdown.` },
                 { role: "user", content: prompt },
@@ -433,7 +434,7 @@ export const Route = createFileRoute("/api/compare")({
           const platformMeasuredScores: Record<string, { gemini?: number | null; chatgpt?: number | null }> = {};
           for (const b of normalizedBrands) {
             if (perPlatform[b.name]) {
-              platformMeasured[b.name] = [...PLATFORMS_8];
+              platformMeasured[b.name] = PLATFORMS_8.filter((p) => perPlatform[b.name]?.basis?.[p] === "measured_simulation");
             }
             platformMeasuredScores[b.name] = {
               gemini: b.platform_presence?.gemini ?? null,
@@ -511,6 +512,11 @@ export const Route = createFileRoute("/api/compare")({
             official_site_status: Object.fromEntries(Object.entries(officialSites).map(([k, v]) => [k, { status: v.status, reason: v.reason }])),
             seo_sge: seoSgeReports,
             platform_measured: platformMeasured,
+            live_search: {
+              ok: sources.length > 0,
+              sources_count: sources.length,
+              failed_queries: liveSearchFailures.length,
+            },
           };
 
           await admin.from("agent_tasks").insert({
