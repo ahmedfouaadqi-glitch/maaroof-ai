@@ -108,113 +108,155 @@ export const Route = createFileRoute("/api/compare")({
           const market = describeMarket(body.scope);
           const SYSTEM = buildSystem(market);
           let sources: any[] = [];
-          const officialSites: Record<string, { url: string; content: string }> = {};
+          const officialSites: Record<string, { url: string; content: string; status: "confirmed" | "candidate" | "user"; reason: string }> = {};
           const seoSgeReports: Record<string, SeoSgeReport> = {};
+          const platformEvidence: Record<string, Record<string, number>> = {};
           const userWebsites = body.websites || {};
           try {
             const allBrands = [brand, ...competitors];
-            // Multi-signal probe: general, official site, reviews, news, geo presence
+            // Multi-signal probe: general/official/reviews/news/geo + per-platform signals
+            // (LinkedIn → copilot, X → grok, reddit → perplexity, wiki → claude/chatgpt, etc.)
             const queries = allBrands.flatMap((n) => [
-              { brand: n, q: `${n} ${keywords} ${market.region}`.trim(), kind: "general" },
-              { brand: n, q: `"${n}" official site OR موقع رسمي OR website`.trim(), kind: "official" },
-              { brand: n, q: `"${n}" reviews OR رأي OR تقييم ${market.region}`.trim(), kind: "reviews" },
-              { brand: n, q: `"${n}" news ${market.region}`.trim(), kind: "news" },
-              { brand: n, q: `"${n}" ${market.region} address OR عنوان OR location`.trim(), kind: "geo" },
+              { brand: n, q: `${n} ${keywords} ${market.region}`.trim(), kind: "general", limit: 5 },
+              { brand: n, q: `"${n}" official site OR موقع رسمي OR website`.trim(), kind: "official", limit: 5 },
+              { brand: n, q: `"${n}" reviews OR رأي OR تقييم ${market.region}`.trim(), kind: "reviews", limit: 4 },
+              { brand: n, q: `"${n}" news ${market.region}`.trim(), kind: "news", limit: 4 },
+              { brand: n, q: `"${n}" ${market.region} address OR عنوان OR location`.trim(), kind: "geo", limit: 3 },
+              { brand: n, q: `site:linkedin.com "${n}"`, kind: "linkedin", limit: 3 },
+              { brand: n, q: `site:x.com OR site:twitter.com "${n}"`, kind: "x", limit: 3 },
+              { brand: n, q: `site:reddit.com "${n}"`, kind: "reddit", limit: 3 },
+              { brand: n, q: `site:wikipedia.org "${n}"`, kind: "wiki", limit: 2 },
+              { brand: n, q: `site:youtube.com "${n}"`, kind: "youtube", limit: 2 },
             ]);
-            const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: 5, lang })));
+            const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: x.limit, lang })));
             sources = settled.flatMap((s, idx) => {
               if (s.status !== "fulfilled") return [];
               const data: any = (s.value as any)?.data;
               const rows = Array.isArray(data) ? data : [...(data?.web || []), ...(data?.news || [])];
-              return rows.slice(0, 5).map((r: any) => ({
-                brand: queries[idx].brand,
-                kind: queries[idx].kind,
+              const q = queries[idx];
+              return rows.slice(0, q.limit).map((r: any) => ({
+                brand: q.brand,
+                kind: q.kind,
                 title: r.title,
                 url: r.url,
                 snippet: (r.markdown || r.description || "").slice(0, 400),
               }));
-            }).slice(0, 60);
+            }).slice(0, 140);
 
-            // Auto-detect or use user-provided official website per brand, then DEEP scrape for SEO/SGE
+            // Per-platform evidence counts (real, varying per brand)
+            for (const n of allBrands) {
+              const ev: Record<string, number> = {};
+              const mine = sources.filter((s) => s.brand === n);
+              const c = (k: string) => mine.filter((s) => s.kind === k).length;
+              ev.news = c("news"); ev.linkedin = c("linkedin"); ev.x = c("x");
+              ev.reddit = c("reddit"); ev.wiki = c("wiki"); ev.youtube = c("youtube");
+              ev.reviews = c("reviews"); ev.geo = c("geo"); ev.official = c("official"); ev.general = c("general");
+              platformEvidence[n] = ev;
+            }
+
+            // Official site discovery — RELAXED with scoring + user-URL trust
             const NON_OFFICIAL = /(facebook|instagram|x\.com|twitter|linkedin|youtube|tiktok|wikipedia|wikiwand|yelp|tripadvisor|crunchbase|bloomberg|reuters|aljazeera|alarabiya|cnn|bbc|forbes|pinterest|reddit|medium|maps\.google|goo\.gl|bing\.com|yahoo|amazon\.|noon\.com|souq|opensooq|dubizzle|olx|trustpilot|glassdoor|indeed|google\.com|apple\.com\/store|play\.google)/i;
             const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-            // simple translit for Arabic to latin to help match a hostname
             const AR_MAP: Record<string,string> = { "ا":"a","أ":"a","إ":"a","آ":"a","ب":"b","ت":"t","ث":"th","ج":"j","ح":"h","خ":"kh","د":"d","ذ":"d","ر":"r","ز":"z","س":"s","ش":"sh","ص":"s","ض":"d","ط":"t","ظ":"z","ع":"a","غ":"gh","ف":"f","ق":"q","ك":"k","ل":"l","م":"m","ن":"n","ه":"h","و":"w","ي":"y","ى":"a","ء":"","ؤ":"o","ئ":"y","ة":"h"," ":"" };
             const translit = (s: string) => s.split("").map((c) => AR_MAP[c] ?? c).join("").toLowerCase().replace(/[^a-z0-9]/g, "");
             const hostMatches = (host: string, name: string, kwSlug: string) => {
               const root = host.split(".")[0];
               const slugs = [norm(name), translit(name), kwSlug].filter((s) => s && s.length >= 3);
-              return slugs.some((slug) => root.includes(slug.slice(0, Math.min(8, slug.length))) || slug.includes(root.slice(0, Math.min(8, root.length))));
+              return slugs.some((slug) => {
+                const seg = slug.slice(0, Math.min(5, slug.length));
+                return root.includes(seg) || slug.includes(root.slice(0, Math.min(5, root.length)));
+              });
             };
             const kwSlug = norm(keywords).slice(0, 12);
 
             await Promise.all(allBrands.map(async (n) => {
-              let chosenUrl: string | null = (userWebsites[n] || "").trim() || null;
-
-              if (!chosenUrl) {
-                // 1) Look in sources already gathered (prefer "official" kind)
-                const pool = sources.filter((s) => s.brand === n);
-                const officialFirst = [...pool.filter((s) => s.kind === "official"), ...pool];
-                const found = officialFirst.find((s) => {
-                  try {
-                    const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
-                    if (NON_OFFICIAL.test(host)) return false;
-                    return hostMatches(host, n, kwSlug);
-                  } catch { return false; }
-                });
-                chosenUrl = found?.url || null;
+              // 1) Trust user-provided URL fully
+              const userUrl = (userWebsites[n] || "").trim();
+              if (userUrl) {
+                try {
+                  const scraped: any = await fcScrape(userUrl, { deep: true });
+                  const root = scraped?.data || scraped;
+                  const md = String(root?.markdown || "").slice(0, 1500);
+                  officialSites[n] = { url: userUrl, content: md, status: "user", reason: "user_provided" };
+                  seoSgeReports[n] = analyzeSeoSge({
+                    url: userUrl, html: root?.html || "", markdown: root?.markdown || "",
+                    links: Array.isArray(root?.links) ? root.links : [], metadata: root?.metadata || {},
+                  });
+                } catch (e) {
+                  officialSites[n] = { url: userUrl, content: "", status: "user", reason: "user_provided_unreachable" };
+                }
+                return;
               }
 
-              if (!chosenUrl) {
-                // 2) Dedicated search: "<brand>" official site
+              // 2) Score candidates
+              type Cand = { url: string; host: string; score: number };
+              const cands: Cand[] = [];
+              const pool = sources.filter((s) => s.brand === n);
+              for (const s of pool) {
+                try {
+                  const host = new URL(s.url).hostname.replace(/^www\./, "").toLowerCase();
+                  if (NON_OFFICIAL.test(host)) continue;
+                  let sc = 0;
+                  if (s.kind === "official") sc += 5;
+                  if (s.kind === "general") sc += 2;
+                  if (hostMatches(host, n, kwSlug)) sc += 6;
+                  if ((s.title || "").toLowerCase().includes(n.toLowerCase())) sc += 3;
+                  if ((s.snippet || "").toLowerCase().includes(n.toLowerCase())) sc += 1;
+                  if (sc > 0) cands.push({ url: s.url, host, score: sc });
+                } catch {}
+              }
+              // 3) Fallback dedicated search
+              if (cands.length === 0 || Math.max(...cands.map((c) => c.score)) < 4) {
                 try {
                   const q = `"${n}" ${keywords} official site OR موقع رسمي ${market.region}`.trim().slice(0, 240);
-                  const sr: any = await fcSearch(q, { limit: 5, lang });
+                  const sr: any = await fcSearch(q, { limit: 6, lang });
                   const rows = (sr?.data?.web || sr?.data || sr?.web || []) as any[];
                   for (const r of rows) {
                     try {
                       const host = new URL(r.url).hostname.replace(/^www\./, "").toLowerCase();
                       if (NON_OFFICIAL.test(host)) continue;
-                      if (hostMatches(host, n, kwSlug)) { chosenUrl = r.url; break; }
+                      let sc = 3;
+                      if (hostMatches(host, n, kwSlug)) sc += 6;
+                      if ((r.title || "").toLowerCase().includes(n.toLowerCase())) sc += 3;
+                      cands.push({ url: r.url, host, score: sc });
                     } catch {}
-                  }
-                  // fallback: first non-blacklisted result
-                  if (!chosenUrl) {
-                    for (const r of rows) {
-                      try {
-                        const host = new URL(r.url).hostname.replace(/^www\./, "").toLowerCase();
-                        if (!NON_OFFICIAL.test(host)) { chosenUrl = r.url; break; }
-                      } catch {}
-                    }
                   }
                 } catch (e) { console.warn("[api/compare] official lookup failed", n, (e as Error).message); }
               }
-
-              if (!chosenUrl) return;
+              if (cands.length === 0) return;
+              const byHost = new Map<string, Cand>();
+              for (const c of cands) {
+                const prev = byHost.get(c.host);
+                if (!prev || c.score > prev.score) byHost.set(c.host, c);
+              }
+              const best = [...byHost.values()].sort((a, b) => b.score - a.score)[0];
+              const chosenUrl = best.url;
               try {
                 const scraped: any = await fcScrape(chosenUrl, { deep: true });
                 const root = scraped?.data || scraped;
                 const md = String(root?.markdown || "").slice(0, 1500);
                 const title = String(root?.metadata?.title || "").toLowerCase();
                 const desc = String(root?.metadata?.description || "").toLowerCase();
-                // Sanity-check: page must reference the brand somehow
                 const slugs = [norm(n), translit(n)].filter(Boolean);
-                const pageOk = slugs.some((slug) =>
-                  title.includes(slug.slice(0, 6)) ||
-                  desc.includes(slug.slice(0, 6)) ||
-                  md.toLowerCase().includes(n.toLowerCase()) ||
-                  md.toLowerCase().includes(slug)
+                const hostMatchesBrand = hostMatches(best.host, n, kwSlug);
+                const pageReferencesBrand = slugs.some((slug) =>
+                  title.includes(slug.slice(0, 5)) || desc.includes(slug.slice(0, 5)) ||
+                  md.toLowerCase().includes(n.toLowerCase()) || md.toLowerCase().includes(slug)
                 );
-                if (md && pageOk) officialSites[n] = { url: chosenUrl, content: md };
-                if (pageOk) {
-                  seoSgeReports[n] = analyzeSeoSge({
-                    url: chosenUrl,
-                    html: root?.html || "",
-                    markdown: root?.markdown || "",
-                    links: Array.isArray(root?.links) ? root.links : [],
-                    metadata: root?.metadata || {},
-                  });
+                // RELAXED: accept on domain match OR page reference OR strong candidate score
+                const accept = hostMatchesBrand || pageReferencesBrand || best.score >= 7;
+                if (!accept || !md) {
+                  console.warn("[api/compare] rejected official candidate", n, chosenUrl, { hostMatchesBrand, pageReferencesBrand, score: best.score });
+                  return;
                 }
+                const status: "confirmed" | "candidate" = (hostMatchesBrand && pageReferencesBrand) ? "confirmed" : "candidate";
+                const reason = status === "confirmed" ? "domain_and_page_match"
+                  : hostMatchesBrand ? "domain_match_only" : "page_reference_only";
+                officialSites[n] = { url: chosenUrl, content: md, status, reason };
+                seoSgeReports[n] = analyzeSeoSge({
+                  url: chosenUrl, html: root?.html || "", markdown: root?.markdown || "",
+                  links: Array.isArray(root?.links) ? root.links : [], metadata: root?.metadata || {},
+                });
               } catch (e) {
                 console.warn("[api/compare] scrape failed for", n, chosenUrl, e instanceof Error ? e.message : e);
               }
