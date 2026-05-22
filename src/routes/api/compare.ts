@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
-import { fcSearch, fcScrape } from "@/lib/firecrawl";
+import { fcSearch, fcScrape, isFirecrawlError } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
@@ -49,6 +49,14 @@ function clamp(n: unknown) {
 function arr(v: unknown, max = 5) {
   if (!Array.isArray(v)) return [] as string[];
   return v.map((x) => String(x ?? "").trim()).filter(Boolean).slice(0, max).map((s) => s.slice(0, 220));
+}
+
+function liveSearchErrorFrom(errors: unknown[]) {
+  const fc = errors.filter(isFirecrawlError);
+  if (fc.some((e) => e.status === 402)) return { error: "live_search_credits_exhausted", status: 402 };
+  if (fc.some((e) => e.status === 429)) return { error: "live_search_rate_limited", status: 429 };
+  if (fc.length > 0) return { error: "live_search_unavailable", status: 503 };
+  return null;
 }
 
 export const Route = createFileRoute("/api/compare")({
