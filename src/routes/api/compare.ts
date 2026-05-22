@@ -120,6 +120,7 @@ export const Route = createFileRoute("/api/compare")({
           const seoSgeReports: Record<string, SeoSgeReport> = {};
           const platformEvidence: Record<string, Record<string, number>> = {};
           const userWebsites = body.websites || {};
+          const liveSearchFailures: unknown[] = [];
           try {
             const allBrands = [brand, ...competitors];
             // Multi-signal probe: general/official/reviews/news/geo + per-platform signals
@@ -137,6 +138,7 @@ export const Route = createFileRoute("/api/compare")({
               { brand: n, q: `site:youtube.com "${n}"`, kind: "youtube", limit: 2 },
             ]);
             const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: x.limit, lang })));
+            liveSearchFailures.push(...settled.filter((s) => s.status === "rejected").map((s) => (s as PromiseRejectedResult).reason));
             sources = settled.flatMap((s, idx) => {
               if (s.status !== "fulfilled") return [];
               const data: any = (s.value as any)?.data;
@@ -150,6 +152,11 @@ export const Route = createFileRoute("/api/compare")({
                 snippet: (r.markdown || r.description || "").slice(0, 400),
               }));
             }).slice(0, 140);
+
+            const liveSearchError = liveSearchErrorFrom(liveSearchFailures);
+            if (liveSearchError && sources.length === 0) {
+              return Response.json({ error: liveSearchError.error }, { status: liveSearchError.status });
+            }
 
             // Per-platform evidence counts (real, varying per brand)
             for (const n of allBrands) {
