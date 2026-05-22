@@ -201,7 +201,7 @@ export async function probeBrandsPerPlatform(
   brands: BrandEvidenceInput[],
   opts: { lang: Lang; market?: string; apiKey: string; model?: string },
 ): Promise<Record<string, BrandProbeResult>> {
-  const model = opts.model || "google/gemini-2.5-flash";
+  const model = opts.model || "google/gemini-3-flash-preview";
   const out: Record<string, BrandProbeResult> = {};
   if (brands.length === 0) return out;
 
