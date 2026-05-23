@@ -70,7 +70,7 @@ function GuidePage() {
         </Section>
 
         <div className="mt-8 text-center"><Link to="/dashboard" className="text-sm text-primary hover:underline">← {t("nav_dashboard")}</Link></div>
-      </div>
+      </main>
     </div>
   );
 }
