@@ -241,6 +241,48 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_authority_packs: {
+        Row: {
+          brand_keywords: string | null
+          brand_name: string
+          brand_slug: string
+          created_at: string
+          html: string
+          id: string
+          json_ld: Json
+          markdown: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_keywords?: string | null
+          brand_name: string
+          brand_slug: string
+          created_at?: string
+          html?: string
+          id?: string
+          json_ld?: Json
+          markdown?: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_keywords?: string | null
+          brand_name?: string
+          brand_slug?: string
+          created_at?: string
+          html?: string
+          id?: string
+          json_ld?: Json
+          markdown?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       brand_boost_jobs: {
         Row: {
           active: boolean
@@ -320,6 +362,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      crawler_hits: {
+        Row: {
+          bot_name: string | null
+          brand_slug: string
+          hit_at: string
+          id: string
+          ip_hash: string | null
+          path: string | null
+          user_agent: string
+          user_id: string | null
+        }
+        Insert: {
+          bot_name?: string | null
+          brand_slug: string
+          hit_at?: string
+          id?: string
+          ip_hash?: string | null
+          path?: string | null
+          user_agent: string
+          user_id?: string | null
+        }
+        Update: {
+          bot_name?: string | null
+          brand_slug?: string
+          hit_at?: string
+          id?: string
+          ip_hash?: string | null
+          path?: string | null
+          user_agent?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
