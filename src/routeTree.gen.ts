@@ -30,10 +30,12 @@ import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
 import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
+import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-authority'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
+import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -140,6 +142,11 @@ const ApiBrandBoostRoute = ApiBrandBoostRouteImport.update({
   path: '/api/brand-boost',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBrandAuthorityRoute = ApiBrandAuthorityRouteImport.update({
+  id: '/api/brand-authority',
+  path: '/api/brand-authority',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBizdevRoute = ApiBizdevRouteImport.update({
   id: '/api/bizdev',
   path: '/api/bizdev',
@@ -161,6 +168,11 @@ const ApiPublicHooksAgentRunnerRoute =
     path: '/api/public/hooks/agent-runner',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
+  id: '/api/public/brand/$slug',
+  path: '/api/public/brand/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -179,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
+  '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
@@ -187,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesByTo {
@@ -206,6 +220,7 @@ export interface FileRoutesByTo {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
+  '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
@@ -214,6 +229,7 @@ export interface FileRoutesByTo {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesById {
@@ -234,6 +250,7 @@ export interface FileRoutesById {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
+  '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
@@ -242,6 +259,7 @@ export interface FileRoutesById {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRouteTypes {
@@ -263,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
+    | '/api/brand-authority'
     | '/api/brand-boost'
     | '/api/company-email'
     | '/api/compare'
@@ -271,6 +290,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -290,6 +310,7 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
+    | '/api/brand-authority'
     | '/api/brand-boost'
     | '/api/company-email'
     | '/api/compare'
@@ -298,6 +319,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
   id:
     | '__root__'
@@ -317,6 +339,7 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
+    | '/api/brand-authority'
     | '/api/brand-boost'
     | '/api/company-email'
     | '/api/compare'
@@ -325,6 +348,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
   fileRoutesById: FileRoutesById
 }
@@ -345,6 +369,7 @@ export interface RootRouteChildren {
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
+  ApiBrandAuthorityRoute: typeof ApiBrandAuthorityRoute
   ApiBrandBoostRoute: typeof ApiBrandBoostRoute
   ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
   ApiCompareRoute: typeof ApiCompareRoute
@@ -353,6 +378,7 @@ export interface RootRouteChildren {
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
+  ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
 }
 
@@ -505,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBrandBoostRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/brand-authority': {
+      id: '/api/brand-authority'
+      path: '/api/brand-authority'
+      fullPath: '/api/brand-authority'
+      preLoaderRoute: typeof ApiBrandAuthorityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bizdev': {
       id: '/api/bizdev'
       path: '/api/bizdev'
@@ -533,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAgentRunnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/brand/$slug': {
+      id: '/api/public/brand/$slug'
+      path: '/api/public/brand/$slug'
+      fullPath: '/api/public/brand/$slug'
+      preLoaderRoute: typeof ApiPublicBrandSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -553,6 +593,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiAppliedRankingRoute: ApiAppliedRankingRoute,
   ApiBizdevRoute: ApiBizdevRoute,
+  ApiBrandAuthorityRoute: ApiBrandAuthorityRoute,
   ApiBrandBoostRoute: ApiBrandBoostRoute,
   ApiCompanyEmailRoute: ApiCompanyEmailRoute,
   ApiCompareRoute: ApiCompareRoute,
@@ -561,18 +602,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiResearchRoute: ApiResearchRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
+  ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
