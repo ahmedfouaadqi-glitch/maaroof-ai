@@ -10,6 +10,15 @@ import { Loader2, Save, Lock, ShieldCheck } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
 
 export const Route = createFileRoute("/profile")({
+  head: () => ({
+    meta: [
+      { title: "Your Profile & Brand Settings · GEO-Iraq" },
+      { name: "description", content: "Update your brand name, keywords, geographic scope, and device lock for your GEO-Iraq account." },
+      { name: "robots", content: "noindex,follow" },
+      { property: "og:title", content: "Your Profile & Brand Settings · GEO-Iraq" },
+      { property: "og:description", content: "Update your brand name, keywords, geographic scope, and device lock for your GEO-Iraq account." },
+    ],
+  }),
   component: () => (
     <I18nProvider><AuthProvider><ProfilePage /></AuthProvider></I18nProvider>
   ),

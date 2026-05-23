@@ -82,6 +82,7 @@ function Page() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
+      <main>
 
       {/* Agent promo banner */}
       <div className="border-b border-accent/30 bg-gradient-to-r from-accent/15 via-primary/10 to-accent/15">
@@ -304,6 +305,7 @@ function Page() {
       </section>
 
       <SubscribeModal open={subOpen} onClose={() => setSubOpen(false)} />
+      </main>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
         <div>{t("footer")}</div>
