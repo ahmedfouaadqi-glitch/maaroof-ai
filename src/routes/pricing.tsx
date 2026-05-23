@@ -306,7 +306,7 @@ function PricingPage() {
         <div className="mt-10 text-center">
           <Link to="/" className="text-sm text-primary hover:underline">← {t("pr_back_home")}</Link>
         </div>
-      </div>
+      </main>
 
       {/* Selection modal */}
       {selected && (
