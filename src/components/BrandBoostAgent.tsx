@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Megaphone, Loader2, Plus, Power, Trash2 } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
