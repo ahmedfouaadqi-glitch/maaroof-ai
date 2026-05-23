@@ -277,6 +277,187 @@ export function BrandBoostAgent() {
           <HandoffMenu source="boost" getText={() => `${brand}\n${report.summary || ""}\n\n${(report.plan || []).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).join(", ")}`).join("\n")}`} />
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="authority" className="mt-4">
+          <AuthorityPanel brand={brand} kw={kw} lang={outLang} />
+        </TabsContent>
+
+        <TabsContent value="propagation" className="mt-4">
+          <PropagationPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+
+function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: Lang }) {
+  const { t } = useI18n();
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [ping, setPing] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [pack, setPack] = useState<any>(null);
+
+  const generate = async () => {
+    if (!brand.trim()) { setErr(t("boost_brand")); return; }
+    setLoading(true); setErr(""); setPack(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const res = await apiFetch("/api/brand-authority", {
+        method: "POST", headers,
+        body: JSON.stringify({ brand_name: brand, brand_keywords: kw, source_url: sourceUrl, ping, lang }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `http_${res.status}`);
+      setPack(data);
+    } catch (e: any) { setErr(e?.message || "failed"); }
+    finally { setLoading(false); }
+  };
+
+  const copy = (s: string) => { navigator.clipboard.writeText(s).catch(() => {}); };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
+        <div className="font-semibold text-foreground">{t("authority_title")}</div>
+        <p className="mt-1 text-muted-foreground">{t("authority_desc")}</p>
+      </div>
+
+      <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
+        placeholder={t("authority_source_url")}
+        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input type="checkbox" checked={ping} onChange={(e) => setPing(e.target.checked)} />
+        {t("authority_ping")}
+      </label>
+
+      <button disabled={loading || !brand.trim()} onClick={generate}
+        className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40">
+        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+        {t("authority_generate")}
+      </button>
+
+      {err && <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
+
+      {pack && (
+        <div className="space-y-3 text-xs">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <div className="text-[10px] font-semibold uppercase text-muted-foreground">{t("authority_public_url")}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <a href={pack.public_url} target="_blank" rel="noreferrer" className="break-all font-mono text-primary hover:underline">{pack.public_url}</a>
+              <button onClick={() => copy(pack.public_url)} className="rounded border border-border px-2 py-0.5 text-[10px]"><Copy className="inline size-3" /> {t("authority_copy")}</button>
+              <a href={pack.public_url} target="_blank" rel="noreferrer" className="rounded border border-border px-2 py-0.5 text-[10px]"><ExternalLink className="inline size-3" /> {t("authority_open")}</a>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">{t("authority_public_hint")}</p>
+            {pack.ping && (
+              <div className="mt-2 text-[11px]">IndexNow: <span className={pack.ping.ok ? "text-green-600" : "text-amber-600"}>{pack.ping.ok ? "ok" : `status ${pack.ping.status}`}</span></div>
+            )}
+          </div>
+
+          {pack.summary && <div className="rounded-lg border border-border bg-background/40 p-3">{pack.summary}</div>}
+
+          <div className="rounded-lg border border-border bg-background/40 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground">{t("authority_jsonld")}</span>
+              <button onClick={() => copy(JSON.stringify(pack.json_ld, null, 2))} className="text-[10px] underline text-primary">{t("authority_copy")}</button>
+            </div>
+            <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-background/60 p-2 text-[10px] font-mono text-foreground/80">{JSON.stringify(pack.json_ld, null, 2)}</pre>
+          </div>
+
+          <div className="rounded-lg border border-border bg-background/40 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground">{t("authority_markdown")}</span>
+              <button onClick={() => copy(pack.markdown)} className="text-[10px] underline text-primary">{t("authority_copy")}</button>
+            </div>
+            <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-foreground/90">{pack.markdown}</pre>
+          </div>
+
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-700 dark:text-amber-400">
+            {t("authority_wikidata_hint")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PropagationPanel() {
+  const { t } = useI18n();
+  const [data, setData] = useState<{ packs: any[]; hits: any[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+        const res = await apiFetch("/api/brand-authority", { headers });
+        const j = await res.json().catch(() => ({ packs: [], hits: [] }));
+        setData(j);
+      } catch { setData({ packs: [], hits: [] }); }
+      finally { setLoading(false); }
+    })();
+  }, []);
+
+  if (loading) return <div className="text-xs text-muted-foreground"><Loader2 className="inline size-3 animate-spin" /></div>;
+  const hits = data?.hits || [];
+
+  // Aggregate by bot_name
+  const byBot = new Map<string, { count: number; last: string; paths: Set<string> }>();
+  for (const h of hits) {
+    const key = h.bot_name || "Unknown";
+    const cur = byBot.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
+    cur.count++;
+    if (h.hit_at > cur.last) cur.last = h.hit_at;
+    if (h.path) cur.paths.add(h.path);
+    byBot.set(key, cur);
+  }
+  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
+        <div className="font-semibold text-foreground">{t("propagation_title")}</div>
+        <p className="mt-1 text-muted-foreground">{t("propagation_desc")}</p>
+      </div>
+
+      {byBot.size === 0 ? (
+        <div className="rounded-lg border border-border bg-background/40 p-4 text-center text-xs text-muted-foreground">{t("propagation_empty")}</div>
+      ) : (
+        <>
+          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
+            {t("propagation_visible_to").replace("{n}", String(knownCount))}
+          </div>
+          <div className="overflow-auto rounded-lg border border-border">
+            <table className="w-full text-xs">
+              <thead className="bg-background/60 text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-1.5 text-start">{t("propagation_bot")}</th>
+                  <th className="px-2 py-1.5 text-start">{t("propagation_last")}</th>
+                  <th className="px-2 py-1.5 text-start">{t("propagation_count")}</th>
+                  <th className="px-2 py-1.5 text-start">{t("propagation_paths")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from(byBot.entries()).sort((a, b) => b[1].count - a[1].count).map(([bot, info]) => (
+                  <tr key={bot} className="border-t border-border">
+                    <td className="px-2 py-1.5 font-semibold">{bot}</td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{new Date(info.last).toLocaleString()}</td>
+                    <td className="px-2 py-1.5">{info.count}</td>
+                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{Array.from(info.paths).slice(0, 2).join(", ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
