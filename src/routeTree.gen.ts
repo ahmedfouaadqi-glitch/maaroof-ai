@@ -34,6 +34,7 @@ import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
+import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -161,6 +162,11 @@ const ApiPublicHooksAgentRunnerRoute =
     path: '/api/public/hooks/agent-runner',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
+  id: '/api/public/brand/$slug',
+  path: '/api/public/brand/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesByTo {
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRoutesById {
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
 }
 export interface FileRouteTypes {
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
   id:
     | '__root__'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
   fileRoutesById: FileRoutesById
 }
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
+  ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
 }
 
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAgentRunnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/brand/$slug': {
+      id: '/api/public/brand/$slug'
+      path: '/api/public/brand/$slug'
+      fullPath: '/api/public/brand/$slug'
+      preLoaderRoute: typeof ApiPublicBrandSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -561,6 +581,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiResearchRoute: ApiResearchRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
+  ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
 }
 export const routeTree = rootRouteImport
