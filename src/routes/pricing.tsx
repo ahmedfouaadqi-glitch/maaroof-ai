@@ -126,7 +126,7 @@ function PricingPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+      <main className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
             <Sparkles className="size-3.5" /> {t("pr_badge")}
