@@ -93,6 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "GEO-Iraq" },
       { name: "mobile-web-app-capable", content: "yes" },
+      { name: "google-site-verification", content: "KG0z4EF5ZvR3yjDn91E9qOb1v0vLnocoSB4pIeGoEEg" },
     ],
     links: [
       { rel: "icon", href: "/icon-512.png", type: "image/png" },
