@@ -305,6 +305,7 @@ function Page() {
       </section>
 
       <SubscribeModal open={subOpen} onClose={() => setSubOpen(false)} />
+      </main>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
         <div>{t("footer")}</div>
