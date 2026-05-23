@@ -82,6 +82,7 @@ function Page() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
+      <main>
 
       {/* Agent promo banner */}
       <div className="border-b border-accent/30 bg-gradient-to-r from-accent/15 via-primary/10 to-accent/15">
