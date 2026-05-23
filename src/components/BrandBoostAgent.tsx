@@ -116,7 +116,15 @@ export function BrandBoostAgent() {
         <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <Tabs defaultValue="run" className="mt-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
+          <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
+          <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="run" className="mt-4">
+      <div className="grid gap-2 sm:grid-cols-2">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("boost_brand")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder={t("boost_keywords")}
