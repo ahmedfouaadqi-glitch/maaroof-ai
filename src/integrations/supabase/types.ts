@@ -422,6 +422,7 @@ export type Database = {
           tool_geo_scopes: Json
           usage_day_start: string
           usage_period_start: string
+          username: string | null
         }
         Insert: {
           brand_keywords?: string | null
@@ -448,6 +449,7 @@ export type Database = {
           tool_geo_scopes?: Json
           usage_day_start?: string
           usage_period_start?: string
+          username?: string | null
         }
         Update: {
           brand_keywords?: string | null
@@ -474,6 +476,7 @@ export type Database = {
           tool_geo_scopes?: Json
           usage_day_start?: string
           usage_period_start?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -810,6 +813,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_username_from_email: {
+        Args: { _email: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

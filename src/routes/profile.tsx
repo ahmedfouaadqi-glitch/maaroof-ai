@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
-import { Loader2, Save, Lock, ShieldCheck } from "lucide-react";
+import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
 
 export const Route = createFileRoute("/profile")({
@@ -32,9 +32,12 @@ function ProfilePage() {
   const [brandName, setBrandName] = useState("");
   const [brandKw, setBrandKw] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameErr, setUsernameErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [locking, setLocking] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/profile" } }); }, [loading, user, navigate]);
 
@@ -44,16 +47,32 @@ function ProfilePage() {
     setBrandName((profile as any).brand_name || "");
     setBrandKw((profile as any).brand_keywords || "");
     setSpecialty((profile as any).specialty || "");
+    setUsername((profile as any).username || "");
   }, [profile]);
 
   const save = async () => {
     if (!user) return;
+    setUsernameErr("");
+    const u = username.trim().toLowerCase();
+    if (u && !/^[a-z0-9_-]{3,32}$/.test(u)) {
+      setUsernameErr("3–32, a–z 0–9 _ -");
+      return;
+    }
     setSaving(true);
-    await supabase.from("profiles").update({
+    const { error } = await supabase.from("profiles").update({
       full_name: fullName, brand_name: brandName, brand_keywords: brandKw, specialty,
+      ...(u ? { username: u } : {}),
     }).eq("id", user.id);
+    if (error) setUsernameErr(error.message);
     await refreshProfile();
     setSaving(false); setDone(true); setTimeout(() => setDone(false), 1500);
+  };
+
+  const publicUrl = username ? `https://geoiraq.com/u/${username}` : "";
+  const copyUrl = async () => {
+    if (!publicUrl) return;
+    await navigator.clipboard.writeText(publicUrl).catch(() => {});
+    setCopied(true); setTimeout(() => setCopied(false), 1200);
   };
 
   const lockToDevice = async () => {

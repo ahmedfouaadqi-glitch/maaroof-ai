@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
@@ -117,10 +117,11 @@ export function BrandBoostAgent() {
       </div>
 
       <Tabs defaultValue="run" className="mt-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
           <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
           <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
+          <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="run" className="mt-4">
@@ -286,6 +287,10 @@ export function BrandBoostAgent() {
         <TabsContent value="propagation" className="mt-4">
           <PropagationPanel />
         </TabsContent>
+
+        <TabsContent value="logs" className="mt-4">
+          <LogsPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -345,6 +350,9 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
       {pack && (
         <div className="space-y-3 text-xs">
+          {/* Step-by-step guide */}
+          <StepGuide lang={lang as Lang} />
+
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
             <div className="text-[10px] font-semibold uppercase text-muted-foreground">{t("authority_public_url")}</div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -353,6 +361,13 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
               <a href={pack.public_url} target="_blank" rel="noreferrer" className="rounded border border-border px-2 py-0.5 text-[10px]"><ExternalLink className="inline size-3" /> {t("authority_open")}</a>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">{t("authority_public_hint")}</p>
+
+            {/* Share buttons */}
+            <div className="mt-3">
+              <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-foreground"><Share2 className="size-3.5" /> {lang === "ar" ? "شارك الرابط الآن" : lang === "ku" ? "ئێستا لینکەکە بڵاو بکەرەوە" : "Share now"}</div>
+              <ShareButtons url={pack.public_url} text={`${brand}${kw ? " — " + kw : ""}`} lang={lang as Lang} />
+            </div>
+
             {pack.ping && (
               <div className="mt-2 text-[11px]">IndexNow: <span className={pack.ping.ok ? "text-green-600" : "text-amber-600"}>{pack.ping.ok ? "ok" : `status ${pack.ping.status}`}</span></div>
             )}
@@ -376,6 +391,12 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
             <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-foreground/90">{pack.markdown}</pre>
           </div>
 
+          {/* Export buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.json`, JSON.stringify({ summary: pack.summary, json_ld: pack.json_ld, markdown: pack.markdown, public_url: pack.public_url }, null, 2), "application/json")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> JSON</button>
+            <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.md`, String(pack.markdown || ""), "text/markdown")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> Markdown</button>
+          </div>
+
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-700 dark:text-amber-400">
             {t("authority_wikidata_hint")}
           </div>
@@ -385,49 +406,146 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
   );
 }
 
+function StepGuide({ lang }: { lang: Lang }) {
+  const steps = lang === "ar"
+    ? ["افتح الرابط للتأكد من ظهور بطاقتك", "انسخه", "شاركه على منصاتك ومواقع موثوقة", "راقب الزيارات في تبويب «متتبع الانتشار»"]
+    : lang === "ku"
+    ? ["لینکەکە بکەرەوە بۆ پشتڕاستکردنەوە", "کۆپی بکە", "بڵاوی بکەرەوە لە پلاتفۆڕمەکانت", "سەردانەکان ببینە لە تابی «شوێنپێ»"]
+    : ["Open the URL to verify your card renders", "Copy it", "Share it on your sites and trusted platforms", "Watch hits in the Propagation Tracker tab"];
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+      <div className="mb-2 text-[11px] font-semibold text-accent">{lang === "ar" ? "ماذا تفعل بالرابط؟" : lang === "ku" ? "چی بکەی بەو لینکە؟" : "What to do with the link"}</div>
+      <ol className="space-y-1 ps-4 text-[11px] text-foreground/85">
+        {steps.map((s, i) => (
+          <li key={i} className="list-decimal"><span>{s}</span></li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function ShareButtons({ url, text, lang }: { url: string; text: string; lang: Lang }) {
+  const enc = encodeURIComponent;
+  const msg = (lang === "ar"
+    ? `تعرّف على علامتنا: ${text}\n`
+    : lang === "ku"
+    ? `براندەکەمان بناسە: ${text}\n`
+    : `Learn about us: ${text}\n`);
+  const targets: { label: string; href: string; color: string }[] = [
+    { label: "WhatsApp", color: "bg-[#25D366] text-white", href: `https://wa.me/?text=${enc(msg + url)}` },
+    { label: "X", color: "bg-black text-white", href: `https://twitter.com/intent/tweet?text=${enc(msg)}&url=${enc(url)}` },
+    { label: "LinkedIn", color: "bg-[#0A66C2] text-white", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
+    { label: "Facebook", color: "bg-[#1877F2] text-white", href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
+    { label: "Telegram", color: "bg-[#229ED9] text-white", href: `https://t.me/share/url?url=${enc(url)}&text=${enc(msg)}` },
+  ];
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {targets.map((t) => (
+        <a key={t.label} href={t.href} target="_blank" rel="noreferrer noopener" className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition hover:opacity-90 ${t.color}`}>
+          <Share2 className="size-3" /> {t.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function downloadFile(name: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 function PropagationPanel() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [data, setData] = useState<{ packs: any[]; hits: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
+      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
         if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
         const res = await apiFetch("/api/brand-authority", { headers });
         const j = await res.json().catch(() => ({ packs: [], hits: [] }));
-        setData(j);
-      } catch { setData({ packs: [], hits: [] }); }
-      finally { setLoading(false); }
+        if (!cancelled) setData(j);
+      } catch { if (!cancelled) setData({ packs: [], hits: [] }); }
+      finally { if (!cancelled) setLoading(false); }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+
+  const hits = data?.hits || [];
+  const byBot = useMemo(() => {
+    const m = new Map<string, { count: number; last: string; paths: Set<string> }>();
+    for (const h of hits) {
+      const key = h.bot_name || "Unknown";
+      const cur = m.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
+      cur.count++;
+      if (h.hit_at > cur.last) cur.last = h.hit_at;
+      if (h.path) cur.paths.add(h.path);
+      m.set(key, cur);
+    }
+    return m;
+  }, [hits]);
+  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
+
+  const exportCsv = () => {
+    const rows = [["bot_name", "user_agent", "path", "hit_at"]];
+    for (const h of hits) rows.push([h.bot_name || "Unknown", h.user_agent || "", h.path || "", h.hit_at || ""]);
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    downloadFile(`crawler-hits-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
+  };
+
+  const botName = (b: string): string => {
+    const map: Record<string, string> = {
+      GPTBot: "ChatGPT (OpenAI)", "ChatGPT-User": "ChatGPT browsing",
+      "OAI-SearchBot": "OpenAI Search", PerplexityBot: "Perplexity",
+      "Perplexity-User": "Perplexity user", ClaudeBot: "Claude (Anthropic)",
+      "Google-Extended": "Google AI (Gemini)", Googlebot: "Google Search",
+      Bingbot: "Bing / Copilot", "Applebot-Extended": "Apple AI",
+      Applebot: "Apple Search", "Meta-ExternalAgent": "Meta AI",
+      YouBot: "You.com", Bytespider: "ByteDance/Doubao",
+      "MistralAI-User": "Mistral", DeepSeekBot: "DeepSeek", DuckAssistBot: "DuckDuckGo AI",
+    };
+    return map[b] ? `${b} — ${map[b]}` : b;
+  };
 
   if (loading) return <div className="text-xs text-muted-foreground"><Loader2 className="inline size-3 animate-spin" /></div>;
-  const hits = data?.hits || [];
-
-  // Aggregate by bot_name
-  const byBot = new Map<string, { count: number; last: string; paths: Set<string> }>();
-  for (const h of hits) {
-    const key = h.bot_name || "Unknown";
-    const cur = byBot.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
-    cur.count++;
-    if (h.hit_at > cur.last) cur.last = h.hit_at;
-    if (h.path) cur.paths.add(h.path);
-    byBot.set(key, cur);
-  }
-  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
 
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
-        <div className="font-semibold text-foreground">{t("propagation_title")}</div>
-        <p className="mt-1 text-muted-foreground">{t("propagation_desc")}</p>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="font-semibold text-foreground">{t("propagation_title")}</div>
+            <p className="mt-1 text-muted-foreground">{t("propagation_desc")}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-full border border-border bg-background/60 px-2 py-1 text-[11px]"><RefreshCw className="inline size-3" /> {lang === "ar" ? "تحديث" : lang === "ku" ? "نوێکردن" : "Refresh"}</button>
+            {hits.length > 0 && (
+              <button onClick={exportCsv} className="rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><Download className="inline size-3" /> CSV</button>
+            )}
+          </div>
+        </div>
       </div>
 
       {byBot.size === 0 ? (
-        <div className="rounded-lg border border-border bg-background/40 p-4 text-center text-xs text-muted-foreground">{t("propagation_empty")}</div>
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
+          <div className="font-semibold text-amber-700 dark:text-amber-400">{lang === "ar" ? "لم تصل أي عناكب بعد" : lang === "ku" ? "هێشتا هیچ کرۆلەرێک نەهاتووە" : "No crawlers have arrived yet"}</div>
+          <p className="mt-1 text-muted-foreground">{t("propagation_empty")}</p>
+          <ol className="mt-2 list-decimal ps-5 text-foreground/80 space-y-1">
+            <li>{lang === "ar" ? "اذهب إلى تبويب «محرك السلطة» وولّد الرابط العام." : lang === "ku" ? "بڕۆ بۆ تابی «بزوێنەری دەسەڵات» و لینکی گشتی دروست بکە." : "Go to the Authority Engine tab and generate the public URL."}</li>
+            <li>{lang === "ar" ? "شارك الرابط على منصاتك (واتساب، إكس، لينكدإن…)." : lang === "ku" ? "لینکەکە لە پلاتفۆڕمەکانت بڵاو بکەرەوە." : "Share the URL on your platforms (WhatsApp, X, LinkedIn…)."}</li>
+            <li>{lang === "ar" ? "انتظر من ساعات إلى أيام حتى تكتشفه العناكب وتظهر هنا." : lang === "ku" ? "چاوەڕێ بکە چەند کاتژمێر بۆ ڕۆژێک." : "Wait hours to days for crawlers to discover it."}</li>
+          </ol>
+        </div>
       ) : (
         <>
           <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
@@ -446,7 +564,7 @@ function PropagationPanel() {
               <tbody>
                 {Array.from(byBot.entries()).sort((a, b) => b[1].count - a[1].count).map(([bot, info]) => (
                   <tr key={bot} className="border-t border-border">
-                    <td className="px-2 py-1.5 font-semibold">{bot}</td>
+                    <td className="px-2 py-1.5 font-semibold">{botName(bot)}</td>
                     <td className="px-2 py-1.5 text-muted-foreground">{new Date(info.last).toLocaleString()}</td>
                     <td className="px-2 py-1.5">{info.count}</td>
                     <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{Array.from(info.paths).slice(0, 2).join(", ")}</td>
@@ -460,4 +578,98 @@ function PropagationPanel() {
     </div>
   );
 }
+
+function LogsPanel() {
+  const { lang } = useI18n();
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) { setLoading(false); return; }
+      setLoading(true);
+      const { data } = await supabase
+        .from("activity_log")
+        .select("created_at, action, metadata")
+        .eq("user_id", user.id)
+        .in("action", ["brand_boost", "brand_authority"])
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (!cancelled) { setRows(data || []); setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [user, refreshKey]);
+
+  const exportCsv = () => {
+    const head = [["created_at", "action", "brand", "details"]];
+    for (const r of rows) {
+      const m = r.metadata || {};
+      head.push([r.created_at, r.action, String(m.brand || ""), JSON.stringify(m)]);
+    }
+    const csv = head.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    downloadFile(`activity-log-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
+  };
+
+  const actionLabel = (a: string) =>
+    a === "brand_boost"
+      ? (lang === "ar" ? "تشغيل تعزيز" : lang === "ku" ? "بەهێزکردن" : "Run boost")
+      : a === "brand_authority"
+      ? (lang === "ar" ? "محرك السلطة" : lang === "ku" ? "بزوێنەری دەسەڵات" : "Authority")
+      : a;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="font-semibold text-foreground">{lang === "ar" ? "سجل العمليات" : lang === "ku" ? "تۆماری کردارەکان" : "Activity log"}</div>
+            <p className="mt-1 text-muted-foreground">{lang === "ar" ? "آخر 100 عملية على أداة تعزيز العلامة (تشغيل + توليد بطاقات سلطة)." : lang === "ku" ? "دوایین ١٠٠ کردار." : "Latest 100 actions on the Brand Boost tool."}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-full border border-border bg-background/60 px-2 py-1 text-[11px]"><RefreshCw className="inline size-3" /> {lang === "ar" ? "تحديث" : lang === "ku" ? "نوێکردن" : "Refresh"}</button>
+            {rows.length > 0 && (
+              <button onClick={exportCsv} className="rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><Download className="inline size-3" /> CSV</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-xs text-muted-foreground"><Loader2 className="inline size-3 animate-spin" /></div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-lg border border-border bg-background/40 p-4 text-center text-xs text-muted-foreground">{lang === "ar" ? "لا توجد عمليات بعد." : lang === "ku" ? "هیچ کردارێک نییە." : "No activity yet."}</div>
+      ) : (
+        <div className="overflow-auto rounded-lg border border-border">
+          <table className="w-full text-xs">
+            <thead className="bg-background/60 text-muted-foreground">
+              <tr>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "التاريخ" : lang === "ku" ? "بەروار" : "Date"}</th>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "النوع" : lang === "ku" ? "جۆر" : "Type"}</th>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "العلامة" : lang === "ku" ? "براند" : "Brand"}</th>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "تفاصيل" : lang === "ku" ? "وردەکاری" : "Details"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const m = r.metadata || {};
+                return (
+                  <tr key={i} className="border-t border-border">
+                    <td className="px-2 py-1.5 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="px-2 py-1.5 font-semibold">{actionLabel(r.action)}</td>
+                    <td className="px-2 py-1.5">{String(m.brand || "—")}</td>
+                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{m.slug ? `slug: ${m.slug}` : ""}{m.cost ? ` · ${m.cost} credits` : ""}{m.pinged ? " · pinged" : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
