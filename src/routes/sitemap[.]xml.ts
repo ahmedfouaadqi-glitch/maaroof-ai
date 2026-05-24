@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 
 const BASE_URL = "https://geoiraq.com";
 
@@ -20,6 +21,26 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
         ];
+
+        // Add per-user public profile URLs so AI crawlers (and Google) discover them.
+        try {
+          const SUPABASE_URL = process.env.SUPABASE_URL;
+          const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (SUPABASE_URL && SERVICE) {
+            const admin = createClient(SUPABASE_URL, SERVICE);
+            const { data: users } = await admin
+              .from("profiles")
+              .select("username")
+              .not("username", "is", null)
+              .limit(5000);
+            for (const u of users || []) {
+              const name = String((u as any).username || "").trim();
+              if (name) entries.push({ path: `/u/${name}`, changefreq: "weekly", priority: "0.5" });
+            }
+          }
+        } catch {
+          // Sitemap should still render even if DB is unreachable.
+        }
 
         const urls = entries.map((e) =>
           [
