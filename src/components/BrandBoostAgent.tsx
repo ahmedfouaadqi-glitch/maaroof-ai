@@ -459,48 +459,93 @@ function downloadFile(name: string, content: string, mime: string) {
 }
 
 function PropagationPanel() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [data, setData] = useState<{ packs: any[]; hits: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
+      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
         if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
         const res = await apiFetch("/api/brand-authority", { headers });
         const j = await res.json().catch(() => ({ packs: [], hits: [] }));
-        setData(j);
-      } catch { setData({ packs: [], hits: [] }); }
-      finally { setLoading(false); }
+        if (!cancelled) setData(j);
+      } catch { if (!cancelled) setData({ packs: [], hits: [] }); }
+      finally { if (!cancelled) setLoading(false); }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+
+  const hits = data?.hits || [];
+  const byBot = useMemo(() => {
+    const m = new Map<string, { count: number; last: string; paths: Set<string> }>();
+    for (const h of hits) {
+      const key = h.bot_name || "Unknown";
+      const cur = m.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
+      cur.count++;
+      if (h.hit_at > cur.last) cur.last = h.hit_at;
+      if (h.path) cur.paths.add(h.path);
+      m.set(key, cur);
+    }
+    return m;
+  }, [hits]);
+  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
+
+  const exportCsv = () => {
+    const rows = [["bot_name", "user_agent", "path", "hit_at"]];
+    for (const h of hits) rows.push([h.bot_name || "Unknown", h.user_agent || "", h.path || "", h.hit_at || ""]);
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    downloadFile(`crawler-hits-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
+  };
+
+  const botName = (b: string): string => {
+    const map: Record<string, string> = {
+      GPTBot: "ChatGPT (OpenAI)", "ChatGPT-User": "ChatGPT browsing",
+      "OAI-SearchBot": "OpenAI Search", PerplexityBot: "Perplexity",
+      "Perplexity-User": "Perplexity user", ClaudeBot: "Claude (Anthropic)",
+      "Google-Extended": "Google AI (Gemini)", Googlebot: "Google Search",
+      Bingbot: "Bing / Copilot", "Applebot-Extended": "Apple AI",
+      Applebot: "Apple Search", "Meta-ExternalAgent": "Meta AI",
+      YouBot: "You.com", Bytespider: "ByteDance/Doubao",
+      "MistralAI-User": "Mistral", DeepSeekBot: "DeepSeek", DuckAssistBot: "DuckDuckGo AI",
+    };
+    return map[b] ? `${b} — ${map[b]}` : b;
+  };
 
   if (loading) return <div className="text-xs text-muted-foreground"><Loader2 className="inline size-3 animate-spin" /></div>;
-  const hits = data?.hits || [];
-
-  // Aggregate by bot_name
-  const byBot = new Map<string, { count: number; last: string; paths: Set<string> }>();
-  for (const h of hits) {
-    const key = h.bot_name || "Unknown";
-    const cur = byBot.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
-    cur.count++;
-    if (h.hit_at > cur.last) cur.last = h.hit_at;
-    if (h.path) cur.paths.add(h.path);
-    byBot.set(key, cur);
-  }
-  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
 
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
-        <div className="font-semibold text-foreground">{t("propagation_title")}</div>
-        <p className="mt-1 text-muted-foreground">{t("propagation_desc")}</p>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="font-semibold text-foreground">{t("propagation_title")}</div>
+            <p className="mt-1 text-muted-foreground">{t("propagation_desc")}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-full border border-border bg-background/60 px-2 py-1 text-[11px]"><RefreshCw className="inline size-3" /> {lang === "ar" ? "تحديث" : lang === "ku" ? "نوێکردن" : "Refresh"}</button>
+            {hits.length > 0 && (
+              <button onClick={exportCsv} className="rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><Download className="inline size-3" /> CSV</button>
+            )}
+          </div>
+        </div>
       </div>
 
       {byBot.size === 0 ? (
-        <div className="rounded-lg border border-border bg-background/40 p-4 text-center text-xs text-muted-foreground">{t("propagation_empty")}</div>
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
+          <div className="font-semibold text-amber-700 dark:text-amber-400">{lang === "ar" ? "لم تصل أي عناكب بعد" : lang === "ku" ? "هێشتا هیچ کرۆلەرێک نەهاتووە" : "No crawlers have arrived yet"}</div>
+          <p className="mt-1 text-muted-foreground">{t("propagation_empty")}</p>
+          <ol className="mt-2 list-decimal ps-5 text-foreground/80 space-y-1">
+            <li>{lang === "ar" ? "اذهب إلى تبويب «محرك السلطة» وولّد الرابط العام." : lang === "ku" ? "بڕۆ بۆ تابی «بزوێنەری دەسەڵات» و لینکی گشتی دروست بکە." : "Go to the Authority Engine tab and generate the public URL."}</li>
+            <li>{lang === "ar" ? "شارك الرابط على منصاتك (واتساب، إكس، لينكدإن…)." : lang === "ku" ? "لینکەکە لە پلاتفۆڕمەکانت بڵاو بکەرەوە." : "Share the URL on your platforms (WhatsApp, X, LinkedIn…)."}</li>
+            <li>{lang === "ar" ? "انتظر من ساعات إلى أيام حتى تكتشفه العناكب وتظهر هنا." : lang === "ku" ? "چاوەڕێ بکە چەند کاتژمێر بۆ ڕۆژێک." : "Wait hours to days for crawlers to discover it."}</li>
+          </ol>
+        </div>
       ) : (
         <>
           <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
@@ -519,7 +564,7 @@ function PropagationPanel() {
               <tbody>
                 {Array.from(byBot.entries()).sort((a, b) => b[1].count - a[1].count).map(([bot, info]) => (
                   <tr key={bot} className="border-t border-border">
-                    <td className="px-2 py-1.5 font-semibold">{bot}</td>
+                    <td className="px-2 py-1.5 font-semibold">{botName(bot)}</td>
                     <td className="px-2 py-1.5 text-muted-foreground">{new Date(info.last).toLocaleString()}</td>
                     <td className="px-2 py-1.5">{info.count}</td>
                     <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{Array.from(info.paths).slice(0, 2).join(", ")}</td>
@@ -533,4 +578,98 @@ function PropagationPanel() {
     </div>
   );
 }
+
+function LogsPanel() {
+  const { lang } = useI18n();
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) { setLoading(false); return; }
+      setLoading(true);
+      const { data } = await supabase
+        .from("activity_log")
+        .select("created_at, action, metadata")
+        .eq("user_id", user.id)
+        .in("action", ["brand_boost", "brand_authority"])
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (!cancelled) { setRows(data || []); setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [user, refreshKey]);
+
+  const exportCsv = () => {
+    const head = [["created_at", "action", "brand", "details"]];
+    for (const r of rows) {
+      const m = r.metadata || {};
+      head.push([r.created_at, r.action, String(m.brand || ""), JSON.stringify(m)]);
+    }
+    const csv = head.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    downloadFile(`activity-log-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
+  };
+
+  const actionLabel = (a: string) =>
+    a === "brand_boost"
+      ? (lang === "ar" ? "تشغيل تعزيز" : lang === "ku" ? "بەهێزکردن" : "Run boost")
+      : a === "brand_authority"
+      ? (lang === "ar" ? "محرك السلطة" : lang === "ku" ? "بزوێنەری دەسەڵات" : "Authority")
+      : a;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="font-semibold text-foreground">{lang === "ar" ? "سجل العمليات" : lang === "ku" ? "تۆماری کردارەکان" : "Activity log"}</div>
+            <p className="mt-1 text-muted-foreground">{lang === "ar" ? "آخر 100 عملية على أداة تعزيز العلامة (تشغيل + توليد بطاقات سلطة)." : lang === "ku" ? "دوایین ١٠٠ کردار." : "Latest 100 actions on the Brand Boost tool."}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-full border border-border bg-background/60 px-2 py-1 text-[11px]"><RefreshCw className="inline size-3" /> {lang === "ar" ? "تحديث" : lang === "ku" ? "نوێکردن" : "Refresh"}</button>
+            {rows.length > 0 && (
+              <button onClick={exportCsv} className="rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><Download className="inline size-3" /> CSV</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-xs text-muted-foreground"><Loader2 className="inline size-3 animate-spin" /></div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-lg border border-border bg-background/40 p-4 text-center text-xs text-muted-foreground">{lang === "ar" ? "لا توجد عمليات بعد." : lang === "ku" ? "هیچ کردارێک نییە." : "No activity yet."}</div>
+      ) : (
+        <div className="overflow-auto rounded-lg border border-border">
+          <table className="w-full text-xs">
+            <thead className="bg-background/60 text-muted-foreground">
+              <tr>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "التاريخ" : lang === "ku" ? "بەروار" : "Date"}</th>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "النوع" : lang === "ku" ? "جۆر" : "Type"}</th>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "العلامة" : lang === "ku" ? "براند" : "Brand"}</th>
+                <th className="px-2 py-1.5 text-start">{lang === "ar" ? "تفاصيل" : lang === "ku" ? "وردەکاری" : "Details"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const m = r.metadata || {};
+                return (
+                  <tr key={i} className="border-t border-border">
+                    <td className="px-2 py-1.5 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="px-2 py-1.5 font-semibold">{actionLabel(r.action)}</td>
+                    <td className="px-2 py-1.5">{String(m.brand || "—")}</td>
+                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{m.slug ? `slug: ${m.slug}` : ""}{m.cost ? ` · ${m.cost} credits` : ""}{m.pinged ? " · pinged" : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
