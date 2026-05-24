@@ -350,6 +350,9 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
       {pack && (
         <div className="space-y-3 text-xs">
+          {/* Step-by-step guide */}
+          <StepGuide lang={lang as Lang} />
+
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
             <div className="text-[10px] font-semibold uppercase text-muted-foreground">{t("authority_public_url")}</div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -358,6 +361,13 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
               <a href={pack.public_url} target="_blank" rel="noreferrer" className="rounded border border-border px-2 py-0.5 text-[10px]"><ExternalLink className="inline size-3" /> {t("authority_open")}</a>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">{t("authority_public_hint")}</p>
+
+            {/* Share buttons */}
+            <div className="mt-3">
+              <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-foreground"><Share2 className="size-3.5" /> {lang === "ar" ? "شارك الرابط الآن" : lang === "ku" ? "ئێستا لینکەکە بڵاو بکەرەوە" : "Share now"}</div>
+              <ShareButtons url={pack.public_url} text={`${brand}${kw ? " — " + kw : ""}`} lang={lang as Lang} />
+            </div>
+
             {pack.ping && (
               <div className="mt-2 text-[11px]">IndexNow: <span className={pack.ping.ok ? "text-green-600" : "text-amber-600"}>{pack.ping.ok ? "ok" : `status ${pack.ping.status}`}</span></div>
             )}
@@ -381,6 +391,12 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
             <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-foreground/90">{pack.markdown}</pre>
           </div>
 
+          {/* Export buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.json`, JSON.stringify({ summary: pack.summary, json_ld: pack.json_ld, markdown: pack.markdown, public_url: pack.public_url }, null, 2), "application/json")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> JSON</button>
+            <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.md`, String(pack.markdown || ""), "text/markdown")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> Markdown</button>
+          </div>
+
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-700 dark:text-amber-400">
             {t("authority_wikidata_hint")}
           </div>
@@ -388,6 +404,58 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
       )}
     </div>
   );
+}
+
+function StepGuide({ lang }: { lang: Lang }) {
+  const steps = lang === "ar"
+    ? ["افتح الرابط للتأكد من ظهور بطاقتك", "انسخه", "شاركه على منصاتك ومواقع موثوقة", "راقب الزيارات في تبويب «متتبع الانتشار»"]
+    : lang === "ku"
+    ? ["لینکەکە بکەرەوە بۆ پشتڕاستکردنەوە", "کۆپی بکە", "بڵاوی بکەرەوە لە پلاتفۆڕمەکانت", "سەردانەکان ببینە لە تابی «شوێنپێ»"]
+    : ["Open the URL to verify your card renders", "Copy it", "Share it on your sites and trusted platforms", "Watch hits in the Propagation Tracker tab"];
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+      <div className="mb-2 text-[11px] font-semibold text-accent">{lang === "ar" ? "ماذا تفعل بالرابط؟" : lang === "ku" ? "چی بکەی بەو لینکە؟" : "What to do with the link"}</div>
+      <ol className="space-y-1 ps-4 text-[11px] text-foreground/85">
+        {steps.map((s, i) => (
+          <li key={i} className="list-decimal"><span>{s}</span></li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function ShareButtons({ url, text, lang }: { url: string; text: string; lang: Lang }) {
+  const enc = encodeURIComponent;
+  const msg = (lang === "ar"
+    ? `تعرّف على علامتنا: ${text}\n`
+    : lang === "ku"
+    ? `براندەکەمان بناسە: ${text}\n`
+    : `Learn about us: ${text}\n`);
+  const targets: { label: string; href: string; color: string }[] = [
+    { label: "WhatsApp", color: "bg-[#25D366] text-white", href: `https://wa.me/?text=${enc(msg + url)}` },
+    { label: "X", color: "bg-black text-white", href: `https://twitter.com/intent/tweet?text=${enc(msg)}&url=${enc(url)}` },
+    { label: "LinkedIn", color: "bg-[#0A66C2] text-white", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
+    { label: "Facebook", color: "bg-[#1877F2] text-white", href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
+    { label: "Telegram", color: "bg-[#229ED9] text-white", href: `https://t.me/share/url?url=${enc(url)}&text=${enc(msg)}` },
+  ];
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {targets.map((t) => (
+        <a key={t.label} href={t.href} target="_blank" rel="noreferrer noopener" className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition hover:opacity-90 ${t.color}`}>
+          <Share2 className="size-3" /> {t.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function downloadFile(name: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function PropagationPanel() {
