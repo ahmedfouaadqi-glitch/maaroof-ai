@@ -117,10 +117,11 @@ export function BrandBoostAgent() {
       </div>
 
       <Tabs defaultValue="run" className="mt-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
           <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
           <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
+          <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="run" className="mt-4">
