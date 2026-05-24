@@ -287,6 +287,10 @@ export function BrandBoostAgent() {
         <TabsContent value="propagation" className="mt-4">
           <PropagationPanel />
         </TabsContent>
+
+        <TabsContent value="logs" className="mt-4">
+          <LogsPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
