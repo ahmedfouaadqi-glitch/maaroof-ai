@@ -35,6 +35,7 @@ import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-author
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiPublicHooksPulseCrawlRouteImport } from './routes/api/public/hooks/pulse-crawl'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
 
@@ -168,6 +169,12 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksPulseCrawlRoute =
+  ApiPublicHooksPulseCrawlRouteImport.update({
+    id: '/api/public/hooks/pulse-crawl',
+    path: '/api/public/hooks/pulse-crawl',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksAgentRunnerRoute =
   ApiPublicHooksAgentRunnerRouteImport.update({
     id: '/api/public/hooks/agent-runner',
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
+  '/api/public/hooks/pulse-crawl': typeof ApiPublicHooksPulseCrawlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -239,6 +247,7 @@ export interface FileRoutesByTo {
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
+  '/api/public/hooks/pulse-crawl': typeof ApiPublicHooksPulseCrawlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -270,6 +279,7 @@ export interface FileRoutesById {
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
+  '/api/public/hooks/pulse-crawl': typeof ApiPublicHooksPulseCrawlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
+    | '/api/public/hooks/pulse-crawl'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
+    | '/api/public/hooks/pulse-crawl'
   id:
     | '__root__'
     | '/'
@@ -362,6 +374,7 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
+    | '/api/public/hooks/pulse-crawl'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -393,6 +406,7 @@ export interface RootRouteChildren {
   UUsernameRoute: typeof UUsernameRoute
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
+  ApiPublicHooksPulseCrawlRoute: typeof ApiPublicHooksPulseCrawlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -579,6 +593,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/pulse-crawl': {
+      id: '/api/public/hooks/pulse-crawl'
+      path: '/api/public/hooks/pulse-crawl'
+      fullPath: '/api/public/hooks/pulse-crawl'
+      preLoaderRoute: typeof ApiPublicHooksPulseCrawlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/agent-runner': {
       id: '/api/public/hooks/agent-runner'
       path: '/api/public/hooks/agent-runner'
@@ -625,6 +646,7 @@ const rootRouteChildren: RootRouteChildren = {
   UUsernameRoute: UUsernameRoute,
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
+  ApiPublicHooksPulseCrawlRoute: ApiPublicHooksPulseCrawlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

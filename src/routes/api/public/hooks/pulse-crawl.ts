@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/public/hooks/pulse-crawl")({
               });
               if (result.metrics.length > 0) {
                 await supabaseAdmin.from("pulse_metrics").insert(
-                  result.metrics.map((m) => ({ ...m, source_id: src.id })),
+                  result.metrics.map((m) => ({ ...m, meta: (m.meta ?? {}) as any, source_id: src.id })) as any,
                 );
               }
               if (result.trendingApps && result.trendingApps.length > 0) {
