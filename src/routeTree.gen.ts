@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PulseRouteImport } from './routes/pulse'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -35,6 +36,7 @@ import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-author
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as ApiPublicHooksPulseCrawlRouteImport } from './routes/api/public/hooks/pulse-crawl'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
 
@@ -51,6 +53,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PulseRoute = PulseRouteImport.update({
+  id: '/pulse',
+  path: '/pulse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -168,6 +175,12 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksPulseCrawlRoute =
+  ApiPublicHooksPulseCrawlRouteImport.update({
+    id: '/api/public/hooks/pulse-crawl',
+    path: '/api/public/hooks/pulse-crawl',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksAgentRunnerRoute =
   ApiPublicHooksAgentRunnerRouteImport.update({
     id: '/api/public/hooks/agent-runner',
@@ -191,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/pulse': typeof PulseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -209,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
+  '/api/public/hooks/pulse-crawl': typeof ApiPublicHooksPulseCrawlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -221,6 +236,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/pulse': typeof PulseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -239,6 +255,7 @@ export interface FileRoutesByTo {
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
+  '/api/public/hooks/pulse-crawl': typeof ApiPublicHooksPulseCrawlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -252,6 +269,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/pulse': typeof PulseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -270,6 +288,7 @@ export interface FileRoutesById {
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
+  '/api/public/hooks/pulse-crawl': typeof ApiPublicHooksPulseCrawlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -284,6 +303,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/profile'
+    | '/pulse'
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
@@ -302,6 +322,7 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
+    | '/api/public/hooks/pulse-crawl'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -314,6 +335,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/profile'
+    | '/pulse'
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
@@ -332,6 +354,7 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
+    | '/api/public/hooks/pulse-crawl'
   id:
     | '__root__'
     | '/'
@@ -344,6 +367,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/profile'
+    | '/pulse'
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
@@ -362,6 +386,7 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
+    | '/api/public/hooks/pulse-crawl'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -375,6 +400,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
+  PulseRoute: typeof PulseRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
@@ -393,6 +419,7 @@ export interface RootRouteChildren {
   UUsernameRoute: typeof UUsernameRoute
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
+  ApiPublicHooksPulseCrawlRoute: typeof ApiPublicHooksPulseCrawlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -416,6 +443,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pulse': {
+      id: '/pulse'
+      path: '/pulse'
+      fullPath: '/pulse'
+      preLoaderRoute: typeof PulseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -579,6 +613,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/pulse-crawl': {
+      id: '/api/public/hooks/pulse-crawl'
+      path: '/api/public/hooks/pulse-crawl'
+      fullPath: '/api/public/hooks/pulse-crawl'
+      preLoaderRoute: typeof ApiPublicHooksPulseCrawlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/agent-runner': {
       id: '/api/public/hooks/agent-runner'
       path: '/api/public/hooks/agent-runner'
@@ -607,6 +648,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
+  PulseRoute: PulseRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
@@ -625,17 +667,8 @@ const rootRouteChildren: RootRouteChildren = {
   UUsernameRoute: UUsernameRoute,
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
+  ApiPublicHooksPulseCrawlRoute: ApiPublicHooksPulseCrawlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
