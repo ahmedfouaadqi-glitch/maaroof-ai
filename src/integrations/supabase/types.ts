@@ -396,6 +396,42 @@ export type Database = {
         }
         Relationships: []
       }
+      governorates: {
+        Row: {
+          created_at: string
+          id: string
+          lat: number | null
+          lng: number | null
+          name_ar: string
+          name_en: string
+          name_ku: string
+          population_base: number | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name_ar: string
+          name_en: string
+          name_ku: string
+          population_base?: number | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name_ar?: string
+          name_en?: string
+          name_ku?: string
+          population_base?: number | null
+          slug?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           brand_keywords: string | null
@@ -542,6 +578,294 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pulse_app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      pulse_metrics: {
+        Row: {
+          captured_at: string
+          governorate_id: string | null
+          id: string
+          meta: Json
+          metric_key: string
+          sector: string
+          source_id: string | null
+          unit: string | null
+          value: number | null
+        }
+        Insert: {
+          captured_at?: string
+          governorate_id?: string | null
+          id?: string
+          meta?: Json
+          metric_key: string
+          sector?: string
+          source_id?: string | null
+          unit?: string | null
+          value?: number | null
+        }
+        Update: {
+          captured_at?: string
+          governorate_id?: string | null
+          id?: string
+          meta?: Json
+          metric_key?: string
+          sector?: string
+          source_id?: string | null
+          unit?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pulse_metrics_governorate_id_fkey"
+            columns: ["governorate_id"]
+            isOneToOne: false
+            referencedRelation: "governorates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pulse_metrics_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "pulse_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pulse_raw_snapshots: {
+        Row: {
+          fetched_at: string
+          id: string
+          payload: Json
+          source_id: string
+          url: string | null
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          payload: Json
+          source_id: string
+          url?: string | null
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          payload?: Json
+          source_id?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pulse_raw_snapshots_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "pulse_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pulse_scrape_log: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          rows_inserted: number | null
+          source_id: string | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_inserted?: number | null
+          source_id?: string | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_inserted?: number | null
+          source_id?: string | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pulse_scrape_log_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "pulse_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pulse_sources: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          key: string
+          last_success_at: string | null
+          name_ar: string
+          name_en: string
+          scrape_config: Json
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          key: string
+          last_success_at?: string | null
+          name_ar: string
+          name_en: string
+          scrape_config?: Json
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          key?: string
+          last_success_at?: string | null
+          name_ar?: string
+          name_en?: string
+          scrape_config?: Json
+          url?: string
+        }
+        Relationships: []
+      }
+      pulse_specialty_weights: {
+        Row: {
+          id: string
+          sector: string
+          specialty: string
+          weight: number
+        }
+        Insert: {
+          id?: string
+          sector: string
+          specialty: string
+          weight?: number
+        }
+        Update: {
+          id?: string
+          sector?: string
+          specialty?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      pulse_trending_apps: {
+        Row: {
+          app_name: string
+          captured_at: string
+          category: string | null
+          governorate_id: string | null
+          id: string
+          rank: number
+          score: number | null
+          source_id: string | null
+        }
+        Insert: {
+          app_name: string
+          captured_at?: string
+          category?: string | null
+          governorate_id?: string | null
+          id?: string
+          rank: number
+          score?: number | null
+          source_id?: string | null
+        }
+        Update: {
+          app_name?: string
+          captured_at?: string
+          category?: string | null
+          governorate_id?: string | null
+          id?: string
+          rank?: number
+          score?: number | null
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pulse_trending_apps_governorate_id_fkey"
+            columns: ["governorate_id"]
+            isOneToOne: false
+            referencedRelation: "governorates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pulse_trending_apps_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "pulse_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pulse_user_behavior: {
+        Row: {
+          action: string
+          created_at: string
+          governorate_id: string | null
+          id: string
+          metric_key: string | null
+          sector: string | null
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          governorate_id?: string | null
+          id?: string
+          metric_key?: string | null
+          sector?: string | null
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          governorate_id?: string | null
+          id?: string
+          metric_key?: string | null
+          sector?: string | null
+          user_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pulse_user_behavior_governorate_id_fkey"
+            columns: ["governorate_id"]
+            isOneToOne: false
+            referencedRelation: "governorates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
