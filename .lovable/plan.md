@@ -1,105 +1,99 @@
-# خطة بناء "نبض" (Pulse)
+# خطة إكمال نظام "نبض"
 
-قسم جديد داخل GEO-Iraq الحالي على المسار `/pulse`، يشارك الحسابات وقاعدة البيانات، قابل للفصل لاحقاً عبر Remix.
-
-يجب ان يتم جمع التطبيقات الاكثر تداولاً او أنتشاراً او استخداماً لكل العراق وايضا لكل محافظة 
+البنية الأساسية جاهزة (الجداول، الكاشط، صفحة `/pulse`). هذه الخطة تكمل ما تبقى لتشغيل النظام بالكامل.
 
 ---
 
-## 1. حل جمع البيانات الحقيقي 100%
+## 1. المسارات (Routes) المتبقية
 
-كل المصادر التسعة قانونية ومجانية، نكشطها عبر **Firecrawl** (متصل مسبقاً) كل 12 ساعة:
+### `/pulse/$gov` — لوحة المحافظة (استبدال الـ stub الحالي)
+- يقرأ `governorates` + آخر `pulse_metrics` للمحافظة (مجمّعة حسب القطاع)
+- يعرض Uₜ المحلي = (population_base × نسبة الانتشار الرقمي) × Wₜ
+- جدول التطبيقات الرائجة من `pulse_trending_apps` المفلتر بـ `governorate_id`
+- **UI Morphing** حسب `profiles.specialty`: ترتيب البطاقات يتغيّر (مهندس/طبيب/تاجر/افتراضي)
+- كل تفاعل يكتب صفّاً في `pulse_user_behavior` عبر server fn
 
+### `/pulse/compare` — مقارنة محافظات
+- multi-select لمحافظتين فأكثر
+- جدول/شارت أعمدة يعرض المؤشرات جنباً إلى جنب
 
-| المصدر                 | ما نجمعه                  | طريقة الجلب                     |
-| ---------------------- | ------------------------- | ------------------------------- |
-| COSIT (cosit.gov.iq)   | سكان/عمل/أسعار لكل محافظة | Firecrawl scrape + PDF parse    |
-| CMC (cmc.iq)           | مشتركو الإنترنت والهاتف   | Firecrawl scrape                |
-| ISX (isx-iq.net)       | أسعار وأحجام تداول يومية  | Firecrawl scrape                |
-| Google Trends Iraq     | اهتمام بحثي لكل محافظة    | Firecrawl + endpoint trends-api |
-| HDX (data.humdata.org) | CSV مفتوح عن العراق       | fetch مباشر لـ CSV              |
-| IOM DTM Iraq           | حركة سكانية               | Firecrawl                       |
-| World Bank Iraq        | مؤشرات اقتصادية           | API مفتوح                       |
-| CBI (cbi.iq)           | صرف وتضخم                 | Firecrawl                       |
-| MoP (mop.gov.iq)       | تقارير قطاعية             | Firecrawl                       |
+### `/pulse/sources` — شفافية المصادر
+- قائمة `pulse_sources` مع `last_success_at` + آخر سجلات `pulse_scrape_log`
 
+### `/pulse/assistant` — المساعد الاستراتيجي
+- مربع إدخال سؤال + زر "ولّد"
+- يستدعي `pulse-assistant.functions.ts` (Gemini 2.5 Pro) ويعرض markdown
+- زر "تصدير Excel"
 
-كل سحب يُخزن خاماً في `pulse_raw_snapshots` ثم يُطبَّع إلى `pulse_metrics`. أي مصدر يفشل يُسجَّل في `pulse_scrape_log` ولا يوقف الباقي.
-
----
-
-## 2. قاعدة البيانات (جداول جديدة فقط)
-
-- `governorates` — المحافظات الـ18 (slug, name_ar, name_en, name_ku, lat, lng, population_base)
-- `pulse_sources` — تعريف المصادر (id, name, url, scrape_config jsonb, active)
-- `pulse_raw_snapshots` — كل ما يأتي من الكشط خاماً (source_id, fetched_at, payload jsonb)
-- `pulse_metrics` — البيانات المطبَّعة (governorate_id, metric_key, value, unit, source_id, captured_at, sector)
-- `pulse_scrape_log` — سجلات تشغيل المحرك (source_id, started_at, status, error)
-- `pulse_user_behavior` — البصمة السلوكية (user_id, governorate_id, metric_key, action, weight, created_at)
-- `pulse_specialty_weights` — أوزان كل تخصص لكل قطاع (specialty, sector, weight)
-- `pulse_app_config` — مفاتيح إعدادات (key, value) — يشمل `geoiraq_bridge_enabled`
-
-جميعها RLS: المستخدم يرى/يكتب سلوكه فقط؛ بقية البيانات للقراءة العامة من `authenticated`؛ الكتابة الإدارية فقط عبر `service_role` من server functions/cron.
+### `/admin/pulse` — لوحة المالك
+- محمي بـ `has_role(admin)`
+- يعرض حالة الكشط + زر "تشغيل يدوي" (POST إلى `pulse-crawl`)
+- تعديل `hourly_curve` و `geoiraq_bridge_enabled` في `pulse_app_config`
 
 ---
 
-## 3. محرك الكشط المجدول
+## 2. دوال الخادم (createServerFn)
 
-- **Server route عام**: `src/routes/api/public/hooks/pulse-crawl.ts` — POST يستقبل من pg_cron، يستخدم `supabaseAdmin` و`@mendable/firecrawl-js` لكشط المصادر بالتوازي.
-- **Cron**: `SELECT cron.schedule('pulse-crawl-12h', '0 */12 * * *', ...)` يستدعي المسار عبر `net.http_post` مع `apikey` header.
-- **محرك الكشط العكسي**: مسار ثانٍ `pulse-recrawl-personalized.ts` يقرأ `pulse_user_behavior` لآخر 12 ساعة ويعمّق الكشط في القطاعات الأعلى وزناً.
+ملف `src/lib/pulse.functions.ts`:
 
----
+- `computeUt({ governorateSlug? })` — يحسب Uₜ من `population_base × W[hour]` ويرجع `{ ut, hour, curve }`
+- `logBehavior({ governorateId?, metricKey?, sector?, action, weight? })` — يحمي بـ `requireSupabaseAuth` ويُدخل في `pulse_user_behavior`
+- `getGovernorateDashboard({ slug })` — يجمع المحافظة + مقاييسها الأخيرة + تطبيقاتها
+- `runManualCrawl()` — admin only، يطلق محرك الكشط
+- `pulseAssistant({ question, governorateSlug? })` — يبني السياق ويستدعي Lovable AI
 
-## 4. معادلة Uₜ (المستخدمون النشطون لحظياً)
-
-`Uₜ = U₁₂ × Wₜ` حيث `Wₜ` هو الوزن الزمني من منحنى السلوك الرقمي العراقي (24 قيمة لكل ساعة من اليوم) المخزن في `pulse_app_config.key='hourly_curve'`. الحساب يتم في server function يُعاد كل 60 ثانية للواجهة. المنحنى الأولي مبني على دراسات GSMA/ITU العامة للعراق، قابل للتعديل من لوحة المالك.
-
-ملاحظة: هذا تقدير محسوب من بيانات حقيقية، **ليس تتبعاً لمستخدمين خارجيين**. النص في الواجهة يوضّح أنه "تقدير لحظي مبني على آخر 12 ساعة + المنحنى الزمني".
+ملف `src/lib/pulse-export.ts`: دالة `exportPulseReport(rows, meta)` تنتج Excel متعدد الأوراق + ذيل إخلاء المسؤولية.
 
 ---
 
-## 5. الواجهة (`/pulse/*`)
+## 3. جدولة الكشط (pg_cron + pg_net)
 
-- `/pulse` — خريطة العراق التفاعلية للمحافظات الـ18 + المؤشرات اللحظية الإجمالية
-- `/pulse/$gov` — لوحة محافظة (سكان، نشاط رقمي، Uₜ، أسعار، اتجاهات بحث، قطاعات)
-- `/pulse/compare` — مقارنة محافظتين أو أكثر
-- `/pulse/sources` — شفافية المصادر وآخر تحديث لكل منها
-- `/pulse/assistant` — المساعد الاستراتيجي
-
-**UI Morphing حسب التخصص** (من `profiles.specialty`):
-
-- مهندس/مطور عقاري → مؤشرات هندسية، شبكات
-- طبيب → كثافة سكانية + خدمات صحية
-- تاجر → أسهم صعود/هبوط + ISX + أسعار
-- افتراضي → عرض متوازن
-
-كل تفاعل يكتب صفّاً في `pulse_user_behavior`.
-
----
-
-## 6. المساعد الاستراتيجي
-
-Server function `pulse-assistant.functions.ts` تستقبل سؤال المستخدم، تقرأ:
-
-1. ملفه (`profiles.specialty`, `brand_name`, `geo_scope`)
-2. آخر 50 تفاعل من `pulse_user_behavior`
-3. آخر `pulse_metrics` للمحافظات/القطاعات ذات الصلة
-
-ثم تستدعي Lovable AI (`google/gemini-2.5-pro`) بـ system prompt صارم: استخدم البيانات الحية فقط، لا تخمين، صياغة بلغة التخصص. تُولّد دراسات جدوى وخطط استراتيجية كـ markdown منظَّم قابل للتصدير.
+عبر `supabase--insert` (ليس migration لأنه يحوي مفتاح):
+```sql
+SELECT cron.schedule(
+  'pulse-crawl-12h',
+  '0 */12 * * *',
+  $$ SELECT net.http_post(
+       url := 'https://project--fa07a113-c24f-4419-b1d8-07ffd60e98c6.lovable.app/api/public/hooks/pulse-crawl',
+       headers := '{"Content-Type":"application/json","apikey":"<ANON>"}'::jsonb,
+       body := '{}'::jsonb
+     ); $$
+);
+```
+سنُمكّن `pg_cron` و `pg_net` عبر migration إذا لم يكونا مفعّلين.
 
 ---
 
-## 7. تصدير Excel + إخلاء المسؤولية
+## 4. التنقل والربط
 
-- نوسّع `src/lib/exports.ts` الحالي بدالة `exportPulseReport` تبني ملف Excel متعدد الأوراق (مؤشرات، مصادر، رسوم).
-- تذييل تلقائي في كل ملف وكل صفحة `/pulse/*` بالنص المطلوب حرفياً.
+- إضافة رابط "نبض" في `src/components/SiteHeader.tsx`
+- بطاقة "نبض" في `src/routes/dashboard.tsx` للوصول السريع
+- تذييل إخلاء المسؤولية في layout قسم `/pulse/*` (مكوّن `PulseFooter`)
 
 ---
 
-## 8. لوحة المالك + جسر geoiraq
+## 5. ترجمات إضافية في `pulse-i18n.ts`
 
-- `/admin/pulse` (محمي بـ `has_role(admin)`) — حالة الكشط، تشغيل يدوي، تعديل المنحنى الزمني، تعديل أوزان التخصصات.
-- **Toggle الجسر**: مفتاح في `pulse_app_config.geoiraq_bridge_enabled`. عند التفعيل، server function داخلية في GEO-Iraq تُغذّي مؤشرات `pulse_metrics` لمحرك GEO لتحسين خطط الـ GEO/SGE. عند الإيقاف، كل قسم معزول.
+مفاتيح: `pulse_compare`, `pulse_assistant`, `pulse_export`, `pulse_admin_panel`, `pulse_run_now`, إلخ.
 
-بما أن المشروعان داخل نفس قاعدة البيانات حالياً، الجسر = استعلام داخلي محمي ب
+---
+
+## التفاصيل التقنية
+
+- كل المسارات تستخدم `createFileRoute` بدون `as any`
+- البيانات تُجلب عبر `createServerFn` (RLS يحمي `pulse_user_behavior` تلقائياً، باقي الجداول قراءة عامة)
+- المساعد يستخدم `LOVABLE_API_KEY` الموجود
+- لوحة الأدمن تستدعي `has_role` عبر RPC قبل العرض
+- تصدير Excel عبر مكتبة `xlsx` (موجودة مسبقاً في `src/lib/exports.ts`)
+- نص إخلاء المسؤولية موحّد في `pulse-i18n.ts` (`pulse_disclaimer`) ومضمّن في كل صفحة وكل ملف مصدّر
+
+---
+
+## الترتيب
+
+1. `pulse.functions.ts` + `pulse-export.ts`
+2. استبدال `pulse.$gov.tsx` بالنسخة الكاملة + بقية المسارات
+3. `/admin/pulse` + جدولة pg_cron
+4. ربط التنقل + الترجمات
+
+هل أبدأ التنفيذ؟
