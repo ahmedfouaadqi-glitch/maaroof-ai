@@ -24,6 +24,9 @@ import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as PulseSourcesRouteImport } from './routes/pulse.sources'
+import { Route as PulseCompareRouteImport } from './routes/pulse.compare'
+import { Route as PulseAssistantRouteImport } from './routes/pulse.assistant'
 import { Route as PulseGovRouteImport } from './routes/pulse.$gov'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
@@ -37,6 +40,7 @@ import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-author
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
+import { Route as AdminPulseRouteImport } from './routes/admin.pulse'
 import { Route as ApiPublicHooksPulseCrawlRouteImport } from './routes/api/public/hooks/pulse-crawl'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
@@ -116,6 +120,21 @@ const UUsernameRoute = UUsernameRouteImport.update({
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PulseSourcesRoute = PulseSourcesRouteImport.update({
+  id: '/sources',
+  path: '/sources',
+  getParentRoute: () => PulseRoute,
+} as any)
+const PulseCompareRoute = PulseCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => PulseRoute,
+} as any)
+const PulseAssistantRoute = PulseAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => PulseRoute,
+} as any)
 const PulseGovRoute = PulseGovRouteImport.update({
   id: '/$gov',
   path: '/$gov',
@@ -181,6 +200,11 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPulseRoute = AdminPulseRouteImport.update({
+  id: '/pulse',
+  path: '/pulse',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiPublicHooksPulseCrawlRoute =
   ApiPublicHooksPulseCrawlRouteImport.update({
     id: '/api/public/hooks/pulse-crawl',
@@ -201,7 +225,7 @@ const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
@@ -214,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/admin/pulse': typeof AdminPulseRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -227,6 +252,9 @@ export interface FileRoutesByFullPath {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/pulse/$gov': typeof PulseGovRoute
+  '/pulse/assistant': typeof PulseAssistantRoute
+  '/pulse/compare': typeof PulseCompareRoute
+  '/pulse/sources': typeof PulseSourcesRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -234,7 +262,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
@@ -247,6 +275,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/admin/pulse': typeof AdminPulseRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -260,6 +289,9 @@ export interface FileRoutesByTo {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/pulse/$gov': typeof PulseGovRoute
+  '/pulse/assistant': typeof PulseAssistantRoute
+  '/pulse/compare': typeof PulseCompareRoute
+  '/pulse/sources': typeof PulseSourcesRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -268,7 +300,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
@@ -281,6 +313,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/admin/pulse': typeof AdminPulseRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -294,6 +327,9 @@ export interface FileRoutesById {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/pulse/$gov': typeof PulseGovRoute
+  '/pulse/assistant': typeof PulseAssistantRoute
+  '/pulse/compare': typeof PulseCompareRoute
+  '/pulse/sources': typeof PulseSourcesRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -316,6 +352,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/admin/pulse'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -329,6 +366,9 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/pulse/$gov'
+    | '/pulse/assistant'
+    | '/pulse/compare'
+    | '/pulse/sources'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -349,6 +389,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/admin/pulse'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -362,6 +403,9 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/pulse/$gov'
+    | '/pulse/assistant'
+    | '/pulse/compare'
+    | '/pulse/sources'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -382,6 +426,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/admin/pulse'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -395,6 +440,9 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/pulse/$gov'
+    | '/pulse/assistant'
+    | '/pulse/compare'
+    | '/pulse/sources'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -403,7 +451,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AgentRoute: typeof AgentRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
@@ -541,6 +589,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pulse/sources': {
+      id: '/pulse/sources'
+      path: '/sources'
+      fullPath: '/pulse/sources'
+      preLoaderRoute: typeof PulseSourcesRouteImport
+      parentRoute: typeof PulseRoute
+    }
+    '/pulse/compare': {
+      id: '/pulse/compare'
+      path: '/compare'
+      fullPath: '/pulse/compare'
+      preLoaderRoute: typeof PulseCompareRouteImport
+      parentRoute: typeof PulseRoute
+    }
+    '/pulse/assistant': {
+      id: '/pulse/assistant'
+      path: '/assistant'
+      fullPath: '/pulse/assistant'
+      preLoaderRoute: typeof PulseAssistantRouteImport
+      parentRoute: typeof PulseRoute
+    }
     '/pulse/$gov': {
       id: '/pulse/$gov'
       path: '/$gov'
@@ -632,6 +701,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/pulse': {
+      id: '/admin/pulse'
+      path: '/pulse'
+      fullPath: '/admin/pulse'
+      preLoaderRoute: typeof AdminPulseRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/public/hooks/pulse-crawl': {
       id: '/api/public/hooks/pulse-crawl'
       path: '/api/public/hooks/pulse-crawl'
@@ -656,19 +732,35 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminPulseRoute: typeof AdminPulseRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminPulseRoute: AdminPulseRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface PulseRouteChildren {
   PulseGovRoute: typeof PulseGovRoute
+  PulseAssistantRoute: typeof PulseAssistantRoute
+  PulseCompareRoute: typeof PulseCompareRoute
+  PulseSourcesRoute: typeof PulseSourcesRoute
 }
 
 const PulseRouteChildren: PulseRouteChildren = {
   PulseGovRoute: PulseGovRoute,
+  PulseAssistantRoute: PulseAssistantRoute,
+  PulseCompareRoute: PulseCompareRoute,
+  PulseSourcesRoute: PulseSourcesRoute,
 }
 
 const PulseRouteWithChildren = PulseRoute._addFileChildren(PulseRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   AgentRoute: AgentRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
