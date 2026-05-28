@@ -19,14 +19,15 @@ export const pulseAssistant = createServerFn({ method: "POST" })
     }
 
     // Load context: governorate (if any) + latest metrics + trending apps
-    let govRow: { id: string; name_ar: string; name_en: string; population_base: number | null } | null = null;
+    type GovCtx = { id: string; name_ar: string; name_en: string; population_base: number | null };
+    let govRow: GovCtx | null = null;
     if (data.governorateSlug) {
       const { data: g } = await supabaseAdmin
         .from("governorates")
         .select("id, name_ar, name_en, population_base")
         .eq("slug", data.governorateSlug)
         .maybeSingle();
-      govRow = g as typeof govRow;
+      govRow = (g as GovCtx | null) ?? null;
     }
 
     const metricsQ = supabaseAdmin
