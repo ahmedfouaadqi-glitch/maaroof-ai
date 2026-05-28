@@ -24,6 +24,7 @@ import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as PulseGovRouteImport } from './routes/pulse.$gov'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
@@ -115,6 +116,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PulseGovRoute = PulseGovRouteImport.update({
+  id: '/$gov',
+  path: '/$gov',
+  getParentRoute: () => PulseRoute,
+} as any)
 const ApiVisibilityRoute = ApiVisibilityRouteImport.update({
   id: '/api/visibility',
   path: '/api/visibility',
@@ -204,7 +210,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/pulse': typeof PulseRoute
+  '/pulse': typeof PulseRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/pulse/$gov': typeof PulseGovRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -236,7 +243,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/pulse': typeof PulseRoute
+  '/pulse': typeof PulseRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/pulse/$gov': typeof PulseGovRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -269,7 +277,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/pulse': typeof PulseRoute
+  '/pulse': typeof PulseRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/api/research': typeof ApiResearchRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/pulse/$gov': typeof PulseGovRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/pulse/$gov'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/pulse/$gov'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/api/suggest'
     | '/api/visibility'
+    | '/pulse/$gov'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -400,7 +412,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
-  PulseRoute: typeof PulseRoute
+  PulseRoute: typeof PulseRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
@@ -529,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pulse/$gov': {
+      id: '/pulse/$gov'
+      path: '/$gov'
+      fullPath: '/pulse/$gov'
+      preLoaderRoute: typeof PulseGovRouteImport
+      parentRoute: typeof PulseRoute
+    }
     '/api/visibility': {
       id: '/api/visibility'
       path: '/api/visibility'
@@ -637,6 +656,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface PulseRouteChildren {
+  PulseGovRoute: typeof PulseGovRoute
+}
+
+const PulseRouteChildren: PulseRouteChildren = {
+  PulseGovRoute: PulseGovRoute,
+}
+
+const PulseRouteWithChildren = PulseRoute._addFileChildren(PulseRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -648,7 +677,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
-  PulseRoute: PulseRoute,
+  PulseRoute: PulseRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
@@ -672,3 +701,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
