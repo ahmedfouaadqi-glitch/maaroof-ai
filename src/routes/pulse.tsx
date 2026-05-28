@@ -68,7 +68,7 @@ function PulsePage() {
             {govs.map((g) => (
               <Link
                 key={g.id}
-                to="/pulse/$gov" as any
+                to="/pulse/$gov"
                 params={{ gov: g.slug }}
                 className="rounded-xl border border-border bg-card/50 p-4 hover:bg-card/80 transition"
               >
