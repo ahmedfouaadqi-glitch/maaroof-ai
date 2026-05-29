@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@tanstack/react-router";
-import { Cpu, LogOut, Menu, X, Volume2, VolumeX } from "lucide-react";
+import { LogOut, Menu, X, Volume2, VolumeX } from "lucide-react";
+import maaroofLogo from "@/assets/maaroof-ai-logo.png";
 import { useAuth } from "@/lib/auth";
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
@@ -26,11 +27,14 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 min-w-0">
-          <div className="relative grid size-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-[var(--shadow-glow)]">
-            <Cpu className="size-5 text-primary-foreground" />
+          <div className="relative grid size-10 shrink-0 place-items-center rounded-lg bg-background/40 ring-1 ring-border/60 shadow-[var(--shadow-glow)] overflow-hidden">
+            <img src={maaroofLogo} alt="MAAROOF Ai logo" className="size-10 object-contain" />
           </div>
           <div className="leading-tight min-w-0">
             <div className="truncate font-display text-sm font-bold sm:text-base">{t("brand")}</div>
+            <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
+              formerly GEO-Iraq
+            </div>
             <div className="hidden truncate text-[10px] uppercase tracking-widest text-muted-foreground sm:block">{t("ecosystem")}</div>
           </div>
         </Link>
