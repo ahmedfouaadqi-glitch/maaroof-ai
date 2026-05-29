@@ -59,7 +59,7 @@ function AdminPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-bold text-gradient">{t("admin_title")}</h1>
           <Link
-            to="/admin_/pulse"
+            to="/admin/pulse"
             className="rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/20 transition"
           >
             ⚡ لوحة نبض (Pulse Admin)
