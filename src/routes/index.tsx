@@ -15,9 +15,9 @@ import { EnginesOrbit } from "@/components/EnginesOrbit";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "GEO-Iraq · Become the Source AI Trusts" },
+      { title: "MAAROOF Ai · Become the Source AI Trusts" },
       { name: "description", content: "Score, optimize and publish content so ChatGPT, Gemini and Claude cite your brand. Built for Iraq, in EN, AR, KU." },
-      { property: "og:title", content: "GEO-Iraq · Become the Source AI Trusts" },
+      { property: "og:title", content: "MAAROOF Ai · Become the Source AI Trusts" },
       { property: "og:description", content: "Score, optimize and publish content so ChatGPT, Gemini and Claude cite your brand. Built for Iraq, in EN, AR, KU." },
       { property: "og:url", content: "https://geoiraq.com/" },
     ],
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       children: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        name: "GEO-Iraq",
+        name: "MAAROOF Ai",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         url: "https://geoiraq.com/",

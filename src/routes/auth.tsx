@@ -10,11 +10,11 @@ import { z } from "zod";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign In or Sign Up · GEO-Iraq" },
-      { name: "description", content: "Sign in or create your GEO-Iraq account to access the AI visibility tools, dashboard, and the autonomous brand agent." },
+      { title: "Sign In or Sign Up · MAAROOF Ai" },
+      { name: "description", content: "Sign in or create your MAAROOF Ai account to access the AI visibility tools, dashboard, and the autonomous brand agent." },
       { name: "robots", content: "noindex,follow" },
-      { property: "og:title", content: "Sign In or Sign Up · GEO-Iraq" },
-      { property: "og:description", content: "Sign in or create your GEO-Iraq account to access the AI visibility tools, dashboard, and the autonomous brand agent." },
+      { property: "og:title", content: "Sign In or Sign Up · MAAROOF Ai" },
+      { property: "og:description", content: "Sign in or create your MAAROOF Ai account to access the AI visibility tools, dashboard, and the autonomous brand agent." },
     ],
   }),
   validateSearch: (s: Record<string, unknown>) => ({

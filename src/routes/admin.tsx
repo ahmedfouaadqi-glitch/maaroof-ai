@@ -10,11 +10,11 @@ import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Console · GEO-Iraq" },
-      { name: "description", content: "GEO-Iraq admin console: manage users, subscription requests, plans, agent quotas, access policies, brand boost, and content." },
+      { title: "Admin Console · MAAROOF Ai" },
+      { name: "description", content: "MAAROOF Ai admin console: manage users, subscription requests, plans, agent quotas, access policies, brand boost, and content." },
       { name: "robots", content: "noindex,nofollow" },
-      { property: "og:title", content: "Admin Console · GEO-Iraq" },
-      { property: "og:description", content: "GEO-Iraq admin console for managing users, plans, agent quotas, and content." },
+      { property: "og:title", content: "Admin Console · MAAROOF Ai" },
+      { property: "og:description", content: "MAAROOF Ai admin console for managing users, plans, agent quotas, and content." },
     ],
   }),
   component: () => (

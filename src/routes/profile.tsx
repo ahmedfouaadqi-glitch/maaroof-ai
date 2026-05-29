@@ -12,11 +12,11 @@ import { ToolLinksManager } from "@/components/ToolLinksManager";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Your Profile & Brand Settings · GEO-Iraq" },
-      { name: "description", content: "Update your brand name, keywords, geographic scope, and device lock for your GEO-Iraq account." },
+      { title: "Your Profile & Brand Settings · MAAROOF Ai" },
+      { name: "description", content: "Update your brand name, keywords, geographic scope, and device lock for your MAAROOF Ai account." },
       { name: "robots", content: "noindex,follow" },
-      { property: "og:title", content: "Your Profile & Brand Settings · GEO-Iraq" },
-      { property: "og:description", content: "Update your brand name, keywords, geographic scope, and device lock for your GEO-Iraq account." },
+      { property: "og:title", content: "Your Profile & Brand Settings · MAAROOF Ai" },
+      { property: "og:description", content: "Update your brand name, keywords, geographic scope, and device lock for your MAAROOF Ai account." },
     ],
   }),
   component: () => (
@@ -128,7 +128,7 @@ function ProfilePage() {
             <Globe className="size-5 text-primary" /> صفحتك العامة على الإنترنت / Your Public Page
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            هذه صفحتك العامة على جيو العراق. تقرأها زواحف الذكاء الاصطناعي (GPTBot, ClaudeBot, PerplexityBot, Gemini) وتُضاف تلقائياً إلى <code>sitemap.xml</code>. كل زيارة من زاحف ستظهر في "متتبع الانتشار".
+            هذه صفحتك العامة على MAAROOF Ai. تقرأها زواحف الذكاء الاصطناعي (GPTBot, ClaudeBot, PerplexityBot, Gemini) وتُضاف تلقائياً إلى <code>sitemap.xml</code>. كل زيارة من زاحف ستظهر في "متتبع الانتشار".
           </p>
 
           <div className="mt-4">
