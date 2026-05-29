@@ -96,6 +96,18 @@ function findGovId(govs: GovernorateRow[], slugOrName: string): string | null {
   return g?.id ?? null;
 }
 
+/** Safely coerce an AI response field into an array — AI sometimes returns object/null. */
+function asArray<T>(v: unknown): T[] {
+  if (Array.isArray(v)) return v as T[];
+  if (v && typeof v === "object") {
+    const obj = v as Record<string, unknown>;
+    for (const k of ["items", "data", "results", "list"]) {
+      if (Array.isArray(obj[k])) return obj[k] as T[];
+    }
+  }
+  return [];
+}
+
 // ------------------- Per-source scrapers -------------------
 
 async function scrapeCosit(source: PulseSourceRow, govs: GovernorateRow[]): Promise<ScrapeResult> {
