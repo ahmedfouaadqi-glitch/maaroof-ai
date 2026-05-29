@@ -369,7 +369,7 @@ async function scrapeTrendingApps(source: PulseSourceRow, govs: GovernorateRow[]
       score: Number.isFinite(a.score) ? a.score! : null,
     });
   }
-  for (const a of extracted?.per_governorate || []) {
+  for (const a of asArray<{ slug: string; app: string; rank?: number }>(extracted?.per_governorate)) {
     const gid = findGovId(govs, a.slug);
     if (gid) {
       apps.push({
