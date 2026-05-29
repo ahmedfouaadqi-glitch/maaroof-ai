@@ -51,7 +51,7 @@ function GovPage() {
   const [gov, setGov] = useState<Gov | null>(null);
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [apps, setApps] = useState<App[]>([]);
-  const [hour, setHour] = useState(new Date().getHours());
+  const [hour, setHour] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
