@@ -96,6 +96,18 @@ function findGovId(govs: GovernorateRow[], slugOrName: string): string | null {
   return g?.id ?? null;
 }
 
+/** Safely coerce an AI response field into an array — AI sometimes returns object/null. */
+function asArray<T>(v: unknown): T[] {
+  if (Array.isArray(v)) return v as T[];
+  if (v && typeof v === "object") {
+    const obj = v as Record<string, unknown>;
+    for (const k of ["items", "data", "results", "list"]) {
+      if (Array.isArray(obj[k])) return obj[k] as T[];
+    }
+  }
+  return [];
+}
+
 // ------------------- Per-source scrapers -------------------
 
 async function scrapeCosit(source: PulseSourceRow, govs: GovernorateRow[]): Promise<ScrapeResult> {
@@ -105,7 +117,7 @@ async function scrapeCosit(source: PulseSourceRow, govs: GovernorateRow[]): Prom
     md,
   );
   const rows: NormalizedMetric[] = [];
-  for (const r of extracted?.population_by_governorate || []) {
+  for (const r of asArray<{ slug: string; value: number }>(extracted?.population_by_governorate)) {
     const gid = findGovId(govs, r.slug);
     if (gid && Number.isFinite(r.value)) {
       rows.push({ governorate_id: gid, metric_key: "population", sector: "population", value: r.value, unit: "people" });
@@ -143,7 +155,7 @@ async function scrapeCmc(source: PulseSourceRow, govs: GovernorateRow[]): Promis
       unit: "people",
     });
   }
-  for (const r of extracted?.per_governorate || []) {
+  for (const r of asArray<any>(extracted?.per_governorate)) {
     const gid = findGovId(govs, r.slug);
     if (gid && Number.isFinite(r.internet_subscribers)) {
       rows.push({
@@ -194,7 +206,7 @@ async function scrapeGoogleTrends(_source: PulseSourceRow, govs: GovernorateRow[
   );
   const rows: NormalizedMetric[] = [];
   let rank = 1;
-  for (const q of (extracted?.trending_queries || []).slice(0, 20)) {
+  for (const q of asArray<{ query: string; volume?: number }>(extracted?.trending_queries).slice(0, 20)) {
     rows.push({
       governorate_id: null,
       metric_key: "trending_query",
@@ -204,7 +216,7 @@ async function scrapeGoogleTrends(_source: PulseSourceRow, govs: GovernorateRow[
       meta: { query: q.query, rank: rank++ },
     });
   }
-  for (const r of extracted?.per_governorate || []) {
+  for (const r of asArray<any>(extracted?.per_governorate)) {
     const gid = findGovId(govs, r.slug);
     if (gid) {
       rows.push({
@@ -227,7 +239,7 @@ async function scrapeHdx(source: PulseSourceRow): Promise<ScrapeResult> {
   }>("List the most recent HDX datasets about Iraq (title, organization, last update).", md);
   const rows: NormalizedMetric[] = [];
   let rank = 1;
-  for (const d of (extracted?.datasets || []).slice(0, 10)) {
+  for (const d of asArray<{ title: string; org?: string; last_update?: string }>(extracted?.datasets).slice(0, 10)) {
     rows.push({
       governorate_id: null,
       metric_key: "hdx_dataset",
@@ -254,7 +266,7 @@ async function scrapeIomDtm(source: PulseSourceRow, govs: GovernorateRow[]): Pro
   if (Number.isFinite(extracted?.total_returnees)) {
     rows.push({ governorate_id: null, metric_key: "returnees_total", sector: "humanitarian", value: extracted!.total_returnees!, unit: "people" });
   }
-  for (const r of extracted?.per_governorate || []) {
+  for (const r of asArray<any>(extracted?.per_governorate)) {
     const gid = findGovId(govs, r.slug);
     if (!gid) continue;
     if (Number.isFinite(r.idps)) rows.push({ governorate_id: gid, metric_key: "idps", sector: "humanitarian", value: r.idps!, unit: "people" });
@@ -322,7 +334,7 @@ async function scrapeMoP(source: PulseSourceRow, govs: GovernorateRow[]): Promis
     projects?: { governorate_slug?: string; sector?: string; title?: string }[];
   }>("List recent Iraqi Ministry of Planning projects/reports with governorate and sector. Return JSON.", md);
   const rows: NormalizedMetric[] = [];
-  for (const p of (extracted?.projects || []).slice(0, 20)) {
+  for (const p of asArray<{ governorate_slug?: string; sector?: string; title?: string }>(extracted?.projects).slice(0, 20)) {
     const gid = p.governorate_slug ? findGovId(govs, p.governorate_slug) : null;
     rows.push({
       governorate_id: gid,
@@ -348,7 +360,7 @@ async function scrapeTrendingApps(source: PulseSourceRow, govs: GovernorateRow[]
   const rows: NormalizedMetric[] = [];
   const apps: NormalizedTrendingApp[] = [];
   let rank = 1;
-  for (const a of (extracted?.top_apps || []).slice(0, 20)) {
+  for (const a of asArray<{ app: string; category?: string; rank?: number; score?: number }>(extracted?.top_apps).slice(0, 20)) {
     apps.push({
       governorate_id: null,
       app_name: a.app,
@@ -357,7 +369,7 @@ async function scrapeTrendingApps(source: PulseSourceRow, govs: GovernorateRow[]
       score: Number.isFinite(a.score) ? a.score! : null,
     });
   }
-  for (const a of extracted?.per_governorate || []) {
+  for (const a of asArray<{ slug: string; app: string; rank?: number }>(extracted?.per_governorate)) {
     const gid = findGovId(govs, a.slug);
     if (gid) {
       apps.push({
