@@ -29,6 +29,37 @@ type Result = {
 
 const STEPS = ["scan_tokenize", "scan_authority", "scan_local", "scan_citation"] as const;
 
+function localStepLabel(
+  scope: { scope: string; country?: string; city?: string } | undefined | null,
+  L: "ar" | "en" | "ku",
+): string {
+  const s = scope?.scope || "country";
+  const country = (scope?.country || "IQ").toUpperCase();
+  const city = scope?.city || "";
+  const countryName: Record<string, { ar: string; en: string; ku: string }> = {
+    IQ: { ar: "العراق", en: "Iraq", ku: "عێراق" },
+    SA: { ar: "السعودية", en: "Saudi Arabia", ku: "سعودیە" },
+    AE: { ar: "الإمارات", en: "UAE", ku: "ئیمارات" },
+    EG: { ar: "مصر", en: "Egypt", ku: "میسر" },
+    JO: { ar: "الأردن", en: "Jordan", ku: "ئوردن" },
+    KW: { ar: "الكويت", en: "Kuwait", ku: "کوەیت" },
+    QA: { ar: "قطر", en: "Qatar", ku: "قەتەر" },
+    TR: { ar: "تركيا", en: "Turkey", ku: "تورکیا" },
+    US: { ar: "الولايات المتحدة", en: "United States", ku: "ئەمریکا" },
+  };
+  const cn = countryName[country]?.[L] || country;
+  if (s === "world") {
+    return L === "ar" ? "فحص الصلة بالسياق العالمي" : L === "ku" ? "پشکنینی پەیوەندی جیهانی" : "Checking global relevance";
+  }
+  if (s === "city" && city) {
+    return L === "ar" ? `فحص الصلة بسياق مدينة ${city}` : L === "ku" ? `پشکنینی پەیوەندی شاری ${city}` : `Checking ${city} city relevance`;
+  }
+  if (s === "province" && city) {
+    return L === "ar" ? `فحص الصلة بسياق محافظة ${city}` : L === "ku" ? `پشکنینی پەیوەندی پارێزگای ${city}` : `Checking ${city} province relevance`;
+  }
+  return L === "ar" ? `فحص الصلة بسياق ${cn}` : L === "ku" ? `پشکنینی پەیوەندی ${cn}` : `Checking ${cn} relevance`;
+}
+
 export function Sandbox() {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
