@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePulseI18n } from "@/lib/pulse-i18n";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse")({
   head: () => ({
@@ -62,6 +63,7 @@ function PulsePage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-10">
+        <PulseSubNav />
         <section>
           <h2 className="text-xl font-bold mb-4">المحافظات الـ18</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">

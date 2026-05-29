@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { triggerPulseCrawl } from "@/lib/pulse.functions";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/admin/pulse")({
   component: AdminPulse,

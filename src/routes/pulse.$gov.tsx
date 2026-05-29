@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { useAuth } from "@/lib/auth";
 import { exportPulseReport } from "@/lib/pulse-export";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/$gov")({
   component: GovPage,

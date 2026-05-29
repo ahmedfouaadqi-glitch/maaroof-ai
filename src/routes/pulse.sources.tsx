@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePulseI18n } from "@/lib/pulse-i18n";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/sources")({
   component: SourcesPage,
