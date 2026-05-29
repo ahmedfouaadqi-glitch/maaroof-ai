@@ -113,6 +113,69 @@ function AdminPulse() {
 
         {msg && <div className="rounded-lg border border-border bg-card/50 p-3 text-xs font-mono">{msg}</div>}
 
+        <section className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
+          <h2 className="text-lg font-bold">نشاط نظام نبض</h2>
+          <PulseHint>
+            تحكّم بتشغيل نظام نبض بالكامل وبفاصل الكشط التلقائي. عند الإيقاف يتم تعطيل
+            cron تلقائياً، ويرفض الـ webhook أي محاولة كشط (يدوية كانت أو مجدوَلة).
+          </PulseHint>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={pulseEnabled}
+                onChange={(e) => setPulseEnabled(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <span className="text-sm font-medium">
+                {pulseEnabled ? "نبض نشط" : "نبض موقوف"}
+              </span>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <span>فاصل الكشط:</span>
+              <select
+                value={cronHours}
+                onChange={(e) => setCronHours(Number(e.target.value))}
+                disabled={!pulseEnabled}
+                className="rounded-md border border-border bg-background px-2 py-1 text-sm disabled:opacity-50"
+              >
+                <option value={0}>إيقاف الجدولة</option>
+                <option value={1}>كل ساعة</option>
+                <option value={2}>كل ساعتين</option>
+                <option value={3}>كل 3 ساعات</option>
+                <option value={4}>كل 4 ساعات</option>
+                <option value={6}>كل 6 ساعات</option>
+                <option value={8}>كل 8 ساعات</option>
+                <option value={12}>كل 12 ساعة</option>
+                <option value={24}>كل 24 ساعة</option>
+              </select>
+            </label>
+
+            <button
+              onClick={async () => {
+                setSavingSettings(true); setMsg("");
+                try {
+                  const r = await saveSettings({ data: { enabled: pulseEnabled, hours: cronHours } });
+                  if (r.ok) {
+                    setMsg(`✓ تم الحفظ — الجدولة: ${r.schedule}`);
+                  } else {
+                    setMsg(`✗ فشل: ${r.error}`);
+                  }
+                  await refresh();
+                } finally {
+                  setSavingSettings(false);
+                }
+              }}
+              disabled={savingSettings}
+              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {savingSettings ? "…" : "حفظ"}
+            </button>
+          </div>
+        </section>
+
+
         <section className="space-y-2">
           <h2 className="text-lg font-bold">{t("pulse_bridge_geoiraq")}</h2>
           <PulseHint>
