@@ -6,6 +6,7 @@ import { usePulseI18n } from "@/lib/pulse-i18n";
 import { useAuth } from "@/lib/auth";
 import { pulseAssistant } from "@/lib/pulse.functions";
 import { exportPulseReport } from "@/lib/pulse-export";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/assistant")({
   component: AssistantPage,
@@ -83,6 +84,7 @@ function AssistantPage() {
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-8 space-y-6">
+        <PulseSubNav />
         <div className="space-y-3">
           <select
             value={govSlug}

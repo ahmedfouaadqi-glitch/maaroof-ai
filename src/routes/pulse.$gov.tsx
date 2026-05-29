@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { useAuth } from "@/lib/auth";
 import { exportPulseReport } from "@/lib/pulse-export";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/$gov")({
   component: GovPage,
@@ -168,6 +169,7 @@ function GovPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+        <PulseSubNav />
         {specialty && (
           <div className="text-xs text-muted-foreground">
             {t("pulse_specialty_lens")}: <span className="text-primary font-medium">{specialty}</span>

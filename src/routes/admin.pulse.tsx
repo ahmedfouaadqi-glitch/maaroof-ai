@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { triggerPulseCrawl } from "@/lib/pulse.functions";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/admin/pulse")({
   component: AdminPulse,
@@ -84,6 +85,7 @@ function AdminPulse() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+        <PulseSubNav />
         {msg && <div className="rounded-lg border border-border bg-card/50 p-3 text-xs font-mono">{msg}</div>}
 
         <section>

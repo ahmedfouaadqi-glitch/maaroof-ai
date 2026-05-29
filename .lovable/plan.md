@@ -1,99 +1,53 @@
-# خطة إكمال نظام "نبض"
 
-البنية الأساسية جاهزة (الجداول، الكاشط، صفحة `/pulse`). هذه الخطة تكمل ما تبقى لتشغيل النظام بالكامل.
+## السياق
 
----
+كل المكوّنات الأساسية لـ "نبض" مبنية وتعمل (الصفحات، الكشط، الجدولة كل 12 ساعة، المساعد الاستراتيجي، لوحة المالك، تصدير Excel). تبقّت 3 أشياء صغيرة فقط لإغلاق المشروع:
 
-## 1. المسارات (Routes) المتبقية
+1. **لا يوجد تنقّل فرعي داخل /pulse** — المستخدم يصل لـ `/pulse` لكن لا يرى روابط واضحة لـ `compare` / `sources` / `assistant`.
+2. **الـDashboard لا يحوي بطاقة نبض** — مستخدمو المنصة لا يكتشفونه.
+3. **`pulse_metrics` فيها 0 صفوف** — الكرون مجدول كل 12 ساعة لكن لم يعمل بعد ولا أحد شغّل كشطاً يدوياً. يجب تشغيل دورة كشط أولى الآن حتى تظهر بيانات حقيقية في كل الصفحات.
 
-### `/pulse/$gov` — لوحة المحافظة (استبدال الـ stub الحالي)
-- يقرأ `governorates` + آخر `pulse_metrics` للمحافظة (مجمّعة حسب القطاع)
-- يعرض Uₜ المحلي = (population_base × نسبة الانتشار الرقمي) × Wₜ
-- جدول التطبيقات الرائجة من `pulse_trending_apps` المفلتر بـ `governorate_id`
-- **UI Morphing** حسب `profiles.specialty`: ترتيب البطاقات يتغيّر (مهندس/طبيب/تاجر/افتراضي)
-- كل تفاعل يكتب صفّاً في `pulse_user_behavior` عبر server fn
+## التغييرات
 
-### `/pulse/compare` — مقارنة محافظات
-- multi-select لمحافظتين فأكثر
-- جدول/شارت أعمدة يعرض المؤشرات جنباً إلى جنب
+### 1. مكوّن `PulseSubNav` جديد
 
-### `/pulse/sources` — شفافية المصادر
-- قائمة `pulse_sources` مع `last_success_at` + آخر سجلات `pulse_scrape_log`
+ملف: `src/components/PulseSubNav.tsx`
 
-### `/pulse/assistant` — المساعد الاستراتيجي
-- مربع إدخال سؤال + زر "ولّد"
-- يستدعي `pulse-assistant.functions.ts` (Gemini 2.5 Pro) ويعرض markdown
-- زر "تصدير Excel"
+شريط تنقّل صغير يُستخدم في كل صفحات `/pulse/*`:
+- نظرة عامة → `/pulse`
+- مقارنة → `/pulse/compare`
+- المساعد → `/pulse/assistant`
+- المصادر → `/pulse/sources`
+- لوحة المالك → `/admin/pulse` (تظهر فقط للأدمن)
 
-### `/admin/pulse` — لوحة المالك
-- محمي بـ `has_role(admin)`
-- يعرض حالة الكشط + زر "تشغيل يدوي" (POST إلى `pulse-crawl`)
-- تعديل `hourly_curve` و `geoiraq_bridge_enabled` في `pulse_app_config`
+يستخدم `usePulseI18n` للترجمات الموجودة (`pulse_overview`, `pulse_compare`, …).
 
----
+ثم أدخله أعلى الـ`<main>` في:
+- `src/routes/pulse.tsx`
+- `src/routes/pulse.$gov.tsx`
+- `src/routes/pulse.compare.tsx`
+- `src/routes/pulse.sources.tsx`
+- `src/routes/pulse.assistant.tsx`
+- `src/routes/admin.pulse.tsx`
 
-## 2. دوال الخادم (createServerFn)
+### 2. بطاقة نبض في الـDashboard
 
-ملف `src/lib/pulse.functions.ts`:
+في `src/routes/dashboard.tsx` أضف بطاقة Link → `/pulse` بين البطاقات الموجودة، بعنوان "نبض المحافظات" ووصف قصير "رصد حي لمحافظات العراق كل 12 ساعة" مع أيقونة `Activity` (مستوردة سابقاً).
 
-- `computeUt({ governorateSlug? })` — يحسب Uₜ من `population_base × W[hour]` ويرجع `{ ut, hour, curve }`
-- `logBehavior({ governorateId?, metricKey?, sector?, action, weight? })` — يحمي بـ `requireSupabaseAuth` ويُدخل في `pulse_user_behavior`
-- `getGovernorateDashboard({ slug })` — يجمع المحافظة + مقاييسها الأخيرة + تطبيقاتها
-- `runManualCrawl()` — admin only، يطلق محرك الكشط
-- `pulseAssistant({ question, governorateSlug? })` — يبني السياق ويستدعي Lovable AI
+### 3. تشغيل أول دورة كشط فعلية
 
-ملف `src/lib/pulse-export.ts`: دالة `exportPulseReport(rows, meta)` تنتج Excel متعدد الأوراق + ذيل إخلاء المسؤولية.
+استدعاء HTTP واحد لـ `/api/public/hooks/pulse-crawl` (POST مع `apikey`) عبر `stack_modern--invoke-server-function` بعد نشر التغييرات، حتى تمتلئ `pulse_metrics` و`pulse_trending_apps` ببيانات Firecrawl + Lovable AI الحقيقية من المصادر الـ10. هذا يحوّل كل الصفحات من "لا توجد بيانات" إلى عرض حي.
 
----
+## تفاصيل تقنية
 
-## 3. جدولة الكشط (pg_cron + pg_net)
-
-عبر `supabase--insert` (ليس migration لأنه يحوي مفتاح):
-```sql
-SELECT cron.schedule(
-  'pulse-crawl-12h',
-  '0 */12 * * *',
-  $$ SELECT net.http_post(
-       url := 'https://project--fa07a113-c24f-4419-b1d8-07ffd60e98c6.lovable.app/api/public/hooks/pulse-crawl',
-       headers := '{"Content-Type":"application/json","apikey":"<ANON>"}'::jsonb,
-       body := '{}'::jsonb
-     ); $$
-);
-```
-سنُمكّن `pg_cron` و `pg_net` عبر migration إذا لم يكونا مفعّلين.
-
----
-
-## 4. التنقل والربط
-
-- إضافة رابط "نبض" في `src/components/SiteHeader.tsx`
-- بطاقة "نبض" في `src/routes/dashboard.tsx` للوصول السريع
-- تذييل إخلاء المسؤولية في layout قسم `/pulse/*` (مكوّن `PulseFooter`)
-
----
-
-## 5. ترجمات إضافية في `pulse-i18n.ts`
-
-مفاتيح: `pulse_compare`, `pulse_assistant`, `pulse_export`, `pulse_admin_panel`, `pulse_run_now`, إلخ.
-
----
-
-## التفاصيل التقنية
-
-- كل المسارات تستخدم `createFileRoute` بدون `as any`
-- البيانات تُجلب عبر `createServerFn` (RLS يحمي `pulse_user_behavior` تلقائياً، باقي الجداول قراءة عامة)
-- المساعد يستخدم `LOVABLE_API_KEY` الموجود
-- لوحة الأدمن تستدعي `has_role` عبر RPC قبل العرض
-- تصدير Excel عبر مكتبة `xlsx` (موجودة مسبقاً في `src/lib/exports.ts`)
-- نص إخلاء المسؤولية موحّد في `pulse-i18n.ts` (`pulse_disclaimer`) ومضمّن في كل صفحة وكل ملف مصدّر
-
----
+- `PulseSubNav` يقرأ `useAuth` بشكل دفاعي (try/catch) لأن بعض الصفحات قد لا تكون داخل `AuthProvider`.
+- لا تغييرات على قاعدة البيانات، ولا migrations، ولا أسرار جديدة (`FIRECRAWL_API_KEY` و`LOVABLE_API_KEY` موجودان).
+- لا تعديل على `pulse-i18n.ts` (المفاتيح اللازمة موجودة).
+- لا تعديل على ملفات auto-generated.
 
 ## الترتيب
 
-1. `pulse.functions.ts` + `pulse-export.ts`
-2. استبدال `pulse.$gov.tsx` بالنسخة الكاملة + بقية المسارات
-3. `/admin/pulse` + جدولة pg_cron
-4. ربط التنقل + الترجمات
-
-هل أبدأ التنفيذ؟
+1. أنشئ `PulseSubNav.tsx`.
+2. أدخله في الستّ صفحات.
+3. أضف بطاقة نبض في `dashboard.tsx`.
+4. شغّل دورة الكشط الأولى وأكّد ظهور صفوف في `pulse_metrics`.

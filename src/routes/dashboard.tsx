@@ -150,6 +150,7 @@ function DashboardPage() {
             <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} cost={TOOL_COST.boost} onOpen={() => setOpenTool("boost")} />
             <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} cost={TOOL_COST.applied} onOpen={() => setOpenTool("applied")} />
             <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />
+            <ToolCard icon={<Activity className="size-5" />} title="نبض المحافظات" desc="رصد حي لمحافظات العراق الـ18 من 10 مصادر رسمية، كل 12 ساعة" cta="فتح نبض" to="/pulse" badge="LIVE" badgeOk />
           </div>
         </div>
 

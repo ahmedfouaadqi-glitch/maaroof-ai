@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePulseI18n } from "@/lib/pulse-i18n";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/sources")({
   component: SourcesPage,
@@ -31,6 +32,7 @@ function SourcesPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-4">
+        <PulseSubNav />
         <ul className="space-y-2">
           {sources.map((s) => (
             <li key={s.id} className="rounded-xl border border-border bg-card/50 p-4 flex items-center justify-between gap-3 flex-wrap">

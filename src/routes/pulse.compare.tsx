@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePulseI18n } from "@/lib/pulse-i18n";
+import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/compare")({
   component: ComparePage,
@@ -60,6 +61,7 @@ function ComparePage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
+        <PulseSubNav />
         <section>
           <p className="text-sm text-muted-foreground mb-3">اختر حتى 5 محافظات للمقارنة</p>
           <div className="flex flex-wrap gap-2">
