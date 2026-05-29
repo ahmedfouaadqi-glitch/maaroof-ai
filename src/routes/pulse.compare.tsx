@@ -5,6 +5,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { PulseSubNav } from "@/components/PulseSubNav";
+import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
 export const Route = createFileRoute("/pulse/compare")({
   component: () => (
@@ -70,6 +71,13 @@ function ComparePage() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
         <PulseSubNav />
+
+        <PulseInfoCard title="مقارنة المحافظات">
+          أداة لمقارنة المؤشرات بين عدة محافظات جنباً إلى جنب. <b>اختر حتى 5 محافظات</b> من
+          الأزرار أدناه، وسيظهر جدول يعرض أحدث قراءة لكل مؤشر في كل محافظة. الإشارة
+          <b> "—" </b>تعني أنه لا توجد قراءة بعد لهذا المؤشر في تلك المحافظة.
+        </PulseInfoCard>
+
         <section>
           <p className="text-sm text-muted-foreground mb-3">اختر حتى 5 محافظات للمقارنة</p>
           <div className="flex flex-wrap gap-2">

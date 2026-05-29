@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { triggerPulseCrawl } from "@/lib/pulse.functions";
 import { PulseSubNav } from "@/components/PulseSubNav";
+import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
 export const Route = createFileRoute("/admin/pulse")({
   component: () => (
@@ -93,10 +94,21 @@ function AdminPulse() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
         <PulseSubNav />
+
+        <PulseInfoCard title="لوحة تحكم نبض (للمالك فقط)">
+          من هنا تتحكم بنظام نبض بالكامل: تشغيل الكاشط يدوياً لمصدر معين أو لكل المصادر،
+          تفعيل/إيقاف <b>جسر geoiraq</b>، ومتابعة سجل الكشط لمعرفة ما نجح وما فشل.
+          الكشط التلقائي يعمل كل 12 ساعة عبر cron.
+        </PulseInfoCard>
+
         {msg && <div className="rounded-lg border border-border bg-card/50 p-3 text-xs font-mono">{msg}</div>}
 
-        <section>
-          <h2 className="text-lg font-bold mb-3">{t("pulse_bridge_geoiraq")}</h2>
+        <section className="space-y-2">
+          <h2 className="text-lg font-bold">{t("pulse_bridge_geoiraq")}</h2>
+          <PulseHint>
+            عند تفعيله، يتدفق بيانات نبض إلى وحدات geoiraq الأخرى (تحليل المحتوى،
+            المساعد العام، إلخ). إذا كان معطلاً، يبقى نبض معزولاً.
+          </PulseHint>
           <button
             onClick={toggleBridge}
             className={`rounded-full px-4 py-2 text-sm border ${bridgeOn ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}
@@ -105,8 +117,12 @@ function AdminPulse() {
           </button>
         </section>
 
-        <section>
-          <h2 className="text-lg font-bold mb-3">{t("pulse_sources")}</h2>
+        <section className="space-y-2">
+          <h2 className="text-lg font-bold">{t("pulse_sources")}</h2>
+          <PulseHint>
+            اضغط <b>تشغيل الكشط الآن</b> بجانب أي مصدر لإجبار سحب فوري منه. وقت بجانب
+            كل مصدر هو آخر نجاح. إذا لم يظهر وقت، فالكاشط لم ينجح بعد لهذا المصدر.
+          </PulseHint>
           <ul className="space-y-2">
             {sources.map((s) => (
               <li key={s.id} className="rounded-lg border border-border bg-card/50 p-3 flex items-center justify-between gap-3 flex-wrap">
@@ -128,8 +144,12 @@ function AdminPulse() {
           </ul>
         </section>
 
-        <section>
-          <h2 className="text-lg font-bold mb-3">{t("pulse_scrape_log")}</h2>
+        <section className="space-y-2">
+          <h2 className="text-lg font-bold">{t("pulse_scrape_log")}</h2>
+          <PulseHint>
+            آخر 30 محاولة كشط. <b>status</b>: success/error، <b>rows</b>: عدد الصفوف
+            المُدرجة في قاعدة البيانات، <b>error</b>: رسالة الخطأ إن وُجدت.
+          </PulseHint>
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
