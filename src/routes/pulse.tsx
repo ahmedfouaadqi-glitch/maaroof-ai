@@ -25,7 +25,7 @@ function PulsePage() {
   const [govs, setGovs] = useState<Gov[]>([]);
   const [apps, setApps] = useState<App[]>([]);
   const [sources, setSources] = useState<Src[]>([]);
-  const [now, setNow] = useState(new Date());
+  const [hour, setHour] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -38,14 +38,15 @@ function PulsePage() {
       if (a.data) setApps(a.data as App[]);
       if (s.data) setSources(s.data as Src[]);
     })();
-    const t = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(t);
+    setHour(new Date().getHours());
+    const timer = setInterval(() => setHour(new Date().getHours()), 60000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Uₜ rough preview: hour-curve × demo base
+  // Uₜ rough preview: hour-curve × demo base. Computed client-only to avoid SSR/CSR hydration mismatch.
   const hourCurve = [0.35,0.25,0.18,0.15,0.18,0.25,0.45,0.65,0.80,0.85,0.88,0.92,0.95,0.90,0.85,0.88,0.95,1.05,1.20,1.35,1.40,1.30,1.05,0.70];
-  const wT = hourCurve[now.getHours()];
-  const ut = Math.round(8000 * wT);
+  const ut = hour === null ? null : Math.round(8000 * hourCurve[hour]);
+
 
   return (
     <div dir={dir} className="min-h-screen bg-background text-foreground">
