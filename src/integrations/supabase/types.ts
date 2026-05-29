@@ -1148,6 +1148,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_pulse_cron: { Args: { _hours: number }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
