@@ -42,14 +42,20 @@ function AdminPulse() {
   const [msg, setMsg] = useState<string>("");
 
   const refresh = async () => {
-    const [{ data: l }, { data: s }, { data: cfg }] = await Promise.all([
+    const [{ data: l }, { data: s }, { data: cfgs }] = await Promise.all([
       supabase.from("pulse_scrape_log").select("*").order("started_at", { ascending: false }).limit(30),
       supabase.from("pulse_sources").select("id, key, name_ar, last_success_at"),
-      supabase.from("pulse_app_config").select("value").eq("key", "geoiraq_bridge_enabled").maybeSingle(),
+      supabase.from("pulse_app_config").select("key, value")
+        .in("key", ["geoiraq_bridge_enabled", "pulse_enabled", "pulse_cron_hours"]),
     ]);
     setLogs((l ?? []) as LogRow[]);
     setSources((s ?? []) as Src[]);
-    setBridgeOn(Boolean((cfg?.value as any)?.enabled));
+    const cfgMap = new Map((cfgs ?? []).map((r: any) => [r.key, r.value]));
+    setBridgeOn(Boolean((cfgMap.get("geoiraq_bridge_enabled") as any)?.enabled));
+    const pe = cfgMap.get("pulse_enabled") as any;
+    setPulseEnabled(pe?.enabled !== false); // default true
+    const ph = cfgMap.get("pulse_cron_hours") as any;
+    setCronHours(typeof ph?.hours === "number" ? ph.hours : 12);
   };
 
   useEffect(() => { void refresh(); }, []);
