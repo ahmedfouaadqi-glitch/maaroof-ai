@@ -1,53 +1,34 @@
 
-## السياق
+## الهدف
+1. إصلاح تعطّل صفحة `/pulse` (سبب عدم استجابة رابط "نبض").
+2. إكمال ما تبقى من نظام نبض.
 
-كل المكوّنات الأساسية لـ "نبض" مبنية وتعمل (الصفحات، الكشط، الجدولة كل 12 ساعة، المساعد الاستراتيجي، لوحة المالك، تصدير Excel). تبقّت 3 أشياء صغيرة فقط لإغلاق المشروع:
+## 1. إصلاح خطأ الهيدريشن في /pulse (الأولوية القصوى)
 
-1. **لا يوجد تنقّل فرعي داخل /pulse** — المستخدم يصل لـ `/pulse` لكن لا يرى روابط واضحة لـ `compare` / `sources` / `assistant`.
-2. **الـDashboard لا يحوي بطاقة نبض** — مستخدمو المنصة لا يكتشفونه.
-3. **`pulse_metrics` فيها 0 صفوف** — الكرون مجدول كل 12 ساعة لكن لم يعمل بعد ولا أحد شغّل كشطاً يدوياً. يجب تشغيل دورة كشط أولى الآن حتى تظهر بيانات حقيقية في كل الصفحات.
+**المشكلة:** `useState(new Date())` و `toLocaleString()` تُنفّذ على SSR والمتصفح بقيم مختلفة → React #418 → الصفحة تنهار.
 
-## التغييرات
+**الحل في `src/routes/pulse.tsx`:**
+- تهيئة `now` بـ `useState<Date | null>(null)` ثم تعيينها داخل `useEffect`.
+- عرض `ut` فقط بعد التحميل (`mounted` flag) أو إظهار `—` كـ placeholder ثابت أثناء SSR.
+- استبدال `toLocaleString()` بصياغة ثابتة (`Intl.NumberFormat('en-US')` أو `.toLocaleString('en-US')`) لتفادي اختلاف locale بين Node والمتصفح.
 
-### 1. مكوّن `PulseSubNav` جديد
+**نفس المعالجة** في:
+- `src/routes/pulse.sources.tsx` (تواريخ `last_success_at`).
+- `src/routes/pulse.$gov.tsx` (إن وُجد `Date().toLocaleString` داخل JSX).
 
-ملف: `src/components/PulseSubNav.tsx`
+## 2. إكمال جلب البيانات الناقصة
 
-شريط تنقّل صغير يُستخدم في كل صفحات `/pulse/*`:
-- نظرة عامة → `/pulse`
-- مقارنة → `/pulse/compare`
-- المساعد → `/pulse/assistant`
-- المصادر → `/pulse/sources`
-- لوحة المالك → `/admin/pulse` (تظهر فقط للأدمن)
+- جدول `pulse_trending_apps` فارغ. مراجعة `src/lib/pulse-scraper.server.ts` للمصدرين `trending_apps` و `google_trends`: استخدام مصدر بديل قابل للزحف (مثلاً صفحات Sensor Tower/AppBrain العامة، أو RSS من Google Trends Iraq) لأنّ المصادر الحالية محظورة أو JS-only.
+- مصادر `ISX/CMC/CBI/MoP/HDX`: إضافة fallback عبر صفحات alternatives أو APIs عامة. مرحلياً وضع علامة `inactive` للمصادر التي لا تُرجع شيئاً لتجنّب رسائل "—".
 
-يستخدم `usePulseI18n` للترجمات الموجودة (`pulse_overview`, `pulse_compare`, …).
+## 3. إصلاح كرون 12h
+- في الترحيل الموجود للكرون، تغيير الرابط من `geoiraq.lovable.app` إلى `project--fa07a113-c24f-4419-b1d8-07ffd60e98c6.lovable.app` (الرابط المستقر) حتى يعمل قبل/بعد النشر.
 
-ثم أدخله أعلى الـ`<main>` في:
-- `src/routes/pulse.tsx`
-- `src/routes/pulse.$gov.tsx`
-- `src/routes/pulse.compare.tsx`
-- `src/routes/pulse.sources.tsx`
-- `src/routes/pulse.assistant.tsx`
-- `src/routes/admin.pulse.tsx`
+## 4. التحقق
+- بعد التعديلات: فتح `/pulse` في البريفيو والتأكد من عدم وجود خطأ #418 في الكونسول.
+- استدعاء `/api/public/hooks/pulse-crawl` يدوياً للتأكد من امتلاء `pulse_trending_apps`.
 
-### 2. بطاقة نبض في الـDashboard
-
-في `src/routes/dashboard.tsx` أضف بطاقة Link → `/pulse` بين البطاقات الموجودة، بعنوان "نبض المحافظات" ووصف قصير "رصد حي لمحافظات العراق كل 12 ساعة" مع أيقونة `Activity` (مستوردة سابقاً).
-
-### 3. تشغيل أول دورة كشط فعلية
-
-استدعاء HTTP واحد لـ `/api/public/hooks/pulse-crawl` (POST مع `apikey`) عبر `stack_modern--invoke-server-function` بعد نشر التغييرات، حتى تمتلئ `pulse_metrics` و`pulse_trending_apps` ببيانات Firecrawl + Lovable AI الحقيقية من المصادر الـ10. هذا يحوّل كل الصفحات من "لا توجد بيانات" إلى عرض حي.
-
-## تفاصيل تقنية
-
-- `PulseSubNav` يقرأ `useAuth` بشكل دفاعي (try/catch) لأن بعض الصفحات قد لا تكون داخل `AuthProvider`.
-- لا تغييرات على قاعدة البيانات، ولا migrations، ولا أسرار جديدة (`FIRECRAWL_API_KEY` و`LOVABLE_API_KEY` موجودان).
-- لا تعديل على `pulse-i18n.ts` (المفاتيح اللازمة موجودة).
-- لا تعديل على ملفات auto-generated.
-
-## الترتيب
-
-1. أنشئ `PulseSubNav.tsx`.
-2. أدخله في الستّ صفحات.
-3. أضف بطاقة نبض في `dashboard.tsx`.
-4. شغّل دورة الكشط الأولى وأكّد ظهور صفوف في `pulse_metrics`.
+## ملاحظات تقنية
+- لا تغييرات على المخطط (schema).
+- لا أسرار جديدة.
+- لا تعديل على ملفات المولَّدة تلقائياً.
