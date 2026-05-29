@@ -105,13 +105,13 @@
 }
 
 @utility glow-border {
-  box-shadow: 0 0 0 1px oklch(0.78 0.18 195 / 0.3), var(--shadow-glow);
+  box-shadow: 0 0 0 1px oklch(0.62 0.16 245 / 0.3), var(--shadow-glow);
 }
 
 @utility grid-bg {
   background-image:
-    linear-gradient(oklch(0.78 0.18 195 / 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(0.78 0.18 195 / 0.06) 1px, transparent 1px);
+    linear-gradient(oklch(0.62 0.16 245 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.62 0.16 245 / 0.06) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -121,8 +121,8 @@
   100% { transform: translateY(100%); opacity: 0; }
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px oklch(0.78 0.18 195 / 0.4); }
-  50% { box-shadow: 0 0 50px oklch(0.78 0.18 195 / 0.7); }
+  0%, 100% { box-shadow: 0 0 20px oklch(0.62 0.16 245 / 0.4); }
+  50% { box-shadow: 0 0 50px oklch(0.62 0.16 245 / 0.7); }
 }
 .animate-scan { animation: scan 2s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }

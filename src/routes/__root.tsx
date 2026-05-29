@@ -87,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Generative Engine Optimization for Iraq. Test, score and optimize your content so ChatGPT, Gemini and Claude cite you in EN, AR, KU." },
       { property: "og:image", content: "https://geoiraq.com/og-maaroof.png" },
       { name: "twitter:image", content: "https://geoiraq.com/og-maaroof.png" },
-      { name: "theme-color", content: "#0b0f1a" },
+      { name: "theme-color", content: "#0f2454" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "MAAROOF Ai" },

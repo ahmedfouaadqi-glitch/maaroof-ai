@@ -1,4 +1,4 @@
-# MAAROOF Ai
+# MAAROOF Ai (formerly GEO-Iraq)
 
 > Generative Engine Optimization platform for Iraq — score, optimize and publish content so ChatGPT, Gemini, Claude and Perplexity cite your brand. Available in English, Arabic and Kurdish. Part of Marouf Intelligence.
 
