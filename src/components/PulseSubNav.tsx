@@ -4,8 +4,7 @@ import { useAuth } from "@/lib/auth";
 
 export function PulseSubNav() {
   const { t } = usePulseI18n();
-  let auth: ReturnType<typeof useAuth> | null = null;
-  try { auth = useAuth(); } catch { /* no provider */ }
+  const auth = useAuth();
 
   const itemCls =
     "rounded-full border border-border bg-card/40 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-card/80 transition";

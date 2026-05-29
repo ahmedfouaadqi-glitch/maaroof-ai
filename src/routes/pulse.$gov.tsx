@@ -1,13 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { I18nProvider } from "@/lib/i18n";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
-import { useAuth } from "@/lib/auth";
 import { exportPulseReport } from "@/lib/pulse-export";
 import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/$gov")({
-  component: GovPage,
+  component: () => (
+    <I18nProvider>
+      <AuthProvider>
+        <GovPage />
+      </AuthProvider>
+    </I18nProvider>
+  ),
 });
 
 type Gov = {

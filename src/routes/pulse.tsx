@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { I18nProvider } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { PulseSubNav } from "@/components/PulseSubNav";
 
@@ -13,7 +15,13 @@ export const Route = createFileRoute("/pulse")({
       { property: "og:description", content: "رصد سيادي مباشر لمحافظات العراق." },
     ],
   }),
-  component: PulsePage,
+  component: () => (
+    <I18nProvider>
+      <AuthProvider>
+        <PulsePage />
+      </AuthProvider>
+    </I18nProvider>
+  ),
 });
 
 type Gov = { id: string; slug: string; name_ar: string; name_en: string; population_base: number | null };

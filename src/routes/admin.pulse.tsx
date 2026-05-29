@@ -2,13 +2,20 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { I18nProvider } from "@/lib/i18n";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { triggerPulseCrawl } from "@/lib/pulse.functions";
 import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/admin/pulse")({
-  component: AdminPulse,
+  component: () => (
+    <I18nProvider>
+      <AuthProvider>
+        <AdminPulse />
+      </AuthProvider>
+    </I18nProvider>
+  ),
 });
 
 type LogRow = {
