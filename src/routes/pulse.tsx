@@ -5,6 +5,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { PulseSubNav } from "@/components/PulseSubNav";
+import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
 export const Route = createFileRoute("/pulse")({
   head: () => ({
@@ -73,8 +74,20 @@ function PulsePage() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-10">
         <PulseSubNav />
-        <section>
-          <h2 className="text-xl font-bold mb-4">المحافظات الـ18</h2>
+
+        <PulseInfoCard title="ما هو نبض؟">
+          نظام رصد سيادي لمحافظات العراق الـ18. يسحب البيانات تلقائياً من 10 مصادر رسمية
+          (البنك المركزي، الجهاز المركزي للإحصاء، البنك الدولي، منظمة الهجرة الدولية،
+          هيئة الاتصالات والإعلام، وزارة التخطيط، وغيرها) كل 12 ساعة، ويعرضها بلغتك
+          مع تحليل مخصص حسب تخصصك. كل الأرقام مرجعية استرشادية.
+        </PulseInfoCard>
+
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold">المحافظات الـ18</h2>
+          <PulseHint>
+            اضغط على أي محافظة لرؤية مؤشراتها التفصيلية (اقتصاد، سكان، اتصالات…) وتقدير
+            عدد المستخدمين النشطين فيها الآن، مع زر تصدير Excel.
+          </PulseHint>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {govs.map((g) => (
               <Link
@@ -91,10 +104,15 @@ function PulsePage() {
               </Link>
             ))}
           </div>
+          <PulseHint>الرقم الأخضر تحت كل محافظة هو عدد السكان بالملايين (تقدير 2024).</PulseHint>
         </section>
 
-        <section>
-          <h2 className="text-xl font-bold mb-4">{t("pulse_trending_apps")}</h2>
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold">{t("pulse_trending_apps")}</h2>
+          <PulseHint>
+            ترتيب وطني للتطبيقات الأكثر تداولاً في العراق محدّث كل 12 ساعة. اضغط محافظة
+            معينة لرؤية الترتيب الخاص بها.
+          </PulseHint>
           {apps.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("pulse_no_data")}</p>
           ) : (
@@ -112,8 +130,12 @@ function PulsePage() {
           )}
         </section>
 
-        <section>
-          <h2 className="text-xl font-bold mb-4">{t("pulse_sources")}</h2>
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold">{t("pulse_sources")}</h2>
+          <PulseHint>
+            الجهات الرسمية التي نسحب منها البيانات. الوقت بجانب كل مصدر هو آخر مرة نجح
+            فيها السحب. ستجد تفاصيل أكثر في صفحة "المصادر".
+          </PulseHint>
           <ul className="text-sm space-y-1">
             {sources.map((s) => (
               <li key={s.id} className="flex justify-between border-b border-border/50 py-2">
