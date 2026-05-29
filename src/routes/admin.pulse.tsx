@@ -30,10 +30,14 @@ function AdminPulse() {
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch { /* no provider */ }
   const trigger = useServerFn(triggerPulseCrawl);
+  const saveSettings = useServerFn(updatePulseSettings);
 
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [sources, setSources] = useState<Src[]>([]);
   const [bridgeOn, setBridgeOn] = useState(false);
+  const [pulseEnabled, setPulseEnabled] = useState(true);
+  const [cronHours, setCronHours] = useState<number>(12);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
