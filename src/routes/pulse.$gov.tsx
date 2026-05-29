@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { exportPulseReport } from "@/lib/pulse-export";
 import { PulseSubNav } from "@/components/PulseSubNav";
+import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
 export const Route = createFileRoute("/pulse/$gov")({
   component: () => (
@@ -179,39 +180,56 @@ function GovPage() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
         <PulseSubNav />
+
+        <PulseInfoCard title={`نبض ${gov.name_ar}`}>
+          مؤشرات حية لمحافظة <b>{gov.name_ar}</b> مستخلصة من المصادر الرسمية. أحدث قراءة
+          لكل مؤشر معروضة بجانب وقت التقاطها. الرقم في الأعلى <b>"المستخدمون النشطون الآن"</b>
+          هو تقدير حسب الصيغة: <code className="text-primary">السكان × 0.78 × منحنى الساعة × 0.045</code>،
+          ويُحدَّث كل دقيقة. اضغط <b>تصدير Excel</b> لتنزيل تقرير كامل بالمؤشرات والتطبيقات.
+        </PulseInfoCard>
+
         {specialty && (
-          <div className="text-xs text-muted-foreground">
-            {t("pulse_specialty_lens")}: <span className="text-primary font-medium">{specialty}</span>
-          </div>
+          <PulseHint>
+            <b>العدسة التخصصية:</b> القطاعات أُعيد ترتيبها حسب تخصصك (
+            <span className="text-primary font-medium">{specialty}</span>) لإبراز الأهم أولاً.
+          </PulseHint>
         )}
 
         {bySector.length === 0 ? (
           <p className="text-muted-foreground">{t("pulse_no_data")}</p>
         ) : (
-          bySector.map(([sector, rows]) => (
-            <section key={sector}>
-              <h2 className="text-lg font-bold mb-3 capitalize text-primary">{sector}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {rows.map((m) => (
-                  <div key={m.id} className="rounded-xl border border-border bg-card/50 p-4">
-                    <div className="text-xs text-muted-foreground">{m.metric_key}</div>
-                    <div className="text-xl font-bold tabular-nums mt-1">
-                      {m.value !== null ? m.value.toLocaleString() : "—"}
-                      {m.unit && <span className="text-xs text-muted-foreground ms-1">{m.unit}</span>}
+          <>
+            <PulseHint>
+              المؤشرات مجمّعة حسب القطاع: <b>economy</b> (اقتصاد)، <b>population</b> (سكان)،
+              <b> telecom</b> (اتصالات)، <b>infrastructure</b> (بنية تحتية)،
+              <b> humanitarian</b> (إنساني). كل بطاقة تعرض آخر قراءة ووقت التقاطها.
+            </PulseHint>
+            {bySector.map(([sector, rows]) => (
+              <section key={sector}>
+                <h2 className="text-lg font-bold mb-3 capitalize text-primary">{sector}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {rows.map((m) => (
+                    <div key={m.id} className="rounded-xl border border-border bg-card/50 p-4">
+                      <div className="text-xs text-muted-foreground">{m.metric_key}</div>
+                      <div className="text-xl font-bold tabular-nums mt-1">
+                        {m.value !== null ? m.value.toLocaleString() : "—"}
+                        {m.unit && <span className="text-xs text-muted-foreground ms-1">{m.unit}</span>}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-2">
+                        {new Date(m.captured_at).toLocaleString()}
+                      </div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-2">
-                      {new Date(m.captured_at).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
         )}
 
         {apps.length > 0 && (
-          <section>
-            <h2 className="text-lg font-bold mb-3 text-primary">{t("pulse_trending_apps")}</h2>
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-primary">{t("pulse_trending_apps")}</h2>
+            <PulseHint>ترتيب التطبيقات الأكثر تداولاً داخل {gov.name_ar} تحديداً.</PulseHint>
             <ol className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
               {apps.map((a) => (
                 <li key={a.id} className="rounded-lg border border-border bg-card/50 px-3 py-2 flex items-center gap-3">
@@ -225,6 +243,7 @@ function GovPage() {
             </ol>
           </section>
         )}
+
 
         <footer className="border-t border-border pt-6 text-xs text-muted-foreground leading-relaxed">
           {t("pulse_disclaimer")}
