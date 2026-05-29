@@ -93,6 +93,7 @@ function GovPage() {
         });
       }
     })();
+    setHour(new Date().getHours());
     const timer = setInterval(() => setHour(new Date().getHours()), 60_000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,10 +101,11 @@ function GovPage() {
 
   // Uₜ: population × digital penetration (~0.78) × hourly curve × tiny noise
   const ut = useMemo(() => {
-    if (!gov?.population_base) return null;
+    if (!gov?.population_base || hour === null) return null;
     const base = gov.population_base * 0.78;
     return Math.round(base * HOUR_CURVE[hour] * 0.045);
   }, [gov, hour]);
+
 
   // Group metrics by sector, latest per metric_key
   const bySector = useMemo(() => {
