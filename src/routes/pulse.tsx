@@ -58,7 +58,7 @@ function PulsePage() {
           </div>
           <div className="text-right">
             <div className="text-xs text-muted-foreground">{t("pulse_active_users_now")}</div>
-            <div className="text-2xl font-bold text-primary tabular-nums">{ut.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-primary tabular-nums">{ut === null ? "—" : ut.toLocaleString("en-US")}</div>
           </div>
         </div>
       </header>
