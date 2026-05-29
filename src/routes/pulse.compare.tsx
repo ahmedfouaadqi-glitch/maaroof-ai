@@ -61,6 +61,7 @@ function ComparePage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
+        <PulseSubNav />
         <section>
           <p className="text-sm text-muted-foreground mb-3">اختر حتى 5 محافظات للمقارنة</p>
           <div className="flex flex-wrap gap-2">

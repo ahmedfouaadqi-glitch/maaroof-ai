@@ -169,6 +169,7 @@ function GovPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+        <PulseSubNav />
         {specialty && (
           <div className="text-xs text-muted-foreground">
             {t("pulse_specialty_lens")}: <span className="text-primary font-medium">{specialty}</span>
