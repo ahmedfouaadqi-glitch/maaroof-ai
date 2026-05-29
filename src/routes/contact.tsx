@@ -8,10 +8,10 @@ import { WHATSAPP_NUMBER, whatsappLink } from "@/lib/whatsapp";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact GEO-Iraq · Talk to the AI Visibility Team" },
-      { name: "description", content: "Reach the GEO-Iraq team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
-      { property: "og:title", content: "Contact GEO-Iraq · Talk to the AI Visibility Team" },
-      { property: "og:description", content: "Reach the GEO-Iraq team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
+      { title: "Contact MAAROOF Ai · Talk to the AI Visibility Team" },
+      { name: "description", content: "Reach the MAAROOF Ai team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
+      { property: "og:title", content: "Contact MAAROOF Ai · Talk to the AI Visibility Team" },
+      { property: "og:description", content: "Reach the MAAROOF Ai team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
       { property: "og:url", content: "https://geoiraq.com/contact" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/contact" }],

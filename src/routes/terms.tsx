@@ -5,10 +5,10 @@ import { SiteHeader } from "@/components/SiteHeader";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Use · GEO-Iraq" },
-      { name: "description", content: "Terms governing use of GEO-Iraq tools, AI Agent and subscriptions." },
-      { property: "og:title", content: "Terms of Use · GEO-Iraq" },
-      { property: "og:description", content: "Terms of use for GEO-Iraq." },
+      { title: "Terms of Use · MAAROOF Ai" },
+      { name: "description", content: "Terms governing use of MAAROOF Ai tools, AI Agent and subscriptions." },
+      { property: "og:title", content: "Terms of Use · MAAROOF Ai" },
+      { property: "og:description", content: "Terms of use for MAAROOF Ai." },
       { property: "og:url", content: "https://geoiraq.com/terms" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/terms" }],
@@ -39,7 +39,7 @@ function Page() {
 
 const content = {
   ar: `
-<p>باستخدامك منصة <strong>GEO-Iraq</strong> (جزء من نظام معروف) فإنك توافق على الشروط التالية:</p>
+<p>باستخدامك منصة <strong>MAAROOF Ai</strong> (جزء من نظام معروف) فإنك توافق على الشروط التالية:</p>
 <h2>1. الاستخدام المقبول</h2>
 <ul>
 <li>تستخدم المنصة لأغراض مشروعة فقط.</li>
@@ -77,7 +77,7 @@ const content = {
 <p class="text-sm text-muted-foreground">آخر تحديث: 2026</p>
 `,
   en: `
-<p>By using <strong>GEO-Iraq</strong> (part of the Marouf system), you agree to the following:</p>
+<p>By using <strong>MAAROOF Ai</strong> (part of the Marouf system), you agree to the following:</p>
 <h2>1. Acceptable Use</h2>
 <ul>
 <li>Use the platform for lawful purposes only.</li>
@@ -115,7 +115,7 @@ const content = {
 <p class="text-sm text-muted-foreground">Last updated: 2026</p>
 `,
   ku: `
-<p>بە بەکارهێنانی <strong>GEO-Iraq</strong> (بەشێک لە سیستەمی مەعروف) ڕەزامەندیت لەسەر ئەم مەرجانە:</p>
+<p>بە بەکارهێنانی <strong>MAAROOF Ai</strong> (بەشێک لە سیستەمی مەعروف) ڕەزامەندیت لەسەر ئەم مەرجانە:</p>
 <h2>1. بەکارهێنانی پەسەند</h2>
 <ul>
 <li>پلاتفۆڕم تەنها بۆ مەبەستی یاسایی بەکاربێنە.</li>

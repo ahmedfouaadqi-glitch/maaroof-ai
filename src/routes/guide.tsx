@@ -7,10 +7,10 @@ import { TOOL_CATALOG } from "@/lib/tool-catalog";
 export const Route = createFileRoute("/guide")({
   head: () => ({
     meta: [
-      { title: "Guide · GEO-Iraq" },
-      { name: "description", content: "How to use every GEO-Iraq tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more." },
-      { property: "og:title", content: "Guide · GEO-Iraq" },
-      { property: "og:description", content: "How to use every GEO-Iraq tool and the AI Agent." },
+      { title: "Guide · MAAROOF Ai" },
+      { name: "description", content: "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more." },
+      { property: "og:title", content: "Guide · MAAROOF Ai" },
+      { property: "og:description", content: "How to use every MAAROOF Ai tool and the AI Agent." },
       { property: "og:url", content: "https://geoiraq.com/guide" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/guide" }],

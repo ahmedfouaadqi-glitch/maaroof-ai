@@ -87,13 +87,13 @@ export const Route = createFileRoute("/u/$username")({
 
         const description = brand
           ? `${displayName} — ${brand}${kw ? ` (${kw})` : ""}`.slice(0, 280)
-          : `${displayName} on GEO-Iraq.`.slice(0, 280);
+          : `${displayName} on MAAROOF Ai.`.slice(0, 280);
 
         const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>${escapeHtml(displayName)} — GEO-Iraq</title>
+<title>${escapeHtml(displayName)} — MAAROOF Ai</title>
 <meta name="description" content="${escapeHtml(description)}" />
 ${kw ? `<meta name="keywords" content="${escapeHtml(kw)}" />` : ""}
 <meta name="robots" content="index,follow" />
@@ -113,7 +113,7 @@ ${kw ? `<p>${escapeHtml(kw)}</p>` : ""}
 <main>
 ${packsHtml}
 </main>
-<footer><small>Public profile on <a href="${escapeHtml(url.origin)}/" rel="noopener">GEO-Iraq</a></small></footer>
+<footer><small>Public profile on <a href="${escapeHtml(url.origin)}/" rel="noopener">MAAROOF Ai</a></small></footer>
 </body>
 </html>`;
 

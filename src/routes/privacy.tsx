@@ -5,10 +5,10 @@ import { SiteHeader } from "@/components/SiteHeader";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy · GEO-Iraq" },
-      { name: "description", content: "How GEO-Iraq collects, uses and protects your data across the platform and AI Agent." },
-      { property: "og:title", content: "Privacy Policy · GEO-Iraq" },
-      { property: "og:description", content: "How GEO-Iraq handles your data." },
+      { title: "Privacy Policy · MAAROOF Ai" },
+      { name: "description", content: "How MAAROOF Ai collects, uses and protects your data across the platform and AI Agent." },
+      { property: "og:title", content: "Privacy Policy · MAAROOF Ai" },
+      { property: "og:description", content: "How MAAROOF Ai handles your data." },
       { property: "og:url", content: "https://geoiraq.com/privacy" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/privacy" }],
@@ -39,7 +39,7 @@ function Page() {
 
 const content = {
   ar: `
-<p>تحترم منصة <strong>GEO-Iraq</strong> (جزء من نظام معروف) خصوصيتك وتلتزم بحماية بياناتك.</p>
+<p>تحترم منصة <strong>MAAROOF Ai</strong> (جزء من نظام معروف) خصوصيتك وتلتزم بحماية بياناتك.</p>
 <h2>البيانات التي نجمعها</h2>
 <ul>
 <li>بيانات الحساب: البريد الإلكتروني، الاسم.</li>
@@ -69,7 +69,7 @@ const content = {
 <p class="text-sm text-muted-foreground">آخر تحديث: 2026</p>
 `,
   en: `
-<p><strong>GEO-Iraq</strong> (part of the Marouf system) respects your privacy and is committed to protecting your data.</p>
+<p><strong>MAAROOF Ai</strong> (part of the Marouf system) respects your privacy and is committed to protecting your data.</p>
 <h2>Data we collect</h2>
 <ul>
 <li>Account data: email, name.</li>
@@ -99,7 +99,7 @@ const content = {
 <p class="text-sm text-muted-foreground">Last updated: 2026</p>
 `,
   ku: `
-<p>پلاتفۆڕمی <strong>GEO-Iraq</strong> (بەشێک لە سیستەمی مەعروف) ڕێز لە نهێنیپارێزیت دەگرێت.</p>
+<p>پلاتفۆڕمی <strong>MAAROOF Ai</strong> (بەشێک لە سیستەمی مەعروف) ڕێز لە نهێنیپارێزیت دەگرێت.</p>
 <h2>زانیارییەکان</h2>
 <ul>
 <li>زانیاری هەژمار: ئیمەیڵ، ناو.</li>

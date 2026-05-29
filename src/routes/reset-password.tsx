@@ -8,11 +8,11 @@ import { Loader2, Lock } from "lucide-react";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Reset Your Password · GEO-Iraq" },
-      { name: "description", content: "Securely reset your GEO-Iraq account password to regain access to your dashboard." },
+      { title: "Reset Your Password · MAAROOF Ai" },
+      { name: "description", content: "Securely reset your MAAROOF Ai account password to regain access to your dashboard." },
       { name: "robots", content: "noindex,follow" },
-      { property: "og:title", content: "Reset Password · GEO-Iraq" },
-      { property: "og:description", content: "Securely reset your GEO-Iraq account password." },
+      { property: "og:title", content: "Reset Password · MAAROOF Ai" },
+      { property: "og:description", content: "Securely reset your MAAROOF Ai account password." },
       { property: "og:url", content: "https://geoiraq.com/reset-password" },
     ],
   }),

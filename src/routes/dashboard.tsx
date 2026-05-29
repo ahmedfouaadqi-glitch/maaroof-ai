@@ -31,11 +31,11 @@ const TOOL_COST: Record<ToolKey, number> = {
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Your AI Visibility Dashboard · GEO-Iraq" },
-      { name: "description", content: "Run analyses, suggest posts, compare competitors, and track how AI engines cite your brand from a single GEO-Iraq dashboard." },
+      { title: "Your AI Visibility Dashboard · MAAROOF Ai" },
+      { name: "description", content: "Run analyses, suggest posts, compare competitors, and track how AI engines cite your brand from a single MAAROOF Ai dashboard." },
       { name: "robots", content: "noindex,follow" },
-      { property: "og:title", content: "Your AI Visibility Dashboard · GEO-Iraq" },
-      { property: "og:description", content: "Run analyses, suggest posts, compare competitors, and track how AI engines cite your brand from a single GEO-Iraq dashboard." },
+      { property: "og:title", content: "Your AI Visibility Dashboard · MAAROOF Ai" },
+      { property: "og:description", content: "Run analyses, suggest posts, compare competitors, and track how AI engines cite your brand from a single MAAROOF Ai dashboard." },
     ],
   }),
   component: () => (

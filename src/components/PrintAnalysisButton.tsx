@@ -19,7 +19,7 @@ export function PrintAnalysisButton({ targetId, label }: { targetId: string; lab
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${t("print_title")}</title><style>${styles}</style></head><body>`);
     w.document.write(`<h1>${t("print_title")}</h1>`);
     w.document.write(el.innerHTML);
-    w.document.write(`<div class="footer">GeoIraq.com · ${new Date().toLocaleString()} · ${t("export_disclaimer")}</div>`);
+    w.document.write(`<div class="footer">geoiraq.com · ${new Date().toLocaleString()} · ${t("export_disclaimer")}</div>`);
     w.document.write(`</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); }, 250);
