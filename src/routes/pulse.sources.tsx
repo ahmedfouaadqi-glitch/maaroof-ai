@@ -5,6 +5,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
 import { PulseSubNav } from "@/components/PulseSubNav";
+import { PulseInfoCard } from "@/components/PulseInfo";
 
 export const Route = createFileRoute("/pulse/sources")({
   component: () => (
@@ -41,6 +42,15 @@ function SourcesPage() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-4">
         <PulseSubNav />
+
+        <PulseInfoCard title="المصادر الرسمية لنبض">
+          نبض يسحب البيانات تلقائياً من <b>10 جهات رسمية</b> كل 12 ساعة (البنك المركزي،
+          البنك الدولي، الجهاز المركزي للإحصاء، منظمة الهجرة الدولية، هيئة الاتصالات،
+          وزارة التخطيط، HDX، ISX، Google Trends، ومصادر التطبيقات). كل بطاقة أدناه تعرض
+          اسم الجهة، رابطها الرسمي، وآخر وقت نجح فيه السحب. <b>"موقوف"</b> يعني أن
+          الكاشط معطّل مؤقتاً، و<b>"—"</b> يعني لم يُسحب بعد بنجاح.
+        </PulseInfoCard>
+
         <ul className="space-y-2">
           {sources.map((s) => (
             <li key={s.id} className="rounded-xl border border-border bg-card/50 p-4 flex items-center justify-between gap-3 flex-wrap">

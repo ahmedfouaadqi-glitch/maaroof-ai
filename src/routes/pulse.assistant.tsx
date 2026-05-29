@@ -8,6 +8,7 @@ import { usePulseI18n } from "@/lib/pulse-i18n";
 import { pulseAssistant } from "@/lib/pulse.functions";
 import { exportPulseReport } from "@/lib/pulse-export";
 import { PulseSubNav } from "@/components/PulseSubNav";
+import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
 export const Route = createFileRoute("/pulse/assistant")({
   component: () => (
@@ -92,7 +93,30 @@ function AssistantPage() {
 
       <main className="mx-auto max-w-4xl px-6 py-8 space-y-6">
         <PulseSubNav />
+
+        <PulseInfoCard title="المساعد الاستراتيجي">
+          يحلل المساعد <b>البيانات الحية</b> لمحافظتك المختارة + تخصصك في ملفك الشخصي،
+          ويولّد توصيات استراتيجية مكتوبة. اختر محافظة (أو اتركها على "كل العراق")،
+          اكتب سؤالك بأي لغة، ثم اضغط <b>توليد التحليل</b>. يمكنك تصدير الإجابة كملف Excel.
+        </PulseInfoCard>
+
         <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {[
+              "أفضل قطاع للاستثمار في البصرة الآن؟",
+              "قارن فرص التجارة بين أربيل والموصل",
+              "ما الوضع الإنساني في نينوى؟",
+            ].map((ex) => (
+              <button
+                key={ex}
+                onClick={() => setQuestion(ex)}
+                className="text-xs rounded-full border border-border bg-card/50 px-3 py-1.5 hover:bg-card/80"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+          <PulseHint>اضغط أي مثال أعلاه لتجربته بسرعة، أو اكتب سؤالك في المربع.</PulseHint>
           <select
             value={govSlug}
             onChange={(e) => setGovSlug(e.target.value)}
