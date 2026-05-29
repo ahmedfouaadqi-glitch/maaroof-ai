@@ -103,10 +103,7 @@ export const triggerPulseCrawl = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => CrawlSchema.parse(input ?? {}))
   .handler(async ({ data }) => {
     const anon = process.env.SUPABASE_PUBLISHABLE_KEY;
-    const base = process.env.SUPABASE_URL ? "" : "";
-    // Use the project's stable public URL for the hook
     const url = `https://project--fa07a113-c24f-4419-b1d8-07ffd60e98c6.lovable.app/api/public/hooks/pulse-crawl${data.sourceKey ? `?source=${encodeURIComponent(data.sourceKey)}` : ""}`;
-    void base;
     if (!anon) return { ok: false as const, error: "anon key missing" };
     try {
       const res = await fetch(url, {
@@ -119,4 +116,42 @@ export const triggerPulseCrawl = createServerFn({ method: "POST" })
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : "fetch failed" };
     }
+  });
+
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const PulseSettingsSchema = z.object({
+  enabled: z.boolean(),
+  hours: z.number().int().refine((n) => [0, 1, 2, 3, 4, 6, 8, 12, 24].includes(n), "invalid hours"),
+});
+
+/** Admin: enable/disable Pulse + update auto-crawl interval (hours). hours=0 disables cron. */
+export const updatePulseSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => PulseSettingsSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const userId = (context as { userId: string }).userId;
+    const { data: roleRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!roleRow) return { ok: false as const, error: "forbidden" };
+
+    await supabaseAdmin
+      .from("pulse_app_config")
+      .upsert({ key: "pulse_enabled", value: { enabled: data.enabled }, updated_by: userId });
+    await supabaseAdmin
+      .from("pulse_app_config")
+      .upsert({ key: "pulse_cron_hours", value: { hours: data.hours }, updated_by: userId });
+
+    const anon = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
+    const effectiveHours = data.enabled && data.hours > 0 ? data.hours : 0;
+    const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc("set_pulse_cron", {
+      _hours: effectiveHours,
+      _anon: anon,
+    });
+    if (rpcErr) return { ok: false as const, error: rpcErr.message };
+    return { ok: true as const, schedule: (rpcRes as string) ?? "unscheduled" };
   });

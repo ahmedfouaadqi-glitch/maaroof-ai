@@ -1148,6 +1148,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_pulse_cron: {
+        Args: { _anon: string; _hours: number }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -1,104 +1,38 @@
-# خطة تقرير التكلفة التشغيلية لـ GEO-Iraq
+# تحكم المدير بنشاط "نبض"
 
-أُريدها لي شخصيا وليس في صفحة الأدمن ( المدير ) كما ليس اقصد بيها الوحدات ولكن اقصد كم تكلفني انا شخصياً
+إضافة قسم جديد في `/admin/pulse` يسمح للمالك بـ:
+1. **تشغيل/إيقاف نظام نبض كاملاً** (يوقف الكشط التلقائي + يخفي الواجهة العامة اختيارياً).
+2. **تعديل الفاصل الزمني للكشط** (كل 6 / 12 / 24 ساعة، أو إيقاف الجدولة).
 
-## 1) النطاق
+## التخزين
+يستخدم جدول `pulse_app_config` الموجود (لا حاجة لمايجريشن):
+- `key = 'pulse_enabled'` → `{ enabled: true|false }`
+- `key = 'pulse_cron_hours'` → `{ hours: 6|12|24 }`
 
-سأحسب التكلفة عبر 4 طبقات:
+## التغييرات
 
+### 1. `src/routes/admin.pulse.tsx`
+قسم جديد أعلى الصفحة:
+- مفتاح Toggle لـ "نظام نبض نشط" (يقرأ/يكتب `pulse_enabled`).
+- Select لـ "وقت الكشط التلقائي" بخيارات: كل 6 ساعات / 12 ساعة / 24 ساعة / إيقاف.
+- زر "حفظ" يحدّث الـ cron schedule عبر استدعاء server function جديدة.
 
-| الطبقة                      | المزود                                                       | طبيعة التكلفة                    |
-| --------------------------- | ------------------------------------------------------------ | -------------------------------- |
-| الاستضافة                   | Lovable Hosting                                              | اشتراك ثابت شهري                 |
-| قاعدة البيانات/Auth/Storage | Lovable Cloud (Supabase)                                     | اعتمادات (Credits) حسب الاستخدام |
-| الذكاء الاصطناعي            | Lovable AI Gateway                                           | لكل طلب — حسب الموديل            |
-| الكشط (Pulse + بعض الأدوات) | Lovable AI Gateway فقط (لا Firecrawl خارجي حالياً حسب الكود) | داخل اعتمادات AI                 |
+### 2. `src/lib/pulse.functions.ts`
+إضافة `updatePulseCronSchedule({ hours | null })` كـ `createServerFn` محمية بـ `requireSupabaseAuth` + فحص admin role، تنفّذ:
+```sql
+SELECT cron.unschedule('pulse-crawl-12h'); -- إن وُجد
+SELECT cron.schedule('pulse-crawl', '0 */{hours} * * *', $$...net.http_post...$$);
+```
+عبر `supabaseAdmin.rpc` على دالة SQL `public.set_pulse_cron(hours int)` التي ننشئها مرة واحدة.
 
+### 3. مايجريشن صغيرة
+دالة SQL `set_pulse_cron(_hours int)` تُلغي الجدولة الحالية وتعيد إنشاءها بالساعة المطلوبة (أو تُلغيها فقط لو `_hours IS NULL`). `SECURITY DEFINER` لتستطيع الوصول إلى `cron.*`.
 
-## 2) خريطة الأدوات والموديلات (مستخرجة من الكود)
+### 4. `src/routes/api/public/hooks/pulse-crawl.ts`
+فحص في بداية المعالج: إذا `pulse_enabled = false` أرجع `{ skipped: true }` بدون تشغيل الكشط (حماية إضافية حتى لو نسي cron).
 
+### 5. الواجهة العامة (`src/routes/pulse.tsx`)
+قراءة `pulse_enabled` وإظهار شارة "النظام في وضع الصيانة" عند الإيقاف (بدون حذف الصفحة).
 
-| الأداة / المسار             | الموديل                                           | الطلبات لكل تشغيل |
-| --------------------------- | ------------------------------------------------- | ----------------- |
-| analyze (تحليل GEO)         | `gemini-2.5-flash-lite`                           | 1                 |
-| suggest (مولّد المنشورات)   | `gemini-2.5-flash-lite`                           | 1                 |
-| compare (مقارنة المنافسين)  | `gemini-3-flash-preview` + 8 منصات                | ~9                |
-| feasibility (دراسة جدوى)    | `gemini-2.5-flash-lite`                           | 1                 |
-| bizdev (تطوير أعمال)        | `gemini-2.5-flash-lite`                           | 1                 |
-| research (بحث ذكي)          | `gemini-2.5-flash-lite`                           | 1                 |
-| brand_boost (تعزيز العلامة) | مزيج: `gpt-5-mini/nano` + `gemini-2.5-flash/lite` | 8 منصات + خطة     |
-| company_email               | `gemini-2.5-flash-lite`                           | 1                 |
-| applied_ranking             | `gemini-2.5-flash`                                | 1                 |
-| visibility (فحص الظهور)     | `gemini-2.5-flash-lite`                           | 1                 |
-| brand-authority             | `gemini-2.5-flash`                                | 1                 |
-| geo-rewrite                 | `gemini-2.5-flash-lite`                           | 1                 |
-| Agent runner (كرون)         | `gemini-2.5-flash-lite`                           | 1 لكل هدف         |
-| Pulse scraper (كرون)        | `gemini-2.5-flash`                                | عدة مصادر/يوم     |
-
-
-## 3) المخرجات الثلاثة
-
-### أ) تقرير Markdown مفصّل في الشات
-
-يحتوي:
-
-- جدول تكلفة الموديل الواحد (سعر الـ1M tokens لكل موديل من تسعير Lovable AI الرسمية).
-- جدول لكل أداة: تكلفة المالك للتشغيل الواحد + تكلفة المستخدم الواحد + التكلفة عند 1000 مستخدم نشط.
-- التكلفة الثابتة (Hosting + Cloud الأساسي).
-- 3 سيناريوهات:
-  - **عادي**: 1000 مستخدم، 30 تحليل/مستخدم/شهر (مثل Starter).
-  - **قوي**: 1000 مستخدم، 120 تحليل/مستخدم (مثل Pro) + 20% يستخدم compare/brand_boost.
-  - **طارئ (ذروة)**: ضعف القوي + 50% تشغيل وكلاء يومي.
-- تكلفة Pulse الشهرية (كرون مستقل عن المستخدمين).
-- هامش الربح المتوقع مقابل أسعار الخطط الحالية (75k / 85k / 200k د.ع).
-
-### ب) ملف Excel `/mnt/documents/geoiraq-costs.xlsx`
-
-ورقات:
-
-1. **Pricing** — أسعار Lovable AI لكل موديل + خطط Cloud + الاستضافة.
-2. **Tools** — صف لكل أداة: الموديل، tokens تقديري للطلب، التكلفة/تشغيل.
-3. **PerUser** — تكلفة المستخدم الواحد حسب خطته.
-4. **Scenarios** — عادي / قوي / طارئ مع formulas حيّة (تغيير عدد المستخدمين يعيد الحساب).
-5. **Margins** — مقارنة الإيراد بالتكلفة لكل خطة.
-
-كل الأرقام formulas (ليست hardcoded) ليسهل تعديلها لاحقاً، بصيغة أعمدة ملوّنة (أزرق = إدخال، أسود = صيغة).
-
-### ج) صفحة أدمن حيّة `/admin/costs`
-
-- تقرأ من جدول `tool_runs` / السجلات الموجودة (analyses, tasks) آخر 30 يوم.
-- تعرض:
-  - تكلفة فعلية لكل أداة (عدد التشغيل × سعر الطلب التقديري).
-  - تكلفة المستخدم النشط الواحد (متوسط).
-  - مؤشرات تنبيه: إذا اقترب الاستخدام من سقف اعتمادات Lovable AI.
-- جدول SQL جديد بسيط `cost_rates` (model_key, input_per_mtok, output_per_mtok) قابل للتحديث من نفس الصفحة عند تغيّر أسعار Lovable.
-- محمية بـ `has_role(admin)`.
-
-## 4) الملفات والتغييرات
-
-**جديد:**
-
-- `/tmp/build-costs-xlsx.py` (سكربت إنشاء Excel).
-- `/mnt/documents/geoiraq-costs.xlsx` (الناتج).
-- `src/routes/admin.costs.tsx` — صفحة الأدمن.
-- `src/lib/costs.functions.ts` — server functions لقراءة الاستخدام وحساب التكلفة.
-- Migration: جدول `cost_rates` + GRANTs + RLS (admin only) + seed بأسعار Lovable الحالية.
-
-**معدّل:**
-
-- `src/routes/admin.tsx` — إضافة رابط "التكلفة التشغيلية".
-
-## 5) افتراضات (سأوثّقها داخل التقرير)
-
-- **1000 مستخدم أونلاين** = ~1000 مستخدم نشط شهري (MAU). الذروة المتزامنة ≈ 5–10%.
-- متوسط tokens لكل طلب: 1500 input / 800 output (سأضع التقدير في خانة قابلة للتعديل).
-- أسعار Lovable AI = الأسعار الرسمية المعلنة في docs.lovable.dev/features/ai (سأذكر تاريخ الالتقاط).
-- لا يوجد Firecrawl أو APIs خارجية مدفوعة في الكود الحالي — كل الكشط عبر Lovable AI.
-
-## 6) ترتيب التنفيذ
-
-1. جلب أسعار Lovable AI الرسمية (web fetch).
-2. إنشاء migration `cost_rates` + seed.
-3. توليد Excel (مع QA: تحويل لصور والتأكد من الأرقام).
-4. بناء `/admin/costs` + server function.
-5. كتابة التقرير الـ Markdown في الرد النهائي مع زر تنزيل الـ Excel.
+## ملاحظة فنية
+لن نلمس جدولة pg_cron الحالية يدوياً — كل التحكم يمرّ عبر `set_pulse_cron` ليبقى الـ job اسمه `pulse-crawl` ثابتاً.

@@ -16,6 +16,17 @@ export const Route = createFileRoute("/api/public/hooks/pulse-crawl")({
         const url = new URL(request.url);
         const onlyKey = url.searchParams.get("source"); // optional: run one source
 
+        // Respect global enable/disable switch
+        const { data: cfg } = await supabaseAdmin
+          .from("pulse_app_config")
+          .select("value")
+          .eq("key", "pulse_enabled")
+          .maybeSingle();
+        const enabled = (cfg?.value as { enabled?: boolean } | null)?.enabled !== false;
+        if (!enabled) {
+          return Response.json({ ok: true, skipped: true, reason: "pulse_disabled" });
+        }
+
         const { data: govs } = await supabaseAdmin
           .from("governorates")
           .select("id, slug, name_ar, name_en, population_base");

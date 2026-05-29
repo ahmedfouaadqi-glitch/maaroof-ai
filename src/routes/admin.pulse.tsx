@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
-import { triggerPulseCrawl } from "@/lib/pulse.functions";
+import { triggerPulseCrawl, updatePulseSettings } from "@/lib/pulse.functions";
 import { PulseSubNav } from "@/components/PulseSubNav";
 import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
@@ -30,22 +30,32 @@ function AdminPulse() {
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch { /* no provider */ }
   const trigger = useServerFn(triggerPulseCrawl);
+  const saveSettings = useServerFn(updatePulseSettings);
 
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [sources, setSources] = useState<Src[]>([]);
   const [bridgeOn, setBridgeOn] = useState(false);
+  const [pulseEnabled, setPulseEnabled] = useState(true);
+  const [cronHours, setCronHours] = useState<number>(12);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
   const refresh = async () => {
-    const [{ data: l }, { data: s }, { data: cfg }] = await Promise.all([
+    const [{ data: l }, { data: s }, { data: cfgs }] = await Promise.all([
       supabase.from("pulse_scrape_log").select("*").order("started_at", { ascending: false }).limit(30),
       supabase.from("pulse_sources").select("id, key, name_ar, last_success_at"),
-      supabase.from("pulse_app_config").select("value").eq("key", "geoiraq_bridge_enabled").maybeSingle(),
+      supabase.from("pulse_app_config").select("key, value")
+        .in("key", ["geoiraq_bridge_enabled", "pulse_enabled", "pulse_cron_hours"]),
     ]);
     setLogs((l ?? []) as LogRow[]);
     setSources((s ?? []) as Src[]);
-    setBridgeOn(Boolean((cfg?.value as any)?.enabled));
+    const cfgMap = new Map((cfgs ?? []).map((r: any) => [r.key, r.value]));
+    setBridgeOn(Boolean((cfgMap.get("geoiraq_bridge_enabled") as any)?.enabled));
+    const pe = cfgMap.get("pulse_enabled") as any;
+    setPulseEnabled(pe?.enabled !== false); // default true
+    const ph = cfgMap.get("pulse_cron_hours") as any;
+    setCronHours(typeof ph?.hours === "number" ? ph.hours : 12);
   };
 
   useEffect(() => { void refresh(); }, []);
@@ -102,6 +112,69 @@ function AdminPulse() {
         </PulseInfoCard>
 
         {msg && <div className="rounded-lg border border-border bg-card/50 p-3 text-xs font-mono">{msg}</div>}
+
+        <section className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
+          <h2 className="text-lg font-bold">نشاط نظام نبض</h2>
+          <PulseHint>
+            تحكّم بتشغيل نظام نبض بالكامل وبفاصل الكشط التلقائي. عند الإيقاف يتم تعطيل
+            cron تلقائياً، ويرفض الـ webhook أي محاولة كشط (يدوية كانت أو مجدوَلة).
+          </PulseHint>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={pulseEnabled}
+                onChange={(e) => setPulseEnabled(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <span className="text-sm font-medium">
+                {pulseEnabled ? "نبض نشط" : "نبض موقوف"}
+              </span>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <span>فاصل الكشط:</span>
+              <select
+                value={cronHours}
+                onChange={(e) => setCronHours(Number(e.target.value))}
+                disabled={!pulseEnabled}
+                className="rounded-md border border-border bg-background px-2 py-1 text-sm disabled:opacity-50"
+              >
+                <option value={0}>إيقاف الجدولة</option>
+                <option value={1}>كل ساعة</option>
+                <option value={2}>كل ساعتين</option>
+                <option value={3}>كل 3 ساعات</option>
+                <option value={4}>كل 4 ساعات</option>
+                <option value={6}>كل 6 ساعات</option>
+                <option value={8}>كل 8 ساعات</option>
+                <option value={12}>كل 12 ساعة</option>
+                <option value={24}>كل 24 ساعة</option>
+              </select>
+            </label>
+
+            <button
+              onClick={async () => {
+                setSavingSettings(true); setMsg("");
+                try {
+                  const r = await saveSettings({ data: { enabled: pulseEnabled, hours: cronHours } });
+                  if (r.ok) {
+                    setMsg(`✓ تم الحفظ — الجدولة: ${r.schedule}`);
+                  } else {
+                    setMsg(`✗ فشل: ${r.error}`);
+                  }
+                  await refresh();
+                } finally {
+                  setSavingSettings(false);
+                }
+              }}
+              disabled={savingSettings}
+              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {savingSettings ? "…" : "حفظ"}
+            </button>
+          </div>
+        </section>
+
 
         <section className="space-y-2">
           <h2 className="text-lg font-bold">{t("pulse_bridge_geoiraq")}</h2>
