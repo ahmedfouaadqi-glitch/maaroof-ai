@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
-import { triggerPulseCrawl } from "@/lib/pulse.functions";
+import { triggerPulseCrawl, updatePulseSettings } from "@/lib/pulse.functions";
 import { PulseSubNav } from "@/components/PulseSubNav";
 import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
