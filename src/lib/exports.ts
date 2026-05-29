@@ -3,6 +3,7 @@
  * Supports PDF (via browser print) and Excel (via xlsx) with brand header + disclaimer.
  */
 import * as XLSX from "xlsx";
+import maaroofLogo from "@/assets/maaroof-ai-logo.png";
 
 export type ExportLang = "ar" | "en" | "ku";
 
@@ -24,6 +25,7 @@ export type ExportPayload = {
 };
 
 const BRAND = "MAAROOF Ai";
+const PREVIOUS_BRAND = "formerly GEO-Iraq";
 const SITE = "geoiraq.com";
 const ECOSYSTEM = "Part of the Marouf system";
 
@@ -50,19 +52,11 @@ function brandHeaderHtml(lang: ExportLang) {
   return `
     <header class="brand">
       <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 40 40" width="44" height="44">
-          <defs>
-            <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stop-color="#22d3ee"/>
-              <stop offset="100%" stop-color="#a855f7"/>
-            </linearGradient>
-          </defs>
-          <rect x="2" y="2" width="36" height="36" rx="9" fill="url(#g)"/>
-          <text x="50%" y="56%" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" font-weight="800" fill="#fff">G</text>
-        </svg>
+        <img src="${maaroofLogo}" alt="MAAROOF Ai" width="56" height="56" style="display:block;object-fit:contain;border-radius:10px;background:#fff;padding:2px"/>
       </div>
       <div class="brand-text">
         <div class="brand-name">${BRAND}</div>
+        <div class="brand-prev">${PREVIOUS_BRAND}</div>
         <div class="brand-sub">${SITE} · ${ECOSYSTEM}</div>
       </div>
       <div class="meta">${UI[lang].generated} ${escapeHtml(new Date().toLocaleString())}</div>
@@ -107,9 +101,10 @@ export function exportToPDF(payload: ExportPayload) {
   @page { size: A4; margin: 18mm 14mm 22mm 14mm; }
   * { box-sizing: border-box; }
   body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#0f172a; margin:0; padding: 0 8px; line-height: 1.6; }
-  header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #6366f1; margin-bottom: 18px; }
+  header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #1e40af; margin-bottom: 18px; }
   .brand-text { flex:1; }
-  .brand-name { font-size: 20px; font-weight: 800; color:#4338ca; letter-spacing: .3px; }
+  .brand-name { font-size: 22px; font-weight: 800; color:#0f2454; letter-spacing: .3px; }
+  .brand-prev { font-size: 10px; font-weight: 600; color:#94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-top: 2px; }
   .brand-sub { font-size: 11px; color:#64748b; margin-top: 2px; }
   .meta { font-size: 11px; color:#64748b; }
   h1 { font-size: 22px; margin: 6px 0 4px; color:#0f172a; }
@@ -165,6 +160,7 @@ export function exportToExcel(payload: ExportPayload) {
 
   const headerRows: any[][] = [
     [BRAND, "", "", ""],
+    [PREVIOUS_BRAND, "", "", ""],
     [`${SITE} · ${ECOSYSTEM}`, "", "", ""],
     [`${UI[lang].generated}: ${new Date().toLocaleString()}`, "", "", ""],
     [payload.title, "", "", ""],
