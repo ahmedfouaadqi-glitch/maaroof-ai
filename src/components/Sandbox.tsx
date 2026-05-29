@@ -240,10 +240,13 @@ export function Sandbox() {
           {STEPS.map((s, i) => {
             const done = result !== null || i < step;
             const active = i === step;
+            const label = s === "scan_local"
+              ? localStepLabel(getEffectiveScope(auth?.profile, "analyze"), L)
+              : t(s);
             return (
               <div key={s} className="flex items-center gap-3 text-sm">
                 <div className={`size-2 shrink-0 rounded-full transition ${done ? "bg-success" : active ? "bg-primary animate-pulse" : "bg-muted"}`} />
-                <span className={done || active ? "text-foreground" : "text-muted-foreground"}>{t(s)}</span>
+                <span className={done || active ? "text-foreground" : "text-muted-foreground"}>{label}</span>
                 <div className="ms-auto h-1 w-20 overflow-hidden rounded-full bg-muted sm:w-32">
                   <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: done ? "100%" : active ? "60%" : "0%" }} />
                 </div>
