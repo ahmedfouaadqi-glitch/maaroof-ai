@@ -2,14 +2,21 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { I18nProvider } from "@/lib/i18n";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePulseI18n } from "@/lib/pulse-i18n";
-import { useAuth } from "@/lib/auth";
 import { pulseAssistant } from "@/lib/pulse.functions";
 import { exportPulseReport } from "@/lib/pulse-export";
 import { PulseSubNav } from "@/components/PulseSubNav";
 
 export const Route = createFileRoute("/pulse/assistant")({
-  component: AssistantPage,
+  component: () => (
+    <I18nProvider>
+      <AuthProvider>
+        <AssistantPage />
+      </AuthProvider>
+    </I18nProvider>
+  ),
 });
 
 type Gov = { id: string; slug: string; name_ar: string };
