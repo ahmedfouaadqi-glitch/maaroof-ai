@@ -29,6 +29,37 @@ type Result = {
 
 const STEPS = ["scan_tokenize", "scan_authority", "scan_local", "scan_citation"] as const;
 
+function localStepLabel(
+  scope: { scope: string; country?: string; city?: string } | undefined | null,
+  L: "ar" | "en" | "ku",
+): string {
+  const s = scope?.scope || "country";
+  const country = (scope?.country || "IQ").toUpperCase();
+  const city = scope?.city || "";
+  const countryName: Record<string, { ar: string; en: string; ku: string }> = {
+    IQ: { ar: "العراق", en: "Iraq", ku: "عێراق" },
+    SA: { ar: "السعودية", en: "Saudi Arabia", ku: "سعودیە" },
+    AE: { ar: "الإمارات", en: "UAE", ku: "ئیمارات" },
+    EG: { ar: "مصر", en: "Egypt", ku: "میسر" },
+    JO: { ar: "الأردن", en: "Jordan", ku: "ئوردن" },
+    KW: { ar: "الكويت", en: "Kuwait", ku: "کوەیت" },
+    QA: { ar: "قطر", en: "Qatar", ku: "قەتەر" },
+    TR: { ar: "تركيا", en: "Turkey", ku: "تورکیا" },
+    US: { ar: "الولايات المتحدة", en: "United States", ku: "ئەمریکا" },
+  };
+  const cn = countryName[country]?.[L] || country;
+  if (s === "world") {
+    return L === "ar" ? "فحص الصلة بالسياق العالمي" : L === "ku" ? "پشکنینی پەیوەندی جیهانی" : "Checking global relevance";
+  }
+  if (s === "city" && city) {
+    return L === "ar" ? `فحص الصلة بسياق مدينة ${city}` : L === "ku" ? `پشکنینی پەیوەندی شاری ${city}` : `Checking ${city} city relevance`;
+  }
+  if (s === "province" && city) {
+    return L === "ar" ? `فحص الصلة بسياق محافظة ${city}` : L === "ku" ? `پشکنینی پەیوەندی پارێزگای ${city}` : `Checking ${city} province relevance`;
+  }
+  return L === "ar" ? `فحص الصلة بسياق ${cn}` : L === "ku" ? `پشکنینی پەیوەندی ${cn}` : `Checking ${cn} relevance`;
+}
+
 export function Sandbox() {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
@@ -209,10 +240,13 @@ export function Sandbox() {
           {STEPS.map((s, i) => {
             const done = result !== null || i < step;
             const active = i === step;
+            const label = s === "scan_local"
+              ? localStepLabel(getEffectiveScope(auth?.profile, "analyze"), L)
+              : t(s);
             return (
               <div key={s} className="flex items-center gap-3 text-sm">
                 <div className={`size-2 shrink-0 rounded-full transition ${done ? "bg-success" : active ? "bg-primary animate-pulse" : "bg-muted"}`} />
-                <span className={done || active ? "text-foreground" : "text-muted-foreground"}>{t(s)}</span>
+                <span className={done || active ? "text-foreground" : "text-muted-foreground"}>{label}</span>
                 <div className="ms-auto h-1 w-20 overflow-hidden rounded-full bg-muted sm:w-32">
                   <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: done ? "100%" : active ? "60%" : "0%" }} />
                 </div>
