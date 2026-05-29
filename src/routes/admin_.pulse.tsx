@@ -107,7 +107,7 @@ function AdminPulse() {
 
         <PulseInfoCard title="لوحة تحكم نبض (للمالك فقط)">
           من هنا تتحكم بنظام نبض بالكامل: تشغيل الكاشط يدوياً لمصدر معين أو لكل المصادر،
-          تفعيل/إيقاف <b>جسر geoiraq</b>، ومتابعة سجل الكشط لمعرفة ما نجح وما فشل.
+          تفعيل/إيقاف <b>جسر MAAROOF Ai</b>، ومتابعة سجل الكشط لمعرفة ما نجح وما فشل.
           الكشط التلقائي يعمل كل 12 ساعة عبر cron.
         </PulseInfoCard>
 
@@ -179,7 +179,7 @@ function AdminPulse() {
         <section className="space-y-2">
           <h2 className="text-lg font-bold">{t("pulse_bridge_geoiraq")}</h2>
           <PulseHint>
-            عند تفعيله، يتدفق بيانات نبض إلى وحدات geoiraq الأخرى (تحليل المحتوى،
+            عند تفعيله، يتدفق بيانات نبض إلى وحدات MAAROOF Ai الأخرى (تحليل المحتوى،
             المساعد العام، إلخ). إذا كان معطلاً، يبقى نبض معزولاً.
           </PulseHint>
           <button
