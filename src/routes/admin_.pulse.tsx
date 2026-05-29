@@ -9,7 +9,7 @@ import { triggerPulseCrawl, updatePulseSettings } from "@/lib/pulse.functions";
 import { PulseSubNav } from "@/components/PulseSubNav";
 import { PulseHint, PulseInfoCard } from "@/components/PulseInfo";
 
-export const Route = createFileRoute("/admin/pulse")({
+export const Route = createFileRoute("/admin_/pulse")({
   component: () => (
     <I18nProvider>
       <AuthProvider>

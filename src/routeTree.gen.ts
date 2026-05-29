@@ -40,7 +40,7 @@ import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-author
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
-import { Route as AdminPulseRouteImport } from './routes/admin.pulse'
+import { Route as AdminPulseRouteImport } from './routes/admin_.pulse'
 import { Route as ApiPublicHooksPulseCrawlRouteImport } from './routes/api/public/hooks/pulse-crawl'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
@@ -201,9 +201,9 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminPulseRoute = AdminPulseRouteImport.update({
-  id: '/pulse',
-  path: '/pulse',
-  getParentRoute: () => AdminRoute,
+  id: '/admin_/pulse',
+  path: '/admin/pulse',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksPulseCrawlRoute =
   ApiPublicHooksPulseCrawlRouteImport.update({
@@ -225,7 +225,7 @@ const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
+  '/admin': typeof AdminRoute
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
@@ -262,7 +262,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
+  '/admin': typeof AdminRoute
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
@@ -300,7 +300,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
+  '/admin': typeof AdminRoute
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
@@ -313,7 +313,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/admin/pulse': typeof AdminPulseRoute
+  '/admin_/pulse': typeof AdminPulseRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -426,7 +426,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
-    | '/admin/pulse'
+    | '/admin_/pulse'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -451,7 +451,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRouteWithChildren
+  AdminRoute: typeof AdminRoute
   AgentRoute: typeof AgentRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
@@ -464,6 +464,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  AdminPulseRoute: typeof AdminPulseRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
@@ -701,12 +702,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/pulse': {
-      id: '/admin/pulse'
-      path: '/pulse'
+    '/admin_/pulse': {
+      id: '/admin_/pulse'
+      path: '/admin/pulse'
       fullPath: '/admin/pulse'
       preLoaderRoute: typeof AdminPulseRouteImport
-      parentRoute: typeof AdminRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/pulse-crawl': {
       id: '/api/public/hooks/pulse-crawl'
@@ -732,16 +733,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AdminRouteChildren {
-  AdminPulseRoute: typeof AdminPulseRoute
-}
-
-const AdminRouteChildren: AdminRouteChildren = {
-  AdminPulseRoute: AdminPulseRoute,
-}
-
-const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
-
 interface PulseRouteChildren {
   PulseGovRoute: typeof PulseGovRoute
   PulseAssistantRoute: typeof PulseAssistantRoute
@@ -760,7 +751,7 @@ const PulseRouteWithChildren = PulseRoute._addFileChildren(PulseRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRouteWithChildren,
+  AdminRoute: AdminRoute,
   AgentRoute: AgentRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
@@ -773,6 +764,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  AdminPulseRoute: AdminPulseRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiAppliedRankingRoute: ApiAppliedRankingRoute,
   ApiBizdevRoute: ApiBizdevRoute,
