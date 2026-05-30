@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
+import { ENGINES } from "@/components/engine-logos";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,16 +47,8 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-const ENGINES = [
-  { name: "ChatGPT",    grad: "from-emerald-400/30 to-emerald-500/10" },
-  { name: "Gemini",     grad: "from-blue-400/30 to-violet-500/10" },
-  { name: "Claude",     grad: "from-orange-400/30 to-amber-500/10" },
-  { name: "Perplexity", grad: "from-cyan-400/30 to-teal-500/10" },
-  { name: "Copilot",    grad: "from-indigo-400/30 to-sky-500/10" },
-  { name: "Grok",       grad: "from-zinc-300/30 to-zinc-500/10" },
-  { name: "Mistral",    grad: "from-fuchsia-400/30 to-rose-500/10" },
-  { name: "DeepSeek",   grad: "from-sky-400/30 to-blue-600/10" },
-];
+
+
 
 function Page() {
   const { t, lang } = useI18n();

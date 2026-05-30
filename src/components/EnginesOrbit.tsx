@@ -118,7 +118,7 @@ export function EnginesOrbit() {
             {/* logo container */}
             <div className="relative grid size-28 md:size-32 place-items-center rounded-3xl bg-background/80 ring-2 ring-primary/40 logo-glow logo-float overflow-hidden backdrop-blur-sm">
               <img
-                src={maaroofLogo}
+                src={maaroofMark}
                 alt="MAAROOF Ai"
                 className="size-24 md:size-28 object-contain drop-shadow-[0_4px_18px_hsl(220_70%_55%/0.55)]"
               />
