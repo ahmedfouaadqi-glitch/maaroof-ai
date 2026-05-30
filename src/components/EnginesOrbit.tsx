@@ -1,5 +1,7 @@
-import { Cpu, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import maaroofLogo from "@/assets/maaroof-ai-logo.png";
+
 import { useI18n } from "@/lib/i18n";
 
 const ENGINES = [

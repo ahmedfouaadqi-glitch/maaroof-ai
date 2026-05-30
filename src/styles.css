@@ -146,7 +146,43 @@
   stroke-dasharray: 2 8;
   animation: beam-pulse 2.4s ease-in-out infinite;
 }
+
+/* Brand logo animations */
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes logo-glow {
+  0%, 100% { box-shadow: 0 0 30px hsl(220 70% 55% / 0.45), 0 0 60px hsl(220 70% 55% / 0.15); }
+  50%      { box-shadow: 0 0 50px hsl(40 80% 60% / 0.55), 0 0 90px hsl(40 80% 60% / 0.20); }
+}
+@keyframes logo-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes radar-ping {
+  0%   { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.logo-float { animation: logo-float 4s ease-in-out infinite; }
+.logo-glow  { animation: logo-glow 3.5s ease-in-out infinite; }
+.logo-conic {
+  background: conic-gradient(from 0deg,
+    transparent 0deg,
+    hsl(220 70% 55% / 0.55) 90deg,
+    transparent 180deg,
+    hsl(40 80% 60% / 0.55) 270deg,
+    transparent 360deg);
+  animation: logo-spin-slow 12s linear infinite;
+  filter: blur(8px);
+}
+.radar-ping {
+  animation: radar-ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.radar-ping-delay { animation-delay: 1.5s; }
+
 @media (prefers-reduced-motion: reduce) {
   .orbit-spin, .orbit-spin-reverse { animation: none; }
   .orbit-beams line { animation: none; opacity: 0.5; }
+  .logo-float, .logo-glow, .logo-conic, .radar-ping { animation: none; }
 }
+
