@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
+import { ENGINES } from "@/components/engine-logos";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,16 +47,8 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-const ENGINES = [
-  { name: "ChatGPT",    grad: "from-emerald-400/30 to-emerald-500/10" },
-  { name: "Gemini",     grad: "from-blue-400/30 to-violet-500/10" },
-  { name: "Claude",     grad: "from-orange-400/30 to-amber-500/10" },
-  { name: "Perplexity", grad: "from-cyan-400/30 to-teal-500/10" },
-  { name: "Copilot",    grad: "from-indigo-400/30 to-sky-500/10" },
-  { name: "Grok",       grad: "from-zinc-300/30 to-zinc-500/10" },
-  { name: "Mistral",    grad: "from-fuchsia-400/30 to-rose-500/10" },
-  { name: "DeepSeek",   grad: "from-sky-400/30 to-blue-600/10" },
-];
+
+
 
 function Page() {
   const { t, lang } = useI18n();
@@ -122,17 +116,18 @@ function Page() {
             </p>
 
             {/* Engine logos strip */}
-            <div className="mx-auto mt-7 flex max-w-2xl flex-wrap items-center justify-center gap-2">
+            <div className="mx-auto mt-7 flex max-w-2xl flex-wrap items-center justify-center gap-2.5">
               {ENGINES.map((e) => (
                 <span
                   key={e.name}
-                  className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-gradient-to-br ${e.grad} px-3 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur transition hover:scale-105 hover:border-primary/40`}
+                  className={`inline-flex items-center gap-2 rounded-full border border-border bg-gradient-to-br ${e.tint} px-3 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur transition hover:scale-105 hover:border-primary/50 hover:shadow-[0_4px_18px_-6px_hsl(220_70%_55%/0.4)]`}
                 >
-                  <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                  <e.Logo size={14} />
                   {e.name}
                 </span>
               ))}
             </div>
+
 
             {/* Quick chips */}
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
@@ -179,14 +174,15 @@ function Page() {
 
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
             {ENGINES.map((e) => (
-              <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.grad} p-4 text-center transition hover:scale-[1.03] hover:border-primary/40`}>
-                <div className="mx-auto mb-2 grid size-10 place-items-center rounded-xl bg-background/60 backdrop-blur">
-                  <span className="font-mono text-xs font-bold text-foreground/80">{e.name.slice(0, 2).toUpperCase()}</span>
+              <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.tint} p-4 text-center transition hover:scale-[1.03] hover:border-primary/50 hover:shadow-[var(--shadow-glow)]`}>
+                <div className="mx-auto mb-2 grid size-12 place-items-center rounded-xl bg-background/80 ring-1 ring-border/60 backdrop-blur transition group-hover:ring-primary/50">
+                  <e.Logo size={26} />
                 </div>
                 <div className="font-display text-sm font-semibold">{e.name}</div>
               </div>
             ))}
           </div>
+
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             <FeedStep n="1" icon={<Search className="size-4" />} text={t("engines_how_1")} />

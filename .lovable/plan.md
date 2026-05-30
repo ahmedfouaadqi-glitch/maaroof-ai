@@ -1,46 +1,60 @@
 ## الهدف
-ترقية شعار **MAAROOF Ai** ليكون احترافياً في كامل الموقع، مع إضافة أنيميشن أنيق له، ووضعه في **منتصف قسم المدارات (EnginesOrbit)** بدل أيقونة `Cpu` الحالية.
+1. استخدام **شعارات حقيقية** للمنصات الـ8 (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek) في كل المواقع التي تظهر فيها بالواجهة.
+2. توضيح شعار **MAAROOF Ai** بشكل أفضل (الحالي يحتوي على نص داخل المربع الصغير فيصبح غير واضح).
+3. رفع احترافية التصميم في الأقسام الرئيسية.
 
 ## الخطوات
 
-### 1) استبدال الصورة الحالية للشعار بنسخة نظيفة (شفافة)
-- استخدام الصورة المرفوعة الجديدة `user-uploads://Gemini_Generated_Image_oyvzoxoyvzoxoyvz-2.png` كمصدر.
-- توليد نسخة **PNG شفافة** (إزالة الخلفية البيضاء) عبر `imagegen--edit_image` مع `transparent_background: true`، وحفظها في:
-  - `src/assets/maaroof-ai-logo.png` (تستبدل الحالية المستخدمة في الهيدر و التصدير)
-  - `public/icon-512.png` (PWA / favicon)
-  - `public/og-maaroof.png` (مع خلفية داكنة متناسقة مع الهوية لـ OG/Twitter)
+### 1) إنشاء مكتبة شعارات المنصات (SVG inline)
+ملف جديد `src/components/engine-logos.tsx` يصدّر 8 مكوّنات SVG نظيفة، لكل منصة شعارها الرسمي المبسّط بألوانها الفعلية:
+- `ChatGPTLogo` — زهرة OpenAI الخضراء (#10A37F)
+- `GeminiLogo` — نجمة Gemini الزرقاء/البنفسجية المتدرّجة
+- `ClaudeLogo` — موجة Anthropic البرتقالية (#D97757)
+- `PerplexityLogo` — حلقة Perplexity التركوازية
+- `CopilotLogo` — Copilot الزرقاء (Microsoft)
+- `GrokLogo` — شعار X/Grok الأبيض/الأسود
+- `MistralLogo` — أعلام Mistral المتدرّجة الملوّنة
+- `DeepSeekLogo` — حوت DeepSeek الأزرق
 
-### 2) تحسين عرض الشعار في `SiteHeader.tsx`
-- إزالة الإطار الصغير `bg-background/40 ring-1 ring-border/60` الذي يخنق الشعار.
-- تكبير الحجم إلى `size-12` مع `object-contain` ومسافة مناسبة، وإضافة هالة `drop-shadow` خفيفة بلون `--primary`.
-- إضافة كلاس أنيميشن خفيف عند الظهور: `animate-fade-in` + تأثير `hover:scale-105` ناعم.
+كل مكوّن يقبل `className` و`size` ويستخدم `currentColor` حيث يلزم — لكنّ الألوان الأساسية مضمّنة في الـ SVG لتظهر العلامة كما هي.
 
-### 3) وضع الشعار في **منتصف EnginesOrbit** + أنيميشن احترافي
-في `src/components/EnginesOrbit.tsx`:
-- استبدال `<Cpu className="size-10 text-primary-foreground" />` داخل النواة المركزية بصورة `maaroofLogo`.
-- تكبير النواة من `size-24` إلى `size-28 md:size-32` لتلائم الشعار.
-- إضافة طبقات أنيميشن متعددة (CSS عبر `src/styles.css`):
-  - **Float خفيف**: تذبذب رأسي بطيء (4s ease-in-out infinite).
-  - **Glow نابض**: حلقة هالة حول الشعار تتنفس بلوني `--primary` و`--accent`.
-  - **Conic shimmer**: حلقة دوارة بـ `conic-gradient` خلف الشعار (12s linear infinite) — تعطي إحساس "ذكاء يعمل".
-  - **Pulse rings**: حلقتان متمددتان تخرجان من المركز كل 3s (مثل موجة رادار) لربط الشعار بالمحركات حوله.
-- إبقاء شارة الاسم `t("brand")` تحت الشعار كما هي.
-
-### 4) إضافة keyframes جديدة في `src/styles.css`
-```css
-@keyframes logo-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes logo-glow  { 0%,100%{box-shadow:0 0 30px hsl(var(--primary)/.45)} 50%{box-shadow:0 0 60px hsl(var(--accent)/.55)} }
-@keyframes logo-spin-slow { to { transform: rotate(360deg) } }
-@keyframes radar-ping { 0%{transform:scale(.6);opacity:.7} 100%{transform:scale(2);opacity:0} }
+يصدّر الملف أيضاً مصفوفة `ENGINES` موحّدة:
+```ts
+export const ENGINES = [
+  { name: "ChatGPT",    Logo: ChatGPTLogo,    tint: "from-emerald-400/30 to-emerald-500/10" },
+  ...
+];
 ```
-وكلاسات utility مرافقة: `.logo-float`, `.logo-glow`, `.logo-conic`, `.radar-ping`.
 
-### 5) فحص باقي مواضع الشعار
-- `PrintAnalysisButton.tsx` ورأس PDF في `exports.ts`: تأكيد أن النسخة الشفافة تظهر جيداً على خلفية بيضاء (لا حاجة لتعديل غير تحديث المرجع — نفس المسار).
-- لا تغيير على المنطق أو السيرفر.
+### 2) استبدال الـ chips النصية بالشعارات
+- **`src/components/EnginesOrbit.tsx`**: استبدال صناديق الحروف المختصرة (`GPT`, `GM`, `CL`...) بمكوّنات الشعارات من المكتبة الجديدة. تكبير `size-12` → `size-14`، وإزالة التدرّج الملوّن المكرّر (لأن الشعار نفسه ملوّن) واستبدال الخلفية بـ `bg-background/80 ring-1 ring-border/60 backdrop-blur` لإبراز الشعار.
+- **`src/routes/index.tsx`**:
+  - استيراد `ENGINES` من المكتبة الجديدة بدل التعريف المحلي.
+  - **شريط الـ Hero** (الـ 8 خانات الصغيرة): استبدال نقطة الـ pulse بشعار المنصة الفعلي بحجم `size-4`.
+  - **شبكة AI ENGINES**: استبدال الـ box الذي يعرض حرفين بشعار الشعار الحقيقي بحجم `size-7`، مع `bg-background/70` خلفية محايدة لإبراز الشعار، وعنوان أسفله.
+
+### 3) توضيح شعار MAAROOF Ai في الهيدر والمنتصف
+المشكلة الحالية: ملف `src/assets/maaroof-ai-logo.png` يحوي الإمبليم + كلمة "MAAROOF Ai" + "GEO IRAQ" داخل صورة واحدة — عند تصغيره إلى 44px في الهيدر تصبح الكلمات غير مقروءة وتبدو ضبابية.
+
+الحل: توليد نسخة **إمبليم فقط** (الـ hex بدون نص) عبر `imagegen--edit_image` من الصورة المرفوعة وحفظها في `src/assets/maaroof-ai-mark.png` (PNG شفاف، مربّع، حواف نظيفة).
+- استخدام **الإمبليم فقط** في:
+  - `SiteHeader.tsx` (يصبح واضحاً وحاداً)
+  - مركز `EnginesOrbit` (الموضع الذي وضعناه فيه)
+  - رأس التصدير في `PrintAnalysisButton.tsx`
+- إبقاء **الصورة الكاملة (إمبليم + نص)** في:
+  - `public/og-maaroof.png` (مشاركات اجتماعية)
+  - رأس PDF في `exports.ts` (مساحة كافية)
+
+### 4) لمسات احترافية
+- في شبكة المنصات على `/`: إضافة تأثير `hover:shadow-[var(--shadow-glow)]` وانتقال أنعم.
+- في شريط الـ Hero: تباعد أكبر `gap-3`، حدود أوضح، حجم نص `text-sm`.
+- مزامنة ألوان `tint` لكل منصة مع لون شعارها الفعلي.
+
+### 5) فحص نهائي
+- مراجعة `/` على المسار الرئيسي للتأكد من أن الشعارات الـ8 تظهر بألوانها الحقيقية في الـ Hero strip، شبكة AI Engines، ومدار المحركات.
+- التأكد من أن الإمبليم الجديد لـ MAAROOF Ai حاد وواضح في الهيدر.
 
 ## ملاحظات تقنية
-- لن أعدّل `src/integrations/supabase/*` ولا `routeTree.gen.ts`.
-- جميع الألوان عبر tokens (`--primary`, `--accent`) — لا ألوان مباشرة.
-- الأنيميشن خفيفة لا تستنزف الأداء (CSS transforms + opacity فقط).
-- يُحترم `prefers-reduced-motion` بتعطيل الـ float والـ ping عند تفعيله.
+- جميع شعارات المنصات SVG داخلية (لا روابط خارجية) → أداء ممتاز وبدون CORS.
+- ألوان الشعارات مضمّنة لتطابق الهوية الرسمية (الاستخدام التحريري/المعلوماتي).
+- لن أعدّل `routeTree.gen.ts` ولا `supabase/*`.

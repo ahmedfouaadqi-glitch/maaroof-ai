@@ -1,19 +1,10 @@
 import { Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import maaroofLogo from "@/assets/maaroof-ai-logo.png";
+import maaroofMark from "@/assets/maaroof-ai-mark.png";
 
 import { useI18n } from "@/lib/i18n";
+import { ENGINES } from "./engine-logos";
 
-const ENGINES = [
-  { name: "ChatGPT",    short: "GPT", color: "from-emerald-400 to-emerald-600" },
-  { name: "Gemini",     short: "GM",  color: "from-blue-400 to-violet-500" },
-  { name: "Claude",     short: "CL",  color: "from-orange-400 to-amber-500" },
-  { name: "Perplexity", short: "PX",  color: "from-cyan-400 to-teal-500" },
-  { name: "Copilot",    short: "CP",  color: "from-indigo-400 to-sky-500" },
-  { name: "Grok",       short: "GK",  color: "from-zinc-300 to-zinc-500" },
-  { name: "Mistral",    short: "MS",  color: "from-fuchsia-400 to-rose-500" },
-  { name: "DeepSeek",   short: "DS",  color: "from-sky-400 to-blue-600" },
-];
 
 /**
  * Hero orbit animation:
@@ -102,13 +93,14 @@ export function EnginesOrbit() {
                   }}
                 >
                   <div className="orbit-spin-reverse group flex flex-col items-center">
-                    <div className={`grid size-12 place-items-center rounded-2xl bg-gradient-to-br ${e.color} shadow-[0_8px_24px_-8px_rgba(0,0,0,0.4)] ring-1 ring-white/20 transition group-hover:scale-110`}>
-                      <span className="font-mono text-[10px] font-bold text-white drop-shadow">{e.short}</span>
+                    <div className="grid size-14 place-items-center rounded-2xl bg-background/85 ring-1 ring-border/70 backdrop-blur shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)] transition group-hover:scale-110 group-hover:ring-primary/60">
+                      <e.Logo size={32} />
                     </div>
-                    <div className="mt-1.5 rounded-full bg-background/70 px-2 py-0.5 text-[10px] font-medium text-foreground/80 backdrop-blur">
+                    <div className="mt-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-semibold text-foreground/90 backdrop-blur">
                       {e.name}
                     </div>
                   </div>
+
                 </div>
               );
             })}
@@ -126,7 +118,7 @@ export function EnginesOrbit() {
             {/* logo container */}
             <div className="relative grid size-28 md:size-32 place-items-center rounded-3xl bg-background/80 ring-2 ring-primary/40 logo-glow logo-float overflow-hidden backdrop-blur-sm">
               <img
-                src={maaroofLogo}
+                src={maaroofMark}
                 alt="MAAROOF Ai"
                 className="size-24 md:size-28 object-contain drop-shadow-[0_4px_18px_hsl(220_70%_55%/0.55)]"
               />

@@ -3,7 +3,7 @@ import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@tanstack/react-router";
 import { LogOut, Menu, X, Volume2, VolumeX } from "lucide-react";
-import maaroofLogo from "@/assets/maaroof-ai-logo.png";
+import maaroofMark from "@/assets/maaroof-ai-mark.png";
 import { useAuth } from "@/lib/auth";
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
@@ -28,7 +28,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 min-w-0">
           <div className="relative grid size-11 shrink-0 place-items-center transition-transform hover:scale-105">
-            <img src={maaroofLogo} alt="MAAROOF Ai logo" className="size-11 object-contain drop-shadow-[0_2px_10px_hsl(220_70%_55%/0.45)]" />
+            <img src={maaroofMark} alt="MAAROOF Ai logo" className="size-11 object-contain drop-shadow-[0_2px_10px_hsl(220_70%_55%/0.45)]" />
           </div>
 
           <div className="leading-tight min-w-0">
