@@ -27,9 +27,10 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 min-w-0">
-          <div className="relative grid size-10 shrink-0 place-items-center rounded-lg bg-background/40 ring-1 ring-border/60 shadow-[var(--shadow-glow)] overflow-hidden">
-            <img src={maaroofLogo} alt="MAAROOF Ai logo" className="size-10 object-contain" />
+          <div className="relative grid size-11 shrink-0 place-items-center transition-transform hover:scale-105">
+            <img src={maaroofLogo} alt="MAAROOF Ai logo" className="size-11 object-contain drop-shadow-[0_2px_10px_hsl(220_70%_55%/0.45)]" />
           </div>
+
           <div className="leading-tight min-w-0">
             <div className="truncate font-display text-sm font-bold sm:text-base">{t("brand")}</div>
             <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">

@@ -1,5 +1,7 @@
-import { Cpu, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import maaroofLogo from "@/assets/maaroof-ai-logo.png";
+
 import { useI18n } from "@/lib/i18n";
 
 const ENGINES = [
@@ -114,14 +116,26 @@ export function EnginesOrbit() {
 
           {/* Central brand core */}
           <div className="relative z-10 grid place-items-center">
-            <div className="absolute inset-0 -m-6 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-2xl animate-pulse" style={{ animationDuration: "3s" }} />
-            <div className="relative grid size-24 place-items-center rounded-3xl bg-gradient-to-br from-primary to-accent shadow-[var(--shadow-glow)] ring-2 ring-primary/40">
-              <Cpu className="size-10 text-primary-foreground" />
+            {/* radar waves */}
+            <div className="pointer-events-none absolute inset-0 -m-2 rounded-full border border-primary/40 radar-ping" />
+            <div className="pointer-events-none absolute inset-0 -m-2 rounded-full border border-accent/40 radar-ping radar-ping-delay" />
+            {/* soft halo */}
+            <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-2xl animate-pulse" style={{ animationDuration: "3s" }} />
+            {/* rotating conic shimmer */}
+            <div className="absolute inset-0 -m-4 rounded-full logo-conic opacity-70" />
+            {/* logo container */}
+            <div className="relative grid size-28 md:size-32 place-items-center rounded-3xl bg-background/80 ring-2 ring-primary/40 logo-glow logo-float overflow-hidden backdrop-blur-sm">
+              <img
+                src={maaroofLogo}
+                alt="MAAROOF Ai"
+                className="size-24 md:size-28 object-contain drop-shadow-[0_4px_18px_hsl(220_70%_55%/0.55)]"
+              />
               <span className="absolute -bottom-7 whitespace-nowrap rounded-full border border-primary/40 bg-background/90 px-3 py-1 text-[11px] font-bold text-foreground backdrop-blur">
                 {t("brand")}
               </span>
             </div>
           </div>
+
         </div>
 
         {/* Tagline */}
