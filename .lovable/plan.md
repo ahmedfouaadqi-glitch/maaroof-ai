@@ -1,56 +1,46 @@
 ## الهدف
-استبدال الشعار والاسم الحالي "GEO-Iraq / جيو-العراق" بالعلامة الجديدة **MAAROOF Ai** في كل اللغات والمواضع (الواجهة، التذييل، الـ SEO، التصدير، PWA)، مع إبقاء "GEO-Iraq" نصاً مصغّراً تحت الاسم/الشعار الجديد كإشارة للعلامة السابقة، وتحديث الألوان لتنسجم مع الهوية البصرية للشعار الجديد (أزرق نفطي عميق + ذهبي دافئ).
+ترقية شعار **MAAROOF Ai** ليكون احترافياً في كامل الموقع، مع إضافة أنيميشن أنيق له، ووضعه في **منتصف قسم المدارات (EnginesOrbit)** بدل أيقونة `Cpu` الحالية.
 
 ## الخطوات
 
-### 1) إضافة أصول الشعار الجديد
-- نسخ الصورة المرفوعة إلى `src/assets/maaroof-ai-logo.png` (للاستخدام في الهيدر والتصدير).
-- نسخة مربّعة/أيقونة إلى `public/icon-512.png` (استبدال الأيقونة الحالية) لكي تظهر في PWA وفي علامة التبويب.
-- نسخة OG (1200×630) إلى `public/og-maaroof.png` للمشاركة على الشبكات.
+### 1) استبدال الصورة الحالية للشعار بنسخة نظيفة (شفافة)
+- استخدام الصورة المرفوعة الجديدة `user-uploads://Gemini_Generated_Image_oyvzoxoyvzoxoyvz-2.png` كمصدر.
+- توليد نسخة **PNG شفافة** (إزالة الخلفية البيضاء) عبر `imagegen--edit_image` مع `transparent_background: true`، وحفظها في:
+  - `src/assets/maaroof-ai-logo.png` (تستبدل الحالية المستخدمة في الهيدر و التصدير)
+  - `public/icon-512.png` (PWA / favicon)
+  - `public/og-maaroof.png` (مع خلفية داكنة متناسقة مع الهوية لـ OG/Twitter)
 
-### 2) تحديث الهوية اللونية في `src/styles.css`
-موائمة الـ tokens مع ألوان الشعار:
-- `--primary` → أزرق تكنولوجي عميق مأخوذ من الشعار
-- `--accent` → ذهبي/كهرماني دافئ
-- `--cyber` و`--cyber-glow` وتدرّجات `--gradient-cyber` / `--gradient-text` و`--shadow-glow` تُعاد معايرتها على نفس العائلة
-- `--background` يبقى داكناً ولكن مع لمسة أكثر نفطية لتنسجم مع الشعار
+### 2) تحسين عرض الشعار في `SiteHeader.tsx`
+- إزالة الإطار الصغير `bg-background/40 ring-1 ring-border/60` الذي يخنق الشعار.
+- تكبير الحجم إلى `size-12` مع `object-contain` ومسافة مناسبة، وإضافة هالة `drop-shadow` خفيفة بلون `--primary`.
+- إضافة كلاس أنيميشن خفيف عند الظهور: `animate-fade-in` + تأثير `hover:scale-105` ناعم.
 
-### 3) استبدال الاسم في الترجمات والـ UI
-- في `src/lib/i18n.tsx`:
-  - `brand` يصبح **MAAROOF Ai** في كل اللغات (EN/AR/KU) — الاسم الإنكليزي ثابت كما طلبت.
-  - `footer` و`whatsapp_msg` وأي ذكر للاسم القديم يُحدّث.
-- في `src/components/SiteHeader.tsx`: استبدال الأيقونة `Cpu` بصورة الشعار الجديد، وإظهار:
-  - السطر الأول: **MAAROOF Ai** (font-display، أكبر)
-  - السطر الثاني (مصغّر، مكتوم اللون): **GEO-Iraq** كإشارة للعلامة السابقة
-- استبدال كل ظهور لـ "GEO-Iraq / جيو-العراق / GeoIraq" في الملفات التالية بـ MAAROOF Ai مع الحفاظ على ذكر "(formerly GEO-Iraq)" / "(سابقاً: جيو-العراق)" في التذييل فقط:
-  `src/routes/__root.tsx`, `index.tsx`, `pricing.tsx`, `guide.tsx`, `contact.tsx`, `privacy.tsx`, `terms.tsx`, `auth.tsx`, `reset-password.tsx`, `profile.tsx`, `dashboard.tsx`, `agent.tsx`, `admin.tsx`, `admin_.pulse.tsx`, `u.$username.ts`, `sitemap[.]xml.ts`, `src/lib/pulse-i18n.ts`, `src/components/PrintAnalysisButton.tsx`.
+### 3) وضع الشعار في **منتصف EnginesOrbit** + أنيميشن احترافي
+في `src/components/EnginesOrbit.tsx`:
+- استبدال `<Cpu className="size-10 text-primary-foreground" />` داخل النواة المركزية بصورة `maaroofLogo`.
+- تكبير النواة من `size-24` إلى `size-28 md:size-32` لتلائم الشعار.
+- إضافة طبقات أنيميشن متعددة (CSS عبر `src/styles.css`):
+  - **Float خفيف**: تذبذب رأسي بطيء (4s ease-in-out infinite).
+  - **Glow نابض**: حلقة هالة حول الشعار تتنفس بلوني `--primary` و`--accent`.
+  - **Conic shimmer**: حلقة دوارة بـ `conic-gradient` خلف الشعار (12s linear infinite) — تعطي إحساس "ذكاء يعمل".
+  - **Pulse rings**: حلقتان متمددتان تخرجان من المركز كل 3s (مثل موجة رادار) لربط الشعار بالمحركات حوله.
+- إبقاء شارة الاسم `t("brand")` تحت الشعار كما هي.
 
-### 4) تحديث الـ SEO وميتاداتا الجذر (`src/routes/__root.tsx`)
-- `title`, `og:title`, `twitter:title` → "MAAROOF Ai · Become the Source AI Trusts"
-- `og:site_name`, `apple-mobile-web-app-title` → "MAAROOF Ai"
-- `og:image` / `twitter:image` → الصورة الجديدة `/og-maaroof.png`
-- `theme-color` → اللون الأساسي الجديد
-- JSON-LD: `name` للـ WebSite يصبح "MAAROOF Ai"، و`brand` يبقى "MAAROOF Ai" مع `alternateName: "GEO-Iraq"`.
+### 4) إضافة keyframes جديدة في `src/styles.css`
+```css
+@keyframes logo-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes logo-glow  { 0%,100%{box-shadow:0 0 30px hsl(var(--primary)/.45)} 50%{box-shadow:0 0 60px hsl(var(--accent)/.55)} }
+@keyframes logo-spin-slow { to { transform: rotate(360deg) } }
+@keyframes radar-ping { 0%{transform:scale(.6);opacity:.7} 100%{transform:scale(2);opacity:0} }
+```
+وكلاسات utility مرافقة: `.logo-float`, `.logo-glow`, `.logo-conic`, `.radar-ping`.
 
-### 5) تحديث PWA والملفات العامة
-- `public/manifest.webmanifest`: `name` و`short_name` و`description` → MAAROOF Ai.
-- `public/llms.txt`: تحديث الاسم والوصف مع الإبقاء على ذكر GEO-Iraq كاسم سابق.
-- `public/robots.txt`: تحديث أي تعليق فيه الاسم.
-
-### 6) التصدير (PDF/Excel) — إضافة الشعار
-في `src/lib/exports.ts`:
-- تحويل `src/assets/maaroof-ai-logo.png` إلى base64 (import as URL ثم fetch→dataURL أو import مباشر) لاستخدامه في رأس الـ PDF.
-- ثوابت `BRAND` تصبح "MAAROOF Ai" و`SITE` يبقى `geoiraq.com` حالياً (الدومين لم يتغير).
-- في توليد PDF: إدراج الشعار أعلى الصفحة، السطر الأول الاسم الجديد بخط بارز، السطر الثاني مصغّر "formerly GEO-Iraq".
-- في Excel: إضافة صف رأس بالاسم الجديد + سطر صغير بالاسم السابق.
-- تحديث نصوص الـ Disclaimer لتذكر MAAROOF Ai (مع إبقاء الإشارة "formerly GEO-Iraq" مرة واحدة).
-- نفس المعالجة في `src/lib/pulse-export.ts` و`src/components/PrintAnalysisButton.tsx` (رأس الطباعة).
-
-### 7) فحص نهائي
-- مراجعة الـ preview على المسارات الرئيسية (/, /pricing, /guide, /pulse, /admin) للتأكد من أن الهيدر يعرض الشعار الجديد + الاسم المصغّر القديم.
-- توليد PDF تجريبي من زر التصدير للتحقق من ظهور الشعار.
+### 5) فحص باقي مواضع الشعار
+- `PrintAnalysisButton.tsx` ورأس PDF في `exports.ts`: تأكيد أن النسخة الشفافة تظهر جيداً على خلفية بيضاء (لا حاجة لتعديل غير تحديث المرجع — نفس المسار).
+- لا تغيير على المنطق أو السيرفر.
 
 ## ملاحظات تقنية
-- الدومين والمسارات (`geoiraq.com`) لن تتغير في هذه المهمة — فقط الاسم المرئي والشعار.
-- يبقى "GEO-Iraq" مرئياً كـ "العلامة السابقة" في: الهيدر (سطر مصغّر تحت الاسم)، التذييل، رأس التصدير. لا يظهر في عناوين الصفحات أو الـ SEO meta.
-- لن أعدّل `src/integrations/supabase/*` ولا `src/routeTree.gen.ts`.
+- لن أعدّل `src/integrations/supabase/*` ولا `routeTree.gen.ts`.
+- جميع الألوان عبر tokens (`--primary`, `--accent`) — لا ألوان مباشرة.
+- الأنيميشن خفيفة لا تستنزف الأداء (CSS transforms + opacity فقط).
+- يُحترم `prefers-reduced-motion` بتعطيل الـ float والـ ping عند تفعيله.
