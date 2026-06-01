@@ -172,16 +172,20 @@ function Page() {
             <p className="mt-3 text-muted-foreground">{t("engines_sub")}</p>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
             {ENGINES.map((e) => (
               <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.tint} p-4 text-center transition hover:scale-[1.03] hover:border-primary/50 hover:shadow-[var(--shadow-glow)]`}>
-                <div className="mx-auto mb-2 grid size-12 place-items-center rounded-xl bg-background/80 ring-1 ring-border/60 backdrop-blur transition group-hover:ring-primary/50">
-                  <e.Logo size={26} />
+                <div className="relative mx-auto mb-2 size-14">
+                  <div aria-hidden className="absolute inset-0 clip-hex bg-gradient-to-br from-[var(--cyber)]/70 via-primary/40 to-[var(--accent)]/70" />
+                  <div className="absolute inset-[2px] clip-hex grid place-items-center bg-background/90 backdrop-blur transition group-hover:bg-background">
+                    <e.Logo size={28} />
+                  </div>
                 </div>
                 <div className="font-display text-sm font-semibold">{e.name}</div>
               </div>
             ))}
           </div>
+
 
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
