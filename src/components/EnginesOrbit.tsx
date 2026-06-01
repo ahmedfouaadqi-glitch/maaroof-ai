@@ -93,8 +93,11 @@ export function EnginesOrbit() {
                   }}
                 >
                   <div className="orbit-spin-reverse group flex flex-col items-center">
-                    <div className="grid size-14 place-items-center rounded-2xl bg-background/85 ring-1 ring-border/70 backdrop-blur shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)] transition group-hover:scale-110 group-hover:ring-primary/60">
-                      <e.Logo size={32} />
+                    <div className="relative size-14">
+                      <div aria-hidden className="absolute inset-0 clip-hex bg-gradient-to-br from-[var(--cyber)]/70 via-primary/40 to-[var(--accent)]/70" />
+                      <div className="absolute inset-[2px] clip-hex grid place-items-center bg-background/90 backdrop-blur transition group-hover:bg-background">
+                        <e.Logo size={28} />
+                      </div>
                     </div>
                     <div className="mt-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-semibold text-foreground/90 backdrop-blur">
                       {e.name}
@@ -109,24 +112,28 @@ export function EnginesOrbit() {
           {/* Central brand core */}
           <div className="relative z-10 grid place-items-center">
             {/* radar waves */}
-            <div className="pointer-events-none absolute inset-0 -m-2 rounded-full border border-primary/40 radar-ping" />
-            <div className="pointer-events-none absolute inset-0 -m-2 rounded-full border border-accent/40 radar-ping radar-ping-delay" />
+            <div className="pointer-events-none absolute inset-0 -m-2 clip-hex border border-primary/40 radar-ping" />
+            <div className="pointer-events-none absolute inset-0 -m-2 clip-hex border border-accent/40 radar-ping radar-ping-delay" />
             {/* soft halo */}
             <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-2xl animate-pulse" style={{ animationDuration: "3s" }} />
             {/* rotating conic shimmer */}
             <div className="absolute inset-0 -m-4 rounded-full logo-conic opacity-70" />
-            {/* logo container */}
-            <div className="relative grid size-28 md:size-32 place-items-center rounded-3xl bg-background/80 ring-2 ring-primary/40 logo-glow logo-float overflow-hidden backdrop-blur-sm">
-              <img
-                src={maaroofMark}
-                alt="MAAROOF Ai"
-                className="size-24 md:size-28 object-contain drop-shadow-[0_4px_18px_hsl(220_70%_55%/0.55)]"
-              />
-              <span className="absolute -bottom-7 whitespace-nowrap rounded-full border border-primary/40 bg-background/90 px-3 py-1 text-[11px] font-bold text-foreground backdrop-blur">
+            {/* logo container — hexagon */}
+            <div className="relative size-28 md:size-32 logo-float">
+              <div aria-hidden className="absolute inset-0 clip-hex bg-gradient-to-br from-[var(--cyber)] via-primary/70 to-[var(--accent)] logo-glow" />
+              <div className="absolute inset-[3px] clip-hex grid place-items-center bg-background/90 backdrop-blur-sm overflow-hidden">
+                <img
+                  src={maaroofMark}
+                  alt="MAAROOF Ai"
+                  className="size-[88%] object-contain drop-shadow-[0_4px_18px_oklch(0.70_0.13_218/0.55)]"
+                />
+              </div>
+              <span className="absolute left-1/2 -translate-x-1/2 -bottom-7 whitespace-nowrap rounded-full border border-primary/40 bg-background/90 px-3 py-1 text-[11px] font-bold text-foreground backdrop-blur">
                 {t("brand")}
               </span>
             </div>
           </div>
+
 
         </div>
 

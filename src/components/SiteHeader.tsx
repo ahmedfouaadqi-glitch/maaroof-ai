@@ -4,7 +4,9 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@tanstack/react-router";
 import { LogOut, Menu, X, Volume2, VolumeX } from "lucide-react";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
+import { HexBadge } from "@/components/HexBadge";
 import { useAuth } from "@/lib/auth";
+
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
 export function SiteHeader() {
@@ -27,9 +29,10 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 min-w-0">
-          <div className="relative grid size-11 shrink-0 place-items-center transition-transform hover:scale-105">
-            <img src={maaroofMark} alt="MAAROOF Ai logo" className="size-11 object-contain drop-shadow-[0_2px_10px_hsl(220_70%_55%/0.45)]" />
-          </div>
+          <HexBadge size={44} className="transition-transform hover:scale-105 drop-shadow-[0_2px_10px_oklch(0.70_0.13_218/0.45)]">
+            <img src={maaroofMark} alt="MAAROOF Ai logo" className="size-[88%] object-contain" />
+          </HexBadge>
+
 
           <div className="leading-tight min-w-0">
             <div className="truncate font-display text-sm font-bold sm:text-base">{t("brand")}</div>
