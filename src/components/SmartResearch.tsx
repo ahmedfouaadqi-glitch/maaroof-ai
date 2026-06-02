@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp } from "lucide-react";
+import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -13,11 +13,14 @@ const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
 ] as const;
 
+type SearchMode = "web" | "company";
+
 export function SmartResearch() {
   const { t, lang } = useI18n();
   const { profile, session } = useAuth();
   const specialty = (profile as any)?.specialty || "";
   const [q, setQ] = useState("");
+  const [mode, setMode] = useState<SearchMode>("web");
   const [loading, setLoading] = useState(false);
   const [out, setOut] = useState<any>(null);
   const [err, setErr] = useState("");
