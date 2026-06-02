@@ -1137,6 +1137,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_trial_subscription: { Args: never; Returns: string }
       generate_username_from_email: {
         Args: { _email: string }
         Returns: string
