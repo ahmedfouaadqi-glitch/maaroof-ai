@@ -19,12 +19,13 @@ import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X, Eye } from "lucide-react";
+import { AIVisibility } from "@/components/AIVisibility";
 
-type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied";
+type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied" | "visibility";
 const TOOL_COST: Record<ToolKey, number> = {
   analyze: 1, suggest: 1, compare: 1, feasibility: 2, bizdev: 2,
-  research: 2, outreach: 1, boost: 5, applied: 2,
+  research: 2, outreach: 1, boost: 5, applied: 2, visibility: 1,
 };
 
 
@@ -146,6 +147,7 @@ function DashboardPage() {
             <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} cost={TOOL_COST.feasibility} onOpen={() => setOpenTool("feasibility")} />
             <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} cost={TOOL_COST.bizdev} onOpen={() => setOpenTool("bizdev")} />
             <ToolGridCard icon={<Search className="size-5" />} title={t("research_title")} desc={t("research_desc") || ""} cost={TOOL_COST.research} onOpen={() => setOpenTool("research")} />
+            <ToolGridCard icon={<Eye className="size-5" />} title={t("ag_vis_title")} desc={t("ag_vis_desc") || ""} cost={TOOL_COST.visibility} onOpen={() => setOpenTool("visibility")} />
             <ToolGridCard icon={<Mail className="size-5" />} title={t("outreach_title")} desc={t("outreach_desc") || ""} cost={TOOL_COST.outreach} onOpen={() => setOpenTool("outreach")} />
             <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} cost={TOOL_COST.boost} onOpen={() => setOpenTool("boost")} />
             <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} cost={TOOL_COST.applied} onOpen={() => setOpenTool("applied")} />
@@ -194,6 +196,7 @@ function DashboardPage() {
               {openTool === "outreach" && <CompanyOutreach />}
               {openTool === "boost" && <BrandBoostAgent />}
               {openTool === "applied" && <AppliedRanking />}
+              {openTool === "visibility" && <AIVisibility />}
             </div>
           </DialogContent>
         </Dialog>
