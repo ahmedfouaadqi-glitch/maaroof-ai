@@ -10,9 +10,10 @@ export const Route = createFileRoute("/api/research")({
       POST: async ({ request }) => {
         try {
           const reqBody = await request.json();
-          const { query, lang = "en", scope } = reqBody;
+          const { query, lang = "en", scope, mode = "web" } = reqBody;
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });
           const limited = String(query).slice(0, 300);
+          const isCompany = mode === "company";
 
           // Mandatory auth — endpoint consumes paid Firecrawl + AI gateway credits
           const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -64,16 +65,16 @@ export const Route = createFileRoute("/api/research")({
             const sys = `${FACTUAL_SAFETY_PROMPT}
 
 You are a precise research assistant that mimics a Generative Search Experience (SGE). Write STRICTLY in language code: ${lang}.
-Rules:
+${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/brand. Build a concise company profile from the supplied snippets only: what they do, sector, geography, official website if visible, products/services, target customers, public reputation signals. Do NOT fabricate revenue, headcount, dates, founders, awards, or contacts.\n` : ""}Rules:
 - Cite EVERY non-trivial claim inline as [1], [2] matching the source list order.
 - If sources contradict, say so explicitly.
 - Never invent facts not present in the snippets.
 - Output JSON with these keys EXACTLY:
   {
     "sge_summary": string (60-90 words, the kind of compact AI overview Google/Bing show on top of search; plain prose with [n] citations, no bullets),
-    "answer": string (300-500 words, deeper answer with [n] citations),
+    "answer": string (300-500 words, ${isCompany ? "structured company profile" : "deeper answer"} with [n] citations),
     "key_findings": string[] (3-6 short bullets, each with at least one [n]),
-    "visibility_opportunities": string[] (3-5 concrete actions the user/brand can take to BE CITED by AI engines on this topic — content angles, missing entities, structured-data ideas, channels to publish on)
+    "visibility_opportunities": string[] (3-5 concrete actions ${isCompany ? "to reach or partner with this company, or to position your brand against it" : "the user/brand can take to BE CITED by AI engines on this topic"} — content angles, missing entities, structured-data ideas, channels to publish on)
   }${specialtyHint(userCtx, lang as any)}${brandLine}`;
             const ctx = results.map((r: any, i: number) => `[${i + 1}] ${r.title} — ${r.domain} (${r.url})\n${r.snippet}`).join("\n\n");
             const ai = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
