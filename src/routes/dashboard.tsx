@@ -440,6 +440,7 @@ function toolTitle(k: ToolKey, t: (k: string) => string): string {
     outreach: t("outreach_title"),
     boost: t("boost_title"),
     applied: t("dash_tool_applied_t"),
+    visibility: t("ag_vis_title"),
   };
   return map[k] || k;
 }
