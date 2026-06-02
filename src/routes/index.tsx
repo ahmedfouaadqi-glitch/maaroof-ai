@@ -63,6 +63,7 @@ function Page() {
       feasibility: "guide_how_feasibility",
       bizdev: "guide_how_bizdev",
       research: "guide_how_research",
+      visibility: "guide_how_agent_visibility",
       brand_boost: "guide_how_brand_boost",
       company_email: "guide_how_company_email",
       applied_ranking: "guide_how_company_email",
