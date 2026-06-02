@@ -10,7 +10,7 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 
-type Mode = "search" | "email" | "brand";
+type Mode = "email" | "brand";
 
 export function CompanyOutreach() {
   const { t, lang } = useI18n();
@@ -62,7 +62,6 @@ export function CompanyOutreach() {
   };
 
   const modes: { key: Mode; label: string; icon: any }[] = [
-    { key: "search", label: t("outreach_mode_search"), icon: Search },
     { key: "email", label: t("outreach_mode_email"), icon: Mail },
     { key: "brand", label: t("outreach_mode_brand"), icon: Sparkles },
   ];
@@ -88,7 +87,7 @@ export function CompanyOutreach() {
       )}
 
       {/* Mode selector */}
-      <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/40 p-1">
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-border bg-background/40 p-1">
         {modes.map((m) => {
           const Icon = m.icon;
           const active = mode === m.key;
@@ -101,7 +100,6 @@ export function CompanyOutreach() {
         })}
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">
-        {mode === "search" && t("outreach_mode_search_desc")}
         {mode === "email" && t("outreach_mode_email_desc")}
         {mode === "brand" && t("outreach_mode_brand_desc")}
       </p>
@@ -122,8 +120,8 @@ export function CompanyOutreach() {
 
       <button disabled={loading} onClick={run}
         className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-        {loading ? <Loader2 className="size-4 animate-spin" /> : (mode === "email" ? <Mail className="size-4" /> : <Search className="size-4" />)}
-        {mode === "search" ? t("outreach_run_search") : mode === "brand" ? t("outreach_run_brand") : t("outreach_run")}
+        {loading ? <Loader2 className="size-4 animate-spin" /> : (mode === "email" ? <Mail className="size-4" /> : <Sparkles className="size-4" />)}
+        {mode === "brand" ? t("outreach_run_brand") : t("outreach_run")}
       </button>
 
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
@@ -142,20 +140,6 @@ export function CompanyOutreach() {
               <ul className="list-inside list-disc space-y-1 text-sm">
                 {out.key_points.map((p: string, i: number) => <li key={i}>{p}</li>)}
               </ul>
-            </div>
-          )}
-
-          {/* Search-only extras */}
-          {mode === "search" && out.website && (
-            <a href={out.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-              {out.website} <ExternalLink className="size-3" />
-            </a>
-          )}
-          {mode === "search" && out.social && (
-            <div className="flex flex-wrap gap-2 text-xs">
-              {Object.entries(out.social).filter(([_, v]) => v).map(([k, v]) => (
-                <a key={k} href={String(v)} target="_blank" rel="noreferrer" className="rounded-full border border-border bg-background/60 px-2.5 py-1 hover:border-primary">{k}</a>
-              ))}
             </div>
           )}
 

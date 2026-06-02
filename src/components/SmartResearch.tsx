@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp } from "lucide-react";
+import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -13,11 +13,14 @@ const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
 ] as const;
 
+type SearchMode = "web" | "company";
+
 export function SmartResearch() {
   const { t, lang } = useI18n();
   const { profile, session } = useAuth();
   const specialty = (profile as any)?.specialty || "";
   const [q, setQ] = useState("");
+  const [mode, setMode] = useState<SearchMode>("web");
   const [loading, setLoading] = useState(false);
   const [out, setOut] = useState<any>(null);
   const [err, setErr] = useState("");
@@ -48,8 +51,9 @@ export function SmartResearch() {
         method: "POST", headers,
         body: JSON.stringify({
           query: q, lang, scope: getEffectiveScope(profile, "research"),
-          include_channels: includeChannels,
-          channel_types: includeChannels ? channelTypes : undefined,
+          mode,
+          include_channels: includeChannels || mode === "company",
+          channel_types: (includeChannels || mode === "company") ? channelTypes : undefined,
         }),
       });
       const j = await res.json();
@@ -72,8 +76,22 @@ export function SmartResearch() {
           <Sparkles className="size-3" /> {t("specialty_active")}: <b>{specialty}</b>
         </div>
       )}
+
+      {/* Mode toggle: web vs company */}
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-border bg-background/40 p-1">
+        <button onClick={() => { setMode("web"); setOut(null); }}
+          className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition ${mode === "web" ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
+          <Globe className="size-3.5" /> {t("research_mode_web") || "بحث عام في الويب"}
+        </button>
+        <button onClick={() => { setMode("company"); setOut(null); setIncludeChannels(true); }}
+          className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition ${mode === "company" ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
+          <Building2 className="size-3.5" /> {t("research_mode_company") || "بحث عن شركة"}
+        </button>
+      </div>
+
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("research_ph")}
+        <input value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder={mode === "company" ? (t("research_company_ph") || "اسم الشركة أو العلامة") : t("research_ph")}
           className="flex-1 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <button disabled={loading} onClick={run}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">

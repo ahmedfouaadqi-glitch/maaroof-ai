@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
+import { ENGINES } from "@/components/engine-logos";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
 const MAX_PLATFORMS_PER_RUN = 5;
@@ -192,12 +193,19 @@ export function BrandBoostAgent() {
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <strong className="text-foreground uppercase">{p.platform}</strong>
-                <span className="max-w-full break-all rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
-                {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
-                <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
-              </div>
+              {(() => {
+                const eng = ENGINES.find((e) => e.name.toLowerCase() === String(p.platform || "").toLowerCase());
+                const Logo = eng?.Logo;
+                return (
+                  <div className={`flex flex-wrap items-center gap-2 rounded-md bg-gradient-to-br ${eng?.tint || "from-primary/10 to-accent/5"} p-2`}>
+                    {Logo && <Logo size={20} />}
+                    <strong className="text-foreground capitalize">{p.platform}</strong>
+                    <span className="max-w-full break-all rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
+                    {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
+                    <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
+                  </div>
+                );
+              })()}
               {p.current_answer ? (
                 <div className="rounded-md border border-border bg-card/50 p-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "ما قاله المحرك الآن" : lang === "ku" ? "وەڵامی ئێستا" : "What the engine said just now"}</div>

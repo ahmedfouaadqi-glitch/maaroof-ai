@@ -93,6 +93,21 @@ function AgentPage() {
 
     let effectiveSub = subData;
     if (!effectiveSub && isAdmin) effectiveSub = ADMIN_SUB as any;
+    // Auto-provision Trial subscription for any signed-in user without an active sub
+    if (!effectiveSub && !isAdmin) {
+      try {
+        await supabase.rpc("ensure_trial_subscription");
+        const { data: trial } = await supabase
+          .from("user_agent_subscriptions")
+          .select("*, agent_addons:addon_id(*)")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (trial) effectiveSub = trial as any;
+      } catch (e) { console.warn("[agent] trial provisioning failed", e); }
+    }
     setSub(effectiveSub);
     setAddon(effectiveSub?.agent_addons || null);
 
@@ -384,30 +399,15 @@ function AgentPage() {
           </div>
         </div>
 
-        {/* AI Visibility Check */}
+        {/* AI Visibility moved to dashboard tools — link out */}
         <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
             <Eye className="size-5 text-primary" /> {t("ag_vis_title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("ag_vis_desc")}</p>
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
-            <input value={brand} onChange={(e) => setBrand(e.target.value)}
-              placeholder={t("ag_vis_brand_ph")}
-              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-            <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
-              placeholder={t("ag_vis_keywords_ph")}
-              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-          </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            {visMsg && (
-              <span className={`text-xs ${visMsg.ok ? "text-success" : "text-destructive"}`}>{visMsg.text}</span>
-            )}
-            <button onClick={runVisibility} disabled={visBusy || !brand.trim()}
-              className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-              {visBusy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
-              {visBusy ? t("ag_running") : t("ag_vis_run")}
-            </button>
-          </div>
+          <Link to="/dashboard" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
+            <Eye className="size-4" /> {t("ag_vis_run")}
+          </Link>
         </div>
 
         {/* Publishing Channels */}
