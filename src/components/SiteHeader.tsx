@@ -46,7 +46,7 @@ export function SiteHeader() {
           <Link to="/" hash="features" className="hover:text-foreground">{t("nav_features")}</Link>
           <Link to="/" hash="how" className="hover:text-foreground">{t("nav_how")}</Link>
           <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>
-          <Link to="/pulse" className="hover:text-foreground text-primary">نبض</Link>
+          
           {auth?.user && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
           {auth?.user && <Link to="/agent" className="hover:text-foreground">{t("nav_agent")}</Link>}
           {auth?.user && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
@@ -91,7 +91,7 @@ export function SiteHeader() {
             <Link to="/" hash="features" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_features")}</Link>
             <Link to="/" hash="how" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_how")}</Link>
             <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>
-            <Link to="/pulse" onClick={close} className="rounded-md px-2 py-2 text-primary hover:bg-muted/40">نبض</Link>
+            
             {auth?.user && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
             {auth?.user && <Link to="/agent" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_agent")}</Link>}
             {auth?.user && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}

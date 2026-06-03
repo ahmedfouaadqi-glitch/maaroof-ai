@@ -103,7 +103,16 @@ function AdminPulse() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+        <div className="rounded-xl border-2 border-destructive/60 bg-destructive/10 p-4 text-sm">
+          <div className="font-bold text-destructive mb-1">⛔ نبض موقوف بالكامل (Kill Switch مفعّل في الكود)</div>
+          <div className="text-muted-foreground">
+            تم تعطيل جميع عمليات الكشط، إلغاء جدولة cron، وتعطيل كل المصادر. الواجهة العامة تعرض شاشة "تحت الصيانة".
+            لإعادة التشغيل: (1) أزل ثابت <code className="font-mono">PULSE_KILL_SWITCH</code> من
+            <code className="font-mono"> src/routes/api/public/hooks/pulse-crawl.ts</code> ثم (2) فعّل "نبض نشط" أدناه.
+          </div>
+        </div>
         <PulseSubNav />
+
 
         <PulseInfoCard title="لوحة تحكم نبض (للمالك فقط)">
           من هنا تتحكم بنظام نبض بالكامل: تشغيل الكاشط يدوياً لمصدر معين أو لكل المصادر،

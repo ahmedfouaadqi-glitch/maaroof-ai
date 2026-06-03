@@ -2,10 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { scrapeSource, type PulseSourceRow, type GovernorateRow } from "@/lib/pulse-scraper.server";
 
+// HARD KILL SWITCH — Pulse system is fully disabled.
+// Do NOT remove unless re-enabling pulse with explicit owner approval.
+const PULSE_KILL_SWITCH = true;
+
 export const Route = createFileRoute("/api/public/hooks/pulse-crawl")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        if (PULSE_KILL_SWITCH) {
+          return Response.json(
+            { ok: false, disabled: true, reason: "pulse_under_maintenance" },
+            { status: 503 },
+          );
+        }
         // Light auth: require apikey header (Supabase anon) OR x-hook-secret if set
         const apikey = request.headers.get("apikey");
         const expected = process.env.SUPABASE_PUBLISHABLE_KEY;
