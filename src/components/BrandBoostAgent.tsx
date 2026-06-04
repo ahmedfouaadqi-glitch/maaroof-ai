@@ -119,13 +119,26 @@ export function BrandBoostAgent() {
         <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
-      <Tabs defaultValue="run" className="mt-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="visibility" className="mt-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="visibility" className="text-xs"><Eye className="me-1 inline size-3.5" />{t("ag_vis_title")}</TabsTrigger>
           <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
           <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
           <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="visibility" className="mt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). استخدم النتائج هنا كخط أساس قبل تشغيل «تعزيز العلامة» في التبويب التالي."
+              : lang === "ku"
+              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری)."
+              : "Probe your brand visibility across 8 AI engines (1 analysis). Use as a baseline before running Brand Boost."}
+          </div>
+          <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
+        </TabsContent>
+
 
         <TabsContent value="run" className="mt-4">
       <div className="grid gap-2 sm:grid-cols-2">
