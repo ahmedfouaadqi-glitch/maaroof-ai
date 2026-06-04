@@ -199,7 +199,15 @@ export function BrandBoostAgent() {
         </div>
       )}
 
-      {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
+      {err && (
+        <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+          {err === "credits_exhausted" || err === "subscription_required"
+            ? (lang === "ar" ? "تم استنفاد رصيد التحليلات الشهري. ارفع باقتك أو انتظر تجديد الرصيد." : lang === "ku" ? "ڕەسیدی شیکاری مانگانە تەواو بوو." : "Monthly analyses quota exhausted. Upgrade your plan or wait for renewal.")
+            : err === "rate_limited"
+            ? (lang === "ar" ? "تم تجاوز الحد المسموح، حاول بعد دقائق." : "Rate limited — try again in a few minutes.")
+            : err}
+        </div>
+      )}
       {report && (
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-end">
@@ -216,11 +224,31 @@ export function BrandBoostAgent() {
                     {Logo && <Logo size={20} />}
                     <strong className="text-foreground capitalize">{p.platform}</strong>
                     <span className="max-w-full break-all rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
-                    {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
+                    {p.is_proxy ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">
+                              <Info className="size-2.5" /> proxy
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-[11px]">
+                            {lang === "ar"
+                              ? "لا يوجد API عام مباشر لهذه المنصة، فاستخدمنا نموذجاً مكافئاً من نفس العائلة لمحاكاة جوابها."
+                              : lang === "ku"
+                              ? "API ڕاستەوخۆی گشتی بۆ ئەم پلاتفۆڕمە نییە، مۆدێلی هاوشێوەمان بەکارهێنا."
+                              : "No direct public API for this platform — we used an equivalent model from the same family to simulate its answer."}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-600">{lang === "ar" ? "مباشر" : "direct"}</span>
+                    )}
                     <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
                   </div>
                 );
               })()}
+
               {p.current_answer ? (
                 <div className="rounded-md border border-border bg-card/50 p-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "ما قاله المحرك الآن" : lang === "ku" ? "وەڵامی ئێستا" : "What the engine said just now"}</div>
