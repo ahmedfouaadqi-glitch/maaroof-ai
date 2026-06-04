@@ -19,8 +19,8 @@ import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X, Eye } from "lucide-react";
-import { AIVisibility } from "@/components/AIVisibility";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X } from "lucide-react";
+
 
 type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied" | "visibility";
 const TOOL_COST: Record<ToolKey, number> = {
