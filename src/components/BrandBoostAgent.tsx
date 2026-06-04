@@ -281,9 +281,19 @@ export function BrandBoostAgent() {
               )}
               {p.injection_pack && (
                 <div className="rounded-md border border-accent/30 bg-accent/5 p-2 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">{lang === "ar" ? "حقنة جاهزة للنشر" : lang === "ku" ? "پاکێجی ئامادە بۆ بڵاوکردنەوە" : "Ready-to-publish injection"}</span>
                     {p.injection_pack.channel && <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">{p.injection_pack.channel}</span>}
+                    <button onClick={() => {
+                      const pack = p.injection_pack;
+                      const qa = Array.isArray(pack?.qa_pairs) ? pack.qa_pairs.map((q: any) => `Q: ${q.q}\nA: ${q.a}`).join("\n\n") : "";
+                      const combined = [pack?.title ? `# ${pack.title}` : "", pack?.article_markdown || "", qa ? `\n## Q&A\n${qa}` : "", pack?.json_ld ? `\n## JSON-LD\n\`\`\`json\n${pack.json_ld}\n\`\`\`` : ""].filter(Boolean).join("\n\n");
+                      navigator.clipboard.writeText(combined);
+                    }} className="ms-auto inline-flex items-center gap-1 rounded border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent hover:bg-accent/20">
+                      <Copy className="size-3" /> {lang === "ar" ? "نسخ الكل" : lang === "ku" ? "هەموو کۆپی" : "Copy all"}
+                    </button>
+                  </div>
+
                   </div>
                   {p.injection_pack.title && <div className="font-semibold text-foreground">{p.injection_pack.title}</div>}
                   {p.injection_pack.article_markdown && (
