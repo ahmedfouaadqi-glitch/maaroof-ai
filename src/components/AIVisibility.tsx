@@ -10,21 +10,42 @@ import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { ENGINES } from "@/components/engine-logos";
 
-export function AIVisibility() {
-  const { t, lang } = useI18n();
-  const [outLang, setOutLang] = useState<Lang>(lang);
+type PanelProps = {
+  /** When provided, the panel uses the parent's brand and skips the inner brand input. */
+  brand?: string;
+  /** When provided, the panel uses the parent's keywords and skips the inner keywords input. */
+  keywords?: string;
+  /** When provided, the panel uses the parent's output language and hides its own language picker. */
+  lang?: Lang;
+  /** Hide the outer card chrome (used when embedded inside another card / tab). */
+  embedded?: boolean;
+  /** Override which tool's geo-scope is used. Defaults to "research" to preserve old behavior. */
+  toolKey?: "research" | "brand";
+};
+
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research" }: PanelProps) {
+  const { t, lang: uiLang } = useI18n();
+  const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
+  useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
+
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
-  const [brand, setBrand] = useState((auth?.profile as any)?.brand_name || "");
-  const [keywords, setKeywords] = useState((auth?.profile as any)?.brand_keywords || "");
+
+  const controlled = brandProp !== undefined;
+  const [innerBrand, setInnerBrand] = useState((auth?.profile as any)?.brand_name || "");
+  const [innerKw, setInnerKw] = useState((auth?.profile as any)?.brand_keywords || "");
+  const brand = controlled ? (brandProp || "") : innerBrand;
+  const keywords = controlled ? (kwProp || "") : innerKw;
+
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
 
   useEffect(() => {
+    if (controlled) return;
     const p: any = auth?.profile;
-    if (p?.brand_name && !brand) setBrand(p.brand_name);
-    if (p?.brand_keywords && !keywords) setKeywords(p.brand_keywords);
+    if (p?.brand_name && !innerBrand) setInnerBrand(p.brand_name);
+    if (p?.brand_keywords && !innerKw) setInnerKw(p.brand_keywords);
   }, [auth?.profile]);
 
   const run = async () => {
@@ -36,7 +57,7 @@ export function AIVisibility() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, "research") }),
+        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey) }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
@@ -47,31 +68,35 @@ export function AIVisibility() {
 
   const findEngine = (name: string) => ENGINES.find((e) => e.name.toLowerCase() === String(name || "").toLowerCase());
 
-  return (
-    <div className="rounded-2xl border border-border bg-card/70 p-5 backdrop-blur">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-            <Eye className="size-5 text-primary" /> {t("ag_vis_title")}
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">{t("ag_vis_desc")}</p>
-          <ToolHelpBanner toolKey="research" />
-          <div className="mt-3"><GeoScopeSelector compact toolKey="research" /></div>
+  const body = (
+    <>
+      {!embedded && (
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+              <Eye className="size-5 text-primary" /> {t("ag_vis_title")}
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t("ag_vis_desc")}</p>
+            <ToolHelpBanner toolKey="research" />
+            <div className="mt-3"><GeoScopeSelector compact toolKey="research" /></div>
+          </div>
+          {!langProp && <ToolLangSelect value={outLang} onChange={setOutLang} />}
         </div>
-        <ToolLangSelect value={outLang} onChange={setOutLang} />
-      </div>
+      )}
 
-      <div className="mt-3 grid gap-2 md:grid-cols-2">
-        <input value={brand} onChange={(e) => setBrand(e.target.value)}
-          placeholder={t("ag_vis_brand_ph")}
-          className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-        <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
-          placeholder={t("ag_vis_keywords_ph")}
-          className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-      </div>
+      {!controlled && (
+        <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
+          <input value={innerBrand} onChange={(e) => setInnerBrand(e.target.value)}
+            placeholder={t("ag_vis_brand_ph")}
+            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+          <input value={innerKw} onChange={(e) => setInnerKw(e.target.value)}
+            placeholder={t("ag_vis_keywords_ph")}
+            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+        </div>
+      )}
 
-      <div className="mt-3 flex items-center justify-between gap-2">
-        {err && <span className="text-xs text-destructive">{err}</span>}
+      <div className={`${embedded && controlled ? "" : "mt-3"} flex items-center justify-between gap-2`}>
+        {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || "تم استنفاد رصيد التحليلات الشهري" : err}</span>}
         <button onClick={run} disabled={busy || !brand.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
@@ -151,6 +176,14 @@ export function AIVisibility() {
           })} />
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (embedded) return <div className="space-y-3">{body}</div>;
+  return <div className="rounded-2xl border border-border bg-card/70 p-5 backdrop-blur">{body}</div>;
+}
+
+// Back-compat: keep standalone export used by /agent route.
+export function AIVisibility() {
+  return <VisibilityPanel />;
 }

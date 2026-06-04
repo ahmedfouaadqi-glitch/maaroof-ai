@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisibilityPanel } from "@/components/AIVisibility";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
@@ -117,13 +119,26 @@ export function BrandBoostAgent() {
         <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
-      <Tabs defaultValue="run" className="mt-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="visibility" className="mt-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="visibility" className="text-xs"><Eye className="me-1 inline size-3.5" />{t("ag_vis_title")}</TabsTrigger>
           <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
           <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
           <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="visibility" className="mt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). استخدم النتائج هنا كخط أساس قبل تشغيل «تعزيز العلامة» في التبويب التالي."
+              : lang === "ku"
+              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری)."
+              : "Probe your brand visibility across 8 AI engines (1 analysis). Use as a baseline before running Brand Boost."}
+          </div>
+          <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
+        </TabsContent>
+
 
         <TabsContent value="run" className="mt-4">
       <div className="grid gap-2 sm:grid-cols-2">
@@ -184,7 +199,15 @@ export function BrandBoostAgent() {
         </div>
       )}
 
-      {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
+      {err && (
+        <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+          {err === "credits_exhausted" || err === "subscription_required"
+            ? (lang === "ar" ? "تم استنفاد رصيد التحليلات الشهري. ارفع باقتك أو انتظر تجديد الرصيد." : lang === "ku" ? "ڕەسیدی شیکاری مانگانە تەواو بوو." : "Monthly analyses quota exhausted. Upgrade your plan or wait for renewal.")
+            : err === "rate_limited"
+            ? (lang === "ar" ? "تم تجاوز الحد المسموح، حاول بعد دقائق." : "Rate limited — try again in a few minutes.")
+            : err}
+        </div>
+      )}
       {report && (
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-end">
@@ -201,11 +224,31 @@ export function BrandBoostAgent() {
                     {Logo && <Logo size={20} />}
                     <strong className="text-foreground capitalize">{p.platform}</strong>
                     <span className="max-w-full break-all rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{p.model_used}</span>
-                    {p.is_proxy && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">proxy</span>}
+                    {p.is_proxy ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">
+                              <Info className="size-2.5" /> proxy
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-[11px]">
+                            {lang === "ar"
+                              ? "لا يوجد API عام مباشر لهذه المنصة، فاستخدمنا نموذجاً مكافئاً من نفس العائلة لمحاكاة جوابها."
+                              : lang === "ku"
+                              ? "API ڕاستەوخۆی گشتی بۆ ئەم پلاتفۆڕمە نییە، مۆدێلی هاوشێوەمان بەکارهێنا."
+                              : "No direct public API for this platform — we used an equivalent model from the same family to simulate its answer."}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-600">{lang === "ar" ? "مباشر" : "direct"}</span>
+                    )}
                     <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
                   </div>
                 );
               })()}
+
               {p.current_answer ? (
                 <div className="rounded-md border border-border bg-card/50 p-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "ما قاله المحرك الآن" : lang === "ku" ? "وەڵامی ئێستا" : "What the engine said just now"}</div>
@@ -238,11 +281,20 @@ export function BrandBoostAgent() {
               )}
               {p.injection_pack && (
                 <div className="rounded-md border border-accent/30 bg-accent/5 p-2 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">{lang === "ar" ? "حقنة جاهزة للنشر" : lang === "ku" ? "پاکێجی ئامادە بۆ بڵاوکردنەوە" : "Ready-to-publish injection"}</span>
                     {p.injection_pack.channel && <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">{p.injection_pack.channel}</span>}
+                    <button onClick={() => {
+                      const pack = p.injection_pack;
+                      const qa = Array.isArray(pack?.qa_pairs) ? pack.qa_pairs.map((q: any) => `Q: ${q.q}\nA: ${q.a}`).join("\n\n") : "";
+                      const combined = [pack?.title ? `# ${pack.title}` : "", pack?.article_markdown || "", qa ? `\n## Q&A\n${qa}` : "", pack?.json_ld ? `\n## JSON-LD\n\`\`\`json\n${pack.json_ld}\n\`\`\`` : ""].filter(Boolean).join("\n\n");
+                      navigator.clipboard.writeText(combined);
+                    }} className="ms-auto inline-flex items-center gap-1 rounded border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent hover:bg-accent/20">
+                      <Copy className="size-3" /> {lang === "ar" ? "نسخ الكل" : lang === "ku" ? "هەموو کۆپی" : "Copy all"}
+                    </button>
                   </div>
                   {p.injection_pack.title && <div className="font-semibold text-foreground">{p.injection_pack.title}</div>}
+
                   {p.injection_pack.article_markdown && (
                     <div>
                       <div className="flex items-center justify-between">
