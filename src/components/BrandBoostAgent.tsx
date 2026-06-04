@@ -293,9 +293,8 @@ export function BrandBoostAgent() {
                       <Copy className="size-3" /> {lang === "ar" ? "نسخ الكل" : lang === "ku" ? "هەموو کۆپی" : "Copy all"}
                     </button>
                   </div>
-
-                  </div>
                   {p.injection_pack.title && <div className="font-semibold text-foreground">{p.injection_pack.title}</div>}
+
                   {p.injection_pack.article_markdown && (
                     <div>
                       <div className="flex items-center justify-between">
