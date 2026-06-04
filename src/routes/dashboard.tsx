@@ -196,7 +196,7 @@ function DashboardPage() {
               {openTool === "outreach" && <CompanyOutreach />}
               {openTool === "boost" && <BrandBoostAgent />}
               {openTool === "applied" && <AppliedRanking />}
-              {openTool === "visibility" && <AIVisibility />}
+              
             </div>
           </DialogContent>
         </Dialog>
