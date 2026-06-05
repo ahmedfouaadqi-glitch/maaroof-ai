@@ -11,15 +11,15 @@ import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelect
 import { ENGINES } from "@/components/engine-logos";
 
 type PanelProps = {
-  /** When provided, the panel uses the parent's brand and skips the inner brand input. */
+  /** Initial brand name (still editable by the user). */
   brand?: string;
-  /** When provided, the panel uses the parent's keywords and skips the inner keywords input. */
+  /** Initial keywords (still editable; optional for the user). */
   keywords?: string;
-  /** When provided, the panel uses the parent's output language and hides its own language picker. */
+  /** When provided, hides the inner language picker and uses the parent's language. */
   lang?: Lang;
   /** Hide the outer card chrome (used when embedded inside another card / tab). */
   embedded?: boolean;
-  /** Override which tool's geo-scope is used. Defaults to "research" to preserve old behavior. */
+  /** Override which tool's geo-scope is used. */
   toolKey?: "research" | "brand";
 };
 
@@ -31,22 +31,24 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
 
-  const controlled = brandProp !== undefined;
-  const [innerBrand, setInnerBrand] = useState((auth?.profile as any)?.brand_name || "");
-  const [innerKw, setInnerKw] = useState((auth?.profile as any)?.brand_keywords || "");
-  const brand = controlled ? (brandProp || "") : innerBrand;
-  const keywords = controlled ? (kwProp || "") : innerKw;
+  // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
+  const [brand, setBrand] = useState(brandProp ?? (auth?.profile as any)?.brand_name ?? "");
+  const [keywords, setKeywords] = useState(kwProp ?? (auth?.profile as any)?.brand_keywords ?? "");
+
+  // If parent prop changes (e.g. user typed in the Boost "Run" tab), sync once.
+  useEffect(() => { if (brandProp !== undefined) setBrand(brandProp); }, [brandProp]);
+  useEffect(() => { if (kwProp !== undefined) setKeywords(kwProp); }, [kwProp]);
+
+  // Fall back to profile defaults when nothing set yet.
+  useEffect(() => {
+    const p: any = auth?.profile;
+    if (p?.brand_name && !brand) setBrand(p.brand_name);
+    if (p?.brand_keywords && !keywords) setKeywords(p.brand_keywords);
+  }, [auth?.profile]);
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
-
-  useEffect(() => {
-    if (controlled) return;
-    const p: any = auth?.profile;
-    if (p?.brand_name && !innerBrand) setInnerBrand(p.brand_name);
-    if (p?.brand_keywords && !innerKw) setInnerKw(p.brand_keywords);
-  }, [auth?.profile]);
 
   const run = async () => {
     if (!brand.trim() || busy) return;
@@ -68,6 +70,16 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
   const findEngine = (name: string) => ENGINES.find((e) => e.name.toLowerCase() === String(name || "").toLowerCase());
 
+  const kwOptionalLabel =
+    outLang === "ar" ? " (اختياري)" :
+    outLang === "ku" ? " (ئارەزوومەندانە)" :
+    " (optional)";
+
+  const helperHint =
+    outLang === "ar" ? "اسم العلامة إلزامي — الكلمات المفتاحية اختيارية وتُحسّن دقة الفحص."
+    : outLang === "ku" ? "ناوی براند پێویستە — وشە کلیلیەکان ئارەزوومەندانەن و دەقیقتر دەکەن."
+    : "Brand is required — keywords are optional and improve probe accuracy.";
+
   const body = (
     <>
       {!embedded && (
@@ -84,18 +96,17 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         </div>
       )}
 
-      {!controlled && (
-        <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
-          <input value={innerBrand} onChange={(e) => setInnerBrand(e.target.value)}
-            placeholder={t("ag_vis_brand_ph")}
-            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-          <input value={innerKw} onChange={(e) => setInnerKw(e.target.value)}
-            placeholder={t("ag_vis_keywords_ph")}
-            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-        </div>
-      )}
+      <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
+        <input value={brand} onChange={(e) => setBrand(e.target.value)}
+          placeholder={t("ag_vis_brand_ph")}
+          className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+        <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
+          placeholder={(t("ag_vis_keywords_ph") || "") + kwOptionalLabel}
+          className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+      </div>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">{helperHint}</p>
 
-      <div className={`${embedded && controlled ? "" : "mt-3"} flex items-center justify-between gap-2`}>
+      <div className="mt-3 flex items-center justify-between gap-2">
         {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || "تم استنفاد رصيد التحليلات الشهري" : err}</span>}
         <button onClick={run} disabled={busy || !brand.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
