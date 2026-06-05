@@ -364,6 +364,28 @@ export function BrandBoostAgent() {
               </ol>
             </div>
           )}
+          <div className="rounded-xl border-2 border-accent/50 bg-gradient-to-br from-accent/10 to-primary/10 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Rocket className="size-5 text-accent" />
+              <strong className="text-sm">
+                {lang === "ar" ? "جاهز للبثّ الحقيقي إلى محركات الذكاء؟"
+                  : lang === "ku" ? "ئامادەی بۆ بڵاوکردنەوەی ڕاستەقینە بۆ AI؟"
+                  : "Ready to broadcast to AI engines?"}
+              </strong>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {lang === "ar"
+                ? "افتح تبويب «بثّ للذكاء» لإنشاء صفحة عامة مفهرسة + ping IndexNow (Bing/Copilot/Perplexity/ChatGPT) + روابط مشاركة جاهزة لكل المنصات."
+                : lang === "ku"
+                ? "تابی «بڵاوکردنەوە بۆ AI» بکەرەوە: لاپەڕەی گشتی + IndexNow ping + بەستەری هاوبەشی."
+                : "Open the Broadcast tab to publish an indexable public page, ping IndexNow (Bing/Copilot/Perplexity/ChatGPT), and get share-ready links for every platform."}
+            </p>
+            <button onClick={() => setTab("authority")}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
+              <Rocket className="size-4" />
+              {lang === "ar" ? "ابدأ البثّ الآن" : lang === "ku" ? "ئێستا بڵاو بکەرەوە" : "Broadcast now"}
+            </button>
+          </div>
           <HandoffMenu source="boost" getText={() => `${brand}\n${report.summary || ""}\n\n${(report.plan || []).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).join(", ")}`).join("\n")}`} />
         </div>
       )}
