@@ -33,6 +33,7 @@ export function BrandBoostAgent() {
   const [running, setRunning] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
   const [err, setErr] = useState("");
+  const [tab, setTab] = useState<string>("visibility");
 
   const load = async () => {
     if (!user) return;
