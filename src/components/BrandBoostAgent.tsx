@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Search, Mail, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisibilityPanel } from "@/components/AIVisibility";
+import { SmartResearch } from "@/components/SmartResearch";
+import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
