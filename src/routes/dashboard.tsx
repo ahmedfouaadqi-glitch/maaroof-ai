@@ -190,8 +190,6 @@ function DashboardPage() {
               {openTool === "compare" && <CompetitorCompare />}
               {openTool === "feasibility" && <FeasibilityStudy />}
               {openTool === "bizdev" && <BizDev />}
-              {openTool === "research" && <SmartResearch />}
-              {openTool === "outreach" && <CompanyOutreach />}
               {openTool === "boost" && <BrandBoostAgent />}
               {openTool === "applied" && <AppliedRanking />}
               
