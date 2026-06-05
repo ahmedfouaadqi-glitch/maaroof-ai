@@ -437,10 +437,27 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
   return (
     <div className="space-y-3">
+      <div className="rounded-xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 to-primary/5 p-4 text-xs">
+        <div className="flex items-center gap-2 font-semibold text-foreground">
+          <Rocket className="size-4 text-accent" />
+          {lang === "ar" ? "بثّ حقيقي لمحركات الذكاء — كيف يعمل؟"
+            : lang === "ku" ? "بڵاوکردنەوەی ڕاستەقینە بۆ AI — چۆن کاردەکات؟"
+            : "Real broadcast to AI engines — how it works"}
+        </div>
+        <ol className="mt-2 ms-4 list-decimal space-y-1 text-muted-foreground">
+          <li>{lang === "ar" ? "ننشر بطاقة علامتك على رابط عام مفهرَس (HTML + JSON-LD)." : lang === "ku" ? "بەستەرێکی گشتی + JSON-LD دروست دەکەین." : "We publish your brand card to an indexable public URL (HTML + JSON-LD)."}</li>
+          <li>{lang === "ar" ? "نُبلّغ IndexNow → Bing/Yandex فوراً، وهذا هو نفس فهرس Copilot و ChatGPT Search و Perplexity." : lang === "ku" ? "IndexNow → Bing فۆراً، هەمان فهرس بۆ Copilot/ChatGPT/Perplexity." : "We ping IndexNow → Bing/Yandex — the same index Copilot, ChatGPT Search, and Perplexity read."}</li>
+          <li>{lang === "ar" ? "نضيف الرابط لـ sitemap.xml لـ Google/Gemini." : lang === "ku" ? "بەستەرەکە لە sitemap بۆ Google/Gemini." : "We add the URL to sitemap.xml for Google/Gemini."}</li>
+          <li>{lang === "ar" ? "تنسخ وتشارك على X/LinkedIn/Reddit ليصل لـ Grok و Claude و باقي الزواحف." : lang === "ku" ? "بەستەرەکە لە X/LinkedIn هاوبەش بکە بۆ Grok و Claude." : "Share the link on X/LinkedIn/Reddit so Grok, Claude, and other crawlers pick it up."}</li>
+          <li>{lang === "ar" ? "راقب من زارها فعلاً في تبويب «متتبع الانتشار»." : lang === "ku" ? "زیارەتکارەکان لە تابی «شوێنپێ» ببینە." : "Watch which AI crawlers actually visited in the Propagation tab."}</li>
+        </ol>
+      </div>
+
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
         <div className="font-semibold text-foreground">{t("authority_title")}</div>
         <p className="mt-1 text-muted-foreground">{t("authority_desc")}</p>
       </div>
+
 
       <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
         placeholder={t("authority_source_url")}
