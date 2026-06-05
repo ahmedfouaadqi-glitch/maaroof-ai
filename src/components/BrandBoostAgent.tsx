@@ -121,11 +121,13 @@ export function BrandBoostAgent() {
         <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
-      <Tabs defaultValue="visibility" className="mt-4">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs value={tab} onValueChange={setTab} className="mt-4">
+        <TabsList className="flex h-auto w-full flex-wrap gap-1">
           <TabsTrigger value="visibility" className="text-xs"><Eye className="me-1 inline size-3.5" />{t("ag_vis_title")}</TabsTrigger>
+          <TabsTrigger value="research" className="text-xs"><Search className="me-1 inline size-3.5" />{t("research_title")}</TabsTrigger>
+          <TabsTrigger value="outreach" className="text-xs"><Mail className="me-1 inline size-3.5" />{t("outreach_title")}</TabsTrigger>
           <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
-          <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
+          <TabsTrigger value="authority" className="text-xs"><Rocket className="me-1 inline size-3.5" />{lang === "ar" ? "بثّ للذكاء" : lang === "ku" ? "بڵاوکردنەوە بۆ AI" : "Broadcast"}</TabsTrigger>
           <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
@@ -133,13 +135,37 @@ export function BrandBoostAgent() {
         <TabsContent value="visibility" className="mt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
             {lang === "ar"
-              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). استخدم النتائج هنا كخط أساس قبل تشغيل «تعزيز العلامة» في التبويب التالي."
+              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
               : lang === "ku"
-              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری)."
-              : "Probe your brand visibility across 8 AI engines (1 analysis). Use as a baseline before running Brand Boost."}
+              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
+              : "Probe your brand visibility across 8 AI engines (1 analysis). Brand required, keywords optional."}
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
         </TabsContent>
+
+        <TabsContent value="research" className="mt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "ابحث عن شركات/علامات/أسواق وحوّل النتائج إلى تغذية للظهور والتعزيز."
+              : lang === "ku"
+              ? "گەڕانی کۆمپانیا/براند/بازاڕ و گۆڕینیان بۆ خواردنی AI."
+              : "Research companies/brands/markets and feed insights back into your boost plan."}
+          </div>
+          <SmartResearch />
+        </TabsContent>
+
+        <TabsContent value="outreach" className="mt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "ولّد رسائل تواصل وبروفايلات شركات لاستهداف الشركاء والعملاء بصوت علامتك."
+              : lang === "ku"
+              ? "نامەی پەیوەندی و پرۆفایلی کۆمپانیا دروست بکە."
+              : "Generate outreach emails and company briefs in your brand voice."}
+          </div>
+          <CompanyOutreach />
+        </TabsContent>
+
+
 
 
         <TabsContent value="run" className="mt-4">
