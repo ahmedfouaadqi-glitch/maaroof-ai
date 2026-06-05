@@ -8,8 +8,8 @@ import { PostSuggester } from "@/components/PostSuggester";
 import { CompetitorCompare } from "@/components/CompetitorCompare";
 import { FeasibilityStudy } from "@/components/FeasibilityStudy";
 import { BizDev } from "@/components/BizDev";
-import { SmartResearch } from "@/components/SmartResearch";
-import { CompanyOutreach } from "@/components/CompanyOutreach";
+import { SmartResearch as _SmartResearch } from "@/components/SmartResearch";
+import { CompanyOutreach as _CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
 import { AppliedRanking } from "@/components/AppliedRanking";
 import { BrandPulseGauges } from "@/components/BrandPulseGauges";
@@ -146,12 +146,10 @@ function DashboardPage() {
             <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} cost={TOOL_COST.compare} onOpen={() => setOpenTool("compare")} />
             <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} cost={TOOL_COST.feasibility} onOpen={() => setOpenTool("feasibility")} />
             <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} cost={TOOL_COST.bizdev} onOpen={() => setOpenTool("bizdev")} />
-            <ToolGridCard icon={<Search className="size-5" />} title={t("research_title")} desc={t("research_desc") || ""} cost={TOOL_COST.research} onOpen={() => setOpenTool("research")} />
-            
-            <ToolGridCard icon={<Mail className="size-5" />} title={t("outreach_title")} desc={t("outreach_desc") || ""} cost={TOOL_COST.outreach} onOpen={() => setOpenTool("outreach")} />
             <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} cost={TOOL_COST.boost} onOpen={() => setOpenTool("boost")} />
             <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} cost={TOOL_COST.applied} onOpen={() => setOpenTool("applied")} />
             <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />
+            
             
           </div>
         </div>
@@ -192,8 +190,6 @@ function DashboardPage() {
               {openTool === "compare" && <CompetitorCompare />}
               {openTool === "feasibility" && <FeasibilityStudy />}
               {openTool === "bizdev" && <BizDev />}
-              {openTool === "research" && <SmartResearch />}
-              {openTool === "outreach" && <CompanyOutreach />}
               {openTool === "boost" && <BrandBoostAgent />}
               {openTool === "applied" && <AppliedRanking />}
               

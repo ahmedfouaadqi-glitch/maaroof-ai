@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Search, Mail, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisibilityPanel } from "@/components/AIVisibility";
+import { SmartResearch } from "@/components/SmartResearch";
+import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
@@ -31,6 +33,7 @@ export function BrandBoostAgent() {
   const [running, setRunning] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
   const [err, setErr] = useState("");
+  const [tab, setTab] = useState<string>("visibility");
 
   const load = async () => {
     if (!user) return;
@@ -119,11 +122,13 @@ export function BrandBoostAgent() {
         <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
 
-      <Tabs defaultValue="visibility" className="mt-4">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs value={tab} onValueChange={setTab} className="mt-4">
+        <TabsList className="flex h-auto w-full flex-wrap gap-1">
           <TabsTrigger value="visibility" className="text-xs"><Eye className="me-1 inline size-3.5" />{t("ag_vis_title")}</TabsTrigger>
+          <TabsTrigger value="research" className="text-xs"><Search className="me-1 inline size-3.5" />{t("research_title")}</TabsTrigger>
+          <TabsTrigger value="outreach" className="text-xs"><Mail className="me-1 inline size-3.5" />{t("outreach_title")}</TabsTrigger>
           <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
-          <TabsTrigger value="authority" className="text-xs"><Sparkles className="me-1 inline size-3.5" />{t("boost_tab_authority")}</TabsTrigger>
+          <TabsTrigger value="authority" className="text-xs"><Rocket className="me-1 inline size-3.5" />{lang === "ar" ? "بثّ للذكاء" : lang === "ku" ? "بڵاوکردنەوە بۆ AI" : "Broadcast"}</TabsTrigger>
           <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
@@ -131,13 +136,37 @@ export function BrandBoostAgent() {
         <TabsContent value="visibility" className="mt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
             {lang === "ar"
-              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). استخدم النتائج هنا كخط أساس قبل تشغيل «تعزيز العلامة» في التبويب التالي."
+              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
               : lang === "ku"
-              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری)."
-              : "Probe your brand visibility across 8 AI engines (1 analysis). Use as a baseline before running Brand Boost."}
+              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
+              : "Probe your brand visibility across 8 AI engines (1 analysis). Brand required, keywords optional."}
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
         </TabsContent>
+
+        <TabsContent value="research" className="mt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "ابحث عن شركات/علامات/أسواق وحوّل النتائج إلى تغذية للظهور والتعزيز."
+              : lang === "ku"
+              ? "گەڕانی کۆمپانیا/براند/بازاڕ و گۆڕینیان بۆ خواردنی AI."
+              : "Research companies/brands/markets and feed insights back into your boost plan."}
+          </div>
+          <SmartResearch />
+        </TabsContent>
+
+        <TabsContent value="outreach" className="mt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "ولّد رسائل تواصل وبروفايلات شركات لاستهداف الشركاء والعملاء بصوت علامتك."
+              : lang === "ku"
+              ? "نامەی پەیوەندی و پرۆفایلی کۆمپانیا دروست بکە."
+              : "Generate outreach emails and company briefs in your brand voice."}
+          </div>
+          <CompanyOutreach />
+        </TabsContent>
+
+
 
 
         <TabsContent value="run" className="mt-4">
@@ -335,6 +364,28 @@ export function BrandBoostAgent() {
               </ol>
             </div>
           )}
+          <div className="rounded-xl border-2 border-accent/50 bg-gradient-to-br from-accent/10 to-primary/10 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Rocket className="size-5 text-accent" />
+              <strong className="text-sm">
+                {lang === "ar" ? "جاهز للبثّ الحقيقي إلى محركات الذكاء؟"
+                  : lang === "ku" ? "ئامادەی بۆ بڵاوکردنەوەی ڕاستەقینە بۆ AI؟"
+                  : "Ready to broadcast to AI engines?"}
+              </strong>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {lang === "ar"
+                ? "افتح تبويب «بثّ للذكاء» لإنشاء صفحة عامة مفهرسة + ping IndexNow (Bing/Copilot/Perplexity/ChatGPT) + روابط مشاركة جاهزة لكل المنصات."
+                : lang === "ku"
+                ? "تابی «بڵاوکردنەوە بۆ AI» بکەرەوە: لاپەڕەی گشتی + IndexNow ping + بەستەری هاوبەشی."
+                : "Open the Broadcast tab to publish an indexable public page, ping IndexNow (Bing/Copilot/Perplexity/ChatGPT), and get share-ready links for every platform."}
+            </p>
+            <button onClick={() => setTab("authority")}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
+              <Rocket className="size-4" />
+              {lang === "ar" ? "ابدأ البثّ الآن" : lang === "ku" ? "ئێستا بڵاو بکەرەوە" : "Broadcast now"}
+            </button>
+          </div>
           <HandoffMenu source="boost" getText={() => `${brand}\n${report.summary || ""}\n\n${(report.plan || []).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).join(", ")}`).join("\n")}`} />
         </div>
       )}
@@ -386,10 +437,27 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
   return (
     <div className="space-y-3">
+      <div className="rounded-xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 to-primary/5 p-4 text-xs">
+        <div className="flex items-center gap-2 font-semibold text-foreground">
+          <Rocket className="size-4 text-accent" />
+          {lang === "ar" ? "بثّ حقيقي لمحركات الذكاء — كيف يعمل؟"
+            : lang === "ku" ? "بڵاوکردنەوەی ڕاستەقینە بۆ AI — چۆن کاردەکات؟"
+            : "Real broadcast to AI engines — how it works"}
+        </div>
+        <ol className="mt-2 ms-4 list-decimal space-y-1 text-muted-foreground">
+          <li>{lang === "ar" ? "ننشر بطاقة علامتك على رابط عام مفهرَس (HTML + JSON-LD)." : lang === "ku" ? "بەستەرێکی گشتی + JSON-LD دروست دەکەین." : "We publish your brand card to an indexable public URL (HTML + JSON-LD)."}</li>
+          <li>{lang === "ar" ? "نُبلّغ IndexNow → Bing/Yandex فوراً، وهذا هو نفس فهرس Copilot و ChatGPT Search و Perplexity." : lang === "ku" ? "IndexNow → Bing فۆراً، هەمان فهرس بۆ Copilot/ChatGPT/Perplexity." : "We ping IndexNow → Bing/Yandex — the same index Copilot, ChatGPT Search, and Perplexity read."}</li>
+          <li>{lang === "ar" ? "نضيف الرابط لـ sitemap.xml لـ Google/Gemini." : lang === "ku" ? "بەستەرەکە لە sitemap بۆ Google/Gemini." : "We add the URL to sitemap.xml for Google/Gemini."}</li>
+          <li>{lang === "ar" ? "تنسخ وتشارك على X/LinkedIn/Reddit ليصل لـ Grok و Claude و باقي الزواحف." : lang === "ku" ? "بەستەرەکە لە X/LinkedIn هاوبەش بکە بۆ Grok و Claude." : "Share the link on X/LinkedIn/Reddit so Grok, Claude, and other crawlers pick it up."}</li>
+          <li>{lang === "ar" ? "راقب من زارها فعلاً في تبويب «متتبع الانتشار»." : lang === "ku" ? "زیارەتکارەکان لە تابی «شوێنپێ» ببینە." : "Watch which AI crawlers actually visited in the Propagation tab."}</li>
+        </ol>
+      </div>
+
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
         <div className="font-semibold text-foreground">{t("authority_title")}</div>
         <p className="mt-1 text-muted-foreground">{t("authority_desc")}</p>
       </div>
+
 
       <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
         placeholder={t("authority_source_url")}
