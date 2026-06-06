@@ -155,11 +155,15 @@ function DashboardPage() {
             <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} cost={TOOL_COST.bizdev} onOpen={() => setOpenTool("bizdev")} />
             <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} cost={TOOL_COST.boost} onOpen={() => setOpenTool("boost")} />
             <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} cost={TOOL_COST.applied} onOpen={() => setOpenTool("applied")} />
+            <ToolGridCard icon={<Share2 className="size-5" />} title="تحليل الظهور الاجتماعي" desc="إشارات علامتك على شبكات التواصل + تحليل المشاعر" cost={TOOL_COST.social} onOpen={() => setOpenTool("social")} />
+            <ToolGridCard icon={<Bell className="size-5" />} title="مراقبة المنافسين" desc="baseline + تنبيهات عند تغيّر ظهور منافسيك" cost={TOOL_COST.monitor} onOpen={() => setOpenTool("monitor")} />
+            <ToolGridCard icon={<Target className="size-5" />} title="استراتيجي GEO" desc="خطة 12 أسبوع مخصّصة لأهدافك" cost={TOOL_COST.strategist} onOpen={() => setOpenTool("strategist")} />
+            <ToolGridCard icon={<FlaskConical className="size-5" />} title="محاكاة ماذا لو" desc="جرّب التغييرات قبل تنفيذها" cost={TOOL_COST.whatif} onOpen={() => setOpenTool("whatif")} />
+            <ToolGridCard icon={<FileText className="size-5" />} title="منشئ التقارير" desc="اختر المقاييس وصدّر PDF/CSV" cost={TOOL_COST.report} onOpen={() => setOpenTool("report")} />
             <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />
-            
-            
           </div>
         </div>
+
 
         {/* How they connect */}
         <div className="mt-10 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 p-6">
@@ -199,10 +203,15 @@ function DashboardPage() {
               {openTool === "bizdev" && <BizDev />}
               {openTool === "boost" && <BrandBoostAgent />}
               {openTool === "applied" && <AppliedRanking />}
-              
+              {openTool === "social" && <SocialAnalysis />}
+              {openTool === "monitor" && <CompetitorMonitor />}
+              {openTool === "strategist" && <GeoStrategist />}
+              {openTool === "whatif" && <WhatIfSimulator />}
+              {openTool === "report" && <ReportBuilder />}
             </div>
           </DialogContent>
         </Dialog>
+
 
 
         {/* Activity & summary export */}
@@ -444,9 +453,15 @@ function toolTitle(k: ToolKey, t: (k: string) => string): string {
     boost: t("boost_title"),
     applied: t("dash_tool_applied_t"),
     visibility: t("ag_vis_title"),
+    social: "تحليل الظهور الاجتماعي",
+    monitor: "مراقبة المنافسين",
+    strategist: "استراتيجي GEO",
+    whatif: "محاكاة ماذا لو",
+    report: "منشئ التقارير",
   };
   return map[k] || k;
 }
+
 
 function ToolGridCard({ icon, title, desc, cost, onOpen }: { icon: React.ReactNode; title: string; desc: string; cost: number; onOpen: () => void }) {
   return (
