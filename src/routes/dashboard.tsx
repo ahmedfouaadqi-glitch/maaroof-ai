@@ -12,6 +12,11 @@ import { SmartResearch as _SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach as _CompanyOutreach } from "@/components/CompanyOutreach";
 import { BrandBoostAgent } from "@/components/BrandBoostAgent";
 import { AppliedRanking } from "@/components/AppliedRanking";
+import { SocialAnalysis } from "@/components/SocialAnalysis";
+import { CompetitorMonitor } from "@/components/CompetitorMonitor";
+import { GeoStrategist } from "@/components/GeoStrategist";
+import { WhatIfSimulator } from "@/components/WhatIfSimulator";
+import { ReportBuilder } from "@/components/ReportBuilder";
 import { BrandPulseGauges } from "@/components/BrandPulseGauges";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
@@ -19,14 +24,16 @@ import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X } from "lucide-react";
+import { Activity, Sparkles, Crown, Loader2, Bot, ArrowRight, ArrowDown, Trash2, Copy, RefreshCw, Check, ClipboardList, TrendingUp, Search, Mail, Megaphone, Trophy, Zap, X, Share2, Bell, Target, FlaskConical, FileText } from "lucide-react";
 
 
-type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied" | "visibility";
+type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "research" | "outreach" | "boost" | "applied" | "visibility" | "social" | "monitor" | "strategist" | "whatif" | "report";
 const TOOL_COST: Record<ToolKey, number> = {
   analyze: 1, suggest: 1, compare: 1, feasibility: 2, bizdev: 2,
   research: 2, outreach: 1, boost: 5, applied: 2, visibility: 1,
+  social: 1, monitor: 2, strategist: 3, whatif: 2, report: 0,
 };
+
 
 
 export const Route = createFileRoute("/dashboard")({
