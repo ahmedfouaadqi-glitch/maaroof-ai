@@ -28,11 +28,15 @@ import { Route as PulseSourcesRouteImport } from './routes/pulse.sources'
 import { Route as PulseCompareRouteImport } from './routes/pulse.compare'
 import { Route as PulseAssistantRouteImport } from './routes/pulse.assistant'
 import { Route as PulseGovRouteImport } from './routes/pulse.$gov'
+import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
+import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
+import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
+import { Route as ApiCompetitorMonitorRouteImport } from './routes/api/competitor-monitor'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
 import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
@@ -140,6 +144,11 @@ const PulseGovRoute = PulseGovRouteImport.update({
   path: '/$gov',
   getParentRoute: () => PulseRoute,
 } as any)
+const ApiWhatIfRoute = ApiWhatIfRouteImport.update({
+  id: '/api/what-if',
+  path: '/api/what-if',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiVisibilityRoute = ApiVisibilityRouteImport.update({
   id: '/api/visibility',
   path: '/api/visibility',
@@ -150,9 +159,19 @@ const ApiSuggestRoute = ApiSuggestRouteImport.update({
   path: '/api/suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSocialAnalysisRoute = ApiSocialAnalysisRouteImport.update({
+  id: '/api/social-analysis',
+  path: '/api/social-analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiResearchRoute = ApiResearchRouteImport.update({
   id: '/api/research',
   path: '/api/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
+  id: '/api/geo-strategist',
+  path: '/api/geo-strategist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGeoRewriteRoute = ApiGeoRewriteRouteImport.update({
@@ -163,6 +182,11 @@ const ApiGeoRewriteRoute = ApiGeoRewriteRouteImport.update({
 const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
   id: '/api/feasibility',
   path: '/api/feasibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompetitorMonitorRoute = ApiCompetitorMonitorRouteImport.update({
+  id: '/api/competitor-monitor',
+  path: '/api/competitor-monitor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCompareRoute = ApiCompareRouteImport.update({
@@ -246,11 +270,15 @@ export interface FileRoutesByFullPath {
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
+  '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/research': typeof ApiResearchRoute
+  '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/what-if': typeof ApiWhatIfRoute
   '/pulse/$gov': typeof PulseGovRoute
   '/pulse/assistant': typeof PulseAssistantRoute
   '/pulse/compare': typeof PulseCompareRoute
@@ -283,11 +311,15 @@ export interface FileRoutesByTo {
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
+  '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/research': typeof ApiResearchRoute
+  '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/what-if': typeof ApiWhatIfRoute
   '/pulse/$gov': typeof PulseGovRoute
   '/pulse/assistant': typeof PulseAssistantRoute
   '/pulse/compare': typeof PulseCompareRoute
@@ -321,11 +353,15 @@ export interface FileRoutesById {
   '/api/brand-boost': typeof ApiBrandBoostRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
+  '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
+  '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/research': typeof ApiResearchRoute
+  '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/what-if': typeof ApiWhatIfRoute
   '/pulse/$gov': typeof PulseGovRoute
   '/pulse/assistant': typeof PulseAssistantRoute
   '/pulse/compare': typeof PulseCompareRoute
@@ -360,11 +396,15 @@ export interface FileRouteTypes {
     | '/api/brand-boost'
     | '/api/company-email'
     | '/api/compare'
+    | '/api/competitor-monitor'
     | '/api/feasibility'
     | '/api/geo-rewrite'
+    | '/api/geo-strategist'
     | '/api/research'
+    | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/what-if'
     | '/pulse/$gov'
     | '/pulse/assistant'
     | '/pulse/compare'
@@ -397,11 +437,15 @@ export interface FileRouteTypes {
     | '/api/brand-boost'
     | '/api/company-email'
     | '/api/compare'
+    | '/api/competitor-monitor'
     | '/api/feasibility'
     | '/api/geo-rewrite'
+    | '/api/geo-strategist'
     | '/api/research'
+    | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/what-if'
     | '/pulse/$gov'
     | '/pulse/assistant'
     | '/pulse/compare'
@@ -434,11 +478,15 @@ export interface FileRouteTypes {
     | '/api/brand-boost'
     | '/api/company-email'
     | '/api/compare'
+    | '/api/competitor-monitor'
     | '/api/feasibility'
     | '/api/geo-rewrite'
+    | '/api/geo-strategist'
     | '/api/research'
+    | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/what-if'
     | '/pulse/$gov'
     | '/pulse/assistant'
     | '/pulse/compare'
@@ -472,11 +520,15 @@ export interface RootRouteChildren {
   ApiBrandBoostRoute: typeof ApiBrandBoostRoute
   ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
   ApiCompareRoute: typeof ApiCompareRoute
+  ApiCompetitorMonitorRoute: typeof ApiCompetitorMonitorRoute
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
+  ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
   ApiResearchRoute: typeof ApiResearchRoute
+  ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
+  ApiWhatIfRoute: typeof ApiWhatIfRoute
   UUsernameRoute: typeof UUsernameRoute
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
@@ -618,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PulseGovRouteImport
       parentRoute: typeof PulseRoute
     }
+    '/api/what-if': {
+      id: '/api/what-if'
+      path: '/api/what-if'
+      fullPath: '/api/what-if'
+      preLoaderRoute: typeof ApiWhatIfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/visibility': {
       id: '/api/visibility'
       path: '/api/visibility'
@@ -632,11 +691,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social-analysis': {
+      id: '/api/social-analysis'
+      path: '/api/social-analysis'
+      fullPath: '/api/social-analysis'
+      preLoaderRoute: typeof ApiSocialAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/research': {
       id: '/api/research'
       path: '/api/research'
       fullPath: '/api/research'
       preLoaderRoute: typeof ApiResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/geo-strategist': {
+      id: '/api/geo-strategist'
+      path: '/api/geo-strategist'
+      fullPath: '/api/geo-strategist'
+      preLoaderRoute: typeof ApiGeoStrategistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/geo-rewrite': {
@@ -651,6 +724,13 @@ declare module '@tanstack/react-router' {
       path: '/api/feasibility'
       fullPath: '/api/feasibility'
       preLoaderRoute: typeof ApiFeasibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/competitor-monitor': {
+      id: '/api/competitor-monitor'
+      path: '/api/competitor-monitor'
+      fullPath: '/api/competitor-monitor'
+      preLoaderRoute: typeof ApiCompetitorMonitorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/compare': {
@@ -772,11 +852,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandBoostRoute: ApiBrandBoostRoute,
   ApiCompanyEmailRoute: ApiCompanyEmailRoute,
   ApiCompareRoute: ApiCompareRoute,
+  ApiCompetitorMonitorRoute: ApiCompetitorMonitorRoute,
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
+  ApiGeoStrategistRoute: ApiGeoStrategistRoute,
   ApiResearchRoute: ApiResearchRoute,
+  ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
+  ApiWhatIfRoute: ApiWhatIfRoute,
   UUsernameRoute: UUsernameRoute,
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
