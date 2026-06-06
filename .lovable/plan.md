@@ -1,111 +1,57 @@
-# دمج وتطوير «تعزيز العلامة التجارية»
+# خطة: تدقيق وتطوير الأدوات الخمس
 
-## 1) نقل البحث الذكي + تواصل الشركات إلى «تعزيز العلامة»
+## 1) ما هو موجود فعلاً (audit)
 
-داخل `src/components/BrandBoostAgent.tsx` يصبح شريط التبويبات 7 أعمدة:
+| # | الطلب | الحالة | الملف |
+|---|---|---|---|
+| 1 | تحليل/تحسين الظهور على وسائل التواصل | **جزئي** – يولّد منشورات فقط، بدون تحليل ظهور حقيقي عبر المنصات | `PostSuggester.tsx` |
+| 2 | لوحة مراقبة منافسين فورية + تنبيهات | **جزئي** – مقارنة لحظية فقط بدون تتبّع زمني ولا تنبيهات | `CompetitorCompare.tsx` |
+| 3 | توصيات GEO مخصّصة (محتوى/كلمات/منصات) | **جزئي** – ضمن نتائج `BrandBoostAgent` لكنها غير مُوحَّدة ولا مرتبطة بالأهداف | `BrandBoostAgent.tsx` |
+| 4 | منشئ تقارير مخصّص + تصدير | **جزئي** – تصدير ثابت (PDF/CSV) للأنشطة فقط، بلا اختيار مقاييس | `ExportButtons.tsx` + `dashboard.tsx` |
+| 5 | محاكاة "ماذا لو" (What-If) | **غير موجود** | — |
 
-```text
-Visibility | Research | Outreach | Run | Authority | Propagation | Logs
-```
+## 2) خطة التنفيذ
 
-- `Visibility` ← `<VisibilityPanel embedded toolKey="brand" />` (كما هو).
-- `Research` ← `<SmartResearch />` داخل غلاف خفيف (نزيل الـ Card الخارجي عبر شرط `embedded` بسيط، أو نتركه كما هو داخل التبويب).
-- `Outreach` ← `<CompanyOutreach />` بنفس الأسلوب.
-- نمرّر `brand` و `kw` كقيم ابتدائية حيث يدعم المكوّن ذلك (Outreach: تعبئة `company`، Research: تعبئة `query` من brand+kw عند التحميل الأوّل فقط، دون قفل الحقل).
+### (1) تحليل الظهور الاجتماعي — تطوير `PostSuggester`
+- إضافة تبويب **"تحليل اجتماعي"** يستخدم `fcSearch` على `site:twitter.com / linkedin.com / reddit.com / youtube.com` للعلامة + الكلمات.
+- إرجاع: عدد الإشارات لكل منصة، أبرز المنشورات، تحليل المشاعر عبر Lovable AI (`gemini-2.5-flash`)، وفجوات المحتوى.
+- مخرَج JSON يُغذّي مولّد المنشورات الحالي تلقائياً (روابط، هاشتاجات، أفضل أوقات نشر مستنتجة من تواريخ المنشورات).
 
-### تنظيف لوحة التحكم `src/routes/dashboard.tsx`
+### (2) مراقبة المنافسين الفورية — أداة جديدة `CompetitorMonitor`
+- جدول جديد `competitor_watch` (user_id, brand, competitors[], baseline jsonb, frequency_hours, last_run, alerts jsonb) + RLS + GRANT.
+- زر **"بدء المراقبة"** يحفظ baseline (visibility + سيرب + برومبتات AI).
+- `pg_cron` كل N ساعة → `/api/public/hooks/competitor-watch` يعيد التشغيل ويقارن بـ baseline ويسجّل التغييرات (≥10%) في `alerts`.
+- لوحة تنبيهات داخل `dashboard.tsx` تعرض الأحداث (badge أحمر، إشعار toast عند الفتح).
 
-- إزالة بطاقات `research` و `outreach` من شبكة الأدوات (مع إبقاء استيراد المكونين لأنهما يُستخدمان داخل Brand Boost).
-- إزالة حالتَي `openTool === "research" | "outreach"` من المودال.
-- الإبقاء على `TOOL_COST.research/outreach` لأن الفوترة تتم على مستوى الـ API.
+### (3) توصيات GEO مخصّصة — أداة جديدة `GeoStrategist`
+- نموذج إدخال: العلامة + الأهداف (وعي/تحويل/سلطة) + الميزانية + السوق الجغرافي.
+- تستهلك آخر تقرير `brand_boost` + `ai_visibility` المخزّن وتمرّره مع الأهداف إلى `gemini-2.5-flash` بـ schema:
+  - `content_types[]`، `priority_keywords[]`، `priority_platforms[]`، `editorial_calendar[12 week]`، `kpi_targets`.
+- تُحفظ في جدول `geo_strategies` لإعادة الاستخدام + تصدير PDF.
 
-النتيجة: نقطة دخول واحدة موحّدة لكل ما يخص العلامة التجارية.
+### (4) منشئ تقارير مخصّص — أداة جديدة `ReportBuilder`
+- واجهة drag‑select لاختيار: المقاييس (visibility/competitors/social/brand boost)، المدى الزمني، الرسوم (bar/line/donut عبر `recharts` الموجود)، اللغة.
+- معاينة حيّة + تصدير **PDF/CSV/PNG** عبر `src/lib/exports.ts` (تمديد `kind: "chart"`).
+- حفظ "قوالب التقرير" في جدول `report_templates` لإعادة التوليد بنقرة.
 
-## 2) إرجاع حقول الإدخال في تبويب الظهور
+### (5) محاكاة "ماذا لو" — أداة جديدة `WhatIfSimulator`
+- يقرأ baseline من تقارير المستخدم.
+- نموذج تغييرات: + نوع محتوى جديد، + كلمة مفتاحية، تغيير الجمهور، تغيير المنصة، زيادة نشر X%.
+- يستدعي Lovable AI بمطالبة محاكاة محافظة (لا أرقام مخترعة — نسب تقديرية مع `confidence`).
+- يعيد: تأثير متوقّع لكل محرك (chatgpt/gemini/perplexity/…)، تكلفة تقديرية، مخاطر، توصية نهائية.
+- 2 وحدة تحليل لكل سيناريو.
 
-في `VisibilityPanel` نُلغي قاعدة "إخفاء الحقول عند تمرير `brand` من الأب".
+### دمج في `dashboard.tsx`
+ترتيب البطاقات: Visibility → Social Analysis → Competitor Monitor → GEO Strategist → What-If → Report Builder → Brand Boost.
 
-- إزالة `controlled` كحاجز للحقول: الحقول تظهر دائماً ومُعبّأة مسبقًا بالـ `brandProp / kwProp` (قابلة للتعديل).
-- `keywords` يصبح اختياريًا فعليًا: زر التشغيل يعتمد فقط على وجود `brand.trim()`.
-- placeholder للكلمات المفتاحية يُضاف إليه «(اختياري)».
-- عند التعديل اليدوي لا يُعاد الكتابة فوقه من props (نستخدم `useEffect` يضبط القيمة الأولية مرة واحدة).
-- نص توضيحي صغير: «اسم العلامة إلزامي — الكلمات المفتاحية اختيارية وتُحسّن دقة الفحص».
+## 3) تفاصيل تقنية (موجزة)
+- جميع نقاط النهاية = `createServerFn` ضمن `src/lib/*.functions.ts` مع `requireSupabaseAuth`.
+- استخدام `LOVABLE_API_KEY` فقط؛ نموذج افتراضي `google/gemini-2.5-flash` (تحليل) و `openai/gpt-5-mini` (توصيات حسّاسة).
+- الجداول الجديدة: `competitor_watch`، `geo_strategies`، `report_templates` + GRANT + RLS scoped على `auth.uid()`.
+- cron عبر `set_pulse_cron`-style helper.
+- التكلفة (وحدات تحليل): Social=1، Monitor (لكل تشغيل cron)=2، GEO Strategist=3، What-If=2، Report=0.
 
-## 3) بثّ حقيقي للعلامة إلى محركات الذكاء
+## 4) خارج النطاق
+- لا أتطرق إلى أدوات نبض (Pulse) ولا إلى تدفقات الدفع — فقط إضافة/تطوير الأدوات الخمس.
 
-محركات الذكاء لا تستقبل "حقن مباشر"؛ كلها تتعلم/تستجلب من الويب العام أو من فهارس محددة. الحل الواقعي = نشر محتوى رسمي مفهرَس + إجبار المحركات على رؤيته فورًا.
-
-### خط الأنابيب الجديد (ينفّذ بضغطة زر «بث الآن»)
-
-```text
-Brand Boost output (injection_pack)
-        │
-        ▼
-1) حفظ نسخة عامة في DB                 (table: brand_public_pages)
-        │
-        ▼
-2) خدمة صفحة عامة مفهرسة                /b/$slug.html  +  /b/$slug.json
-   – HTML نظيف + JSON-LD Organization/FAQPage
-   – robots: index,follow + sitemap.xml تلقائي
-        │
-        ▼
-3) إخبار محركات البحث فورًا             IndexNow (Bing/Yandex)
-   – موجود بالفعل: src/lib/indexnow.server.ts
-   – Bing index ≡ ما تقرأه Copilot + ChatGPT search + Perplexity
-        │
-        ▼
-4) Ping Google                          GET /ping?sitemap=…  +  Search Console (المفتاح موجود)
-        │
-        ▼
-5) قنوات الذكاء غير القابلة للحقن:      توليد منشورات جاهزة (X/LinkedIn/Reddit/Quora)
-   – نسخة قصيرة + روابط للصفحة العامة
-   – زر «نسخ» + Web Share API
-        │
-        ▼
-6) جدولة تكرار البث                     pg_cron كل N أيام يعيد IndexNow + يحدّث الصفحة
-```
-
-### تفاصيل تقنية
-
-- **جدول جديد** `brand_public_pages(user_id, slug unique, brand_name, lang, content_md, json_ld, qa_pairs jsonb, last_pinged_at, updated_at)` + RLS: المالك يكتب، العام يقرأ عبر `SECURITY DEFINER` function.
-- **مسار عام جديد** `src/routes/b.$slug.tsx`: SSR صفحة كاملة مع `<head>` يحوي JSON-LD، canonical، og/twitter cards، hreflang. لا يستعمل auth.
-- **API** `src/routes/api/brand-broadcast.ts` (POST، مع `requireSupabaseAuth`):
-  1. ينشئ/يحدّث صفّ `brand_public_pages`.
-  2. يستدعي `submitToIndexNow([publicUrl])` (الدالة موجودة).
-  3. يستدعي Google ping + Search Console API (المفتاح متاح).
-  4. يُرجع: `{ public_url, indexnow_status, google_status, social_drafts: { twitter, linkedin, reddit, quora } }`.
-- **Sitemap**: تعديل `src/routes/sitemap[.]xml.ts` لإضافة `/b/<slug>` لكل صف نشط.
-- **زر جديد داخل تبويب Run** بعد ظهور `injection_pack`:
-  - «🚀 بثّ الآن» يفتح dialog يعرض المعاينة → عند التأكيد ينادي `/api/brand-broadcast`.
-  - يعرض URL العام + نتائج IndexNow/Google + بطاقات «انسخ ونشر» لكل منصة اجتماعية.
-- **Cron اختياري** (إعادة بثّ أسبوعي) عبر `set_brand_rebroadcast_cron(_hours, _anon)` على نمط `set_pulse_cron` السابق، يستدعي `/api/public/hooks/brand-rebroadcast` الذي يكرّر IndexNow لكل صفّ نشط.
-
-### لماذا يعمل هذا فعلياً مع كل محرك
-
-| المحرك | كيف يلتقط الصفحة |
-|---|---|
-| ChatGPT (Browse) / Copilot | فهرس Bing — IndexNow يدفع الـ URL خلال دقائق |
-| Perplexity | يقرأ من Bing + Google + crawler خاص — صفحتنا قابلة للزحف |
-| Gemini / Google AI Overviews | Google ping + Search Console + sitemap |
-| Claude (web) | يستعمل Brave/Google — تصبح نتيجة قابلة للاستشهاد |
-| Grok | فهرس X + ويب عام — نوفّر draft تغريدة تلقائية تربط للصفحة |
-| DeepSeek / Mistral | crawler ويب عام — robots مفتوح + sitemap |
-
-النتيجة: العلامة تصبح "حقيقة عامة موثّقة" يلتقطها كل محرك خلال أيام، بدل وعد بالنشر اليدوي.
-
-## ملفات سيتم لمسها
-
-- تعديل: `src/components/BrandBoostAgent.tsx` (تبويبات Research/Outreach + زر البثّ)
-- تعديل: `src/components/AIVisibility.tsx` (إظهار الحقول دائمًا، keywords اختياري)
-- تعديل: `src/routes/dashboard.tsx` (إزالة بطاقتي Research/Outreach)
-- تعديل: `src/routes/sitemap[.]xml.ts` (إضافة /b/$slug)
-- جديد: `src/routes/b.$slug.tsx` (الصفحة العامة المفهرسة)
-- جديد: `src/routes/api/brand-broadcast.ts` (تشغيل البث)
-- جديد (اختياري): `src/routes/api/public/hooks/brand-rebroadcast.ts` (cron)
-- ترحيل DB: جدول `brand_public_pages` + RLS + GRANT + (اختياري) دالة `set_brand_rebroadcast_cron`.
-
-## التكلفة (بدون تغيير سعر)
-
-- `Visibility` يبقى 1 وحدة. `Brand Boost Run` يبقى 5 وحدات.
-- `بث الآن` = 0 وحدات إضافية (يعيد استعمال آخر تقرير Brand Boost) — التكلفة الحقيقية على المالك = استدعاء IndexNow/Google (مجاني) + استضافة الصفحة (مشمولة).
-- إن أراد المستخدم إعادة توليد المحتوى قبل البث → يدفع 5 وحدات Brand Boost كالمعتاد.
+هل أبدأ التنفيذ بهذه الخطة، أم تفضّل تعديل الأولويات (مثلاً البدء بـ What-If + Monitor فقط)؟

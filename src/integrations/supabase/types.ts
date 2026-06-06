@@ -363,6 +363,51 @@ export type Database = {
           },
         ]
       }
+      competitor_watch: {
+        Row: {
+          active: boolean
+          alerts: Json
+          baseline: Json | null
+          brand: string
+          competitors: Json
+          created_at: string
+          frequency_hours: number
+          id: string
+          last_run_at: string | null
+          scope: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          alerts?: Json
+          baseline?: Json | null
+          brand: string
+          competitors?: Json
+          created_at?: string
+          frequency_hours?: number
+          id?: string
+          last_run_at?: string | null
+          scope?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          alerts?: Json
+          baseline?: Json | null
+          brand?: string
+          competitors?: Json
+          created_at?: string
+          frequency_hours?: number
+          id?: string
+          last_run_at?: string | null
+          scope?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       crawler_hits: {
         Row: {
           bot_name: string | null
@@ -393,6 +438,39 @@ export type Database = {
           path?: string | null
           user_agent?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      geo_strategies: {
+        Row: {
+          brand: string
+          created_at: string
+          goals: Json
+          id: string
+          recommendations: Json
+          scope: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          goals?: Json
+          id?: string
+          recommendations?: Json
+          scope?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          goals?: Json
+          id?: string
+          recommendations?: Json
+          scope?: Json | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1128,6 +1206,33 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatif_scenarios: {
+        Row: {
+          brand: string
+          changes: Json
+          created_at: string
+          id: string
+          projection: Json
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          projection?: Json
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          projection?: Json
           user_id?: string
         }
         Relationships: []

@@ -1,0 +1,96 @@
+import { useState } from "react";
+import { Loader2, FlaskConical } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
+
+const CHANGES = [
+  { id: "add_content_type", label: "إضافة نوع محتوى جديد" },
+  { id: "new_audience", label: "استهداف جمهور جديد" },
+  { id: "new_platform", label: "إضافة منصّة جديدة" },
+  { id: "increase_frequency", label: "زيادة وتيرة النشر" },
+  { id: "wikipedia", label: "إنشاء صفحة ويكيبيديا" },
+  { id: "press", label: "حملة علاقات عامة" },
+];
+
+export function WhatIfSimulator() {
+  const { lang } = useI18n();
+  let auth: ReturnType<typeof useAuth> | null = null;
+  try { auth = useAuth(); } catch {}
+  const [brand, setBrand] = useState((auth?.profile as any)?.brand_name ?? "");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [res, setRes] = useState<any>(null);
+
+  function toggle(id: string) { setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
+
+  async function run() {
+    if (!brand.trim() || selected.length === 0) return;
+    setBusy(true); setErr(""); setRes(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await apiFetch("/api/what-if", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ brand, lang, changes: { selected, note } }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error || "failed");
+      setRes(j);
+    } catch (e: any) { setErr(e?.message || "failed"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-card/40 p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FlaskConical className="size-4 text-primary"/> محاكاة "ماذا لو"</div>
+        <p className="mb-3 text-xs text-muted-foreground">حاكِ تأثير التغييرات على ظهورك في محركات الذكاء قبل التنفيذ (2 وحدة).</p>
+        <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="اسم العلامة" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+        <div className="mt-2 flex flex-wrap gap-2">
+          {CHANGES.map((c) => (
+            <button key={c.id} onClick={() => toggle(c.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(c.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{c.label}</button>
+          ))}
+        </div>
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
+        <button onClick={run} disabled={busy || !brand.trim() || selected.length === 0} className="mt-2 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+          {busy ? <Loader2 className="size-4 animate-spin"/> : <FlaskConical className="size-4"/>} محاكاة
+        </button>
+        {err && <p className="mt-2 text-xs text-destructive">{err === "subscription_required" ? "اشتراك مطلوب أو رصيد غير كافٍ" : err}</p>}
+      </div>
+
+      {res && (
+        <div className="space-y-3 text-sm">
+          {res.summary && <div className="rounded-xl border border-primary/30 bg-card/60 p-4">{res.summary}</div>}
+          {res.engine_projections?.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="border-b"><th className="p-2 text-start">المحرك</th><th className="p-2 text-start">baseline</th><th className="p-2 text-start">Δ متوقع</th><th className="p-2 text-start">ثقة</th><th className="p-2 text-start">السبب</th></tr></thead>
+                <tbody>
+                  {res.engine_projections.map((p: any, i: number) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="p-2 font-semibold">{p.engine}</td>
+                      <td className="p-2">{p.baseline_score ?? "—"}</td>
+                      <td className="p-2 text-primary">{p.projected_delta}</td>
+                      <td className="p-2">{p.confidence}</td>
+                      <td className="p-2 text-muted-foreground">{p.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 text-xs">
+            {res.estimated_cost && <span className="rounded-full border border-border px-3 py-1">التكلفة: {res.estimated_cost}</span>}
+            {res.time_to_impact_weeks && <span className="rounded-full border border-border px-3 py-1">الوقت: {res.time_to_impact_weeks} أسبوع</span>}
+            {res.final_recommendation && <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-semibold">{res.final_recommendation}</span>}
+          </div>
+          {res.risks?.length > 0 && <div className="text-destructive text-xs"><b>مخاطر:</b> {res.risks.join("، ")}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
