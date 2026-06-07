@@ -67,7 +67,7 @@ function AgentPage() {
   const [visMsg, setVisMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // Channels
   const [channels, setChannels] = useState<any[]>([]);
-  const [chKind, setChKind] = useState<"telegram" | "linkedin" | "facebook" | "instagram">("telegram");
+  const [chKind] = useState<"telegram">("telegram");
   const [chLabel, setChLabel] = useState("");
   const [chBotToken, setChBotToken] = useState("");
   const [chChatId, setChChatId] = useState("");
