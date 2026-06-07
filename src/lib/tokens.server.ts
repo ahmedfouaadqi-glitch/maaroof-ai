@@ -38,12 +38,13 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
     !!(prof as any)?.is_subscribed &&
     (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
   if (planActive && (prof as any)?.subscription_tier) {
-    const { data: plan } = await db.from("subscription_plans").select("id").eq("name", (prof as any).subscription_tier).maybeSingle();
-    if (plan?.id) {
+    const { data: planRow } = await db.from("subscription_plans").select("id").eq("name", (prof as any).subscription_tier).maybeSingle();
+    const planId = (planRow as any)?.id as string | undefined;
+    if (planId) {
       const { data: tpa } = await db
         .from("tool_plan_access")
         .select("tokens_per_use, usd_per_use, enabled")
-        .eq("plan_id", plan.id)
+        .eq("plan_id", planId)
         .eq("tool_key", toolKey)
         .maybeSingle();
       if (tpa && (tpa as any).enabled && Number((tpa as any).tokens_per_use) > 0) {
