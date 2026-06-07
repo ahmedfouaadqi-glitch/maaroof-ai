@@ -33,7 +33,7 @@ const en: Dict = {
   sandbox_running: "Analyzing…",
   scan_tokenize: "Reading content",
   scan_authority: "Evaluating authority",
-  scan_local: "Checking local Iraq relevance",
+  scan_local: "Checking local relevance",
   scan_citation: "Computing citation probability",
   score_label: "GEO Trust Score",
   score_low: "Invisible to AI",
