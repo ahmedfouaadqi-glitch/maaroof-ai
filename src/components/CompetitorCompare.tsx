@@ -51,7 +51,7 @@ type Result = {
   live_search?: { ok: boolean; sources_count: number; failed_queries: number };
 };
 
-const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
+const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
 
 export function CompetitorCompare() {
   const { t, lang } = useI18n();

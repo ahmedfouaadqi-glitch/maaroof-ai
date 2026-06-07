@@ -984,7 +984,7 @@ function AccessTab() {
   );
 }
 
-const ALL_PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
+const ALL_PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
 
 function BoostTab() {
   const [enabled, setEnabled] = useState<string[]>([...ALL_PLATFORMS]);

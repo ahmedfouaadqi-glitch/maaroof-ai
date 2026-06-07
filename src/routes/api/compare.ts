@@ -30,7 +30,7 @@ const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_
       "visibility_percent": <0-100>,
       "geo_score": <0-100>,
       "sentiment": "positive" | "neutral" | "negative",
-      "platform_presence": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100> },
+      "platform_presence": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100>, "kimi": <0-100> },
       "strengths": ["...","..."],
       "weaknesses": ["...","..."]
     }
@@ -324,7 +324,7 @@ export const Route = createFileRoute("/api/compare")({
 
           // (no retry — save credits; deterministic layers will fill the gaps)
 
-          const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
+          const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
           const allBrandNames = [brand, ...competitors];
           const brands = Array.isArray(parsed.brands) ? parsed.brands.slice(0, 5) : [];
 

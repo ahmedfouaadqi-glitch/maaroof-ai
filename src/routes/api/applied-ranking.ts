@@ -17,7 +17,7 @@ type Body = {
   scope?: GeoScope;
 };
 
-const PLATFORMS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek"];
+const PLATFORMS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi"];
 
 const LANG_INSTR: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -28,7 +28,7 @@ const LANG_INSTR: Record<string, string> = {
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
 You are a STRICT, evidence-based "Applied Ranking" analyst for ${m.market}.
-Your job: rate a brand's REAL-WORLD applied presence across THREE pillars and explain how each of the 8 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek) sees it for ${m.audience}.
+Your job: rate a brand's REAL-WORLD applied presence across THREE pillars and explain how each of the 9 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi) sees it for ${m.audience}.
 
 LOCALIZATION CONTEXT: ${m.contextHint}
 
@@ -54,7 +54,7 @@ Return ONLY valid JSON:
   },
   "platforms": [
     { "name": "ChatGPT", "score": <0-100>, "verdict": "high"|"medium"|"low", "why": "1-2 sentences referencing the pillars", "next_step": "single most impactful action for THIS engine" },
-    ... 8 entries total in the order: ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek
+    ... 9 entries total in the order: ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi
   ],
   "priority_actions": ["top 3-6 cross-engine actions sorted by impact"],
   "evidence_used": ["short bullet referring to which source/snippet supported each pillar; if none, say 'no evidence'"]
