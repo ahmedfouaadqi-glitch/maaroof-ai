@@ -68,7 +68,7 @@ export const Route = createFileRoute("/api/public/brand/$slug")({
 <meta name="keywords" content="${escapeHtml(kw)}" />
 <meta name="robots" content="index,follow" />
 <link rel="canonical" href="${escapeHtml(url.origin + url.pathname)}" />
-<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">${safeJsonLd(jsonLd)}</script>
 </head>
 <body>
 <header><h1>${escapeHtml(brand)}</h1>${summary ? `<p>${escapeHtml(summary)}</p>` : ""}</header>
