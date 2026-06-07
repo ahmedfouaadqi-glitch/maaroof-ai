@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcScrape } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { slugify } from "@/lib/crawler-bots";
 import { pingIndexNow } from "@/lib/indexnow.server";
 
