@@ -97,6 +97,7 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
     // Update plan-level fields
     await supabase.from("subscription_plans").update({
       price_usd: priceUsd, monthly_tokens: monthlyTok, daily_tokens: dailyTok,
+      agent_daily_cap: agentDaily || null, agent_monthly_cap: agentMonthly || null, agent_max_targets: agentTargets || null,
     } as any).eq("id", plan.id);
     // Upsert all tool rows
     const payload = Object.values(rows).map((r) => ({
