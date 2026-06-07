@@ -93,7 +93,7 @@ export async function chargeTokens(opts: {
   const cost = await resolveToolCost(opts.userId, opts.toolKey);
   if (cost.tokens <= 0) return { ok: true, balance: Number((prof as any).tokens_balance) || 0, used_today: 0, used_month: 0, tokens: 0, usd: 0 };
 
-  const { data, error } = await db.rpc("charge_tokens", {
+  const { data, error } = await (db.rpc as any)("charge_tokens", {
     _user_id: opts.userId,
     _tool_key: opts.toolKey,
     _tokens: cost.tokens,
