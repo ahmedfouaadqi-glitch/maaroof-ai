@@ -52,7 +52,15 @@ export const Route = createFileRoute("/")({
 
 
 function Page() {
-  const { t, lang } = useI18n();
+ const { t, lang } = useI18n();
+ const { info: country } = useCountry();
+ const welcomeName = country
+   ? lang === "ar"
+     ? country.name_ar
+     : lang === "ku"
+       ? country.name_ku
+       : country.name_en
+   : "";
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const [subOpen, setSubOpen] = useState(false);
 
@@ -116,6 +124,19 @@ function Page() {
             <div className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-accent/90">
               {t("hero_kicker")}
             </div>
+
+            {country && (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-xs text-foreground/80">
+                <span className="text-base leading-none">{country.flag}</span>
+                <span>
+                  {lang === "ar"
+                    ? `مرحباً بزوارنا من ${welcomeName}`
+                    : lang === "ku"
+                      ? `بەخێرهاتنی میوانانمان لە ${welcomeName}`
+                      : `Welcome, visitors from ${welcomeName}`}
+                </span>
+              </div>
+            )}
 
             <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl">
               <span className="text-gradient">{t("hero_title")}</span>
