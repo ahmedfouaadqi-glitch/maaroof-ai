@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.functions";
+import { ChannelsPanel } from "@/components/ChannelsPanel";
+import { ApprovalQueue } from "@/components/ApprovalQueue";
+import { NotifyOnboardModal } from "@/components/NotifyOnboardModal";
 
 import type { ExportPayload } from "@/lib/exports";
 import { apiFetch } from "@/lib/api-client";
