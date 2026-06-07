@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 
-import { SubscribeModal } from "@/components/SubscribeModal";
+
 import {
   ArrowRight, Sparkles, Globe2, ShieldCheck, Zap, Phone, Bot, Wrench,
   Search, Lightbulb, PenSquare, Megaphone, LineChart, Coins,
@@ -62,7 +62,7 @@ function Page() {
        : country.name_en
    : "";
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
-  const [subOpen, setSubOpen] = useState(false);
+  
 
   const howtoKey = (k: ToolKey) => {
     const map: Partial<Record<ToolKey, string>> = {
@@ -329,17 +329,16 @@ function Page() {
               <span className="text-gradient">{t("cta_title")}</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">{t("cta_sub")}</p>
-            <button
-              onClick={() => setSubOpen(true)}
+            <Link
+              to="/pricing"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02]"
             >
               {t("cta_button")} <ArrowRight className="size-4" />
-            </button>
+            </Link>
           </div>
         </div>
       </section>
 
-      <SubscribeModal open={subOpen} onClose={() => setSubOpen(false)} />
       </main>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
