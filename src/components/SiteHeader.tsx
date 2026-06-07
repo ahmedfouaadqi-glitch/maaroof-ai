@@ -8,6 +8,7 @@ import { HexBadge } from "@/components/HexBadge";
 import { useAuth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertsBell } from "@/components/AlertsBell";
+import { CountryBadge } from "@/components/CountryBadge";
 
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
@@ -57,6 +58,7 @@ export function SiteHeader() {
           {auth?.isAdmin && <Link to="/admin" className="text-accent hover:text-foreground">{t("nav_admin")}</Link>}
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2">
+          <CountryBadge compact />
           <LanguageSwitcher />
           <ThemeToggle />
           <AlertsBell />
