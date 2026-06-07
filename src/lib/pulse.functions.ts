@@ -120,7 +120,6 @@ export const triggerPulseCrawl = createServerFn({ method: "POST" })
     }
   });
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PulseSettingsSchema = z.object({
   enabled: z.boolean(),
