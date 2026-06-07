@@ -446,6 +446,23 @@ function AgentPage() {
             </button>
           </div>
 
+          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                <SendIcon className="size-4 text-primary" />
+                <span className="font-semibold">LinkedIn</span>
+                <span className="text-xs text-muted-foreground">— {t("ag_ch_linkedin_desc") || "Publish directly via your connected LinkedIn account"}</span>
+              </div>
+              {channels.some((c) => c.kind === "linkedin") ? (
+                <span className="text-xs text-success font-semibold">✓ {t("ag_ch_active") || "Active"}</span>
+              ) : (
+                <button onClick={addLinkedInChannel} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+                  <Plus className="size-3" /> {t("ag_ch_enable") || "Enable"}
+                </button>
+              )}
+            </div>
+          </div>
+
           {channels.length > 0 && (
             <ul className="mt-4 divide-y divide-border/60 rounded-lg border border-border bg-background/40">
               {channels.map((c) => (
