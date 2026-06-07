@@ -589,7 +589,7 @@ function AgentPage() {
                     )}
                   </div>
                 )}
-                {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && channels.length > 0 && (
+                {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
                     <span className="text-xs text-muted-foreground">{t("ag_pub_to")}:</span>
                     {channels.filter((c) => c.active).map((c) => (
@@ -600,6 +600,20 @@ function AgentPage() {
                         {c.label || c.kind}
                       </button>
                     ))}
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(tk.result.summary)}`}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold text-success hover:bg-success/20"
+                    >
+                      <MessageCircle className="size-3" /> WhatsApp
+                    </a>
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tk.result.summary)}`}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20"
+                    >
+                      <SendIcon className="size-3" /> X / Twitter
+                    </a>
                   </div>
                 )}
               </div>
