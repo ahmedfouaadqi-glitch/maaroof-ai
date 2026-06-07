@@ -6,15 +6,16 @@ import { CostInput } from "@/components/admin/CostInput";
 import { CostBadge } from "@/components/CostBadge";
 import { useI18n } from "@/lib/i18n";
 
-type Plan = { id: string; name: string; description: string | null; price_usd: number | string; monthly_tokens: number; daily_tokens: number };
+type Plan = { id: string; name: string; description: string | null; price_usd: number | string; monthly_tokens: number; daily_tokens: number; agent_daily_cap: number | null; agent_monthly_cap: number | null; agent_max_targets: number | null };
 type ToolRow = { id?: string; plan_id: string; tool_key: string; enabled: boolean; tokens_per_use: number; usd_per_use: number; monthly_quota: number | null; daily_quota: number | null };
 type Suggestion = { tool_key: string; default_tokens: number; default_usd: number };
 
 const T = {
-  ar: { title: "شبكة أسعار الخطط", load: "جارٍ التحميل…", noPlans: "لا توجد خطط مفعّلة.", tool: "الأداة", enabled: "مفعّلة", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", copyFromCatalog: "نسخ من كتالوج الاقتراحات", save: "حفظ كل التغييرات", saved: "تم الحفظ", priceUnsetWarn: "أي خانة فارغة = الأداة معطّلة لمشتركي هذه الخطة.", planMeta: "السعر/الشهر · توكن شهري · توكن يومي" },
-  en: { title: "Plan pricing grid", load: "Loading…", noPlans: "No active plans.", tool: "Tool", enabled: "Enabled", tokensPerUse: "tokens/use", usdPerUse: "USD/use", dailyCap: "daily cap", monthlyCap: "monthly cap", copyFromCatalog: "Copy from catalog", save: "Save all changes", saved: "Saved", priceUnsetWarn: "Any empty cell = the tool is blocked for users on this plan.", planMeta: "Price/mo · Monthly tokens · Daily tokens" },
-  ku: { title: "خشتەی نرخی پلانەکان", load: "بارکردن…", noPlans: "هیچ پلانێک چالاک نییە.", tool: "ئامرازە", enabled: "چالاک", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", copyFromCatalog: "کۆپی لە کاتالۆگ", save: "پاشەکەوتکردن", saved: "پاشەکەوت کرا", priceUnsetWarn: "هەر خانەیەکی بەتاڵ = ئامرازە بۆ پلانە بلۆککراوە.", planMeta: "نرخ/مانگ · تۆکن مانگانە · ڕۆژانە" },
+  ar: { title: "شبكة أسعار الخطط", load: "جارٍ التحميل…", noPlans: "لا توجد خطط مفعّلة.", tool: "الأداة", enabled: "مفعّلة", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", copyFromCatalog: "نسخ من كتالوج الاقتراحات", save: "حفظ كل التغييرات", saved: "تم الحفظ", priceUnsetWarn: "أي خانة فارغة = الأداة معطّلة لمشتركي هذه الخطة.", planMeta: "السعر/الشهر · توكن شهري · توكن يومي", agentBlock: "حصص الوكيل الذكي (تتحكم بها الإدارة فقط)", agentDaily: "مهام/يوم", agentMonthly: "مهام/شهر", agentTargets: "أهداف قصوى" },
+  en: { title: "Plan pricing grid", load: "Loading…", noPlans: "No active plans.", tool: "Tool", enabled: "Enabled", tokensPerUse: "tokens/use", usdPerUse: "USD/use", dailyCap: "daily cap", monthlyCap: "monthly cap", copyFromCatalog: "Copy from catalog", save: "Save all changes", saved: "Saved", priceUnsetWarn: "Any empty cell = the tool is blocked for users on this plan.", planMeta: "Price/mo · Monthly tokens · Daily tokens", agentBlock: "Smart Agent quotas (admin-controlled)", agentDaily: "tasks/day", agentMonthly: "tasks/month", agentTargets: "max targets" },
+  ku: { title: "خشتەی نرخی پلانەکان", load: "بارکردن…", noPlans: "هیچ پلانێک چالاک نییە.", tool: "ئامرازە", enabled: "چالاک", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", copyFromCatalog: "کۆپی لە کاتالۆگ", save: "پاشەکەوتکردن", saved: "پاشەکەوت کرا", priceUnsetWarn: "هەر خانەیەکی بەتاڵ = ئامرازە بۆ پلانە بلۆککراوە.", planMeta: "نرخ/مانگ · تۆکن مانگانە · ڕۆژانە", agentBlock: "سنووری ئەجێنتی زیرەک (تەنیا ئەدمین)", agentDaily: "کار/ڕۆژ", agentMonthly: "کار/مانگ", agentTargets: "ئامانجی زۆر" },
 };
+
 
 export function AdminPlanPricingPanel() {
   const { lang } = useI18n();
