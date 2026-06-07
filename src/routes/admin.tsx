@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Users, Activity, Bell, Crown, Check, X, ShieldPlus, ShieldMinus, Bot, KeyRound as Lock, Smartphone, Pencil, KeySquare } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
+import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
+import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -27,7 +30,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content" | "tokens";
+type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content" | "tokens" | "pricing" | "ledger";
 
 function AdminPage() {
   const { t } = useI18n();
@@ -68,12 +71,12 @@ function AdminPage() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users","tokens","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
+          {(["overview","users","tokens","pricing","ledger","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : k === "tokens" ? "التوكن" : t(`admin_${k}` as any)}
+              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : k === "tokens" ? t("admin_tokens") || "Tokens" : k === "pricing" ? t("admin_pricing_grid") : k === "ledger" ? t("admin_ledger") : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
@@ -81,6 +84,8 @@ function AdminPage() {
         {tab === "overview" && <Overview />}
         {tab === "users" && <UsersTab />}
         {tab === "tokens" && <AdminTokensPanel />}
+        {tab === "pricing" && <AdminPlanPricingPanel />}
+        {tab === "ledger" && <AdminLedgerPanel />}
         {tab === "requests" && <RequestsTab />}
         {tab === "plans" && <PlansTab />}
         {tab === "agent" && <AgentTab />}
@@ -91,6 +96,7 @@ function AdminPage() {
     </div>
   );
 }
+
 
 function Center({ children }: { children: React.ReactNode }) {
   return <div className="flex min-h-[60vh] items-center justify-center">{children}</div>;
@@ -183,7 +189,7 @@ function UsersTab() {
     <div className="overflow-x-auto rounded-2xl border border-border bg-card/70 backdrop-blur">
       <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
-          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Devices</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
+          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">{t("admin_subscription")}</th><th className="p-3 text-start" title={t("admin_used_help")}>{t("admin_used")}</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Devices</th><th className="p-3 text-start">{t("admin_joined")}</th><th className="p-3"></th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
@@ -195,7 +201,12 @@ function UsersTab() {
                 ) : <span className="text-muted-foreground">—</span>}
                 {r.subscription_expires_at && <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(r.subscription_expires_at).toLocaleDateString()}</div>}
               </td>
-              <td className="p-3">{r.monthly_analyses_used}A · {r.monthly_suggestions_used}S</td>
+              <td className="p-3 whitespace-nowrap text-xs" title={t("admin_used_help")}>
+                <span className="inline-flex items-center gap-1"><Activity className="size-3 text-primary" />{r.monthly_analyses_used} <span className="text-muted-foreground">{t("admin_analyses_short")}</span></span>
+                <span className="mx-1 text-muted-foreground">·</span>
+                <span className="inline-flex items-center gap-1"><Pencil className="size-3 text-accent" />{r.monthly_suggestions_used} <span className="text-muted-foreground">{t("admin_posts_short")}</span></span>
+              </td>
+
               <td className="p-3">
                 <div className="flex items-center gap-1.5">
                   <input
@@ -529,7 +540,13 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
         </div>
       </div>
       {!edit ? (
-        <div className="mt-2 text-sm text-muted-foreground">{plan.price_iqd.toLocaleString()} IQD · {plan.duration_days}d · {plan.monthly_analyses}A / {plan.monthly_suggestions}S</div>
+        <div className="mt-2 text-sm text-muted-foreground" title="Monthly Analyses / Monthly Suggestions (posts)">
+          {plan.price_iqd.toLocaleString()} IQD · {plan.duration_days}d ·{" "}
+          <span className="inline-flex items-center gap-1" title="Monthly Analyses"><Activity className="size-3 text-primary" />{plan.monthly_analyses}</span>{" "}
+          <span className="text-muted-foreground">·</span>{" "}
+          <span className="inline-flex items-center gap-1" title="Monthly Suggestions / Posts"><Pencil className="size-3 text-accent" />{plan.monthly_suggestions}</span>
+        </div>
+
       ) : (
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={inp} /></Field>

@@ -1,80 +1,60 @@
-## خطة الإكمال النهائية (بدون افتراضيات، بدون تكلفة فيديو)
+## إكمال المتبقي + توضيح الرموز
 
-### مبادئ عامة
-- **لا قيم افتراضية للتكلفة**: كل أداة وكل خطة وكل مستخدم يجب أن يحدد الأدمن تكلفتها يدوياً. عند غياب التكلفة → الأداة معطّلة لذلك المستخدم مع رسالة "لم يتم تسعير هذه الأداة بعد".
-- **وحدة الدولار مبسّطة**: حقل إدخال التكلفة يحتوي على **قائمة وحدة** بجوار الرقم:
-  - `$` (دولار كامل)
-  - `¢` (سنت = 0.01$)
-  - `m¢` (ملّي‑سنت = 0.00001$ — لتسعير العمليات الرخيصة)
-  يتم التخزين دائماً بـ `usd_cost numeric(12,6)` لكن العرض يحوّل تلقائياً لأقرب وحدة قابلة للقراءة (مثلاً `0.0003$` → `30 m¢`).
-- مكوّن `CostBadge` و`CostInput` موحّدان عبر التطبيق كله.
+### توضيح الرموز A و S (تبسيط فوري)
+في لوحة المستخدمون والخطط كان يُكتب مثل `12A · 7S` — وهي اختصارات غامضة:
+- **A = Analyses** (عدد التحليلات المُستهلكة هذا الشهر)
+- **S = Suggestions** (عدد المنشورات/الاقتراحات المُولَّدة هذا الشهر)
 
-### المرحلة A — ربط chargeTokens بكل المسارات (بدون افتراضيات)
-- تعديل `src/lib/tokens.server.ts → resolveToolCost()`: ترتيب القراءة = **تجاوز المستخدم → خطة المستخدم → لا شيء** (إزالة fallback لـ `tool_pricing_catalog` كافتراضي تلقائي؛ يبقى الكتالوج مرجع اقتراحات فقط للأدمن).
-- إذا لم تُحدَّد تكلفة → يرجع `{ok:false, reason:'unpriced'}` و402 برسالة "لم يقم الأدمن بتسعير هذه الأداة بعد" (AR/EN/KU).
-- ربط `chargeTokens({userId, toolKey})` بجميع `src/routes/api/*` و`src/lib/agent.server.ts` (17 أداة).
+سيتم استبدالها بصيغة واضحة ثلاثية اللغة:
+- العربية: `12 تحليل · 7 منشور`
+- الإنجليزية: `12 analyses · 7 posts`
+- الكردية: `12 شیکاری · 7 پۆست`
+مع `title` تلميح يشرح كل قيمة عند المرور بالماوس. الأماكن المستهدفة: `src/routes/admin.tsx:198` (سطر المستخدم) و `:532` (بطاقة الخطة).
 
-### المرحلة B — نسيان كلمة المرور
-- زر في `src/routes/auth.tsx` يستدعي `supabase.auth.resetPasswordForEmail` مع `redirectTo=/reset-password`.
-- استكمال `reset-password.tsx` لـ `supabase.auth.updateUser`.
+### المرحلة A — ربط chargeTokens بكل المسارات (17 أداة)
+لكل مسار في `src/routes/api/*` و`agent.server.ts`:
+1. استدعاء `chargeTokens({ userId, toolKey })` بعد التحقق من الجلسة وقبل تنفيذ العمل.
+2. عند `ok=false`:
+   - `reason==="unpriced"` → 402 + `chargeFailureBody("unpriced")`.
+   - `reason==="balance" | "daily_limit" | "monthly_limit"` → 402 + الرسالة المقابلة.
+3. تمرير `runId` و`meta` بسيطة (model, input size) للسجل.
+4. الأدوات: analyze, suggest, compare, feasibility, bizdev, research, visibility, brand_boost, company_email, applied_ranking, geo_strategist, competitor_monitor, social_analysis, what_if, brand_authority, geo_rewrite + agent.command, agent.run_targets, agent.visibility.
 
-### المرحلة C — دمج Kimi الكامل
-تحديث `BrandPulseGauges, AIVisibility, GeoStrategist, CompetitorMonitor, social-analysis, what-if` لإضافة Kimi كمحرك تاسع متساوي الوزن في GEO Trust Score، وإظهاره في كل واجهات اختيار المحرك.
+### المرحلة F-tail — شبكة أسعار الخطط (PlanToolGrid)
+- تبويب "الخطط" يصبح: لكل خطة جدول كل أداة قابل للتحرير:
+  - تفعيل/تعطيل، `tokens_per_use`، `usd_per_use` (عبر `CostInput` بوحدة `$/¢/m¢`)، `daily_quota`، `monthly_quota`.
+  - شارة "غير مسعّرة" حمراء لكل خانة فارغة لإجبار الأدمن.
+- زرّ "نسخ من كتالوج الاقتراحات" يملأ القيم تلقائياً (يحتاج موافقة الأدمن).
 
-### المرحلة D — إعادة كتابة المحتوى (بدون بيانات تجريبية)
-- `src/routes/index.tsx`: Hero + بطاقات 11 أداة + 3 خطوات.
-- `src/routes/guide.tsx`: دليل خطوة-بخطوة لكل أداة مع تلميحات وأمثلة مدخل/مخرج نصية.
-- `src/routes/tools.$slug.tsx`: صفحة هبوط ديناميكية لكل أداة.
+### المرحلة F-spend — تبويب "سجل التوكن"
+- جدول لحظي من `token_ledger` مع فلاتر (مستخدم/أداة/تاريخ) + تصدير CSV/Excel عبر `ExportButtons`.
+- لوحة ملخّص أعلى الصفحة: إجمالي اليوم/الشهر (توكن + $)، أعلى 5 أدوات وأعلى 5 مستخدمين.
 
-### المرحلة E — شروحات تعريفية (بدون فيديو/تكلفة)
-- `src/components/HowItWorks.tsx`: شرح نصي + أيقونات Lucide + رسومات SVG/CSS بسيطة + أمثلة واقعية، AR/EN/KU.
+### المرحلة C — Kimi محرك تاسع
+- إضافة Kimi إلى مصفوفة المحركات في: `BrandPulseGauges`, `AIVisibility`, `GeoStrategist`, `CompetitorMonitor`, `social-analysis`, `what-if`.
+- شعار وأيقونة في `engine-logos.tsx`.
+- وزن متساوٍ في حساب GEO Trust Score (المجموع يصبح 9 بدل 8).
 
-### المرحلة F — لوحة الأدمن الموحّدة (الجوهر الجديد)
+### المرحلة D — إعادة كتابة المحتوى
+- `src/routes/index.tsx` — Hero + 11 بطاقة أداة + 3 خطوات (من الواقع، بلا بيانات تجريبية).
+- `src/routes/guide.tsx` — دليل خطوة-بخطوة لكل أداة مع تلميحات وأمثلة مدخل/مخرج نصية.
+- `src/routes/tools.$slug.tsx` — صفحة هبوط لكل أداة (5 slugs: brand-boost / visibility / competitor-monitor / what-if / report-builder) مع زر "ابدأ الآن".
 
-#### 1) دمج الصلاحيات داخل تبويب "المستخدمون"
-- إزالة تبويب الصلاحيات المنفصل. لكل مستخدم سطر قابل للتوسعة `<UserExpand />` يعرض:
-  - **الدور** (admin/user) — تعديل مباشر عبر `user_roles`.
-  - **الخطة الحالية** + زر تغيير + ملخّص حدود (شهري/يومي/رصيد).
-  - **شبكة الأدوات** (17 صفّ × 6 أعمدة):
-    | الأداة | مسموحة؟ | تكلفة التوكن/استخدام | تكلفة الدولار/استخدام (مع وحدة) | الاستخدام اليوم/الشهر | الإجمالي المنفَق ($/توكن) |
-  - كل خلية تكلفة قابلة للتحرير لحظياً بـ `CostInput` (رقم + قائمة وحدة `$` / `¢` / `m¢`).
-  - زر "حفظ" يحدّث `profiles.per_user_tool_overrides` (jsonb).
-  - زر "إعادة للقيمة من الخطة" يمسح التجاوز.
-  - عمود **الإجمالي المنفَق** = `SUM(token_ledger.tokens)` و`SUM(token_ledger.usd_cost)` لذلك المستخدم وتلك الأداة (Realtime عبر `useQuery` كل 10 ثوان).
-
-#### 2) تبويب "الخطط"
-- جدول `subscription_plans`: تعديل `monthly_tokens, daily_tokens, price_usd` (مع `CostInput`).
-- لكل خطة جدول فرعي `tool_plan_access` يعرض **كل أداة** مع:
-  - تفعيل/تعطيل + `tokens_per_use` + `usd_per_use` (وحدة قابلة للاختيار) + `daily_limit` + `monthly_limit`.
-- شارة "غير مسعّرة" حمراء إذا لم تُحدَّد القيمة (لإجبار الأدمن).
-
-#### 3) تبويب "كتالوج الأدوات (اقتراحات)"
-- مرجع للأدمن فقط — يحتوي أسعار اقتراحية يستخدمها كنقطة بداية عند الضغط على "نسخ إلى الخطة". **لا يُطبَّق تلقائياً** على أي مستخدم.
-
-#### 4) تبويب "سجل التوكن"
-- قراءة `token_ledger` بفلترة (مستخدم/أداة/تاريخ) + تصدير CSV/Excel.
-- لكل صفّ: عرض التوكن + الدولار بالوحدة المبسّطة.
-
-#### 5) لوحة ملخّص أعلى الصفحة
-- إجمالي المنفَق اليوم والشهر (توكن + $)، عدد المستخدمين النشطين، أعلى 5 أدوات استهلاكاً، أعلى 5 مستخدمين كلفة.
-
-### مكوّنات مشتركة جديدة
-- `src/components/admin/CostInput.tsx`: حقل رقم + `Select` بوحدة (`$ / ¢ / m¢`) → يخزّن `numeric(12,6)`.
-- `src/components/CostBadge.tsx`: يعرض القيمة بأنسب وحدة تلقائياً مع شارة التوكن.
-- `src/components/admin/UserToolGrid.tsx`: الشبكة القابلة للتعديل لكل مستخدم.
-- `src/components/admin/PlanToolGrid.tsx`: الشبكة لكل خطة.
+### المرحلة E — HowItWorks نصي
+- مكوّن `src/components/HowItWorks.tsx` لكل أداة: أيقونات Lucide + رسوم SVG/CSS بسيطة + مثال مدخل/مخرج. ثلاث لغات عبر `useI18n`. **بدون فيديو**.
 
 ### قاعدة البيانات
-- Migration جديدة:
-  - تأكيد أن `usd_per_use, price_usd, usd_cost` نوعها `numeric(12,6)` (لدعم `m¢`).
-  - إضافة عمود `is_priced boolean generated always as (...)` (أو استخدام NULL كإشارة "غير مسعّر").
-  - إضافة view `v_user_tool_spend` لتجميع لحظي من `token_ledger` لكل (user, tool).
-  - GRANTs لكل الجداول الجديدة.
+لا حاجة لتغييرات جديدة — كل البنية التحتية (token_ledger، v_user_tool_spend، numeric(12,6)) جاهزة من الدور السابق.
 
 ### ترتيب التنفيذ
-A (إزالة الافتراضيات + ربط) → F (الأدمن الموحّد) → B → C → D → E.
+1. توضيح A/S (تعديل سطرين).
+2. PlanToolGrid + تبويب سجل التوكن (لوحة الأدمن الكاملة).
+3. Kimi في GEO Trust Score.
+4. ربط chargeTokens بالمسارات الـ17.
+5. إعادة كتابة index/guide + صفحات tools.$slug.
+6. HowItWorks النصي.
 
 ### ملاحظات
-- جميع النصوص بالعربية/الإنجليزية/الكردية عبر `useI18n`.
-- التصديرات (Excel/PDF/CSV) متاحة في كل تبويب أدمن + كل أداة عبر `ExportButtons`.
-- لا بيانات تجريبية في أي مكان.
+- كل النصوص الجديدة عبر `useI18n` (AR/EN/KU).
+- ExportButtons (Excel/PDF/CSV) متاحة في تبويبات الأدمن وصفحات الأدوات.
+- بدون أي بيانات تجريبية.
