@@ -112,6 +112,9 @@ export type Database = {
       }
       agent_tasks: {
         Row: {
+          approval_channel_id: string | null
+          approval_status: string | null
+          approved_at: string | null
           created_at: string
           error: string | null
           id: string
@@ -123,6 +126,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_channel_id?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
           created_at?: string
           error?: string | null
           id?: string
@@ -134,6 +140,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_channel_id?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
           created_at?: string
           error?: string | null
           id?: string
@@ -145,6 +154,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agent_tasks_approval_channel_id_fkey"
+            columns: ["approval_channel_id"]
+            isOneToOne: false
+            referencedRelation: "publish_channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agent_tasks_target_id_fkey"
             columns: ["target_id"]
@@ -666,36 +682,45 @@ export type Database = {
         Row: {
           account_label: string | null
           active: boolean
+          approval_mode: string
           config: Json
           connection_id: string | null
           created_at: string
+          external_account_id: string | null
           id: string
           kind: string
           label: string | null
+          scopes: Json
           user_id: string
           verified_at: string | null
         }
         Insert: {
           account_label?: string | null
           active?: boolean
+          approval_mode?: string
           config?: Json
           connection_id?: string | null
           created_at?: string
+          external_account_id?: string | null
           id?: string
           kind: string
           label?: string | null
+          scopes?: Json
           user_id: string
           verified_at?: string | null
         }
         Update: {
           account_label?: string | null
           active?: boolean
+          approval_mode?: string
           config?: Json
           connection_id?: string | null
           created_at?: string
+          external_account_id?: string | null
           id?: string
           kind?: string
           label?: string | null
+          scopes?: Json
           user_id?: string
           verified_at?: string | null
         }
@@ -1085,6 +1110,50 @@ export type Database = {
             columns: ["addon_id"]
             isOneToOne: false
             referencedRelation: "agent_addons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          link: string | null
+          read_at: string | null
+          task_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          link?: string | null
+          read_at?: string | null
+          task_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          link?: string | null
+          read_at?: string | null
+          task_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tasks"
             referencedColumns: ["id"]
           },
         ]
