@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Users, Activity, Bell, Crown, Check, X, ShieldPlus, ShieldMinus, Bot, KeyRound as Lock, Smartphone, Pencil, KeySquare } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
+import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
+import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -27,7 +30,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content" | "tokens";
+type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content" | "tokens" | "pricing" | "ledger";
 
 function AdminPage() {
   const { t } = useI18n();
@@ -68,12 +71,12 @@ function AdminPage() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users","tokens","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
+          {(["overview","users","tokens","pricing","ledger","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : k === "tokens" ? "التوكن" : t(`admin_${k}` as any)}
+              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : k === "tokens" ? t("admin_tokens") || "Tokens" : k === "pricing" ? t("admin_pricing_grid") : k === "ledger" ? t("admin_ledger") : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
@@ -81,6 +84,8 @@ function AdminPage() {
         {tab === "overview" && <Overview />}
         {tab === "users" && <UsersTab />}
         {tab === "tokens" && <AdminTokensPanel />}
+        {tab === "pricing" && <AdminPlanPricingPanel />}
+        {tab === "ledger" && <AdminLedgerPanel />}
         {tab === "requests" && <RequestsTab />}
         {tab === "plans" && <PlansTab />}
         {tab === "agent" && <AgentTab />}
@@ -91,6 +96,7 @@ function AdminPage() {
     </div>
   );
 }
+
 
 function Center({ children }: { children: React.ReactNode }) {
   return <div className="flex min-h-[60vh] items-center justify-center">{children}</div>;

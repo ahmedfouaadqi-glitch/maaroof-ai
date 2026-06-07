@@ -4,7 +4,7 @@ import { Loader2, Search, Download, Activity } from "lucide-react";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { CostBadge, formatUsd } from "@/components/CostBadge";
 import { useI18n } from "@/lib/i18n";
-import { exportToCsv } from "@/lib/exports";
+import { exportToCSV } from "@/lib/exports";
 
 type LedgerRow = { id: string; user_id: string; tool_key: string; tokens: number; usd_cost: number; created_at: string; meta: any; run_id: string | null };
 type Profile = { id: string; email: string | null; full_name: string | null; username: string | null };
@@ -77,16 +77,22 @@ export function AdminLedgerPanel() {
   }, [filtered]);
 
   function exportCsv() {
-    const data = filtered.map((r) => ({
-      time: new Date(r.created_at).toISOString(),
-      user_email: profiles[r.user_id]?.email || r.user_id,
-      tool: r.tool_key,
-      tokens: r.tokens,
-      usd: Number(r.usd_cost).toFixed(6),
-      run_id: r.run_id || "",
-    }));
-    exportToCsv("token-ledger", data);
+    const cols = [L.time, L.user, L.tool, L.tokens, L.usd, L.run];
+    const data = filtered.map((r) => [
+      new Date(r.created_at).toISOString(),
+      profiles[r.user_id]?.email || r.user_id,
+      r.tool_key,
+      r.tokens,
+      Number(r.usd_cost).toFixed(6),
+      r.run_id || "",
+    ]);
+    exportToCSV({
+      title: "token-ledger",
+      lang: (lang as any) || "ar",
+      sections: [{ heading: L.title, kind: "table", table: { columns: cols, data } }],
+    });
   }
+
 
   return (
     <div className="space-y-4">
