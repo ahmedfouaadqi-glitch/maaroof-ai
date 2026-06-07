@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 const COST = 2;
 
@@ -34,6 +35,8 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+        const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor" });
+        if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const body = await request.json();
         const { action, id, brand, competitors = [], frequency_hours = 24, lang = "ar", scope } = body;

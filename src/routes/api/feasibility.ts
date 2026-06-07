@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 type Body = {
   project_name?: string;
@@ -149,6 +150,8 @@ export const Route = createFileRoute("/api/feasibility")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const _chg = await chargeTokens({ userId, toolKey: "feasibility" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota piggybacks on monthly_analyses_used
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();

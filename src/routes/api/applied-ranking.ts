@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 type Body = {
   brand_name: string;
@@ -126,6 +127,8 @@ export const Route = createFileRoute("/api/applied-ranking")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const _chg = await chargeTokens({ userId, toolKey: "applied_ranking" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota: counts against monthly_analyses (premium tool, costs 2 by default but 1 per call here)
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();

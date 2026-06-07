@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { describeMarket } from "@/lib/geo-scope.server";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 const COST = 3;
 
@@ -20,6 +21,8 @@ export const Route = createFileRoute("/api/geo-strategist")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+        const _chg = await chargeTokens({ userId, toolKey: "geo_strategist" });
+        if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
         if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });

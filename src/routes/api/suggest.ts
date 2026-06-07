@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 type Body = {
   description?: string;
@@ -85,6 +86,8 @@ export const Route = createFileRoute("/api/suggest")({
           const { data: u } = await admin.auth.getUser(token);
           const userId = u.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const _chg = await chargeTokens({ userId, toolKey: "suggest" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
