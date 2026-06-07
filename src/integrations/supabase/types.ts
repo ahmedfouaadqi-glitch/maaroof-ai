@@ -573,7 +573,9 @@ export type Database = {
           max_devices: number
           monthly_analyses_used: number
           monthly_suggestions_used: number
+          notify_onboarded: boolean
           per_user_tool_overrides: Json
+          preferred_notify_channel: string
           quota_overrides: Json
           specialty: string | null
           subscription_expires_at: string | null
@@ -606,7 +608,9 @@ export type Database = {
           max_devices?: number
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          notify_onboarded?: boolean
           per_user_tool_overrides?: Json
+          preferred_notify_channel?: string
           quota_overrides?: Json
           specialty?: string | null
           subscription_expires_at?: string | null
@@ -639,7 +643,9 @@ export type Database = {
           max_devices?: number
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          notify_onboarded?: boolean
           per_user_tool_overrides?: Json
+          preferred_notify_channel?: string
           quota_overrides?: Json
           specialty?: string | null
           subscription_expires_at?: string | null
@@ -658,31 +664,40 @@ export type Database = {
       }
       publish_channels: {
         Row: {
+          account_label: string | null
           active: boolean
           config: Json
+          connection_id: string | null
           created_at: string
           id: string
           kind: string
           label: string | null
           user_id: string
+          verified_at: string | null
         }
         Insert: {
+          account_label?: string | null
           active?: boolean
           config?: Json
+          connection_id?: string | null
           created_at?: string
           id?: string
           kind: string
           label?: string | null
           user_id: string
+          verified_at?: string | null
         }
         Update: {
+          account_label?: string | null
           active?: boolean
           config?: Json
+          connection_id?: string | null
           created_at?: string
           id?: string
           kind?: string
           label?: string | null
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
