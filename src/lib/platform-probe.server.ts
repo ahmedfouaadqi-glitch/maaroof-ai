@@ -8,8 +8,11 @@ import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } 
 
 type Lang = "en" | "ar" | "ku";
 
-export const PLATFORMS_8 = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
-export type Platform8 = typeof PLATFORMS_8[number];
+export const PLATFORMS_9 = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
+export type Platform9 = typeof PLATFORMS_9[number];
+// Back-compat aliases for older imports
+export const PLATFORMS_8 = PLATFORMS_9;
+export type Platform8 = Platform9;
 
 export type BrandEvidenceInput = {
   name: string;
