@@ -6,15 +6,16 @@ import { CostInput } from "@/components/admin/CostInput";
 import { CostBadge } from "@/components/CostBadge";
 import { useI18n } from "@/lib/i18n";
 
-type Plan = { id: string; name: string; description: string | null; price_usd: number | string; monthly_tokens: number; daily_tokens: number };
+type Plan = { id: string; name: string; description: string | null; price_usd: number | string; monthly_tokens: number; daily_tokens: number; agent_daily_cap: number | null; agent_monthly_cap: number | null; agent_max_targets: number | null };
 type ToolRow = { id?: string; plan_id: string; tool_key: string; enabled: boolean; tokens_per_use: number; usd_per_use: number; monthly_quota: number | null; daily_quota: number | null };
 type Suggestion = { tool_key: string; default_tokens: number; default_usd: number };
 
 const T = {
-  ar: { title: "شبكة أسعار الخطط", load: "جارٍ التحميل…", noPlans: "لا توجد خطط مفعّلة.", tool: "الأداة", enabled: "مفعّلة", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", copyFromCatalog: "نسخ من كتالوج الاقتراحات", save: "حفظ كل التغييرات", saved: "تم الحفظ", priceUnsetWarn: "أي خانة فارغة = الأداة معطّلة لمشتركي هذه الخطة.", planMeta: "السعر/الشهر · توكن شهري · توكن يومي" },
-  en: { title: "Plan pricing grid", load: "Loading…", noPlans: "No active plans.", tool: "Tool", enabled: "Enabled", tokensPerUse: "tokens/use", usdPerUse: "USD/use", dailyCap: "daily cap", monthlyCap: "monthly cap", copyFromCatalog: "Copy from catalog", save: "Save all changes", saved: "Saved", priceUnsetWarn: "Any empty cell = the tool is blocked for users on this plan.", planMeta: "Price/mo · Monthly tokens · Daily tokens" },
-  ku: { title: "خشتەی نرخی پلانەکان", load: "بارکردن…", noPlans: "هیچ پلانێک چالاک نییە.", tool: "ئامرازە", enabled: "چالاک", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", copyFromCatalog: "کۆپی لە کاتالۆگ", save: "پاشەکەوتکردن", saved: "پاشەکەوت کرا", priceUnsetWarn: "هەر خانەیەکی بەتاڵ = ئامرازە بۆ پلانە بلۆککراوە.", planMeta: "نرخ/مانگ · تۆکن مانگانە · ڕۆژانە" },
+  ar: { title: "شبكة أسعار الخطط", load: "جارٍ التحميل…", noPlans: "لا توجد خطط مفعّلة.", tool: "الأداة", enabled: "مفعّلة", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", copyFromCatalog: "نسخ من كتالوج الاقتراحات", save: "حفظ كل التغييرات", saved: "تم الحفظ", priceUnsetWarn: "أي خانة فارغة = الأداة معطّلة لمشتركي هذه الخطة.", planMeta: "السعر/الشهر · توكن شهري · توكن يومي", agentBlock: "حصص الوكيل الذكي (تتحكم بها الإدارة فقط)", agentDaily: "مهام/يوم", agentMonthly: "مهام/شهر", agentTargets: "أهداف قصوى" },
+  en: { title: "Plan pricing grid", load: "Loading…", noPlans: "No active plans.", tool: "Tool", enabled: "Enabled", tokensPerUse: "tokens/use", usdPerUse: "USD/use", dailyCap: "daily cap", monthlyCap: "monthly cap", copyFromCatalog: "Copy from catalog", save: "Save all changes", saved: "Saved", priceUnsetWarn: "Any empty cell = the tool is blocked for users on this plan.", planMeta: "Price/mo · Monthly tokens · Daily tokens", agentBlock: "Smart Agent quotas (admin-controlled)", agentDaily: "tasks/day", agentMonthly: "tasks/month", agentTargets: "max targets" },
+  ku: { title: "خشتەی نرخی پلانەکان", load: "بارکردن…", noPlans: "هیچ پلانێک چالاک نییە.", tool: "ئامرازە", enabled: "چالاک", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", copyFromCatalog: "کۆپی لە کاتالۆگ", save: "پاشەکەوتکردن", saved: "پاشەکەوت کرا", priceUnsetWarn: "هەر خانەیەکی بەتاڵ = ئامرازە بۆ پلانە بلۆککراوە.", planMeta: "نرخ/مانگ · تۆکن مانگانە · ڕۆژانە", agentBlock: "سنووری ئەجێنتی زیرەک (تەنیا ئەدمین)", agentDaily: "کار/ڕۆژ", agentMonthly: "کار/مانگ", agentTargets: "ئامانجی زۆر" },
 };
+
 
 export function AdminPlanPricingPanel() {
   const { lang } = useI18n();
@@ -24,7 +25,7 @@ export function AdminPlanPricingPanel() {
 
   async function load() {
     setBusy(true);
-    const { data } = await supabase.from("subscription_plans").select("id,name,description,price_usd,monthly_tokens,daily_tokens").eq("active", true).order("sort_order");
+    const { data } = await supabase.from("subscription_plans").select("id,name,description,price_usd,monthly_tokens,daily_tokens,agent_daily_cap,agent_monthly_cap,agent_max_targets").eq("active", true).order("sort_order");
     setPlans((data || []) as any);
     setBusy(false);
   }
@@ -50,6 +51,9 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
   const [priceUsd, setPriceUsd] = useState<number>(Number(plan.price_usd) || 0);
   const [monthlyTok, setMonthlyTok] = useState<number>(plan.monthly_tokens || 0);
   const [dailyTok, setDailyTok] = useState<number>(plan.daily_tokens || 0);
+  const [agentDaily, setAgentDaily] = useState<number>(plan.agent_daily_cap || 0);
+  const [agentMonthly, setAgentMonthly] = useState<number>(plan.agent_monthly_cap || 0);
+  const [agentTargets, setAgentTargets] = useState<number>(plan.agent_max_targets || 0);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +97,7 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
     // Update plan-level fields
     await supabase.from("subscription_plans").update({
       price_usd: priceUsd, monthly_tokens: monthlyTok, daily_tokens: dailyTok,
+      agent_daily_cap: agentDaily || null, agent_monthly_cap: agentMonthly || null, agent_max_targets: agentTargets || null,
     } as any).eq("id", plan.id);
     // Upsert all tool rows
     const payload = Object.values(rows).map((r) => ({
@@ -124,6 +129,25 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
           <button onClick={copyFromCatalog} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-3 py-1 text-xs hover:bg-card">
             <ArrowDownToLine className="size-3" /> {L.copyFromCatalog}
           </button>
+        </div>
+      </div>
+
+      {/* Smart Agent quotas — admin-controlled only */}
+      <div className="mb-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
+        <div className="mb-2 text-xs font-semibold text-accent">{L.agentBlock}</div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <label className="text-muted-foreground">{L.agentDaily}:</label>
+          <input type="number" min={0} value={agentDaily || ""} placeholder="0"
+            onChange={(e) => setAgentDaily(Number(e.target.value) || 0)}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1" />
+          <label className="text-muted-foreground">{L.agentMonthly}:</label>
+          <input type="number" min={0} value={agentMonthly || ""} placeholder="0"
+            onChange={(e) => setAgentMonthly(Number(e.target.value) || 0)}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1" />
+          <label className="text-muted-foreground">{L.agentTargets}:</label>
+          <input type="number" min={0} value={agentTargets || ""} placeholder="0"
+            onChange={(e) => setAgentTargets(Number(e.target.value) || 0)}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1" />
         </div>
       </div>
 

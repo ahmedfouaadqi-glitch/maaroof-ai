@@ -10,7 +10,7 @@ import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.func
 
 import type { ExportPayload } from "@/lib/exports";
 import { apiFetch } from "@/lib/api-client";
-import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
+import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
   head: () => ({
@@ -67,7 +67,7 @@ function AgentPage() {
   const [visMsg, setVisMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // Channels
   const [channels, setChannels] = useState<any[]>([]);
-  const [chKind, setChKind] = useState<"telegram" | "linkedin" | "facebook" | "instagram">("telegram");
+  const [chKind] = useState<"telegram">("telegram");
   const [chLabel, setChLabel] = useState("");
   const [chBotToken, setChBotToken] = useState("");
   const [chChatId, setChChatId] = useState("");
@@ -410,56 +410,32 @@ function AgentPage() {
           </Link>
         </div>
 
-        {/* Publishing Channels */}
+        {/* Publishing Channels — Telegram (more channels via per-task share links) */}
         <div className="mt-8 rounded-2xl border border-accent/30 bg-card/70 p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold">
             <SendIcon className="size-5 text-accent" /> {t("ag_ch_title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("ag_ch_desc")}</p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(["telegram", "linkedin", "facebook", "instagram"] as const).map((k) => {
-              const Icon = k === "telegram" ? MessageCircle : k === "linkedin" ? Linkedin : k === "facebook" ? Facebook : Instagram;
-              const soon = k !== "telegram";
-              return (
-                <button key={k} type="button" onClick={() => setChKind(k)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    chKind === k ? "border-accent bg-accent/20 text-accent" : "border-border text-muted-foreground"
-                  }`}>
-                  <Icon className="size-3.5" /> {t(`ag_ch_${k}` as any)}
-                  {soon && <span className="ms-1 rounded-full bg-muted px-1.5 text-[9px]">{t("ag_ch_soon_tag")}</span>}
-                </button>
-              );
-            })}
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            <input value={chLabel} onChange={(e) => setChLabel(e.target.value)}
+              placeholder={t("ag_ch_label_ph")}
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            <input value={chBotToken} onChange={(e) => setChBotToken(e.target.value)}
+              placeholder={t("ag_ch_token_ph")} type="password"
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            <input value={chChatId} onChange={(e) => setChChatId(e.target.value)}
+              placeholder={t("ag_ch_chatid_ph")}
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
           </div>
 
-          {chKind === "telegram" ? (
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
-              <input value={chLabel} onChange={(e) => setChLabel(e.target.value)}
-                placeholder={t("ag_ch_label_ph")}
-                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-              <input value={chBotToken} onChange={(e) => setChBotToken(e.target.value)}
-                placeholder={t("ag_ch_token_ph")} type="password"
-                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-              <input value={chChatId} onChange={(e) => setChChatId(e.target.value)}
-                placeholder={t("ag_ch_chatid_ph")}
-                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-            </div>
-          ) : (
-            <div className="mt-3 rounded-lg border border-dashed border-border bg-background/40 p-3 text-xs text-muted-foreground">
-              {t("ag_ch_soon_desc")}
-            </div>
-          )}
-
-          {chKind === "telegram" && (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noreferrer"
-                className="text-xs text-primary underline">{t("ag_ch_help")}</a>
-              <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-                <Plus className="size-4" /> {t("ag_ch_add")}
-              </button>
-            </div>
-          )}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noreferrer"
+              className="text-xs text-primary underline">{t("ag_ch_help")}</a>
+            <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
+              <Plus className="size-4" /> {t("ag_ch_add")}
+            </button>
+          </div>
 
           {channels.length > 0 && (
             <ul className="mt-4 divide-y divide-border/60 rounded-lg border border-border bg-background/40">
@@ -478,6 +454,7 @@ function AgentPage() {
             </ul>
           )}
         </div>
+
 
         <div className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
@@ -612,7 +589,7 @@ function AgentPage() {
                     )}
                   </div>
                 )}
-                {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && channels.length > 0 && (
+                {(tk.task_type === "suggest_post" || tk.task_type === "command") && tk.status === "done" && tk.result?.summary && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
                     <span className="text-xs text-muted-foreground">{t("ag_pub_to")}:</span>
                     {channels.filter((c) => c.active).map((c) => (
@@ -623,6 +600,20 @@ function AgentPage() {
                         {c.label || c.kind}
                       </button>
                     ))}
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(tk.result.summary)}`}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold text-success hover:bg-success/20"
+                    >
+                      <MessageCircle className="size-3" /> WhatsApp
+                    </a>
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tk.result.summary)}`}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20"
+                    >
+                      <SendIcon className="size-3" /> X / Twitter
+                    </a>
                   </div>
                 )}
               </div>

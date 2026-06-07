@@ -749,6 +749,9 @@ export type Database = {
       subscription_plans: {
         Row: {
           active: boolean
+          agent_daily_cap: number | null
+          agent_max_targets: number | null
+          agent_monthly_cap: number | null
           created_at: string
           daily_tokens: number
           description: string | null
@@ -765,6 +768,9 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          agent_daily_cap?: number | null
+          agent_max_targets?: number | null
+          agent_monthly_cap?: number | null
           created_at?: string
           daily_tokens?: number
           description?: string | null
@@ -781,6 +787,9 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          agent_daily_cap?: number | null
+          agent_max_targets?: number | null
+          agent_monthly_cap?: number | null
           created_at?: string
           daily_tokens?: number
           description?: string | null
