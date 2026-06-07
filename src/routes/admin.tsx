@@ -67,18 +67,19 @@ function AdminPage() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
+          {(["overview","users","tokens","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : t(`admin_${k}` as any)}
+              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : k === "tokens" ? "التوكن" : t(`admin_${k}` as any)}
             </button>
           ))}
         </div>
 
         {tab === "overview" && <Overview />}
         {tab === "users" && <UsersTab />}
+        {tab === "tokens" && <AdminTokensPanel />}
         {tab === "requests" && <RequestsTab />}
         {tab === "plans" && <PlansTab />}
         {tab === "agent" && <AgentTab />}
