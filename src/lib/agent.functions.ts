@@ -98,6 +98,18 @@ export const runAgentNow = createServerFn({ method: "POST" })
               `اكتمل تحليل GEO لـ "${subject}"${score != null ? ` — الدرجة ${score}/100` : ""}`,
               { link: "/agent" });
           }
+        } catch (e: any) {
+          await supabaseAdmin.from("agent_tasks").insert({
+            user_id: userId, target_id: (tg as any).id, task_type: taskType,
+            input: subject, status: "failed", error: e?.message || "error",
+          });
+          failed++;
+        }
+      }
+    }
+    return { ok: true, done, failed };
+  });
+
 
 export const runAgentCommand = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
