@@ -114,7 +114,8 @@ export function ReportBuilder() {
     [data, selected],
   );
 
-  const palette = ["hsl(var(--primary))", "hsl(var(--accent))", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  // High-contrast palette (OKLCH-derived hex), distinct in both light/dark
+  const palette = ["#3b82f6", "#f97316", "#10b981", "#a855f7", "#ef4444", "#eab308"];
 
   const payload = useMemo<() => ExportPayload>(() => () => {
     const sections: any[] = [];
