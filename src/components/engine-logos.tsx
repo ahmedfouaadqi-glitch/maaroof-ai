@@ -86,6 +86,19 @@ export const DeepSeekLogo = (props: LogoProps) => (
   </svg>
 );
 
+export const KimiLogo = (props: LogoProps) => (
+  <svg {...base(props)} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="kimiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#7B61FF" />
+        <stop offset="100%" stopColor="#1FB8CD" />
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10" fill="url(#kimiGrad)" />
+    <text x="12" y="16" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="800" fill="#fff">K</text>
+  </svg>
+);
+
 export type EngineMeta = {
   name: string;
   Logo: ComponentType<LogoProps>;
@@ -101,4 +114,6 @@ export const ENGINES: EngineMeta[] = [
   { name: "Grok",       Logo: GrokLogo,       tint: "from-zinc-300/20 to-zinc-500/5" },
   { name: "Mistral",    Logo: MistralLogo,    tint: "from-orange-400/20 to-red-500/5" },
   { name: "DeepSeek",   Logo: DeepSeekLogo,   tint: "from-indigo-400/20 to-blue-600/5" },
+  { name: "Kimi",       Logo: KimiLogo,       tint: "from-violet-400/20 to-cyan-500/5" },
 ];
+
