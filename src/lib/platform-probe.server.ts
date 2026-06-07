@@ -63,7 +63,7 @@ function basisFromEvidence(ev: number, hasOfficial: boolean, hasSeo: boolean): P
   return "insufficient_evidence";
 }
 
-const PLATFORM_RUBRIC = `Score each engine 0-100 USING ITS OWN signal mix — the 8 numbers MUST vary based on which evidence is present:
+const PLATFORM_RUBRIC = `Score each engine 0-100 USING ITS OWN signal mix — the 9 numbers MUST vary based on which evidence is present:
 
 - chatgpt (OpenAI + Bing): WEIGH news + wiki + official site + OG metadata + reputable backlinks. Penalize if no news & no wiki.
 - gemini (Google + Knowledge Graph): WEIGH JSON-LD/Organization/LocalBusiness schema + Google reviews + geo presence + recency. Penalize hard if no JSON-LD.
@@ -73,13 +73,14 @@ const PLATFORM_RUBRIC = `Score each engine 0-100 USING ITS OWN signal mix — th
 - grok (xAI + X/Twitter): WEIGH X/Twitter mentions + recent news + viral buzz + YouTube. Penalize hard if no X presence.
 - mistral (Brave + EU + multilingual): WEIGH multilingual content (lang attr) + structured pages + EU/non-US sources + official.
 - deepseek (technical web, CN+EN): WEIGH technical/structured factual pages + JSON-LD + docs + multilingual.
+- kimi (Moonshot AI, CN/EN, long-context): WEIGH long-form structured content (word_count ≥ 1500) + multilingual (esp. CN/EN) + technical/research-style docs + wiki + official. Penalize thin content and pure-marketing pages.
 
 Scoring guardrails:
 - No evidence at all for the brand → ALL engines ≤ 10.
 - Only an official site, zero news/social/reviews → most engines 18-32; engines that need their specific signal (grok without X, perplexity without news, copilot without LinkedIn) stay ≤ 20.
 - Strong matching signal for a specific engine (e.g. 3+ LinkedIn results for copilot, 3+ X results for grok, JSON-LD+Organization for gemini) → that engine 55-80.
-- Wikipedia presence boosts chatgpt + claude by ~15.
-- The 8 numbers MUST NOT all cluster within 10 points of each other unless evidence is genuinely uniform.`;
+- Wikipedia presence boosts chatgpt + claude + kimi by ~12.
+- The 9 numbers MUST NOT all cluster within 10 points of each other unless evidence is genuinely uniform.`;
 
 async function probeOneBrand(
   brand: BrandEvidenceInput,
