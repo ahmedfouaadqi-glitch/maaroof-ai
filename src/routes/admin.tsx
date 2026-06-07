@@ -183,7 +183,7 @@ function UsersTab() {
     <div className="overflow-x-auto rounded-2xl border border-border bg-card/70 backdrop-blur">
       <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-background/40 text-xs uppercase text-muted-foreground">
-          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">Subscription</th><th className="p-3 text-start">Used</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Devices</th><th className="p-3 text-start">Joined</th><th className="p-3"></th></tr>
+          <tr><th className="p-3 text-start">Email</th><th className="p-3 text-start">{t("admin_subscription")}</th><th className="p-3 text-start" title={t("admin_used_help")}>{t("admin_used")}</th><th className="p-3 text-start">{t("admin_quota_override")}</th><th className="p-3 text-start">Devices</th><th className="p-3 text-start">{t("admin_joined")}</th><th className="p-3"></th></tr>
         </thead>
         <tbody>
           {rows.map((r) => (
@@ -195,7 +195,12 @@ function UsersTab() {
                 ) : <span className="text-muted-foreground">—</span>}
                 {r.subscription_expires_at && <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(r.subscription_expires_at).toLocaleDateString()}</div>}
               </td>
-              <td className="p-3">{r.monthly_analyses_used}A · {r.monthly_suggestions_used}S</td>
+              <td className="p-3 whitespace-nowrap text-xs" title={t("admin_used_help")}>
+                <span className="inline-flex items-center gap-1"><Activity className="size-3 text-primary" />{r.monthly_analyses_used} <span className="text-muted-foreground">{t("admin_analyses_short")}</span></span>
+                <span className="mx-1 text-muted-foreground">·</span>
+                <span className="inline-flex items-center gap-1"><Pencil className="size-3 text-accent" />{r.monthly_suggestions_used} <span className="text-muted-foreground">{t("admin_posts_short")}</span></span>
+              </td>
+
               <td className="p-3">
                 <div className="flex items-center gap-1.5">
                   <input
@@ -529,7 +534,13 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
         </div>
       </div>
       {!edit ? (
-        <div className="mt-2 text-sm text-muted-foreground">{plan.price_iqd.toLocaleString()} IQD · {plan.duration_days}d · {plan.monthly_analyses}A / {plan.monthly_suggestions}S</div>
+        <div className="mt-2 text-sm text-muted-foreground" title="Monthly Analyses / Monthly Suggestions (posts)">
+          {plan.price_iqd.toLocaleString()} IQD · {plan.duration_days}d ·{" "}
+          <span className="inline-flex items-center gap-1" title="Monthly Analyses"><Activity className="size-3 text-primary" />{plan.monthly_analyses}</span>{" "}
+          <span className="text-muted-foreground">·</span>{" "}
+          <span className="inline-flex items-center gap-1" title="Monthly Suggestions / Posts"><Pencil className="size-3 text-accent" />{plan.monthly_suggestions}</span>
+        </div>
+
       ) : (
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={inp} /></Field>
