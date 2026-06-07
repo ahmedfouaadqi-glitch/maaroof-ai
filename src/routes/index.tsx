@@ -173,14 +173,14 @@ function Page() {
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent">
-              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">8</span>
+              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">{ENGINES.length}</span>
               AI Engines
             </span>
             <h2 className="mt-4 font-display text-3xl font-bold md:text-4xl">{t("engines_title")}</h2>
             <p className="mt-3 text-muted-foreground">{t("engines_sub")}</p>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
             {ENGINES.map((e) => (
               <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.tint} p-4 text-center transition hover:scale-[1.03] hover:border-primary/50 hover:shadow-[var(--shadow-glow)]`}>
                 <div className="relative mx-auto mb-2 size-14">
