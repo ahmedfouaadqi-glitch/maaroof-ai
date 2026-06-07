@@ -12,6 +12,7 @@ import {
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
 import { ENGINES } from "@/components/engine-logos";
+import { useCountry } from "@/lib/use-country";
 
 
 export const Route = createFileRoute("/")({
