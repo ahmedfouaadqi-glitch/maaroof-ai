@@ -8,8 +8,11 @@ import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } 
 
 type Lang = "en" | "ar" | "ku";
 
-export const PLATFORMS_8 = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek"] as const;
-export type Platform8 = typeof PLATFORMS_8[number];
+export const PLATFORMS_9 = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
+export type Platform9 = typeof PLATFORMS_9[number];
+// Back-compat aliases for older imports
+export const PLATFORMS_8 = PLATFORMS_9;
+export type Platform8 = Platform9;
 
 export type BrandEvidenceInput = {
   name: string;
@@ -60,7 +63,7 @@ function basisFromEvidence(ev: number, hasOfficial: boolean, hasSeo: boolean): P
   return "insufficient_evidence";
 }
 
-const PLATFORM_RUBRIC = `Score each engine 0-100 USING ITS OWN signal mix — the 8 numbers MUST vary based on which evidence is present:
+const PLATFORM_RUBRIC = `Score each engine 0-100 USING ITS OWN signal mix — the 9 numbers MUST vary based on which evidence is present:
 
 - chatgpt (OpenAI + Bing): WEIGH news + wiki + official site + OG metadata + reputable backlinks. Penalize if no news & no wiki.
 - gemini (Google + Knowledge Graph): WEIGH JSON-LD/Organization/LocalBusiness schema + Google reviews + geo presence + recency. Penalize hard if no JSON-LD.
@@ -70,13 +73,14 @@ const PLATFORM_RUBRIC = `Score each engine 0-100 USING ITS OWN signal mix — th
 - grok (xAI + X/Twitter): WEIGH X/Twitter mentions + recent news + viral buzz + YouTube. Penalize hard if no X presence.
 - mistral (Brave + EU + multilingual): WEIGH multilingual content (lang attr) + structured pages + EU/non-US sources + official.
 - deepseek (technical web, CN+EN): WEIGH technical/structured factual pages + JSON-LD + docs + multilingual.
+- kimi (Moonshot AI, CN/EN, long-context): WEIGH long-form structured content (word_count ≥ 1500) + multilingual (esp. CN/EN) + technical/research-style docs + wiki + official. Penalize thin content and pure-marketing pages.
 
 Scoring guardrails:
 - No evidence at all for the brand → ALL engines ≤ 10.
 - Only an official site, zero news/social/reviews → most engines 18-32; engines that need their specific signal (grok without X, perplexity without news, copilot without LinkedIn) stay ≤ 20.
 - Strong matching signal for a specific engine (e.g. 3+ LinkedIn results for copilot, 3+ X results for grok, JSON-LD+Organization for gemini) → that engine 55-80.
-- Wikipedia presence boosts chatgpt + claude by ~15.
-- The 8 numbers MUST NOT all cluster within 10 points of each other unless evidence is genuinely uniform.`;
+- Wikipedia presence boosts chatgpt + claude + kimi by ~12.
+- The 9 numbers MUST NOT all cluster within 10 points of each other unless evidence is genuinely uniform.`;
 
 async function probeOneBrand(
   brand: BrandEvidenceInput,
@@ -115,12 +119,12 @@ async function probeOneBrand(
 
   const sys = `${PLATFORM_RUBRIC}
 
-You are scoring how each of the 8 AI engines above would RECALL or CITE the brand "${brand.name}" if asked about it in market "${market || "global"}". Use ONLY the evidence below. Do NOT invent facts. Different engines MUST get different scores when their specific signals differ.
+You are scoring how each of the 9 AI engines above would RECALL or CITE the brand "${brand.name}" if asked about it in market "${market || "global"}". Use ONLY the evidence below. Do NOT invent facts. Different engines MUST get different scores when their specific signals differ.
 
 Reply in STRICT JSON only, no markdown:
 {
-  "scores": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100> },
-  "reasons": { "chatgpt": "<≤120 chars in ${langName}, cite the specific signal>", "gemini": "...", "claude": "...", "perplexity": "...", "copilot": "...", "grok": "...", "mistral": "...", "deepseek": "..." }
+  "scores": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100>, "kimi": <0-100> },
+  "reasons": { "chatgpt": "<≤120 chars in ${langName}, cite the specific signal>", "gemini": "...", "claude": "...", "perplexity": "...", "copilot": "...", "grok": "...", "mistral": "...", "deepseek": "...", "kimi": "..." }
 }`;
 
   const user = `Brand: ${brand.name}
@@ -181,6 +185,7 @@ Return the JSON now. Remember: different engines MUST score differently when the
           case "claude": return (pe.wiki || 0) + ((seo?.word_count || 0) >= 800 ? 2 : 0);
           case "mistral": return (pe.general || 0) + (seo?.has_lang ? 2 : 0);
           case "deepseek": return (seo?.has_jsonld ? 3 : 0) + (pe.general || 0);
+          case "kimi": return (pe.wiki || 0) + ((seo?.word_count || 0) >= 1500 ? 3 : 0) + (seo?.has_lang ? 1 : 0);
           default: return 0;
         }
       })();
