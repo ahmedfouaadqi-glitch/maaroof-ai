@@ -63,16 +63,16 @@ function Page() {
       feasibility: "guide_how_feasibility",
       bizdev: "guide_how_bizdev",
       research: "guide_how_research",
-      visibility: "guide_how_agent_visibility",
+      visibility: "guide_how_visibility",
       brand_boost: "guide_how_brand_boost",
       company_email: "guide_how_company_email",
-      applied_ranking: "guide_how_company_email",
-      geo_strategist: "guide_how_analyze",
-      competitor_monitor: "guide_how_compare",
-      social_analysis: "guide_how_agent_visibility",
-      what_if: "guide_how_analyze",
-      brand_authority: "guide_how_brand_boost",
-      geo_rewrite: "guide_how_suggest",
+      applied_ranking: "guide_how_applied_ranking",
+      geo_strategist: "guide_how_geo_strategist",
+      competitor_monitor: "guide_how_competitor_monitor",
+      social_analysis: "guide_how_social_analysis",
+      what_if: "guide_how_what_if",
+      brand_authority: "guide_how_brand_authority",
+      geo_rewrite: "guide_how_geo_rewrite",
       "agent.command": "guide_how_agent_command",
       "agent.run_targets": "guide_how_agent_targets",
       "agent.visibility": "guide_how_agent_visibility",
@@ -173,14 +173,14 @@ function Page() {
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent">
-              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">8</span>
+              <span className="grid size-4 place-items-center rounded-full bg-accent/20 font-mono text-[10px]">{ENGINES.length}</span>
               AI Engines
             </span>
             <h2 className="mt-4 font-display text-3xl font-bold md:text-4xl">{t("engines_title")}</h2>
             <p className="mt-3 text-muted-foreground">{t("engines_sub")}</p>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
             {ENGINES.map((e) => (
               <div key={e.name} className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${e.tint} p-4 text-center transition hover:scale-[1.03] hover:border-primary/50 hover:shadow-[var(--shadow-glow)]`}>
                 <div className="relative mx-auto mb-2 size-14">
@@ -270,22 +270,30 @@ function Page() {
             <p className="mt-3 text-muted-foreground">{t("home_tools_sub")}</p>
           </div>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {TOOL_CATALOG.map((td) => (
-              <div key={td.key} className="group rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
-                <div className="flex items-center gap-2">
-                  <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
-                    {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
-                  </span>
-                  <h3 className="font-display text-base font-semibold">{td.labels[L]}</h3>
-                  <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-primary">
-                    {td.costPerRun}×
-                  </span>
+            {TOOL_CATALOG.map((td) => {
+              const hasLanding = ["analyze", "suggest", "compare", "visibility", "brand_boost"].includes(td.key);
+              const cardInner = (
+                <div className="group h-full rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
+                  <div className="flex items-center gap-2">
+                    <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
+                      {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
+                    </span>
+                    <h3 className="font-display text-base font-semibold">{td.labels[L]}</h3>
+                    <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-primary">
+                      {td.costPerRun}×
+                    </span>
+                  </div>
+                  <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                    {t(howtoKey(td.key) as any)}
+                  </p>
                 </div>
-                <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                  {t(howtoKey(td.key) as any)}
-                </p>
-              </div>
-            ))}
+              );
+              return hasLanding ? (
+                <Link key={td.key} to="/tools/$slug" params={{ slug: td.key }} className="block">{cardInner}</Link>
+              ) : (
+                <Link key={td.key} to="/guide" className="block">{cardInner}</Link>
+              );
+            })}
           </div>
           <div className="mt-6 text-center">
             <Link to="/guide" className="text-sm text-primary hover:underline">{t("guide_title")} →</Link>
