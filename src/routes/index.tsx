@@ -121,9 +121,6 @@ function Page() {
               <Sparkles className="size-3.5 animate-pulse" /> {t("hero_badge")}
             </span>
 
-            <div className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-accent/90">
-              {t("hero_kicker")}
-            </div>
 
             {country && (
               <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-xs text-foreground/80">
