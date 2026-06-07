@@ -102,7 +102,7 @@ ${kw ? `<meta name="keywords" content="${escapeHtml(kw)}" />` : ""}
 <meta property="og:url" content="${escapeHtml(canonical)}" />
 <meta property="og:type" content="profile" />
 <link rel="canonical" href="${escapeHtml(canonical)}" />
-<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">${safeJsonLd(jsonLd)}</script>
 </head>
 <body>
 <header>
