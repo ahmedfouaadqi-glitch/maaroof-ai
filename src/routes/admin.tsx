@@ -1079,9 +1079,11 @@ function ContentTab() {
   const [editLang, setEditLang] = useState<"ar" | "en" | "ku">("ar");
   const [overrides, setOverrides] = useState<Record<string, Record<string, string>>>({});
   const [filter, setFilter] = useState("");
+  const [group, setGroup] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string>("");
+  const [translatingKey, setTranslatingKey] = useState<string | null>(null);
   const [SITE_DICTS, setDicts] = useState<any>(null);
 
   useEffect(() => {
@@ -1098,22 +1100,38 @@ function ContentTab() {
 
   const baseDict = SITE_DICTS[editLang] || SITE_DICTS.en;
   const allKeys = Object.keys(SITE_DICTS.en);
+
+  // Group keys by prefix (homepage / dashboard / tools / agent / admin / nav / footer / report / other)
+  const groupOf = (k: string): string => {
+    if (k.startsWith("hero_") || k.startsWith("home_") || k.startsWith("cta_") || k.startsWith("why_") || k.startsWith("how_") || k.startsWith("link_") || k.startsWith("engines_") || k.startsWith("orbit_")) return "homepage";
+    if (k.startsWith("dash_") || k.startsWith("dashboard_")) return "dashboard";
+    if (k.startsWith("tool") || k.startsWith("guide_") || k.startsWith("sandbox_") || k.startsWith("suggest_") || k.startsWith("compare_") || k.startsWith("visibility_") || k.startsWith("brand_") || k.startsWith("feasibility_") || k.startsWith("research_") || k.startsWith("whatif_") || k.startsWith("monitor_") || k.startsWith("strategist_") || k.startsWith("social_") || k.startsWith("bizdev_") || k.startsWith("company_")) return "tools";
+    if (k.startsWith("agent")) return "agent";
+    if (k.startsWith("admin_") || k.startsWith("pricing_") || k.startsWith("plan_")) return "admin";
+    if (k.startsWith("nav_") || k.startsWith("footer")) return "nav";
+    if (k.startsWith("report_")) return "reports";
+    if (k.startsWith("auth_") || k.startsWith("signin") || k.startsWith("signup")) return "auth";
+    return "other";
+  };
+
   const f = filter.trim().toLowerCase();
   const visible = allKeys.filter((k) => {
+    if (group !== "all" && groupOf(k) !== group) return false;
     if (!f) return true;
     return k.toLowerCase().includes(f)
       || String(baseDict[k] || "").toLowerCase().includes(f)
       || String(overrides[editLang]?.[k] || "").toLowerCase().includes(f);
   });
 
-  const setVal = (k: string, v: string) => {
+  const setVal = (k: string, v: string, lang: "ar" | "en" | "ku" = editLang) => {
     setOverrides((prev) => {
-      const next = { ...prev, [editLang]: { ...(prev[editLang] || {}) } };
-      if (v.trim() === "" || v === baseDict[k]) {
-        delete next[editLang][k];
-        if (Object.keys(next[editLang]).length === 0) delete next[editLang];
+      const next = { ...prev, [lang]: { ...(prev[lang] || {}) } };
+      const base = SITE_DICTS[lang]?.[k] ?? "";
+      if (v.trim() === "" || v === base) {
+        delete next[lang][k];
+        if (Object.keys(next[lang]).length === 0) delete next[lang];
       } else {
-        next[editLang][k] = v;
+        next[lang][k] = v;
       }
       return next;
     });
@@ -1128,82 +1146,129 @@ function ContentTab() {
     }, { onConflict: "key" });
     if (error) setMsg("✗ " + error.message);
     else {
-      setMsg("✓ Saved · refresh page to see changes");
+      setMsg("✓ تم الحفظ — حدّث الصفحة لرؤية التغييرات");
       try { localStorage.setItem("geo-site-text", JSON.stringify(overrides)); } catch {}
     }
     setSaving(false);
   };
 
+  const autoTranslate = async (k: string) => {
+    const sourceText = overrides[editLang]?.[k] ?? String(baseDict[k] ?? "");
+    if (!sourceText.trim()) return;
+    setTranslatingKey(k);
+    try {
+      const { translateText } = await import("@/lib/translate.functions");
+      const others = (["ar", "en", "ku"] as const).filter((l) => l !== editLang);
+      const results = await Promise.all(others.map((target) =>
+        translateText({ data: { text: sourceText, sourceLang: editLang, targetLang: target } })
+      ));
+      results.forEach((r, idx) => setVal(k, r.text, others[idx]));
+      setMsg(`✓ تُرجم "${k}" إلى ${others.join(" و ")}`);
+    } catch (e: any) {
+      setMsg("✗ " + (e?.message || "ترجمة فشلت"));
+    } finally {
+      setTranslatingKey(null);
+    }
+  };
+
   const overrideCount = Object.values(overrides).reduce((a, b) => a + Object.keys(b || {}).length, 0);
 
+  const groups: { id: string; label: string }[] = [
+    { id: "all", label: "الكل" },
+    { id: "homepage", label: "الرئيسية" },
+    { id: "dashboard", label: "لوحتي" },
+    { id: "tools", label: "الأدوات" },
+    { id: "agent", label: "الوكيل" },
+    { id: "reports", label: "التقارير" },
+    { id: "admin", label: "الإدارة" },
+    { id: "nav", label: "التنقل" },
+    { id: "auth", label: "الحساب" },
+    { id: "other", label: "أخرى" },
+  ];
+
   return (
-    <div className="rounded-2xl border border-border bg-card/70 p-4 backdrop-blur">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="font-display text-xl font-bold">Site Content Editor</h2>
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">{overrideCount} custom override(s)</span>
-        <div className="ms-auto flex items-center gap-2">
-          <select value={editLang} onChange={(e) => setEditLang(e.target.value as any)}
-            className="rounded-md border border-border bg-background/60 px-3 py-1.5 text-sm">
-            <option value="ar">العربية</option>
-            <option value="en">English</option>
-            <option value="ku">Kurdish</option>
-          </select>
-          <button onClick={save} disabled={saving}
-            className="rounded-md bg-gradient-to-r from-primary to-accent px-4 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">
-            {saving ? "Saving…" : "Save All Changes"}
-          </button>
+    <div className="space-y-4">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 rounded-2xl border-2 border-border bg-card/95 p-4 backdrop-blur shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold">محرّر محتوى الموقع</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">عدّل النصوص باللغة المختارة وستُرجَم تلقائياً للغتين الأخريين عند الضغط على زر الترجمة.</p>
+          </div>
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{overrideCount} نص مخصّص</span>
+
+          <div className="ms-auto flex items-center gap-2">
+            <div className="inline-flex rounded-full border border-border bg-background p-1">
+              {(["ar", "en", "ku"] as const).map((l) => (
+                <button key={l} onClick={() => setEditLang(l)}
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition ${editLang === l ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
+                  {l === "ar" ? "العربية" : l === "en" ? "English" : "کوردی"}
+                </button>
+              ))}
+            </div>
+            <button onClick={save} disabled={saving}
+              className="rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50">
+              {saving ? "جاري الحفظ…" : "حفظ الكل"}
+            </button>
+          </div>
         </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input type="search" value={filter} onChange={(e) => setFilter(e.target.value)}
+            placeholder="ابحث بالنص أو المفتاح…"
+            className="min-w-[200px] flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm" />
+          <div className="flex flex-wrap gap-1.5">
+            {groups.map((g) => (
+              <button key={g.id} onClick={() => setGroup(g.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${group === g.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/40"}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {msg && <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">{msg}</div>}
       </div>
 
-      <input
-        type="search"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filter by key or text…"
-        className="mb-4 w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm"
-      />
-
-      {msg && <div className="mb-3 rounded-md border border-border bg-background/40 p-2 text-xs">{msg}</div>}
-
-      <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-[11px] text-warning mb-3">
-        ⚠ Editing {visible.length} of {allKeys.length} keys. Empty field or default value clears the override. Changes affect ALL visitors.
-      </div>
-
-      <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-2">
+      {/* Cards grid */}
+      <div className="text-xs text-muted-foreground">{visible.length} بطاقة من {allKeys.length}</div>
+      <div className="grid gap-3 md:grid-cols-2">
         {visible.map((k) => {
           const def = String(baseDict[k] ?? "");
           const ov = overrides[editLang]?.[k];
           const val = ov ?? def;
-          const isMultiline = def.length > 80;
+          const isMultiline = def.length > 60;
+          const isCustom = !!ov;
+          const isTranslating = translatingKey === k;
           return (
-            <div key={k} className={`rounded-md border p-2 ${ov ? "border-primary/40 bg-primary/5" : "border-border bg-background/30"}`}>
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <code className="text-[11px] font-mono text-accent">{k}</code>
-                {ov && <span className="text-[10px] text-primary">customized</span>}
+            <div key={k}
+              className={`rounded-xl border-2 p-4 transition ${isCustom ? "border-primary bg-primary/5" : "border-border bg-card/50 hover:border-primary/30"}`}>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                  <span className="rounded bg-muted/40 px-1.5 py-0.5 font-mono">{groupOf(k)}</span>
+                  <code className="font-mono opacity-60">{k}</code>
+                </span>
+                {isCustom && <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">معدّل</span>}
               </div>
               {isMultiline ? (
-                <textarea
-                  value={val}
-                  onChange={(e) => setVal(k, e.target.value)}
-                  rows={Math.min(6, Math.ceil(val.length / 80))}
-                  className="w-full rounded border border-border bg-background/60 px-2 py-1 text-sm"
-                  dir={editLang === "en" ? "ltr" : "rtl"}
-                />
+                <textarea value={val} onChange={(e) => setVal(k, e.target.value)}
+                  rows={Math.min(5, Math.max(2, Math.ceil(val.length / 70)))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm leading-relaxed focus:border-primary focus:outline-none"
+                  dir={editLang === "en" ? "ltr" : "rtl"} />
               ) : (
-                <input
-                  type="text"
-                  value={val}
-                  onChange={(e) => setVal(k, e.target.value)}
-                  className="w-full rounded border border-border bg-background/60 px-2 py-1 text-sm"
-                  dir={editLang === "en" ? "ltr" : "rtl"}
-                />
+                <input type="text" value={val} onChange={(e) => setVal(k, e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  dir={editLang === "en" ? "ltr" : "rtl"} />
               )}
-              {ov && (
-                <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>Default: {def.slice(0, 100)}{def.length > 100 ? "…" : ""}</span>
-                  <button onClick={() => setVal(k, "")} className="text-destructive hover:underline">Reset</button>
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <button onClick={() => autoTranslate(k)} disabled={isTranslating}
+                  className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent hover:bg-accent/20 disabled:opacity-50">
+                  {isTranslating ? <Loader2 className="size-3 animate-spin" /> : "🌐"} ترجمة تلقائية للغتين الأخريين
+                </button>
+                {isCustom && (
+                  <button onClick={() => setVal(k, "")} className="text-[11px] text-destructive hover:underline">استعادة الافتراضي</button>
+                )}
+              </div>
             </div>
           );
         })}
@@ -1211,3 +1276,4 @@ function ContentTab() {
     </div>
   );
 }
+
