@@ -1403,7 +1403,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_user_tool_spend: {
+        Row: {
+          last_used_at: string | null
+          tokens_month: number | null
+          tokens_today: number | null
+          tool_key: string | null
+          total_tokens: number | null
+          total_usd: number | null
+          usd_month: number | null
+          user_id: string | null
+          uses: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       charge_tokens: {
