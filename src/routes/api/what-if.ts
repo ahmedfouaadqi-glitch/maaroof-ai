@@ -45,7 +45,7 @@ Estimate the LIKELY directional impact of the proposed changes on the brand's vi
   "summary": "2-3 sentences",
   "engine_projections": [
     {"engine":"chatgpt","baseline_score":<0-100|null>,"projected_delta":"+X% to +Y%","confidence":"low|medium|high","reason":"..."}
-    // include gemini, perplexity, copilot, claude, grok, mistral, deepseek
+    // include gemini, perplexity, copilot, claude, grok, mistral, deepseek, kimi
   ],
   "estimated_cost": "free|low|medium|high",
   "time_to_impact_weeks": <number>,
