@@ -419,67 +419,9 @@ function AgentPage() {
           </Link>
         </div>
 
-        {/* Publishing Channels — Telegram (more channels via per-task share links) */}
-        <div className="mt-8 rounded-2xl border border-accent/30 bg-card/70 p-5">
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold">
-            <SendIcon className="size-5 text-accent" /> {t("ag_ch_title")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("ag_ch_desc")}</p>
+        <ChannelsPanel onChanged={load} />
+        <ApprovalQueue />
 
-          <div className="mt-3 grid gap-2 md:grid-cols-3">
-            <input value={chLabel} onChange={(e) => setChLabel(e.target.value)}
-              placeholder={t("ag_ch_label_ph")}
-              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-            <input value={chBotToken} onChange={(e) => setChBotToken(e.target.value)}
-              placeholder={t("ag_ch_token_ph")} type="password"
-              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-            <input value={chChatId} onChange={(e) => setChChatId(e.target.value)}
-              placeholder={t("ag_ch_chatid_ph")}
-              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-          </div>
-
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noreferrer"
-              className="text-xs text-primary underline">{t("ag_ch_help")}</a>
-            <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-              <Plus className="size-4" /> {t("ag_ch_add")}
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-sm">
-                <SendIcon className="size-4 text-primary" />
-                <span className="font-semibold">LinkedIn</span>
-                <span className="text-xs text-muted-foreground">— {t("ag_ch_linkedin_desc") || "Publish directly via your connected LinkedIn account"}</span>
-              </div>
-              {channels.some((c) => c.kind === "linkedin") ? (
-                <span className="text-xs text-success font-semibold">✓ {t("ag_ch_active") || "Active"}</span>
-              ) : (
-                <button onClick={addLinkedInChannel} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-                  <Plus className="size-3" /> {t("ag_ch_enable") || "Enable"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {channels.length > 0 && (
-            <ul className="mt-4 divide-y divide-border/60 rounded-lg border border-border bg-background/40">
-              {channels.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="size-4 text-accent" />
-                    <span className="font-semibold">{c.label || c.kind}</span>
-                    <span className="text-xs text-muted-foreground">({c.kind})</span>
-                  </div>
-                  <button onClick={() => removeChannel(c.id)} className="text-destructive hover:opacity-80">
-                    <Trash2 className="size-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
 
         <div className="mt-8">
