@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const AssistantSchema = z.object({
   question: z.string().min(3).max(2000),
@@ -11,6 +12,7 @@ const AssistantSchema = z.object({
 });
 
 export const pulseAssistant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => AssistantSchema.parse(input))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -118,7 +120,6 @@ export const triggerPulseCrawl = createServerFn({ method: "POST" })
     }
   });
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PulseSettingsSchema = z.object({
   enabled: z.boolean(),
