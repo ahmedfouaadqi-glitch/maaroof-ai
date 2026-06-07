@@ -25,7 +25,7 @@ export function AdminPlanPricingPanel() {
 
   async function load() {
     setBusy(true);
-    const { data } = await supabase.from("subscription_plans").select("id,name,description,price_usd,monthly_tokens,daily_tokens").eq("active", true).order("sort_order");
+    const { data } = await supabase.from("subscription_plans").select("id,name,description,price_usd,monthly_tokens,daily_tokens,agent_daily_cap,agent_monthly_cap,agent_max_targets").eq("active", true).order("sort_order");
     setPlans((data || []) as any);
     setBusy(false);
   }
