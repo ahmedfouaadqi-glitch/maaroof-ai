@@ -6,6 +6,8 @@ import { LogOut, Menu, X, Volume2, VolumeX } from "lucide-react";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
 import { HexBadge } from "@/components/HexBadge";
 import { useAuth } from "@/lib/auth";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { AlertsBell } from "@/components/AlertsBell";
 
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
@@ -56,6 +58,8 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher />
+          <ThemeToggle />
+          <AlertsBell />
           <button
             type="button"
             onClick={toggleSound}
