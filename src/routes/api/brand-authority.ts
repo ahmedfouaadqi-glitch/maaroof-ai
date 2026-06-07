@@ -54,6 +54,9 @@ export const Route = createFileRoute("/api/brand-authority")({
           const { admin, userId, profile, err } = await authUser(request);
           if (err) return err;
 
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+
           // Quota check (same model as brand-boost)
           const bbToggle = String((profile as any)?.quota_overrides?.brand_boost || "").toLowerCase();
           if (bbToggle === "off") return Response.json({ error: "tool_disabled_by_admin" }, { status: 403 });
