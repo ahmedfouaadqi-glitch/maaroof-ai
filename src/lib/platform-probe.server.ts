@@ -3,7 +3,7 @@
 // (LinkedIn for Copilot, X for Grok, Wikipedia for Claude/ChatGPT, Reddit for
 // Perplexity, news, reviews, geo, official site, on-site SEO). The model is
 // instructed to score each engine independently using its own rubric, so the
-// 8 numbers actually vary per brand instead of being a single shared score.
+// 9 numbers actually vary per brand instead of being a single shared score.
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
 
 type Lang = "en" | "ar" | "ku";

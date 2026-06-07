@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Building2, Loader2, Mail, Copy, Check, Search, Sparkles, ExternalLink } from "lucide-react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { ExportButtons } from "@/components/ExportButtons";
+
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
@@ -193,14 +193,6 @@ export function CompanyOutreach() {
             </div>
           )}
 
-          <ExportButtons size="xs" build={() => ({
-            title: t("outreach_title"), subtitle: company,
-            sections: [
-              { kind: "kv", heading: t("outreach_brief"), rows: [["", out.company_brief || ""]] },
-              ...(out.email_subject || out.email_body ? [{ kind: "kv" as const, heading: t("outreach_email"),
-                rows: [[t("col_subject"), out.email_subject || ""], [t("col_body"), out.email_body || ""]] as [string, string | number][] }] : []),
-            ],
-          })} />
 
           <HandoffMenu source="outreach" getText={() => `${company}\n${out.company_brief || ""}\n\n${out.email_body || ""}`} />
         </div>

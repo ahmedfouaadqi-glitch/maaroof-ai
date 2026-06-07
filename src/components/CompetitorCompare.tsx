@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Trophy, Users, Sparkles, Lightbulb } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
-import { ExportButtons } from "./ExportButtons";
+
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
@@ -225,7 +225,7 @@ export function CompetitorCompare() {
                 )}
               </div>
             </div>
-            <ExportButtons build={buildExport} />
+            
           </div>
 
           {result.overview && (

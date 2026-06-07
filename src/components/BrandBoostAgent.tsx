@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { VisibilityPanel } from "@/components/AIVisibility";
 import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
-import { ExportButtons } from "@/components/ExportButtons";
+
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
@@ -136,10 +136,10 @@ export function BrandBoostAgent() {
         <TabsContent value="visibility" className="mt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
             {lang === "ar"
-              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
+              ? "فحص ظهور علامتك في 9 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
               : lang === "ku"
-              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
-              : "Probe your brand visibility across 8 AI engines (1 analysis). Brand required, keywords optional."}
+              ? "پشکنینی دەرکەوتنی براندەکەت لە 9 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
+              : "Probe your brand visibility across 9 AI engines (1 analysis). Brand required, keywords optional."}
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
         </TabsContent>
@@ -239,9 +239,6 @@ export function BrandBoostAgent() {
       )}
       {report && (
         <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-end">
-            <ExportButtons build={() => buildExport(jobs[0] || { brand_name: brand })} />
-          </div>
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">

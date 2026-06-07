@@ -201,7 +201,7 @@ const en: Dict = {
   compare_how_it_works: "How these indicators are computed (live)",
   compare_how_visibility: "Visibility % — measured live from real web evidence: number and type of search results (news, official site, reviews, geo) returned by Firecrawl for each brand. More citations on independent sources = higher score.",
   compare_how_geo: "Geo score — derived from geographic signals: address mentions, Google Maps presence, local reviews, and your selected scope (country/city). Tied to the geo scope shown above.",
-  compare_how_platforms: "8 AI platforms — for platforms with available APIs (Perplexity, Gemini, Grok), we issue real queries. For closed platforms (ChatGPT, Claude, Copilot, DeepSeek, Mistral) the bar is inferred from the real evidence layer (citations, official presence, news freshness), not from a guess.",
+  compare_how_platforms: "9 AI platforms — for platforms with available APIs (Perplexity, Gemini, Grok), we issue real queries. For closed platforms (ChatGPT, Claude, Copilot, DeepSeek, Mistral, Kimi) the bar is inferred from the real evidence layer (citations, official presence, news freshness), not from a guess.",
   compare_how_seo: "SEO score — deterministic audit of the live HTML (title, meta, H1, Open Graph, canonical, JSON-LD, internal links, alt text, word count). Recomputed every run.",
   compare_how_sge: "SGE readiness — measures eligibility for AI Overviews / Search Generative Experience: FAQ & Organization schema, Author/Article schema, content depth, factual headings, freshness.",
   compare_how_profile: "Personalization — your profile's specialty and geo scope are sent on every run and bias the recommendations, gaps, and per-platform tips toward your sector and market.",

@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, ClipboardList, AlertTriangle, Target } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
-import { ExportButtons } from "./ExportButtons";
+
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
@@ -156,7 +156,7 @@ export function FeasibilityStudy() {
                 </div>
               </div>
             </div>
-            <ExportButtons build={buildExport} />
+            
           </div>
 
           <div className="rounded-xl border border-border bg-background/60 p-4 text-sm leading-relaxed">{result.executive_summary}</div>

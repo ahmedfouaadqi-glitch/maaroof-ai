@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { ExportButtons } from "@/components/ExportButtons";
+
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { HandoffMenu } from "@/components/HandoffMenu";
@@ -221,19 +221,6 @@ export function SmartResearch() {
               </ul>
             </div>
           )}
-          <ExportButtons size="xs" build={() => ({
-            title: t("research_title"), subtitle: q,
-            sections: [
-              ...(out.sge_summary ? [{ kind: "kv" as const, heading: t("research_sge"), rows: [["", out.sge_summary]] as [string, string | number][] }] : []),
-              { kind: "kv", heading: t("research_answer"), rows: [["", out.answer || ""]] as [string, string | number][] },
-              ...(out.key_findings?.length ? [{ kind: "list" as const, heading: t("research_findings"), list: out.key_findings }] : []),
-              ...(out.visibility_opportunities?.length ? [{ kind: "list" as const, heading: t("research_opportunities"), list: out.visibility_opportunities }] : []),
-              ...(out.channels?.length ? [{ kind: "table" as const, heading: t("research_channels"),
-                table: { columns: [t("col_type") || "Type", t("col_title") || "Label", "URL"], data: out.channels.map((c: any) => [t(`ch_${c.type}`) || c.type, c.label, c.url]) } }] : []),
-              { kind: "table", heading: t("research_sources"),
-                table: { columns: ["#", t("col_title"), "URL"], data: (out.sources || []).map((s: any, i: number) => [i + 1, s.title, s.url]) } },
-            ],
-          })} />
           <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
         </div>
       )}
