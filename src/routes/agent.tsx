@@ -250,6 +250,15 @@ function AgentPage() {
     load();
   };
 
+  const addLinkedInChannel = async () => {
+    if (!user) return;
+    if (channels.some((c) => c.kind === "linkedin")) return;
+    await supabase.from("publish_channels").insert({
+      user_id: user.id, kind: "linkedin", label: "LinkedIn", config: {},
+    });
+    load();
+  };
+
   const removeChannel = async (id: string) => {
     await supabase.from("publish_channels").delete().eq("id", id);
     load();
