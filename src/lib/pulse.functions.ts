@@ -102,8 +102,18 @@ const CrawlSchema = z.object({ sourceKey: z.string().max(64).optional() });
 
 /** Admin-triggered manual crawl. Calls the public hook with the anon key server-side. */
 export const triggerPulseCrawl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CrawlSchema.parse(input ?? {}))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const userId = (context as { userId: string }).userId;
+    const { data: roleRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!roleRow) return { ok: false as const, error: "forbidden" };
+
     const anon = process.env.SUPABASE_PUBLISHABLE_KEY;
     const url = `https://project--fa07a113-c24f-4419-b1d8-07ffd60e98c6.lovable.app/api/public/hooks/pulse-crawl${data.sourceKey ? `?source=${encodeURIComponent(data.sourceKey)}` : ""}`;
     if (!anon) return { ok: false as const, error: "anon key missing" };
