@@ -763,7 +763,7 @@ const en: Dict = {
   link_tools_title: "How tools connect — one workflow",
   link_tools_sub: "Each tool feeds the next. Run them in order or let the agent chain them for you.",
   link_step_1_t: "1 · Analyze",
-  link_step_1_d: "Drop a URL or paste text. GEO Analysis scores it across 8 engines and lists what to fix.",
+  link_step_1_d: "Drop a URL or paste text. GEO Analysis scores it across 9 engines and lists what to fix.",
   link_step_2_t: "2 · Decide",
   link_step_2_d: "Compare with competitors, run Feasibility / BizDev / Smart Research to size the opportunity.",
   link_step_3_t: "3 · Create",
