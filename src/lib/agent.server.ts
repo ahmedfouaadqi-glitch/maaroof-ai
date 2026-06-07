@@ -147,6 +147,57 @@ export async function checkAndConsume(userId: string, count = 1): Promise<void> 
     .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
   if (roleRow) return;
 
+  // 1) NEW path — read agent quotas from subscription_plans (admin-controlled)
+  const { data: prof } = await supabaseAdmin
+    .from("profiles")
+    .select("subscription_tier, is_subscribed, subscription_expires_at")
+    .eq("id", userId).maybeSingle();
+
+  if (prof?.subscription_tier) {
+    const { data: plan } = await supabaseAdmin
+      .from("subscription_plans")
+      .select("agent_daily_cap, agent_monthly_cap, agent_max_targets")
+      .eq("name", prof.subscription_tier)
+      .maybeSingle();
+
+    const dailyCap = plan?.agent_daily_cap as number | null | undefined;
+    const monthlyCap = plan?.agent_monthly_cap as number | null | undefined;
+
+    if (dailyCap != null || monthlyCap != null) {
+      if ((prof as any).subscription_expires_at && new Date((prof as any).subscription_expires_at) < new Date()) {
+        throw new Error("subscription_expired");
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      let { data: sub } = await supabaseAdmin
+        .from("user_agent_subscriptions")
+        .select("*").eq("user_id", userId).eq("status", "active")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!sub) {
+        const { data: addonRow } = await supabaseAdmin.from("agent_addons").select("id").limit(1).maybeSingle();
+        if (addonRow) {
+          const { data: ins } = await supabaseAdmin.from("user_agent_subscriptions").insert({
+            user_id: userId, addon_id: (addonRow as any).id, status: "active",
+            tasks_used: 0, tasks_used_today: 0,
+          }).select("*").single();
+          sub = ins as any;
+        }
+      }
+      if (!sub) throw new Error("no_active_subscription");
+
+      const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
+      if (monthlyCap != null && sub.tasks_used + count > monthlyCap) throw new Error("monthly_cap_reached");
+      if (dailyCap != null && dailyUsed + count > dailyCap) throw new Error("daily_cap_reached");
+
+      await supabaseAdmin.from("user_agent_subscriptions").update({
+        tasks_used: sub.tasks_used + count,
+        tasks_used_today: dailyUsed + count,
+        last_run_date: today,
+      }).eq("id", sub.id);
+      return;
+    }
+  }
+
+  // 2) LEGACY fallback — old agent_addons-based quotas
   const { data: sub } = await supabaseAdmin
     .from("user_agent_subscriptions")
     .select("*, agent_addons(*)")
@@ -168,4 +219,46 @@ export async function checkAndConsume(userId: string, count = 1): Promise<void> 
     tasks_used_today: dailyUsed + count,
     last_run_date: today,
   }).eq("id", sub.id);
+}
+
+// Publish to LinkedIn via Lovable connector gateway (w_member_social scope)
+export async function publishToLinkedIn(text: string): Promise<void> {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const liKey = process.env.LINKEDIN_API_KEY;
+  if (!lovableKey) throw new Error("missing_lovable_key");
+  if (!liKey) throw new Error("linkedin_not_connected");
+
+  const meResp = await fetch("https://connector-gateway.lovable.dev/linkedin/v2/userinfo", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": liKey },
+  });
+  if (!meResp.ok) throw new Error(`linkedin_userinfo_${meResp.status}`);
+  const me = await meResp.json() as { sub?: string };
+  if (!me.sub) throw new Error("linkedin_no_member_id");
+
+  const body = {
+    author: `urn:li:person:${me.sub}`,
+    lifecycleState: "PUBLISHED",
+    specificContent: {
+      "com.linkedin.ugc.ShareContent": {
+        shareCommentary: { text: text.slice(0, 3000) },
+        shareMediaCategory: "NONE",
+      },
+    },
+    visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+  };
+  const resp = await fetch("https://connector-gateway.lovable.dev/linkedin/v2/ugcPosts", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": liKey,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => "");
+    throw new Error(`linkedin_${resp.status}: ${errBody.slice(0, 180)}`);
+  }
 }

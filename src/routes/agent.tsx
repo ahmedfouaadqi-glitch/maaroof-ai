@@ -250,6 +250,15 @@ function AgentPage() {
     load();
   };
 
+  const addLinkedInChannel = async () => {
+    if (!user) return;
+    if (channels.some((c) => c.kind === "linkedin")) return;
+    await supabase.from("publish_channels").insert({
+      user_id: user.id, kind: "linkedin", label: "LinkedIn", config: {},
+    });
+    load();
+  };
+
   const removeChannel = async (id: string) => {
     await supabase.from("publish_channels").delete().eq("id", id);
     load();
@@ -435,6 +444,23 @@ function AgentPage() {
             <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
               <Plus className="size-4" /> {t("ag_ch_add")}
             </button>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                <SendIcon className="size-4 text-primary" />
+                <span className="font-semibold">LinkedIn</span>
+                <span className="text-xs text-muted-foreground">— {t("ag_ch_linkedin_desc") || "Publish directly via your connected LinkedIn account"}</span>
+              </div>
+              {channels.some((c) => c.kind === "linkedin") ? (
+                <span className="text-xs text-success font-semibold">✓ {t("ag_ch_active") || "Active"}</span>
+              ) : (
+                <button onClick={addLinkedInChannel} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+                  <Plus className="size-3" /> {t("ag_ch_enable") || "Enable"}
+                </button>
+              )}
+            </div>
           </div>
 
           {channels.length > 0 && (
