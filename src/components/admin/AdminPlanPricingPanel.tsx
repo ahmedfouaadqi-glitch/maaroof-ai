@@ -132,6 +132,25 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
         </div>
       </div>
 
+      {/* Smart Agent quotas — admin-controlled only */}
+      <div className="mb-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
+        <div className="mb-2 text-xs font-semibold text-accent">{L.agentBlock}</div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <label className="text-muted-foreground">{L.agentDaily}:</label>
+          <input type="number" min={0} value={agentDaily || ""} placeholder="0"
+            onChange={(e) => setAgentDaily(Number(e.target.value) || 0)}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1" />
+          <label className="text-muted-foreground">{L.agentMonthly}:</label>
+          <input type="number" min={0} value={agentMonthly || ""} placeholder="0"
+            onChange={(e) => setAgentMonthly(Number(e.target.value) || 0)}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1" />
+          <label className="text-muted-foreground">{L.agentTargets}:</label>
+          <input type="number" min={0} value={agentTargets || ""} placeholder="0"
+            onChange={(e) => setAgentTargets(Number(e.target.value) || 0)}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1" />
+        </div>
+      </div>
+
       {busy ? (
         <div className="flex justify-center p-6"><Loader2 className="size-5 animate-spin text-primary" /></div>
       ) : (
