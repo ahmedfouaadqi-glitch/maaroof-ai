@@ -114,7 +114,8 @@ export function ReportBuilder() {
     [data, selected],
   );
 
-  const palette = ["hsl(var(--primary))", "hsl(var(--accent))", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  // High-contrast palette (OKLCH-derived hex), distinct in both light/dark
+  const palette = ["#3b82f6", "#f97316", "#10b981", "#a855f7", "#ef4444", "#eab308"];
 
   const payload = useMemo<() => ExportPayload>(() => () => {
     const sections: any[] = [];
@@ -205,37 +206,37 @@ export function ReportBuilder() {
       </div>
 
       {/* Visual preview */}
-      <div className="rounded-2xl border border-border bg-card/40 p-4">
+      <div className="rounded-2xl border-2 border-border bg-background p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <div className="text-sm font-semibold">{t("report_preview_title")}</div>
-          <div className="text-[11px] text-muted-foreground">{selected.length} · {chart}</div>
+          <div className="text-sm font-semibold text-foreground">{t("report_preview_title")}</div>
+          <div className="text-[11px] font-mono text-muted-foreground">{selected.length} · {chart}</div>
         </div>
-        <div className="h-72 w-full">
+        <div className="h-80 w-full rounded-xl bg-card/60 p-3">
           <ResponsiveContainer width="100%" height="100%">
             {chart === "bar" ? (
-              <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
-                <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {selected.map((k, i) => <Bar key={k} dataKey={k} fill={palette[i % palette.length]} name={METRICS.find((m) => m.id === k)?.label} radius={[4, 4, 0, 0]} />)}
+              <BarChart data={chartData} margin={{ top: 8, right: 12, left: -6, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} allowDecimals={false} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "2px solid hsl(var(--primary))", borderRadius: 10, fontSize: 12, color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--primary) / 0.08)" }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                {selected.map((k, i) => <Bar key={k} dataKey={k} fill={palette[i % palette.length]} name={METRICS.find((m) => m.id === k)?.label} radius={[6, 6, 0, 0]} />)}
               </BarChart>
             ) : chart === "line" ? (
-              <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
-                <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {selected.map((k, i) => <Line key={k} type="monotone" dataKey={k} stroke={palette[i % palette.length]} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} name={METRICS.find((m) => m.id === k)?.label} />)}
+              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -6, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} allowDecimals={false} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "2px solid hsl(var(--primary))", borderRadius: 10, fontSize: 12, color: "hsl(var(--foreground))" }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                {selected.map((k, i) => <Line key={k} type="monotone" dataKey={k} stroke={palette[i % palette.length]} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} name={METRICS.find((m) => m.id === k)?.label} />)}
               </LineChart>
             ) : (
               <RadarChart data={radarData}>
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} />
-                <Radar dataKey="value" stroke={palette[0]} fill={palette[0]} fillOpacity={0.4} strokeWidth={2} />
-                <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.7} />
+                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12, fill: "hsl(var(--foreground))", fontWeight: 600 }} />
+                <Radar dataKey="value" stroke={palette[0]} fill={palette[0]} fillOpacity={0.45} strokeWidth={2.5} />
+                <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "2px solid hsl(var(--primary))", borderRadius: 10, fontSize: 12, color: "hsl(var(--foreground))" }} />
               </RadarChart>
             )}
           </ResponsiveContainer>
