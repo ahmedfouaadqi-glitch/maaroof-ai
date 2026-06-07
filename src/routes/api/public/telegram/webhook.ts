@@ -87,7 +87,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             return Response.json({ ok: true });
           }
 
-          const newCfg: Record<string, unknown> = { ...((ch.config as any) || {}), chat_id: String(chatId) };
+          const newCfg: any = { ...((ch.config as any) || {}), chat_id: String(chatId) };
           delete newCfg.link_token;
           const acctLabel = msg.from?.username
             ? `@${msg.from.username}`
