@@ -24,6 +24,7 @@ import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
 import { Route as PulseSourcesRouteImport } from './routes/pulse.sources'
 import { Route as PulseCompareRouteImport } from './routes/pulse.compare'
 import { Route as PulseAssistantRouteImport } from './routes/pulse.assistant'
@@ -122,6 +123,11 @@ const IndexRoute = IndexRouteImport.update({
 const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsSlugRoute = ToolsSlugRouteImport.update({
+  id: '/tools/$slug',
+  path: '/tools/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PulseSourcesRoute = PulseSourcesRouteImport.update({
@@ -283,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/pulse/assistant': typeof PulseAssistantRoute
   '/pulse/compare': typeof PulseCompareRoute
   '/pulse/sources': typeof PulseSourcesRoute
+  '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/pulse/assistant': typeof PulseAssistantRoute
   '/pulse/compare': typeof PulseCompareRoute
   '/pulse/sources': typeof PulseSourcesRoute
+  '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/pulse/assistant': typeof PulseAssistantRoute
   '/pulse/compare': typeof PulseCompareRoute
   '/pulse/sources': typeof PulseSourcesRoute
+  '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/pulse/assistant'
     | '/pulse/compare'
     | '/pulse/sources'
+    | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -450,6 +460,7 @@ export interface FileRouteTypes {
     | '/pulse/assistant'
     | '/pulse/compare'
     | '/pulse/sources'
+    | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -491,6 +502,7 @@ export interface FileRouteTypes {
     | '/pulse/assistant'
     | '/pulse/compare'
     | '/pulse/sources'
+    | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
@@ -529,6 +541,7 @@ export interface RootRouteChildren {
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiWhatIfRoute: typeof ApiWhatIfRoute
+  ToolsSlugRoute: typeof ToolsSlugRoute
   UUsernameRoute: typeof UUsernameRoute
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
@@ -640,6 +653,13 @@ declare module '@tanstack/react-router' {
       path: '/u/$username'
       fullPath: '/u/$username'
       preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/$slug': {
+      id: '/tools/$slug'
+      path: '/tools/$slug'
+      fullPath: '/tools/$slug'
+      preLoaderRoute: typeof ToolsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pulse/sources': {
@@ -861,6 +881,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiWhatIfRoute: ApiWhatIfRoute,
+  ToolsSlugRoute: ToolsSlugRoute,
   UUsernameRoute: UUsernameRoute,
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,

@@ -270,22 +270,30 @@ function Page() {
             <p className="mt-3 text-muted-foreground">{t("home_tools_sub")}</p>
           </div>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {TOOL_CATALOG.map((td) => (
-              <div key={td.key} className="group rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
-                <div className="flex items-center gap-2">
-                  <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
-                    {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
-                  </span>
-                  <h3 className="font-display text-base font-semibold">{td.labels[L]}</h3>
-                  <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-primary">
-                    {td.costPerRun}×
-                  </span>
+            {TOOL_CATALOG.map((td) => {
+              const hasLanding = ["analyze", "suggest", "compare", "visibility", "brand_boost"].includes(td.key);
+              const cardInner = (
+                <div className="group h-full rounded-2xl border border-border bg-card/60 p-5 backdrop-blur transition hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]">
+                  <div className="flex items-center gap-2">
+                    <span className={`grid size-9 place-items-center rounded-xl ${td.group === "agent" ? "bg-gradient-to-br from-accent/20 to-primary/20 text-accent" : "bg-gradient-to-br from-primary/20 to-accent/20 text-primary"}`}>
+                      {td.group === "agent" ? <Bot className="size-4" /> : <Sparkles className="size-4" />}
+                    </span>
+                    <h3 className="font-display text-base font-semibold">{td.labels[L]}</h3>
+                    <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-semibold text-primary">
+                      {td.costPerRun}×
+                    </span>
+                  </div>
+                  <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                    {t(howtoKey(td.key) as any)}
+                  </p>
                 </div>
-                <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                  {t(howtoKey(td.key) as any)}
-                </p>
-              </div>
-            ))}
+              );
+              return hasLanding ? (
+                <Link key={td.key} to="/tools/$slug" params={{ slug: td.key }} className="block">{cardInner}</Link>
+              ) : (
+                <Link key={td.key} to="/guide" className="block">{cardInner}</Link>
+              );
+            })}
           </div>
           <div className="mt-6 text-center">
             <Link to="/guide" className="text-sm text-primary hover:underline">{t("guide_title")} →</Link>
