@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"] as const;
 type Platform = typeof PLATFORMS[number];
