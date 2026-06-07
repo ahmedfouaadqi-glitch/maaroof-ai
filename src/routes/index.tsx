@@ -56,7 +56,7 @@ function Page() {
   const [subOpen, setSubOpen] = useState(false);
 
   const howtoKey = (k: ToolKey) => {
-    const map: Record<ToolKey, string> = {
+    const map: Partial<Record<ToolKey, string>> = {
       analyze: "guide_how_analyze",
       suggest: "guide_how_suggest",
       compare: "guide_how_compare",
@@ -67,12 +67,19 @@ function Page() {
       brand_boost: "guide_how_brand_boost",
       company_email: "guide_how_company_email",
       applied_ranking: "guide_how_company_email",
+      geo_strategist: "guide_how_analyze",
+      competitor_monitor: "guide_how_compare",
+      social_analysis: "guide_how_agent_visibility",
+      what_if: "guide_how_analyze",
+      brand_authority: "guide_how_brand_boost",
+      geo_rewrite: "guide_how_suggest",
       "agent.command": "guide_how_agent_command",
       "agent.run_targets": "guide_how_agent_targets",
       "agent.visibility": "guide_how_agent_visibility",
     };
-    return map[k];
+    return map[k] ?? "guide_how_analyze";
   };
+
 
   return (
     <div className="min-h-screen">

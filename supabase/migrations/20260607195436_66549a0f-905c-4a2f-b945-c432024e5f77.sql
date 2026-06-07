@@ -1,0 +1,1 @@
+ALTER VIEW public.v_user_tool_spend SET (security_invoker = true);
