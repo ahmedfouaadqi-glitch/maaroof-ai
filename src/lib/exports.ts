@@ -207,3 +207,46 @@ export function exportToExcel(payload: ExportPayload) {
   const fileName = `${payload.title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
+
+/** Build and download a CSV file. Flattens sections (kv/list/text/table) into rows. */
+export function exportToCSV(payload: ExportPayload) {
+  const lang = payload.lang || "ar";
+  const lines: string[] = [];
+  const esc = (v: any) => {
+    const s = String(v ?? "");
+    if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  lines.push(esc(BRAND));
+  lines.push(esc(payload.title));
+  if (payload.subtitle) lines.push(esc(payload.subtitle));
+  lines.push(esc(`${UI[lang].generated}: ${new Date().toLocaleString()}`));
+  lines.push("");
+
+  payload.sections.forEach((s) => {
+    lines.push(esc(`# ${s.heading}`));
+    if (s.kind === "kv" && s.rows) {
+      lines.push(["key", "value"].map(esc).join(","));
+      s.rows.forEach(([k, v]) => lines.push([esc(k), esc(v)].join(",")));
+    } else if (s.kind === "text" && s.text) {
+      s.text.split("\n").forEach((l) => lines.push(esc(l)));
+    } else if (s.kind === "list" && s.list) {
+      s.list.forEach((x) => lines.push(esc(x)));
+    } else if (s.kind === "table" && s.table) {
+      lines.push(s.table.columns.map(esc).join(","));
+      s.table.data.forEach((r) => lines.push(r.map(esc).join(",")));
+    }
+    lines.push("");
+  });
+  lines.push(esc(DISCLAIMER[lang]));
+
+  const csv = "\ufeff" + lines.join("\n"); // BOM for Excel UTF-8
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${payload.title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+

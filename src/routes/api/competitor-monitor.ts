@@ -86,6 +86,19 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           }
           const alerts = [...newAlerts, ...((w as any).alerts || [])].slice(0, 50);
           await admin.from("competitor_watch").update({ baseline: fresh, last_run_at: new Date().toISOString(), alerts }).eq("id", id);
+
+          // Insert per-alert notifications for the user
+          if (newAlerts.length > 0) {
+            const rows = newAlerts.map((a) => ({
+              user_id: userId,
+              watch_id: id,
+              severity: Math.abs(a.delta) >= 5 ? "high" : "info",
+              target: a.target,
+              message: `تغيّر ظهور ${a.target}: ${a.prev} → ${a.now} (${a.delta > 0 ? "+" : ""}${a.delta})`,
+              payload: a,
+            }));
+            await admin.from("competitor_alerts").insert(rows);
+          }
           return Response.json({ alerts: newAlerts, baseline: fresh });
         }
 
