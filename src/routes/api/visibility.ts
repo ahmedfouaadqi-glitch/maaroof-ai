@@ -172,6 +172,9 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
 
+          const _chg = await chargeTokens({ userId, toolKey: "visibility" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+
           const { data: roleRow } = await admin
             .from("user_roles")
             .select("role")
