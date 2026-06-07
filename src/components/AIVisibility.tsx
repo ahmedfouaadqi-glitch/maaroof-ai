@@ -4,7 +4,7 @@ import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
-import { ExportButtons } from "@/components/ExportButtons";
+
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
@@ -174,17 +174,6 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </div>
           )}
 
-          <ExportButtons size="xs" build={() => ({
-            title: t("ag_vis_title"), subtitle: brand,
-            sections: [
-              { kind: "kv", heading: t("ag_vis_score"), rows: [[t("ag_vis_score"), `${out.visibility_percent}%`], [t("ag_vis_sentiment"), out.sentiment]] as [string, string | number][] },
-              { kind: "table", heading: t("ag_vis_platforms"), table: {
-                columns: ["Platform", "Score", t("ag_vis_trust"), t("ag_vis_action")],
-                data: (out.platforms || []).map((p: any) => [p.name, `${p.score}%`, p.trust_signal || "", p.action || ""]),
-              } },
-              ...(out.recommendations?.length ? [{ kind: "list" as const, heading: "Recommendations", list: out.recommendations }] : []),
-            ],
-          })} />
         </div>
       )}
     </>

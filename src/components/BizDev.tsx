@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, TrendingUp, Target, Rocket } from "lucide-react";
 import { ToolLangSelect } from "./ToolLangSelect";
-import { ExportButtons } from "./ExportButtons";
+
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
@@ -127,7 +127,7 @@ export function BizDev() {
                 <div className="font-display text-base font-bold">{result.north_star_metric || "—"}</div>
               </div>
             </div>
-            <ExportButtons build={buildExport} />
+            
           </div>
 
           {result.stage_assessment && <div className="rounded-xl border border-border bg-background/60 p-4 text-sm">{result.stage_assessment}</div>}
