@@ -10,7 +10,7 @@ import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.func
 
 import type { ExportPayload } from "@/lib/exports";
 import { apiFetch } from "@/lib/api-client";
-import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle, Linkedin, Facebook, Instagram } from "lucide-react";
+import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/agent")({
   head: () => ({
