@@ -815,7 +815,7 @@ const ar: Dict = {
   sandbox_running: "جارٍ التحليل…",
   scan_tokenize: "قراءة المحتوى",
   scan_authority: "تقييم السلطة",
-  scan_local: "فحص الصلة بالسياق العراقي",
+  scan_local: "فحص الصلة بسياقك المحلي",
   scan_citation: "حساب احتمالية الاستشهاد",
   score_label: "درجة الثقة في GEO",
   score_low: "غير مرئي للذكاء الاصطناعي",
