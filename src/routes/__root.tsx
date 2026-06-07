@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { attachGlobalClickSound } from "@/lib/sound";
 import { attachDevtoolsGuard } from "@/lib/devtools-guard";
+import { CountryProvider } from "@/lib/use-country";
 
 function NotFoundComponent() {
   return (
@@ -170,7 +171,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <CountryProvider>
+        <Outlet />
+      </CountryProvider>
     </QueryClientProvider>
   );
 }

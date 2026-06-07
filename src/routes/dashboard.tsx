@@ -17,7 +17,7 @@ import { CompetitorMonitor } from "@/components/CompetitorMonitor";
 import { GeoStrategist } from "@/components/GeoStrategist";
 import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { ReportBuilder } from "@/components/ReportBuilder";
-import { BrandPulseGauges } from "@/components/BrandPulseGauges";
+
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -119,8 +119,6 @@ function DashboardPage() {
           />
         </div>
 
-        {/* Real-time gauges */}
-        <div className="mt-6"><BrandPulseGauges /></div>
 
         {/* Units balance — live */}
           <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4 sm:p-5">

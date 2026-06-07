@@ -23,10 +23,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/contact", changefreq: "monthly", priority: "0.6" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
-          { path: "/pulse", changefreq: "daily", priority: "0.8" },
-          { path: "/pulse/sources", changefreq: "weekly", priority: "0.5" },
-          { path: "/pulse/compare", changefreq: "weekly", priority: "0.6" },
-          { path: "/pulse/assistant", changefreq: "weekly", priority: "0.6" },
         ];
 
         // Add per-user public profile URLs so AI crawlers (and Google) discover them.
