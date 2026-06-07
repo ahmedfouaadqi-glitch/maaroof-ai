@@ -41,7 +41,7 @@ const en: Dict = {
   score_high: "Authoritative Source",
   score_unlock: "View detailed report",
   metric_authority: "Technical Authority",
-  metric_local: "Local Iraq Relevance",
+  metric_local: "Local Relevance",
   metric_citation: "Citation Probability",
   why_title: "Why GEO, why now?",
   why_sub: "Search is being replaced by answers. The brands AI cites win the next decade.",
