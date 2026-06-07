@@ -573,10 +573,16 @@ export type Database = {
           max_devices: number
           monthly_analyses_used: number
           monthly_suggestions_used: number
+          per_user_tool_overrides: Json
           quota_overrides: Json
           specialty: string | null
           subscription_expires_at: string | null
           subscription_tier: string | null
+          tokens_balance: number
+          tokens_daily_limit: number | null
+          tokens_monthly_limit: number | null
+          tokens_used_month: number
+          tokens_used_today: number
           tool_geo_scopes: Json
           usage_day_start: string
           usage_period_start: string
@@ -600,10 +606,16 @@ export type Database = {
           max_devices?: number
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          per_user_tool_overrides?: Json
           quota_overrides?: Json
           specialty?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          tokens_balance?: number
+          tokens_daily_limit?: number | null
+          tokens_monthly_limit?: number | null
+          tokens_used_month?: number
+          tokens_used_today?: number
           tool_geo_scopes?: Json
           usage_day_start?: string
           usage_period_start?: string
@@ -627,10 +639,16 @@ export type Database = {
           max_devices?: number
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
+          per_user_tool_overrides?: Json
           quota_overrides?: Json
           specialty?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          tokens_balance?: number
+          tokens_daily_limit?: number | null
+          tokens_monthly_limit?: number | null
+          tokens_used_month?: number
+          tokens_used_today?: number
           tool_geo_scopes?: Json
           usage_day_start?: string
           usage_period_start?: string
@@ -1020,40 +1038,49 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          daily_tokens: number
           description: string | null
           duration_days: number
           features: Json
           id: string
           monthly_analyses: number
           monthly_suggestions: number
+          monthly_tokens: number
           name: string
           price_iqd: number
+          price_usd: number
           sort_order: number
         }
         Insert: {
           active?: boolean
           created_at?: string
+          daily_tokens?: number
           description?: string | null
           duration_days?: number
           features?: Json
           id?: string
           monthly_analyses?: number
           monthly_suggestions?: number
+          monthly_tokens?: number
           name: string
           price_iqd?: number
+          price_usd?: number
           sort_order?: number
         }
         Update: {
           active?: boolean
           created_at?: string
+          daily_tokens?: number
           description?: string | null
           duration_days?: number
           features?: Json
           id?: string
           monthly_analyses?: number
           monthly_suggestions?: number
+          monthly_tokens?: number
           name?: string
           price_iqd?: number
+          price_usd?: number
           sort_order?: number
         }
         Relationships: []
@@ -1145,6 +1172,39 @@ export type Database = {
         }
         Relationships: []
       }
+      token_ledger: {
+        Row: {
+          created_at: string
+          id: string
+          meta: Json
+          run_id: string | null
+          tokens: number
+          tool_key: string
+          usd_cost: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meta?: Json
+          run_id?: string | null
+          tokens: number
+          tool_key: string
+          usd_cost?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meta?: Json
+          run_id?: string | null
+          tokens?: number
+          tool_key?: string
+          usd_cost?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       tool_links: {
         Row: {
           created_at: string
@@ -1178,8 +1238,10 @@ export type Database = {
           monthly_quota: number | null
           notes: string | null
           plan_id: string
+          tokens_per_use: number
           tool_key: string
           updated_at: string
+          usd_per_use: number
         }
         Insert: {
           created_at?: string
@@ -1189,8 +1251,10 @@ export type Database = {
           monthly_quota?: number | null
           notes?: string | null
           plan_id: string
+          tokens_per_use?: number
           tool_key: string
           updated_at?: string
+          usd_per_use?: number
         }
         Update: {
           created_at?: string
@@ -1200,8 +1264,10 @@ export type Database = {
           monthly_quota?: number | null
           notes?: string | null
           plan_id?: string
+          tokens_per_use?: number
           tool_key?: string
           updated_at?: string
+          usd_per_use?: number
         }
         Relationships: [
           {
@@ -1212,6 +1278,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tool_pricing_catalog: {
+        Row: {
+          default_tokens: number
+          default_usd: number
+          model: string | null
+          notes: string | null
+          tool_key: string
+          updated_at: string
+        }
+        Insert: {
+          default_tokens?: number
+          default_usd?: number
+          model?: string | null
+          notes?: string | null
+          tool_key: string
+          updated_at?: string
+        }
+        Update: {
+          default_tokens?: number
+          default_usd?: number
+          model?: string | null
+          notes?: string | null
+          tool_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_agent_subscriptions: {
         Row: {
@@ -1313,6 +1406,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      charge_tokens: {
+        Args: {
+          _meta?: Json
+          _run_id?: string
+          _tokens: number
+          _tool_key: string
+          _usd: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       ensure_trial_subscription: { Args: never; Returns: string }
       generate_username_from_email: {
         Args: { _email: string }
