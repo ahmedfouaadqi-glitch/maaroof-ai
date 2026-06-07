@@ -231,37 +231,8 @@ function AgentPage() {
     }
   };
 
-  const addChannel = async () => {
-    if (!user) return;
-    if (chKind !== "telegram") {
-      alert(t("ag_ch_soon"));
-      return;
-    }
-    if (!chBotToken.trim() || !chChatId.trim()) {
-      alert(t("ag_ch_required"));
-      return;
-    }
-    await supabase.from("publish_channels").insert({
-      user_id: user.id, kind: chKind, label: chLabel || null,
-      config: { bot_token: chBotToken.trim(), chat_id: chChatId.trim() },
-    });
-    setChLabel(""); setChBotToken(""); setChChatId("");
-    load();
-  };
+  // Legacy channel handlers removed — ChannelsPanel handles linking now
 
-  const addLinkedInChannel = async () => {
-    if (!user) return;
-    if (channels.some((c) => c.kind === "linkedin")) return;
-    await supabase.from("publish_channels").insert({
-      user_id: user.id, kind: "linkedin", label: "LinkedIn", config: {},
-    });
-    load();
-  };
-
-  const removeChannel = async (id: string) => {
-    await supabase.from("publish_channels").delete().eq("id", id);
-    load();
-  };
 
   const publishTask = async (taskId: string, text: string, channelId: string) => {
     setPublishingTask(taskId);
