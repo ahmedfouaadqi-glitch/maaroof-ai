@@ -778,10 +778,10 @@ const en: Dict = {
   sound_on: "Enable sounds",
   sound_off: "Mute sounds",
   orbit_badge: "Where intelligence meets simplicity",
-  orbit_title: "8 AI engines. One source they all cite.",
+  orbit_title: "9 AI engines. One source they all cite.",
   orbit_sub: "While others chase keywords, we make the engines themselves point to your brand.",
   orbit_tagline: "If the idea is smart — it stays simple.",
-  orbit_tagline_sub: "One platform. One signal. Eight engines, every language, every search.",
+  orbit_tagline_sub: "One platform. One signal. Nine engines, every language, every search.",
   orbit_cta_guide: "See how each tool works",
   orbit_cta_pricing: "Start now",
 };
