@@ -110,6 +110,8 @@ export const publishToChannel = createServerFn({ method: "POST" })
         const cfg = (ch.config || {}) as { bot_token?: string; chat_id?: string };
         if (!cfg.bot_token || !cfg.chat_id) throw new Error("telegram_config_missing");
         await publishToTelegram(cfg.bot_token, cfg.chat_id, data.text);
+      } else if (ch.kind === "linkedin") {
+        await publishToLinkedIn(data.text);
       } else {
         throw new Error("channel_kind_not_supported_yet");
       }
