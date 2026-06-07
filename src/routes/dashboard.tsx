@@ -80,21 +80,20 @@ function DashboardPage() {
         {/* Tools — card grid; click opens modal */}
         <div className="mt-10">
           <h2 className="font-display text-2xl font-bold">{t("dash_tools_title")}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{t("dash_tools_intro")}</p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} onOpen={() => setOpenTool("analyze")} />
-            <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} onOpen={() => setOpenTool("suggest")} />
-            <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} onOpen={() => setOpenTool("compare")} />
-            <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} onOpen={() => setOpenTool("feasibility")} />
-            <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} onOpen={() => setOpenTool("bizdev")} />
-            <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} onOpen={() => setOpenTool("boost")} />
-            <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} onOpen={() => setOpenTool("applied")} />
-            <ToolGridCard icon={<Share2 className="size-5" />} title="تحليل الظهور الاجتماعي" desc="إشارات علامتك على شبكات التواصل + تحليل المشاعر" onOpen={() => setOpenTool("social")} />
-            <ToolGridCard icon={<Bell className="size-5" />} title="مراقبة المنافسين" desc="baseline + تنبيهات عند تغيّر ظهور منافسيك" onOpen={() => setOpenTool("monitor")} />
-            <ToolGridCard icon={<Target className="size-5" />} title="استراتيجي GEO" desc="خطة 12 أسبوع مخصّصة لأهدافك" onOpen={() => setOpenTool("strategist")} />
-            <ToolGridCard icon={<FlaskConical className="size-5" />} title="محاكاة ماذا لو" desc="جرّب التغييرات قبل تنفيذها" onOpen={() => setOpenTool("whatif")} />
-            <ToolGridCard icon={<FileText className="size-5" />} title="منشئ التقارير" desc="بوابة التصدير الوحيدة — اختر تحليلاً محفوظاً وصدّر بالصيغة التي تريد" onOpen={() => setOpenTool("report")} />
+            <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} onOpen={() => setOpenTool("analyze")} t={t} />
+            <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} onOpen={() => setOpenTool("suggest")} t={t} />
+            <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} onOpen={() => setOpenTool("compare")} t={t} />
+            <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} onOpen={() => setOpenTool("feasibility")} t={t} />
+            <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} onOpen={() => setOpenTool("bizdev")} t={t} />
+            <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} onOpen={() => setOpenTool("boost")} t={t} />
+            <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} onOpen={() => setOpenTool("applied")} t={t} />
+            <ToolGridCard icon={<Share2 className="size-5" />} title={t("dash_tool_social_t")} desc={t("dash_tool_social_d")} onOpen={() => setOpenTool("social")} t={t} />
+            <ToolGridCard icon={<Bell className="size-5" />} title={t("dash_tool_monitor_t")} desc={t("dash_tool_monitor_d")} onOpen={() => setOpenTool("monitor")} t={t} />
+            <ToolGridCard icon={<Target className="size-5" />} title={t("dash_tool_strat_t")} desc={t("dash_tool_strat_d")} onOpen={() => setOpenTool("strategist")} t={t} />
+            <ToolGridCard icon={<FlaskConical className="size-5" />} title={t("dash_tool_whatif_t")} desc={t("dash_tool_whatif_d")} onOpen={() => setOpenTool("whatif")} t={t} />
+            <ToolGridCard icon={<FileText className="size-5" />} title={t("dash_tool_report_t")} desc={t("dash_tool_report_d")} onOpen={() => setOpenTool("report")} t={t} />
             <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />
           </div>
         </div>
@@ -169,16 +168,16 @@ function toolTitle(k: ToolKey, t: (k: string) => string): string {
     bizdev: t("dash_tool_biz_t"),
     boost: t("boost_title"),
     applied: t("dash_tool_applied_t"),
-    social: "تحليل الظهور الاجتماعي",
-    monitor: "مراقبة المنافسين",
-    strategist: "استراتيجي GEO",
-    whatif: "محاكاة ماذا لو",
-    report: "منشئ التقارير",
+    social: t("dash_tool_social_t"),
+    monitor: t("dash_tool_monitor_t"),
+    strategist: t("dash_tool_strat_t"),
+    whatif: t("dash_tool_whatif_t"),
+    report: t("dash_tool_report_t"),
   };
   return map[k] || k;
 }
 
-function ToolGridCard({ icon, title, desc, onOpen }: { icon: React.ReactNode; title: string; desc: string; onOpen: () => void }) {
+function ToolGridCard({ icon, title, desc, onOpen, t }: { icon: React.ReactNode; title: string; desc: string; onOpen: () => void; t: (k: string) => string }) {
   return (
     <button
       type="button"
@@ -188,10 +187,10 @@ function ToolGridCard({ icon, title, desc, onOpen }: { icon: React.ReactNode; ti
       <div className="inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
         {icon}
       </div>
-      <h3 className="mt-3 font-display text-base font-bold">أداة · {title.replace(/^\d+\)\s*/, "").replace(/^أداة\s*/, "")}</h3>
+      <h3 className="mt-3 font-display text-base font-bold">{title.replace(/^\d+\)\s*/, "")}</h3>
       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{desc}</p>
       <div className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary group-hover:gap-2 transition-all">
-        فتح الأداة <ArrowRight className="size-3.5" />
+        {t("dash_open_tool")} <ArrowRight className="size-3.5" />
       </div>
     </button>
   );
