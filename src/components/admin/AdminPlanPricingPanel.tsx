@@ -51,6 +51,9 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
   const [priceUsd, setPriceUsd] = useState<number>(Number(plan.price_usd) || 0);
   const [monthlyTok, setMonthlyTok] = useState<number>(plan.monthly_tokens || 0);
   const [dailyTok, setDailyTok] = useState<number>(plan.daily_tokens || 0);
+  const [agentDaily, setAgentDaily] = useState<number>(plan.agent_daily_cap || 0);
+  const [agentMonthly, setAgentMonthly] = useState<number>(plan.agent_monthly_cap || 0);
+  const [agentTargets, setAgentTargets] = useState<number>(plan.agent_max_targets || 0);
 
   useEffect(() => {
     (async () => {
