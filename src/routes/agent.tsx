@@ -410,56 +410,32 @@ function AgentPage() {
           </Link>
         </div>
 
-        {/* Publishing Channels */}
+        {/* Publishing Channels — Telegram (more channels via per-task share links) */}
         <div className="mt-8 rounded-2xl border border-accent/30 bg-card/70 p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold">
             <SendIcon className="size-5 text-accent" /> {t("ag_ch_title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("ag_ch_desc")}</p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(["telegram", "linkedin", "facebook", "instagram"] as const).map((k) => {
-              const Icon = k === "telegram" ? MessageCircle : k === "linkedin" ? Linkedin : k === "facebook" ? Facebook : Instagram;
-              const soon = k !== "telegram";
-              return (
-                <button key={k} type="button" onClick={() => setChKind(k)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    chKind === k ? "border-accent bg-accent/20 text-accent" : "border-border text-muted-foreground"
-                  }`}>
-                  <Icon className="size-3.5" /> {t(`ag_ch_${k}` as any)}
-                  {soon && <span className="ms-1 rounded-full bg-muted px-1.5 text-[9px]">{t("ag_ch_soon_tag")}</span>}
-                </button>
-              );
-            })}
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            <input value={chLabel} onChange={(e) => setChLabel(e.target.value)}
+              placeholder={t("ag_ch_label_ph")}
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            <input value={chBotToken} onChange={(e) => setChBotToken(e.target.value)}
+              placeholder={t("ag_ch_token_ph")} type="password"
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            <input value={chChatId} onChange={(e) => setChChatId(e.target.value)}
+              placeholder={t("ag_ch_chatid_ph")}
+              className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
           </div>
 
-          {chKind === "telegram" ? (
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
-              <input value={chLabel} onChange={(e) => setChLabel(e.target.value)}
-                placeholder={t("ag_ch_label_ph")}
-                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-              <input value={chBotToken} onChange={(e) => setChBotToken(e.target.value)}
-                placeholder={t("ag_ch_token_ph")} type="password"
-                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-              <input value={chChatId} onChange={(e) => setChChatId(e.target.value)}
-                placeholder={t("ag_ch_chatid_ph")}
-                className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-            </div>
-          ) : (
-            <div className="mt-3 rounded-lg border border-dashed border-border bg-background/40 p-3 text-xs text-muted-foreground">
-              {t("ag_ch_soon_desc")}
-            </div>
-          )}
-
-          {chKind === "telegram" && (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noreferrer"
-                className="text-xs text-primary underline">{t("ag_ch_help")}</a>
-              <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-                <Plus className="size-4" /> {t("ag_ch_add")}
-              </button>
-            </div>
-          )}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noreferrer"
+              className="text-xs text-primary underline">{t("ag_ch_help")}</a>
+            <button onClick={addChannel} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
+              <Plus className="size-4" /> {t("ag_ch_add")}
+            </button>
+          </div>
 
           {channels.length > 0 && (
             <ul className="mt-4 divide-y divide-border/60 rounded-lg border border-border bg-background/40">
@@ -478,6 +454,7 @@ function AgentPage() {
             </ul>
           )}
         </div>
+
 
         <div className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold">
