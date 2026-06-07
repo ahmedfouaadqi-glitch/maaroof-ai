@@ -17,7 +17,7 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
 import { ENGINES } from "@/components/engine-logos";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"];
+const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"];
 const MAX_PLATFORMS_PER_RUN = 5;
 
 export function BrandBoostAgent() {

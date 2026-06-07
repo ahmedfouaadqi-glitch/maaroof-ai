@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcScrape } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { slugify } from "@/lib/crawler-bots";
 import { pingIndexNow } from "@/lib/indexnow.server";
 
@@ -52,6 +53,9 @@ export const Route = createFileRoute("/api/brand-authority")({
           if (!lovableKey) return Response.json({ error: "internal_error" }, { status: 500 });
           const { admin, userId, profile, err } = await authUser(request);
           if (err) return err;
+
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota check (same model as brand-boost)
           const bbToggle = String((profile as any)?.quota_overrides?.brand_boost || "").toLowerCase();

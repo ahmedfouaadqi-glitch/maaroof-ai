@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
 type Body = {
   brand_name: string;
@@ -16,7 +17,7 @@ type Body = {
   scope?: GeoScope;
 };
 
-const PLATFORMS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek"];
+const PLATFORMS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi"];
 
 const LANG_INSTR: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -27,7 +28,7 @@ const LANG_INSTR: Record<string, string> = {
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
 You are a STRICT, evidence-based "Applied Ranking" analyst for ${m.market}.
-Your job: rate a brand's REAL-WORLD applied presence across THREE pillars and explain how each of the 8 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek) sees it for ${m.audience}.
+Your job: rate a brand's REAL-WORLD applied presence across THREE pillars and explain how each of the 9 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi) sees it for ${m.audience}.
 
 LOCALIZATION CONTEXT: ${m.contextHint}
 
@@ -53,7 +54,7 @@ Return ONLY valid JSON:
   },
   "platforms": [
     { "name": "ChatGPT", "score": <0-100>, "verdict": "high"|"medium"|"low", "why": "1-2 sentences referencing the pillars", "next_step": "single most impactful action for THIS engine" },
-    ... 8 entries total in the order: ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek
+    ... 9 entries total in the order: ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi
   ],
   "priority_actions": ["top 3-6 cross-engine actions sorted by impact"],
   "evidence_used": ["short bullet referring to which source/snippet supported each pillar; if none, say 'no evidence'"]
@@ -126,6 +127,8 @@ export const Route = createFileRoute("/api/applied-ranking")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const _chg = await chargeTokens({ userId, toolKey: "applied_ranking" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota: counts against monthly_analyses (premium tool, costs 2 by default but 1 per call here)
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();

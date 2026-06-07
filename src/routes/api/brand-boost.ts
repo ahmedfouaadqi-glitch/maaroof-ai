@@ -3,8 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
+import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek"] as const;
+const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"] as const;
 type Platform = typeof PLATFORMS[number];
 const BRAND_BOOST_COST = 5;
 const MAX_PLATFORMS_PER_RUN = 5;
@@ -21,6 +22,7 @@ const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
   grok:       { model: "openai/gpt-5-nano",            proxy: true  },
   mistral:    { model: "google/gemini-2.5-flash-lite", proxy: true  },
   deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
+  kimi:       { model: "google/gemini-2.5-flash-lite", proxy: true  },
 };
 
 async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000) {
@@ -103,6 +105,9 @@ export const Route = createFileRoute("/api/brand-boost")({
           const { data: userData, error: userErr } = await admin.auth.getUser(auth.slice(7));
           const userId = userData?.user?.id;
           if (userErr || !userId) return Response.json({ error: "auth_required" }, { status: 401 });
+
+          const _chg = await chargeTokens({ userId, toolKey: "brand_boost" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });

@@ -1,60 +1,40 @@
-## إكمال المتبقي + توضيح الرموز
+# خطة إكمال العمل المتبقي
 
-### توضيح الرموز A و S (تبسيط فوري)
-في لوحة المستخدمون والخطط كان يُكتب مثل `12A · 7S` — وهي اختصارات غامضة:
-- **A = Analyses** (عدد التحليلات المُستهلكة هذا الشهر)
-- **S = Suggestions** (عدد المنشورات/الاقتراحات المُولَّدة هذا الشهر)
+## ما تم إنجازه سابقاً
+- توضيح A/S → تحليلات/منشورات في لوحة الأدمن
+- إضافة Kimi كمحرّك تاسع في `api/analyze.ts`
+- لوحة تسعير الخطط `AdminPlanPricingPanel`
+- سجل التوكنات `AdminLedgerPanel` + تصدير CSV
+- helper موحّد `api-auth.server.ts` (authAndCharge)
+- مكوّن `HowItWorks` متعدد اللغات
 
-سيتم استبدالها بصيغة واضحة ثلاثية اللغة:
-- العربية: `12 تحليل · 7 منشور`
-- الإنجليزية: `12 analyses · 7 posts`
-- الكردية: `12 شیکاری · 7 پۆست`
-مع `title` تلميح يشرح كل قيمة عند المرور بالماوس. الأماكن المستهدفة: `src/routes/admin.tsx:198` (سطر المستخدم) و `:532` (بطاقة الخطة).
+## المتبقي (سيتم تنفيذه بهذا الترتيب)
 
-### المرحلة A — ربط chargeTokens بكل المسارات (17 أداة)
-لكل مسار في `src/routes/api/*` و`agent.server.ts`:
-1. استدعاء `chargeTokens({ userId, toolKey })` بعد التحقق من الجلسة وقبل تنفيذ العمل.
-2. عند `ok=false`:
-   - `reason==="unpriced"` → 402 + `chargeFailureBody("unpriced")`.
-   - `reason==="balance" | "daily_limit" | "monthly_limit"` → 402 + الرسالة المقابلة.
-3. تمرير `runId` و`meta` بسيطة (model, input size) للسجل.
-4. الأدوات: analyze, suggest, compare, feasibility, bizdev, research, visibility, brand_boost, company_email, applied_ranking, geo_strategist, competitor_monitor, social_analysis, what_if, brand_authority, geo_rewrite + agent.command, agent.run_targets, agent.visibility.
+### 1) ربط `authAndCharge` بجميع مسارات الـ API الـ17
+لكل مسار في `src/routes/api/*` (suggest, compare, feasibility, bizdev, research, visibility, brand_boost, company_email, applied_ranking, geo_strategist, competitor_monitor, social_analysis, what_if, brand_authority, geo_rewrite) + أوامر `agent.server.ts`:
+- إضافة gate في أعلى الـ handler
+- عند الفشل: إرجاع `gate.response` (401 أو 402)
+- معالجة `unpriced` برسالة عربية واضحة "هذه الأداة غير مُسعّرة من قبل المسؤول"
 
-### المرحلة F-tail — شبكة أسعار الخطط (PlanToolGrid)
-- تبويب "الخطط" يصبح: لكل خطة جدول كل أداة قابل للتحرير:
-  - تفعيل/تعطيل، `tokens_per_use`، `usd_per_use` (عبر `CostInput` بوحدة `$/¢/m¢`)، `daily_quota`، `monthly_quota`.
-  - شارة "غير مسعّرة" حمراء لكل خانة فارغة لإجبار الأدمن.
-- زرّ "نسخ من كتالوج الاقتراحات" يملأ القيم تلقائياً (يحتاج موافقة الأدمن).
+### 2) إضافة Kimi لباقي المكوّنات (مجموع المحرّكات = 9)
+- `AIVisibility.tsx`, `GeoStrategist.tsx`, `CompetitorMonitor.tsx`, `social-analysis`, `what-if`
+- تحديث `engine-logos.tsx` (شعار Kimi)
+- تعديل صيغة GEO Trust Score لتقسم على 9 بدلاً من 8
 
-### المرحلة F-spend — تبويب "سجل التوكن"
-- جدول لحظي من `token_ledger` مع فلاتر (مستخدم/أداة/تاريخ) + تصدير CSV/Excel عبر `ExportButtons`.
-- لوحة ملخّص أعلى الصفحة: إجمالي اليوم/الشهر (توكن + $)، أعلى 5 أدوات وأعلى 5 مستخدمين.
+### 3) إعادة كتابة محتوى الصفحات (بدون mock data، الكل عبر `useI18n`)
+- **`index.tsx`**: Hero جديد + بطاقات 11 أداة + 3 خطوات (Input/Process/Output) + دمج `HowItWorks`
+- **`guide.tsx`**: أدلة نصية تفصيلية لكل أداة مع أمثلة مكتوبة
+- **`tools.$slug.tsx`**: 5 صفحات هبوط (analyze, suggest, compare, geo_strategist, brand_boost) مع زر "ابدأ الآن"
 
-### المرحلة C — Kimi محرك تاسع
-- إضافة Kimi إلى مصفوفة المحركات في: `BrandPulseGauges`, `AIVisibility`, `GeoStrategist`, `CompetitorMonitor`, `social-analysis`, `what-if`.
-- شعار وأيقونة في `engine-logos.tsx`.
-- وزن متساوٍ في حساب GEO Trust Score (المجموع يصبح 9 بدل 8).
+### 4) تحقق نهائي
+- فحص build لا يحوي أخطاء
+- التأكد من أن `attachSupabaseAuth` مسجّل في `src/start.ts`
+- مراجعة بصرية للوحة الأدمن (التابات الثلاث: المستخدمون / تسعير الخطط / السجل)
 
-### المرحلة D — إعادة كتابة المحتوى
-- `src/routes/index.tsx` — Hero + 11 بطاقة أداة + 3 خطوات (من الواقع، بلا بيانات تجريبية).
-- `src/routes/guide.tsx` — دليل خطوة-بخطوة لكل أداة مع تلميحات وأمثلة مدخل/مخرج نصية.
-- `src/routes/tools.$slug.tsx` — صفحة هبوط لكل أداة (5 slugs: brand-boost / visibility / competitor-monitor / what-if / report-builder) مع زر "ابدأ الآن".
+## ملاحظات
+- لا يوجد تغيير على قاعدة البيانات (البنية جاهزة من المهاجرات السابقة)
+- جميع النصوص ثلاثية اللغة (AR/EN/KU)
+- لا قيم افتراضية للتسعير — الأدوات غير المسعّرة تُرجع 402
 
-### المرحلة E — HowItWorks نصي
-- مكوّن `src/components/HowItWorks.tsx` لكل أداة: أيقونات Lucide + رسوم SVG/CSS بسيطة + مثال مدخل/مخرج. ثلاث لغات عبر `useI18n`. **بدون فيديو**.
-
-### قاعدة البيانات
-لا حاجة لتغييرات جديدة — كل البنية التحتية (token_ledger، v_user_tool_spend، numeric(12,6)) جاهزة من الدور السابق.
-
-### ترتيب التنفيذ
-1. توضيح A/S (تعديل سطرين).
-2. PlanToolGrid + تبويب سجل التوكن (لوحة الأدمن الكاملة).
-3. Kimi في GEO Trust Score.
-4. ربط chargeTokens بالمسارات الـ17.
-5. إعادة كتابة index/guide + صفحات tools.$slug.
-6. HowItWorks النصي.
-
-### ملاحظات
-- كل النصوص الجديدة عبر `useI18n` (AR/EN/KU).
-- ExportButtons (Excel/PDF/CSV) متاحة في تبويبات الأدمن وصفحات الأدوات.
-- بدون أي بيانات تجريبية.
+## الترتيب
+1 → 2 → 3 → 4
