@@ -68,12 +68,8 @@ function AgentPage() {
   const [agentScope, setAgentScope] = useState<any>(null);
   const [visBusy, setVisBusy] = useState(false);
   const [visMsg, setVisMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // Channels
+  // Channels (loaded via ChannelsPanel)
   const [channels, setChannels] = useState<any[]>([]);
-  const [chKind] = useState<"telegram">("telegram");
-  const [chLabel, setChLabel] = useState("");
-  const [chBotToken, setChBotToken] = useState("");
-  const [chChatId, setChChatId] = useState("");
   const [publishingTask, setPublishingTask] = useState<string | null>(null);
   const runNowFn = useServerFn(runAgentNow);
   const runCmdFn = useServerFn(runAgentCommand);
