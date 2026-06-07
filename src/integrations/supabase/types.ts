@@ -363,6 +363,50 @@ export type Database = {
           },
         ]
       }
+      competitor_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          payload: Json | null
+          read_at: string | null
+          severity: string
+          target: string | null
+          user_id: string
+          watch_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          payload?: Json | null
+          read_at?: string | null
+          severity?: string
+          target?: string | null
+          user_id: string
+          watch_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          payload?: Json | null
+          read_at?: string | null
+          severity?: string
+          target?: string | null
+          user_id?: string
+          watch_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_alerts_watch_id_fkey"
+            columns: ["watch_id"]
+            isOneToOne: false
+            referencedRelation: "competitor_watch"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitor_watch: {
         Row: {
           active: boolean
@@ -944,6 +988,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      report_templates: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       subscription_plans: {
         Row: {
