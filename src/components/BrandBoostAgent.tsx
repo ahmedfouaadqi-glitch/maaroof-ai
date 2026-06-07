@@ -136,7 +136,7 @@ export function BrandBoostAgent() {
         <TabsContent value="visibility" className="mt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
             {lang === "ar"
-              ? "فحص ظهور علامتك في 8 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
+              ? "فحص ظهور علامتك في 9 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
               : lang === "ku"
               ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
               : "Probe your brand visibility across 8 AI engines (1 analysis). Brand required, keywords optional."}

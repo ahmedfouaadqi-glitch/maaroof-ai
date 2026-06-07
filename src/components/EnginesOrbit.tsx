@@ -8,7 +8,7 @@ import { ENGINES } from "./engine-logos";
 
 /**
  * Hero orbit animation:
- * - 8 AI engines orbit a central brand logo
+ * - 9 AI engines orbit a central brand logo
  * - Animated beams converge toward the brand → conveys "AI engines cite YOU"
  * - Tagline reinforces: smart idea = simplicity
  */
