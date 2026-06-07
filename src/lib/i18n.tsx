@@ -769,7 +769,7 @@ const en: Dict = {
   link_step_3_t: "3 · Create",
   link_step_3_d: "Post Generator writes ready-to-publish posts. Company Outreach drafts tailored emails.",
   link_step_4_t: "4 · Amplify",
-  link_step_4_d: "Brand Boost runs autonomously to lift your visibility across all 8 AI engines.",
+  link_step_4_d: "Brand Boost runs autonomously to lift your visibility across all 9 AI engines.",
   link_step_5_t: "5 · Monitor",
   link_step_5_d: "AI Visibility tracks where you stand. The agent re-runs on schedule and alerts you.",
   home_consume_title: "Fair, transparent consumption",
