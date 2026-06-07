@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callAI, checkAndConsume, publishToTelegram, publishToLinkedIn, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
+import { notifyUser } from "@/lib/notify.server";
 
 type L = "ar" | "en" | "ku";
 const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
@@ -39,11 +40,64 @@ export const runAgentNow = createServerFn({ method: "POST" })
             const m = content.match(/(\d{1,3})\s*\/\s*100/);
             if (m) score = Math.min(100, parseInt(m[1], 10));
           }
-          await supabaseAdmin.from("agent_tasks").insert({
+          const { data: ins } = await supabaseAdmin.from("agent_tasks").insert({
             user_id: userId, target_id: (tg as any).id, task_type: taskType,
-            input: subject, status: "done", result: { summary: content, score, lang: data.lang },
-          });
+            input: subject, status: "done",
+            result: { summary: content, score, lang: data.lang },
+            approval_status: taskType === "suggest_post" ? "pending" : "none",
+          }).select("id").single();
+          const tid = (ins as any)?.id as string | undefined;
           done++;
+
+          if (taskType === "suggest_post" && tid) {
+            // Try auto-publish to any channel in 'auto' mode
+            const { data: autoChans } = await supabaseAdmin
+              .from("publish_channels").select("*")
+              .eq("user_id", userId).eq("approval_mode", "auto").eq("active", true)
+              .not("verified_at", "is", null);
+            let published = false;
+            for (const ch of autoChans || []) {
+              try {
+                if (ch.kind === "telegram") {
+                  const cfg = (ch.config as any) || {};
+                  const tk = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
+                  if (tk && cfg.chat_id) {
+                    await publishToTelegram(tk, cfg.chat_id, content);
+                    published = true;
+                  }
+                } else if (ch.kind === "linkedin") {
+                  await publishToLinkedIn(content);
+                  published = true;
+                }
+                if (published) {
+                  await supabaseAdmin.from("publish_log").insert({
+                    user_id: userId, task_id: tid, channel_id: ch.id, kind: ch.kind, status: "sent",
+                  });
+                  await supabaseAdmin.from("agent_tasks").update({
+                    approval_status: "approved",
+                    approved_at: new Date().toISOString(),
+                    approval_channel_id: ch.id,
+                  }).eq("id", tid);
+                  await notifyUser(userId, "post_published", `تم النشر تلقائياً على ${ch.label || ch.kind}`, { link: "/agent" });
+                  break;
+                }
+              } catch (e: any) {
+                await supabaseAdmin.from("publish_log").insert({
+                  user_id: userId, task_id: tid, channel_id: ch.id, kind: ch.kind,
+                  status: "failed", error: e?.message || "error",
+                });
+              }
+            }
+            if (!published) {
+              await notifyUser(userId, "approval_needed",
+                `منشور جديد جاهز لـ "${subject}". افتح الوكيل للمراجعة والنشر.`,
+                { link: "/agent", taskId: tid });
+            }
+          } else if (taskType === "analyze_url" && tid) {
+            await notifyUser(userId, "analysis_done",
+              `اكتمل تحليل GEO لـ "${subject}"${score != null ? ` — الدرجة ${score}/100` : ""}`,
+              { link: "/agent" });
+          }
         } catch (e: any) {
           await supabaseAdmin.from("agent_tasks").insert({
             user_id: userId, target_id: (tg as any).id, task_type: taskType,
@@ -55,6 +109,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
     }
     return { ok: true, done, failed };
   });
+
 
 export const runAgentCommand = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
