@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/brand-authority")({
 
           // Step 1: optional scrape for grounding
           let evidenceText = "";
-          if (source_url) {
+          if (source_url && /^https?:\/\//i.test(source_url)) {
             try {
               const s: any = await fcScrape(source_url, { deep: false });
               const md = String(s?.data?.markdown || s?.markdown || "").slice(0, 6000);
