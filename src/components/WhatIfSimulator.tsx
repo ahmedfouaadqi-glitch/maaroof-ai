@@ -68,17 +68,25 @@ export function WhatIfSimulator() {
           {res.engine_projections?.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead><tr className="border-b"><th className="p-2 text-start">المحرك</th><th className="p-2 text-start">baseline</th><th className="p-2 text-start">Δ متوقع</th><th className="p-2 text-start">ثقة</th><th className="p-2 text-start">السبب</th></tr></thead>
+                <thead><tr className="border-b"><th className="p-2 text-start">المحرك</th><th className="p-2 text-start">قبل</th><th className="p-2 text-start">بعد (متوقع)</th><th className="p-2 text-start">Δ</th><th className="p-2 text-start">ثقة</th><th className="p-2 text-start">سبب التغيّر</th></tr></thead>
                 <tbody>
-                  {res.engine_projections.map((p: any, i: number) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="p-2 font-semibold">{p.engine}</td>
-                      <td className="p-2">{p.baseline_score ?? "—"}</td>
-                      <td className="p-2 text-primary">{p.projected_delta}</td>
-                      <td className="p-2">{p.confidence}</td>
-                      <td className="p-2 text-muted-foreground">{p.reason}</td>
-                    </tr>
-                  ))}
+                  {res.engine_projections.map((p: any, i: number) => {
+                    const before = typeof p.baseline_score === "number" ? p.baseline_score : null;
+                    // Parse "+X% to +Y%" to mid value for after estimate
+                    const m = String(p.projected_delta || "").match(/([+-]?\d+(?:\.\d+)?)\s*%?\s*(?:to|إلى|الى|-)\s*([+-]?\d+(?:\.\d+)?)/);
+                    const midDelta = m ? (parseFloat(m[1]) + parseFloat(m[2])) / 2 : null;
+                    const after = before !== null && midDelta !== null ? Math.max(0, Math.min(100, Math.round(before * (1 + midDelta / 100)))) : null;
+                    return (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="p-2 font-semibold">{p.engine}</td>
+                        <td className="p-2">{before ?? "—"}</td>
+                        <td className="p-2 text-success font-bold">{after ?? "—"}</td>
+                        <td className="p-2 text-primary">{p.projected_delta}</td>
+                        <td className="p-2">{p.confidence}</td>
+                        <td className="p-2 text-muted-foreground">{p.reason}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
