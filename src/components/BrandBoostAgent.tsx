@@ -138,8 +138,8 @@ export function BrandBoostAgent() {
             {lang === "ar"
               ? "فحص ظهور علامتك في 9 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
               : lang === "ku"
-              ? "پشکنینی دەرکەوتنی براندەکەت لە 8 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
-              : "Probe your brand visibility across 8 AI engines (1 analysis). Brand required, keywords optional."}
+              ? "پشکنینی دەرکەوتنی براندەکەت لە 9 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
+              : "Probe your brand visibility across 9 AI engines (1 analysis). Brand required, keywords optional."}
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
         </TabsContent>
