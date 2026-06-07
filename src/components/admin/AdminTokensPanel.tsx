@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Coins, Save, Search, Wallet } from "lucide-react";
+import { Loader2, Coins, Save, Search, Wallet, ShieldPlus, ShieldMinus, RotateCcw } from "lucide-react";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
-import { CostBadge } from "@/components/CostBadge";
+import { CostBadge, formatUsd } from "@/components/CostBadge";
+import { CostInput } from "@/components/admin/CostInput";
 import { useI18n } from "@/lib/i18n";
 
 type Profile = {
@@ -14,26 +15,41 @@ type Profile = {
 };
 
 type Pricing = { tool_key: string; default_tokens: number; default_usd: number; model: string | null };
+type RoleRow = { user_id: string; role: "admin" | "user" | string };
+type SpendRow = { user_id: string; tool_key: string; uses: number; total_tokens: number; total_usd: number; tokens_today: number; tokens_month: number; usd_month: number };
+type PlanPrice = { tool_key: string; tokens_per_use: number; usd_per_use: number; enabled: boolean };
+
+const T = {
+  ar: { title: "إدارة التوكن والصلاحيات والتسعير", search: "بحث بالبريد/الاسم", user: "المستخدم", plan: "الخطة", balance: "الرصيد", daily: "يومي", monthly: "شهري", role: "الدور", action: "إجراء", manage: "إدارة", admin: "مسؤول", normal: "مستخدم", makeAdmin: "ترقية لمسؤول", revokeAdmin: "إلغاء الإدارة", noResults: "لا توجد نتائج", suggestionsCatalog: "كتالوج اقتراحات الأسعار (للمسؤول فقط)", balanceTok: "رصيد التوكن", dailyLimit: "حد يومي (توكن)", monthlyLimit: "حد شهري (توكن)", toolsHeader: "الأدوات: التكلفة/مرة، الحدود، الاستخدام، الإجمالي المنفَق", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", usesLbl: "مرات", spent: "المنفَق", reset: "إعادة لقيمة الخطة", save: "حفظ", source: "المصدر", srcUser: "خاص بالمستخدم", srcPlan: "من الخطة", srcNone: "غير مسعّرة", inheritsPlan: "يرث من الخطة", noPlan: "بدون خطة", priceUnsetWarn: "لم تُسعّر هذه الأداة لا في الخطة ولا في إعدادات المستخدم — لن تعمل لهذا المستخدم.", today: "اليوم", month: "الشهر" },
+  en: { title: "Tokens, Roles & Pricing", search: "search email/name", user: "User", plan: "Plan", balance: "Balance", daily: "Daily", monthly: "Monthly", role: "Role", action: "Action", manage: "Manage", admin: "Admin", normal: "User", makeAdmin: "Promote to admin", revokeAdmin: "Revoke admin", noResults: "No results", suggestionsCatalog: "Price suggestions catalog (admin only)", balanceTok: "Token balance", dailyLimit: "Daily limit (tokens)", monthlyLimit: "Monthly limit (tokens)", toolsHeader: "Tools: cost/use, caps, usage, total spent", tokensPerUse: "tokens/use", usdPerUse: "cost/use", dailyCap: "daily cap", monthlyCap: "monthly cap", usesLbl: "uses", spent: "spent", reset: "Reset to plan", save: "Save", source: "Source", srcUser: "User override", srcPlan: "From plan", srcNone: "Unpriced", inheritsPlan: "inherits from plan", noPlan: "no plan", priceUnsetWarn: "This tool is unpriced in both the plan and the user — it will be blocked for this user.", today: "today", month: "month" },
+  ku: { title: "بەڕێوەبردنی تۆکن، ڕۆڵ و نرخدانان", search: "گەڕان", user: "بەکارهێنەر", plan: "پلان", balance: "بەڵانس", daily: "ڕۆژانە", monthly: "مانگانە", role: "ڕۆڵ", action: "کردار", manage: "بەڕێوەبردن", admin: "ئەدمین", normal: "بەکارهێنەر", makeAdmin: "بکە بە ئەدمین", revokeAdmin: "ڕاکێشانەوەی ئەدمین", noResults: "هیچ نییە", suggestionsCatalog: "کاتالۆگی پێشنیار", balanceTok: "بەڵانسی تۆکن", dailyLimit: "سنووری ڕۆژانە", monthlyLimit: "سنووری مانگانە", toolsHeader: "ئامرازەکان", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", usesLbl: "جار", spent: "خەرجکراو", reset: "گەڕاندنەوە", save: "پاشەکەوت", source: "سەرچاوە", srcUser: "تایبەت", srcPlan: "لە پلان", srcNone: "نرخ نەنراوە", inheritsPlan: "لە پلانەوە", noPlan: "بێ پلان", priceUnsetWarn: "نرخ نەنراوە — کار ناکات.", today: "ئەمڕۆ", month: "مانگ" },
+};
 
 export function AdminTokensPanel() {
   const { lang } = useI18n();
+  const L = (T as any)[lang] || T.ar;
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [pricing, setPricing] = useState<Pricing[]>([]);
+  const [roles, setRoles] = useState<RoleRow[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(true);
   const [editing, setEditing] = useState<Profile | null>(null);
 
   async function load() {
     setBusy(true);
-    const [p, c] = await Promise.all([
+    const [p, c, r] = await Promise.all([
       supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier").order("email"),
       supabase.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd, model"),
+      supabase.from("user_roles").select("user_id, role"),
     ]);
     setProfiles((p.data || []) as any);
     setPricing((c.data || []) as any);
+    setRoles((r.data || []) as any);
     setBusy(false);
   }
   useEffect(() => { load(); }, []);
+
+  const adminSet = useMemo(() => new Set(roles.filter((r) => r.role === "admin").map((r) => r.user_id)), [roles]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -43,13 +59,22 @@ export function AdminTokensPanel() {
 
   const catalog = useMemo(() => Object.fromEntries(pricing.map((p) => [p.tool_key, p])), [pricing]);
 
+  async function toggleAdmin(userId: string, makeAdmin: boolean) {
+    if (makeAdmin) {
+      await supabase.from("user_roles").upsert({ user_id: userId, role: "admin" } as any, { onConflict: "user_id,role" });
+    } else {
+      await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "admin");
+    }
+    load();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-xl font-semibold flex items-center gap-2"><Coins className="size-5 text-primary" /> إدارة التوكن والتسعير</h2>
+        <h2 className="font-display text-xl font-semibold flex items-center gap-2"><Coins className="size-5 text-primary" /> {L.title}</h2>
         <div className="relative">
           <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالبريد/الاسم" className="rounded-full border border-border bg-card/60 py-2 pr-9 pl-3 text-sm w-64" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L.search} className="rounded-full border border-border bg-card/60 py-2 pr-9 pl-3 text-sm w-64" />
         </div>
       </div>
 
@@ -60,44 +85,57 @@ export function AdminTokensPanel() {
           <table className="w-full text-sm">
             <thead className="bg-card/60 text-xs">
               <tr>
-                <th className="p-2 text-start">المستخدم</th>
-                <th className="p-2">الخطة</th>
-                <th className="p-2">الرصيد</th>
-                <th className="p-2">يومي</th>
-                <th className="p-2">شهري</th>
-                <th className="p-2">إجراء</th>
+                <th className="p-2 text-start">{L.user}</th>
+                <th className="p-2">{L.role}</th>
+                <th className="p-2">{L.plan}</th>
+                <th className="p-2">{L.balance}</th>
+                <th className="p-2">{L.daily}</th>
+                <th className="p-2">{L.monthly}</th>
+                <th className="p-2">{L.action}</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="border-t border-border/50">
-                  <td className="p-2">
-                    <div className="font-medium">{p.full_name || p.username || p.email}</div>
-                    <div className="text-xs text-muted-foreground">{p.email}</div>
-                  </td>
-                  <td className="p-2 text-center text-xs">{p.subscription_tier || "—"}</td>
-                  <td className="p-2 text-center font-semibold text-primary">{p.tokens_balance.toLocaleString()}</td>
-                  <td className="p-2 text-center text-xs">{p.tokens_used_today}/{p.tokens_daily_limit ?? "∞"}</td>
-                  <td className="p-2 text-center text-xs">{p.tokens_used_month}/{p.tokens_monthly_limit ?? "∞"}</td>
-                  <td className="p-2 text-center">
-                    <button onClick={() => setEditing(p)} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20">إدارة</button>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">لا توجد نتائج</td></tr>}
+              {filtered.map((p) => {
+                const isAdmin = adminSet.has(p.id);
+                return (
+                  <tr key={p.id} className="border-t border-border/50">
+                    <td className="p-2">
+                      <div className="font-medium">{p.full_name || p.username || p.email}</div>
+                      <div className="text-xs text-muted-foreground">{p.email}</div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={() => toggleAdmin(p.id, !isAdmin)}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${isAdmin ? "border border-accent/40 bg-accent/10 text-accent" : "border border-border bg-card/60"}`}
+                        title={isAdmin ? L.revokeAdmin : L.makeAdmin}
+                      >
+                        {isAdmin ? <><ShieldPlus className="size-3" /> {L.admin}</> : <><ShieldMinus className="size-3" /> {L.normal}</>}
+                      </button>
+                    </td>
+                    <td className="p-2 text-center text-xs">{p.subscription_tier || "—"}</td>
+                    <td className="p-2 text-center font-semibold text-primary">{p.tokens_balance.toLocaleString()}</td>
+                    <td className="p-2 text-center text-xs">{p.tokens_used_today}/{p.tokens_daily_limit ?? "∞"}</td>
+                    <td className="p-2 text-center text-xs">{p.tokens_used_month}/{p.tokens_monthly_limit ?? "∞"}</td>
+                    <td className="p-2 text-center">
+                      <button onClick={() => setEditing(p)} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20">{L.manage}</button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{L.noResults}</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
       <details className="rounded-xl border border-border bg-card/40 p-3">
-        <summary className="cursor-pointer text-sm font-semibold">كتالوج التسعير الافتراضي ({pricing.length} أداة)</summary>
+        <summary className="cursor-pointer text-sm font-semibold">{L.suggestionsCatalog} ({pricing.length})</summary>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {pricing.map((c) => (
             <div key={c.tool_key} className="flex items-center justify-between rounded-lg border border-border bg-background/40 px-3 py-2 text-xs">
               <div>
-                <div className="font-semibold">{c.tool_key}</div>
-                <div className="text-[10px] text-muted-foreground">{c.model}</div>
+                <div className="font-semibold">{toolLabel(c.tool_key as any, lang as any)}</div>
+                <div className="text-[10px] text-muted-foreground">{c.model || c.tool_key}</div>
               </div>
               <CostBadge tokens={c.default_tokens} usd={c.default_usd} compact />
             </div>
@@ -105,39 +143,52 @@ export function AdminTokensPanel() {
         </div>
       </details>
 
-      {editing && <UserTokensDrawer user={editing} catalog={catalog} onClose={() => { setEditing(null); load(); }} />}
+      {editing && <UserTokensDrawer user={editing} catalog={catalog} L={L} lang={lang as any} onClose={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function UserTokensDrawer({ user, catalog, onClose }: { user: Profile; catalog: Record<string, Pricing>; onClose: () => void }) {
+function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; catalog: Record<string, Pricing>; L: any; lang: "ar" | "en" | "ku"; onClose: () => void }) {
   const [balance, setBalance] = useState(user.tokens_balance);
   const [daily, setDaily] = useState<number | "">(user.tokens_daily_limit ?? "");
   const [monthly, setMonthly] = useState<number | "">(user.tokens_monthly_limit ?? "");
   const [overrides, setOverrides] = useState<Record<string, any>>(user.per_user_tool_overrides || {});
+  const [planPrices, setPlanPrices] = useState<Record<string, PlanPrice>>({});
+  const [spend, setSpend] = useState<Record<string, SpendRow>>({});
+  const [planActive, setPlanActive] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const totalDailyCost = useMemo(() => {
-    let tokens = 0, usd = 0;
-    for (const t of TOOL_CATALOG) {
-      const o = overrides[t.key] || {};
-      const def = catalog[t.key];
-      const perUse = Number(o.tokens_per_use ?? def?.default_tokens ?? 0);
-      const perUsd = Number(o.usd_per_use ?? def?.default_usd ?? 0);
-      const dailyUses = Number(o.daily ?? 0);
-      tokens += perUse * dailyUses;
-      usd += perUsd * dailyUses;
-    }
-    return { tokens, usd };
-  }, [overrides, catalog]);
+  useEffect(() => {
+    (async () => {
+      // Load plan tool prices for this user's plan (if any)
+      if (user.subscription_tier) {
+        const { data: plan } = await supabase.from("subscription_plans").select("id").eq("name", user.subscription_tier).maybeSingle();
+        const planId = (plan as any)?.id;
+        if (planId) {
+          const { data: tpa } = await supabase.from("tool_plan_access").select("tool_key, tokens_per_use, usd_per_use, enabled").eq("plan_id", planId);
+          setPlanPrices(Object.fromEntries(((tpa || []) as any[]).map((r) => [r.tool_key, r])));
+          setPlanActive(true);
+        }
+      }
+      // Real per-tool spend from view
+      const { data: sp } = await supabase.from("v_user_tool_spend" as any).select("*").eq("user_id", user.id);
+      setSpend(Object.fromEntries(((sp || []) as any[]).map((r) => [r.tool_key, r])));
+    })();
+  }, [user.id, user.subscription_tier]);
 
   async function save() {
     setSaving(true);
+    // Clean: drop empty overrides so resolveToolCost falls back to the plan
+    const clean: Record<string, any> = {};
+    for (const [k, v] of Object.entries(overrides)) {
+      const hasAny = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0;
+      if (hasAny) clean[k] = v;
+    }
     await supabase.from("profiles").update({
       tokens_balance: balance,
       tokens_daily_limit: daily === "" ? null : Number(daily),
       tokens_monthly_limit: monthly === "" ? null : Number(monthly),
-      per_user_tool_overrides: overrides,
+      per_user_tool_overrides: clean,
     } as any).eq("id", user.id);
     setSaving(false);
     onClose();
@@ -146,61 +197,147 @@ function UserTokensDrawer({ user, catalog, onClose }: { user: Profile; catalog: 
   function patchTool(key: string, patch: any) {
     setOverrides((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
   }
+  function resetTool(key: string) {
+    setOverrides((prev) => { const next = { ...prev }; delete next[key]; return next; });
+  }
+
+  function effective(toolKey: string): { tokens: number; usd: number; source: "user" | "plan" | "none" } {
+    const ov = overrides[toolKey] || {};
+    if (Number(ov.tokens_per_use) > 0 || Number(ov.usd_per_use) > 0) {
+      return { tokens: Number(ov.tokens_per_use) || 0, usd: Number(ov.usd_per_use) || 0, source: "user" };
+    }
+    const pp = planPrices[toolKey];
+    if (planActive && pp?.enabled && (Number(pp.tokens_per_use) > 0 || Number(pp.usd_per_use) > 0)) {
+      return { tokens: Number(pp.tokens_per_use), usd: Number(pp.usd_per_use), source: "plan" };
+    }
+    return { tokens: 0, usd: 0, source: "none" };
+  }
+
+  // Grand total actually spent (all tools)
+  const grandSpent = useMemo(() => {
+    let tokens = 0, usd = 0;
+    for (const r of Object.values(spend)) { tokens += r.total_tokens; usd += Number(r.total_usd) || 0; }
+    return { tokens, usd };
+  }, [spend]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-background p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-border bg-background p-5" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-display text-lg font-bold">{user.full_name || user.email}</h3>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <p className="text-xs text-muted-foreground">{user.email} · {user.subscription_tier || L.noPlan}</p>
           </div>
           <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">✕</button>
         </div>
 
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <Field label="رصيد التوكن" icon={<Wallet className="size-3.5 text-primary" />}>
+          <Field label={L.balanceTok} icon={<Wallet className="size-3.5 text-primary" />}>
             <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
           </Field>
-          <Field label="حد يومي (توكن)">
+          <Field label={L.dailyLimit}>
             <input type="number" value={daily} onChange={(e) => setDaily(e.target.value === "" ? "" : Number(e.target.value))} placeholder="∞" className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
           </Field>
-          <Field label="حد شهري (توكن)">
+          <Field label={L.monthlyLimit}>
             <input type="number" value={monthly} onChange={(e) => setMonthly(e.target.value === "" ? "" : Number(e.target.value))} placeholder="∞" className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
           </Field>
         </div>
 
-        <h4 className="mb-2 text-sm font-semibold">إعدادات الأدوات (تجاوز لكل مستخدم)</h4>
-        <div className="space-y-2">
-          {TOOL_CATALOG.map((t) => {
-            const o = overrides[t.key] || {};
-            const def = catalog[t.key];
-            const perUse = Number(o.tokens_per_use ?? def?.default_tokens ?? 0);
-            const perUsd = Number(o.usd_per_use ?? def?.default_usd ?? 0);
-            return (
-              <div key={t.key} className="rounded-lg border border-border bg-card/40 p-2 text-xs">
-                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-semibold">{toolLabel(t.key as any, "ar")}</div>
-                  <CostBadge tokens={perUse} usd={perUsd} compact />
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <SmallField label="توكن/مرة" value={o.tokens_per_use ?? ""} placeholder={String(def?.default_tokens || 0)} onChange={(v) => patchTool(t.key, { tokens_per_use: v })} />
-                  <SmallField label="دولار/مرة" value={o.usd_per_use ?? ""} placeholder={String(def?.default_usd || 0)} step="0.0001" onChange={(v) => patchTool(t.key, { usd_per_use: v })} />
-                  <SmallField label="يومي" value={o.daily ?? ""} placeholder="0" onChange={(v) => patchTool(t.key, { daily: v })} />
-                  <SmallField label="شهري" value={o.monthly ?? ""} placeholder="0" onChange={(v) => patchTool(t.key, { monthly: v })} />
-                </div>
-              </div>
-            );
-          })}
+        <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
+
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-xs">
+            <thead className="bg-card/60">
+              <tr>
+                <th className="p-2 text-start">Tool</th>
+                <th className="p-2">{L.source}</th>
+                <th className="p-2 w-28">{L.tokensPerUse}</th>
+                <th className="p-2 w-40">{L.usdPerUse}</th>
+                <th className="p-2 w-20">{L.dailyCap}</th>
+                <th className="p-2 w-20">{L.monthlyCap}</th>
+                <th className="p-2">{L.usesLbl}</th>
+                <th className="p-2">{L.spent}</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {TOOL_CATALOG.map((t) => {
+                const o = overrides[t.key] || {};
+                const eff = effective(t.key);
+                const sp = spend[t.key];
+                const pp = planPrices[t.key];
+                const placeholderTokens = pp?.tokens_per_use && pp.tokens_per_use > 0 ? String(pp.tokens_per_use) : "";
+                return (
+                  <tr key={t.key} className="border-t border-border/50">
+                    <td className="p-2">
+                      <div className="font-semibold">{toolLabel(t.key as any, lang)}</div>
+                      <div className="text-[10px] text-muted-foreground">{t.key}</div>
+                    </td>
+                    <td className="p-2 text-center">
+                      {eff.source === "user" && <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{L.srcUser}</span>}
+                      {eff.source === "plan" && <span className="rounded-full border border-border bg-card/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{L.srcPlan}</span>}
+                      {eff.source === "none" && <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">{L.srcNone}</span>}
+                    </td>
+                    <td className="p-2">
+                      <input
+                        type="number" min={0}
+                        value={o.tokens_per_use ?? ""}
+                        placeholder={placeholderTokens}
+                        onChange={(e) => patchTool(t.key, { tokens_per_use: e.target.value === "" ? undefined : Number(e.target.value) })}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <CostInput
+                        value={Number(o.usd_per_use) || 0}
+                        onChange={(usd) => patchTool(t.key, { usd_per_use: usd > 0 ? usd : undefined })}
+                        placeholder={pp?.usd_per_use ? formatUsd(Number(pp.usd_per_use)).replace(/[^\d.]/g, "") : "0"}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input type="number" min={0} value={o.daily ?? ""} placeholder="∞"
+                        onChange={(e) => patchTool(t.key, { daily: e.target.value === "" ? undefined : Number(e.target.value) })}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+                    </td>
+                    <td className="p-2">
+                      <input type="number" min={0} value={o.monthly ?? ""} placeholder="∞"
+                        onChange={(e) => patchTool(t.key, { monthly: e.target.value === "" ? undefined : Number(e.target.value) })}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+                    </td>
+                    <td className="p-2 text-center">{sp?.uses ?? 0}</td>
+                    <td className="p-2 text-center">
+                      <CostBadge tokens={sp?.total_tokens ?? 0} usd={Number(sp?.total_usd) || 0} compact />
+                      {sp && (sp.tokens_today > 0 || sp.tokens_month > 0) && (
+                        <div className="mt-0.5 text-[9px] text-muted-foreground">{L.today}: {sp.tokens_today} · {L.month}: {sp.tokens_month}</div>
+                      )}
+                    </td>
+                    <td className="p-2 text-center">
+                      {overrides[t.key] && (
+                        <button onClick={() => resetTool(t.key)} title={L.reset} className="rounded-full border border-border bg-card/60 p-1 hover:bg-card">
+                          <RotateCcw className="size-3" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+
+        {TOOL_CATALOG.some((t) => effective(t.key).source === "none") && (
+          <div className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            {L.priceUnsetWarn}
+          </div>
+        )}
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="text-sm">
-            <div className="text-xs text-muted-foreground">التكلفة اليومية الكاملة (لو استُهلكت كل الحصص)</div>
-            <CostBadge tokens={totalDailyCost.tokens} usd={totalDailyCost.usd} />
+            <div className="text-xs text-muted-foreground">{L.spent} (Σ)</div>
+            <CostBadge tokens={grandSpent.tokens} usd={grandSpent.usd} />
           </div>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} حفظ
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {L.save}
           </button>
         </div>
       </div>
@@ -213,14 +350,6 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
     <label className="space-y-1">
       <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">{icon}{label}</div>
       {children}
-    </label>
-  );
-}
-function SmallField({ label, value, onChange, placeholder, step }: { label: string; value: any; onChange: (v: number | "") => void; placeholder?: string; step?: string }) {
-  return (
-    <label className="space-y-0.5">
-      <div className="text-[10px] text-muted-foreground">{label}</div>
-      <input type="number" step={step} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))} className="w-full rounded-md border border-border bg-background px-2 py-1" />
     </label>
   );
 }
