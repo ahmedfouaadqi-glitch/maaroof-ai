@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callAI, checkAndConsume, publishToTelegram, publishToLinkedIn, SYSTEM_AGENT, SYSTEM_ANALYZE, SYSTEM_SUGGEST } from "@/lib/agent.server";
+import { notifyUser } from "@/lib/notify.server";
 
 type L = "ar" | "en" | "ku";
 const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
