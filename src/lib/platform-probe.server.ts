@@ -119,12 +119,12 @@ async function probeOneBrand(
 
   const sys = `${PLATFORM_RUBRIC}
 
-You are scoring how each of the 8 AI engines above would RECALL or CITE the brand "${brand.name}" if asked about it in market "${market || "global"}". Use ONLY the evidence below. Do NOT invent facts. Different engines MUST get different scores when their specific signals differ.
+You are scoring how each of the 9 AI engines above would RECALL or CITE the brand "${brand.name}" if asked about it in market "${market || "global"}". Use ONLY the evidence below. Do NOT invent facts. Different engines MUST get different scores when their specific signals differ.
 
 Reply in STRICT JSON only, no markdown:
 {
-  "scores": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100> },
-  "reasons": { "chatgpt": "<≤120 chars in ${langName}, cite the specific signal>", "gemini": "...", "claude": "...", "perplexity": "...", "copilot": "...", "grok": "...", "mistral": "...", "deepseek": "..." }
+  "scores": { "chatgpt": <0-100>, "gemini": <0-100>, "claude": <0-100>, "perplexity": <0-100>, "copilot": <0-100>, "grok": <0-100>, "mistral": <0-100>, "deepseek": <0-100>, "kimi": <0-100> },
+  "reasons": { "chatgpt": "<≤120 chars in ${langName}, cite the specific signal>", "gemini": "...", "claude": "...", "perplexity": "...", "copilot": "...", "grok": "...", "mistral": "...", "deepseek": "...", "kimi": "..." }
 }`;
 
   const user = `Brand: ${brand.name}
