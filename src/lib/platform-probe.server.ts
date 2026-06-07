@@ -185,6 +185,7 @@ Return the JSON now. Remember: different engines MUST score differently when the
           case "claude": return (pe.wiki || 0) + ((seo?.word_count || 0) >= 800 ? 2 : 0);
           case "mistral": return (pe.general || 0) + (seo?.has_lang ? 2 : 0);
           case "deepseek": return (seo?.has_jsonld ? 3 : 0) + (pe.general || 0);
+          case "kimi": return (pe.wiki || 0) + ((seo?.word_count || 0) >= 1500 ? 3 : 0) + (seo?.has_lang ? 1 : 0);
           default: return 0;
         }
       })();
