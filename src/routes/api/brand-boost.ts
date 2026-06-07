@@ -104,6 +104,9 @@ export const Route = createFileRoute("/api/brand-boost")({
           const userId = userData?.user?.id;
           if (userErr || !userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
+          const _chg = await chargeTokens({ userId, toolKey: "brand_boost" });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });
           // Per-user super-admin toggle for Brand Boost: quota_overrides.brand_boost = "on" | "off" | undefined
