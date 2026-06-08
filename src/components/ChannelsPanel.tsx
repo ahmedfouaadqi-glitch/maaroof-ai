@@ -7,9 +7,18 @@ import {
   disconnectChannel,
   setChannelApprovalMode,
   setPreferredNotify,
+  saveManualSocialToken,
 } from "@/lib/publish.functions";
 import { useI18n } from "@/lib/i18n";
-import { Send, Linkedin, Music2, Trash2, CheckCircle2, Loader2, ExternalLink, Bell, Mail, Inbox } from "lucide-react";
+import {
+  Send, Linkedin, Facebook, Instagram, Twitter, Trash2, CheckCircle2,
+  Loader2, ExternalLink, Bell, Mail, Inbox, ChevronDown,
+} from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type Channel = {
   id: string;
@@ -30,13 +39,57 @@ type State = {
   tiktokAvailable: boolean;
 };
 
-const KIND_META: Record<string, { name: string; icon: any; color: string; gradient: string }> = {
-  telegram: { name: "Telegram", icon: Send, color: "text-sky-500", gradient: "from-sky-500/20 to-sky-700/10" },
-  linkedin: { name: "LinkedIn", icon: Linkedin, color: "text-blue-600", gradient: "from-blue-600/20 to-blue-800/10" },
-  tiktok: { name: "TikTok", icon: Music2, color: "text-pink-500", gradient: "from-pink-500/20 to-fuchsia-700/10" },
+type ProviderKey = "telegram" | "linkedin" | "facebook" | "instagram" | "x";
+
+const PROVIDER_META: Record<ProviderKey, {
+  name: string;
+  icon: any;
+  color: string;
+  gradient: string;
+  tokenHelpUrl?: string;
+  tokenHelpSteps?: string[];
+}> = {
+  telegram: {
+    name: "Telegram", icon: Send, color: "text-sky-500",
+    gradient: "from-sky-500/20 to-sky-700/10",
+  },
+  linkedin: {
+    name: "LinkedIn", icon: Linkedin, color: "text-blue-600",
+    gradient: "from-blue-600/20 to-blue-800/10",
+  },
+  facebook: {
+    name: "Facebook", icon: Facebook, color: "text-blue-500",
+    gradient: "from-blue-500/20 to-indigo-700/10",
+    tokenHelpUrl: "https://developers.facebook.com/tools/explorer/",
+    tokenHelpSteps: [
+      "افتح Graph API Explorer واختر تطبيقك",
+      "اطلب صلاحيتي: pages_manage_posts و pages_read_engagement",
+      "انسخ Page Access Token وألصقه أدناه + ضع Page ID",
+    ],
+  },
+  instagram: {
+    name: "Instagram", icon: Instagram, color: "text-pink-500",
+    gradient: "from-pink-500/20 to-fuchsia-700/10",
+    tokenHelpUrl: "https://developers.facebook.com/docs/instagram-api/getting-started",
+    tokenHelpSteps: [
+      "يجب أن يكون حسابك Instagram Business مرتبط بصفحة Facebook",
+      "احصل على Long-Lived Page Access Token من Graph API Explorer",
+      "انسخ IG User ID (من /me/accounts) وألصق الاثنين أدناه",
+    ],
+  },
+  x: {
+    name: "X (Twitter)", icon: Twitter, color: "text-foreground",
+    gradient: "from-zinc-500/20 to-zinc-800/10",
+    tokenHelpUrl: "https://developer.twitter.com/en/portal/dashboard",
+    tokenHelpSteps: [
+      "افتح Developer Portal وأنشئ تطبيقاً (إن لم يكن لديك)",
+      "فعّل OAuth 2.0 مع scopes: tweet.read tweet.write users.read",
+      "ولّد User Access Token (Bearer) وألصقه أدناه",
+    ],
+  },
 };
 
-const COMING_SOON = ["facebook", "instagram", "x", "whatsapp"];
+const ORDER: ProviderKey[] = ["telegram", "linkedin", "facebook", "instagram", "x"];
 
 export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
   const { t } = useI18n();
@@ -46,56 +99,46 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
   const disconnectFn = useServerFn(disconnectChannel);
   const setModeFn = useServerFn(setChannelApprovalMode);
   const setPrefFn = useServerFn(setPreferredNotify);
+  const saveManualFn = useServerFn(saveManualSocialToken);
 
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [tgLink, setTgLink] = useState<string | null>(null);
+  const [dialogProvider, setDialogProvider] = useState<"facebook" | "instagram" | "x" | null>(null);
 
-  const load = async () => {
-    const s = (await fetchState()) as State;
-    setState(s);
-  };
+  const load = async () => setState((await fetchState()) as State);
   useEffect(() => { load(); }, []);
 
   const connectTelegram = async () => {
-    setBusy("tg");
+    setBusy("telegram");
     try {
       const r = (await tgLinkFn()) as any;
       if (r?.ok && r.link) {
         setTgLink(r.link);
         window.open(r.link, "_blank", "noopener,noreferrer");
       } else {
-        alert(t("ag_ch_tg_not_ready") || "بوت Telegram غير مُهيّأ بعد. تواصل مع الإدارة.");
+        alert(t("ag_ch_tg_not_ready") || "بوت Telegram غير مُهيّأ. تواصل مع الإدارة.");
       }
-    } finally {
-      setBusy(null);
-      await load();
-      onChanged?.();
-    }
+    } finally { setBusy(null); await load(); onChanged?.(); }
   };
 
   const connectLinkedIn = async () => {
-    setBusy("li");
+    setBusy("linkedin");
     try {
       const r = (await liEnableFn()) as any;
-      if (!r?.ok) alert(t("ag_ch_li_unavailable") || "LinkedIn غير متاح حالياً.");
-    } finally {
-      setBusy(null);
-      await load();
-      onChanged?.();
-    }
+      if (!r?.ok) alert(t("ag_ch_li_unavailable") || "LinkedIn غير متاح حالياً (لم يربط بعد).");
+    } finally { setBusy(null); await load(); onChanged?.(); }
   };
 
   const disconnect = async (id: string) => {
-    if (!confirm(t("ag_ch_confirm_disconnect") || "هل تريد فصل هذه القناة؟")) return;
+    if (!confirm(t("ag_ch_confirm_disconnect") || "فصل هذه القناة؟")) return;
     setBusy(id);
     try { await disconnectFn({ data: { id } }); }
     finally { setBusy(null); await load(); onChanged?.(); }
   };
 
   const toggleMode = async (id: string, currentMode: string) => {
-    const mode = currentMode === "auto" ? "manual" : "auto";
-    await setModeFn({ data: { id, mode } });
+    await setModeFn({ data: { id, mode: currentMode === "auto" ? "manual" : "auto" } });
     await load();
   };
 
@@ -112,29 +155,32 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <div className="mt-8 space-y-6">
-      {/* OAuth / Real connections */}
       <div className="rounded-2xl border border-accent/30 bg-card/70 p-5">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           <CheckCircle2 className="size-5 text-accent" />
-          {t("ch_panel_title") || "قنوات الربط الحقيقية"}
+          {t("ch_panel_title") || "قنوات النشر"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t("ch_panel_desc") || "اربط حساباتك بنقرة واحدة. الوكيل يحترم تفضيلك: نشر تلقائي أو موافقة قبل النشر."}
+          {t("ch_panel_desc") || "اربط حساباتك بنقرة واحدة. كل مستخدم يربط حساباته الشخصية."}
         </p>
 
-        <div className="mt-4 space-y-3">
-          {(["telegram", "linkedin", "tiktok"] as const).map((kind) => {
-            const meta = KIND_META[kind];
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {ORDER.map((kind) => {
+            const meta = PROVIDER_META[kind];
             const Icon = meta.icon;
             const ch = findChan(kind);
-            const avail =
-              kind === "telegram" ? state.telegramAvailable :
-              kind === "linkedin" ? state.linkedinAvailable :
-              state.tiktokAvailable;
             const isPref = state.preferred === kind;
+            const isManual = kind === "facebook" || kind === "instagram" || kind === "x";
+
+            const onConnect = () => {
+              if (kind === "telegram") return connectTelegram();
+              if (kind === "linkedin") return connectLinkedIn();
+              setDialogProvider(kind as any);
+            };
+
             return (
               <div key={kind} className={`rounded-xl border ${ch ? "border-success/40" : "border-border/60"} bg-gradient-to-br ${meta.gradient} p-4`}>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`grid size-10 place-items-center rounded-lg bg-background/60 ${meta.color}`}>
                       <Icon className="size-5" />
@@ -142,60 +188,60 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
                     <div className="min-w-0">
                       <div className="font-display text-base font-bold">{meta.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {ch ? `✓ ${ch.account_label || t("ch_connected") || "متصل"}` : (avail ? (t("ch_not_connected") || "غير متصل") : (t("ch_coming") || "قريباً"))}
+                        {ch ? `✓ ${ch.account_label || t("ch_connected") || "متصل"}` : (t("ch_not_connected") || "غير متصل")}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {ch ? (
-                      <button
-                        onClick={() => disconnect(ch.id)}
-                        disabled={busy === ch.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                      >
-                        {busy === ch.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
-                        {t("ch_disconnect") || "فصل"}
-                      </button>
-                    ) : avail ? (
-                      <button
-                        onClick={kind === "telegram" ? connectTelegram : kind === "linkedin" ? connectLinkedIn : () => alert(t("ch_tiktok_soon") || "TikTok قريباً.")}
-                        disabled={busy === kind.slice(0, 2)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-50"
-                      >
-                        {busy === kind.slice(0, 2) ? <Loader2 className="size-3 animate-spin" /> : <ExternalLink className="size-3" />}
-                        {t("ch_connect") || "اتصال"}
-                      </button>
-                    ) : (
-                      <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{t("ch_soon") || "قريباً"}</span>
-                    )}
-                  </div>
+                  {ch ? (
+                    <button
+                      onClick={() => disconnect(ch.id)}
+                      disabled={busy === ch.id}
+                      className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-2.5 py-1 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      {busy === ch.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+                      {t("ch_disconnect") || "فصل"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={onConnect}
+                      disabled={busy === kind}
+                      className="inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-50"
+                    >
+                      {busy === kind ? <Loader2 className="size-3 animate-spin" /> : <ExternalLink className="size-3" />}
+                      {t("ch_connect") || "اتصال"}
+                    </button>
+                  )}
                 </div>
 
                 {ch && (
-                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/40 pt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
                     <button
                       onClick={() => toggleMode(ch.id, ch.approval_mode)}
-                      className="inline-flex items-center gap-2 rounded-md border border-border bg-background/60 px-3 py-1.5 text-xs font-semibold hover:bg-background"
+                      className="inline-flex items-center gap-2 rounded-md border border-border bg-background/60 px-2.5 py-1 text-xs font-semibold hover:bg-background"
                     >
                       <span className={`inline-block size-2 rounded-full ${ch.approval_mode === "auto" ? "bg-warning" : "bg-success"}`} />
-                      {ch.approval_mode === "auto"
-                        ? (t("ch_mode_auto") || "نشر تلقائي بدون موافقة")
-                        : (t("ch_mode_manual") || "موافقة قبل النشر")}
+                      {ch.approval_mode === "auto" ? (t("ch_mode_auto") || "نشر تلقائي") : (t("ch_mode_manual") || "موافقة قبل النشر")}
                     </button>
                     <button
                       onClick={() => choosePref(kind)}
-                      className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold ${isPref ? "bg-primary text-primary-foreground" : "border border-border bg-background/60 hover:bg-background"}`}
+                      className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-semibold ${isPref ? "bg-primary text-primary-foreground" : "border border-border bg-background/60 hover:bg-background"}`}
                     >
                       <Bell className="size-3" />
-                      {isPref ? (t("ch_notify_here_on") || "✓ تستلم النتائج هنا") : (t("ch_notify_here") || "استلم النتائج هنا")}
+                      {isPref ? (t("ch_notify_here_on") || "✓ تستلم هنا") : (t("ch_notify_here") || "استلم هنا")}
                     </button>
                   </div>
                 )}
 
+                {isManual && !ch && (
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    {t("ch_manual_note") || "يتطلب لصق Access Token من حسابك (مع شرح وخطوات)"}
+                  </div>
+                )}
+
                 {kind === "telegram" && tgLink && !ch && (
-                  <div className="mt-3 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs">
-                    <p className="font-semibold">{t("ch_tg_open_link") || "فُتح Telegram في نافذة جديدة. اضغط Start لإكمال الربط."}</p>
-                    <a href={tgLink} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary underline">
+                  <div className="mt-3 rounded-md border border-primary/40 bg-primary/10 p-2 text-[11px]">
+                    <p className="font-semibold">{t("ch_tg_open_link") || "اضغط Start في Telegram لإكمال الربط"}</p>
+                    <a href={tgLink} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary underline truncate">
                       <ExternalLink className="size-3" /> {tgLink}
                     </a>
                   </div>
@@ -205,44 +251,119 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
           })}
         </div>
 
-        {/* Preferred = email/inapp/none */}
-        <div className="mt-5 rounded-xl border border-border/60 bg-background/40 p-4">
-          <div className="mb-2 text-xs font-semibold text-muted-foreground">{t("ch_notify_pref_title") || "إذا لم تربط قناة خارجية، استلم الإشعارات عبر:"}</div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { v: "inapp", label: t("notify_inapp") || "صندوق التطبيق", icon: Inbox },
-              { v: "email", label: t("notify_email") || "البريد", icon: Mail },
-              { v: "none", label: t("notify_none") || "بدون", icon: Bell },
-            ].map((o) => (
-              <button
-                key={o.v}
-                onClick={() => choosePref(o.v)}
-                className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold ${state.preferred === o.v ? "bg-primary text-primary-foreground" : "border border-border bg-background/60 hover:bg-background"}`}
-              >
-                <o.icon className="size-3" />
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Notification preference fallback */}
+        <Collapsible className="mt-5">
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border/60 bg-background/40 px-4 py-2 text-xs font-semibold hover:bg-background/60">
+            <span>{t("ch_notify_pref_title") || "إعدادات الإشعارات المتقدمة"}</span>
+            <ChevronDown className="size-4" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 rounded-lg border border-border/60 bg-background/40 p-3">
+            <div className="mb-2 text-xs text-muted-foreground">
+              {t("ch_notify_fallback") || "إذا لم تربط قناة، استلم الإشعارات عبر:"}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { v: "inapp", label: t("notify_inapp") || "صندوق التطبيق", icon: Inbox },
+                { v: "email", label: t("notify_email") || "البريد", icon: Mail },
+                { v: "none", label: t("notify_none") || "بدون", icon: Bell },
+              ].map((o) => (
+                <button
+                  key={o.v}
+                  onClick={() => choosePref(o.v)}
+                  className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold ${state.preferred === o.v ? "bg-primary text-primary-foreground" : "border border-border bg-background/60 hover:bg-background"}`}
+                >
+                  <o.icon className="size-3" /> {o.label}
+                </button>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      {/* Coming soon */}
-      <div className="rounded-2xl border border-border bg-card/40 p-4">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-          ⏰ {t("ch_coming_title") || "قريباً (بانتظار اعتماد Meta و X)"}
-        </h3>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {COMING_SOON.map((k) => (
-            <span key={k} className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-xs capitalize text-muted-foreground">
-              {k}
-            </span>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t("ch_coming_desc") || "هذه المنصات تتطلب اعتمادات أعمال خاصة. نعمل على توفيرها."}
-        </p>
-      </div>
+      <ManualTokenDialog
+        provider={dialogProvider}
+        onClose={() => setDialogProvider(null)}
+        onSaved={async () => { setDialogProvider(null); await load(); onChanged?.(); }}
+        saveFn={saveManualFn}
+      />
     </div>
+  );
+}
+
+function ManualTokenDialog({
+  provider, onClose, onSaved, saveFn,
+}: {
+  provider: "facebook" | "instagram" | "x" | null;
+  onClose: () => void;
+  onSaved: () => void;
+  saveFn: (a: any) => Promise<any>;
+}) {
+  const [token, setToken] = useState("");
+  const [pageId, setPageId] = useState("");
+  const [igUserId, setIgUserId] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (provider) { setToken(""); setPageId(""); setIgUserId(""); setMediaUrl(""); setErr(null); }
+  }, [provider]);
+
+  if (!provider) return null;
+  const meta = PROVIDER_META[provider];
+
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await saveFn({ data: { provider, token, pageId, igUserId, defaultMediaUrl: mediaUrl } });
+      if (!r?.ok) setErr(r?.error || "فشل التحقق");
+      else onSaved();
+    } catch (e: any) { setErr(e?.message || "خطأ"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open={!!provider} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <meta.icon className={`size-5 ${meta.color}`} /> ربط {meta.name}
+          </DialogTitle>
+          <DialogDescription>اتبع الخطوات للحصول على Access Token الخاص بك:</DialogDescription>
+        </DialogHeader>
+
+        <ol className="list-decimal space-y-1 rounded-lg border border-border/60 bg-muted/40 p-3 ps-6 text-xs text-muted-foreground">
+          {meta.tokenHelpSteps?.map((s, i) => <li key={i}>{s}</li>)}
+        </ol>
+
+        {meta.tokenHelpUrl && (
+          <a href={meta.tokenHelpUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+            <ExternalLink className="size-3" /> افتح صفحة الحصول على التوكن
+          </a>
+        )}
+
+        <div className="space-y-2">
+          {provider === "facebook" && (
+            <Input placeholder="Page ID" value={pageId} onChange={(e) => setPageId(e.target.value)} />
+          )}
+          {provider === "instagram" && (
+            <>
+              <Input placeholder="Instagram User ID" value={igUserId} onChange={(e) => setIgUserId(e.target.value)} />
+              <Input placeholder="رابط صورة افتراضية (مطلوب للنشر)" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
+            </>
+          )}
+          <Input type="password" placeholder={provider === "x" ? "User Bearer Token" : "Access Token"} value={token} onChange={(e) => setToken(e.target.value)} />
+        </div>
+
+        {err && <p className="text-xs text-destructive">⚠ {err}</p>}
+
+        <DialogFooter>
+          <button onClick={onClose} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">إلغاء</button>
+          <button onClick={submit} disabled={busy || token.length < 10} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+            {busy && <Loader2 className="size-3 animate-spin" />} اختبر واحفظ
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
