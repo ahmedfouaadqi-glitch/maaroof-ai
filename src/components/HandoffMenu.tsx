@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, Link2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useVisibility } from "@/lib/visibility";
 import { HANDOFF_LABELS, HANDOFF_TARGETS, sendHandoff, type HandoffTarget } from "@/lib/tool-handoff";
 
 type Props = {
