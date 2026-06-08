@@ -1,81 +1,51 @@
-## التنفيذ بالترتيب (موجة 4 — استكمال)
+# Wave 4 — Continuation Plan
 
-### ١) Telegram "أحضر بوتك" (Bring-Your-Own-Bot) — لأن لا بوت مركزي
+## 1) نقل "تحليل الظهور في محركات الذكاء" إلى "تعزيز العلامة التجارية"
 
-كل مستخدم يربط بوته الشخصي بثلاث نقرات:
+- إزالة بطاقة/تبويب AI Visibility المستقلة من `/agent` ومن قائمة الأدوات.
+- داخل `BrandBoostAgent.tsx` إضافة قسم جديد بعنوان **"تحليل الظهور في محركات الذكاء"** يستضيف `<VisibilityPanel embedded toolKey="brand" />`.
+- تحديث الشرح (الوصف) ليكون موحّداً:
+  - AR: "افحص ظهور علامتك في ChatGPT و Gemini و Perplexity وغيرها، واحصل على توصيات فورية لتعزيز حضورك ضمن حزمة تعزيز العلامة."
+  - EN / KU مطابقتان.
+- تحديث `tool-catalog.ts`: إزالة مفتاح `visibility` المستقل والإبقاء على `brand_boost` فقط (مع تحديث `agent.visibility` ليشير داخلياً إلى نفس الـ handler).
+- تحديث الروابط في `tool-handoff.ts` و i18n keys (`ag_vis_*` تنتقل تحت `bb_vis_*`).
+- إزالة عرض الكارد المكرر من `dashboard.tsx` و `tools.$slug.tsx` (slug=visibility يعيد توجيه إلى `/tools/brand-boost#visibility`).
 
-**واجهة `ChannelsPanel.tsx`:**
-```
-١) أنشئ بوتاً مع @BotFather → [نسخ /newbot]
-٢) الصق Token: [_____] · Username: [_____]  [حفظ]
-٣) [فتح البوت]  → t.me/<bot>?start=<linkToken>
-```
+## 2) دمج لوحات الإدارة في لوحة واحدة
 
-**تقنياً:**
-- Server fn `saveUserTelegramBot({token, username})`:
-  - يتحقق عبر `getMe`.
-  - يستخرج `botId = token.split(":")[0]`.
-  - يحفظ في `publish_channels.config = { bot_token, bot_username, bot_id, link_token }`.
-  - يسجّل webhook خاص بالبوت: `setWebhook` → `/api/public/telegram/webhook/<botId>`.
-- Route جديد `src/routes/api/public/telegram/webhook/$botId.ts` (splat) — يبحث القناة بـ `bot_id` ويقرأ الـ token من config.
-- نحذف الاعتماد على `process.env.TELEGRAM_BOT_TOKEN` في `agent.functions.ts` و `notify.server.ts` — كله من config.
+دمج 4 لوحات في `admin.tsx` ضمن لوحة تبويبية واحدة باسم **"المستخدمون والصلاحيات والأسعار"**:
 
----
+| التبويب الجديد | يحتوي |
+|---|---|
+| المستخدمون والـ Tokens | `AdminTokensPanel` (الحالي + تعديلات Wave 3) |
+| شبكة أسعار الخطط | `AdminPlanPricingPanel` |
+| الخطط والصلاحيات | `subscription_plans` + `tool_plan_access` (محرر موحّد) |
+| الوكيل | إعدادات `agent_addons` + حدود `user_agent_subscriptions` |
 
-### ٢) لوحة الإدارة — Tokens: تحكم متقدم لكل مستخدم
+- ملف موحّد جديد: `src/components/admin/AdminUsersAndPricingPanel.tsx` يحتوي على `<Tabs>` داخلية.
+- مشاركة الـ context (قائمة المستخدمين، قائمة الأدوات من `TOOL_CATALOG`) عبر hook واحد `useAdminPricingContext()` لتجنّب جلب البيانات مرتين.
+- في "إدارة" بجانب اسم المستخدم: Drawer واحد يفتح على 4 تبويبات (Tokens / الخطط / الأدوات / الوكيل) بدل drawerين منفصلين.
 
-في `AdminTokensPanel.tsx` (موجود) داخل نافذة "إدارة" لكل مستخدم، نضيف:
+## 3) إكمال البنود السابقة بالترتيب
 
-**أ) عمود "مفعّلة" لكل أداة:**
-- Toggle switch (مفعّل/مخفي) يضبط `per_user_tool_overrides[tool].enabled`.
-- في الباك: `tokens.server.ts` يفحص هذه القيمة — إن `false` ترفض المكالمة بـ `tool_disabled_for_user`.
-- في الفرونت: `tool-catalog.ts` و `dashboard.tsx` و `tools.$slug.tsx` تخفي/تعطّل البطاقة عند `enabled === false`.
+1. **Telegram BYOB** — تطبيق `saveUserTelegramBot()`، تحويل webhook إلى `/api/public/telegram/webhook/$botId.ts`، إزالة `process.env.TELEGRAM_BOT_TOKEN` من `agent.functions.ts` و `notify.server.ts`.
+2. **OAuth حقيقي لكل مستخدم** — LinkedIn/TikTok/YouTube عبر App User Connector، Facebook/Instagram/X/WhatsApp ك "قريباً".
+3. **تبويبات `/agent`** — فصل "المهام الحالية" عن "السجل السابق" بـ `<Tabs>` + i18n keys.
 
-**ب) تعديل أرقام الاستخدام الحالي (`tokens_used_today`, `tokens_used_month`):**
-- حقلان جديدان قابلان للتعديل في رأس النافذة بجانب الرصيد.
-- زر "تصفير اليوم" و "تصفير الشهر".
-- زر "إخفاء عداد الاستخدام" — يضبط `profiles.hide_usage_counter = true` فلا يظهر للمستخدم في شريط الوحدات.
+## ترتيب التنفيذ
 
-**ج) Migration بسيطة (عمود واحد فقط):**
-```sql
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS hide_usage_counter boolean NOT NULL DEFAULT false;
-```
-(الـ `enabled` و `tokens_used_*` و `per_user_tool_overrides` موجودة سلفاً — لا migration لها).
+1. نقل AI Visibility إلى Brand Boost + تحديث النصوص و i18n + حذف البطاقة القديمة.
+2. دمج لوحات الإدارة في `AdminUsersAndPricingPanel.tsx` + ربطها في `admin.tsx`.
+3. Telegram BYOB (migration للحقول الجديدة في `publish_channels.config` إن لزم).
+4. OAuth (LinkedIn أولاً).
+5. تبويبات `/agent`.
+6. اختبار شامل.
 
-**د) تحديث شريط الوحدات في الواجهة:**
-- `SiteHeader.tsx` (أو حيث يُعرض الرصيد): يخفي العداد عند `hide_usage_counter=true`.
-- يضيف badge "🔒 أداة مخفية" بجانب الأدوات المعطّلة في الـ dashboard.
+## تفاصيل تقنية
 
----
+- `BrandBoostAgent.tsx`: إضافة `<section id="visibility">` يحوي `VisibilityPanel` بـ `embedded` و `toolKey="brand"`.
+- `admin.tsx`: استبدال 4 imports بـ import واحد `AdminUsersAndPricingPanel`.
+- `tool-catalog.ts`: تعليم `visibility` بـ `deprecated: true` بدل حذفها لتجنّب كسر سجلات `token_ledger` القديمة؛ المفتاح يبقى مقبولاً في `chargeTokens` لكن يُعرض ضمن brand_boost في الواجهة.
+- لا حاجة لـ migration جديد لـ schema — فقط تنظيم واجهة.
 
-### ٣) تبويب "تشغيل حالي / السجل" + تحليل الظهور البارز (من خطة سابقة — متبقي)
-
-- بطاقة "تحليل الظهور" بارزة أعلى `/agent` تعرض آخر نتيجة + زر "تشغيل الآن".
-- مفاتيح i18n: `ag_tab_current`, `ag_tab_history`, `ag_no_current_tasks` (AR/EN/KU).
-
----
-
-### ٤) ربط حسابات OAuth الحقيقية (متبقي)
-
-- **LinkedIn** per-user عبر App User Connector (يستبدل الحساب المشترك).
-- **TikTok** + **YouTube** نفس النمط.
-- **Facebook / Instagram / X / WhatsApp** بطاقة "قريباً" مع شرح السبب.
-- **Threads / Reddit / Pinterest** أزرار Intent (تفتح التطبيق بالمحتوى جاهز).
-
----
-
-## ترتيب التنفيذ النهائي
-
-1. **Migration**: `profiles.hide_usage_counter`.
-2. **AdminTokensPanel**: إضافة عمود `enabled` toggle + حقول تعديل `tokens_used_today/month` + toggle إخفاء العداد.
-3. **Backend**: `tokens.server.ts` يفحص `enabled=false` ويرفض.
-4. **شريط الوحدات + Dashboard**: يحترم `hide_usage_counter` ويخفي الأدوات المعطّلة.
-5. **Telegram BYOB**: webhook متعدد البوتات + `saveUserTelegramBot` + UI ثلاث خطوات.
-6. **`/agent`**: بطاقة تحليل الظهور البارزة + i18n keys.
-7. **LinkedIn per-user OAuth** (App User Connector).
-8. **TikTok + YouTube** OAuth.
-9. **بطاقة "قريباً"** + أزرار Intent للباقي.
-10. **اختبار end-to-end**.
-
-اضغط **Implement plan** للبدء بالخطوة 1.
+هل أنفّذ بهذا الترتيب؟
