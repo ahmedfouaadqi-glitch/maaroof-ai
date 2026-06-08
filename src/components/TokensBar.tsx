@@ -31,12 +31,18 @@ export function TokensBar({ compact }: { compact?: boolean }) {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("profiles")
-      .select("tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,hide_usage_counter")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => setP((data as any) || null));
+    const reload = () => {
+      supabase
+        .from("profiles")
+        .select("tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,hide_usage_counter")
+        .eq("id", user.id)
+        .maybeSingle()
+        .then(({ data }) => setP((data as any) || null));
+    };
+    reload();
+    const handler = () => reload();
+    window.addEventListener("tokens-changed", handler);
+    return () => window.removeEventListener("tokens-changed", handler);
   }, [user?.id]);
 
   if (!user || !p || visLoading) return null;
