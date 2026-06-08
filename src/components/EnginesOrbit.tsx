@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
 
 import { useI18n } from "@/lib/i18n";
+import { useVisibility } from "@/lib/visibility";
 import { ENGINES } from "./engine-logos";
 
 
