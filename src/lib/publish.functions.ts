@@ -167,13 +167,24 @@ export const approveAndPublish = createServerFn({ method: "POST" })
     if (text.length < 3) return { ok: false, error: "text_too_short" };
 
     try {
+      const cfg = (ch.config as any) || {};
       if (ch.kind === "telegram") {
-        const cfg = (ch.config as any) || {};
         const botToken = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
         if (!botToken || !cfg.chat_id) throw new Error("telegram_config_missing");
         await publishToTelegram(botToken, cfg.chat_id, text);
       } else if (ch.kind === "linkedin") {
         await publishToLinkedIn(text);
+      } else if (ch.kind === "facebook") {
+        if (!cfg.access_token || !cfg.page_id) throw new Error("facebook_config_missing");
+        await publishToFacebookPage(cfg.access_token, cfg.page_id, text);
+      } else if (ch.kind === "instagram") {
+        if (!cfg.access_token || !cfg.ig_user_id) throw new Error("instagram_config_missing");
+        const mediaUrl = cfg.default_media_url;
+        if (!mediaUrl) throw new Error("instagram_needs_image");
+        await publishToInstagram(cfg.access_token, cfg.ig_user_id, text, mediaUrl);
+      } else if (ch.kind === "x") {
+        if (!cfg.bearer) throw new Error("x_config_missing");
+        await publishToX(cfg.bearer, text);
       } else {
         throw new Error("channel_not_supported");
       }
