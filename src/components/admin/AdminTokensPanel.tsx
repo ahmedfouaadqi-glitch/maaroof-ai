@@ -12,6 +12,7 @@ type Profile = {
   tokens_used_today: number; tokens_used_month: number;
   per_user_tool_overrides: Record<string, { tokens_per_use?: number; usd_per_use?: number; enabled?: boolean; daily?: number; monthly?: number }>;
   subscription_tier: string | null;
+  hide_usage_counter?: boolean;
 };
 
 type Pricing = { tool_key: string; default_tokens: number; default_usd: number; model: string | null };
