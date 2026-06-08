@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { BookOpen, Wrench, Bot, Globe2, User } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
+import { usePageGuard } from "@/lib/visibility";
 
 export const Route = createFileRoute("/guide")({
   head: () => ({
