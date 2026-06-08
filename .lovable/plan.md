@@ -1,76 +1,68 @@
 ## الهدف
-تبسيط ربط القنوات في `/agent` → `ChannelsPanel` عبر **OAuth بضغطة واحدة** لجميع المنصات الاجتماعية الرئيسية، مع إخفاء الإعدادات المتقدمة وإعادة تصميم الواجهة كبطاقات.
+كل مستخدم يربط حساباته الشخصية بنفسه بنقرة واحدة من صفحة `/agent` → `ChannelsPanel`.
 
-## القنوات المدعومة
+## آلية الربط لكل منصة
 
-| القناة | آلية الربط | ملاحظات |
+| القناة | الآلية | تجربة المستخدم |
 |---|---|---|
-| **LinkedIn** | OAuth (App User Connector) | scopes: `w_member_social`, `openid`, `profile` |
-| **Google** (Gmail/Calendar) | OAuth (App User Connector) | scopes حسب الحاجة |
-| **Facebook** (Pages) | OAuth (App User Connector) | scopes: `pages_manage_posts`, `pages_read_engagement` |
-| **Instagram** (Business) | OAuth عبر Facebook Login | يتطلب حساب Instagram Business مرتبط بصفحة Facebook — هذا قيد من Meta لا يمكن تجاوزه |
-| **X / Twitter** | OAuth 2.0 (App User Connector) | scopes: `tweet.read`, `tweet.write`, `users.read` |
-| **Telegram** | تدفق مبسّط (لا OAuth) | زر يفتح BotFather + لصق التوكن + اختبار فوري |
+| **LinkedIn** | App User OAuth | زر "اتصل بـ LinkedIn" → نافذة منبثقة → موافقة → اسم الحساب يظهر |
+| **Google** (Gmail/Calendar) | App User OAuth | زر "اتصل بـ Google" → نافذة منبثقة → موافقة → البريد يظهر |
+| **Telegram** | Bot link (الحالي مُبسَّط) | زر "اتصل بـ Telegram" → يفتح بوت → Start → ربط فوري |
+| **Facebook** (Pages) | لصق Access Token | زر "اتصل" → Dialog فيه رابط مباشر لصفحة Meta لتوليد التوكن + حقل لصق + اختبار |
+| **Instagram** (Business) | لصق Access Token | نفس تجربة Facebook (يستخدم نفس نظام Meta Graph) |
+| **X / Twitter** | لصق Bearer Token | زر "اتصل" → Dialog فيه رابط لـ developer.twitter.com + حقل لصق + اختبار |
 
-> **ملاحظة Meta**: Instagram لا يدعم نشر مباشر للحسابات الشخصية — فقط حسابات Business عبر Facebook Graph API. سنوضح هذا للمستخدم في الواجهة.
-
----
-
-## الخطوات
-
-### 1) ربط الـ Connectors في الـ Workspace (مرة واحدة)
-استدعاء `standard_connectors--connect` لكل من: `linkedin`, `google`, `facebook`, `x` (إذا متاح). إذا لم يتوفر connector رسمي لقناة ما → fallback يدوي للتوكن (مع رابط مباشر للحصول عليه).
-
-### 2) البنية التحتية للـ OAuth
-- `src/integrations/lovable/appUserConnector.ts` (خادم) — `authorizeAppUserOAuth` + `callAsAppUser`
-- `src/integrations/lovable/appUserConnectorClient.ts` (متصفح) — `connectAppUser` (نافذة منبثقة + postMessage)
-
-### 3) جدول `user_channel_connections` (migration)
-```
-user_id, provider (linkedin|google|facebook|instagram|x|telegram),
-connection_id, account_name, account_id, scopes, meta jsonb, connected_at
-```
-+ RLS (المستخدم يدير اتصالاته فقط) + GRANT لـ `authenticated` و `service_role`.
-
-### 4) Server Functions (`src/lib/channels.functions.ts`)
-- `startConnect({provider, targetOrigin})` → يستدعي `authorizeAppUserOAuth` بـ `connectorId` و scopes حسب المنصة
-- `saveChannelConnection({provider, connectionId, accountName})` → حفظ بعد نجاح OAuth
-- `listMyChannels()` → القنوات المتصلة للمستخدم
-- `disconnectChannel(id)`
-- `publishTo({provider, content, mediaUrl?})` → router موحّد:
-  - LinkedIn → `POST /v2/ugcPosts`
-  - Facebook → `POST /{page-id}/feed`
-  - Instagram → `POST /{ig-user-id}/media` ثم `/media_publish`
-  - X → `POST /2/tweets`
-  - Telegram → `sendMessage`
-- `saveTelegramToken(token)` → اختبار `getMe` ثم حفظ
-
-### 5) إعادة تصميم `ChannelsPanel`
-- **بطاقات قنوات** (6 منصات) بدل النموذج اليدوي:
-  - شعار المنصة + اسم القناة
-  - حالة **غير متصل** → زر كبير "اتصل بـ X"
-  - حالة **متصل** → اسم الحساب + شارة خضراء + زر "قطع الاتصال"
-- زر OAuth يستدعي `connectAppUser` → نافذة منبثقة → عند النجاح يحفظ ويحدّث القائمة
-- زر Telegram → Dialog مبسّط (حقل توكن + رابط BotFather + "اختبار وحفظ")
-- Instagram يعرض تنبيه: "يتطلب حساب Instagram Business مرتبط بصفحة Facebook"
-- "إعدادات متقدمة" خلف `<Collapsible>` (الـ webhook secrets، اختيار chat IDs، scopes إضافية)
-
-### 6) تحديث منطق النشر في الوكيل
-- `runAgentNow` / `runAgentCommand` يقرأ القنوات من `user_channel_connections`
-- يستدعي `publishTo({provider, content})` الموحّد بدل الفروع المتعددة
+> **ملاحظة صريحة في الواجهة**: Facebook/Instagram/X لا تملك Connector جاهز في Lovable حالياً، لذلك ربطها يتطلب لصق توكن من حساب المطوّر الخاص بكل منصة. سنوضح هذا للمستخدم برابط مباشر وشرح من 3 خطوات داخل الـ Dialog.
 
 ---
 
-## الملفات المتأثرة
-- **جديد**: `appUserConnector.ts`, `appUserConnectorClient.ts`, `channels.functions.ts`, migration واحدة
-- **تعديل**: `ChannelsPanel.tsx` (تصميم كامل), `agent.tsx` (استخدام `publishTo`), منطق النشر الداخلي
+## الخطوات التقنية
+
+### 1) ربط الـ App Connectors اللازمة (مرة واحدة في الـ Workspace)
+- `linkedin` connector (موجود مسبقاً)
+- `google_mail` و `google_calendar` connectors (سأطلب الموافقة في build mode)
+- ستوفر متغير `LINKEDIN_APP_USER_CONNECTOR_CLIENT_ID` و `GOOGLE_APP_USER_CONNECTOR_CLIENT_ID` تلقائياً
+
+### 2) ملفات البنية التحتية
+- `src/integrations/lovable/appUserConnector.ts` (server) — `authorizeAppUserOAuth`, `callAsAppUser`
+- `src/integrations/lovable/appUserConnectorClient.ts` (browser) — `connectAppUser` (popup + postMessage)
+
+### 3) Migration: تمديد جدول `publish_channels` الموجود
+- إضافة أعمدة: `provider_account_id text`, `connection_id text`, `connected_via text` (oauth/manual/bot)
+- توسيع `kind` لقبول: `facebook`, `instagram`, `x`, `gmail`
+- لا تغيير في RLS (القائمة كافية: المستخدم يدير قنواته فقط)
+
+### 4) Server Functions جديدة في `src/lib/channels.functions.ts`
+- `startLinkedInConnect(targetOrigin)` → `authorizeAppUserOAuth` مع scopes النشر
+- `startGoogleConnect(targetOrigin)` → نفس الفكرة لـ Gmail
+- `saveOAuthConnection({provider, connectionId})` → يجلب اسم الحساب من المزوّد + يحفظ في `publish_channels`
+- `saveManualToken({provider, token, accountLabel?, extra?})` → لـ FB/IG/X: يختبر التوكن (طلب `/me`) ثم يحفظ
+- `publishViaConnection(channelId, text, mediaUrl?)` → router موحّد ينشر حسب نوع القناة
+
+### 5) إعادة تصميم `ChannelsPanel.tsx`
+- شبكة من 6 بطاقات بدل القائمة الحالية
+- كل بطاقة: شعار + اسم المنصة + حالة (متصل ✓ مع اسم الحساب / غير متصل / قريباً)
+- **متصل** → زر "فصل" + خيار "نشر تلقائي / موافقة قبل النشر" + خيار "استلم الإشعارات هنا"
+- **غير متصل** → زر "اتصل" يفتح:
+  - LinkedIn/Google → popup OAuth
+  - Telegram → بوت في تبويب جديد (الحالي)
+  - FB/IG/X → Dialog فيه: شرح + رابط مباشر للحصول على التوكن + حقل لصق + زر "اختبر واحفظ"
+- "إعدادات متقدمة" خلف `<Collapsible>` (للـ Page ID, Instagram Business ID, إلخ)
+
+### 6) تحديث منطق النشر
+- `publishToTelegram` و `publishToLinkedIn` الحاليان يبقيان، نضيف:
+  - `publishToLinkedInAsUser(connectionId, text)` → عبر `callAsAppUser`
+  - `publishToFacebookPage(token, pageId, text)`, `publishToInstagram(token, igUserId, text, mediaUrl)`, `publishToX(bearer, text)`
+- `runAgentNow` / `approveAndPublish` يقرأ القناة ثم يستدعي `publishViaConnection`
+
+---
 
 ## ما لن يتغير
-- منطق `runAgentCommand`, `ApprovalQueue`, Visibility — فقط طبقة "القنوات" تُبسَّط
-- جدول `publish_channels` القديم يبقى للتوافق
+- منطق الوكيل (`runAgentCommand`), `ApprovalQueue`, جدول `agent_tasks`, نظام Tokens
+- صفحات الأدوات الأخرى
 
 ## التحقق
-- لكل منصة: ضغط "اتصل" → نافذة OAuth → اسم الحساب يظهر مع شارة خضراء
-- Telegram: لصق توكن → اختبار → حفظ فوري
-- Instagram: رسالة واضحة إذا الحساب ليس Business
-- تشغيل أمر الوكيل → النشر يعمل عبر جميع القنوات المتصلة
+- LinkedIn/Google: نقرة → popup → اسم الحساب يظهر بشارة خضراء
+- Telegram: نقرة → بوت → Start → ربط فوري
+- FB/IG/X: لصق توكن → اختبار يرجع اسم الحساب → حفظ
+- تشغيل أمر الوكيل → النشر يعمل على القناة المتصلة
