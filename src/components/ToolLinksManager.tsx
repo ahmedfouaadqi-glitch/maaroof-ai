@@ -41,6 +41,8 @@ export function ToolLinksManager() {
 
   const isAr = lang === "ar";
 
+  if (!vis.loading && !vis.isWidgetVisible("tool_links")) return null;
+
   return (
     <div className="mt-6 rounded-2xl border border-border bg-card/70 p-5">
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
