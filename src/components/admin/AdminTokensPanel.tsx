@@ -182,16 +182,20 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
 
   async function save() {
     setSaving(true);
-    // Clean: drop empty overrides so resolveToolCost falls back to the plan
+    // Clean: drop empty overrides, but KEEP entries that only disable the tool
     const clean: Record<string, any> = {};
     for (const [k, v] of Object.entries(overrides)) {
-      const hasAny = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0;
-      if (hasAny) clean[k] = v;
+      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0;
+      const isDisabled = v?.enabled === false;
+      if (hasPrice || isDisabled) clean[k] = v;
     }
     await supabase.from("profiles").update({
       tokens_balance: balance,
       tokens_daily_limit: daily === "" ? null : Number(daily),
       tokens_monthly_limit: monthly === "" ? null : Number(monthly),
+      tokens_used_today: Number(usedToday) || 0,
+      tokens_used_month: Number(usedMonth) || 0,
+      hide_usage_counter: hideUsage,
       per_user_tool_overrides: clean,
     } as any).eq("id", user.id);
     setSaving(false);
