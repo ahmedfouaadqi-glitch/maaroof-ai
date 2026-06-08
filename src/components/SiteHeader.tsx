@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertsBell } from "@/components/AlertsBell";
 import { CountryBadge } from "@/components/CountryBadge";
+import { Widget } from "@/lib/visibility";
 
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 
@@ -61,7 +62,7 @@ export function SiteHeader() {
           <CountryBadge compact />
           <LanguageSwitcher />
           <ThemeToggle />
-          <AlertsBell />
+          <Widget k="alerts_bell"><AlertsBell /></Widget>
           <button
             type="button"
             onClick={toggleSound}

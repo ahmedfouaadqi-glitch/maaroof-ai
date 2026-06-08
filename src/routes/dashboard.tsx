@@ -19,8 +19,9 @@ import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText } from "lucide-react";
-import { useVisibility } from "@/lib/visibility";
+import { useVisibility, useToolPrice } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
+import { CostBadge } from "@/components/CostBadge";
 
 type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "boost" | "applied" | "social" | "monitor" | "strategist" | "whatif" | "report";
 
@@ -62,6 +63,11 @@ function DashboardPage() {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/dashboard" } });
   }, [loading, user, navigate]);
 
+  // Page-level gate: admin hid the dashboard page itself
+  useEffect(() => {
+    if (!vis.loading && !vis.isPageVisible("dashboard")) navigate({ to: "/" });
+  }, [vis.loading]);
+
   useEffect(() => {
     if (!user) return;
     supabase.from("user_agent_subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle()
@@ -99,17 +105,17 @@ function DashboardPage() {
           <h2 className="font-display text-2xl font-bold">{t("dash_tools_title")}</h2>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {showCard("analyze") && <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} onOpen={() => setOpenTool("analyze")} t={t} />}
-            {showCard("suggest") && <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} onOpen={() => setOpenTool("suggest")} t={t} />}
-            {showCard("compare") && <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} onOpen={() => setOpenTool("compare")} t={t} />}
-            {showCard("feasibility") && <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} onOpen={() => setOpenTool("feasibility")} t={t} />}
-            {showCard("bizdev") && <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} onOpen={() => setOpenTool("bizdev")} t={t} />}
-            {showCard("boost") && <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} onOpen={() => setOpenTool("boost")} t={t} />}
-            {showCard("applied") && <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} onOpen={() => setOpenTool("applied")} t={t} />}
-            {showCard("social") && <ToolGridCard icon={<Share2 className="size-5" />} title={t("dash_tool_social_t")} desc={t("dash_tool_social_d")} onOpen={() => setOpenTool("social")} t={t} />}
-            {showCard("monitor") && <ToolGridCard icon={<Bell className="size-5" />} title={t("dash_tool_monitor_t")} desc={t("dash_tool_monitor_d")} onOpen={() => setOpenTool("monitor")} t={t} />}
-            {showCard("strategist") && <ToolGridCard icon={<Target className="size-5" />} title={t("dash_tool_strat_t")} desc={t("dash_tool_strat_d")} onOpen={() => setOpenTool("strategist")} t={t} />}
-            {showCard("whatif") && <ToolGridCard icon={<FlaskConical className="size-5" />} title={t("dash_tool_whatif_t")} desc={t("dash_tool_whatif_d")} onOpen={() => setOpenTool("whatif")} t={t} />}
+            {showCard("analyze") && <ToolGridCard toolKey="analyze" icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} onOpen={() => setOpenTool("analyze")} t={t} />}
+            {showCard("suggest") && <ToolGridCard toolKey="suggest" icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} onOpen={() => setOpenTool("suggest")} t={t} />}
+            {showCard("compare") && <ToolGridCard toolKey="compare" icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} onOpen={() => setOpenTool("compare")} t={t} />}
+            {showCard("feasibility") && <ToolGridCard toolKey="feasibility" icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} onOpen={() => setOpenTool("feasibility")} t={t} />}
+            {showCard("bizdev") && <ToolGridCard toolKey="bizdev" icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} onOpen={() => setOpenTool("bizdev")} t={t} />}
+            {showCard("boost") && <ToolGridCard toolKey="brand_boost" icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} onOpen={() => setOpenTool("boost")} t={t} />}
+            {showCard("applied") && <ToolGridCard toolKey="applied_ranking" icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} onOpen={() => setOpenTool("applied")} t={t} />}
+            {showCard("social") && <ToolGridCard toolKey="social_analysis" icon={<Share2 className="size-5" />} title={t("dash_tool_social_t")} desc={t("dash_tool_social_d")} onOpen={() => setOpenTool("social")} t={t} />}
+            {showCard("monitor") && <ToolGridCard toolKey="competitor_monitor" icon={<Bell className="size-5" />} title={t("dash_tool_monitor_t")} desc={t("dash_tool_monitor_d")} onOpen={() => setOpenTool("monitor")} t={t} />}
+            {showCard("strategist") && <ToolGridCard toolKey="geo_strategist" icon={<Target className="size-5" />} title={t("dash_tool_strat_t")} desc={t("dash_tool_strat_d")} onOpen={() => setOpenTool("strategist")} t={t} />}
+            {showCard("whatif") && <ToolGridCard toolKey="what_if" icon={<FlaskConical className="size-5" />} title={t("dash_tool_whatif_t")} desc={t("dash_tool_whatif_d")} onOpen={() => setOpenTool("whatif")} t={t} />}
             {showCard("report") && <ToolGridCard icon={<FileText className="size-5" />} title={t("dash_tool_report_t")} desc={t("dash_tool_report_d")} onOpen={() => setOpenTool("report")} t={t} />}
             {vis.isPageVisible("agent") && <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />}
           </div>
@@ -194,15 +200,19 @@ function toolTitle(k: ToolKey, t: (k: string) => string): string {
   return map[k] || k;
 }
 
-function ToolGridCard({ icon, title, desc, onOpen, t }: { icon: React.ReactNode; title: string; desc: string; onOpen: () => void; t: (k: string) => string }) {
+function ToolGridCard({ icon, title, desc, onOpen, t, toolKey }: { icon: React.ReactNode; title: string; desc: string; onOpen: () => void; t: (k: string) => string; toolKey?: string }) {
+  const price = useToolPrice(toolKey || "");
   return (
     <button
       type="button"
       onClick={onOpen}
       className="group block w-full rounded-2xl border border-border bg-card/70 p-5 text-start transition hover:border-primary/40 hover:shadow-[var(--shadow-glow)]"
     >
-      <div className="inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
-        {icon}
+      <div className="flex items-start justify-between gap-2">
+        <div className="inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
+          {icon}
+        </div>
+        {toolKey && <CostBadge tokens={price.tokens} usd={price.usd} compact />}
       </div>
       <h3 className="mt-3 font-display text-base font-bold">{title.replace(/^\d+\)\s*/, "")}</h3>
       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{desc}</p>

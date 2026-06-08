@@ -1,9 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { I18nProvider, useI18n } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Lock } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
+import { useVisibility, useToolPrice } from "@/lib/visibility";
+import { CostBadge } from "@/components/CostBadge";
 
 type SlugDef = {
   key: ToolKey;
@@ -80,7 +83,9 @@ export const Route = createFileRoute("/tools/$slug")({
   ),
   component: () => (
     <I18nProvider>
-      <Page />
+      <AuthProvider>
+        <Page />
+      </AuthProvider>
     </I18nProvider>
   ),
 });
@@ -88,9 +93,18 @@ export const Route = createFileRoute("/tools/$slug")({
 function Page() {
   const { lang } = useI18n();
   const def = Route.useLoaderData();
+  const vis = useVisibility();
+  const price = useToolPrice(def.key);
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const m = L === "en" ? def.metaEn : L === "ku" ? def.metaKu : def.metaAr;
   const name = toolLabel(def.key, L);
+
+  const blocked = !vis.loading && (!vis.isToolVisible(def.key) || !price.enabled);
+  const BL = {
+    ar: { title: "هذه الأداة غير متاحة لحسابك", desc: "تم إخفاء أو تعطيل هذه الأداة من قِبل الإدارة. للوصول، يرجى التواصل أو ترقية الباقة.", back: "← العودة" },
+    en: { title: "This tool isn't available for your account", desc: "This tool has been hidden or disabled by the admin. Contact us or upgrade your plan to gain access.", back: "← Back" },
+    ku: { title: "ئەم ئامرازە بەردەست نییە", desc: "ئەم ئامرازە لە لایەن بەڕێوەبەرەوە شاراوەتەوە یان لە کار خراوە.", back: "← گەڕانەوە" },
+  }[L];
 
   const Lc = {
     ar: { what: "ما الذي تفعله الأداة", when: "متى تستخدمها", get: "ما الذي ستحصل عليه", start: "ابدأ الآن", backHome: "← الرئيسية" },
@@ -98,15 +112,35 @@ function Page() {
     ku: { what: "ئەرکی ئامراز", when: "کەی بەکاری بهێنیت", get: "چی وەردەگریت", start: "دەستپێبکە", backHome: "← ماڵەوە" },
   }[L];
 
+  if (blocked) {
+    return (
+      <div className="min-h-screen">
+        <SiteHeader />
+        <main className="mx-auto max-w-md px-4 py-20 text-center">
+          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-muted text-muted-foreground">
+            <Lock className="size-7" />
+          </div>
+          <h1 className="mt-6 font-display text-2xl font-bold">{BL.title}</h1>
+          <p className="mt-3 text-sm text-muted-foreground">{BL.desc}</p>
+          <Link to="/dashboard" className="mt-6 inline-block text-sm font-semibold text-primary hover:underline">{BL.back}</Link>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-          <Sparkles className="size-3" /> {name}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+            <Sparkles className="size-3" /> {name}
+          </span>
+          <CostBadge tokens={price.tokens} usd={price.usd} compact />
+        </div>
         <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-gradient">{m.title}</h1>
         <p className="mt-4 text-base text-muted-foreground">{m.desc}</p>
+
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Card title={Lc.what} body={m.desc} />

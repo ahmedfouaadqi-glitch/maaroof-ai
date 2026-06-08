@@ -8,6 +8,7 @@ import { Loader2, Users, Activity, Bell, Crown, Check, X, ShieldPlus, ShieldMinu
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
 import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
+import { AdminPlansMatrixPanel } from "@/components/admin/AdminPlansMatrixPanel";
 import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
 
 
@@ -69,9 +70,9 @@ function AdminPage() {
   };
 
   const subLabel = (k: UPSub) => {
-    if (k === "users") return t("admin_users" as any) || "Users";
+    if (k === "users") return lang === "ar" ? "المستخدمون والتوكنات" : lang === "ku" ? "بەکارهێنەران و تۆکن" : "Users & Tokens";
     if (k === "tokens") return t("admin_tokens") || "Tokens";
-    if (k === "pricing") return t("admin_pricing_grid") || "Pricing grid";
+    if (k === "pricing") return lang === "ar" ? "شبكة الخطط × الأدوات" : lang === "ku" ? "تۆڕی پلان × ئامراز" : "Plans × Tools Matrix";
     if (k === "plans") return t("admin_plans" as any) || "Plans";
     if (k === "agent") return t("nav_agent") || "Agent";
     if (k === "access") return t("admin_access") || "Access";
@@ -100,7 +101,7 @@ function AdminPage() {
 
         {tab === "users_pricing" && (
           <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-border/60 bg-background/40 p-1">
-            {(["users","tokens","pricing","plans","agent","access"] as UPSub[]).map((k) => (
+            {(["users","pricing","plans","agent","access"] as UPSub[]).map((k) => (
               <button key={k} onClick={() => setUpSub(k)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition ${
                   upSub === k ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
@@ -112,9 +113,8 @@ function AdminPage() {
         )}
 
         {tab === "overview" && <Overview />}
-        {tab === "users_pricing" && upSub === "users" && <UsersTab />}
-        {tab === "users_pricing" && upSub === "tokens" && <AdminTokensPanel />}
-        {tab === "users_pricing" && upSub === "pricing" && <AdminPlanPricingPanel />}
+        {tab === "users_pricing" && (upSub === "users" || upSub === "tokens") && <AdminTokensPanel />}
+        {tab === "users_pricing" && upSub === "pricing" && <AdminPlansMatrixPanel />}
         {tab === "users_pricing" && upSub === "plans" && <PlansTab />}
         {tab === "users_pricing" && upSub === "agent" && <AgentTab />}
         {tab === "users_pricing" && upSub === "access" && <AccessTab />}

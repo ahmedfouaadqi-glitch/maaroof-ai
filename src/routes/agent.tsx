@@ -83,6 +83,10 @@ function AgentPage() {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/agent" } });
   }, [loading, user, navigate]);
 
+  useEffect(() => {
+    if (!vis.loading && !vis.isPageVisible("agent")) navigate({ to: "/" });
+  }, [vis.loading]);
+
   const load = async () => {
     if (!user) return;
     const { data: subData } = await supabase
