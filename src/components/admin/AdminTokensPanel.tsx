@@ -228,6 +228,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       tokens_used_month: Number(usedMonth) || 0,
       hide_usage_counter: hideUsage,
       per_user_tool_overrides: clean,
+      ui_visibility: uiVis,
     } as any).eq("id", user.id);
     setSaving(false);
     onClose();
