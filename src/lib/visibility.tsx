@@ -19,6 +19,12 @@ export type WidgetKey =
 
 export type PageKey = "dashboard" | "agent" | "tools" | "guide" | "pricing";
 
+export type ToolPriceOverride = {
+  enabled?: boolean;
+  tokens_per_use?: number;
+  usd_per_use?: number;
+};
+
 export type VisibilityShape = {
   tools?: Record<string, boolean>;
   agent?: Record<string, boolean>;
@@ -26,12 +32,19 @@ export type VisibilityShape = {
   pages?: Partial<Record<PageKey, boolean>>;
 };
 
-const cache = new Map<string, VisibilityShape>();
+const visCache = new Map<string, VisibilityShape>();
+const priceCache = new Map<string, { overrides: Record<string, ToolPriceOverride>; plan: Record<string, { tokens: number; usd: number; enabled: boolean }> }>();
+
+// Safe useAuth — returns null when no provider (e.g. on /tools/$slug)
+function useAuthSafe() {
+  try { return useAuth(); } catch { return null; }
+}
 
 export function useVisibility() {
-  const { user } = useAuth();
-  const [vis, setVis] = useState<VisibilityShape>(() => (user ? cache.get(user.id) || {} : {}));
-  const [loading, setLoading] = useState(!!user && !cache.has(user?.id || ""));
+  const auth = useAuthSafe();
+  const user = auth?.user || null;
+  const [vis, setVis] = useState<VisibilityShape>(() => (user ? visCache.get(user.id) || {} : {}));
+  const [loading, setLoading] = useState(!!user && !visCache.has(user?.id || ""));
 
   useEffect(() => {
     if (!user) {
@@ -48,7 +61,7 @@ export function useVisibility() {
         .maybeSingle();
       if (cancel) return;
       const v = ((data as any)?.ui_visibility || {}) as VisibilityShape;
-      cache.set(user.id, v);
+      visCache.set(user.id, v);
       setVis(v);
       setLoading(false);
     })();
@@ -73,4 +86,70 @@ export function Widget({ k, children }: { k: WidgetKey; children: React.ReactNod
   if (loading) return <>{children}</>;
   if (!isWidgetVisible(k)) return null;
   return <>{children}</>;
+}
+
+/**
+ * Resolve a tool's natural price for the current user.
+ * Order: per_user_tool_overrides → active plan's tool_plan_access → unpriced.
+ * Returns { tokens, usd, source, enabled } — `enabled=false` means admin disabled it.
+ */
+export function useToolPrice(toolKey: string) {
+  const auth = useAuthSafe();
+  const user = auth?.user || null;
+  const profile = auth?.profile as any;
+  const [data, setData] = useState<{ tokens: number; usd: number; source: "user_override" | "plan" | "unpriced"; enabled: boolean }>({
+    tokens: 0, usd: 0, source: "unpriced", enabled: true,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    let cancel = false;
+    (async () => {
+      let cached = priceCache.get(user.id);
+      if (!cached) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("per_user_tool_overrides, subscription_tier, is_subscribed, subscription_expires_at")
+          .eq("id", user.id)
+          .maybeSingle();
+        const overrides = ((prof as any)?.per_user_tool_overrides || {}) as Record<string, ToolPriceOverride>;
+        const planMap: Record<string, { tokens: number; usd: number; enabled: boolean }> = {};
+        const active = !!(prof as any)?.is_subscribed && (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
+        if (active && (prof as any)?.subscription_tier) {
+          const { data: planRow } = await supabase.from("subscription_plans").select("id").eq("name", (prof as any).subscription_tier).maybeSingle();
+          const pid = (planRow as any)?.id;
+          if (pid) {
+            const { data: rows } = await supabase.from("tool_plan_access").select("tool_key, tokens_per_use, usd_per_use, enabled").eq("plan_id", pid);
+            for (const r of (rows as any[]) || []) {
+              planMap[r.tool_key] = { tokens: Number(r.tokens_per_use) || 0, usd: Number(r.usd_per_use) || 0, enabled: !!r.enabled };
+            }
+          }
+        }
+        cached = { overrides, plan: planMap };
+        priceCache.set(user.id, cached);
+      }
+      if (cancel) return;
+      const ov = cached.overrides[toolKey];
+      if (ov && ov.enabled === false) { setData({ tokens: 0, usd: 0, source: "user_override", enabled: false }); return; }
+      if (ov && (Number(ov.tokens_per_use) > 0 || Number(ov.usd_per_use) > 0)) {
+        setData({ tokens: Number(ov.tokens_per_use) || 0, usd: Number(ov.usd_per_use) || 0, source: "user_override", enabled: true });
+        return;
+      }
+      const pl = cached.plan[toolKey];
+      if (pl && pl.enabled && (pl.tokens > 0 || pl.usd > 0)) {
+        setData({ tokens: pl.tokens, usd: pl.usd, source: "plan", enabled: true });
+        return;
+      }
+      setData({ tokens: 0, usd: 0, source: "unpriced", enabled: true });
+    })();
+    return () => { cancel = true; };
+  }, [user?.id, toolKey, profile?.subscription_tier]);
+
+  return data;
+}
+
+// Clear price cache (call after admin changes pricing)
+export function clearToolPriceCache(userId?: string) {
+  if (userId) priceCache.delete(userId);
+  else priceCache.clear();
 }
