@@ -283,7 +283,7 @@ export function PostSuggester({
             className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background/40 p-8 text-sm text-muted-foreground transition hover:border-accent/50 hover:text-foreground"
           >
             {imageData ? (
-              <img src={imageData} alt="upload" className="max-h-40 rounded-lg object-contain" />
+              <img src={imageData} alt="Uploaded image preview for AI content analysis" className="max-h-40 rounded-lg object-contain" />
             ) : (
               <>
                 <Upload className="size-6" />
