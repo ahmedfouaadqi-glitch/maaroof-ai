@@ -46,6 +46,8 @@ export function HandoffMenu({ source, getText }: Props) {
   const label = (k: HandoffTarget) => HANDOFF_LABELS[k][L];
   const passLabel = lang === "ar" ? "تمرير إلى" : lang === "ku" ? "ناردن بۆ" : "Pass to";
 
+  if (!vis.loading && !vis.isWidgetVisible("handoff_menu")) return null;
+
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-2.5">
       <Link2 className="size-3.5 text-primary" />
