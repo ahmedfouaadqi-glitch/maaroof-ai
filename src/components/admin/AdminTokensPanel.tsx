@@ -13,6 +13,36 @@ type Profile = {
   per_user_tool_overrides: Record<string, { tokens_per_use?: number; usd_per_use?: number; enabled?: boolean; daily?: number; monthly?: number }>;
   subscription_tier: string | null;
   hide_usage_counter?: boolean;
+  ui_visibility?: { tools?: Record<string, boolean>; agent?: Record<string, boolean>; widgets?: Record<string, boolean>; pages?: Record<string, boolean> };
+};
+
+const WIDGET_KEYS = [
+  "tokens_bar", "cost_badge", "progress_bar", "results_export",
+  "history", "alerts_bell", "handoff_menu", "engines_orbit",
+  "specialty_banner", "tool_links",
+] as const;
+const AGENT_FEATURE_KEYS = ["command", "run_targets", "visibility"] as const;
+const PAGE_KEYS = ["dashboard", "agent", "tools", "guide", "pricing"] as const;
+
+const VIS_LABELS: Record<string, { ar: string; en: string; ku: string }> = {
+  tokens_bar:       { ar: "شريط الوحدات",            en: "Tokens bar",            ku: "شریتی تۆکن" },
+  cost_badge:       { ar: "شارة التكلفة",            en: "Cost badge",            ku: "نیشانی نرخ" },
+  progress_bar:     { ar: "شريط التقدّم",             en: "Progress bar",          ku: "شریتی پێشکەوتن" },
+  results_export:   { ar: "أزرار التصدير",            en: "Export buttons",        ku: "دوگمەی هەناردن" },
+  history:          { ar: "سجل التشغيلات",            en: "Run history",           ku: "مێژووی کارکردن" },
+  alerts_bell:      { ar: "جرس الإشعارات",            en: "Alerts bell",           ku: "زەنگی ئاگادارکردنەوە" },
+  handoff_menu:     { ar: "قائمة الانتقال بين الأدوات", en: "Tool handoff menu",     ku: "مینوی گواستنەوە" },
+  engines_orbit:    { ar: "شاشة محركات AI",           en: "AI engines orbit",      ku: "ئۆربیتی AI" },
+  specialty_banner: { ar: "بانر التخصص",              en: "Specialty banner",      ku: "بانێری تایبەتمەند" },
+  tool_links:       { ar: "روابط الأدوات",             en: "Tool links",            ku: "بەستەری ئامرازەکان" },
+  command:          { ar: "أمر مباشر للوكيل",          en: "Agent command",         ku: "فەرمانی ئاراستە" },
+  run_targets:      { ar: "تشغيل الأهداف",             en: "Run targets",           ku: "جێبەجێکردنی ئامانج" },
+  visibility:       { ar: "تحليل الظهور",              en: "AI Visibility section", ku: "بەشی دەرکەوتن" },
+  dashboard:        { ar: "صفحة لوحة التحكم",          en: "/dashboard",            ku: "داشبۆرد" },
+  agent:            { ar: "صفحة الوكيل",               en: "/agent",                ku: "وەکیل" },
+  tools:            { ar: "صفحة الأدوات",              en: "/tools",                ku: "ئامرازەکان" },
+  guide:            { ar: "صفحة الدليل",               en: "/guide",                ku: "ڕێنمایی" },
+  pricing:          { ar: "صفحة الأسعار",              en: "/pricing",              ku: "نرخەکان" },
 };
 
 type Pricing = { tool_key: string; default_tokens: number; default_usd: number; model: string | null };
