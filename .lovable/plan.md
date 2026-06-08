@@ -1,52 +1,41 @@
-## Wave 5 — إكمال البنود الستة بالترتيب
+## Wave 6 — إكمال البنود الستة المتبقية بالترتيب
 
-### 1) لوحة `AdminUsersTokensPanel` الكاملة
-- ملف جديد: `src/components/admin/AdminUsersTokensPanel.tsx`
-- جدول رئيسي: email, plan, balance, used today/month, max_devices, دور
-- بحث + فلتر (plan, role, نشط/منتهي)
-- نقر على صف → `Drawer` (من `ui/drawer`) بثلاث تبويبات:
-  - **Tokens & Usage**: balance, daily/monthly limits, آخر 20 سطر من `token_ledger`, زر "إضافة/خصم توكنز" → INSERT في `token_ledger` + UPDATE balance
-  - **Plan & Permissions**: `subscription_tier`, `subscription_expires_at`, `is_subscribed`, `max_devices`, role (admin/user)
-  - **Tools & Agent Visibility**: تحرير `ui_visibility` (tools/agent/widgets/pages) + `per_user_tool_overrides` (سعر/تعطيل لكل أداة لهذا المستخدم تحديداً)
-- Save واحد يكتب: `profiles` + `user_roles` بدفعة واحدة
-- استبدل التبويب الحالي في `admin.tsx` بهذه اللوحة
+### 1) لوحة `AdminUsersTokensPanel` الموحّدة
+ملف جديد: `src/components/admin/AdminUsersTokensPanel.tsx`
+- جدول رئيسي: email, plan, balance, used today/month, max_devices, role + بحث/فلتر
+- النقر على صف → `Drawer` (`@/components/ui/drawer`) بثلاث تبويبات (`Tabs`):
+  - **Tokens & Usage**: عرض balance / daily / monthly، آخر 20 سطر من `token_ledger`، حقل "إضافة/خصم" → `INSERT` في `token_ledger` + `UPDATE profiles.tokens_balance`
+  - **Plan & Permissions**: `subscription_tier`, `subscription_expires_at`, `is_subscribed`, `max_devices` + role (admin/user) عبر `user_roles`
+  - **Tools & Agent Visibility**: تحرير JSON `ui_visibility` (tools/agent/widgets/pages) + جدول `per_user_tool_overrides` لكل أداة (enabled checkbox + `tokens_per_use` + `usd_per_use` + زر "إعادة للافتراضي")
+- زر "حفظ" واحد يكتب: `profiles` + `user_roles` بتسلسل آمن
+- بعد الحفظ: `clearToolPriceCache(userId)`
+- إدراج تبويب جديد في `admin.tsx` يسمّى "المستخدمون والتوكنز" (لا يُحذف `AdminTokensPanel` الحالي — تبويب موازٍ)
 
-### 2) تطبيق `<Widget>` على بقية المكوّنات
-لفّ بالـ `<Widget k="...">` المناسب في موضع الاستخدام:
-- `HandoffMenu` → `handoff_menu`
-- `ExportButtons` → `results_export`
-- `EnginesOrbit` → `engines_orbit` (في `dashboard.tsx`)
-- `SpecialtyBanner` → `specialty_banner`
-- `ToolLinksManager` → `tool_links`
-- شريط التقدم في `tools/$slug.tsx` → `progress_bar`
-- بطاقات النتائج / `history` → `history`
+### 2) واجهة `per_user_tool_overrides`
+مغطّاة بالكامل داخل تبويب "Tools & Agent Visibility" في البند 1 — لا ملف منفصل.
 
-### 3) `CostBadge` داخل `tools/$slug.tsx`
-- استدعاء `useToolPrice(toolKey)` أعلى الصفحة
-- عرض `CostBadge` بجانب زر التشغيل قبل الضغط
-- بعد الاستجابة: `toast` بـ "تم خصم X توكن — الرصيد المتبقي Y" (يقرأ من نتيجة `charge_tokens`)
+### 3) `<Widget>` على المكوّنات المتبقية
+- `SpecialtyBanner.tsx` → لفّ بـ `<Widget k="specialty_banner">` في موضع الاستخدام، أو فحص `useVisibility` داخل المكوّن
+- شريط التقدّم في `tools/$slug.tsx` → `<Widget k="progress_bar">` (إن وُجد عنصر تقدّم)
+- بطاقات `history` في `dashboard.tsx` → `<Widget k="history">`
 
-### 4) بوابة الصفحات على `__root.tsx`
-- إنشاء hook `usePageGuard()` في `src/lib/visibility.tsx`:
-  - يقرأ المسار الحالي → يحوّله لـ `PageKey` (dashboard/agent/tools/guide/pricing)
-  - إذا `!isPageVisible(key)` → `navigate({ to: "/" })`
-- استدعاؤه مرة واحدة في `__root.tsx` بدل تكراره في كل صفحة (إزالة الحراسة اليدوية من `dashboard.tsx`/`agent.tsx`)
-- تغطية `tools`, `guide`, `pricing` تلقائياً
+### 4) Toast بعد خصم التوكنز في `tools/$slug.tsx`
+- التحقق من مسار التشغيل الحالي للأداة (الزر `start now` يقود إلى `/dashboard`، فالخصم الفعلي يحدث في `dashboard`/API). سأضيف `toast` في **مواضع استدعاء `charge_tokens`** الفعلية (داخل المكوّنات التي تستدعي `/api/*`):
+  - بعد استجابة ناجحة تحوي `balance` و`used_today`: `toast.success("تم خصم X — الرصيد: Y")`
+  - في حالة `ok: false`: `toast.error` بسبب مفهوم (`daily_limit` / `monthly_limit` / `balance`)
+- النطاق المبدئي: `PostSuggester`, `CompetitorCompare`, `AIVisibility`, `BrandBoostAgent` (المكوّنات التي تستدعي endpoints مدفوعة)
 
-### 5) واجهة `per_user_tool_overrides`
-- مغطّاة داخل تبويب "Tools & Agent Visibility" في `AdminUsersTokensPanel` (البند 1):
-  - لكل أداة: checkbox تفعيل + `tokens_per_use` + `usd_per_use` (override خاص بهذا المستخدم)
-  - زر "إعادة للسعر الافتراضي" يحذف المفتاح من JSON
-- بعد الحفظ: استدعاء `clearToolPriceCache(userId)` ليُحدّث `useToolPrice` فوراً
+### 5) تنظيف الحراسة اليدوية + `usePageGuard` عام
+- استدعاء `usePageGuard()` مرة واحدة في `__root.tsx` داخل `RootComponent`
+- إزالة الاستدعاءات اليدوية من: `dashboard.tsx`, `agent.tsx`, `tools.$slug.tsx`, `guide.tsx`, `pricing.tsx`
+- التحقق: `__root.tsx` يجب أن يبقى يحتوي `<Outlet />`
 
 ### 6) اختبار فعلي
-بعد كل بند: التحقق من
-- البناء بلا أخطاء TypeScript
-- فحص الكونسول والشبكة عبر `read_console_logs` / `read_network_requests`
-- جلسة الـ replay للتأكد من السلوك البصري (الإخفاء الفعلي، toast الخصم، حماية الصفحات)
+- فحص الكونسول والشبكة (`read_console_logs` / `read_network_requests`) على `/admin` و`/tools/analyze` و`/dashboard`
+- لقطة preview للتأكد من: ظهور التبويب الجديد، فتح `Drawer`، عمل `toast`، حماية صفحة مخفية بإعادة توجيه لـ `/`
 
 ### تفاصيل تقنية
-- لا migrations جديدة — كل الأعمدة موجودة (`ui_visibility`, `per_user_tool_overrides`, `token_ledger`).
-- جميع كتابات المسؤول من المتصفح بـ `supabase` العادي (RLS يسمح للأدمن عبر `has_role`).
-- نسخة `clearToolPriceCache(userId)` لتفريغ الذاكرة بعد كل تعديل سعر فردي.
-- استخدام `Drawer` و `Tabs` من `@/components/ui` الموجودة.
+- لا migrations جديدة — كل الأعمدة موجودة (`ui_visibility`, `per_user_tool_overrides`, `tokens_balance`, `token_ledger`).
+- جميع كتابات الأدمن عبر `supabase` المتصفّح (RLS يسمح للأدمن عبر `has_role` و `guard_profile_privileged_updates`).
+- `sonner` للـ toasts (مستورد من `sonner` مباشرة — لا `use-toast` في TanStack Start).
+- استخدام `Drawer`, `Tabs`, `Input`, `Switch`, `Button` الموجودة في `@/components/ui`.

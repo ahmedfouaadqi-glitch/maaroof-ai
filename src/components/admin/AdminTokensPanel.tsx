@@ -12,6 +12,9 @@ type Profile = {
   tokens_used_today: number; tokens_used_month: number;
   per_user_tool_overrides: Record<string, { tokens_per_use?: number; usd_per_use?: number; enabled?: boolean; daily?: number; monthly?: number }>;
   subscription_tier: string | null;
+  subscription_expires_at?: string | null;
+  is_subscribed?: boolean | null;
+  max_devices?: number | null;
   hide_usage_counter?: boolean;
   ui_visibility?: { tools?: Record<string, boolean>; agent?: Record<string, boolean>; widgets?: Record<string, boolean>; pages?: Record<string, boolean> };
 };
@@ -69,7 +72,7 @@ export function AdminTokensPanel() {
   async function load() {
     setBusy(true);
     const [p, c, r] = await Promise.all([
-      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,hide_usage_counter,ui_visibility").order("email"),
+      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,subscription_expires_at,is_subscribed,max_devices,hide_usage_counter,ui_visibility").order("email"),
       supabase.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd, model"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
@@ -188,6 +191,11 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
   const [hideUsage, setHideUsage] = useState<boolean>(!!user.hide_usage_counter);
   const [overrides, setOverrides] = useState<Record<string, any>>(user.per_user_tool_overrides || {});
   const [uiVis, setUiVis] = useState<NonNullable<Profile["ui_visibility"]>>(user.ui_visibility || {});
+  const [tier, setTier] = useState<string>(user.subscription_tier || "");
+  const [isSub, setIsSub] = useState<boolean>(!!user.is_subscribed);
+  const [expiresAt, setExpiresAt] = useState<string>(user.subscription_expires_at ? user.subscription_expires_at.slice(0, 10) : "");
+  const [maxDevices, setMaxDevices] = useState<number>(user.max_devices || 1);
+  const [planList, setPlanList] = useState<{ id: string; name: string }[]>([]);
   const [planPrices, setPlanPrices] = useState<Record<string, PlanPrice>>({});
   const [spend, setSpend] = useState<Record<string, SpendRow>>({});
   const [planActive, setPlanActive] = useState(false);
@@ -195,6 +203,9 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
 
   useEffect(() => {
     (async () => {
+      // Load all plan names for the picker
+      const { data: plans } = await supabase.from("subscription_plans").select("id, name").eq("active", true).order("sort_order");
+      setPlanList(((plans || []) as any[]).map((p) => ({ id: p.id, name: p.name })));
       // Load plan tool prices for this user's plan (if any)
       if (user.subscription_tier) {
         const { data: plan } = await supabase.from("subscription_plans").select("id").eq("name", user.subscription_tier).maybeSingle();
@@ -229,7 +240,16 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       hide_usage_counter: hideUsage,
       per_user_tool_overrides: clean,
       ui_visibility: uiVis,
+      subscription_tier: tier || null,
+      is_subscribed: isSub,
+      subscription_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      max_devices: Math.max(1, Number(maxDevices) || 1),
     } as any).eq("id", user.id);
+    // Clear cached price for this user so the next tool open re-reads overrides + plan
+    try {
+      const mod = await import("@/lib/visibility");
+      mod.clearToolPriceCache(user.id);
+    } catch {}
     setSaving(false);
     onClose();
   }
@@ -302,6 +322,32 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
               <span>{hideUsage ? L.disabled : L.enabled}</span>
             </label>
           </Field>
+        </div>
+
+        <div className="mb-4 rounded-xl border border-border bg-card/40 p-3">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {lang === "ar" ? "الخطة والاشتراك والأجهزة" : lang === "ku" ? "پلان، بەشداری و ئامێرەکان" : "Plan, subscription & devices"}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Field label={lang === "ar" ? "الخطة" : lang === "ku" ? "پلان" : "Plan"}>
+              <select value={tier} onChange={(e) => setTier(e.target.value)} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm">
+                <option value="">—</option>
+                {planList.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+              </select>
+            </Field>
+            <Field label={lang === "ar" ? "مشترك؟" : lang === "ku" ? "بەشداربووە؟" : "Subscribed?"}>
+              <label className="flex h-[34px] items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs cursor-pointer">
+                <input type="checkbox" checked={isSub} onChange={(e) => setIsSub(e.target.checked)} />
+                <span>{isSub ? (lang === "ar" ? "نعم" : "Yes") : (lang === "ar" ? "لا" : "No")}</span>
+              </label>
+            </Field>
+            <Field label={lang === "ar" ? "تنتهي في" : lang === "ku" ? "بەسەردەچێت" : "Expires on"}>
+              <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+            </Field>
+            <Field label={lang === "ar" ? "أقصى أجهزة" : lang === "ku" ? "زۆرترین ئامێر" : "Max devices"}>
+              <input type="number" min={1} max={50} value={maxDevices} onChange={(e) => setMaxDevices(Number(e.target.value) || 1)} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+            </Field>
+          </div>
         </div>
 
         <VisibilitySection lang={lang} value={uiVis} onChange={setUiVis} />
