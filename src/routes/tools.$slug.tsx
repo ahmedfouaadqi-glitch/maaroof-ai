@@ -95,6 +95,7 @@ function Page() {
   const def = Route.useLoaderData();
   const vis = useVisibility();
   const price = useToolPrice(def.key);
+  usePageGuard();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const m = L === "en" ? def.metaEn : L === "ku" ? def.metaKu : def.metaAr;
   const name = toolLabel(def.key, L);
