@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappLink } from "@/lib/whatsapp";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
+import { usePageGuard } from "@/lib/visibility";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
