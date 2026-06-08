@@ -2,6 +2,7 @@
 // Reads `profiles.ui_visibility` (browser client, RLS scoped to own profile).
 // Default-visible if a key is missing; only explicit `false` hides.
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
