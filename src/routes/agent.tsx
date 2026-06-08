@@ -54,6 +54,7 @@ function AgentPage() {
   const [addon, setAddon] = useState<any | null>(null);
   const [targets, setTargets] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [taskTab, setTaskTab] = useState<"current" | "history">("current");
   const [newUrl, setNewUrl] = useState("");
   const [newTopic, setNewTopic] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
