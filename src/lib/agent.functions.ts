@@ -47,6 +47,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
             input: subject, status: "done",
             result: { summary: content, score, lang: data.lang },
             approval_status: taskType === "suggest_post" ? "pending" : "none",
+            run_id: runId, run_started_at: runStartedAt,
           }).select("id").single();
           const tid = (ins as any)?.id as string | undefined;
           done++;
