@@ -19,8 +19,17 @@ import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText } from "lucide-react";
+import { useVisibility } from "@/lib/visibility";
+import { TokensBar } from "@/components/TokensBar";
 
 type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "boost" | "applied" | "social" | "monitor" | "strategist" | "whatif" | "report";
+
+// Maps dashboard ToolKey → TOOL_CATALOG key used in ui_visibility.tools
+const DASH_TO_CATALOG: Record<ToolKey, string | null> = {
+  analyze: "analyze", suggest: "suggest", compare: "compare", feasibility: "feasibility",
+  bizdev: "bizdev", boost: "brand_boost", applied: "applied_ranking", social: "social_analysis",
+  monitor: "competitor_monitor", strategist: "geo_strategist", whatif: "what_if", report: null,
+};
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -45,6 +54,7 @@ function DashboardPage() {
   const { t } = useI18n();
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const vis = useVisibility();
   const [agentSub, setAgentSub] = useState<any | null>(null);
   const [openTool, setOpenTool] = useState<ToolKey | null>(null);
 
@@ -66,6 +76,11 @@ function DashboardPage() {
     );
   }
 
+  const showCard = (k: ToolKey) => {
+    const catKey = DASH_TO_CATALOG[k];
+    return catKey ? vis.isToolVisible(catKey) : true;
+  };
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -75,26 +90,28 @@ function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{profile?.email}</p>
 
-        <div className="mt-8"><SpecialtyBanner /></div>
+        <div className="mt-6"><TokensBar /></div>
+
+        {vis.isWidgetVisible("specialty_banner") && <div className="mt-8"><SpecialtyBanner /></div>}
 
         {/* Tools — card grid; click opens modal */}
         <div className="mt-10">
           <h2 className="font-display text-2xl font-bold">{t("dash_tools_title")}</h2>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} onOpen={() => setOpenTool("analyze")} t={t} />
-            <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} onOpen={() => setOpenTool("suggest")} t={t} />
-            <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} onOpen={() => setOpenTool("compare")} t={t} />
-            <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} onOpen={() => setOpenTool("feasibility")} t={t} />
-            <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} onOpen={() => setOpenTool("bizdev")} t={t} />
-            <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} onOpen={() => setOpenTool("boost")} t={t} />
-            <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} onOpen={() => setOpenTool("applied")} t={t} />
-            <ToolGridCard icon={<Share2 className="size-5" />} title={t("dash_tool_social_t")} desc={t("dash_tool_social_d")} onOpen={() => setOpenTool("social")} t={t} />
-            <ToolGridCard icon={<Bell className="size-5" />} title={t("dash_tool_monitor_t")} desc={t("dash_tool_monitor_d")} onOpen={() => setOpenTool("monitor")} t={t} />
-            <ToolGridCard icon={<Target className="size-5" />} title={t("dash_tool_strat_t")} desc={t("dash_tool_strat_d")} onOpen={() => setOpenTool("strategist")} t={t} />
-            <ToolGridCard icon={<FlaskConical className="size-5" />} title={t("dash_tool_whatif_t")} desc={t("dash_tool_whatif_d")} onOpen={() => setOpenTool("whatif")} t={t} />
-            <ToolGridCard icon={<FileText className="size-5" />} title={t("dash_tool_report_t")} desc={t("dash_tool_report_d")} onOpen={() => setOpenTool("report")} t={t} />
-            <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />
+            {showCard("analyze") && <ToolGridCard icon={<Activity className="size-5" />} title={t("dash_tool_analyze_t")} desc={t("dash_tool_analyze_d")} onOpen={() => setOpenTool("analyze")} t={t} />}
+            {showCard("suggest") && <ToolGridCard icon={<Sparkles className="size-5" />} title={t("dash_tool_suggest_t")} desc={t("dash_tool_suggest_d")} onOpen={() => setOpenTool("suggest")} t={t} />}
+            {showCard("compare") && <ToolGridCard icon={<Search className="size-5" />} title={t("compare_title")} desc={t("compare_desc") || ""} onOpen={() => setOpenTool("compare")} t={t} />}
+            {showCard("feasibility") && <ToolGridCard icon={<ClipboardList className="size-5" />} title={t("dash_tool_feas_t")} desc={t("dash_tool_feas_d")} onOpen={() => setOpenTool("feasibility")} t={t} />}
+            {showCard("bizdev") && <ToolGridCard icon={<TrendingUp className="size-5" />} title={t("dash_tool_biz_t")} desc={t("dash_tool_biz_d")} onOpen={() => setOpenTool("bizdev")} t={t} />}
+            {showCard("boost") && <ToolGridCard icon={<Megaphone className="size-5" />} title={t("boost_title")} desc={t("boost_desc") || ""} onOpen={() => setOpenTool("boost")} t={t} />}
+            {showCard("applied") && <ToolGridCard icon={<Trophy className="size-5" />} title={t("dash_tool_applied_t")} desc={""} onOpen={() => setOpenTool("applied")} t={t} />}
+            {showCard("social") && <ToolGridCard icon={<Share2 className="size-5" />} title={t("dash_tool_social_t")} desc={t("dash_tool_social_d")} onOpen={() => setOpenTool("social")} t={t} />}
+            {showCard("monitor") && <ToolGridCard icon={<Bell className="size-5" />} title={t("dash_tool_monitor_t")} desc={t("dash_tool_monitor_d")} onOpen={() => setOpenTool("monitor")} t={t} />}
+            {showCard("strategist") && <ToolGridCard icon={<Target className="size-5" />} title={t("dash_tool_strat_t")} desc={t("dash_tool_strat_d")} onOpen={() => setOpenTool("strategist")} t={t} />}
+            {showCard("whatif") && <ToolGridCard icon={<FlaskConical className="size-5" />} title={t("dash_tool_whatif_t")} desc={t("dash_tool_whatif_d")} onOpen={() => setOpenTool("whatif")} t={t} />}
+            {showCard("report") && <ToolGridCard icon={<FileText className="size-5" />} title={t("dash_tool_report_t")} desc={t("dash_tool_report_d")} onOpen={() => setOpenTool("report")} t={t} />}
+            {vis.isPageVisible("agent") && <ToolCard icon={<Bot className="size-5" />} title={t("dash_tool_agent_t")} desc={t("dash_tool_agent_d")} cta={t("dash_open_agent")} to="/agent" badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")} badgeOk={!!agentSub} />}
           </div>
         </div>
 
