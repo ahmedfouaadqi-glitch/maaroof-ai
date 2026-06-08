@@ -15,9 +15,11 @@ export const runAgentNow = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
+    const runId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string;
+    const runStartedAt = new Date().toISOString();
     const q = supabaseAdmin.from("agent_targets").select("*").eq("user_id", userId).eq("active", true);
     const { data: targets } = data.targetId ? await q.eq("id", data.targetId) : await q.limit(5);
-    if (!targets || targets.length === 0) return { ok: false, error: "no_targets" };
+    if (!targets || targets.length === 0) return { ok: false, error: "no_targets", runId };
 
     let done = 0; let failed = 0;
     for (const tg of targets) {
@@ -45,6 +47,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
             input: subject, status: "done",
             result: { summary: content, score, lang: data.lang },
             approval_status: taskType === "suggest_post" ? "pending" : "none",
+            run_id: runId, run_started_at: runStartedAt,
           }).select("id").single();
           const tid = (ins as any)?.id as string | undefined;
           done++;
@@ -102,12 +105,13 @@ export const runAgentNow = createServerFn({ method: "POST" })
           await supabaseAdmin.from("agent_tasks").insert({
             user_id: userId, target_id: (tg as any).id, task_type: taskType,
             input: subject, status: "failed", error: e?.message || "error",
+            run_id: runId, run_started_at: runStartedAt,
           });
           failed++;
         }
       }
     }
-    return { ok: true, done, failed };
+    return { ok: true, done, failed, runId };
   });
 
 

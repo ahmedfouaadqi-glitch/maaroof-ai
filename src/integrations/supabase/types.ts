@@ -120,6 +120,8 @@ export type Database = {
           id: string
           input: string | null
           result: Json | null
+          run_id: string | null
+          run_started_at: string | null
           status: string
           target_id: string | null
           task_type: string
@@ -134,6 +136,8 @@ export type Database = {
           id?: string
           input?: string | null
           result?: Json | null
+          run_id?: string | null
+          run_started_at?: string | null
           status?: string
           target_id?: string | null
           task_type: string
@@ -148,6 +152,8 @@ export type Database = {
           id?: string
           input?: string | null
           result?: Json | null
+          run_id?: string | null
+          run_started_at?: string | null
           status?: string
           target_id?: string | null
           task_type?: string
