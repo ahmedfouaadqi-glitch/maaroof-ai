@@ -11,6 +11,7 @@ import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { toast } from "sonner";
 
 type Brand = {
   name: string;
@@ -112,6 +113,12 @@ export function CompetitorCompare() {
       const data = await r.json();
       if (!r.ok) { setError(errorText(data?.error || "error")); return; }
       setResult(data.result);
+      {
+        const L = (outLang === "en" || outLang === "ku" ? outLang : "ar");
+        toast.success(L === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+          : L === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
+          : "Tokens charged ✓ — see updated balance above");
+      }
       if (auth) auth.refreshProfile();
     } catch (e: any) {
       setError(e.message);

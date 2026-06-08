@@ -12,6 +12,14 @@ import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { toast } from "sonner";
+
+function tokensToast(l: "ar" | "en" | "ku") {
+  const msg = l === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+    : l === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
+    : "Tokens charged ✓ — see updated balance above";
+  toast.success(msg);
+}
 
 type Mode = "text" | "image" | "video";
 type Platform = "linkedin" | "facebook" | "tiktok" | "instagram";
@@ -185,6 +193,7 @@ export function PostSuggester({
       if (!r.ok) throw new Error(data?.error || "Failed");
       setPost(data.post);
       if (data.variants) setResult(data);
+      tokensToast((lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku");
       if (auth) auth.refreshProfile();
     } catch (e: any) {
       setError(e.message);
