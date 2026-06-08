@@ -45,6 +45,8 @@ const HOWTO_KEY: Record<ToolKey, string> = {
 function GuidePage() {
   const { t, lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
+  usePageGuard();
+
 
   const tools = TOOL_CATALOG.filter((x) => x.group === "tools");
   const agent = TOOL_CATALOG.filter((x) => x.group === "agent");
