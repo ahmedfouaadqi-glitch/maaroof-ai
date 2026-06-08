@@ -32,8 +32,13 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
     .eq("id", userId)
     .maybeSingle();
 
-  // 1) Per-user override wins
+  // 0) Admin explicitly disabled this tool for this user
   const ov = (prof as any)?.per_user_tool_overrides?.[toolKey];
+  if (ov && ov.enabled === false) {
+    return { tokens: 0, usd: 0, source: "disabled_by_admin" as any };
+  }
+
+  // 1) Per-user override wins
   if (ov && (Number(ov.tokens_per_use) > 0 || Number(ov.usd_per_use) > 0)) {
     return {
       tokens: Number(ov.tokens_per_use) || 0,
