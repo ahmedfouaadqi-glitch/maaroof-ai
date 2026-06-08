@@ -69,7 +69,7 @@ export function AdminTokensPanel() {
   async function load() {
     setBusy(true);
     const [p, c, r] = await Promise.all([
-      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,hide_usage_counter").order("email"),
+      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,hide_usage_counter,ui_visibility").order("email"),
       supabase.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd, model"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
@@ -187,6 +187,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
   const [usedMonth, setUsedMonth] = useState<number>(user.tokens_used_month || 0);
   const [hideUsage, setHideUsage] = useState<boolean>(!!user.hide_usage_counter);
   const [overrides, setOverrides] = useState<Record<string, any>>(user.per_user_tool_overrides || {});
+  const [uiVis, setUiVis] = useState<NonNullable<Profile["ui_visibility"]>>(user.ui_visibility || {});
   const [planPrices, setPlanPrices] = useState<Record<string, PlanPrice>>({});
   const [spend, setSpend] = useState<Record<string, SpendRow>>({});
   const [planActive, setPlanActive] = useState(false);
