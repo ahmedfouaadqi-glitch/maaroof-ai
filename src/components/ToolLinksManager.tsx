@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { useVisibility } from "@/lib/visibility";
 import { HANDOFF_TARGETS, HANDOFF_LABELS, type HandoffTarget } from "@/lib/tool-handoff";
 import { Loader2, Plus, Trash2, Link2 } from "lucide-react";
 
