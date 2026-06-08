@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ArrowRight, Sparkles, Lock } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
-import { useVisibility, useToolPrice } from "@/lib/visibility";
+import { useVisibility, useToolPrice, usePageGuard } from "@/lib/visibility";
 import { CostBadge } from "@/components/CostBadge";
 
 type SlugDef = {
