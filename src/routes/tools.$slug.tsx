@@ -1,9 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { I18nProvider, useI18n } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Lock } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
+import { useVisibility, useToolPrice } from "@/lib/visibility";
+import { CostBadge } from "@/components/CostBadge";
 
 type SlugDef = {
   key: ToolKey;
@@ -80,7 +83,9 @@ export const Route = createFileRoute("/tools/$slug")({
   ),
   component: () => (
     <I18nProvider>
-      <Page />
+      <AuthProvider>
+        <Page />
+      </AuthProvider>
     </I18nProvider>
   ),
 });
@@ -88,9 +93,18 @@ export const Route = createFileRoute("/tools/$slug")({
 function Page() {
   const { lang } = useI18n();
   const def = Route.useLoaderData();
+  const vis = useVisibility();
+  const price = useToolPrice(def.key);
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const m = L === "en" ? def.metaEn : L === "ku" ? def.metaKu : def.metaAr;
   const name = toolLabel(def.key, L);
+
+  const blocked = !vis.loading && (!vis.isToolVisible(def.key) || !price.enabled);
+  const BL = {
+    ar: { title: "هذه الأداة غير متاحة لحسابك", desc: "تم إخفاء أو تعطيل هذه الأداة من قِبل الإدارة. للوصول، يرجى التواصل أو ترقية الباقة.", back: "← العودة" },
+    en: { title: "This tool isn't available for your account", desc: "This tool has been hidden or disabled by the admin. Contact us or upgrade your plan to gain access.", back: "← Back" },
+    ku: { title: "ئەم ئامرازە بەردەست نییە", desc: "ئەم ئامرازە لە لایەن بەڕێوەبەرەوە شاراوەتەوە یان لە کار خراوە.", back: "← گەڕانەوە" },
+  }[L];
 
   const Lc = {
     ar: { what: "ما الذي تفعله الأداة", when: "متى تستخدمها", get: "ما الذي ستحصل عليه", start: "ابدأ الآن", backHome: "← الرئيسية" },
