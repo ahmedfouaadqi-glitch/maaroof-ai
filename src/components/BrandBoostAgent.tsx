@@ -134,12 +134,18 @@ export function BrandBoostAgent() {
         </TabsList>
 
         <TabsContent value="visibility" className="mt-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-            {lang === "ar"
-              ? "فحص ظهور علامتك في 9 محركات ذكاء (يستهلك 1 تحليل). اسم العلامة مطلوب — الكلمات المفتاحية اختيارية."
-              : lang === "ku"
-              ? "پشکنینی دەرکەوتنی براندەکەت لە 9 بزوێنەری AI (1 شیکاری). ناوی براند پێویستە، وشە کلیلیەکان ئارەزوومەندانە."
-              : "Probe your brand visibility across 9 AI engines (1 analysis). Brand required, keywords optional."}
+          <div className="rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4 mb-3">
+            <h3 className="flex items-center gap-2 font-display text-sm font-bold text-gradient">
+              <Eye className="size-4 text-primary" />
+              {lang === "ar" ? "تحليل الظهور في محركات الذكاء" : lang === "ku" ? "شیکاری دەرکەوتن لە بزوێنەرە AIـەکان" : "AI Engines Visibility Analysis"}
+            </h3>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+              {lang === "ar"
+                ? "افحص كيف تظهر علامتك التجارية أمام 9 محركات ذكاء اصطناعي (ChatGPT و Gemini و Claude و Perplexity و Copilot و Grok و Mistral و DeepSeek و Kimi). يعرض لك: ما يقوله كل محرك الآن، نسبة الظهور لكل منصة، إشارات الثقة، التحيّز السلبي/الإيجابي، وتوصيات عملية مرتبطة مباشرة بخطة \"تعزيز العلامة\" بالأسفل. (يستهلك 1 تحليل — اسم العلامة مطلوب، الكلمات المفتاحية اختيارية)."
+                : lang === "ku"
+                ? "پشکنینی چۆنیەتی دەرکەوتنی براندەکەت لە ٩ بزوێنەری AI. وەڵامی ئێستای هەر بزوێنەرێک، ڕێژەی دەرکەوتن، ئاماژەی متمانە و ڕاسپاردە کارایی پێشکەش دەکات کە ڕاستەوخۆ پەیوەستن بە پلانی بەهێزکردنی براند. (١ شیکاری — ناوی براند پێویستە)."
+                : "Probe how your brand appears across 9 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
+            </p>
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
         </TabsContent>

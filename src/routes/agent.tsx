@@ -379,14 +379,20 @@ function AgentPage() {
           </div>
         </div>
 
-        {/* AI Visibility moved to dashboard tools — link out */}
+        {/* AI Visibility lives inside Brand Boost now */}
         <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
-            <Eye className="size-5 text-primary" /> {t("ag_vis_title")}
+            <Eye className="size-5 text-primary" /> {lang === "ar" ? "تحليل الظهور في محركات الذكاء" : lang === "ku" ? "شیکاری دەرکەوتن لە بزوێنەرە AIـەکان" : "AI Engines Visibility Analysis"}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("ag_vis_desc")}</p>
-          <Link to="/dashboard" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
-            <Eye className="size-4" /> {t("ag_vis_run")}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {lang === "ar"
+              ? "افحص ظهور علامتك في ChatGPT و Gemini و Perplexity وغيرها، واحصل على توصيات فورية لتعزيز الحضور — كل ذلك من داخل أداة \"تعزيز العلامة التجارية\"."
+              : lang === "ku"
+              ? "دەرکەوتنی براندەکەت لە ChatGPT، Gemini، Perplexity و... پشکنیە، لەناو ئامرازی \"بەهێزکردنی براند\"."
+              : "Probe your brand's visibility across ChatGPT, Gemini, Perplexity and more, with instant recommendations — now inside the Brand Boost tool."}
+          </p>
+          <Link to="/tools/$slug" params={{ slug: "brand-boost" }} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
+            <Eye className="size-4" /> {lang === "ar" ? "افتح تعزيز العلامة" : lang === "ku" ? "بەهێزکردنی براند بکەرەوە" : "Open Brand Boost"}
           </Link>
         </div>
 
