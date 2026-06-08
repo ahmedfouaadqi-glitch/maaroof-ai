@@ -12,6 +12,9 @@ type Profile = {
   tokens_used_today: number; tokens_used_month: number;
   per_user_tool_overrides: Record<string, { tokens_per_use?: number; usd_per_use?: number; enabled?: boolean; daily?: number; monthly?: number }>;
   subscription_tier: string | null;
+  subscription_expires_at?: string | null;
+  is_subscribed?: boolean | null;
+  max_devices?: number | null;
   hide_usage_counter?: boolean;
   ui_visibility?: { tools?: Record<string, boolean>; agent?: Record<string, boolean>; widgets?: Record<string, boolean>; pages?: Record<string, boolean> };
 };
