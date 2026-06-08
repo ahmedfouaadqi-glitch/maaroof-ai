@@ -113,6 +113,9 @@ export async function chargeTokens(opts: {
   }
 
   const cost = await resolveToolCost(opts.userId, opts.toolKey);
+  if ((cost.source as any) === "disabled_by_admin") {
+    return { ok: false, reason: "tool_disabled" };
+  }
   if (cost.source === "unpriced") {
     return { ok: false, reason: "unpriced" };
   }
