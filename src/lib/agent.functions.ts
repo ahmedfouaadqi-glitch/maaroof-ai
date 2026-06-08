@@ -15,9 +15,11 @@ export const runAgentNow = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
+    const runId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string;
+    const runStartedAt = new Date().toISOString();
     const q = supabaseAdmin.from("agent_targets").select("*").eq("user_id", userId).eq("active", true);
     const { data: targets } = data.targetId ? await q.eq("id", data.targetId) : await q.limit(5);
-    if (!targets || targets.length === 0) return { ok: false, error: "no_targets" };
+    if (!targets || targets.length === 0) return { ok: false, error: "no_targets", runId };
 
     let done = 0; let failed = 0;
     for (const tg of targets) {
