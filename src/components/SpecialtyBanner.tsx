@@ -2,11 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { useVisibility } from "@/lib/visibility";
 
 export function SpecialtyBanner() {
   const { t } = useI18n();
   const { profile } = useAuth();
+  const vis = useVisibility();
   const specialty = (profile as any)?.specialty as string | undefined;
+
+  if (!vis.loading && !vis.isWidgetVisible("specialty_banner")) return null;
 
   if (specialty) {
     return (
