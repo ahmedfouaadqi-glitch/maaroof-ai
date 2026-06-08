@@ -21,6 +21,7 @@ export function HandoffMenu({ source, getText }: Props) {
   const { t, lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const { user } = useAuth();
+  const vis = useVisibility();
   const [linked, setLinked] = useState<HandoffTarget | null>(null);
   const [open, setOpen] = useState(false);
 
