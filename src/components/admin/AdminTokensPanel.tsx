@@ -12,6 +12,7 @@ type Profile = {
   tokens_used_today: number; tokens_used_month: number;
   per_user_tool_overrides: Record<string, { tokens_per_use?: number; usd_per_use?: number; enabled?: boolean; daily?: number; monthly?: number }>;
   subscription_tier: string | null;
+  hide_usage_counter?: boolean;
 };
 
 type Pricing = { tool_key: string; default_tokens: number; default_usd: number; model: string | null };
@@ -20,9 +21,9 @@ type SpendRow = { user_id: string; tool_key: string; uses: number; total_tokens:
 type PlanPrice = { tool_key: string; tokens_per_use: number; usd_per_use: number; enabled: boolean };
 
 const T = {
-  ar: { title: "إدارة التوكن والصلاحيات والتسعير", search: "بحث بالبريد/الاسم", user: "المستخدم", plan: "الخطة", balance: "الرصيد", daily: "يومي", monthly: "شهري", role: "الدور", action: "إجراء", manage: "إدارة", admin: "مسؤول", normal: "مستخدم", makeAdmin: "ترقية لمسؤول", revokeAdmin: "إلغاء الإدارة", noResults: "لا توجد نتائج", suggestionsCatalog: "كتالوج اقتراحات الأسعار (للمسؤول فقط)", balanceTok: "رصيد التوكن", dailyLimit: "حد يومي (توكن)", monthlyLimit: "حد شهري (توكن)", toolsHeader: "الأدوات: التكلفة/مرة، الحدود، الاستخدام، الإجمالي المنفَق", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", usesLbl: "مرات", spent: "المنفَق", reset: "إعادة لقيمة الخطة", save: "حفظ", source: "المصدر", srcUser: "خاص بالمستخدم", srcPlan: "من الخطة", srcNone: "غير مسعّرة", inheritsPlan: "يرث من الخطة", noPlan: "بدون خطة", priceUnsetWarn: "لم تُسعّر هذه الأداة لا في الخطة ولا في إعدادات المستخدم — لن تعمل لهذا المستخدم.", today: "اليوم", month: "الشهر" },
-  en: { title: "Tokens, Roles & Pricing", search: "search email/name", user: "User", plan: "Plan", balance: "Balance", daily: "Daily", monthly: "Monthly", role: "Role", action: "Action", manage: "Manage", admin: "Admin", normal: "User", makeAdmin: "Promote to admin", revokeAdmin: "Revoke admin", noResults: "No results", suggestionsCatalog: "Price suggestions catalog (admin only)", balanceTok: "Token balance", dailyLimit: "Daily limit (tokens)", monthlyLimit: "Monthly limit (tokens)", toolsHeader: "Tools: cost/use, caps, usage, total spent", tokensPerUse: "tokens/use", usdPerUse: "cost/use", dailyCap: "daily cap", monthlyCap: "monthly cap", usesLbl: "uses", spent: "spent", reset: "Reset to plan", save: "Save", source: "Source", srcUser: "User override", srcPlan: "From plan", srcNone: "Unpriced", inheritsPlan: "inherits from plan", noPlan: "no plan", priceUnsetWarn: "This tool is unpriced in both the plan and the user — it will be blocked for this user.", today: "today", month: "month" },
-  ku: { title: "بەڕێوەبردنی تۆکن، ڕۆڵ و نرخدانان", search: "گەڕان", user: "بەکارهێنەر", plan: "پلان", balance: "بەڵانس", daily: "ڕۆژانە", monthly: "مانگانە", role: "ڕۆڵ", action: "کردار", manage: "بەڕێوەبردن", admin: "ئەدمین", normal: "بەکارهێنەر", makeAdmin: "بکە بە ئەدمین", revokeAdmin: "ڕاکێشانەوەی ئەدمین", noResults: "هیچ نییە", suggestionsCatalog: "کاتالۆگی پێشنیار", balanceTok: "بەڵانسی تۆکن", dailyLimit: "سنووری ڕۆژانە", monthlyLimit: "سنووری مانگانە", toolsHeader: "ئامرازەکان", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", usesLbl: "جار", spent: "خەرجکراو", reset: "گەڕاندنەوە", save: "پاشەکەوت", source: "سەرچاوە", srcUser: "تایبەت", srcPlan: "لە پلان", srcNone: "نرخ نەنراوە", inheritsPlan: "لە پلانەوە", noPlan: "بێ پلان", priceUnsetWarn: "نرخ نەنراوە — کار ناکات.", today: "ئەمڕۆ", month: "مانگ" },
+  ar: { title: "إدارة التوكن والصلاحيات والتسعير", search: "بحث بالبريد/الاسم", user: "المستخدم", plan: "الخطة", balance: "الرصيد", daily: "يومي", monthly: "شهري", role: "الدور", action: "إجراء", manage: "إدارة", admin: "مسؤول", normal: "مستخدم", makeAdmin: "ترقية لمسؤول", revokeAdmin: "إلغاء الإدارة", noResults: "لا توجد نتائج", suggestionsCatalog: "كتالوج اقتراحات الأسعار (للمسؤول فقط)", balanceTok: "رصيد التوكن", dailyLimit: "حد يومي (توكن)", monthlyLimit: "حد شهري (توكن)", toolsHeader: "الأدوات: التكلفة/مرة، الحدود، الاستخدام، الإجمالي المنفَق", tokensPerUse: "توكن/مرة", usdPerUse: "تكلفة/مرة", dailyCap: "سقف يومي", monthlyCap: "سقف شهري", usesLbl: "مرات", spent: "المنفَق", reset: "إعادة لقيمة الخطة", save: "حفظ", source: "المصدر", srcUser: "خاص بالمستخدم", srcPlan: "من الخطة", srcNone: "غير مسعّرة", inheritsPlan: "يرث من الخطة", noPlan: "بدون خطة", priceUnsetWarn: "لم تُسعّر هذه الأداة لا في الخطة ولا في إعدادات المستخدم — لن تعمل لهذا المستخدم.", today: "اليوم", month: "الشهر", enabled: "مفعّلة", disabled: "مخفية", usedToday: "المستخدَم اليوم", usedMonth: "المستخدَم هذا الشهر", resetToday: "تصفير اليوم", resetMonth: "تصفير الشهر", hideUsage: "إخفاء عداد الاستخدام عن المستخدم", toolEnabledTip: "تشغيل/إخفاء الأداة لهذا المستخدم" },
+  en: { title: "Tokens, Roles & Pricing", search: "search email/name", user: "User", plan: "Plan", balance: "Balance", daily: "Daily", monthly: "Monthly", role: "Role", action: "Action", manage: "Manage", admin: "Admin", normal: "User", makeAdmin: "Promote to admin", revokeAdmin: "Revoke admin", noResults: "No results", suggestionsCatalog: "Price suggestions catalog (admin only)", balanceTok: "Token balance", dailyLimit: "Daily limit (tokens)", monthlyLimit: "Monthly limit (tokens)", toolsHeader: "Tools: cost/use, caps, usage, total spent", tokensPerUse: "tokens/use", usdPerUse: "cost/use", dailyCap: "daily cap", monthlyCap: "monthly cap", usesLbl: "uses", spent: "spent", reset: "Reset to plan", save: "Save", source: "Source", srcUser: "User override", srcPlan: "From plan", srcNone: "Unpriced", inheritsPlan: "inherits from plan", noPlan: "no plan", priceUnsetWarn: "This tool is unpriced in both the plan and the user — it will be blocked for this user.", today: "today", month: "month", enabled: "Enabled", disabled: "Hidden", usedToday: "Used today", usedMonth: "Used this month", resetToday: "Reset today", resetMonth: "Reset month", hideUsage: "Hide usage counter from user", toolEnabledTip: "Enable/hide this tool for this user" },
+  ku: { title: "بەڕێوەبردنی تۆکن، ڕۆڵ و نرخدانان", search: "گەڕان", user: "بەکارهێنەر", plan: "پلان", balance: "بەڵانس", daily: "ڕۆژانە", monthly: "مانگانە", role: "ڕۆڵ", action: "کردار", manage: "بەڕێوەبردن", admin: "ئەدمین", normal: "بەکارهێنەر", makeAdmin: "بکە بە ئەدمین", revokeAdmin: "ڕاکێشانەوەی ئەدمین", noResults: "هیچ نییە", suggestionsCatalog: "کاتالۆگی پێشنیار", balanceTok: "بەڵانسی تۆکن", dailyLimit: "سنووری ڕۆژانە", monthlyLimit: "سنووری مانگانە", toolsHeader: "ئامرازەکان", tokensPerUse: "تۆکن/جار", usdPerUse: "نرخ/جار", dailyCap: "سنووری ڕۆژانە", monthlyCap: "سنووری مانگانە", usesLbl: "جار", spent: "خەرجکراو", reset: "گەڕاندنەوە", save: "پاشەکەوت", source: "سەرچاوە", srcUser: "تایبەت", srcPlan: "لە پلان", srcNone: "نرخ نەنراوە", inheritsPlan: "لە پلانەوە", noPlan: "بێ پلان", priceUnsetWarn: "نرخ نەنراوە — کار ناکات.", today: "ئەمڕۆ", month: "مانگ", enabled: "چالاک", disabled: "شاراوە", usedToday: "ئەمڕۆ بەکارهاتوو", usedMonth: "ئەم مانگە بەکارهاتوو", resetToday: "سفرکردن ڕۆژ", resetMonth: "سفرکردن مانگ", hideUsage: "شاردنەوەی ژمێرەری بەکارهێنان", toolEnabledTip: "چالاک/شاردن" },
 };
 
 export function AdminTokensPanel() {
@@ -38,7 +39,7 @@ export function AdminTokensPanel() {
   async function load() {
     setBusy(true);
     const [p, c, r] = await Promise.all([
-      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier").order("email"),
+      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,hide_usage_counter").order("email"),
       supabase.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd, model"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
@@ -152,6 +153,9 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
   const [balance, setBalance] = useState(user.tokens_balance);
   const [daily, setDaily] = useState<number | "">(user.tokens_daily_limit ?? "");
   const [monthly, setMonthly] = useState<number | "">(user.tokens_monthly_limit ?? "");
+  const [usedToday, setUsedToday] = useState<number>(user.tokens_used_today || 0);
+  const [usedMonth, setUsedMonth] = useState<number>(user.tokens_used_month || 0);
+  const [hideUsage, setHideUsage] = useState<boolean>(!!user.hide_usage_counter);
   const [overrides, setOverrides] = useState<Record<string, any>>(user.per_user_tool_overrides || {});
   const [planPrices, setPlanPrices] = useState<Record<string, PlanPrice>>({});
   const [spend, setSpend] = useState<Record<string, SpendRow>>({});
@@ -178,16 +182,20 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
 
   async function save() {
     setSaving(true);
-    // Clean: drop empty overrides so resolveToolCost falls back to the plan
+    // Clean: drop empty overrides, but KEEP entries that only disable the tool
     const clean: Record<string, any> = {};
     for (const [k, v] of Object.entries(overrides)) {
-      const hasAny = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0;
-      if (hasAny) clean[k] = v;
+      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0;
+      const isDisabled = v?.enabled === false;
+      if (hasPrice || isDisabled) clean[k] = v;
     }
     await supabase.from("profiles").update({
       tokens_balance: balance,
       tokens_daily_limit: daily === "" ? null : Number(daily),
       tokens_monthly_limit: monthly === "" ? null : Number(monthly),
+      tokens_used_today: Number(usedToday) || 0,
+      tokens_used_month: Number(usedMonth) || 0,
+      hide_usage_counter: hideUsage,
       per_user_tool_overrides: clean,
     } as any).eq("id", user.id);
     setSaving(false);
@@ -243,6 +251,27 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           </Field>
         </div>
 
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <Field label={L.usedToday}>
+            <div className="flex gap-1">
+              <input type="number" min={0} value={usedToday} onChange={(e) => setUsedToday(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+              <button type="button" onClick={() => setUsedToday(0)} className="rounded-lg border border-border bg-card/60 px-2 text-[10px] hover:bg-card">{L.resetToday}</button>
+            </div>
+          </Field>
+          <Field label={L.usedMonth}>
+            <div className="flex gap-1">
+              <input type="number" min={0} value={usedMonth} onChange={(e) => setUsedMonth(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+              <button type="button" onClick={() => setUsedMonth(0)} className="rounded-lg border border-border bg-card/60 px-2 text-[10px] hover:bg-card">{L.resetMonth}</button>
+            </div>
+          </Field>
+          <Field label={L.hideUsage}>
+            <label className="flex h-[34px] items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={hideUsage} onChange={(e) => setHideUsage(e.target.checked)} />
+              <span>{hideUsage ? L.disabled : L.enabled}</span>
+            </label>
+          </Field>
+        </div>
+
         <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -250,6 +279,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
             <thead className="bg-card/60">
               <tr>
                 <th className="p-2 text-start">Tool</th>
+                <th className="p-2 w-16" title={L.toolEnabledTip}>{L.enabled}</th>
                 <th className="p-2">{L.source}</th>
                 <th className="p-2 w-28">{L.tokensPerUse}</th>
                 <th className="p-2 w-40">{L.usdPerUse}</th>
@@ -272,6 +302,16 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
                     <td className="p-2">
                       <div className="font-semibold">{toolLabel(t.key as any, lang)}</div>
                       <div className="text-[10px] text-muted-foreground">{t.key}</div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <label className="inline-flex cursor-pointer items-center gap-1" title={L.toolEnabledTip}>
+                        <input
+                          type="checkbox"
+                          checked={o.enabled !== false}
+                          onChange={(e) => patchTool(t.key, { enabled: e.target.checked ? undefined : false })}
+                        />
+                        <span className="text-[10px] text-muted-foreground">{o.enabled === false ? L.disabled : L.enabled}</span>
+                      </label>
                     </td>
                     <td className="p-2 text-center">
                       {eff.source === "user" && <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{L.srcUser}</span>}

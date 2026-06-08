@@ -32,8 +32,13 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
     .eq("id", userId)
     .maybeSingle();
 
-  // 1) Per-user override wins
+  // 0) Admin explicitly disabled this tool for this user
   const ov = (prof as any)?.per_user_tool_overrides?.[toolKey];
+  if (ov && ov.enabled === false) {
+    return { tokens: 0, usd: 0, source: "disabled_by_admin" as any };
+  }
+
+  // 1) Per-user override wins
   if (ov && (Number(ov.tokens_per_use) > 0 || Number(ov.usd_per_use) > 0)) {
     return {
       tokens: Number(ov.tokens_per_use) || 0,
@@ -108,6 +113,9 @@ export async function chargeTokens(opts: {
   }
 
   const cost = await resolveToolCost(opts.userId, opts.toolKey);
+  if ((cost.source as any) === "disabled_by_admin") {
+    return { ok: false, reason: "tool_disabled" };
+  }
   if (cost.source === "unpriced") {
     return { ok: false, reason: "unpriced" };
   }
@@ -140,6 +148,11 @@ export async function chargeTokens(opts: {
  */
 export function chargeFailureBody(reason: ChargeResult extends { ok: false; reason: infer R } ? R : string, left?: number) {
   const map: Record<string, { ar: string; en: string; ku: string }> = {
+    tool_disabled: {
+      ar: "هذه الأداة معطّلة لحسابك من قِبل المسؤول.",
+      en: "This tool has been disabled for your account by the admin.",
+      ku: "ئەم ئامرازە لە لایەن بەڕێوەبەرەوە بۆ هەژمارەکەت لە کار خراوە.",
+    },
     unpriced: {
       ar: "لم يقم المسؤول بتسعير هذه الأداة لحسابك بعد.",
       en: "This tool has not been priced for your account yet.",
