@@ -11,6 +11,7 @@ type Row = { id: string; source_tool: string; target_tool: string };
 export function ToolLinksManager() {
   const { user } = useAuth();
   const { lang } = useI18n();
+  const vis = useVisibility();
   const L = (k: HandoffTarget) => HANDOFF_LABELS[k][(lang as "ar" | "en" | "ku") || "ar"];
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
