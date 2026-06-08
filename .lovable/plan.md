@@ -1,68 +1,35 @@
-## الهدف
-كل مستخدم يربط حساباته الشخصية بنفسه بنقرة واحدة من صفحة `/agent` → `ChannelsPanel`.
+## Security Hardening Plan
 
-## آلية الربط لكل منصة
+The scanner found 8 issues. Here is what each one means in plain language and how I will close them.
 
-| القناة | الآلية | تجربة المستخدم |
-|---|---|---|
-| **LinkedIn** | App User OAuth | زر "اتصل بـ LinkedIn" → نافذة منبثقة → موافقة → اسم الحساب يظهر |
-| **Google** (Gmail/Calendar) | App User OAuth | زر "اتصل بـ Google" → نافذة منبثقة → موافقة → البريد يظهر |
-| **Telegram** | Bot link (الحالي مُبسَّط) | زر "اتصل بـ Telegram" → يفتح بوت → Start → ربط فوري |
-| **Facebook** (Pages) | لصق Access Token | زر "اتصل" → Dialog فيه رابط مباشر لصفحة Meta لتوليد التوكن + حقل لصق + اختبار |
-| **Instagram** (Business) | لصق Access Token | نفس تجربة Facebook (يستخدم نفس نظام Meta Graph) |
-| **X / Twitter** | لصق Bearer Token | زر "اتصل" → Dialog فيه رابط لـ developer.twitter.com + حقل لصق + اختبار |
+### 1. Free AI access for anyone on the internet (CRITICAL)
+`translateText` (`src/lib/translate.functions.ts`) has no authentication. Anyone can hit the RPC URL with `curl` and burn the project's paid Lovable AI credits with no account.
 
-> **ملاحظة صريحة في الواجهة**: Facebook/Instagram/X لا تملك Connector جاهز في Lovable حالياً، لذلك ربطها يتطلب لصق توكن من حساب المطوّر الخاص بكل منصة. سنوضح هذا للمستخدم برابط مباشر وشرح من 3 خطوات داخل الـ Dialog.
+**Fix:** Add `.middleware([requireSupabaseAuth])` so only signed-in users can call it, and charge tokens through the existing `chargeTokens` ledger so abuse is bounded by the caller's quota.
 
----
+### 2. Open-redirect / phishing vector in `/auth` (HIGH)
+`src/routes/auth.tsx` reads the `?redirect=` URL parameter and navigates to it without validation, cast through `as any`. An attacker could send `https://geoiraq.com/auth?redirect=https://evil.com` and land victims on a clone right after they sign in.
 
-## الخطوات التقنية
+**Fix:** In `validateSearch`, accept only relative internal paths (`^/(?!/)`); fall back to `/dashboard` for anything else (absolute URLs, `//evil.com`, `javascript:`, etc.). No component changes needed.
 
-### 1) ربط الـ App Connectors اللازمة (مرة واحدة في الـ Workspace)
-- `linkedin` connector (موجود مسبقاً)
-- `google_mail` و `google_calendar` connectors (سأطلب الموافقة في build mode)
-- ستوفر متغير `LINKEDIN_APP_USER_CONNECTOR_CLIENT_ID` و `GOOGLE_APP_USER_CONNECTOR_CLIENT_ID` تلقائياً
+### 3. SECURITY DEFINER functions callable by the public role (5 warnings)
+Postgres functions marked `SECURITY DEFINER` run with the owner's privileges. By default `EXECUTE` is granted to `PUBLIC`, so any signed-in (and sometimes anonymous) user can call them directly via the Data API even when that is not intended.
 
-### 2) ملفات البنية التحتية
-- `src/integrations/lovable/appUserConnector.ts` (server) — `authorizeAppUserOAuth`, `callAsAppUser`
-- `src/integrations/lovable/appUserConnectorClient.ts` (browser) — `connectAppUser` (popup + postMessage)
+**Fix:** One migration that locks each function down to who actually needs it:
+- `handle_new_user`, `guard_profile_privileged_updates` — trigger-only → revoke EXECUTE from PUBLIC.
+- `charge_tokens` — server-only (called via service role) → revoke from PUBLIC, grant to `service_role` only.
+- `has_role` — used inside RLS policies → revoke from PUBLIC + anon, keep `authenticated` (required so policies can call it).
+- `ensure_trial_subscription` — called by signed-in trial flow → revoke from PUBLIC + anon, keep `authenticated`.
 
-### 3) Migration: تمديد جدول `publish_channels` الموجود
-- إضافة أعمدة: `provider_account_id text`, `connection_id text`, `connected_via text` (oauth/manual/bot)
-- توسيع `kind` لقبول: `facebook`, `instagram`, `x`, `gmail`
-- لا تغيير في RLS (القائمة كافية: المستخدم يدير قنواته فقط)
+### 4. Extension installed in `public` schema (WARN, low priority)
+A Postgres extension lives in `public`. Best practice is a dedicated `extensions` schema, but moving an in-use extension can break dependent objects.
 
-### 4) Server Functions جديدة في `src/lib/channels.functions.ts`
-- `startLinkedInConnect(targetOrigin)` → `authorizeAppUserOAuth` مع scopes النشر
-- `startGoogleConnect(targetOrigin)` → نفس الفكرة لـ Gmail
-- `saveOAuthConnection({provider, connectionId})` → يجلب اسم الحساب من المزوّد + يحفظ في `publish_channels`
-- `saveManualToken({provider, token, accountLabel?, extra?})` → لـ FB/IG/X: يختبر التوكن (طلب `/me`) ثم يحفظ
-- `publishViaConnection(channelId, text, mediaUrl?)` → router موحّد ينشر حسب نوع القناة
+**Fix:** Acknowledge and leave in place (document in security memory). I will not move it blindly; if you want it relocated I can do it as a separate, carefully tested migration.
 
-### 5) إعادة تصميم `ChannelsPanel.tsx`
-- شبكة من 6 بطاقات بدل القائمة الحالية
-- كل بطاقة: شعار + اسم المنصة + حالة (متصل ✓ مع اسم الحساب / غير متصل / قريباً)
-- **متصل** → زر "فصل" + خيار "نشر تلقائي / موافقة قبل النشر" + خيار "استلم الإشعارات هنا"
-- **غير متصل** → زر "اتصل" يفتح:
-  - LinkedIn/Google → popup OAuth
-  - Telegram → بوت في تبويب جديد (الحالي)
-  - FB/IG/X → Dialog فيه: شرح + رابط مباشر للحصول على التوكن + حقل لصق + زر "اختبر واحفظ"
-- "إعدادات متقدمة" خلف `<Collapsible>` (للـ Page ID, Instagram Business ID, إلخ)
+### Verification
+After applying the changes I will re-run the security scan to confirm the 4 actionable findings clear, and update the security memory document to reflect the new posture.
 
-### 6) تحديث منطق النشر
-- `publishToTelegram` و `publishToLinkedIn` الحاليان يبقيان، نضيف:
-  - `publishToLinkedInAsUser(connectionId, text)` → عبر `callAsAppUser`
-  - `publishToFacebookPage(token, pageId, text)`, `publishToInstagram(token, igUserId, text, mediaUrl)`, `publishToX(bearer, text)`
-- `runAgentNow` / `approveAndPublish` يقرأ القناة ثم يستدعي `publishViaConnection`
-
----
-
-## ما لن يتغير
-- منطق الوكيل (`runAgentCommand`), `ApprovalQueue`, جدول `agent_tasks`, نظام Tokens
-- صفحات الأدوات الأخرى
-
-## التحقق
-- LinkedIn/Google: نقرة → popup → اسم الحساب يظهر بشارة خضراء
-- Telegram: نقرة → بوت → Start → ربط فوري
-- FB/IG/X: لصق توكن → اختبار يرجع اسم الحساب → حفظ
-- تشغيل أمر الوكيل → النشر يعمل على القناة المتصلة
+### Files / DB touched
+- `src/lib/translate.functions.ts` — add auth middleware + token charge.
+- `src/routes/auth.tsx` — sanitize `redirect` search param.
+- New migration — revoke/grant EXECUTE on the 5 SECURITY DEFINER functions.
