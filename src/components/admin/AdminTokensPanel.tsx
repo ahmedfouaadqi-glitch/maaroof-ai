@@ -304,6 +304,15 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
                       <div className="text-[10px] text-muted-foreground">{t.key}</div>
                     </td>
                     <td className="p-2 text-center">
+                      <label className="inline-flex cursor-pointer items-center gap-1" title={L.toolEnabledTip}>
+                        <input
+                          type="checkbox"
+                          checked={o.enabled !== false}
+                          onChange={(e) => patchTool(t.key, { enabled: e.target.checked ? undefined : false })}
+                        />
+                        <span className="text-[10px] text-muted-foreground">{o.enabled === false ? L.disabled : L.enabled}</span>
+                      </label>
+                    </td>
                       {eff.source === "user" && <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{L.srcUser}</span>}
                       {eff.source === "plan" && <span className="rounded-full border border-border bg-card/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{L.srcPlan}</span>}
                       {eff.source === "none" && <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">{L.srcNone}</span>}
