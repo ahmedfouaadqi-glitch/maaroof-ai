@@ -15,10 +15,13 @@ import { ENGINES } from "./engine-logos";
  */
 export function EnginesOrbit() {
   const { t } = useI18n();
+  const vis = useVisibility();
   const radius = 140; // px in viewBox space
   const size = 380;
   const cx = size / 2;
   const cy = size / 2;
+
+  if (!vis.loading && !vis.isWidgetVisible("engines_orbit")) return null;
 
   return (
     <section id="orbit" className="relative border-t border-border/60 py-20 overflow-hidden">
