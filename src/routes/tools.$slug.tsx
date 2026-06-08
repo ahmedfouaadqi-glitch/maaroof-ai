@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ArrowRight, Sparkles, Lock } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
-import { useVisibility, useToolPrice } from "@/lib/visibility";
+import { useVisibility, useToolPrice, usePageGuard } from "@/lib/visibility";
 import { CostBadge } from "@/components/CostBadge";
 
 type SlugDef = {
@@ -95,6 +95,7 @@ function Page() {
   const def = Route.useLoaderData();
   const vis = useVisibility();
   const price = useToolPrice(def.key);
+  usePageGuard();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const m = L === "en" ? def.metaEn : L === "ku" ? def.metaKu : def.metaAr;
   const name = toolLabel(def.key, L);

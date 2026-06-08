@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappLink } from "@/lib/whatsapp";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
+import { usePageGuard } from "@/lib/visibility";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -50,6 +51,7 @@ function PricingPage() {
   const [addons, setAddons] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedKind, setSelectedKind] = useState<"plan" | "agent">("plan");
+  usePageGuard();
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")

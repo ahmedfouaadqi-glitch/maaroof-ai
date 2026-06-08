@@ -2,6 +2,7 @@
 // Reads `profiles.ui_visibility` (browser client, RLS scoped to own profile).
 // Default-visible if a key is missing; only explicit `false` hides.
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -86,6 +87,30 @@ export function Widget({ k, children }: { k: WidgetKey; children: React.ReactNod
   if (loading) return <>{children}</>;
   if (!isWidgetVisible(k)) return null;
   return <>{children}</>;
+}
+
+/**
+ * Page-level guard: if the current route is hidden for this user,
+ * redirect home. Call once at the top of a page component.
+ */
+const PATH_TO_PAGE: Array<[RegExp, PageKey]> = [
+  [/^\/dashboard(\/|$)/, "dashboard"],
+  [/^\/agent(\/|$)/, "agent"],
+  [/^\/tools(\/|$)/, "tools"],
+  [/^\/guide(\/|$)/, "guide"],
+  [/^\/pricing(\/|$)/, "pricing"],
+];
+
+export function usePageGuard() {
+  const vis = useVisibility();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    if (vis.loading) return;
+    const match = PATH_TO_PAGE.find(([rx]) => rx.test(pathname));
+    if (!match) return;
+    if (!vis.isPageVisible(match[1])) navigate({ to: "/" });
+  }, [vis.loading, pathname]);
 }
 
 /**

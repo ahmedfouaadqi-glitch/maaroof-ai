@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { useVisibility } from "@/lib/visibility";
 import { HANDOFF_TARGETS, HANDOFF_LABELS, type HandoffTarget } from "@/lib/tool-handoff";
 import { Loader2, Plus, Trash2, Link2 } from "lucide-react";
 
@@ -10,6 +11,7 @@ type Row = { id: string; source_tool: string; target_tool: string };
 export function ToolLinksManager() {
   const { user } = useAuth();
   const { lang } = useI18n();
+  const vis = useVisibility();
   const L = (k: HandoffTarget) => HANDOFF_LABELS[k][(lang as "ar" | "en" | "ku") || "ar"];
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,8 @@ export function ToolLinksManager() {
   };
 
   const isAr = lang === "ar";
+
+  if (!vis.loading && !vis.isWidgetVisible("tool_links")) return null;
 
   return (
     <div className="mt-6 rounded-2xl border border-border bg-card/70 p-5">

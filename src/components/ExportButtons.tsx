@@ -1,5 +1,6 @@
 import { FileDown, FileSpreadsheet, FileText } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useVisibility } from "@/lib/visibility";
 import { exportToPDF, exportToExcel, exportToCSV, type ExportPayload } from "@/lib/exports";
 
 export function ExportButtons({
@@ -14,7 +15,10 @@ export function ExportButtons({
   formats?: Array<"pdf" | "xlsx" | "csv">;
 }) {
   const { t, lang } = useI18n();
+  const vis = useVisibility();
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
+
+  if (!vis.loading && !vis.isWidgetVisible("results_export")) return null;
 
   const run = (fn: (p: ExportPayload) => void) => {
     const p = build();

@@ -1,91 +1,52 @@
-# خطة الموجة 4 — إكمال نظام الرؤية والإدارة
+## Wave 5 — إكمال البنود الستة بالترتيب
 
-سأنفّذ ثلاث مراحل بالترتيب. كل مرحلة قابلة للاختبار لوحدها.
+### 1) لوحة `AdminUsersTokensPanel` الكاملة
+- ملف جديد: `src/components/admin/AdminUsersTokensPanel.tsx`
+- جدول رئيسي: email, plan, balance, used today/month, max_devices, دور
+- بحث + فلتر (plan, role, نشط/منتهي)
+- نقر على صف → `Drawer` (من `ui/drawer`) بثلاث تبويبات:
+  - **Tokens & Usage**: balance, daily/monthly limits, آخر 20 سطر من `token_ledger`, زر "إضافة/خصم توكنز" → INSERT في `token_ledger` + UPDATE balance
+  - **Plan & Permissions**: `subscription_tier`, `subscription_expires_at`, `is_subscribed`, `max_devices`, role (admin/user)
+  - **Tools & Agent Visibility**: تحرير `ui_visibility` (tools/agent/widgets/pages) + `per_user_tool_overrides` (سعر/تعطيل لكل أداة لهذا المستخدم تحديداً)
+- Save واحد يكتب: `profiles` + `user_roles` بدفعة واحدة
+- استبدل التبويب الحالي في `admin.tsx` بهذه اللوحة
 
----
+### 2) تطبيق `<Widget>` على بقية المكوّنات
+لفّ بالـ `<Widget k="...">` المناسب في موضع الاستخدام:
+- `HandoffMenu` → `handoff_menu`
+- `ExportButtons` → `results_export`
+- `EnginesOrbit` → `engines_orbit` (في `dashboard.tsx`)
+- `SpecialtyBanner` → `specialty_banner`
+- `ToolLinksManager` → `tool_links`
+- شريط التقدم في `tools/$slug.tsx` → `progress_bar`
+- بطاقات النتائج / `history` → `history`
 
-## المرحلة (أ) — تعميم الإخفاء على كل الموقع
+### 3) `CostBadge` داخل `tools/$slug.tsx`
+- استدعاء `useToolPrice(toolKey)` أعلى الصفحة
+- عرض `CostBadge` بجانب زر التشغيل قبل الضغط
+- بعد الاستجابة: `toast` بـ "تم خصم X توكن — الرصيد المتبقي Y" (يقرأ من نتيجة `charge_tokens`)
 
-**الهدف**: عند إخفاء أداة/widget/صفحة من الإدارة، تختفي فعلاً من كل واجهة المستخدم (وليس فقط dashboard/agent).
+### 4) بوابة الصفحات على `__root.tsx`
+- إنشاء hook `usePageGuard()` في `src/lib/visibility.tsx`:
+  - يقرأ المسار الحالي → يحوّله لـ `PageKey` (dashboard/agent/tools/guide/pricing)
+  - إذا `!isPageVisible(key)` → `navigate({ to: "/" })`
+- استدعاؤه مرة واحدة في `__root.tsx` بدل تكراره في كل صفحة (إزالة الحراسة اليدوية من `dashboard.tsx`/`agent.tsx`)
+- تغطية `tools`, `guide`, `pricing` تلقائياً
 
-### الملفات
-1. **`src/routes/tools.$slug.tsx`** — قبل عرض الأداة:
-   - استدعاء `useVisibility()`
-   - إذا `!isToolVisible(slug)` → عرض شاشة "هذه الأداة غير متاحة لحسابك" + زر العودة للوحة
-   - منع تشغيل الـ API call أصلاً
-2. **`src/routes/__root.tsx`** — حارس صفحات:
-   - hook صغير `usePageGuard()` يقرأ المسار الحالي ويُعيد توجيه إذا `!isPageVisible(pageKey)` (dashboard/agent/tools/guide/pricing)
-3. **لفّ المكونات بـ `<Widget k="...">`** في الأماكن المتبقية:
-   - `SiteHeader.tsx` → `<Widget k="alerts_bell">` حول `<AlertsBell/>`
-   - `dashboard.tsx` و `agent.tsx` → `<Widget k="engines_orbit">`, `<Widget k="specialty_banner">`, `<Widget k="tool_links">`, `<Widget k="handoff_menu">`, `<Widget k="results_export">`, `<Widget k="history">`
-   - بطاقات النتائج داخل كل أداة → `<Widget k="results_export">` حول `ExportButtons`
-   - شريط التقدم في الأدوات → `<Widget k="progress_bar">`
-4. **`CostBadge` على كل بطاقة أداة** في `dashboard.tsx` و `tools.$slug.tsx`:
-   - قراءة السعر الفعلي (override → plan → unpriced) عبر hook جديد `useToolPrice(key)` يقرأ من `profiles.per_user_tool_overrides` + خطة المستخدم
-   - عرض السعر بشكل طبيعي تحت اسم الأداة
+### 5) واجهة `per_user_tool_overrides`
+- مغطّاة داخل تبويب "Tools & Agent Visibility" في `AdminUsersTokensPanel` (البند 1):
+  - لكل أداة: checkbox تفعيل + `tokens_per_use` + `usd_per_use` (override خاص بهذا المستخدم)
+  - زر "إعادة للسعر الافتراضي" يحذف المفتاح من JSON
+- بعد الحفظ: استدعاء `clearToolPriceCache(userId)` ليُحدّث `useToolPrice` فوراً
 
-### اختبار
-- إخفاء أداة من الإدارة → اختفاؤها من dashboard + tools/$slug + لا تظهر في agent
-- إخفاء `tokens_bar` → يختفي الشريط من كل الصفحات
+### 6) اختبار فعلي
+بعد كل بند: التحقق من
+- البناء بلا أخطاء TypeScript
+- فحص الكونسول والشبكة عبر `read_console_logs` / `read_network_requests`
+- جلسة الـ replay للتأكد من السلوك البصري (الإخفاء الفعلي، toast الخصم، حماية الصفحات)
 
----
-
-## المرحلة (ب) — شبكة الأسعار الموحّدة (Plans × Tools × Agent)
-
-**الهدف**: شاشة واحدة تجمع كل الخطط والأدوات والوكيل في جدول واحد، مع إمكانية إضافة خطة جديدة وربطها فوراً.
-
-### مكوّن جديد: `src/components/admin/AdminPlansMatrixPanel.tsx`
-- جدول واحد:
-  - **الصفوف**: كل أدوات `TOOL_CATALOG` (16) + ميزات الوكيل (3) + `agent_addons` (Trial/Pro/...)
-  - **الأعمدة**: كل خطة من `subscription_plans` + عمود "+ خطة جديدة"
-  - **كل خلية**:
-    - checkbox `enabled`
-    - حقل `tokens_per_use`
-    - حقل `usd_per_use` (مع `formatUsd` للعرض)
-- **زر "خطة جديدة"** → modal: name, price_iqd, price_usd, tokens_included → ينشئ `subscription_plans` ويضيف عمود فارغ
-- **زر "حفظ الكل"** → batch upsert إلى `tool_plan_access` + `agent_addons`
-- **زر "نسخ من خطة"** → نسخ كل قيم خطة إلى أخرى
-- **hook**: `useAdminPlansMatrix()` يدمج 3 queries (plans + tool_plan_access + agent_addons)
-
-### تعديل `admin.tsx`
-- استبدال `AdminPlanPricingPanel` بـ `AdminPlansMatrixPanel` تحت تبويب "Plans & Pricing"
-- (الإبقاء على الـ panel القديم كـ backup مؤقتاً، حذفه بعد التأكد)
-
----
-
-## المرحلة (ج) — دمج Users + Tokens بدرج موحّد
-
-**الهدف**: صف واحد لكل مستخدم، نقرة واحدة تفتح درج (Drawer) فيه كل التحكم.
-
-### مكوّن جديد: `src/components/admin/AdminUsersTokensPanel.tsx`
-- **جدول رئيسي**: email | plan | balance | used today | used month | devices | actions
-- **بحث + فلترة** بالخطة/الحالة
-- **عند الضغط على صف** → Drawer فيه 3 tabs:
-  1. **Tokens & Usage**: balance, daily/monthly limits, used today/month, ledger صغير (آخر 20)
-  2. **Plan & Permissions**: subscription_tier, expires_at, max_devices, role (admin/user)
-  3. **Tools & Agent Visibility**:
-     - قسم "Visibility" (موجود حالياً في AdminTokensPanel)
-     - قسم "Per-tool overrides" (موجود حالياً): enabled + tokens_per_use + usd_per_use لكل أداة
-- **حفظ واحد** يكتب لكل الجداول في transaction واحدة
-
-### تعديل `admin.tsx`
-- توحيد التبويبات إلى:
-  - **Users** (الـ panel الجديد)
-  - **Plans & Pricing** (الشبكة من المرحلة ب)
-  - **Ledger**
-  - الباقي كما هو
-
----
-
-## ترتيب التنفيذ
-1. (أ) الإخفاء الشامل + CostBadge على البطاقات — ~6 ملفات
-2. (ب) AdminPlansMatrixPanel — ملف جديد + تعديل admin.tsx
-3. (ج) AdminUsersTokensPanel — ملف جديد + تعديل admin.tsx + نقل قسم Visibility
-
-## تفاصيل تقنية (للمراجعة)
-- لا تغييرات على قاعدة البيانات — كل الأعمدة موجودة (`ui_visibility`, `per_user_tool_overrides`, `tool_plan_access`, `agent_addons`, `subscription_plans`)
-- لا تغييرات على `tokens.server.ts` أو `charge_tokens` SQL
-- `useToolPrice(key)` hook جديد في `src/lib/visibility.tsx` يدمج override + plan price
-- استخدام `Drawer` من shadcn (`src/components/ui/drawer.tsx` موجود)
-
-بعد موافقتك سأبدأ بالمرحلة (أ).
+### تفاصيل تقنية
+- لا migrations جديدة — كل الأعمدة موجودة (`ui_visibility`, `per_user_tool_overrides`, `token_ledger`).
+- جميع كتابات المسؤول من المتصفح بـ `supabase` العادي (RLS يسمح للأدمن عبر `has_role`).
+- نسخة `clearToolPriceCache(userId)` لتفريغ الذاكرة بعد كل تعديل سعر فردي.
+- استخدام `Drawer` و `Tabs` من `@/components/ui` الموجودة.

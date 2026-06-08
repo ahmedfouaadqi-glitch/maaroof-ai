@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, Link2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useVisibility } from "@/lib/visibility";
 import { HANDOFF_LABELS, HANDOFF_TARGETS, sendHandoff, type HandoffTarget } from "@/lib/tool-handoff";
 
 type Props = {
@@ -20,6 +21,7 @@ export function HandoffMenu({ source, getText }: Props) {
   const { t, lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const { user } = useAuth();
+  const vis = useVisibility();
   const [linked, setLinked] = useState<HandoffTarget | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -43,6 +45,8 @@ export function HandoffMenu({ source, getText }: Props) {
   const targets = HANDOFF_TARGETS.filter((x) => x !== source);
   const label = (k: HandoffTarget) => HANDOFF_LABELS[k][L];
   const passLabel = lang === "ar" ? "تمرير إلى" : lang === "ku" ? "ناردن بۆ" : "Pass to";
+
+  if (!vis.loading && !vis.isWidgetVisible("handoff_menu")) return null;
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-2.5">
