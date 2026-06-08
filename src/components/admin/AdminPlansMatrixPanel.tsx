@@ -69,8 +69,9 @@ export function AdminPlansMatrixPanel() {
   useEffect(() => { load(); }, []);
 
   const rows = useMemo(() => {
-    const tools = TOOL_CATALOG.filter((x) => x.group === "tools").map((x) => ({ key: x.key, label: x.labels[lang as any] || x.key, group: "tools" as const }));
-    const agent = AGENT_ROWS.map((r) => ({ key: r.key, label: toolLabel(r.key, lang as any), group: "agent" as const }));
+    const lk = (lang as "ar" | "en" | "ku");
+    const tools = TOOL_CATALOG.filter((x) => x.group === "tools").map((x) => ({ key: x.key as string, label: x.labels[lk] || x.key, group: "tools" as const }));
+    const agent = AGENT_ROWS.map((r) => ({ key: r.key, label: toolLabel(r.key, lk), group: "agent" as const }));
     return { tools, agent };
   }, [lang]);
 
