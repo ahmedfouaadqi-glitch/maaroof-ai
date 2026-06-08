@@ -14,6 +14,8 @@ import { NotifyOnboardModal } from "@/components/NotifyOnboardModal";
 import type { ExportPayload } from "@/lib/exports";
 import { apiFetch } from "@/lib/api-client";
 import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle } from "lucide-react";
+import { useVisibility } from "@/lib/visibility";
+import { TokensBar } from "@/components/TokensBar";
 
 export const Route = createFileRoute("/agent")({
   head: () => ({
@@ -48,6 +50,7 @@ const ADMIN_SUB = {
 function AgentPage() {
   const { t, lang } = useI18n();
   const { user, isAdmin, loading } = useAuth();
+  const vis = useVisibility();
   const [outLang, setOutLang] = useState<Lang>(lang);
   const navigate = useNavigate();
   const [sub, setSub] = useState<any | null>(null);
