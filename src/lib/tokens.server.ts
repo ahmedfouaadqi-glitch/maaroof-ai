@@ -148,6 +148,11 @@ export async function chargeTokens(opts: {
  */
 export function chargeFailureBody(reason: ChargeResult extends { ok: false; reason: infer R } ? R : string, left?: number) {
   const map: Record<string, { ar: string; en: string; ku: string }> = {
+    tool_disabled: {
+      ar: "هذه الأداة معطّلة لحسابك من قِبل المسؤول.",
+      en: "This tool has been disabled for your account by the admin.",
+      ku: "ئەم ئامرازە لە لایەن بەڕێوەبەرەوە بۆ هەژمارەکەت لە کار خراوە.",
+    },
     unpriced: {
       ar: "لم يقم المسؤول بتسعير هذه الأداة لحسابك بعد.",
       en: "This tool has not been priced for your account yet.",
