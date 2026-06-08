@@ -90,6 +90,30 @@ export function Widget({ k, children }: { k: WidgetKey; children: React.ReactNod
 }
 
 /**
+ * Page-level guard: if the current route is hidden for this user,
+ * redirect home. Call once at the top of a page component.
+ */
+const PATH_TO_PAGE: Array<[RegExp, PageKey]> = [
+  [/^\/dashboard(\/|$)/, "dashboard"],
+  [/^\/agent(\/|$)/, "agent"],
+  [/^\/tools(\/|$)/, "tools"],
+  [/^\/guide(\/|$)/, "guide"],
+  [/^\/pricing(\/|$)/, "pricing"],
+];
+
+export function usePageGuard() {
+  const vis = useVisibility();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    if (vis.loading) return;
+    const match = PATH_TO_PAGE.find(([rx]) => rx.test(pathname));
+    if (!match) return;
+    if (!vis.isPageVisible(match[1])) navigate({ to: "/" });
+  }, [vis.loading, pathname]);
+}
+
+/**
  * Resolve a tool's natural price for the current user.
  * Order: per_user_tool_overrides → active plan's tool_plan_access → unpriced.
  * Returns { tokens, usd, source, enabled } — `enabled=false` means admin disabled it.
