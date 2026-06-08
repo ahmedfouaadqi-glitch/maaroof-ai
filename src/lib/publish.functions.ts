@@ -1,9 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { publishToTelegram, publishToLinkedIn } from "@/lib/agent.server";
+import {
+  publishToTelegram, publishToLinkedIn,
+  publishToFacebookPage, publishToInstagram, publishToX,
+  testFacebookToken, testInstagramToken, testXToken,
+} from "@/lib/agent.server";
 import { notifyUser } from "@/lib/notify.server";
 import { randomBytes } from "crypto";
+
+const MANUAL_PROVIDERS = new Set(["facebook", "instagram", "x"]);
 
 const ALLOWED_NOTIFY = new Set(["email", "telegram", "linkedin", "inapp", "none"]);
 const ALLOWED_MODE = new Set(["manual", "auto"]);
@@ -124,6 +130,66 @@ export const getChannelsState = createServerFn({ method: "GET" })
     };
   });
 
+// Manual token save for FB / Instagram / X ---------------------------------
+
+export const saveManualSocialToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => {
+    const x = (d || {}) as { provider?: string; token?: string; pageId?: string; igUserId?: string; defaultMediaUrl?: string };
+    if (!x.provider || !MANUAL_PROVIDERS.has(x.provider)) throw new Error("invalid_provider");
+    if (!x.token || x.token.length < 10) throw new Error("invalid_token");
+    return {
+      provider: x.provider,
+      token: x.token.trim(),
+      pageId: x.pageId?.trim() || "",
+      igUserId: x.igUserId?.trim() || "",
+      defaultMediaUrl: x.defaultMediaUrl?.trim() || "",
+    };
+  })
+  .handler(async ({ data, context }) => {
+    let accountLabel = "";
+    let config: Record<string, any> = {};
+    try {
+      if (data.provider === "facebook") {
+        if (!data.pageId) throw new Error("page_id_required");
+        const r = await testFacebookToken(data.token, data.pageId);
+        accountLabel = r.name;
+        config = { access_token: data.token, page_id: data.pageId };
+      } else if (data.provider === "instagram") {
+        if (!data.igUserId) throw new Error("ig_user_id_required");
+        const r = await testInstagramToken(data.token, data.igUserId);
+        accountLabel = r.name;
+        config = { access_token: data.token, ig_user_id: data.igUserId, default_media_url: data.defaultMediaUrl };
+      } else if (data.provider === "x") {
+        const r = await testXToken(data.token);
+        accountLabel = r.name;
+        config = { bearer: data.token };
+      }
+    } catch (e: any) {
+      return { ok: false as const, error: e?.message || "token_test_failed" };
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("publish_channels").select("id")
+      .eq("user_id", context.userId).eq("kind", data.provider).maybeSingle();
+
+    if (existing) {
+      await supabaseAdmin.from("publish_channels").update({
+        account_label: accountLabel, config, verified_at: new Date().toISOString(),
+        active: true, connected_via: "manual",
+      }).eq("id", existing.id);
+    } else {
+      await supabaseAdmin.from("publish_channels").insert({
+        user_id: context.userId, kind: data.provider, label: data.provider,
+        account_label: accountLabel, active: true, approval_mode: "manual",
+        connected_via: "manual", verified_at: new Date().toISOString(), config,
+      });
+    }
+    return { ok: true as const, accountLabel };
+  });
+
+
+
 // Approval queue ------------------------------------------------------------
 
 export const listPendingApprovals = createServerFn({ method: "GET" })
@@ -161,13 +227,24 @@ export const approveAndPublish = createServerFn({ method: "POST" })
     if (text.length < 3) return { ok: false, error: "text_too_short" };
 
     try {
+      const cfg = (ch.config as any) || {};
       if (ch.kind === "telegram") {
-        const cfg = (ch.config as any) || {};
         const botToken = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
         if (!botToken || !cfg.chat_id) throw new Error("telegram_config_missing");
         await publishToTelegram(botToken, cfg.chat_id, text);
       } else if (ch.kind === "linkedin") {
         await publishToLinkedIn(text);
+      } else if (ch.kind === "facebook") {
+        if (!cfg.access_token || !cfg.page_id) throw new Error("facebook_config_missing");
+        await publishToFacebookPage(cfg.access_token, cfg.page_id, text);
+      } else if (ch.kind === "instagram") {
+        if (!cfg.access_token || !cfg.ig_user_id) throw new Error("instagram_config_missing");
+        const mediaUrl = cfg.default_media_url;
+        if (!mediaUrl) throw new Error("instagram_needs_image");
+        await publishToInstagram(cfg.access_token, cfg.ig_user_id, text, mediaUrl);
+      } else if (ch.kind === "x") {
+        if (!cfg.bearer) throw new Error("x_config_missing");
+        await publishToX(cfg.bearer, text);
       } else {
         throw new Error("channel_not_supported");
       }

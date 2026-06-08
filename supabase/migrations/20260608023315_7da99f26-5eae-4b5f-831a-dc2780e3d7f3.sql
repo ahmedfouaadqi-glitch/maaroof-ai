@@ -1,0 +1,1 @@
+ALTER TABLE public.publish_channels ADD COLUMN IF NOT EXISTS connected_via text NOT NULL DEFAULT 'manual';

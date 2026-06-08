@@ -696,6 +696,7 @@ export type Database = {
           active: boolean
           approval_mode: string
           config: Json
+          connected_via: string
           connection_id: string | null
           created_at: string
           external_account_id: string | null
@@ -711,6 +712,7 @@ export type Database = {
           active?: boolean
           approval_mode?: string
           config?: Json
+          connected_via?: string
           connection_id?: string | null
           created_at?: string
           external_account_id?: string | null
@@ -726,6 +728,7 @@ export type Database = {
           active?: boolean
           approval_mode?: string
           config?: Json
+          connected_via?: string
           connection_id?: string | null
           created_at?: string
           external_account_id?: string | null
