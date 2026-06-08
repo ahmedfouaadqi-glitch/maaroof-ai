@@ -1,9 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { publishToTelegram, publishToLinkedIn } from "@/lib/agent.server";
+import {
+  publishToTelegram, publishToLinkedIn,
+  publishToFacebookPage, publishToInstagram, publishToX,
+  testFacebookToken, testInstagramToken, testXToken,
+} from "@/lib/agent.server";
 import { notifyUser } from "@/lib/notify.server";
 import { randomBytes } from "crypto";
+
+const MANUAL_PROVIDERS = new Set(["facebook", "instagram", "x"]);
 
 const ALLOWED_NOTIFY = new Set(["email", "telegram", "linkedin", "inapp", "none"]);
 const ALLOWED_MODE = new Set(["manual", "auto"]);
