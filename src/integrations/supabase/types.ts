@@ -590,6 +590,7 @@ export type Database = {
           extra_device_fee_iqd: number
           full_name: string | null
           geo_scope: Json
+          hide_usage_counter: boolean
           id: string
           is_subscribed: boolean
           max_devices: number
@@ -625,6 +626,7 @@ export type Database = {
           extra_device_fee_iqd?: number
           full_name?: string | null
           geo_scope?: Json
+          hide_usage_counter?: boolean
           id: string
           is_subscribed?: boolean
           max_devices?: number
@@ -660,6 +662,7 @@ export type Database = {
           extra_device_fee_iqd?: number
           full_name?: string | null
           geo_scope?: Json
+          hide_usage_counter?: boolean
           id?: string
           is_subscribed?: boolean
           max_devices?: number
