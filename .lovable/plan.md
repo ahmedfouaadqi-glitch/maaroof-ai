@@ -1,35 +1,57 @@
-## Security Hardening Plan
+## تقييم تقريرك — ما هو صحيح وما المتبقي
 
-The scanner found 8 issues. Here is what each one means in plain language and how I will close them.
+تقريرك دقيق إلى حد بعيد. الإصلاحات السابقة فعّالة:
 
-### 1. Free AI access for anyone on the internet (CRITICAL)
-`translateText` (`src/lib/translate.functions.ts`) has no authentication. Anyone can hit the RPC URL with `curl` and burn the project's paid Lovable AI credits with no account.
+- ✅ **4.1 وصول الذكاء الاصطناعي المجاني** — تم فعلًا. `translateText` الآن يستخدم `requireSupabaseAuth` ويستهلك من `chargeTokens`. لا يمكن استدعاؤه بدون توكن صالح.
+- ✅ **4.2 إعادة التوجيه المفتوحة** — تم. اختبارك يثبت ذلك: `validateSearch` يرفض `https://evil.com` ويستبدلها بـ `/dashboard`.
+- ✅ **4.3 SECURITY DEFINER** — تمت إزالة `PUBLIC` من الخمس دوال. الفحص الحالي يظهر تحذيرَين فقط متبقيَين، وهما **مقصودان**: `has_role` و `ensure_trial_subscription` يجب أن يكونا قابلين للاستدعاء من `authenticated` (الأول تستخدمه سياسات RLS نفسها، والثاني هو تدفق التجربة المجانية للمستخدم المسجل). الفاحص يحذّر من أي دالة `SECURITY DEFINER` يستطيع المستخدم المسجَّل استدعاءها، لكن هذا التصميم آمن لأن منطق الدالتين لا يكشف بيانات الغير.
+- ✅ **4.4 الإضافة في `public`** — مقبولة بوعي.
 
-**Fix:** Add `.middleware([requireSupabaseAuth])` so only signed-in users can call it, and charge tokens through the existing `chargeTokens` ledger so abuse is bounded by the caller's quota.
+## لكن الفحص الجديد كشف ثغرة لم تكن في تقريرك الأصلي (خطيرة)
 
-### 2. Open-redirect / phishing vector in `/auth` (HIGH)
-`src/routes/auth.tsx` reads the `?redirect=` URL parameter and navigates to it without validation, cast through `as any`. An attacker could send `https://geoiraq.com/auth?redirect=https://evil.com` and land victims on a clone right after they sign in.
+**`src/routes/admin.tsx` — تصعيد صلاحيات محتمل:**
+لوحة الإدارة تنفذ كل العمليات الحساسة (إضافة دور admin، تعديل خطط الاشتراك، منح اشتراكات يدوية، تعديل حصص المستخدمين) **مباشرة من المتصفح** عبر `supabase.from(...).insert/update` معتمدةً فقط على فحص `isAdmin` في React. أي مستخدم مسجَّل يستطيع تجاوز الواجهة واستدعاء PostgREST مباشرة من `curl`. الحماية الحقيقية الوحيدة حاليًا هي سياسات RLS في قاعدة البيانات — وهذا "نقطة فشل واحدة": أي تعديل ترحيلي خاطئ في المستقبل يفتح الباب فورًا.
 
-**Fix:** In `validateSearch`, accept only relative internal paths (`^/(?!/)`); fall back to `/dashboard` for anything else (absolute URLs, `//evil.com`, `javascript:`, etc.). No component changes needed.
+## الخطة
 
-### 3. SECURITY DEFINER functions callable by the public role (5 warnings)
-Postgres functions marked `SECURITY DEFINER` run with the owner's privileges. By default `EXECUTE` is granted to `PUBLIC`, so any signed-in (and sometimes anonymous) user can call them directly via the Data API even when that is not intended.
+### 1) تحويل عمليات لوحة الإدارة إلى Server Functions (CRITICAL)
+ملف جديد `src/lib/admin.functions.ts` يحتوي على دوال محمية بـ `requireSupabaseAuth` + فحص دور `admin` على الخادم قبل كل كتابة:
+- `adminGrantRole` / `adminRevokeRole` — كتابة على `user_roles`
+- `adminUpsertPlan` / `adminDeletePlan` — كتابة على `subscription_plans`
+- `adminUpsertAddon` / `adminGrantManualSubscription` — كتابة على `agent_addons` و `user_agent_subscriptions`
+- `adminPatchProfile` — تعديل الحصص/الباقات في `profiles`
+- `adminUpsertToolPricing` / `adminUpsertToolPlanAccess` — كتابة على جداول التسعير
 
-**Fix:** One migration that locks each function down to who actually needs it:
-- `handle_new_user`, `guard_profile_privileged_updates` — trigger-only → revoke EXECUTE from PUBLIC.
-- `charge_tokens` — server-only (called via service role) → revoke from PUBLIC, grant to `service_role` only.
-- `has_role` — used inside RLS policies → revoke from PUBLIC + anon, keep `authenticated` (required so policies can call it).
-- `ensure_trial_subscription` — called by signed-in trial flow → revoke from PUBLIC + anon, keep `authenticated`.
+كل دالة تبدأ بـ:
+```ts
+.middleware([requireSupabaseAuth])
+.handler(async ({ context, data }) => {
+  const { data: roles } = await context.supabase
+    .from('user_roles').select('role').eq('user_id', context.userId);
+  if (!roles?.some(r => r.role === 'admin'))
+    throw new Response('Forbidden', { status: 403 });
+  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+  // ... do the write via supabaseAdmin
+});
+```
 
-### 4. Extension installed in `public` schema (WARN, low priority)
-A Postgres extension lives in `public`. Best practice is a dedicated `extensions` schema, but moving an in-use extension can break dependent objects.
+ثم استبدال جميع نداءات `supabase.from(...)` للكتابة في `admin.tsx` وملفات `src/components/admin/*` بـ `useServerFn(adminX)`. القراءات تبقى كما هي (RLS تحميها).
 
-**Fix:** Acknowledge and leave in place (document in security memory). I will not move it blindly; if you want it relocated I can do it as a separate, carefully tested migration.
+### 2) توثيق التحذيرَين المقصودَين وإغلاقهما في سجل الفاحص
+- استدعاء `manage_security_finding` بـ `ignore` لكلٍّ من `has_role` و `ensure_trial_subscription` مع شرح أن استدعاء `authenticated` مطلوب بالتصميم.
+- تحديث `security memory` لتسجيل هذا القرار صراحةً (حتى لا يعيد الفاحص رفعها لاحقًا).
 
-### Verification
-After applying the changes I will re-run the security scan to confirm the 4 actionable findings clear, and update the security memory document to reflect the new posture.
+### 3) التحقق
+- إعادة تشغيل الفحص الأمني — يجب أن تبقى فقط: تحذير الإضافة في `public` (مقبول).
+- اختبار يدوي بسيط: محاولة `curl` على PostgREST لإدراج دور admin بتوكن مستخدم عادي — يجب أن ترفضها RLS (والآن الكود لم يعد يحاول الكتابة المباشرة أصلًا).
 
-### Files / DB touched
-- `src/lib/translate.functions.ts` — add auth middleware + token charge.
-- `src/routes/auth.tsx` — sanitize `redirect` search param.
-- New migration — revoke/grant EXECUTE on the 5 SECURITY DEFINER functions.
+### الملفات المتأثرة
+- **جديد:** `src/lib/admin.functions.ts`
+- **معدّل:** `src/routes/admin.tsx` و `src/components/admin/AdminLedgerPanel.tsx` و `AdminPlanPricingPanel.tsx` و `AdminPlansMatrixPanel.tsx` و `AdminTokensPanel.tsx` (استبدال الكتابات المباشرة بنداءات serverFn).
+- **سجل الأمان:** تحديث `security memory` + تعليم تحذيرَي `SECURITY DEFINER` كمقبولَين.
+- **لا تغيير على قاعدة البيانات.**
+
+### لماذا "بقيت" ثغرات بعد الإصلاح السابق؟
+سببان:
+1. ثغرة لوحة الإدارة لم تكن مكتشفة في الجولة السابقة — الفاحص أضاف قاعدة جديدة (`ADMIN_CLIENT_SIDE_AUTH_ONLY`) تكتشف الاعتماد على `isAdmin` في الواجهة فقط.
+2. تحذيرَا `SECURITY DEFINER` المتبقيان مقصودان وآمنان، لكن الفاحص لا يستطيع التمييز — يجب تعليمهما يدويًا كمقبولَين مع تبرير مكتوب.
