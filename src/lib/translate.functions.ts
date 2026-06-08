@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chargeTokens } from "@/lib/tokens.server";
+
 
 const Input = z.object({
   text: z.string().min(1).max(4000),
@@ -24,6 +24,7 @@ export const translateText = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
     if (data.sourceLang === data.targetLang) return { text: data.text };
 
+    const { chargeTokens } = await import("@/lib/tokens.server");
     const charge = await chargeTokens({ userId: context.userId, toolKey: "translate" });
     if (!charge.ok) throw new Error(`quota_exceeded:${charge.reason}`);
 
