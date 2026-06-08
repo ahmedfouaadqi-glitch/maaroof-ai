@@ -51,6 +51,7 @@ function PricingPage() {
   const [addons, setAddons] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedKind, setSelectedKind] = useState<"plan" | "agent">("plan");
+  usePageGuard();
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
