@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
+import { toast } from "sonner";
 import { ENGINES } from "@/components/engine-logos";
 
 const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"];
@@ -100,6 +101,9 @@ export function BrandBoostAgent() {
       try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0, 200) || `http_${res.status}` }; }
       if (!res.ok) throw new Error(data.error || `http_${res.status}`);
       setReport(data);
+      toast.success(outLang === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+        : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
+        : "Tokens charged ✓ — see updated balance above");
       await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, status: "done", report: data });
       await supabase.from("brand_boost_jobs").update({ last_run_at: new Date().toISOString() }).eq("id", j.id);
       await load();

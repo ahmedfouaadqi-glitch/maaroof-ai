@@ -4,6 +4,7 @@ import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
+import { toast } from "sonner";
 
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
@@ -64,6 +65,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
       setOut(j.result);
+      toast.success(outLang === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+        : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
+        : "Tokens charged ✓ — see updated balance above");
     } catch (e: any) { setErr(e?.message || "failed"); }
     finally { setBusy(false); }
   };
