@@ -327,7 +327,10 @@ function AgentPage() {
           </div>
         )}
 
+        <div className="mt-6"><TokensBar /></div>
+
         {/* Command box — give the agent an order */}
+        {vis.isAgentFeatureVisible("command") && (
         <div className="mt-8 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5 p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
             <Sparkles className="size-5 text-accent" /> {t("ag_cmd_title")}
@@ -357,6 +360,7 @@ function AgentPage() {
             </button>
           </div>
         </div>
+        )}
 
         {/* Autonomy explainer */}
         <div className="mt-6 rounded-2xl border border-border/60 bg-card/50 p-4">
