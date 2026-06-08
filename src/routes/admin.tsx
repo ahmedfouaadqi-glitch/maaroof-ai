@@ -30,13 +30,15 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users" | "requests" | "plans" | "agent" | "access" | "boost" | "content" | "tokens" | "pricing" | "ledger";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "ledger";
+type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
+  const [upSub, setUpSub] = useState<UPSub>("users");
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/admin" } });
@@ -56,6 +58,26 @@ function AdminPage() {
     </div>
   );
 
+  const tabLabel = (k: Tab) => {
+    if (k === "overview") return t("admin_overview" as any) || "Overview";
+    if (k === "users_pricing") return lang === "ar" ? "المستخدمون والصلاحيات والأسعار" : lang === "ku" ? "بەکارهێنەران، دەسەڵات و نرخەکان" : "Users, Permissions & Pricing";
+    if (k === "requests") return t("admin_requests" as any) || "Requests";
+    if (k === "boost") return "Brand Boost";
+    if (k === "content") return "Content";
+    if (k === "ledger") return t("admin_ledger") || "Ledger";
+    return k;
+  };
+
+  const subLabel = (k: UPSub) => {
+    if (k === "users") return t("admin_users" as any) || "Users";
+    if (k === "tokens") return t("admin_tokens") || "Tokens";
+    if (k === "pricing") return t("admin_pricing_grid") || "Pricing grid";
+    if (k === "plans") return t("admin_plans" as any) || "Plans";
+    if (k === "agent") return t("nav_agent") || "Agent";
+    if (k === "access") return t("admin_access") || "Access";
+    return k;
+  };
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -65,28 +87,41 @@ function AdminPage() {
         </div>
 
 
-        <div className="mb-6 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users","tokens","pricing","ledger","requests","plans","agent","access","boost","content"] as Tab[]).map((k) => (
+        <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
+          {(["overview","users_pricing","requests","boost","content","ledger"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {k === "agent" ? t("nav_agent") : k === "access" ? t("admin_access") : k === "boost" ? "Brand Boost" : k === "content" ? "Content" : k === "tokens" ? t("admin_tokens") || "Tokens" : k === "pricing" ? t("admin_pricing_grid") : k === "ledger" ? t("admin_ledger") : t(`admin_${k}` as any)}
+              {tabLabel(k)}
             </button>
           ))}
         </div>
 
+        {tab === "users_pricing" && (
+          <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-border/60 bg-background/40 p-1">
+            {(["users","tokens","pricing","plans","agent","access"] as UPSub[]).map((k) => (
+              <button key={k} onClick={() => setUpSub(k)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                  upSub === k ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
+                }`}>
+                {subLabel(k)}
+              </button>
+            ))}
+          </div>
+        )}
+
         {tab === "overview" && <Overview />}
-        {tab === "users" && <UsersTab />}
-        {tab === "tokens" && <AdminTokensPanel />}
-        {tab === "pricing" && <AdminPlanPricingPanel />}
-        {tab === "ledger" && <AdminLedgerPanel />}
+        {tab === "users_pricing" && upSub === "users" && <UsersTab />}
+        {tab === "users_pricing" && upSub === "tokens" && <AdminTokensPanel />}
+        {tab === "users_pricing" && upSub === "pricing" && <AdminPlanPricingPanel />}
+        {tab === "users_pricing" && upSub === "plans" && <PlansTab />}
+        {tab === "users_pricing" && upSub === "agent" && <AgentTab />}
+        {tab === "users_pricing" && upSub === "access" && <AccessTab />}
         {tab === "requests" && <RequestsTab />}
-        {tab === "plans" && <PlansTab />}
-        {tab === "agent" && <AgentTab />}
-        {tab === "access" && <AccessTab />}
         {tab === "boost" && <BoostTab />}
         {tab === "content" && <ContentTab />}
+        {tab === "ledger" && <AdminLedgerPanel />}
       </div>
     </div>
   );
