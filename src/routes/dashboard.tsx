@@ -19,8 +19,9 @@ import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText } from "lucide-react";
-import { useVisibility } from "@/lib/visibility";
+import { useVisibility, useToolPrice } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
+import { CostBadge } from "@/components/CostBadge";
 
 type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "boost" | "applied" | "social" | "monitor" | "strategist" | "whatif" | "report";
 
@@ -61,6 +62,11 @@ function DashboardPage() {
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/dashboard" } });
   }, [loading, user, navigate]);
+
+  // Page-level gate: admin hid the dashboard page itself
+  useEffect(() => {
+    if (!vis.loading && !vis.isPageVisible("dashboard")) navigate({ to: "/" });
+  }, [vis.loading]);
 
   useEffect(() => {
     if (!user) return;
@@ -194,15 +200,19 @@ function toolTitle(k: ToolKey, t: (k: string) => string): string {
   return map[k] || k;
 }
 
-function ToolGridCard({ icon, title, desc, onOpen, t }: { icon: React.ReactNode; title: string; desc: string; onOpen: () => void; t: (k: string) => string }) {
+function ToolGridCard({ icon, title, desc, onOpen, t, toolKey }: { icon: React.ReactNode; title: string; desc: string; onOpen: () => void; t: (k: string) => string; toolKey?: string }) {
+  const price = useToolPrice(toolKey || "");
   return (
     <button
       type="button"
       onClick={onOpen}
       className="group block w-full rounded-2xl border border-border bg-card/70 p-5 text-start transition hover:border-primary/40 hover:shadow-[var(--shadow-glow)]"
     >
-      <div className="inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
-        {icon}
+      <div className="flex items-start justify-between gap-2">
+        <div className="inline-grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
+          {icon}
+        </div>
+        {toolKey && <CostBadge tokens={price.tokens} usd={price.usd} compact />}
       </div>
       <h3 className="mt-3 font-display text-base font-bold">{title.replace(/^\d+\)\s*/, "")}</h3>
       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{desc}</p>
