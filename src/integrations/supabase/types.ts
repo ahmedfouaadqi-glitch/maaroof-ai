@@ -609,6 +609,7 @@ export type Database = {
           tokens_used_month: number
           tokens_used_today: number
           tool_geo_scopes: Json
+          ui_visibility: Json
           usage_day_start: string
           usage_period_start: string
           username: string | null
@@ -645,6 +646,7 @@ export type Database = {
           tokens_used_month?: number
           tokens_used_today?: number
           tool_geo_scopes?: Json
+          ui_visibility?: Json
           usage_day_start?: string
           usage_period_start?: string
           username?: string | null
@@ -681,6 +683,7 @@ export type Database = {
           tokens_used_month?: number
           tokens_used_today?: number
           tool_geo_scopes?: Json
+          ui_visibility?: Json
           usage_day_start?: string
           usage_period_start?: string
           username?: string | null

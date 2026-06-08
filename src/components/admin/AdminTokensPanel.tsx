@@ -13,6 +13,36 @@ type Profile = {
   per_user_tool_overrides: Record<string, { tokens_per_use?: number; usd_per_use?: number; enabled?: boolean; daily?: number; monthly?: number }>;
   subscription_tier: string | null;
   hide_usage_counter?: boolean;
+  ui_visibility?: { tools?: Record<string, boolean>; agent?: Record<string, boolean>; widgets?: Record<string, boolean>; pages?: Record<string, boolean> };
+};
+
+const WIDGET_KEYS = [
+  "tokens_bar", "cost_badge", "progress_bar", "results_export",
+  "history", "alerts_bell", "handoff_menu", "engines_orbit",
+  "specialty_banner", "tool_links",
+] as const;
+const AGENT_FEATURE_KEYS = ["command", "run_targets", "visibility"] as const;
+const PAGE_KEYS = ["dashboard", "agent", "tools", "guide", "pricing"] as const;
+
+const VIS_LABELS: Record<string, { ar: string; en: string; ku: string }> = {
+  tokens_bar:       { ar: "شريط الوحدات",            en: "Tokens bar",            ku: "شریتی تۆکن" },
+  cost_badge:       { ar: "شارة التكلفة",            en: "Cost badge",            ku: "نیشانی نرخ" },
+  progress_bar:     { ar: "شريط التقدّم",             en: "Progress bar",          ku: "شریتی پێشکەوتن" },
+  results_export:   { ar: "أزرار التصدير",            en: "Export buttons",        ku: "دوگمەی هەناردن" },
+  history:          { ar: "سجل التشغيلات",            en: "Run history",           ku: "مێژووی کارکردن" },
+  alerts_bell:      { ar: "جرس الإشعارات",            en: "Alerts bell",           ku: "زەنگی ئاگادارکردنەوە" },
+  handoff_menu:     { ar: "قائمة الانتقال بين الأدوات", en: "Tool handoff menu",     ku: "مینوی گواستنەوە" },
+  engines_orbit:    { ar: "شاشة محركات AI",           en: "AI engines orbit",      ku: "ئۆربیتی AI" },
+  specialty_banner: { ar: "بانر التخصص",              en: "Specialty banner",      ku: "بانێری تایبەتمەند" },
+  tool_links:       { ar: "روابط الأدوات",             en: "Tool links",            ku: "بەستەری ئامرازەکان" },
+  command:          { ar: "أمر مباشر للوكيل",          en: "Agent command",         ku: "فەرمانی ئاراستە" },
+  run_targets:      { ar: "تشغيل الأهداف",             en: "Run targets",           ku: "جێبەجێکردنی ئامانج" },
+  visibility:       { ar: "تحليل الظهور",              en: "AI Visibility section", ku: "بەشی دەرکەوتن" },
+  dashboard:        { ar: "صفحة لوحة التحكم",          en: "/dashboard",            ku: "داشبۆرد" },
+  agent:            { ar: "صفحة الوكيل",               en: "/agent",                ku: "وەکیل" },
+  tools:            { ar: "صفحة الأدوات",              en: "/tools",                ku: "ئامرازەکان" },
+  guide:            { ar: "صفحة الدليل",               en: "/guide",                ku: "ڕێنمایی" },
+  pricing:          { ar: "صفحة الأسعار",              en: "/pricing",              ku: "نرخەکان" },
 };
 
 type Pricing = { tool_key: string; default_tokens: number; default_usd: number; model: string | null };
@@ -39,7 +69,7 @@ export function AdminTokensPanel() {
   async function load() {
     setBusy(true);
     const [p, c, r] = await Promise.all([
-      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,hide_usage_counter").order("email"),
+      supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,hide_usage_counter,ui_visibility").order("email"),
       supabase.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd, model"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
@@ -157,6 +187,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
   const [usedMonth, setUsedMonth] = useState<number>(user.tokens_used_month || 0);
   const [hideUsage, setHideUsage] = useState<boolean>(!!user.hide_usage_counter);
   const [overrides, setOverrides] = useState<Record<string, any>>(user.per_user_tool_overrides || {});
+  const [uiVis, setUiVis] = useState<NonNullable<Profile["ui_visibility"]>>(user.ui_visibility || {});
   const [planPrices, setPlanPrices] = useState<Record<string, PlanPrice>>({});
   const [spend, setSpend] = useState<Record<string, SpendRow>>({});
   const [planActive, setPlanActive] = useState(false);
@@ -197,6 +228,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       tokens_used_month: Number(usedMonth) || 0,
       hide_usage_counter: hideUsage,
       per_user_tool_overrides: clean,
+      ui_visibility: uiVis,
     } as any).eq("id", user.id);
     setSaving(false);
     onClose();
@@ -271,6 +303,8 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
             </label>
           </Field>
         </div>
+
+        <VisibilitySection lang={lang} value={uiVis} onChange={setUiVis} />
 
         <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
 
@@ -390,6 +424,86 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
     <label className="space-y-1">
       <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">{icon}{label}</div>
       {children}
+    </label>
+  );
+}
+
+function VisibilitySection({
+  lang, value, onChange,
+}: {
+  lang: "ar" | "en" | "ku";
+  value: NonNullable<Profile["ui_visibility"]>;
+  onChange: (v: NonNullable<Profile["ui_visibility"]>) => void;
+}) {
+  const isAr = lang === "ar";
+  const isKu = lang === "ku";
+  const heading = isAr ? "ما يراه المستخدم في الموقع" : isKu ? "ئەوەی بەکارهێنەر دەیبینێت" : "What the user sees site-wide";
+  const hint = isAr
+    ? "ضع علامة على ما تريد إظهاره. عدم التحديد = إخفاء كامل من واجهة هذا المستخدم."
+    : isKu
+    ? "هەرچی بسەلمێنرێت پیشان دەدرێت."
+    : "Check what to show. Unchecked items are hidden entirely from this user.";
+
+  const lbl = (k: string) => VIS_LABELS[k]?.[lang] || k;
+  const setGroup = (g: "tools" | "agent" | "widgets" | "pages", k: string, on: boolean) => {
+    const next = { ...(value || {}) };
+    const grp: Record<string, boolean> = { ...(next[g] || {}) };
+    if (on) delete grp[k]; else grp[k] = false;
+    if (Object.keys(grp).length === 0) delete (next as any)[g];
+    else (next as any)[g] = grp;
+    onChange(next);
+  };
+  const isOn = (g: "tools" | "agent" | "widgets" | "pages", k: string) => (value?.[g] as any)?.[k] !== false;
+
+  return (
+    <details className="mb-4 rounded-xl border border-border bg-card/40 p-3" open>
+      <summary className="cursor-pointer text-sm font-semibold">{heading}</summary>
+      <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+
+      <Group title={isAr ? "الأدوات" : isKu ? "ئامرازەکان" : "Tools"}>
+        {TOOL_CATALOG.filter(t => t.group === "tools").map(t => (
+          <CheckRow key={t.key} label={toolLabel(t.key as any, lang)} hint={t.key} checked={isOn("tools", t.key)} onChange={(on) => setGroup("tools", t.key, on)} />
+        ))}
+      </Group>
+
+      <Group title={isAr ? "ميزات الوكيل" : isKu ? "وەکیل" : "Agent features"}>
+        {AGENT_FEATURE_KEYS.map(k => (
+          <CheckRow key={k} label={lbl(k)} hint={`agent.${k}`} checked={isOn("agent", k)} onChange={(on) => setGroup("agent", k, on)} />
+        ))}
+      </Group>
+
+      <Group title={isAr ? "عناصر الواجهة" : isKu ? "ویجێتەکان" : "Widgets"}>
+        {WIDGET_KEYS.map(k => (
+          <CheckRow key={k} label={lbl(k)} hint={k} checked={isOn("widgets", k)} onChange={(on) => setGroup("widgets", k, on)} />
+        ))}
+      </Group>
+
+      <Group title={isAr ? "الصفحات" : isKu ? "پەڕەکان" : "Pages"}>
+        {PAGE_KEYS.map(k => (
+          <CheckRow key={k} label={lbl(k)} hint={`/${k}`} checked={isOn("pages", k)} onChange={(on) => setGroup("pages", k, on)} />
+        ))}
+      </Group>
+    </details>
+  );
+}
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-3">
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</div>
+      <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+    </div>
+  );
+}
+
+function CheckRow({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs ${checked ? "border-primary/30 bg-primary/5" : "border-border bg-background/40 opacity-70"}`}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <div className="flex-1">
+        <div className="font-medium">{label}</div>
+        {hint && <div className="text-[9px] text-muted-foreground">{hint}</div>}
+      </div>
     </label>
   );
 }

@@ -1,51 +1,139 @@
-# Wave 4 — Continuation Plan
 
-## 1) نقل "تحليل الظهور في محركات الذكاء" إلى "تعزيز العلامة التجارية"
+# Wave 4 — تحكّم شامل بظهور كل شيء لكل مستخدم + شريط وحدات محسّن
 
-- إزالة بطاقة/تبويب AI Visibility المستقلة من `/agent` ومن قائمة الأدوات.
-- داخل `BrandBoostAgent.tsx` إضافة قسم جديد بعنوان **"تحليل الظهور في محركات الذكاء"** يستضيف `<VisibilityPanel embedded toolKey="brand" />`.
-- تحديث الشرح (الوصف) ليكون موحّداً:
-  - AR: "افحص ظهور علامتك في ChatGPT و Gemini و Perplexity وغيرها، واحصل على توصيات فورية لتعزيز حضورك ضمن حزمة تعزيز العلامة."
-  - EN / KU مطابقتان.
-- تحديث `tool-catalog.ts`: إزالة مفتاح `visibility` المستقل والإبقاء على `brand_boost` فقط (مع تحديث `agent.visibility` ليشير داخلياً إلى نفس الـ handler).
-- تحديث الروابط في `tool-handoff.ts` و i18n keys (`ag_vis_*` تنتقل تحت `bb_vis_*`).
-- إزالة عرض الكارد المكرر من `dashboard.tsx` و `tools.$slug.tsx` (slug=visibility يعيد توجيه إلى `/tools/brand-boost#visibility`).
+## 1) إصلاح فوري: إخفاء/إيقاف الأدوات لا يُطبَّق
 
-## 2) دمج لوحات الإدارة في لوحة واحدة
+**السبب:** `per_user_tool_overrides[toolKey].enabled=false` يُحترَم فقط داخل `tokens.server.ts` عند الشحن، أمّا بطاقات الأدوات في `/agent`, `/dashboard`, `/tools/$slug` فتُعرَض دائماً من `TOOL_CATALOG` مباشرةً.
 
-دمج 4 لوحات في `admin.tsx` ضمن لوحة تبويبية واحدة باسم **"المستخدمون والصلاحيات والأسعار"**:
+## 2) منظومة "Visibility Profile" لكل مستخدم
 
-| التبويب الجديد | يحتوي |
+عمود JSON جديد على `profiles`:
+
+```
+ui_visibility jsonb DEFAULT '{}'::jsonb
+-- مثال:
+{
+  "tools":      { "analyze": true,  "brand_boost": false, ... },
+  "agent":      { "command": true,  "run_targets": false, "visibility": true },
+  "widgets":    { "tokens_bar": true, "cost_badge": true, "progress_bar": true,
+                  "results_export": false, "history": true, "alerts_bell": true,
+                  "handoff_menu": false, "engines_orbit": true, ... },
+  "pages":      { "dashboard": true, "agent": true, "tools": true, "guide": true }
+}
+```
+
+**المنطق:** غياب المفتاح = ظاهر افتراضياً (back-compat). `false` صريح = مخفي.
+
+### Server function موحّدة
+`src/lib/visibility.functions.ts`:
+- `getMyVisibility()` — يدمج `ui_visibility` + قيود الخطة + override الأدوات + سعر كل أداة المُحلّ.
+- يُعيد:
+```ts
+{
+  tools: { [key]: { visible, enabled, tokens_per_use, usd_per_use, label_override? } },
+  widgets: { [key]: boolean },
+  pages: { [key]: boolean }
+}
+```
+
+### Hook + Provider عميل
+`src/lib/visibility.tsx` — `<VisibilityProvider>` في `__root.tsx`، يكشف:
+- `useToolVisibility(key)` → `{ visible, enabled, price }`
+- `useWidgetVisible(key)` → boolean
+- `usePageVisible(key)` → boolean (مع redirect إلى `/` لو ممنوع)
+
+### نقاط التطبيق
+- `agent.tsx`, `dashboard.tsx`, `tools.$slug.tsx`: فلترة بطاقات الأدوات.
+- `tools.$slug.tsx`: redirect إذا `tools[slug].visible=false`.
+- `SiteHeader.tsx`, `AlertsBell.tsx`, `HandoffMenu.tsx`, `EnginesOrbit.tsx`, `ExportButtons.tsx`, ... : إخفاء كامل عند `widgets.X=false`.
+- `CostBadge.tsx`: عرض السعر الفعلي للمستخدم من `useToolVisibility(key).price` (override → plan → "غير مفعّل").
+
+## 3) شريط الوحدات المحسّن (Tokens Bar)
+
+مكوّن جديد `src/components/TokensBar.tsx`:
+
+```
+┌──────────────────────────────────────────────────┐
+│ 🪙 رصيدك: 1,250 / 5,000        اليوم: 120/500    │
+│ ▓▓▓▓▓▓▓▓░░░░░░░░░░  25%        ▓▓▓▓░░░░░░░ 24%  │
+│ الشهر: 2,100/20,000  •  تجديد خلال 12 يوم        │
+└──────────────────────────────────────────────────┘
+```
+
+**ميزات:**
+- ثلاث progress bars: balance / daily / monthly (لون متدرّج: أخضر/أصفر/أحمر).
+- توقّع نضوب الرصيد ("≈ 8 أيام بمعدّل استخدامك").
+- زر "ترقية" يظهر تلقائياً تحت 20%.
+- يحترم `widgets.tokens_bar` (إخفاء كامل) و `profiles.hide_usage_counter` (الأرقام فقط).
+- بطاقة صغيرة في `dashboard` + شريط مدمج في `SiteHeader`.
+
+**تحكّم الإدارة:** كل القيم تُعدَّل من `AdminUsersTokensPanel` (balance, daily/monthly limits, used today/month, hide_usage_counter, widgets.tokens_bar).
+
+## 4) واجهة الإدارة: تبويب "ظهور الواجهة" داخل drawer المستخدم
+
+في drawer إدارة المستخدم — تبويب رابع **"ما يراه المستخدم"** بثلاث أقسام checkbox tree:
+
+```
+☑ الأدوات (16)              [إلغاء الكل] [الكل]
+  ☑ تحليل GEO       السعر: [10] tokens  [____] USD
+  ☐ Brand Boost     السعر: [50] tokens  [____] USD  ← مخفي
+  ☑ مولّد المنشورات   السعر: [5 ] tokens  [____] USD
+  ...
+
+☑ ميزات الوكيل (3)
+  ☑ أمر مباشر
+  ☐ تشغيل الأهداف   ← مخفي
+  ☑ فحص الظهور
+
+☑ عناصر الواجهة (12)
+  ☑ شريط الوحدات (tokens_bar)
+  ☑ شارة التكلفة على البطاقات (cost_badge)
+  ☑ شريط التقدّم أثناء التشغيل (progress_bar)
+  ☐ أزرار التصدير (results_export)
+  ☑ سجل التشغيلات (history)
+  ☑ جرس الإشعارات (alerts_bell)
+  ☐ قائمة Handoff بين الأدوات (handoff_menu)
+  ☑ شاشة محركات AI الدوّارة (engines_orbit)
+  ...
+
+☑ الصفحات
+  ☑ /dashboard   ☑ /agent   ☑ /tools   ☐ /guide
+```
+
+- كل صف: checkbox + (للأدوات) حقلَي السعر inline.
+- زر "حفظ" يكتب `ui_visibility` + `per_user_tool_overrides` معاً في transaction واحد.
+- زر "نسخ من خطة..." لاستيراد إعدادات افتراضية من خطة موجودة.
+- زر "إعادة للوضع الافتراضي" يمسح overrides ويعود لخطة المستخدم.
+
+## 5) سجل التكاليف الطبيعي بالواجهة
+
+- `CostBadge` يعرض السعر بصيغة بشرية: **"5 وحدات"** أو **"$0.15"** أو **"مجاناً"** أو **"غير متاح"**.
+- داخل كل أداة قبل التشغيل: tooltip صغير "ستُستهلك X وحدة من رصيدك (يتبقّى Y)".
+- بعد التشغيل: toast "تم خصم X وحدة • رصيدك الجديد Y".
+
+## ملفات جديدة / معدَّلة
+
+| الملف | العمل |
 |---|---|
-| المستخدمون والـ Tokens | `AdminTokensPanel` (الحالي + تعديلات Wave 3) |
-| شبكة أسعار الخطط | `AdminPlanPricingPanel` |
-| الخطط والصلاحيات | `subscription_plans` + `tool_plan_access` (محرر موحّد) |
-| الوكيل | إعدادات `agent_addons` + حدود `user_agent_subscriptions` |
-
-- ملف موحّد جديد: `src/components/admin/AdminUsersAndPricingPanel.tsx` يحتوي على `<Tabs>` داخلية.
-- مشاركة الـ context (قائمة المستخدمين، قائمة الأدوات من `TOOL_CATALOG`) عبر hook واحد `useAdminPricingContext()` لتجنّب جلب البيانات مرتين.
-- في "إدارة" بجانب اسم المستخدم: Drawer واحد يفتح على 4 تبويبات (Tokens / الخطط / الأدوات / الوكيل) بدل drawerين منفصلين.
-
-## 3) إكمال البنود السابقة بالترتيب
-
-1. **Telegram BYOB** — تطبيق `saveUserTelegramBot()`، تحويل webhook إلى `/api/public/telegram/webhook/$botId.ts`، إزالة `process.env.TELEGRAM_BOT_TOKEN` من `agent.functions.ts` و `notify.server.ts`.
-2. **OAuth حقيقي لكل مستخدم** — LinkedIn/TikTok/YouTube عبر App User Connector، Facebook/Instagram/X/WhatsApp ك "قريباً".
-3. **تبويبات `/agent`** — فصل "المهام الحالية" عن "السجل السابق" بـ `<Tabs>` + i18n keys.
+| migration | `profiles.ui_visibility jsonb` |
+| `src/lib/visibility.functions.ts` | جديد — server fn |
+| `src/lib/visibility.tsx` | جديد — Provider + hooks |
+| `src/components/TokensBar.tsx` | جديد |
+| `src/components/CostBadge.tsx` | تحديث للسعر المُحلّ |
+| `src/components/admin/AdminUserVisibilityTab.tsx` | جديد — التبويب الرابع |
+| `src/components/admin/AdminTokensPanel.tsx` | دمج التبويب الجديد في الـ drawer |
+| `src/routes/__root.tsx` | إضافة `VisibilityProvider` |
+| `src/routes/agent.tsx` `dashboard.tsx` `tools.$slug.tsx` | فلترة بالـ visibility |
+| `src/components/SiteHeader.tsx` `AlertsBell.tsx` `HandoffMenu.tsx` `ExportButtons.tsx` `EnginesOrbit.tsx` | احترام `widgets.*` |
 
 ## ترتيب التنفيذ
 
-1. نقل AI Visibility إلى Brand Boost + تحديث النصوص و i18n + حذف البطاقة القديمة.
-2. دمج لوحات الإدارة في `AdminUsersAndPricingPanel.tsx` + ربطها في `admin.tsx`.
-3. Telegram BYOB (migration للحقول الجديدة في `publish_channels.config` إن لزم).
-4. OAuth (LinkedIn أولاً).
-5. تبويبات `/agent`.
-6. اختبار شامل.
+1. Migration `ui_visibility` + helper SQL.
+2. `visibility.functions.ts` + Provider + hooks.
+3. تطبيق على بطاقات الأدوات (إصلاح bug الإخفاء فوراً).
+4. `AdminUserVisibilityTab` (شجرة الـ checkboxes الكاملة).
+5. `TokensBar` الجديد + إدماجه.
+6. تحديث `CostBadge` + toasts الطبيعية.
+7. تطبيق `widgets.*` على بقية المكوّنات.
 
-## تفاصيل تقنية
-
-- `BrandBoostAgent.tsx`: إضافة `<section id="visibility">` يحوي `VisibilityPanel` بـ `embedded` و `toolKey="brand"`.
-- `admin.tsx`: استبدال 4 imports بـ import واحد `AdminUsersAndPricingPanel`.
-- `tool-catalog.ts`: تعليم `visibility` بـ `deprecated: true` بدل حذفها لتجنّب كسر سجلات `token_ledger` القديمة؛ المفتاح يبقى مقبولاً في `chargeTokens` لكن يُعرض ضمن brand_boost في الواجهة.
-- لا حاجة لـ migration جديد لـ schema — فقط تنظيم واجهة.
-
-هل أنفّذ بهذا الترتيب؟
+هل أبدأ؟
