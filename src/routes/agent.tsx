@@ -387,6 +387,7 @@ function AgentPage() {
         </div>
 
         {/* AI Visibility lives inside Brand Boost now */}
+        {vis.isAgentFeatureVisible("visibility") && (
         <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-gradient">
             <Eye className="size-5 text-primary" /> {lang === "ar" ? "تحليل الظهور في محركات الذكاء" : lang === "ku" ? "شیکاری دەرکەوتن لە بزوێنەرە AIـەکان" : "AI Engines Visibility Analysis"}
@@ -402,6 +403,7 @@ function AgentPage() {
             <Eye className="size-4" /> {lang === "ar" ? "افتح تعزيز العلامة" : lang === "ku" ? "بەهێزکردنی براند بکەرەوە" : "Open Brand Boost"}
           </Link>
         </div>
+        )}
 
         <ChannelsPanel onChanged={load} />
         <ApprovalQueue />
