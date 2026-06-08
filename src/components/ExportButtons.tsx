@@ -1,5 +1,6 @@
 import { FileDown, FileSpreadsheet, FileText } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useVisibility } from "@/lib/visibility";
 import { exportToPDF, exportToExcel, exportToCSV, type ExportPayload } from "@/lib/exports";
 
 export function ExportButtons({
