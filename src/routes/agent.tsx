@@ -578,6 +578,8 @@ function AgentPage() {
             ))}
           </div>
         </div>
+          );
+        })()}
       </div>
     </div>
   );
