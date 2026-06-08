@@ -442,20 +442,39 @@ function AgentPage() {
         </div>
 
         {/* Tasks */}
+        {(() => {
+          const currentRunId = tasks.find((x) => x.run_id)?.run_id || null;
+          const currentTasks = currentRunId ? tasks.filter((x) => x.run_id === currentRunId) : [];
+          const historyTasks = currentRunId ? tasks.filter((x) => x.run_id !== currentRunId) : tasks;
+          const visible = taskTab === "current" ? currentTasks : historyTasks;
+          return (
         <div className="mt-8">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 font-display text-lg font-bold">
               <Activity className="size-4 text-accent" /> {t("ag_tasks_title")}
             </h2>
-            {null}
+            <div className="inline-flex rounded-lg border border-border bg-background/60 p-0.5 text-xs">
+              <button
+                onClick={() => setTaskTab("current")}
+                className={`rounded-md px-3 py-1 font-semibold transition ${taskTab === "current" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("ag_tab_current") || "تشغيل حالي"} {currentTasks.length > 0 && `(${currentTasks.length})`}
+              </button>
+              <button
+                onClick={() => setTaskTab("history")}
+                className={`rounded-md px-3 py-1 font-semibold transition ${taskTab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("ag_tab_history") || "السجل"} {historyTasks.length > 0 && `(${historyTasks.length})`}
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
-            {tasks.length === 0 && (
+            {visible.length === 0 && (
               <div className="rounded-2xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground">
-                {t("ag_no_tasks")}
+                {taskTab === "current" ? (t("ag_no_current_tasks") || "لا توجد مهام لتشغيل حالي. اضغط «تشغيل الآن».") : t("ag_no_tasks")}
               </div>
             )}
-            {tasks.map((tk) => (
+            {visible.map((tk) => (
               <div key={tk.id} className="rounded-xl border border-border bg-card/70 p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm">
