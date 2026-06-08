@@ -12,10 +12,10 @@ import { useCountry } from "@/lib/use-country";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MAAROOF Ai · Become the Source AI Trusts" },
-      { name: "description", content: "Score, optimize and publish content so 9 AI engines — including ChatGPT, Gemini, Claude and Kimi — cite your brand. In EN, AR, KU." },
-      { property: "og:title", content: "MAAROOF Ai · Become the Source AI Trusts" },
-      { property: "og:description", content: "Score, optimize and publish content so 9 AI engines cite your brand. In EN, AR, KU." },
+      { title: "GEO for Iraq — Get Cited by ChatGPT, Gemini & Claude | MAAROOF Ai" },
+      { name: "description", content: "MAAROOF Ai is the Generative Engine Optimization platform for Iraq & MENA. Score, optimize and publish content so 9 AI engines cite your brand in EN, AR & KU." },
+      { property: "og:title", content: "GEO for Iraq — Get Cited by ChatGPT, Gemini & Claude | MAAROOF Ai" },
+      { property: "og:description", content: "Generative Engine Optimization platform for Iraq & MENA. Make 9 AI engines cite your brand in EN, AR, KU." },
       { property: "og:url", content: "https://geoiraq.com/" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/" }],
