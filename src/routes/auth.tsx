@@ -17,10 +17,18 @@ export const Route = createFileRoute("/auth")({
       { property: "og:description", content: "Sign in or create your MAAROOF Ai account to access the AI visibility tools, dashboard, and the autonomous brand agent." },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({
-    mode: (s.mode as string) === "signup" ? "signup" : "signin",
-    redirect: (s.redirect as string) || "/dashboard",
-  }),
+  validateSearch: (s: Record<string, unknown>) => {
+    const raw = typeof s.redirect === "string" ? s.redirect : "";
+    // Only allow internal absolute paths; reject protocol-relative (//evil)
+    // and absolute URLs (https://evil) to prevent open-redirect phishing.
+    const safe = /^\/(?!\/)[^\s]*$/.test(raw) && !raw.toLowerCase().startsWith("/javascript")
+      ? raw
+      : "/dashboard";
+    return {
+      mode: (s.mode as string) === "signup" ? "signup" : "signin",
+      redirect: safe,
+    };
+  },
   component: () => (
     <I18nProvider>
       <AuthProvider>
