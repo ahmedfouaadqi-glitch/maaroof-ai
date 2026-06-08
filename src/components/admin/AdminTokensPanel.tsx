@@ -427,3 +427,83 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
     </label>
   );
 }
+
+function VisibilitySection({
+  lang, value, onChange,
+}: {
+  lang: "ar" | "en" | "ku";
+  value: NonNullable<Profile["ui_visibility"]>;
+  onChange: (v: NonNullable<Profile["ui_visibility"]>) => void;
+}) {
+  const isAr = lang === "ar";
+  const isKu = lang === "ku";
+  const heading = isAr ? "ما يراه المستخدم في الموقع" : isKu ? "ئەوەی بەکارهێنەر دەیبینێت" : "What the user sees site-wide";
+  const hint = isAr
+    ? "ضع علامة على ما تريد إظهاره. عدم التحديد = إخفاء كامل من واجهة هذا المستخدم."
+    : isKu
+    ? "هەرچی بسەلمێنرێت پیشان دەدرێت."
+    : "Check what to show. Unchecked items are hidden entirely from this user.";
+
+  const lbl = (k: string) => VIS_LABELS[k]?.[lang] || k;
+  const setGroup = (g: "tools" | "agent" | "widgets" | "pages", k: string, on: boolean) => {
+    const next = { ...(value || {}) };
+    const grp: Record<string, boolean> = { ...(next[g] || {}) };
+    if (on) delete grp[k]; else grp[k] = false;
+    if (Object.keys(grp).length === 0) delete (next as any)[g];
+    else (next as any)[g] = grp;
+    onChange(next);
+  };
+  const isOn = (g: "tools" | "agent" | "widgets" | "pages", k: string) => (value?.[g] as any)?.[k] !== false;
+
+  return (
+    <details className="mb-4 rounded-xl border border-border bg-card/40 p-3" open>
+      <summary className="cursor-pointer text-sm font-semibold">{heading}</summary>
+      <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+
+      <Group title={isAr ? "الأدوات" : isKu ? "ئامرازەکان" : "Tools"}>
+        {TOOL_CATALOG.filter(t => t.group === "tools").map(t => (
+          <CheckRow key={t.key} label={toolLabel(t.key as any, lang)} hint={t.key} checked={isOn("tools", t.key)} onChange={(on) => setGroup("tools", t.key, on)} />
+        ))}
+      </Group>
+
+      <Group title={isAr ? "ميزات الوكيل" : isKu ? "وەکیل" : "Agent features"}>
+        {AGENT_FEATURE_KEYS.map(k => (
+          <CheckRow key={k} label={lbl(k)} hint={`agent.${k}`} checked={isOn("agent", k)} onChange={(on) => setGroup("agent", k, on)} />
+        ))}
+      </Group>
+
+      <Group title={isAr ? "عناصر الواجهة" : isKu ? "ویجێتەکان" : "Widgets"}>
+        {WIDGET_KEYS.map(k => (
+          <CheckRow key={k} label={lbl(k)} hint={k} checked={isOn("widgets", k)} onChange={(on) => setGroup("widgets", k, on)} />
+        ))}
+      </Group>
+
+      <Group title={isAr ? "الصفحات" : isKu ? "پەڕەکان" : "Pages"}>
+        {PAGE_KEYS.map(k => (
+          <CheckRow key={k} label={lbl(k)} hint={`/${k}`} checked={isOn("pages", k)} onChange={(on) => setGroup("pages", k, on)} />
+        ))}
+      </Group>
+    </details>
+  );
+}
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-3">
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</div>
+      <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+    </div>
+  );
+}
+
+function CheckRow({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs ${checked ? "border-primary/30 bg-primary/5" : "border-border bg-background/40 opacity-70"}`}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <div className="flex-1">
+        <div className="font-medium">{label}</div>
+        {hint && <div className="text-[9px] text-muted-foreground">{hint}</div>}
+      </div>
+    </label>
+  );
+}
