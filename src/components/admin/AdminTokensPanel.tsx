@@ -304,6 +304,8 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           </Field>
         </div>
 
+        <VisibilitySection lang={lang} value={uiVis} onChange={setUiVis} />
+
         <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
 
         <div className="overflow-x-auto rounded-xl border border-border">
