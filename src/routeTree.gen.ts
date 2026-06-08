@@ -24,6 +24,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
+import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
 import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
@@ -118,6 +119,11 @@ const ToolsSlugRoute = ToolsSlugRouteImport.update({
   id: '/tools/$slug',
   path: '/tools/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const GuideGeoVsAeoRoute = GuideGeoVsAeoRouteImport.update({
+  id: '/geo-vs-aeo',
+  path: '/geo-vs-aeo',
+  getParentRoute: () => GuideRoute,
 } as any)
 const ApiWhatIfRoute = ApiWhatIfRouteImport.update({
   id: '/api/what-if',
@@ -224,7 +230,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
-  '/guide': typeof GuideRoute
+  '/guide': typeof GuideRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
+  '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
@@ -260,7 +267,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
-  '/guide': typeof GuideRoute
+  '/guide': typeof GuideRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
+  '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
@@ -297,7 +305,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
-  '/guide': typeof GuideRoute
+  '/guide': typeof GuideRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -320,6 +328,7 @@ export interface FileRoutesById {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
+  '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/api/what-if'
+    | '/guide/geo-vs-aeo'
     | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
@@ -394,6 +404,7 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/api/what-if'
+    | '/guide/geo-vs-aeo'
     | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/api/what-if'
+    | '/guide/geo-vs-aeo'
     | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
@@ -444,7 +456,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
-  GuideRoute: typeof GuideRoute
+  GuideRoute: typeof GuideRouteWithChildren
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -580,6 +592,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tools/$slug'
       preLoaderRoute: typeof ToolsSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/guide/geo-vs-aeo': {
+      id: '/guide/geo-vs-aeo'
+      path: '/geo-vs-aeo'
+      fullPath: '/guide/geo-vs-aeo'
+      preLoaderRoute: typeof GuideGeoVsAeoRouteImport
+      parentRoute: typeof GuideRoute
     }
     '/api/what-if': {
       id: '/api/what-if'
@@ -717,6 +736,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface GuideRouteChildren {
+  GuideGeoVsAeoRoute: typeof GuideGeoVsAeoRoute
+}
+
+const GuideRouteChildren: GuideRouteChildren = {
+  GuideGeoVsAeoRoute: GuideGeoVsAeoRoute,
+}
+
+const GuideRouteWithChildren = GuideRoute._addFileChildren(GuideRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -724,7 +753,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
-  GuideRoute: GuideRoute,
+  GuideRoute: GuideRouteWithChildren,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
