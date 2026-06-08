@@ -203,6 +203,9 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
 
   useEffect(() => {
     (async () => {
+      // Load all plan names for the picker
+      const { data: plans } = await supabase.from("subscription_plans").select("id, name").eq("active", true).order("sort_order");
+      setPlanList(((plans || []) as any[]).map((p) => ({ id: p.id, name: p.name })));
       // Load plan tool prices for this user's plan (if any)
       if (user.subscription_tier) {
         const { data: plan } = await supabase.from("subscription_plans").select("id").eq("name", user.subscription_tier).maybeSingle();
@@ -237,7 +240,16 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       hide_usage_counter: hideUsage,
       per_user_tool_overrides: clean,
       ui_visibility: uiVis,
+      subscription_tier: tier || null,
+      is_subscribed: isSub,
+      subscription_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      max_devices: Math.max(1, Number(maxDevices) || 1),
     } as any).eq("id", user.id);
+    // Clear cached price for this user so the next tool open re-reads overrides + plan
+    try {
+      const mod = await import("@/lib/visibility");
+      mod.clearToolPriceCache(user.id);
+    } catch {}
     setSaving(false);
     onClose();
   }
