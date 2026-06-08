@@ -251,6 +251,27 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           </Field>
         </div>
 
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <Field label={L.usedToday}>
+            <div className="flex gap-1">
+              <input type="number" min={0} value={usedToday} onChange={(e) => setUsedToday(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+              <button type="button" onClick={() => setUsedToday(0)} className="rounded-lg border border-border bg-card/60 px-2 text-[10px] hover:bg-card">{L.resetToday}</button>
+            </div>
+          </Field>
+          <Field label={L.usedMonth}>
+            <div className="flex gap-1">
+              <input type="number" min={0} value={usedMonth} onChange={(e) => setUsedMonth(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+              <button type="button" onClick={() => setUsedMonth(0)} className="rounded-lg border border-border bg-card/60 px-2 text-[10px] hover:bg-card">{L.resetMonth}</button>
+            </div>
+          </Field>
+          <Field label={L.hideUsage}>
+            <label className="flex h-[34px] items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={hideUsage} onChange={(e) => setHideUsage(e.target.checked)} />
+              <span>{hideUsage ? L.disabled : L.enabled}</span>
+            </label>
+          </Field>
+        </div>
+
         <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
 
         <div className="overflow-x-auto rounded-xl border border-border">
