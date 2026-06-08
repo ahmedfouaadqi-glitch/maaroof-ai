@@ -105,12 +105,13 @@ export const runAgentNow = createServerFn({ method: "POST" })
           await supabaseAdmin.from("agent_tasks").insert({
             user_id: userId, target_id: (tg as any).id, task_type: taskType,
             input: subject, status: "failed", error: e?.message || "error",
+            run_id: runId, run_started_at: runStartedAt,
           });
           failed++;
         }
       }
     }
-    return { ok: true, done, failed };
+    return { ok: true, done, failed, runId };
   });
 
 
