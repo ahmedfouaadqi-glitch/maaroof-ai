@@ -130,6 +130,66 @@ export const getChannelsState = createServerFn({ method: "GET" })
     };
   });
 
+// Manual token save for FB / Instagram / X ---------------------------------
+
+export const saveManualSocialToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => {
+    const x = (d || {}) as { provider?: string; token?: string; pageId?: string; igUserId?: string; defaultMediaUrl?: string };
+    if (!x.provider || !MANUAL_PROVIDERS.has(x.provider)) throw new Error("invalid_provider");
+    if (!x.token || x.token.length < 10) throw new Error("invalid_token");
+    return {
+      provider: x.provider,
+      token: x.token.trim(),
+      pageId: x.pageId?.trim() || "",
+      igUserId: x.igUserId?.trim() || "",
+      defaultMediaUrl: x.defaultMediaUrl?.trim() || "",
+    };
+  })
+  .handler(async ({ data, context }) => {
+    let accountLabel = "";
+    let config: Record<string, any> = {};
+    try {
+      if (data.provider === "facebook") {
+        if (!data.pageId) throw new Error("page_id_required");
+        const r = await testFacebookToken(data.token, data.pageId);
+        accountLabel = r.name;
+        config = { access_token: data.token, page_id: data.pageId };
+      } else if (data.provider === "instagram") {
+        if (!data.igUserId) throw new Error("ig_user_id_required");
+        const r = await testInstagramToken(data.token, data.igUserId);
+        accountLabel = r.name;
+        config = { access_token: data.token, ig_user_id: data.igUserId, default_media_url: data.defaultMediaUrl };
+      } else if (data.provider === "x") {
+        const r = await testXToken(data.token);
+        accountLabel = r.name;
+        config = { bearer: data.token };
+      }
+    } catch (e: any) {
+      return { ok: false as const, error: e?.message || "token_test_failed" };
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("publish_channels").select("id")
+      .eq("user_id", context.userId).eq("kind", data.provider).maybeSingle();
+
+    if (existing) {
+      await supabaseAdmin.from("publish_channels").update({
+        account_label: accountLabel, config, verified_at: new Date().toISOString(),
+        active: true, connected_via: "manual",
+      }).eq("id", existing.id);
+    } else {
+      await supabaseAdmin.from("publish_channels").insert({
+        user_id: context.userId, kind: data.provider, label: data.provider,
+        account_label: accountLabel, active: true, approval_mode: "manual",
+        connected_via: "manual", verified_at: new Date().toISOString(), config,
+      });
+    }
+    return { ok: true as const, accountLabel };
+  });
+
+
+
 // Approval queue ------------------------------------------------------------
 
 export const listPendingApprovals = createServerFn({ method: "GET" })
