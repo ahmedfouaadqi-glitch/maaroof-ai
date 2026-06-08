@@ -279,6 +279,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
             <thead className="bg-card/60">
               <tr>
                 <th className="p-2 text-start">Tool</th>
+                <th className="p-2 w-16" title={L.toolEnabledTip}>{L.enabled}</th>
                 <th className="p-2">{L.source}</th>
                 <th className="p-2 w-28">{L.tokensPerUse}</th>
                 <th className="p-2 w-40">{L.usdPerUse}</th>
