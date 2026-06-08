@@ -324,6 +324,32 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           </Field>
         </div>
 
+        <div className="mb-4 rounded-xl border border-border bg-card/40 p-3">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {lang === "ar" ? "الخطة والاشتراك والأجهزة" : lang === "ku" ? "پلان، بەشداری و ئامێرەکان" : "Plan, subscription & devices"}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Field label={lang === "ar" ? "الخطة" : lang === "ku" ? "پلان" : "Plan"}>
+              <select value={tier} onChange={(e) => setTier(e.target.value)} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm">
+                <option value="">—</option>
+                {planList.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+              </select>
+            </Field>
+            <Field label={lang === "ar" ? "مشترك؟" : lang === "ku" ? "بەشداربووە؟" : "Subscribed?"}>
+              <label className="flex h-[34px] items-center gap-2 rounded-lg border border-border bg-background px-2 text-xs cursor-pointer">
+                <input type="checkbox" checked={isSub} onChange={(e) => setIsSub(e.target.checked)} />
+                <span>{isSub ? (lang === "ar" ? "نعم" : "Yes") : (lang === "ar" ? "لا" : "No")}</span>
+              </label>
+            </Field>
+            <Field label={lang === "ar" ? "تنتهي في" : lang === "ku" ? "بەسەردەچێت" : "Expires on"}>
+              <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+            </Field>
+            <Field label={lang === "ar" ? "أقصى أجهزة" : lang === "ku" ? "زۆرترین ئامێر" : "Max devices"}>
+              <input type="number" min={1} max={50} value={maxDevices} onChange={(e) => setMaxDevices(Number(e.target.value) || 1)} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
+            </Field>
+          </div>
+        </div>
+
         <VisibilitySection lang={lang} value={uiVis} onChange={setUiVis} />
 
         <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
