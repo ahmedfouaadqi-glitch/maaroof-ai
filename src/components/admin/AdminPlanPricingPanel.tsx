@@ -5,6 +5,7 @@ import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { CostInput } from "@/components/admin/CostInput";
 import { CostBadge } from "@/components/CostBadge";
 import { useI18n } from "@/lib/i18n";
+import { adminUpdatePlan, adminUpsertToolPlanAccess } from "@/lib/admin.functions";
 
 type Plan = { id: string; name: string; description: string | null; price_usd: number | string; monthly_tokens: number; daily_tokens: number; agent_daily_cap: number | null; agent_monthly_cap: number | null; agent_max_targets: number | null };
 type ToolRow = { id?: string; plan_id: string; tool_key: string; enabled: boolean; tokens_per_use: number; usd_per_use: number; monthly_quota: number | null; daily_quota: number | null };
