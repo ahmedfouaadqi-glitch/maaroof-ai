@@ -278,7 +278,7 @@ function UsersTab() {
                   {((r.quota_overrides?.monthly_analyses) || (r.quota_overrides?.monthly_suggestions)) && (
                     <button
                       onClick={async () => {
-                        await supabase.from("profiles").update({ monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString() }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString() } } });
                         load();
                       }}
                       title={t("admin_reset_usage")}
