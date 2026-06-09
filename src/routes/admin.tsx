@@ -428,28 +428,7 @@ function RequestsTab() {
   useEffect(() => { load(); }, []);
 
   const decide = async (r: any, status: "approved" | "rejected") => {
-    await supabase.from("subscription_requests").update({
-      status, reviewed_at: new Date().toISOString(),
-    }).eq("id", r.id);
-    if (status === "approved") {
-      if (r.request_type === "plan" && r.subscription_plans) {
-        const expires = new Date(Date.now() + r.subscription_plans.duration_days * 86400000).toISOString();
-        await supabase.from("profiles").update({
-          is_subscribed: true,
-          subscription_tier: r.subscription_plans.name,
-          subscription_expires_at: expires,
-          monthly_analyses_used: 0,
-          monthly_suggestions_used: 0,
-          usage_period_start: new Date().toISOString(),
-        }).eq("id", r.user_id);
-      } else if (r.request_type === "agent" && r.agent_addon_id) {
-        const expires = new Date(Date.now() + 30 * 86400000).toISOString();
-        await supabase.from("user_agent_subscriptions").insert({
-          user_id: r.user_id, addon_id: r.agent_addon_id, status: "active",
-          expires_at: expires, period_start: new Date().toISOString(),
-        });
-      }
-    }
+    await adminDecideSubscriptionRequest({ data: { requestId: r.id, status } });
     load();
   };
 
