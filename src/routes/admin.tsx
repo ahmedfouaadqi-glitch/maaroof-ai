@@ -631,62 +631,61 @@ function AgentTab() {
 
   const toggleGlobal = async () => {
     const next = !globalOn;
-    await supabase.from("app_settings").upsert({ key: "agent_enabled_global", value: next as any, updated_at: new Date().toISOString() });
+    await adminSetAppSetting({ data: { key: "agent_enabled_global", value: { v: next } as any } });
+    // Backward-compat: the prior stored "value" was a bare boolean; wrap so Zod record accepts it.
     setGlobalOn(next);
   };
 
   const grantManual = async () => {
     setGrantMsg(null);
     if (!grantEmail || !grantAddonId) return;
-    const { data: prof } = await supabase.from("profiles").select("id").eq("email", grantEmail.trim().toLowerCase()).maybeSingle();
-    if (!prof) { setGrantMsg(t("ad_grant_no_user")); return; }
-    const expires = new Date(Date.now() + (grantDays || 30) * 86400000).toISOString();
-    await supabase.from("user_agent_subscriptions").insert({
-      user_id: prof.id, addon_id: grantAddonId, status: "active",
-      expires_at: expires, period_start: new Date().toISOString(),
-    });
-    setGrantMsg(t("ad_grant_ok"));
-    setGrantEmail("");
-    load();
+    try {
+      await adminGrantAgentSubscription({ data: { email: grantEmail.trim().toLowerCase(), addonId: grantAddonId, days: grantDays || 30 } });
+      setGrantMsg(t("ad_grant_ok"));
+      setGrantEmail("");
+      load();
+    } catch (e: any) {
+      setGrantMsg(t("ad_grant_no_user"));
+    }
     setTimeout(() => setGrantMsg(null), 3000);
   };
 
   const extend = async (s: any, days: number) => {
     const base = s.expires_at && new Date(s.expires_at) > new Date() ? new Date(s.expires_at) : new Date();
     const exp = new Date(base.getTime() + days * 86400000).toISOString();
-    await supabase.from("user_agent_subscriptions").update({ expires_at: exp, status: "active" }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { expires_at: exp, status: "active" } } });
     load();
   };
   const resetUsage = async (s: any) => {
-    await supabase.from("user_agent_subscriptions").update({ tasks_used: 0, tasks_used_today: 0, period_start: new Date().toISOString() }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { tasks_used: 0, tasks_used_today: 0, period_start: new Date().toISOString() } } });
     load();
   };
   const setStatus = async (s: any, status: string) => {
-    await supabase.from("user_agent_subscriptions").update({ status }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { status: status as any } } });
     load();
   };
   const changeAddon = async (s: any, addonId: string) => {
-    await supabase.from("user_agent_subscriptions").update({ addon_id: addonId }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { addon_id: addonId } } });
     load();
   };
 
   const toggleAddon = async (a: any) => {
-    await supabase.from("agent_addons").update({ active: !a.active }).eq("id", a.id);
+    await adminUpdateAddon({ data: { id: a.id, patch: { active: !a.active } } });
     load();
   };
   const updateAddon = async (a: any, patch: any) => {
-    await supabase.from("agent_addons").update(patch).eq("id", a.id);
+    await adminUpdateAddon({ data: { id: a.id, patch } });
     load();
   };
   const createAddon = async () => {
     const name = prompt("Addon name?");
     if (!name) return;
-    await supabase.from("agent_addons").insert({ name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] });
+    await adminCreateAddon({ data: { values: { name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] } } });
     load();
   };
   const deleteAddon = async (a: any) => {
     if (!confirm(`Delete addon "${a.name}"?`)) return;
-    await supabase.from("agent_addons").delete().eq("id", a.id);
+    await adminDeleteAddon({ data: { id: a.id } });
     load();
   };
 
