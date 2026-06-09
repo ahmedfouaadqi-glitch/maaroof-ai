@@ -186,9 +186,8 @@ function PricingPage() {
 
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="font-display text-3xl font-bold text-gradient">
-                      {p.price_iqd.toLocaleString()}
+                      {priceOf(p).text}
                     </span>
-                    <span className="text-xs text-muted-foreground">{t("pr_iqd")}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {p.duration_days >= 365 ? t("pr_yearly_first") : t("pr_monthly")}
