@@ -298,7 +298,7 @@ function UsersTab() {
                       onClick={async () => {
                         const ov = { ...(r.quota_overrides || {}) };
                         if (next === "auto") delete ov.brand_boost; else ov.brand_boost = next;
-                        await supabase.from("profiles").update({ quota_overrides: ov }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { quota_overrides: ov } } });
                         load();
                       }}
                       className={`mt-1 rounded-full border px-2 py-0.5 text-[10px] ${cls}`}
