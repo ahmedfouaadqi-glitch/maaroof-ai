@@ -96,9 +96,9 @@ export function AdminTokensPanel() {
 
   async function toggleAdmin(userId: string, makeAdmin: boolean) {
     if (makeAdmin) {
-      await supabase.from("user_roles").upsert({ user_id: userId, role: "admin" } as any, { onConflict: "user_id,role" });
+      await adminGrantRole({ data: { userId, role: "admin" } });
     } else {
-      await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "admin");
+      await adminRevokeRole({ data: { userId, role: "admin" } });
     }
     load();
   }
