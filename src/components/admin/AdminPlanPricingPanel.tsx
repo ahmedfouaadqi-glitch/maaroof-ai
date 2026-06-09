@@ -96,17 +96,17 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
   async function saveAll() {
     setSaving(true);
     // Update plan-level fields
-    await supabase.from("subscription_plans").update({
+    await adminUpdatePlan({ data: { planId: plan.id, patch: {
       price_usd: priceUsd, monthly_tokens: monthlyTok, daily_tokens: dailyTok,
       agent_daily_cap: agentDaily || null, agent_monthly_cap: agentMonthly || null, agent_max_targets: agentTargets || null,
-    } as any).eq("id", plan.id);
+    } } });
     // Upsert all tool rows
     const payload = Object.values(rows).map((r) => ({
       plan_id: r.plan_id, tool_key: r.tool_key, enabled: r.enabled,
       tokens_per_use: r.tokens_per_use, usd_per_use: r.usd_per_use,
       monthly_quota: r.monthly_quota, daily_quota: r.daily_quota,
     }));
-    await supabase.from("tool_plan_access").upsert(payload as any, { onConflict: "plan_id,tool_key" });
+    await adminUpsertToolPlanAccess({ data: { rows: payload } });
     setSaving(false);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
