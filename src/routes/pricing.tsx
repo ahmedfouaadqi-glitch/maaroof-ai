@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { whatsappLink } from "@/lib/whatsapp";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 import { usePageGuard } from "@/lib/visibility";
+import { useCountry } from "@/lib/use-country";
+import { pickPrice, formatMoney } from "@/lib/currencies";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -46,12 +48,23 @@ const AGENT_EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
 function PricingPage() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
+  const { info: country } = useCountry();
+  const userCountry = country?.code || null;
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedKind, setSelectedKind] = useState<"plan" | "agent">("plan");
   usePageGuard();
+
+  const priceOf = (row: any) => {
+    const picked = pickPrice(row?.prices, userCountry, row?.default_currency);
+    if (picked) return { ...picked, text: formatMoney(picked.amount, picked.currency, lang as any) };
+    // Legacy fallback (pre-migration rows).
+    if (Number(row?.price_iqd) > 0) return { amount: Number(row.price_iqd), currency: "IQD", text: formatMoney(Number(row.price_iqd), "IQD", lang as any) };
+    if (Number(row?.price_usd) > 0) return { amount: Number(row.price_usd), currency: "USD", text: formatMoney(Number(row.price_usd), "USD", lang as any) };
+    return { amount: 0, currency: "USD", text: "—" };
+  };
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
