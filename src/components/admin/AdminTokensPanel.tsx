@@ -232,7 +232,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       const isDisabled = v?.enabled === false;
       if (hasPrice || isDisabled) clean[k] = v;
     }
-    await supabase.from("profiles").update({
+    await adminPatchProfile({ data: { userId: user.id, patch: {
       tokens_balance: balance,
       tokens_daily_limit: daily === "" ? null : Number(daily),
       tokens_monthly_limit: monthly === "" ? null : Number(monthly),
@@ -245,7 +245,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       is_subscribed: isSub,
       subscription_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       max_devices: Math.max(1, Number(maxDevices) || 1),
-    } as any).eq("id", user.id);
+    } } });
     // Clear cached price for this user so the next tool open re-reads overrides + plan
     try {
       const mod = await import("@/lib/visibility");
