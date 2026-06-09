@@ -118,7 +118,7 @@ function PricingPage() {
     else payload.agent_addon_id = selected.id;
     await supabase.from("subscription_requests").insert(payload);
     const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
-    const msg = `${label} ${selected.name} (${selected.price_iqd.toLocaleString()} ${t("pr_iqd")})\n${user.email}`;
+    const msg = `${label} ${selected.name} (${priceOf(selected).text})\n${user.email}`;
     window.open(whatsappLink(msg), "_blank");
     setSelected(null);
   };
@@ -132,7 +132,7 @@ function PricingPage() {
     const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
     const subject = encodeURIComponent(`${label} ${selected.name}`);
     const body = encodeURIComponent(
-      `${label}:\n• ${selected.name}\n• ${selected.price_iqd.toLocaleString()} ${t("pr_iqd")}\n\n${user.email}`,
+      `${label}:\n• ${selected.name}\n• ${priceOf(selected).text}\n\n${user.email}`,
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSelected(null);
