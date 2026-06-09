@@ -193,33 +193,33 @@ function UsersTab() {
 
   const toggleAdmin = async (uid: string) => {
     if (admins.has(uid)) {
-      await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", "admin");
+      await adminRevokeRole({ data: { userId: uid, role: "admin" } });
     } else {
-      await supabase.from("user_roles").insert({ user_id: uid, role: "admin" });
+      await adminGrantRole({ data: { userId: uid, role: "admin" } });
     }
     load();
   };
 
   const subscribe = async (uid: string, plan: any) => {
     const expires = new Date(Date.now() + plan.duration_days * 86400000).toISOString();
-    await supabase.from("profiles").update({
+    await adminPatchProfile({ data: { userId: uid, patch: {
       is_subscribed: true,
       subscription_tier: plan.name,
       subscription_expires_at: expires,
       monthly_analyses_used: 0,
       monthly_suggestions_used: 0,
       usage_period_start: new Date().toISOString(),
-    }).eq("id", uid);
+    } } });
     setPicker(null);
     load();
   };
 
   const unsubscribe = async (uid: string) => {
-    await supabase.from("profiles").update({
+    await adminPatchProfile({ data: { userId: uid, patch: {
       is_subscribed: false,
       subscription_tier: null,
       subscription_expires_at: null,
-    }).eq("id", uid);
+    } } });
     load();
   };
 
