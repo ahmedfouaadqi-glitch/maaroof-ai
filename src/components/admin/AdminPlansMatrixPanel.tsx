@@ -7,6 +7,7 @@ import { Loader2, Plus, Save, Copy, Trash2, Bot, Wrench } from "lucide-react";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { useI18n } from "@/lib/i18n";
 import { formatUsd } from "@/components/CostBadge";
+import { adminCreatePlan, adminUpdatePlan, adminUpsertToolPlanAccess } from "@/lib/admin.functions";
 
 type Plan = {
   id: string;
