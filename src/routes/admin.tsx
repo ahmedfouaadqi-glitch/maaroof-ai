@@ -270,7 +270,7 @@ function UsersTab() {
                       const v = e.target.value === "" ? null : Number(e.target.value);
                       const next = { ...(r.quota_overrides || {}) };
                       if (v == null) delete next.monthly_suggestions; else next.monthly_suggestions = v;
-                      await supabase.from("profiles").update({ quota_overrides: next }).eq("id", r.id);
+                      await adminPatchProfile({ data: { userId: r.id, patch: { quota_overrides: next } } });
                       load();
                     }}
                     className="w-16 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
