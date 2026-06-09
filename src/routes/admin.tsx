@@ -316,7 +316,7 @@ function UsersTab() {
                       title="Max devices allowed"
                       onBlur={async (e) => {
                         const v = Math.max(1, Number(e.target.value || 1));
-                        await supabase.from("profiles").update({ max_devices: v }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { max_devices: v } } });
                         load();
                       }}
                       className="w-12 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
