@@ -398,6 +398,8 @@ const tpaPatch = z
     enabled: z.boolean().optional(),
     tokens_per_use: z.number().min(0).optional(),
     usd_per_use: z.number().min(0).optional(),
+    prices: pricesMap.optional(),
+    default_currency: currencyCode.optional(),
     monthly_quota: z.number().int().min(0).nullable().optional(),
     daily_quota: z.number().int().min(0).nullable().optional(),
   })
@@ -420,6 +422,8 @@ export const adminUpsertSingleToolPlanAccess = createServerFn({ method: "POST" }
       enabled: data.patch.enabled ?? true,
       tokens_per_use: data.patch.tokens_per_use ?? 0,
       usd_per_use: data.patch.usd_per_use ?? 0,
+      prices: data.patch.prices ?? {},
+      default_currency: data.patch.default_currency ?? "USD",
       monthly_quota: data.patch.monthly_quota ?? null,
       daily_quota: data.patch.daily_quota ?? null,
     };
