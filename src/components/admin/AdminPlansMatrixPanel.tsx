@@ -7,6 +7,7 @@ import { Loader2, Plus, Save, Copy, Trash2, Bot, Wrench } from "lucide-react";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { useI18n } from "@/lib/i18n";
 import { formatUsd } from "@/components/CostBadge";
+import { adminCreatePlan, adminUpdatePlan, adminUpsertToolPlanAccess } from "@/lib/admin.functions";
 
 type Plan = {
   id: string;
@@ -122,8 +123,7 @@ export function AdminPlansMatrixPanel() {
         });
       }
       if (rowsToUpsert.length > 0) {
-        const { error } = await supabase.from("tool_plan_access").upsert(rowsToUpsert as any, { onConflict: "plan_id,tool_key" });
-        if (error) throw error;
+        await adminUpsertToolPlanAccess({ data: { rows: rowsToUpsert } });
       }
       setMsg({ ok: true, text: t.saved });
       await load();
@@ -135,25 +135,28 @@ export function AdminPlansMatrixPanel() {
   }
 
   async function createPlan(form: { name: string; price_iqd: number; price_usd: number; monthly_tokens: number }) {
-    const { data, error } = await supabase.from("subscription_plans").insert({
-      name: form.name,
-      price_iqd: form.price_iqd,
-      price_usd: form.price_usd,
-      monthly_tokens: form.monthly_tokens,
-      active: true,
-      duration_days: 30,
-      monthly_analyses: 0,
-      monthly_suggestions: 0,
-      sort_order: plans.length + 1,
-    } as any).select().single();
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setShowNew(false);
-    await load();
+    try {
+      await adminCreatePlan({ data: { values: {
+        name: form.name,
+        price_iqd: form.price_iqd,
+        price_usd: form.price_usd,
+        monthly_tokens: form.monthly_tokens,
+        active: true,
+        duration_days: 30,
+        monthly_analyses: 0,
+        monthly_suggestions: 0,
+        sort_order: plans.length + 1,
+      } } });
+      setShowNew(false);
+      await load();
+    } catch (e: any) {
+      setMsg({ ok: false, text: e?.message || "create failed" });
+    }
   }
 
   async function deletePlan(planId: string) {
     if (!confirm("Delete plan?")) return;
-    await supabase.from("subscription_plans").update({ active: false }).eq("id", planId);
+    await adminUpdatePlan({ data: { planId, patch: { active: false } } });
     await load();
   }
 

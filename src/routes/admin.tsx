@@ -10,6 +10,14 @@ import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
 import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
 import { AdminPlansMatrixPanel } from "@/components/admin/AdminPlansMatrixPanel";
 import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
+import {
+  adminGrantRole, adminRevokeRole, adminPatchProfile,
+  adminCreatePlan, adminUpdatePlan, adminDeletePlan,
+  adminDecideSubscriptionRequest,
+  adminPatchAgentSubscription, adminGrantAgentSubscription,
+  adminCreateAddon, adminUpdateAddon, adminDeleteAddon,
+  adminSetAppSetting, adminUpsertSingleToolPlanAccess,
+} from "@/lib/admin.functions";
 
 
 export const Route = createFileRoute("/admin")({
@@ -185,33 +193,33 @@ function UsersTab() {
 
   const toggleAdmin = async (uid: string) => {
     if (admins.has(uid)) {
-      await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", "admin");
+      await adminRevokeRole({ data: { userId: uid, role: "admin" } });
     } else {
-      await supabase.from("user_roles").insert({ user_id: uid, role: "admin" });
+      await adminGrantRole({ data: { userId: uid, role: "admin" } });
     }
     load();
   };
 
   const subscribe = async (uid: string, plan: any) => {
     const expires = new Date(Date.now() + plan.duration_days * 86400000).toISOString();
-    await supabase.from("profiles").update({
+    await adminPatchProfile({ data: { userId: uid, patch: {
       is_subscribed: true,
       subscription_tier: plan.name,
       subscription_expires_at: expires,
       monthly_analyses_used: 0,
       monthly_suggestions_used: 0,
       usage_period_start: new Date().toISOString(),
-    }).eq("id", uid);
+    } } });
     setPicker(null);
     load();
   };
 
   const unsubscribe = async (uid: string) => {
-    await supabase.from("profiles").update({
+    await adminPatchProfile({ data: { userId: uid, patch: {
       is_subscribed: false,
       subscription_tier: null,
       subscription_expires_at: null,
-    }).eq("id", uid);
+    } } });
     load();
   };
 
@@ -248,7 +256,7 @@ function UsersTab() {
                       const v = e.target.value === "" ? null : Number(e.target.value);
                       const next = { ...(r.quota_overrides || {}) };
                       if (v == null) delete next.monthly_analyses; else next.monthly_analyses = v;
-                      await supabase.from("profiles").update({ quota_overrides: next }).eq("id", r.id);
+                      await adminPatchProfile({ data: { userId: r.id, patch: { quota_overrides: next } } });
                       load();
                     }}
                     className="w-16 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
@@ -262,7 +270,7 @@ function UsersTab() {
                       const v = e.target.value === "" ? null : Number(e.target.value);
                       const next = { ...(r.quota_overrides || {}) };
                       if (v == null) delete next.monthly_suggestions; else next.monthly_suggestions = v;
-                      await supabase.from("profiles").update({ quota_overrides: next }).eq("id", r.id);
+                      await adminPatchProfile({ data: { userId: r.id, patch: { quota_overrides: next } } });
                       load();
                     }}
                     className="w-16 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
@@ -270,7 +278,7 @@ function UsersTab() {
                   {((r.quota_overrides?.monthly_analyses) || (r.quota_overrides?.monthly_suggestions)) && (
                     <button
                       onClick={async () => {
-                        await supabase.from("profiles").update({ monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString() }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString() } } });
                         load();
                       }}
                       title={t("admin_reset_usage")}
@@ -290,7 +298,7 @@ function UsersTab() {
                       onClick={async () => {
                         const ov = { ...(r.quota_overrides || {}) };
                         if (next === "auto") delete ov.brand_boost; else ov.brand_boost = next;
-                        await supabase.from("profiles").update({ quota_overrides: ov }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { quota_overrides: ov } } });
                         load();
                       }}
                       className={`mt-1 rounded-full border px-2 py-0.5 text-[10px] ${cls}`}
@@ -308,7 +316,7 @@ function UsersTab() {
                       title="Max devices allowed"
                       onBlur={async (e) => {
                         const v = Math.max(1, Number(e.target.value || 1));
-                        await supabase.from("profiles").update({ max_devices: v }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { max_devices: v } } });
                         load();
                       }}
                       className="w-12 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
@@ -323,7 +331,7 @@ function UsersTab() {
                       title="Extra fee per additional device (IQD)"
                       onBlur={async (e) => {
                         const v = Math.max(0, Number(e.target.value || 0));
-                        await supabase.from("profiles").update({ extra_device_fee_iqd: v }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { extra_device_fee_iqd: v } } });
                         load();
                       }}
                       className="w-20 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
@@ -377,7 +385,7 @@ function UsersTab() {
                       {(r.device_fingerprint || (Array.isArray(r.device_fingerprints) && r.device_fingerprints.length > 0)) && (
                         <button onClick={async () => {
                           if (!confirm(t("admin_reset_fp_confirm"))) return;
-                          await supabase.from("profiles").update({ device_fingerprint: null, device_locked_at: null, device_fingerprints: [] }).eq("id", r.id);
+                          await adminPatchProfile({ data: { userId: r.id, patch: { device_fingerprint: null, device_locked_at: null, device_fingerprints: [] } } });
                           load();
                         }} className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/5 px-3 py-1 text-xs text-warning hover:bg-warning/10">
                           <Smartphone className="size-3" /> {t("admin_reset_fp")}
@@ -420,28 +428,7 @@ function RequestsTab() {
   useEffect(() => { load(); }, []);
 
   const decide = async (r: any, status: "approved" | "rejected") => {
-    await supabase.from("subscription_requests").update({
-      status, reviewed_at: new Date().toISOString(),
-    }).eq("id", r.id);
-    if (status === "approved") {
-      if (r.request_type === "plan" && r.subscription_plans) {
-        const expires = new Date(Date.now() + r.subscription_plans.duration_days * 86400000).toISOString();
-        await supabase.from("profiles").update({
-          is_subscribed: true,
-          subscription_tier: r.subscription_plans.name,
-          subscription_expires_at: expires,
-          monthly_analyses_used: 0,
-          monthly_suggestions_used: 0,
-          usage_period_start: new Date().toISOString(),
-        }).eq("id", r.user_id);
-      } else if (r.request_type === "agent" && r.agent_addon_id) {
-        const expires = new Date(Date.now() + 30 * 86400000).toISOString();
-        await supabase.from("user_agent_subscriptions").insert({
-          user_id: r.user_id, addon_id: r.agent_addon_id, status: "active",
-          expires_at: expires, period_start: new Date().toISOString(),
-        });
-      }
-    }
+    await adminDecideSubscriptionRequest({ data: { requestId: r.id, status } });
     load();
   };
 
@@ -503,25 +490,25 @@ function PlansTab() {
   useEffect(() => { load(); }, []);
 
   const toggle = async (p: any) => {
-    await supabase.from("subscription_plans").update({ active: !p.active }).eq("id", p.id);
+    await adminUpdatePlan({ data: { planId: p.id, patch: { active: !p.active } } });
     load();
   };
   const save = async (p: any, patch: any) => {
-    await supabase.from("subscription_plans").update(patch).eq("id", p.id);
+    await adminUpdatePlan({ data: { planId: p.id, patch } });
     load();
   };
   const del = async (p: any) => {
     if (!confirm(`Delete plan "${p.name}"?`)) return;
-    await supabase.from("subscription_plans").delete().eq("id", p.id);
+    await adminDeletePlan({ data: { planId: p.id } });
     load();
   };
   const create = async () => {
     const name = prompt("Plan name?");
     if (!name) return;
-    await supabase.from("subscription_plans").insert({
+    await adminCreatePlan({ data: { values: {
       name, description: "", price_iqd: 0, duration_days: 30,
       monthly_analyses: 50, monthly_suggestions: 30, active: false, sort_order: 99, features: [],
-    });
+    } } });
     load();
   };
 
@@ -644,62 +631,61 @@ function AgentTab() {
 
   const toggleGlobal = async () => {
     const next = !globalOn;
-    await supabase.from("app_settings").upsert({ key: "agent_enabled_global", value: next as any, updated_at: new Date().toISOString() });
+    await adminSetAppSetting({ data: { key: "agent_enabled_global", value: { v: next } as any } });
+    // Backward-compat: the prior stored "value" was a bare boolean; wrap so Zod record accepts it.
     setGlobalOn(next);
   };
 
   const grantManual = async () => {
     setGrantMsg(null);
     if (!grantEmail || !grantAddonId) return;
-    const { data: prof } = await supabase.from("profiles").select("id").eq("email", grantEmail.trim().toLowerCase()).maybeSingle();
-    if (!prof) { setGrantMsg(t("ad_grant_no_user")); return; }
-    const expires = new Date(Date.now() + (grantDays || 30) * 86400000).toISOString();
-    await supabase.from("user_agent_subscriptions").insert({
-      user_id: prof.id, addon_id: grantAddonId, status: "active",
-      expires_at: expires, period_start: new Date().toISOString(),
-    });
-    setGrantMsg(t("ad_grant_ok"));
-    setGrantEmail("");
-    load();
+    try {
+      await adminGrantAgentSubscription({ data: { email: grantEmail.trim().toLowerCase(), addonId: grantAddonId, days: grantDays || 30 } });
+      setGrantMsg(t("ad_grant_ok"));
+      setGrantEmail("");
+      load();
+    } catch (e: any) {
+      setGrantMsg(t("ad_grant_no_user"));
+    }
     setTimeout(() => setGrantMsg(null), 3000);
   };
 
   const extend = async (s: any, days: number) => {
     const base = s.expires_at && new Date(s.expires_at) > new Date() ? new Date(s.expires_at) : new Date();
     const exp = new Date(base.getTime() + days * 86400000).toISOString();
-    await supabase.from("user_agent_subscriptions").update({ expires_at: exp, status: "active" }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { expires_at: exp, status: "active" } } });
     load();
   };
   const resetUsage = async (s: any) => {
-    await supabase.from("user_agent_subscriptions").update({ tasks_used: 0, tasks_used_today: 0, period_start: new Date().toISOString() }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { tasks_used: 0, tasks_used_today: 0, period_start: new Date().toISOString() } } });
     load();
   };
   const setStatus = async (s: any, status: string) => {
-    await supabase.from("user_agent_subscriptions").update({ status }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { status: status as any } } });
     load();
   };
   const changeAddon = async (s: any, addonId: string) => {
-    await supabase.from("user_agent_subscriptions").update({ addon_id: addonId }).eq("id", s.id);
+    await adminPatchAgentSubscription({ data: { id: s.id, patch: { addon_id: addonId } } });
     load();
   };
 
   const toggleAddon = async (a: any) => {
-    await supabase.from("agent_addons").update({ active: !a.active }).eq("id", a.id);
+    await adminUpdateAddon({ data: { id: a.id, patch: { active: !a.active } } });
     load();
   };
   const updateAddon = async (a: any, patch: any) => {
-    await supabase.from("agent_addons").update(patch).eq("id", a.id);
+    await adminUpdateAddon({ data: { id: a.id, patch } });
     load();
   };
   const createAddon = async () => {
     const name = prompt("Addon name?");
     if (!name) return;
-    await supabase.from("agent_addons").insert({ name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] });
+    await adminCreateAddon({ data: { values: { name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] } } });
     load();
   };
   const deleteAddon = async (a: any) => {
     if (!confirm(`Delete addon "${a.name}"?`)) return;
-    await supabase.from("agent_addons").delete().eq("id", a.id);
+    await adminDeleteAddon({ data: { id: a.id } });
     load();
   };
 
@@ -899,11 +885,13 @@ function AccessTab() {
       daily_quota: existing?.daily_quota ?? null,
       ...patch,
     };
-    if (existing) {
-      await supabase.from("tool_plan_access").update(payload).eq("id", existing.id);
-    } else {
-      await supabase.from("tool_plan_access").insert(payload);
-    }
+    await adminUpsertSingleToolPlanAccess({ data: { planId, toolKey, patch: {
+      enabled: payload.enabled,
+      monthly_quota: payload.monthly_quota,
+      daily_quota: payload.daily_quota,
+      ...(typeof payload.tokens_per_use === "number" ? { tokens_per_use: payload.tokens_per_use } : {}),
+      ...(typeof payload.usd_per_use === "number" ? { usd_per_use: payload.usd_per_use } : {}),
+    } } });
     await load();
     setMsg(t("ad_access_saved"));
     setBusy(false);

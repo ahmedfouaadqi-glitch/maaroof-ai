@@ -5,6 +5,7 @@ import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { CostInput } from "@/components/admin/CostInput";
 import { CostBadge } from "@/components/CostBadge";
 import { useI18n } from "@/lib/i18n";
+import { adminUpdatePlan, adminUpsertToolPlanAccess } from "@/lib/admin.functions";
 
 type Plan = { id: string; name: string; description: string | null; price_usd: number | string; monthly_tokens: number; daily_tokens: number; agent_daily_cap: number | null; agent_monthly_cap: number | null; agent_max_targets: number | null };
 type ToolRow = { id?: string; plan_id: string; tool_key: string; enabled: boolean; tokens_per_use: number; usd_per_use: number; monthly_quota: number | null; daily_quota: number | null };
@@ -95,17 +96,17 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
   async function saveAll() {
     setSaving(true);
     // Update plan-level fields
-    await supabase.from("subscription_plans").update({
+    await adminUpdatePlan({ data: { planId: plan.id, patch: {
       price_usd: priceUsd, monthly_tokens: monthlyTok, daily_tokens: dailyTok,
       agent_daily_cap: agentDaily || null, agent_monthly_cap: agentMonthly || null, agent_max_targets: agentTargets || null,
-    } as any).eq("id", plan.id);
+    } } });
     // Upsert all tool rows
     const payload = Object.values(rows).map((r) => ({
       plan_id: r.plan_id, tool_key: r.tool_key, enabled: r.enabled,
       tokens_per_use: r.tokens_per_use, usd_per_use: r.usd_per_use,
       monthly_quota: r.monthly_quota, daily_quota: r.daily_quota,
     }));
-    await supabase.from("tool_plan_access").upsert(payload as any, { onConflict: "plan_id,tool_key" });
+    await adminUpsertToolPlanAccess({ data: { rows: payload } });
     setSaving(false);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);

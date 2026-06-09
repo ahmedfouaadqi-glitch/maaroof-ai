@@ -1,57 +1,55 @@
-## تقييم تقريرك — ما هو صحيح وما المتبقي
+# خطة تأمين لوحة الإدارة
 
-تقريرك دقيق إلى حد بعيد. الإصلاحات السابقة فعّالة:
+الثغرة الحرجة المتبقية: لوحة الإدارة تنفذ ~35 عملية كتابة حساسة مباشرة من المتصفح عبر `supabase.from(...).insert/update/delete` معتمدةً فقط على فحص `isAdmin` في React. الحماية الفعلية الوحيدة الآن هي سياسات RLS — نقطة فشل واحدة.
 
-- ✅ **4.1 وصول الذكاء الاصطناعي المجاني** — تم فعلًا. `translateText` الآن يستخدم `requireSupabaseAuth` ويستهلك من `chargeTokens`. لا يمكن استدعاؤه بدون توكن صالح.
-- ✅ **4.2 إعادة التوجيه المفتوحة** — تم. اختبارك يثبت ذلك: `validateSearch` يرفض `https://evil.com` ويستبدلها بـ `/dashboard`.
-- ✅ **4.3 SECURITY DEFINER** — تمت إزالة `PUBLIC` من الخمس دوال. الفحص الحالي يظهر تحذيرَين فقط متبقيَين، وهما **مقصودان**: `has_role` و `ensure_trial_subscription` يجب أن يكونا قابلين للاستدعاء من `authenticated` (الأول تستخدمه سياسات RLS نفسها، والثاني هو تدفق التجربة المجانية للمستخدم المسجل). الفاحص يحذّر من أي دالة `SECURITY DEFINER` يستطيع المستخدم المسجَّل استدعاءها، لكن هذا التصميم آمن لأن منطق الدالتين لا يكشف بيانات الغير.
-- ✅ **4.4 الإضافة في `public`** — مقبولة بوعي.
+## 1) إنشاء `src/lib/admin.functions.ts`
 
-## لكن الفحص الجديد كشف ثغرة لم تكن في تقريرك الأصلي (خطيرة)
+ملف server functions، كل دالة محمية بـ `requireSupabaseAuth` + فحص دور `admin` على الخادم، ثم تنفذ الكتابة عبر `supabaseAdmin` (مستوردًا داخل `.handler` بـ `await import`).
 
-**`src/routes/admin.tsx` — تصعيد صلاحيات محتمل:**
-لوحة الإدارة تنفذ كل العمليات الحساسة (إضافة دور admin، تعديل خطط الاشتراك، منح اشتراكات يدوية، تعديل حصص المستخدمين) **مباشرة من المتصفح** عبر `supabase.from(...).insert/update` معتمدةً فقط على فحص `isAdmin` في React. أي مستخدم مسجَّل يستطيع تجاوز الواجهة واستدعاء PostgREST مباشرة من `curl`. الحماية الحقيقية الوحيدة حاليًا هي سياسات RLS في قاعدة البيانات — وهذا "نقطة فشل واحدة": أي تعديل ترحيلي خاطئ في المستقبل يفتح الباب فورًا.
-
-## الخطة
-
-### 1) تحويل عمليات لوحة الإدارة إلى Server Functions (CRITICAL)
-ملف جديد `src/lib/admin.functions.ts` يحتوي على دوال محمية بـ `requireSupabaseAuth` + فحص دور `admin` على الخادم قبل كل كتابة:
-- `adminGrantRole` / `adminRevokeRole` — كتابة على `user_roles`
-- `adminUpsertPlan` / `adminDeletePlan` — كتابة على `subscription_plans`
-- `adminUpsertAddon` / `adminGrantManualSubscription` — كتابة على `agent_addons` و `user_agent_subscriptions`
-- `adminPatchProfile` — تعديل الحصص/الباقات في `profiles`
-- `adminUpsertToolPricing` / `adminUpsertToolPlanAccess` — كتابة على جداول التسعير
-
-كل دالة تبدأ بـ:
+نمط موحّد:
 ```ts
-.middleware([requireSupabaseAuth])
-.handler(async ({ context, data }) => {
-  const { data: roles } = await context.supabase
-    .from('user_roles').select('role').eq('user_id', context.userId);
-  if (!roles?.some(r => r.role === 'admin'))
-    throw new Response('Forbidden', { status: 403 });
-  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-  // ... do the write via supabaseAdmin
-});
+const requireAdmin = async (ctx) => {
+  const { data } = await ctx.supabase.from('user_roles')
+    .select('role').eq('user_id', ctx.userId).eq('role', 'admin').maybeSingle();
+  if (!data) throw new Response('Forbidden', { status: 403 });
+};
 ```
 
-ثم استبدال جميع نداءات `supabase.from(...)` للكتابة في `admin.tsx` وملفات `src/components/admin/*` بـ `useServerFn(adminX)`. القراءات تبقى كما هي (RLS تحميها).
+الدوال المطلوبة (مجمَّعة حسب الجدول):
 
-### 2) توثيق التحذيرَين المقصودَين وإغلاقهما في سجل الفاحص
-- استدعاء `manage_security_finding` بـ `ignore` لكلٍّ من `has_role` و `ensure_trial_subscription` مع شرح أن استدعاء `authenticated` مطلوب بالتصميم.
-- تحديث `security memory` لتسجيل هذا القرار صراحةً (حتى لا يعيد الفاحص رفعها لاحقًا).
+| الدالة | الجدول | المستخدم في |
+|---|---|---|
+| `adminGrantRole` / `adminRevokeRole` | `user_roles` | admin.tsx، AdminTokensPanel |
+| `adminPatchProfile` | `profiles` (تحديثات الحصص/الباقات/الأجهزة) | admin.tsx (8 مواضع)، AdminTokensPanel |
+| `adminUpsertPlan` / `adminTogglePlan` / `adminDeletePlan` / `adminCreatePlan` | `subscription_plans` | admin.tsx، AdminPlansMatrixPanel، AdminPlanPricingPanel |
+| `adminUpsertToolPlanAccess` | `tool_plan_access` | AdminPlansMatrixPanel، AdminPlanPricingPanel |
+| `adminUpdateSubscriptionRequest` | `subscription_requests` + `profiles` + `user_agent_subscriptions` (موافقة/رفض طلب) | admin.tsx |
+| `adminGrantAgentSubscription` / `adminPatchAgentSubscription` | `user_agent_subscriptions` | admin.tsx |
+| `adminSetAppSetting` | `app_settings` | admin.tsx (تفعيل الوكيل عامًا) |
 
-### 3) التحقق
-- إعادة تشغيل الفحص الأمني — يجب أن تبقى فقط: تحذير الإضافة في `public` (مقبول).
-- اختبار يدوي بسيط: محاولة `curl` على PostgREST لإدراج دور admin بتوكن مستخدم عادي — يجب أن ترفضها RLS (والآن الكود لم يعد يحاول الكتابة المباشرة أصلًا).
+## 2) استبدال نداءات الكتابة المباشرة
 
-### الملفات المتأثرة
+في الملفات التالية، استبدال كل `await supabase.from(X).insert/update/delete` بنداء `useServerFn(adminX)`:
+- `src/routes/admin.tsx` (~25 موضع كتابة)
+- `src/components/admin/AdminTokensPanel.tsx` (3 مواضع)
+- `src/components/admin/AdminPlansMatrixPanel.tsx` (3 مواضع)
+- `src/components/admin/AdminPlanPricingPanel.tsx` (2 مواضع)
+
+**القراءات تبقى كما هي** — RLS الحالية تحمي الـ SELECT للأدمن فقط.
+
+## 3) إغلاق التحذيرات الأمنية المقصودة
+
+- `manage_security_finding` بـ `ignore` لـ `has_role` و `ensure_trial_subscription` مع تبرير: مطلوبتان بتصميم الـ RLS وتدفق التجربة المجانية.
+- تحديث `security memory` لتسجيل هذا.
+
+## 4) التحقق
+
+- إعادة فحص أمني — يجب ألا يبقى سوى تحذير الإضافة في `public` (مقبول).
+- فتح لوحة الإدارة كأدمن والتأكد من أن كل الأزرار تعمل (منح دور، تعديل خطة، موافقة طلب اشتراك).
+- اختبار سلبي: محاولة استدعاء serverFn من حساب غير-admin → 403.
+
+## الملفات
+
 - **جديد:** `src/lib/admin.functions.ts`
-- **معدّل:** `src/routes/admin.tsx` و `src/components/admin/AdminLedgerPanel.tsx` و `AdminPlanPricingPanel.tsx` و `AdminPlansMatrixPanel.tsx` و `AdminTokensPanel.tsx` (استبدال الكتابات المباشرة بنداءات serverFn).
-- **سجل الأمان:** تحديث `security memory` + تعليم تحذيرَي `SECURITY DEFINER` كمقبولَين.
-- **لا تغيير على قاعدة البيانات.**
-
-### لماذا "بقيت" ثغرات بعد الإصلاح السابق؟
-سببان:
-1. ثغرة لوحة الإدارة لم تكن مكتشفة في الجولة السابقة — الفاحص أضاف قاعدة جديدة (`ADMIN_CLIENT_SIDE_AUTH_ONLY`) تكتشف الاعتماد على `isAdmin` في الواجهة فقط.
-2. تحذيرَا `SECURITY DEFINER` المتبقيان مقصودان وآمنان، لكن الفاحص لا يستطيع التمييز — يجب تعليمهما يدويًا كمقبولَين مع تبرير مكتوب.
+- **معدّل:** `src/routes/admin.tsx`، `src/components/admin/AdminTokensPanel.tsx`، `AdminPlansMatrixPanel.tsx`، `AdminPlanPricingPanel.tsx`
+- **لا تغيير على قاعدة البيانات.** لا migrations.

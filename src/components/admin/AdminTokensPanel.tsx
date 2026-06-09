@@ -5,6 +5,7 @@ import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { CostBadge, formatUsd } from "@/components/CostBadge";
 import { CostInput } from "@/components/admin/CostInput";
 import { useI18n } from "@/lib/i18n";
+import { adminGrantRole, adminRevokeRole, adminPatchProfile } from "@/lib/admin.functions";
 
 type Profile = {
   id: string; email: string | null; full_name: string | null; username: string | null;
@@ -95,9 +96,9 @@ export function AdminTokensPanel() {
 
   async function toggleAdmin(userId: string, makeAdmin: boolean) {
     if (makeAdmin) {
-      await supabase.from("user_roles").upsert({ user_id: userId, role: "admin" } as any, { onConflict: "user_id,role" });
+      await adminGrantRole({ data: { userId, role: "admin" } });
     } else {
-      await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "admin");
+      await adminRevokeRole({ data: { userId, role: "admin" } });
     }
     load();
   }
@@ -231,7 +232,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       const isDisabled = v?.enabled === false;
       if (hasPrice || isDisabled) clean[k] = v;
     }
-    await supabase.from("profiles").update({
+    await adminPatchProfile({ data: { userId: user.id, patch: {
       tokens_balance: balance,
       tokens_daily_limit: daily === "" ? null : Number(daily),
       tokens_monthly_limit: monthly === "" ? null : Number(monthly),
@@ -244,7 +245,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       is_subscribed: isSub,
       subscription_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       max_devices: Math.max(1, Number(maxDevices) || 1),
-    } as any).eq("id", user.id);
+    } } });
     // Clear cached price for this user so the next tool open re-reads overrides + plan
     try {
       const mod = await import("@/lib/visibility");
