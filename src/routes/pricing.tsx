@@ -265,9 +265,9 @@ function PricingPage() {
                     <div className="mt-4 flex items-baseline gap-1">
                       <span className="text-xs text-muted-foreground">+</span>
                       <span className="font-display text-3xl font-bold text-gradient">
-                        {a.price_iqd.toLocaleString()}
+                        {priceOf(a).text}
                       </span>
-                      <span className="text-xs text-muted-foreground">{t("pr_iqd_per_month")}</span>
+                      <span className="text-xs text-muted-foreground">/{t("pr_monthly")}</span>
                     </div>
 
                     {exWho && (
