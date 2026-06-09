@@ -18,6 +18,8 @@ import {
   adminCreateAddon, adminUpdateAddon, adminDeleteAddon,
   adminSetAppSetting, adminUpsertSingleToolPlanAccess,
 } from "@/lib/admin.functions";
+import { PricesEditor, type PricesValue } from "@/components/admin/PricesEditor";
+import { normalizePrices } from "@/lib/currencies";
 
 
 export const Route = createFileRoute("/admin")({
