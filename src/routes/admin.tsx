@@ -490,25 +490,25 @@ function PlansTab() {
   useEffect(() => { load(); }, []);
 
   const toggle = async (p: any) => {
-    await supabase.from("subscription_plans").update({ active: !p.active }).eq("id", p.id);
+    await adminUpdatePlan({ data: { planId: p.id, patch: { active: !p.active } } });
     load();
   };
   const save = async (p: any, patch: any) => {
-    await supabase.from("subscription_plans").update(patch).eq("id", p.id);
+    await adminUpdatePlan({ data: { planId: p.id, patch } });
     load();
   };
   const del = async (p: any) => {
     if (!confirm(`Delete plan "${p.name}"?`)) return;
-    await supabase.from("subscription_plans").delete().eq("id", p.id);
+    await adminDeletePlan({ data: { planId: p.id } });
     load();
   };
   const create = async () => {
     const name = prompt("Plan name?");
     if (!name) return;
-    await supabase.from("subscription_plans").insert({
+    await adminCreatePlan({ data: { values: {
       name, description: "", price_iqd: 0, duration_days: 30,
       monthly_analyses: 50, monthly_suggestions: 30, active: false, sort_order: 99, features: [],
-    });
+    } } });
     load();
   };
 
