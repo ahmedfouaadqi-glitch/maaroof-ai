@@ -332,7 +332,7 @@ function PricingPage() {
             <h3 className="font-display text-xl font-bold">{t("pr_confirm_title")}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {selectedKind === "agent" ? t("pr_confirm_chose_agent") : t("pr_confirm_chose_plan")} <b className="text-foreground">{selected.name}</b> {t("pr_confirm_at_price")}{" "}
-              <b className="text-foreground">{selected.price_iqd.toLocaleString()} {t("pr_iqd")}</b>. {t("pr_confirm_pick_method")}
+              <b className="text-foreground">{priceOf(selected).text}</b>. {t("pr_confirm_pick_method")}
             </p>
 
             <div className="mt-5 grid gap-3">
