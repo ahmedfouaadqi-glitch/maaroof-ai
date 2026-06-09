@@ -682,7 +682,7 @@ function AgentTab() {
   const createAddon = async () => {
     const name = prompt("Addon name?");
     if (!name) return;
-    await adminCreateAddon({ data: { values: { name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] } } });
+    await adminCreateAddon({ data: { values: { name, description: "", prices: { USD: 0 }, default_currency: "USD", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] } } });
     load();
   };
   const deleteAddon = async (a: any) => {
