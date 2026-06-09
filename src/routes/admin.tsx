@@ -10,6 +10,14 @@ import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
 import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
 import { AdminPlansMatrixPanel } from "@/components/admin/AdminPlansMatrixPanel";
 import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
+import {
+  adminGrantRole, adminRevokeRole, adminPatchProfile,
+  adminCreatePlan, adminUpdatePlan, adminDeletePlan,
+  adminDecideSubscriptionRequest,
+  adminPatchAgentSubscription, adminGrantAgentSubscription,
+  adminCreateAddon, adminUpdateAddon, adminDeleteAddon,
+  adminSetAppSetting, adminUpsertSingleToolPlanAccess,
+} from "@/lib/admin.functions";
 
 
 export const Route = createFileRoute("/admin")({
