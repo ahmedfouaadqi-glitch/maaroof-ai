@@ -1,18 +1,22 @@
 // Unified matrix: rows = tools + agent features + agent addons;
-// columns = subscription plans. Each cell controls enabled + tokens/USD per use.
+// columns = subscription plans. Each cell controls enabled + tokens/price per use.
 // "+ New plan" inline column lets admin create a plan and immediately link tools.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Save, Copy, Trash2, Bot, Wrench } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, Bot, Wrench } from "lucide-react";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { useI18n } from "@/lib/i18n";
-import { formatUsd } from "@/components/CostBadge";
 import { adminCreatePlan, adminUpdatePlan, adminUpsertToolPlanAccess } from "@/lib/admin.functions";
+import { PricesEditor, type PricesValue } from "@/components/admin/PricesEditor";
+import { normalizePrices, pickPrice, formatMoney } from "@/lib/currencies";
+import { useCountry } from "@/lib/use-country";
 
 type Plan = {
   id: string;
   name: string;
   description: string | null;
+  prices: Record<string, number> | null;
+  default_currency: string | null;
   price_iqd: number | null;
   price_usd: number | null;
   monthly_tokens: number | null;
@@ -26,6 +30,8 @@ type PlanAccess = {
   enabled: boolean;
   tokens_per_use: number | null;
   usd_per_use: number | null;
+  prices: Record<string, number> | null;
+  default_currency: string | null;
 };
 
 const AGENT_ROWS = [
@@ -35,13 +41,15 @@ const AGENT_ROWS = [
 ];
 
 const L = {
-  ar: { title: "شبكة الخطط × الأدوات", subtitle: "تحكّم بكل ما تقدمه كل خطة من أدوات وميزات الوكيل، والأسعار لكل استخدام.", newPlan: "خطة جديدة", saveAll: "حفظ الكل", copyFrom: "نسخ من", deletePlan: "حذف الخطة", tools: "الأدوات", agentFeatures: "ميزات الوكيل", enabled: "مفعّلة", tokens: "توكن/مرة", usd: "تكلفة/مرة", name: "اسم الخطة", priceIqd: "السعر بالدينار", priceUsd: "السعر بالدولار", monthlyTokens: "توكن شهري", create: "إنشاء", cancel: "إلغاء", saved: "تم الحفظ", saveFailed: "فشل الحفظ" },
-  en: { title: "Plans × Tools Matrix", subtitle: "Control which tools and agent features each plan unlocks, and the per-use price.", newPlan: "New plan", saveAll: "Save all", copyFrom: "Copy from", deletePlan: "Delete plan", tools: "Tools", agentFeatures: "Agent features", enabled: "Enabled", tokens: "tokens/use", usd: "cost/use", name: "Plan name", priceIqd: "Price (IQD)", priceUsd: "Price (USD)", monthlyTokens: "Monthly tokens", create: "Create", cancel: "Cancel", saved: "Saved", saveFailed: "Save failed" },
-  ku: { title: "تۆڕی پلان × ئامراز", subtitle: "کۆنترۆڵی هەموو ئامرازەکان و تایبەتمەندییەکانی وەکیل بۆ هەر پلانێک.", newPlan: "پلانی نوێ", saveAll: "پاشەکەوتی هەموو", copyFrom: "کۆپی لە", deletePlan: "سڕینەوەی پلان", tools: "ئامرازەکان", agentFeatures: "تایبەتمەندی وەکیل", enabled: "چالاک", tokens: "تۆکن/جار", usd: "نرخ/جار", name: "ناوی پلان", priceIqd: "نرخ بە دینار", priceUsd: "نرخ بە دۆلار", monthlyTokens: "تۆکنی مانگانە", create: "دروستکردن", cancel: "ڕەتکردنەوە", saved: "پاشەکەوتکرا", saveFailed: "شکست" },
+  ar: { title: "شبكة الخطط × الأدوات", subtitle: "تحكّم بكل ما تقدمه كل خطة من أدوات وميزات الوكيل، والأسعار لكل استخدام بأي عملة.", newPlan: "خطة جديدة", saveAll: "حفظ الكل", copyFrom: "نسخ من", deletePlan: "حذف الخطة", tools: "الأدوات", agentFeatures: "ميزات الوكيل", enabled: "مفعّلة", tokens: "توكن/مرة", price: "السعر/مرة", name: "اسم الخطة", planPrices: "أسعار الخطة (متعدد العملات)", monthlyTokens: "توكن شهري", create: "إنشاء", cancel: "إلغاء", saved: "تم الحفظ", saveFailed: "فشل الحفظ" },
+  en: { title: "Plans × Tools Matrix", subtitle: "Control which tools and agent features each plan unlocks, plus per-use pricing in any currency.", newPlan: "New plan", saveAll: "Save all", copyFrom: "Copy from", deletePlan: "Delete plan", tools: "Tools", agentFeatures: "Agent features", enabled: "Enabled", tokens: "tokens/use", price: "price/use", name: "Plan name", planPrices: "Plan prices (multi-currency)", monthlyTokens: "Monthly tokens", create: "Create", cancel: "Cancel", saved: "Saved", saveFailed: "Save failed" },
+  ku: { title: "تۆڕی پلان × ئامراز", subtitle: "کۆنترۆڵی هەموو ئامرازەکان و تایبەتمەندییەکانی وەکیل بۆ هەر پلانێک.", newPlan: "پلانی نوێ", saveAll: "پاشەکەوتی هەموو", copyFrom: "کۆپی لە", deletePlan: "سڕینەوەی پلان", tools: "ئامرازەکان", agentFeatures: "تایبەتمەندی وەکیل", enabled: "چالاک", tokens: "تۆکن/جار", price: "نرخ/جار", name: "ناوی پلان", planPrices: "نرخی پلان", monthlyTokens: "تۆکنی مانگانە", create: "دروستکردن", cancel: "ڕەتکردنەوە", saved: "پاشەکەوتکرا", saveFailed: "شکست" },
 };
 
 export function AdminPlansMatrixPanel() {
   const { lang } = useI18n();
+  const { info: country } = useCountry();
+  const userCountry = country?.code || null;
   const t = (L as any)[lang] || L.ar;
   const [plans, setPlans] = useState<Plan[]>([]);
   const [access, setAccess] = useState<Record<string, Record<string, PlanAccess>>>({});
@@ -49,13 +57,13 @@ export function AdminPlansMatrixPanel() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [dirty, setDirty] = useState<Set<string>>(new Set()); // `${planId}:${toolKey}`
+  const [dirty, setDirty] = useState<Set<string>>(new Set());
 
   async function load() {
     setLoading(true);
     const [{ data: pl }, { data: ac }] = await Promise.all([
-      supabase.from("subscription_plans").select("id,name,description,price_iqd,price_usd,monthly_tokens,active,sort_order").eq("active", true).order("sort_order"),
-      supabase.from("tool_plan_access").select("plan_id, tool_key, enabled, tokens_per_use, usd_per_use"),
+      supabase.from("subscription_plans").select("id,name,description,prices,default_currency,price_iqd,price_usd,monthly_tokens,active,sort_order").eq("active", true).order("sort_order"),
+      supabase.from("tool_plan_access").select("plan_id, tool_key, enabled, tokens_per_use, usd_per_use, prices, default_currency"),
     ]);
     setPlans((pl as any) || []);
     const map: Record<string, Record<string, PlanAccess>> = {};
@@ -77,7 +85,7 @@ export function AdminPlansMatrixPanel() {
   }, [lang]);
 
   function getCell(planId: string, toolKey: string): PlanAccess {
-    return access[planId]?.[toolKey] || { plan_id: planId, tool_key: toolKey, enabled: false, tokens_per_use: 0, usd_per_use: 0 };
+    return access[planId]?.[toolKey] || { plan_id: planId, tool_key: toolKey, enabled: false, tokens_per_use: 0, usd_per_use: 0, prices: {}, default_currency: "USD" };
   }
 
   function patchCell(planId: string, toolKey: string, patch: Partial<PlanAccess>) {
@@ -99,7 +107,7 @@ export function AdminPlansMatrixPanel() {
       for (const k of allKeys) {
         const s = src[k];
         if (s) {
-          next[toId][k] = { plan_id: toId, tool_key: k, enabled: s.enabled, tokens_per_use: s.tokens_per_use, usd_per_use: s.usd_per_use };
+          next[toId][k] = { plan_id: toId, tool_key: k, enabled: s.enabled, tokens_per_use: s.tokens_per_use, usd_per_use: s.usd_per_use, prices: s.prices || {}, default_currency: s.default_currency || "USD" };
           setDirty((d) => new Set(d).add(`${toId}:${k}`));
         }
       }
@@ -120,6 +128,8 @@ export function AdminPlansMatrixPanel() {
           enabled: cell.enabled,
           tokens_per_use: cell.tokens_per_use ?? 0,
           usd_per_use: cell.usd_per_use ?? 0,
+          prices: cell.prices ?? {},
+          default_currency: cell.default_currency ?? "USD",
         });
       }
       if (rowsToUpsert.length > 0) {
@@ -134,12 +144,12 @@ export function AdminPlansMatrixPanel() {
     }
   }
 
-  async function createPlan(form: { name: string; price_iqd: number; price_usd: number; monthly_tokens: number }) {
+  async function createPlan(form: { name: string; prices: Record<string, number>; default_currency: string; monthly_tokens: number }) {
     try {
       await adminCreatePlan({ data: { values: {
         name: form.name,
-        price_iqd: form.price_iqd,
-        price_usd: form.price_usd,
+        prices: form.prices,
+        default_currency: form.default_currency,
         monthly_tokens: form.monthly_tokens,
         active: true,
         duration_days: 30,
@@ -192,7 +202,13 @@ export function AdminPlansMatrixPanel() {
                     <div>
                       <div className="font-display text-sm text-primary">{p.name}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {p.price_usd ? `${formatUsd(Number(p.price_usd))}` : (p.price_iqd ? `${p.price_iqd?.toLocaleString()} IQD` : "—")}
+                        {(() => {
+                          const picked = pickPrice(p.prices, userCountry, p.default_currency);
+                          if (picked) return formatMoney(picked.amount, picked.currency, lang as any);
+                          if (p.price_usd) return formatMoney(Number(p.price_usd), "USD", lang as any);
+                          if (p.price_iqd) return formatMoney(Number(p.price_iqd), "IQD", lang as any);
+                          return "—";
+                        })()}
                         {p.monthly_tokens ? ` · ${p.monthly_tokens.toLocaleString()} tok` : ""}
                       </div>
                     </div>

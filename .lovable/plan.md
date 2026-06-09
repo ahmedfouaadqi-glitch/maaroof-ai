@@ -1,55 +1,67 @@
-# خطة تأمين لوحة الإدارة
+# دعم تعدد العملات في الخطط والإضافات والأدوات
 
-الثغرة الحرجة المتبقية: لوحة الإدارة تنفذ ~35 عملية كتابة حساسة مباشرة من المتصفح عبر `supabase.from(...).insert/update/delete` معتمدةً فقط على فحص `isAdmin` في React. الحماية الفعلية الوحيدة الآن هي سياسات RLS — نقطة فشل واحدة.
+اليوم: `subscription_plans` يحتوي عمودين فقط `price_iqd` و `price_usd`، `agent_addons` يحتوي `price_iqd` فقط، و `tool_plan_access` يحتوي `usd_per_use`. لا يوجد ربط بين عملة العرض وموقع المستخدم.
 
-## 1) إنشاء `src/lib/admin.functions.ts`
+الهدف: تسمح الإدارة بإدخال السعر بأي عملة تختارها (IQD/USD/SAR/AED/EGP/EUR…) مع تحديد عملة العرض الافتراضية للخطة/الإضافة/الأداة. العميل يرى السعر بعملة بلده (Cloudflare `cf-ipcountry`) إن وُجد سعر لها، وإلا يقع إلى عملة الخطة الافتراضية ثم USD.
 
-ملف server functions، كل دالة محمية بـ `requireSupabaseAuth` + فحص دور `admin` على الخادم، ثم تنفذ الكتابة عبر `supabaseAdmin` (مستوردًا داخل `.handler` بـ `await import`).
+## 1) قاعدة البيانات (migration واحدة)
 
-نمط موحّد:
-```ts
-const requireAdmin = async (ctx) => {
-  const { data } = await ctx.supabase.from('user_roles')
-    .select('role').eq('user_id', ctx.userId).eq('role', 'admin').maybeSingle();
-  if (!data) throw new Response('Forbidden', { status: 403 });
-};
-```
+- إضافة على `subscription_plans`:
+  - `prices jsonb not null default '{}'::jsonb` — خريطة `{ "USD": 9.99, "IQD": 15000, "SAR": 37 }`
+  - `default_currency text not null default 'USD'`
+- نفس الإضافة على `agent_addons` و `tool_plan_access` (لتسعير الأداة الواحدة لكل خطة).
+- backfill: نسخ `price_usd`→`prices.USD` و `price_iqd`→`prices.IQD` و `usd_per_use`→`prices.USD`. الأعمدة القديمة تبقى للتوافق (للقراءة فقط، تُهمل لاحقًا).
+- جدول مرجعي صغير `country_currency (country_code text pk, currency text not null)` مع بذرة افتراضية (IQ→IQD، SA→SAR، AE→AED، EG→EGP، JO→JOD، KW→KWD، QA→QAR، BH→BHD، OM→OMR، LB→LBP، MA→MAD، DZ→DZD، TN→TND، LY→LYD، TR→TRY، GB→GBP، EU→EUR، باقي الدول→USD).
+- GRANT للقراءة العامة (`anon`+`authenticated`) للجدول المرجعي وللحقول الجديدة (موجودة أصلاً ضمن سياسات الجداول الحالية). RLS الحالية تكفي.
 
-الدوال المطلوبة (مجمَّعة حسب الجدول):
+## 2) كتالوج العملات في الواجهة
 
-| الدالة | الجدول | المستخدم في |
-|---|---|---|
-| `adminGrantRole` / `adminRevokeRole` | `user_roles` | admin.tsx، AdminTokensPanel |
-| `adminPatchProfile` | `profiles` (تحديثات الحصص/الباقات/الأجهزة) | admin.tsx (8 مواضع)، AdminTokensPanel |
-| `adminUpsertPlan` / `adminTogglePlan` / `adminDeletePlan` / `adminCreatePlan` | `subscription_plans` | admin.tsx، AdminPlansMatrixPanel، AdminPlanPricingPanel |
-| `adminUpsertToolPlanAccess` | `tool_plan_access` | AdminPlansMatrixPanel، AdminPlanPricingPanel |
-| `adminUpdateSubscriptionRequest` | `subscription_requests` + `profiles` + `user_agent_subscriptions` (موافقة/رفض طلب) | admin.tsx |
-| `adminGrantAgentSubscription` / `adminPatchAgentSubscription` | `user_agent_subscriptions` | admin.tsx |
-| `adminSetAppSetting` | `app_settings` | admin.tsx (تفعيل الوكيل عامًا) |
+ملف جديد `src/lib/currencies.ts`:
+- قائمة ~15 عملة: code, symbol, name_ar/en, locale, decimals.
+- `formatMoney(amount, currency, locale)` يستخدم `Intl.NumberFormat`.
+- `pickPrice(prices, userCountry, defaultCurrency)` يرجّع `{ amount, currency }` بالأولوية: عملة بلد المستخدم → default_currency → USD → أول مفتاح متاح.
+- خريطة `COUNTRY_CURRENCY` مرآة محلية للجدول المرجعي (لتفادي fetch إضافي).
 
-## 2) استبدال نداءات الكتابة المباشرة
+## 3) لوحة الإدارة
 
-في الملفات التالية، استبدال كل `await supabase.from(X).insert/update/delete` بنداء `useServerFn(adminX)`:
-- `src/routes/admin.tsx` (~25 موضع كتابة)
-- `src/components/admin/AdminTokensPanel.tsx` (3 مواضع)
-- `src/components/admin/AdminPlansMatrixPanel.tsx` (3 مواضع)
-- `src/components/admin/AdminPlanPricingPanel.tsx` (2 مواضع)
+- `AdminPlanPricingPanel.tsx` و `AdminPlansMatrixPanel.tsx`:
+  - استبدال حقلي IQD/USD المنفصلين بمحرّر صفوف ديناميكي: اختيار العملة من قائمة + إدخال المبلغ + زر حذف + زر "+ إضافة عملة".
+  - حقل `Default currency` (select) — يظهر العرض الافتراضي حين لا تتوفر عملة المستخدم.
+  - نفس المحرّر داخل خلية كل أداة في المصفوفة (`tool_plan_access.prices` بدل `usd_per_use`).
+- `admin.tsx` (تبويب Agent addons): نفس المحرّر لـ `agent_addons.prices`/`default_currency`.
 
-**القراءات تبقى كما هي** — RLS الحالية تحمي الـ SELECT للأدمن فقط.
+## 4) Server functions
 
-## 3) إغلاق التحذيرات الأمنية المقصودة
+تحديث في `src/lib/admin.functions.ts`:
+- إضافة `prices: z.record(z.string().regex(/^[A-Z]{3}$/), z.number().min(0)).optional()` و `default_currency: z.string().regex(/^[A-Z]{3}$/).optional()` إلى schemas: `planPayload`, `addonPayload`, `tpaRow`, `tpaPatch`.
+- لا حاجة لدوال جديدة — المسارات الموجودة (`adminUpdatePlan` / `adminCreatePlan` / `adminUpdateAddon` / `adminUpsertToolPlanAccess` / `adminUpsertSingleToolPlanAccess`) ستمرّر الحقول الجديدة.
 
-- `manage_security_finding` بـ `ignore` لـ `has_role` و `ensure_trial_subscription` مع تبرير: مطلوبتان بتصميم الـ RLS وتدفق التجربة المجانية.
-- تحديث `security memory` لتسجيل هذا.
+## 5) واجهة المستخدم (عرض الأسعار)
 
-## 4) التحقق
+- `src/routes/pricing.tsx`:
+  - استدعاء `useCountry()` (موجود)، ثم لكل خطة/إضافة: `pickPrice(p.prices, country, p.default_currency)` و عرض `formatMoney(...)`.
+  - تحديث نصوص واتساب/SMS لتستخدم العملة المختارة بدل `pr_iqd` الثابت.
+  - شارة صغيرة بجانب السعر: `Approx. {USD value}` عند اختلاف العملة عن USD، يُحسب من `prices.USD` إن وُجد (بدون أي API صرف خارجي).
+- أي مكون آخر يعرض سعر خطة (`SubscribeModal.tsx`, شارات في tools) يمرّ بنفس `pickPrice`/`formatMoney`.
 
-- إعادة فحص أمني — يجب ألا يبقى سوى تحذير الإضافة في `public` (مقبول).
-- فتح لوحة الإدارة كأدمن والتأكد من أن كل الأزرار تعمل (منح دور، تعديل خطة، موافقة طلب اشتراك).
-- اختبار سلبي: محاولة استدعاء serverFn من حساب غير-admin → 403.
+## 6) القراءات
+
+كل قراءات `subscription_plans` و `agent_addons` و `tool_plan_access` في الواجهة تُضاف لها الأعمدة `prices, default_currency` ضمن `select(...)`. يبقى `price_iqd/price_usd/usd_per_use` كاحتياط للقراءة فقط حتى نتأكد من تكامل البيانات.
+
+## 7) التحقق
+
+- Migration approved → backfill تلقائي → فحص أن كل خطة لها `prices` غير فارغة.
+- فتح `/admin` كأدمن: إضافة عملة جديدة لخطة، حفظ، ثم زيارة `/pricing` من حساب مستخدم → السعر يظهر بالعملة المتوقعة.
+- اختبار geo: تغيير الدولة يدويًا عبر `CountryProvider` → السعر يتبدّل فورًا.
+- اختبار fallback: خطة بدون سعر بعملة بلد المستخدم → يعرض `default_currency`.
 
 ## الملفات
 
-- **جديد:** `src/lib/admin.functions.ts`
-- **معدّل:** `src/routes/admin.tsx`، `src/components/admin/AdminTokensPanel.tsx`، `AdminPlansMatrixPanel.tsx`، `AdminPlanPricingPanel.tsx`
-- **لا تغيير على قاعدة البيانات.** لا migrations.
+- **Migration:** أعمدة جديدة + جدول `country_currency` + backfill.
+- **جديد:** `src/lib/currencies.ts`.
+- **معدّل:** `src/lib/admin.functions.ts`، `src/components/admin/AdminPlanPricingPanel.tsx`، `src/components/admin/AdminPlansMatrixPanel.tsx`، `src/routes/admin.tsx` (تبويب الإضافات)، `src/routes/pricing.tsx`، `src/components/SubscribeModal.tsx`.
+
+## ملاحظات
+
+- لا تحويل عملات في الخادم — الأسعار التي تدخلها الإدارة هي القيم الفعلية لكل عملة (تحكم كامل، بلا ضجيج أسعار صرف متذبذبة).
+- الأعمدة القديمة `price_iqd/price_usd/usd_per_use` لا تُحذف الآن؛ يمكن حذفها في migration لاحقة بعد التأكد من عدم استخدامها.

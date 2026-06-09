@@ -43,6 +43,7 @@ export type Database = {
           active: boolean
           created_at: string
           daily_task_cap: number
+          default_currency: string
           description: string | null
           features: Json
           id: string
@@ -50,12 +51,14 @@ export type Database = {
           monthly_tasks: number
           name: string
           price_iqd: number
+          prices: Json
           sort_order: number
         }
         Insert: {
           active?: boolean
           created_at?: string
           daily_task_cap?: number
+          default_currency?: string
           description?: string | null
           features?: Json
           id?: string
@@ -63,12 +66,14 @@ export type Database = {
           monthly_tasks?: number
           name: string
           price_iqd?: number
+          prices?: Json
           sort_order?: number
         }
         Update: {
           active?: boolean
           created_at?: string
           daily_task_cap?: number
+          default_currency?: string
           description?: string | null
           features?: Json
           id?: string
@@ -76,6 +81,7 @@ export type Database = {
           monthly_tasks?: number
           name?: string
           price_iqd?: number
+          prices?: Json
           sort_order?: number
         }
         Relationships: []
@@ -474,6 +480,24 @@ export type Database = {
         }
         Relationships: []
       }
+      country_currency: {
+        Row: {
+          country_code: string
+          currency: string
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          currency: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          currency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crawler_hits: {
         Row: {
           bot_name: string | null
@@ -809,6 +833,7 @@ export type Database = {
           agent_monthly_cap: number | null
           created_at: string
           daily_tokens: number
+          default_currency: string
           description: string | null
           duration_days: number
           features: Json
@@ -819,6 +844,7 @@ export type Database = {
           name: string
           price_iqd: number
           price_usd: number
+          prices: Json
           sort_order: number
         }
         Insert: {
@@ -828,6 +854,7 @@ export type Database = {
           agent_monthly_cap?: number | null
           created_at?: string
           daily_tokens?: number
+          default_currency?: string
           description?: string | null
           duration_days?: number
           features?: Json
@@ -838,6 +865,7 @@ export type Database = {
           name: string
           price_iqd?: number
           price_usd?: number
+          prices?: Json
           sort_order?: number
         }
         Update: {
@@ -847,6 +875,7 @@ export type Database = {
           agent_monthly_cap?: number | null
           created_at?: string
           daily_tokens?: number
+          default_currency?: string
           description?: string | null
           duration_days?: number
           features?: Json
@@ -857,6 +886,7 @@ export type Database = {
           name?: string
           price_iqd?: number
           price_usd?: number
+          prices?: Json
           sort_order?: number
         }
         Relationships: []
@@ -1009,11 +1039,13 @@ export type Database = {
         Row: {
           created_at: string
           daily_quota: number | null
+          default_currency: string
           enabled: boolean
           id: string
           monthly_quota: number | null
           notes: string | null
           plan_id: string
+          prices: Json
           tokens_per_use: number
           tool_key: string
           updated_at: string
@@ -1022,11 +1054,13 @@ export type Database = {
         Insert: {
           created_at?: string
           daily_quota?: number | null
+          default_currency?: string
           enabled?: boolean
           id?: string
           monthly_quota?: number | null
           notes?: string | null
           plan_id: string
+          prices?: Json
           tokens_per_use?: number
           tool_key: string
           updated_at?: string
@@ -1035,11 +1069,13 @@ export type Database = {
         Update: {
           created_at?: string
           daily_quota?: number | null
+          default_currency?: string
           enabled?: boolean
           id?: string
           monthly_quota?: number | null
           notes?: string | null
           plan_id?: string
+          prices?: Json
           tokens_per_use?: number
           tool_key?: string
           updated_at?: string

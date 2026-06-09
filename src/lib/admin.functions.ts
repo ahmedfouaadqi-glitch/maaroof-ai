@@ -101,12 +101,17 @@ export const adminPatchProfile = createServerFn({ method: "POST" })
   });
 
 // ============ subscription_plans ============
+const currencyCode = z.string().regex(/^[A-Z]{3}$/);
+const pricesMap = z.record(currencyCode, z.number().min(0));
+
 const planPayload = z
   .object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(1000).nullable().optional(),
     price_iqd: z.number().min(0).optional(),
     price_usd: z.number().min(0).optional(),
+    prices: pricesMap.optional(),
+    default_currency: currencyCode.optional(),
     duration_days: z.number().int().min(1).max(3650).optional(),
     monthly_analyses: z.number().int().min(0).optional(),
     monthly_suggestions: z.number().int().min(0).optional(),
@@ -171,6 +176,8 @@ const tpaRow = z
     enabled: z.boolean(),
     tokens_per_use: z.number().min(0).nullable().optional(),
     usd_per_use: z.number().min(0).nullable().optional(),
+    prices: pricesMap.optional(),
+    default_currency: currencyCode.optional(),
     monthly_quota: z.number().int().min(0).nullable().optional(),
     daily_quota: z.number().int().min(0).nullable().optional(),
   })
@@ -315,6 +322,8 @@ const addonPayload = z
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(1000).nullable().optional(),
     price_iqd: z.number().int().min(0).optional(),
+    prices: pricesMap.optional(),
+    default_currency: currencyCode.optional(),
     monthly_tasks: z.number().int().min(0).optional(),
     daily_task_cap: z.number().int().min(0).optional(),
     max_targets: z.number().int().min(0).optional(),
@@ -389,6 +398,8 @@ const tpaPatch = z
     enabled: z.boolean().optional(),
     tokens_per_use: z.number().min(0).optional(),
     usd_per_use: z.number().min(0).optional(),
+    prices: pricesMap.optional(),
+    default_currency: currencyCode.optional(),
     monthly_quota: z.number().int().min(0).nullable().optional(),
     daily_quota: z.number().int().min(0).nullable().optional(),
   })
@@ -411,6 +422,8 @@ export const adminUpsertSingleToolPlanAccess = createServerFn({ method: "POST" }
       enabled: data.patch.enabled ?? true,
       tokens_per_use: data.patch.tokens_per_use ?? 0,
       usd_per_use: data.patch.usd_per_use ?? 0,
+      prices: data.patch.prices ?? {},
+      default_currency: data.patch.default_currency ?? "USD",
       monthly_quota: data.patch.monthly_quota ?? null,
       daily_quota: data.patch.daily_quota ?? null,
     };

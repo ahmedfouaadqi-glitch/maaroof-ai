@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { whatsappLink } from "@/lib/whatsapp";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 import { usePageGuard } from "@/lib/visibility";
+import { useCountry } from "@/lib/use-country";
+import { pickPrice, formatMoney } from "@/lib/currencies";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -46,12 +48,23 @@ const AGENT_EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
 function PricingPage() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
+  const { info: country } = useCountry();
+  const userCountry = country?.code || null;
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedKind, setSelectedKind] = useState<"plan" | "agent">("plan");
   usePageGuard();
+
+  const priceOf = (row: any) => {
+    const picked = pickPrice(row?.prices, userCountry, row?.default_currency);
+    if (picked) return { ...picked, text: formatMoney(picked.amount, picked.currency, lang as any) };
+    // Legacy fallback (pre-migration rows).
+    if (Number(row?.price_iqd) > 0) return { amount: Number(row.price_iqd), currency: "IQD", text: formatMoney(Number(row.price_iqd), "IQD", lang as any) };
+    if (Number(row?.price_usd) > 0) return { amount: Number(row.price_usd), currency: "USD", text: formatMoney(Number(row.price_usd), "USD", lang as any) };
+    return { amount: 0, currency: "USD", text: "—" };
+  };
 
   useEffect(() => {
     supabase.from("subscription_plans").select("*").eq("active", true).order("sort_order")
@@ -105,7 +118,7 @@ function PricingPage() {
     else payload.agent_addon_id = selected.id;
     await supabase.from("subscription_requests").insert(payload);
     const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
-    const msg = `${label} ${selected.name} (${selected.price_iqd.toLocaleString()} ${t("pr_iqd")})\n${user.email}`;
+    const msg = `${label} ${selected.name} (${priceOf(selected).text})\n${user.email}`;
     window.open(whatsappLink(msg), "_blank");
     setSelected(null);
   };
@@ -119,7 +132,7 @@ function PricingPage() {
     const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
     const subject = encodeURIComponent(`${label} ${selected.name}`);
     const body = encodeURIComponent(
-      `${label}:\n• ${selected.name}\n• ${selected.price_iqd.toLocaleString()} ${t("pr_iqd")}\n\n${user.email}`,
+      `${label}:\n• ${selected.name}\n• ${priceOf(selected).text}\n\n${user.email}`,
     );
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     setSelected(null);
@@ -173,9 +186,8 @@ function PricingPage() {
 
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="font-display text-3xl font-bold text-gradient">
-                      {p.price_iqd.toLocaleString()}
+                      {priceOf(p).text}
                     </span>
-                    <span className="text-xs text-muted-foreground">{t("pr_iqd")}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {p.duration_days >= 365 ? t("pr_yearly_first") : t("pr_monthly")}
@@ -253,9 +265,9 @@ function PricingPage() {
                     <div className="mt-4 flex items-baseline gap-1">
                       <span className="text-xs text-muted-foreground">+</span>
                       <span className="font-display text-3xl font-bold text-gradient">
-                        {a.price_iqd.toLocaleString()}
+                        {priceOf(a).text}
                       </span>
-                      <span className="text-xs text-muted-foreground">{t("pr_iqd_per_month")}</span>
+                      <span className="text-xs text-muted-foreground">/{t("pr_monthly")}</span>
                     </div>
 
                     {exWho && (
@@ -320,7 +332,7 @@ function PricingPage() {
             <h3 className="font-display text-xl font-bold">{t("pr_confirm_title")}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {selectedKind === "agent" ? t("pr_confirm_chose_agent") : t("pr_confirm_chose_plan")} <b className="text-foreground">{selected.name}</b> {t("pr_confirm_at_price")}{" "}
-              <b className="text-foreground">{selected.price_iqd.toLocaleString()} {t("pr_iqd")}</b>. {t("pr_confirm_pick_method")}
+              <b className="text-foreground">{priceOf(selected).text}</b>. {t("pr_confirm_pick_method")}
             </p>
 
             <div className="mt-5 grid gap-3">
