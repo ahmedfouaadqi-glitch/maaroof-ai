@@ -885,11 +885,13 @@ function AccessTab() {
       daily_quota: existing?.daily_quota ?? null,
       ...patch,
     };
-    if (existing) {
-      await supabase.from("tool_plan_access").update(payload).eq("id", existing.id);
-    } else {
-      await supabase.from("tool_plan_access").insert(payload);
-    }
+    await adminUpsertSingleToolPlanAccess({ data: { planId, toolKey, patch: {
+      enabled: payload.enabled,
+      monthly_quota: payload.monthly_quota,
+      daily_quota: payload.daily_quota,
+      ...(typeof payload.tokens_per_use === "number" ? { tokens_per_use: payload.tokens_per_use } : {}),
+      ...(typeof payload.usd_per_use === "number" ? { usd_per_use: payload.usd_per_use } : {}),
+    } } });
     await load();
     setMsg(t("ad_access_saved"));
     setBusy(false);
