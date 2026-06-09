@@ -1,18 +1,22 @@
 // Unified matrix: rows = tools + agent features + agent addons;
-// columns = subscription plans. Each cell controls enabled + tokens/USD per use.
+// columns = subscription plans. Each cell controls enabled + tokens/price per use.
 // "+ New plan" inline column lets admin create a plan and immediately link tools.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Save, Copy, Trash2, Bot, Wrench } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, Bot, Wrench } from "lucide-react";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { useI18n } from "@/lib/i18n";
-import { formatUsd } from "@/components/CostBadge";
 import { adminCreatePlan, adminUpdatePlan, adminUpsertToolPlanAccess } from "@/lib/admin.functions";
+import { PricesEditor, type PricesValue } from "@/components/admin/PricesEditor";
+import { normalizePrices, pickPrice, formatMoney } from "@/lib/currencies";
+import { useCountry } from "@/lib/use-country";
 
 type Plan = {
   id: string;
   name: string;
   description: string | null;
+  prices: Record<string, number> | null;
+  default_currency: string | null;
   price_iqd: number | null;
   price_usd: number | null;
   monthly_tokens: number | null;
@@ -26,6 +30,8 @@ type PlanAccess = {
   enabled: boolean;
   tokens_per_use: number | null;
   usd_per_use: number | null;
+  prices: Record<string, number> | null;
+  default_currency: string | null;
 };
 
 const AGENT_ROWS = [
@@ -35,9 +41,9 @@ const AGENT_ROWS = [
 ];
 
 const L = {
-  ar: { title: "شبكة الخطط × الأدوات", subtitle: "تحكّم بكل ما تقدمه كل خطة من أدوات وميزات الوكيل، والأسعار لكل استخدام.", newPlan: "خطة جديدة", saveAll: "حفظ الكل", copyFrom: "نسخ من", deletePlan: "حذف الخطة", tools: "الأدوات", agentFeatures: "ميزات الوكيل", enabled: "مفعّلة", tokens: "توكن/مرة", usd: "تكلفة/مرة", name: "اسم الخطة", priceIqd: "السعر بالدينار", priceUsd: "السعر بالدولار", monthlyTokens: "توكن شهري", create: "إنشاء", cancel: "إلغاء", saved: "تم الحفظ", saveFailed: "فشل الحفظ" },
-  en: { title: "Plans × Tools Matrix", subtitle: "Control which tools and agent features each plan unlocks, and the per-use price.", newPlan: "New plan", saveAll: "Save all", copyFrom: "Copy from", deletePlan: "Delete plan", tools: "Tools", agentFeatures: "Agent features", enabled: "Enabled", tokens: "tokens/use", usd: "cost/use", name: "Plan name", priceIqd: "Price (IQD)", priceUsd: "Price (USD)", monthlyTokens: "Monthly tokens", create: "Create", cancel: "Cancel", saved: "Saved", saveFailed: "Save failed" },
-  ku: { title: "تۆڕی پلان × ئامراز", subtitle: "کۆنترۆڵی هەموو ئامرازەکان و تایبەتمەندییەکانی وەکیل بۆ هەر پلانێک.", newPlan: "پلانی نوێ", saveAll: "پاشەکەوتی هەموو", copyFrom: "کۆپی لە", deletePlan: "سڕینەوەی پلان", tools: "ئامرازەکان", agentFeatures: "تایبەتمەندی وەکیل", enabled: "چالاک", tokens: "تۆکن/جار", usd: "نرخ/جار", name: "ناوی پلان", priceIqd: "نرخ بە دینار", priceUsd: "نرخ بە دۆلار", monthlyTokens: "تۆکنی مانگانە", create: "دروستکردن", cancel: "ڕەتکردنەوە", saved: "پاشەکەوتکرا", saveFailed: "شکست" },
+  ar: { title: "شبكة الخطط × الأدوات", subtitle: "تحكّم بكل ما تقدمه كل خطة من أدوات وميزات الوكيل، والأسعار لكل استخدام بأي عملة.", newPlan: "خطة جديدة", saveAll: "حفظ الكل", copyFrom: "نسخ من", deletePlan: "حذف الخطة", tools: "الأدوات", agentFeatures: "ميزات الوكيل", enabled: "مفعّلة", tokens: "توكن/مرة", price: "السعر/مرة", name: "اسم الخطة", planPrices: "أسعار الخطة (متعدد العملات)", monthlyTokens: "توكن شهري", create: "إنشاء", cancel: "إلغاء", saved: "تم الحفظ", saveFailed: "فشل الحفظ" },
+  en: { title: "Plans × Tools Matrix", subtitle: "Control which tools and agent features each plan unlocks, plus per-use pricing in any currency.", newPlan: "New plan", saveAll: "Save all", copyFrom: "Copy from", deletePlan: "Delete plan", tools: "Tools", agentFeatures: "Agent features", enabled: "Enabled", tokens: "tokens/use", price: "price/use", name: "Plan name", planPrices: "Plan prices (multi-currency)", monthlyTokens: "Monthly tokens", create: "Create", cancel: "Cancel", saved: "Saved", saveFailed: "Save failed" },
+  ku: { title: "تۆڕی پلان × ئامراز", subtitle: "کۆنترۆڵی هەموو ئامرازەکان و تایبەتمەندییەکانی وەکیل بۆ هەر پلانێک.", newPlan: "پلانی نوێ", saveAll: "پاشەکەوتی هەموو", copyFrom: "کۆپی لە", deletePlan: "سڕینەوەی پلان", tools: "ئامرازەکان", agentFeatures: "تایبەتمەندی وەکیل", enabled: "چالاک", tokens: "تۆکن/جار", price: "نرخ/جار", name: "ناوی پلان", planPrices: "نرخی پلان", monthlyTokens: "تۆکنی مانگانە", create: "دروستکردن", cancel: "ڕەتکردنەوە", saved: "پاشەکەوتکرا", saveFailed: "شکست" },
 };
 
 export function AdminPlansMatrixPanel() {
