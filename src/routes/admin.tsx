@@ -18,6 +18,8 @@ import {
   adminCreateAddon, adminUpdateAddon, adminDeleteAddon,
   adminSetAppSetting, adminUpsertSingleToolPlanAccess,
 } from "@/lib/admin.functions";
+import { PricesEditor, type PricesValue } from "@/components/admin/PricesEditor";
+import { normalizePrices } from "@/lib/currencies";
 
 
 export const Route = createFileRoute("/admin")({
@@ -680,7 +682,7 @@ function AgentTab() {
   const createAddon = async () => {
     const name = prompt("Addon name?");
     if (!name) return;
-    await adminCreateAddon({ data: { values: { name, description: "", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] } } });
+    await adminCreateAddon({ data: { values: { name, description: "", prices: { USD: 0 }, default_currency: "USD", price_iqd: 0, monthly_tasks: 50, daily_task_cap: 10, max_targets: 1, active: false, sort_order: 99, features: [] } } });
     load();
   };
   const deleteAddon = async (a: any) => {
@@ -801,11 +803,11 @@ function AgentTab() {
               </div>
               <textarea defaultValue={a.description || ""} onBlur={(e) => updateAddon(a, { description: e.target.value })}
                 className="mt-2 w-full resize-none rounded border border-border bg-background/40 px-2 py-1 text-xs" rows={2} />
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <label>{t("ad_price")}
-                  <input type="number" defaultValue={a.price_iqd} onBlur={(e) => updateAddon(a, { price_iqd: parseInt(e.target.value, 10) || 0 })}
-                    className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
-                </label>
+              <div className="mt-3">
+                <div className="mb-1 text-xs text-muted-foreground">{t("ad_price")}</div>
+                <AddonPricesEditor addon={a} onSave={(v) => updateAddon(a, { prices: normalizePrices(v.prices), default_currency: v.default_currency })} />
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                 <label>{t("ad_monthly_tasks")}
                   <input type="number" defaultValue={a.monthly_tasks} onBlur={(e) => updateAddon(a, { monthly_tasks: parseInt(e.target.value, 10) || 0 })}
                     className="mt-0.5 w-full rounded border border-border bg-background/60 px-2 py-1" />
@@ -851,6 +853,30 @@ function AgentTab() {
     </div>
   );
 }
+
+function AddonPricesEditor({ addon, onSave }: { addon: any; onSave: (v: PricesValue) => void }) {
+  const initial: PricesValue = {
+    prices: (addon.prices && typeof addon.prices === "object") ? addon.prices : (addon.price_iqd ? { IQD: addon.price_iqd } : { USD: 0 }),
+    default_currency: addon.default_currency || (addon.price_iqd ? "IQD" : "USD"),
+  };
+  const [val, setVal] = useState<PricesValue>(initial);
+  const [dirty, setDirty] = useState(false);
+  return (
+    <div className="space-y-2">
+      <PricesEditor value={val} onChange={(v) => { setVal(v); setDirty(true); }} />
+      {dirty && (
+        <button
+          onClick={() => { onSave(val); setDirty(false); }}
+          className="rounded-full bg-primary/20 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/30"
+        >
+          حفظ الأسعار
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 
 function AccessTab() {
   const { t, lang } = useI18n();

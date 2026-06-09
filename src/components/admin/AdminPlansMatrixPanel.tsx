@@ -287,8 +287,7 @@ function RowLine({ row, plans, getCell, patchCell, t }: { row: { key: string; la
 
 function NewPlanModal({ t, onClose, onCreate }: { t: any; onClose: () => void; onCreate: (f: any) => void }) {
   const [name, setName] = useState("");
-  const [iqd, setIqd] = useState("");
-  const [usd, setUsd] = useState("");
+  const [prices, setPrices] = useState<PricesValue>({ prices: { USD: 0 }, default_currency: "USD" });
   const [tok, setTok] = useState("");
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
@@ -296,16 +295,20 @@ function NewPlanModal({ t, onClose, onCreate }: { t: any; onClose: () => void; o
         <h3 className="font-display text-lg font-bold">{t.newPlan}</h3>
         <div className="mt-4 space-y-3">
           <Field label={t.name}><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm" /></Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Field label={t.priceIqd}><input type="number" value={iqd} onChange={(e) => setIqd(e.target.value)} className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm" /></Field>
-            <Field label={t.priceUsd}><input type="number" step="0.01" value={usd} onChange={(e) => setUsd(e.target.value)} className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm" /></Field>
-          </div>
+          <Field label={t.planPrices}>
+            <PricesEditor value={prices} onChange={setPrices} />
+          </Field>
           <Field label={t.monthlyTokens}><input type="number" value={tok} onChange={(e) => setTok(e.target.value)} className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded border border-border px-3 py-1.5 text-sm">{t.cancel}</button>
           <button
-            onClick={() => name.trim() && onCreate({ name: name.trim(), price_iqd: Number(iqd) || 0, price_usd: Number(usd) || 0, monthly_tokens: Number(tok) || 0 })}
+            onClick={() => name.trim() && onCreate({
+              name: name.trim(),
+              prices: normalizePrices(prices.prices),
+              default_currency: prices.default_currency || "USD",
+              monthly_tokens: Number(tok) || 0,
+            })}
             disabled={!name.trim()}
             className="rounded bg-gradient-to-r from-primary to-accent px-4 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
