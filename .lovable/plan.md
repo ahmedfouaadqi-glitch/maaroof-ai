@@ -1,20 +1,23 @@
-## إكمال نظام تعدد العملات
+## تطبيق تعدد العملات على تبويب الخطط (Plans)
 
-### المتبقي
-1. **`NewPlanModal` في `AdminPlansMatrixPanel.tsx`** — يستخدم حقول `price_iqd` / `price_usd` القديمة. سأستبدلها بـ `PricesEditor` (مع `default_currency`) ليتطابق مع باقي اللوحة.
+### المشكلة
+تبويب **Plans** في `src/routes/admin.tsx` (دالة `PlansTab` و `PlanRow`) لا يزال يستخدم حقل `price_iqd` فقط للقراءة والكتابة، بينما باقي اللوحات (المصفوفة، الإضافات، أسعار الأدوات) تدعم العملات المتعددة.
 
-2. **تبويب Agent addons في `src/routes/admin.tsx` (~سطر 806)** — نموذج إنشاء/تعديل الإضافات لا يزال يستخدم سعر ثابت. سأضيف `PricesEditor` + اختيار العملة الافتراضية، وأمرّر `prices` و `default_currency` إلى `adminUpsertAgentAddon`.
+### التغييرات في `src/routes/admin.tsx`
 
-3. **عرض أسعار الـ Agent addons للمستخدم** — أي مكان يعرض سعر الإضافة (مثل `SubscribeModal` أو صفحة الـ agent) سيستخدم `pickPrice` + `formatMoney` مع `useCountry`، مع عرض "≈ $X" عند اختلاف العملة عن USD.
+1. **`PlansTab.create`** — استبدال القيم الافتراضية لاستخدام `prices: { USD: 0 }` و `default_currency: "USD"` بدل `price_iqd: 0`.
 
-4. **تحقق سريع**:
-   - إنشاء خطة جديدة بعملات متعددة من النموذج → تظهر صحيحة في الشبكة وفي `/pricing`.
-   - تعديل إضافة agent بعملة SAR + USD افتراضي → مستخدم من السعودية يرى SAR، من غيرها يرى USD.
-   - تشغيل `supabase--linter` للتأكد من عدم وجود تحذيرات جديدة.
+2. **`PlanRow` (وضع العرض)** — بدل عرض `{plan.price_iqd} IQD` ثابت، استخدم `pickPrice(plan.prices, userCountry, plan.default_currency)` + `formatMoney` لإظهار سعر العملة المختارة (مع الرجوع إلى `price_iqd`/`price_usd` القديمة كاحتياط للسجلات القديمة).
 
-### الملفات المتأثرة
-- `src/components/admin/AdminPlansMatrixPanel.tsx` (NewPlanModal فقط)
-- `src/routes/admin.tsx` (تبويب Agent addons)
-- `src/components/SubscribeModal.tsx` أو ما يعادله لعرض سعر الإضافة (عند الحاجة)
+3. **`PlanRow` (وضع التحرير)** — استبدال حقل `Price (IQD)` بمحرر `PricesEditor` كامل (مع `default_currency` radio). تمرير `prices` (بعد `normalizePrices`) و `default_currency` ضمن الـ patch المُرسَل إلى `adminUpdatePlan`.
 
-لا تغييرات على قاعدة البيانات أو على server functions — الأعمدة والـ schemas جاهزة من الجولة السابقة.
+4. **Hook بسيط**: استخدام `useI18n().lang` و `useCountry()` داخل `PlanRow` لاختيار العرض، تماماً كما في `AdminPlansMatrixPanel`.
+
+### التحقق
+- إنشاء خطة جديدة من هذا التبويب → ترى `USD: 0` افتراضياً وتستطيع إضافة IQD/SAR/AED.
+- تحرير خطة موجودة → الأسعار القديمة (`price_iqd`) تظهر تلقائياً في المحرر كقيمة IQD ابتدائية إن لم يوجد `prices`.
+- العرض للزائر في `/pricing` لم يتغير لأنه يعتمد بالفعل على `prices` / `default_currency`.
+
+### الملفات
+- `src/routes/admin.tsx` فقط (دوال `PlansTab` و `PlanRow`).
+- لا تغييرات على قاعدة البيانات أو على `admin.functions.ts` (الـ schema يقبل `prices` و `default_currency` بالفعل).
