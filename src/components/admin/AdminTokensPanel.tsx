@@ -5,6 +5,7 @@ import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { CostBadge, formatUsd } from "@/components/CostBadge";
 import { CostInput } from "@/components/admin/CostInput";
 import { useI18n } from "@/lib/i18n";
+import { adminGrantRole, adminRevokeRole, adminPatchProfile } from "@/lib/admin.functions";
 
 type Profile = {
   id: string; email: string | null; full_name: string | null; username: string | null;
