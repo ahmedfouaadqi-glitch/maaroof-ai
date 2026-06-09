@@ -509,7 +509,9 @@ function PlansTab() {
     const name = prompt("Plan name?");
     if (!name) return;
     await adminCreatePlan({ data: { values: {
-      name, description: "", price_iqd: 0, duration_days: 30,
+      name, description: "",
+      prices: { USD: 0 }, default_currency: "USD",
+      price_iqd: 0, duration_days: 30,
       monthly_analyses: 50, monthly_suggestions: 30, active: false, sort_order: 99, features: [],
     } } });
     load();
