@@ -385,7 +385,7 @@ function UsersTab() {
                       {(r.device_fingerprint || (Array.isArray(r.device_fingerprints) && r.device_fingerprints.length > 0)) && (
                         <button onClick={async () => {
                           if (!confirm(t("admin_reset_fp_confirm"))) return;
-                          await supabase.from("profiles").update({ device_fingerprint: null, device_locked_at: null, device_fingerprints: [] }).eq("id", r.id);
+                          await adminPatchProfile({ data: { userId: r.id, patch: { device_fingerprint: null, device_locked_at: null, device_fingerprints: [] } } });
                           load();
                         }} className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/5 px-3 py-1 text-xs text-warning hover:bg-warning/10">
                           <Smartphone className="size-3" /> {t("admin_reset_fp")}
