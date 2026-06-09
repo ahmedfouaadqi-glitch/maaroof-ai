@@ -48,6 +48,8 @@ const L = {
 
 export function AdminPlansMatrixPanel() {
   const { lang } = useI18n();
+  const { info: country } = useCountry();
+  const userCountry = country?.code || null;
   const t = (L as any)[lang] || L.ar;
   const [plans, setPlans] = useState<Plan[]>([]);
   const [access, setAccess] = useState<Record<string, Record<string, PlanAccess>>>({});
@@ -55,13 +57,13 @@ export function AdminPlansMatrixPanel() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [dirty, setDirty] = useState<Set<string>>(new Set()); // `${planId}:${toolKey}`
+  const [dirty, setDirty] = useState<Set<string>>(new Set());
 
   async function load() {
     setLoading(true);
     const [{ data: pl }, { data: ac }] = await Promise.all([
-      supabase.from("subscription_plans").select("id,name,description,price_iqd,price_usd,monthly_tokens,active,sort_order").eq("active", true).order("sort_order"),
-      supabase.from("tool_plan_access").select("plan_id, tool_key, enabled, tokens_per_use, usd_per_use"),
+      supabase.from("subscription_plans").select("id,name,description,prices,default_currency,price_iqd,price_usd,monthly_tokens,active,sort_order").eq("active", true).order("sort_order"),
+      supabase.from("tool_plan_access").select("plan_id, tool_key, enabled, tokens_per_use, usd_per_use, prices, default_currency"),
     ]);
     setPlans((pl as any) || []);
     const map: Record<string, Record<string, PlanAccess>> = {};
@@ -83,7 +85,7 @@ export function AdminPlansMatrixPanel() {
   }, [lang]);
 
   function getCell(planId: string, toolKey: string): PlanAccess {
-    return access[planId]?.[toolKey] || { plan_id: planId, tool_key: toolKey, enabled: false, tokens_per_use: 0, usd_per_use: 0 };
+    return access[planId]?.[toolKey] || { plan_id: planId, tool_key: toolKey, enabled: false, tokens_per_use: 0, usd_per_use: 0, prices: {}, default_currency: "USD" };
   }
 
   function patchCell(planId: string, toolKey: string, patch: Partial<PlanAccess>) {
@@ -105,7 +107,7 @@ export function AdminPlansMatrixPanel() {
       for (const k of allKeys) {
         const s = src[k];
         if (s) {
-          next[toId][k] = { plan_id: toId, tool_key: k, enabled: s.enabled, tokens_per_use: s.tokens_per_use, usd_per_use: s.usd_per_use };
+          next[toId][k] = { plan_id: toId, tool_key: k, enabled: s.enabled, tokens_per_use: s.tokens_per_use, usd_per_use: s.usd_per_use, prices: s.prices || {}, default_currency: s.default_currency || "USD" };
           setDirty((d) => new Set(d).add(`${toId}:${k}`));
         }
       }
@@ -126,6 +128,8 @@ export function AdminPlansMatrixPanel() {
           enabled: cell.enabled,
           tokens_per_use: cell.tokens_per_use ?? 0,
           usd_per_use: cell.usd_per_use ?? 0,
+          prices: cell.prices ?? {},
+          default_currency: cell.default_currency ?? "USD",
         });
       }
       if (rowsToUpsert.length > 0) {
@@ -140,12 +144,12 @@ export function AdminPlansMatrixPanel() {
     }
   }
 
-  async function createPlan(form: { name: string; price_iqd: number; price_usd: number; monthly_tokens: number }) {
+  async function createPlan(form: { name: string; prices: Record<string, number>; default_currency: string; monthly_tokens: number }) {
     try {
       await adminCreatePlan({ data: { values: {
         name: form.name,
-        price_iqd: form.price_iqd,
-        price_usd: form.price_usd,
+        prices: form.prices,
+        default_currency: form.default_currency,
         monthly_tokens: form.monthly_tokens,
         active: true,
         duration_days: 30,
@@ -198,7 +202,13 @@ export function AdminPlansMatrixPanel() {
                     <div>
                       <div className="font-display text-sm text-primary">{p.name}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {p.price_usd ? `${formatUsd(Number(p.price_usd))}` : (p.price_iqd ? `${p.price_iqd?.toLocaleString()} IQD` : "—")}
+                        {(() => {
+                          const picked = pickPrice(p.prices, userCountry, p.default_currency);
+                          if (picked) return formatMoney(picked.amount, picked.currency, lang as any);
+                          if (p.price_usd) return formatMoney(Number(p.price_usd), "USD", lang as any);
+                          if (p.price_iqd) return formatMoney(Number(p.price_iqd), "IQD", lang as any);
+                          return "—";
+                        })()}
                         {p.monthly_tokens ? ` · ${p.monthly_tokens.toLocaleString()} tok` : ""}
                       </div>
                     </div>
