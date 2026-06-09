@@ -331,7 +331,7 @@ function UsersTab() {
                       title="Extra fee per additional device (IQD)"
                       onBlur={async (e) => {
                         const v = Math.max(0, Number(e.target.value || 0));
-                        await supabase.from("profiles").update({ extra_device_fee_iqd: v }).eq("id", r.id);
+                        await adminPatchProfile({ data: { userId: r.id, patch: { extra_device_fee_iqd: v } } });
                         load();
                       }}
                       className="w-20 rounded border border-border bg-background/60 px-1.5 py-0.5 text-xs"
