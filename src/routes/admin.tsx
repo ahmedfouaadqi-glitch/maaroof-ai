@@ -854,6 +854,30 @@ function AgentTab() {
   );
 }
 
+function AddonPricesEditor({ addon, onSave }: { addon: any; onSave: (v: PricesValue) => void }) {
+  const initial: PricesValue = {
+    prices: (addon.prices && typeof addon.prices === "object") ? addon.prices : (addon.price_iqd ? { IQD: addon.price_iqd } : { USD: 0 }),
+    default_currency: addon.default_currency || (addon.price_iqd ? "IQD" : "USD"),
+  };
+  const [val, setVal] = useState<PricesValue>(initial);
+  const [dirty, setDirty] = useState(false);
+  return (
+    <div className="space-y-2">
+      <PricesEditor value={val} onChange={(v) => { setVal(v); setDirty(true); }} />
+      {dirty && (
+        <button
+          onClick={() => { onSave(val); setDirty(false); }}
+          className="rounded-full bg-primary/20 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/30"
+        >
+          حفظ الأسعار
+        </button>
+      )}
+    </div>
+  );
+}
+
+
+
 function AccessTab() {
   const { t, lang } = useI18n();
   const [plans, setPlans] = useState<any[]>([]);
