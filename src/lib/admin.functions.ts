@@ -322,6 +322,8 @@ const addonPayload = z
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(1000).nullable().optional(),
     price_iqd: z.number().int().min(0).optional(),
+    prices: pricesMap.optional(),
+    default_currency: currencyCode.optional(),
     monthly_tasks: z.number().int().min(0).optional(),
     daily_task_cap: z.number().int().min(0).optional(),
     max_targets: z.number().int().min(0).optional(),
