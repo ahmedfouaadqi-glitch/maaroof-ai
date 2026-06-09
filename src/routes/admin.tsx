@@ -530,10 +530,22 @@ function PlansTab() {
 }
 
 function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: () => void; onSave: (patch: any) => void; onDelete: () => void }) {
+  const { lang } = useI18n();
+  const { info: country } = useCountry();
+  const userCountry = country?.code || null;
   const [edit, setEdit] = useState(false);
+  const initialPrices: PricesValue = {
+    prices: (plan.prices && typeof plan.prices === "object" && Object.keys(plan.prices).length > 0)
+      ? plan.prices
+      : (plan.price_iqd
+          ? { IQD: Number(plan.price_iqd) }
+          : (plan.price_usd ? { USD: Number(plan.price_usd) } : { USD: 0 })),
+    default_currency: plan.default_currency || (plan.price_iqd ? "IQD" : "USD"),
+  };
+  const [pv, setPv] = useState<PricesValue>(initialPrices);
   const [f, setF] = useState({
     name: plan.name, description: plan.description || "",
-    price_iqd: plan.price_iqd, duration_days: plan.duration_days,
+    duration_days: plan.duration_days,
     monthly_analyses: plan.monthly_analyses, monthly_suggestions: plan.monthly_suggestions,
     sort_order: plan.sort_order,
     features: Array.isArray(plan.features) ? plan.features.join("\n") : "",
@@ -541,13 +553,22 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
   const submit = () => {
     onSave({
       name: f.name, description: f.description,
-      price_iqd: Number(f.price_iqd) || 0, duration_days: Number(f.duration_days) || 30,
+      prices: normalizePrices(pv.prices),
+      default_currency: pv.default_currency || "USD",
+      duration_days: Number(f.duration_days) || 30,
       monthly_analyses: Number(f.monthly_analyses) || 0, monthly_suggestions: Number(f.monthly_suggestions) || 0,
       sort_order: Number(f.sort_order) || 0,
       features: f.features.split("\n").map((x: string) => x.trim()).filter(Boolean),
     });
     setEdit(false);
   };
+  const displayPrice = (() => {
+    const picked = pickPrice(plan.prices, userCountry, plan.default_currency);
+    if (picked) return formatMoney(picked.amount, picked.currency, lang as any);
+    if (plan.price_usd) return formatMoney(Number(plan.price_usd), "USD", lang as any);
+    if (plan.price_iqd) return formatMoney(Number(plan.price_iqd), "IQD", lang as any);
+    return "—";
+  })();
   return (
     <div className="rounded-xl border border-border bg-card/70 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -563,7 +584,7 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
       </div>
       {!edit ? (
         <div className="mt-2 text-sm text-muted-foreground" title="Monthly Analyses / Monthly Suggestions (posts)">
-          {plan.price_iqd.toLocaleString()} IQD · {plan.duration_days}d ·{" "}
+          {displayPrice} · {plan.duration_days}d ·{" "}
           <span className="inline-flex items-center gap-1" title="Monthly Analyses"><Activity className="size-3 text-primary" />{plan.monthly_analyses}</span>{" "}
           <span className="text-muted-foreground">·</span>{" "}
           <span className="inline-flex items-center gap-1" title="Monthly Suggestions / Posts"><Pencil className="size-3 text-accent" />{plan.monthly_suggestions}</span>
@@ -574,7 +595,7 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
           <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={inp} /></Field>
           <Field label="Sort order"><input type="number" value={f.sort_order} onChange={(e) => setF({ ...f, sort_order: e.target.value as any })} className={inp} /></Field>
           <Field label="Description" full><textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} className={`${inp} h-20`} /></Field>
-          <Field label="Price (IQD)"><input type="number" value={f.price_iqd} onChange={(e) => setF({ ...f, price_iqd: e.target.value as any })} className={inp} /></Field>
+          <Field label="Prices (multi-currency)" full><PricesEditor value={pv} onChange={setPv} /></Field>
           <Field label="Duration (days)"><input type="number" value={f.duration_days} onChange={(e) => setF({ ...f, duration_days: e.target.value as any })} className={inp} /></Field>
           <Field label="Monthly analyses"><input type="number" value={f.monthly_analyses} onChange={(e) => setF({ ...f, monthly_analyses: e.target.value as any })} className={inp} /></Field>
           <Field label="Monthly suggestions"><input type="number" value={f.monthly_suggestions} onChange={(e) => setF({ ...f, monthly_suggestions: e.target.value as any })} className={inp} /></Field>
