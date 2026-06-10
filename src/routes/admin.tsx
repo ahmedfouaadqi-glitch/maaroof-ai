@@ -42,7 +42,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "ledger";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "contact" | "ledger";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
