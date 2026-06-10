@@ -345,7 +345,7 @@ function PricingPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-success to-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
               >
                 <MessageCircle className="size-4" />
-                {t("pr_whatsapp")} — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>+964 773 357 0130</span>
+                {t("pr_whatsapp")} — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{contact.phone_display}</span>
               </button>
               <button
                 onClick={sendEmail}
