@@ -1,79 +1,113 @@
-## 1) سؤال Kimi — هل في مشكلة؟
+# خطة التنفيذ الشاملة
 
-**لا توجد مشكلة فعلية.** تحققت من الكود:
-- Kimi مُدرَج في كل القوائم (`PLATFORMS` التسع) في كل الأدوات: `brand-boost`, `compare`, `analyze`, `visibility`, `applied-ranking`, `competitor-compare`, `platform-probe`، إلخ.
-- في `src/routes/api/brand-boost.ts` (سطر 25) Kimi مربوط بـ `google/gemini-2.5-flash-lite` مع `proxy: true`.
+## 1) CMS كامل للنصوص والمحتوى (Content Studio)
 
-السبب: **Lovable AI Gateway ما يوفر موديل Moonshot/Kimi مباشر** (راجع كتالوج الموديلات — ما فيه أي موديل Moonshot). نفس الحال ينطبق على Claude و Grok و Mistral و DeepSeek — كلهم proxies لأن الـGateway لا يكشفهم مباشرة. وهذا هو السلوك المعتمد المُعلَن في الواجهة:
-> "for closed platforms (ChatGPT, Claude, Copilot, DeepSeek, Mistral, Kimi) the bar is inferred from the real evidence layer".
+**جدول جديد `site_content`**
+```
+key text PK         -- مثل: home.hero.title, tool.brand_boost.tab.outreach
+namespace text      -- home | tool:<key> | header | footer | page:<slug>
+ar text, en text, ku text
+updated_by uuid, updated_at timestamptz
+```
++ GRANT + RLS (read: anon/auth; write: admin فقط).
 
-**التوصية المهنية**: نُبقي Kimi proxy حالياً (لا يوجد بديل)، لكن **نوحّد طريقة الـproxy ونوضّحها للمستخدم**:
-- Kimi طويل السياق وثنائي اللغة CN/EN، فالأنسب رفعه من `gemini-2.5-flash-lite` إلى `gemini-2.5-pro` (سياق أطول ومنطق أقوى) بدل lite الحالي — هذا أقرب لسلوكه الحقيقي.
-- إضافة Tooltip في كروت النتائج عند Kimi (و باقي proxies) يوضّح: "محاكاة عبر موديل مكافئ — لا يوجد API عام لـKimi".
+**Resolver واحد `useContent(key, fallback)`**:
+- يقرأ من `site_content` (cache في localStorage + realtime invalidate)
+- يرجع للـ `i18n` الحالي كـ fallback (لا كسر للموجود)
+- جميع المكونات تستبدل `t("…")` تدريجياً بـ `useContent("…", t("…"))`
 
-> ملاحظة: إن كان قصدك أن Kimi غير ظاهر/غير محسوب في أداة معينة، أرجو تحديد الأداة بالاسم لأن الفحص يُظهر أنه مربوط بكل الأدوات الحالية.
+**سكربت bootstrap لمرة واحدة** يمشي على ملف `src/lib/i18n.tsx` ويحقن كل المفاتيح الحالية في `site_content` (ar/en/ku) فيظهرون فوراً في لوحة الإدارة.
 
-## 2) تعديل معلومات "اتصل بنا" من لوحة الإدارة
+**تبويب جديد في `admin.tsx` → "Content Studio"** يحتوي:
+- بحث + فلترة حسب namespace (الواجهة الرئيسية، الهيدر، الفوتر، كل أداة على حدة، الفوتر، صفحات مخصصة…).
+- محرر جدول بثلاث خانات (ar/en/ku) لكل مفتاح.
+- زر **"ترجمة تلقائية"** لكل صف أو دفعة → يستدعي `translateText` serverFn الموجود مسبقاً.
+- زر **"إنشاء صفحة جديدة"**: يفتح حوار (slug + عنوان + محتوى Markdown) → يخزن في جدول `custom_pages` ويظهر تلقائياً تحت route ديناميكي `/p/$slug` بكل اللغات (مع ترجمة تلقائية للنسخ الفارغة).
 
-حالياً معلومات الاتصال **مكتوبة hardcoded** في الكود:
-- `src/lib/whatsapp.ts` → رقم WhatsApp `9647733570130`
-- `src/routes/contact.tsx` → الرقم المعروض `+964 773 357 0130`
-- `src/routes/pricing.tsx` → `SUPPORT_EMAIL = "ahmedfouaad.qi@gmail.com"`
-- `src/components/SubscribeModal.tsx` → نفس الرقم
-- `src/lib/i18n.tsx` → `footer_contact` يحتوي الرقم في كل اللغات الثلاث
+**تبويبات الأدوات الداخلية**: كل tab key يُسجّل في `site_content` بـ namespace=`tool:<toolKey>` فيمكن تعديل تسميته بكل اللغات من Content Studio.
 
-### الحل
+**التحكم في الهيدر** (إخفاء/إظهار الوكيل + روابط):
+- توسيع `app_settings.key='header_config'` إلى `{ show_agent: bool, show_pricing: bool, extra_links: [{href,label_ar,label_en,label_ku}], extra_phones: [{number, desc_ar, desc_en, desc_ku}] }`
+- لوحة جديدة في الإدارة "Header & Navigation" مع زر ترجمة تلقائية لأي وصف.
+- `SiteHeader.tsx` و `contact.tsx` يقرؤون منها.
 
-تخزين كل المعلومات في `app_settings` تحت المفتاح `contact_info` (JSON)، وقراءتها من كل الصفحات.
+## 2) التصدير لكل أداة + ربط مع منشئ التقارير
 
-**شكل البيانات**:
-```json
-{
-  "whatsapp_number": "9647733570130",
-  "phone_display": "+964 773 357 0130",
-  "email": "ahmedfouaad.qi@gmail.com",
-  "address_ar": "بغداد، العراق",
-  "address_en": "Baghdad, Iraq",
-  "address_ku": "بەغدا، عێراق",
-  "working_hours_ar": "السبت – الخميس · 9 ص – 6 م",
-  "working_hours_en": "Sat – Thu · 9 AM – 6 PM",
-  "working_hours_ku": "شەممە – پێنجشەممە · ٩ ب.ن – ٦ د.ن",
-  "facebook": "",
-  "instagram": "",
-  "twitter": "",
-  "linkedin": "",
-  "telegram": ""
-}
+- توسيع `app_settings.key='export_config'` إلى:
+  ```
+  { mode: "per_tool" | "report_only" | "both",
+    per_tool_enabled: { [toolKey]: boolean } }
+  ```
+- لوحة إدارة جديدة "Exports" تتيح:
+  - وضع موحّد (التصدير من منشئ التقارير فقط) أو
+  - تفعيل/تعطيل التصدير لكل أداة على حدة.
+- مكوّن `<ExportButtons>` يقرأ الإعداد ويظهر/يختفي تلقائياً.
+- كل أداة لا تحتوي تصديراً تحصل على `<ExportButtons>` + زر **"إرسال إلى منشئ التقارير"** (يخزن المخرج في `report_drafts` جديد).
+
+## 3) تطابق لغة الواجهة ولغة المخرجات
+
+**المشكلة**: تبويبات الأدوات (مثل تعزيز العلامة) تبقى بلغة قديمة بعد تغيير اللغة.
+
+**الإصلاح**:
+- كل لوحة أداة (`BrandBoostAgent`, `CompetitorCompare`, `AIVisibility`, `AppliedRanking`, `PostSuggester`, …) تستبدل أي نص ثابت بـ `useContent`/`t` المرتبط بـ `lang` reactive.
+- إضافة `useEffect` يعيد فحص أسماء التبويبات + النتائج المخزنة عند تغيير `lang`، ويستدعي `translateText` تلقائياً للنتائج النصية القديمة (toggle: "ترجم النتائج إلى لغة الواجهة").
+- مراجعة كل ملفات `src/components/*` و `src/routes/*` لاستئصال السلاسل العربية المباشرة (≈ 40 ملف) وتحويلها لمفاتيح `site_content`.
+
+## 4) منطق الإدراك والنية الاستباقي (Cognitive Layer)
+
+**جدول جديد `user_intent_profile`**
+```
+user_id uuid PK
+specialty, brand_name, brand_keywords  -- موجود في profiles، يُرفع هنا
+detected_intent jsonb     -- { primary_goal, audience, gap, opportunity, urgency }
+context_summary text      -- ملخص متراكم (آخر 10 تشغيلات)
+last_signals jsonb        -- مدخلات/مخرجات آخر 10 أدوات
+updated_at timestamptz
 ```
 
-### الملفات
+**Middleware جديد `withCognition`** يُلف حول كل tool serverFn:
+1. **قبل التشغيل**: يستدعي Lovable AI (`gemini-2.5-flash`) بـ JSON schema لاستخراج:
+   - النية الأساسية (نمو/أزمة/استكشاف منافس/إطلاق منتج…)
+   - الجمهور المستهدف
+   - الفجوة المحتملة
+   - الفرصة الاستباقية
+2. **يحقن** هذا السياق في system prompt كل أداة (يعزز جودة المخرج لكل الأدوات دون استثناء).
+3. **بعد التشغيل**: يحدّث `context_summary` + `last_signals` (طي تدريجي بـ summarizer).
+4. **يعيد للأداة** حقل `proactive_next_step` يُعرض كـ بطاقة CTA في نهاية كل نتيجة:
+   _"بناءً على هدفك (X) والفجوة (Y) — ننصح بتشغيل أداة Z الآن"_ مع زر مباشر.
 
-**جديد**:
-- `src/lib/contact-info.ts` — hook `useContactInfo()` يجلب من `app_settings`, مع defaults احتياطية (نفس القيم الحالية لتفادي أي انقطاع).
+**لوحة إدارة جديدة "User Intelligence"**:
+- جدول بكل المستخدمين + النية المُكتشفة + ملخص السياق + آخر 10 إشارات.
+- بحث/فلترة حسب specialty / intent / urgency.
+- زر "أعد فحص النية" لمستخدم معين.
 
-**يُعدَّل**:
-- `src/routes/admin.tsx` — تبويب جديد **"معلومات الاتصال"** أو قسم داخل تبويب موجود، فيه فورم لتعديل كل الحقول أعلاه، يحفظ عبر `adminSetAppSetting({ key: "contact_info", value })` (الـserverFn موجود مسبقاً).
-- `src/routes/contact.tsx` — يستهلك `useContactInfo()` بدل المتغيرات الثابتة، ويعرض العنوان وساعات العمل ووسائل التواصل الاجتماعي (إن وُجدت).
-- `src/components/SubscribeModal.tsx` — يستخدم `useContactInfo()`.
-- `src/routes/pricing.tsx` — `SUPPORT_EMAIL` ورقم WhatsApp من الـhook.
-- `src/lib/whatsapp.ts` — تحويل `WHATSAPP_NUMBER` إلى دالة `getWhatsappNumber()` تقرأ من cache مُعبَّأ بـ `useContactInfo` (مع fallback ثابت).
-- `src/components/SiteHeader.tsx` (إن كان يعرض الرقم) — نفس الـhook.
-- `src/lib/i18n.tsx` — `footer_contact` يصبح template يقبل الرقم من الـhook.
+**Insights عامة**: tab "Cognitive Insights" يعرض clusters: أكثر النوايا شيوعاً، أكثر الفجوات تكراراً، الفرص الجماعية.
 
-### مخطط القاعدة
+---
 
-لا حاجة لـmigration — جدول `app_settings` موجود ويستخدم upsert على `key`. أول حفظ من الإدارة يُنشئ الصف تلقائياً.
+## التفاصيل التقنية (للمراجعة)
 
-### تجربة المستخدم في الإدارة
+**ملفات جديدة**:
+- `supabase/migrations/*_content_cms.sql` — `site_content`, `custom_pages`, `report_drafts`, `user_intent_profile` (+ GRANT + RLS + triggers updated_at)
+- `src/lib/content.ts` — `useContent()` + cache + realtime
+- `src/lib/cognition.server.ts` — `withCognition` middleware + intent extractor
+- `src/lib/cognition.functions.ts` — `detectIntent`, `getUserIntelligence` (admin), `refreshUserIntent`
+- `src/routes/p.$slug.tsx` — صفحات مخصصة ديناميكية
+- `src/components/admin/ContentStudioTab.tsx`
+- `src/components/admin/HeaderConfigTab.tsx`
+- `src/components/admin/ExportConfigTab.tsx`
+- `src/components/admin/UserIntelligenceTab.tsx`
+- `src/components/ProactiveNextStep.tsx` — البطاقة الاستباقية في نهاية كل أداة
+- `scripts/bootstrap-content.ts` — يهجّر مفاتيح i18n الحالية إلى site_content
 
-فورم بسيط مقسّم لأقسام:
-1. **الاتصال المباشر** — WhatsApp number, phone display, email
-2. **العنوان** — 3 حقول (ar/en/ku)
-3. **ساعات العمل** — 3 حقول (ar/en/ku)
-4. **شبكات التواصل** — Facebook, Instagram, Twitter/X, LinkedIn, Telegram (كلها اختيارية، تظهر فقط إن كانت معبّأة)
+**ملفات تُعدَّل**:
+- `src/routes/admin.tsx` — 4 تبويبات جديدة
+- `src/lib/i18n.tsx` — يبقى كـ fallback؛ يتكامل مع `useContent`
+- `src/components/SiteHeader.tsx` — إخفاء الوكيل/روابط ديناميكية
+- `src/components/ExportButtons.tsx` — يقرأ `export_config`
+- كل ملف API tool في `src/routes/api/*.ts` — يُلف بـ `withCognition`
+- كل لوحات الأدوات: استبدال السلاسل المباشرة بـ `useContent`
 
-زر "حفظ" واحد، مع toast نجاح/فشل.
+**التكلفة الزمنية المتوقعة**: تنفيذ على دفعتين — (أ) CMS + الهيدر + التصدير + تطابق اللغة، (ب) طبقة الإدراك والنية. أوصي بالموافقة على الخطة كاملة ثم تنفيذ الدفعة (أ) أولاً للتحقق قبل الدفعة (ب).
 
-## الخلاصة
-- **Kimi**: مربوط بالفعل كـproxy (وضع طبيعي للموديلات غير المتاحة في Gateway). الترقية المهنية: نقله من lite إلى gemini-2.5-pro + tooltip توضيحي.
-- **معلومات الاتصال**: نقل من hardcoded إلى `app_settings` بتبويب إدارة كامل.
+هل أبدأ بالتنفيذ؟ أو تريد تعديل أي قسم قبل الانطلاق؟

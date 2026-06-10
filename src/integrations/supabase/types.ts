@@ -531,6 +531,60 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_pages: {
+        Row: {
+          body_ar: string | null
+          body_en: string | null
+          body_ku: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          meta_description_ar: string | null
+          meta_description_en: string | null
+          meta_description_ku: string | null
+          published: boolean
+          slug: string
+          title_ar: string | null
+          title_en: string | null
+          title_ku: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_ar?: string | null
+          body_en?: string | null
+          body_ku?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_description_ar?: string | null
+          meta_description_en?: string | null
+          meta_description_ku?: string | null
+          published?: boolean
+          slug: string
+          title_ar?: string | null
+          title_en?: string | null
+          title_ku?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_ar?: string | null
+          body_en?: string | null
+          body_ku?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_description_ar?: string | null
+          meta_description_en?: string | null
+          meta_description_ku?: string | null
+          published?: boolean
+          slug?: string
+          title_ar?: string | null
+          title_en?: string | null
+          title_ku?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geo_strategies: {
         Row: {
           brand: string
@@ -798,6 +852,36 @@ export type Database = {
         }
         Relationships: []
       }
+      report_drafts: {
+        Row: {
+          created_at: string
+          id: string
+          lang: string
+          payload: Json
+          title: string | null
+          tool_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lang?: string
+          payload?: Json
+          title?: string | null
+          tool_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lang?: string
+          payload?: Json
+          title?: string | null
+          tool_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_templates: {
         Row: {
           config: Json
@@ -822,6 +906,42 @@ export type Database = {
           name?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      site_content: {
+        Row: {
+          ar: string | null
+          created_at: string
+          en: string | null
+          key: string
+          ku: string | null
+          namespace: string
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ar?: string | null
+          created_at?: string
+          en?: string | null
+          key: string
+          ku?: string | null
+          namespace?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ar?: string | null
+          created_at?: string
+          en?: string | null
+          key?: string
+          ku?: string | null
+          namespace?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -1170,6 +1290,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_intent_profile: {
+        Row: {
+          context_summary: string | null
+          detected_intent: Json
+          last_signals: Json
+          signal_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_summary?: string | null
+          detected_intent?: Json
+          last_signals?: Json
+          signal_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_summary?: string | null
+          detected_intent?: Json
+          last_signals?: Json
+          signal_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_notifications: {
         Row: {
