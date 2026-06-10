@@ -133,6 +133,7 @@ function AdminPage() {
         {tab === "requests" && <RequestsTab />}
         {tab === "boost" && <BoostTab />}
         {tab === "content" && <ContentTab />}
+        {tab === "contact" && <ContactInfoTab />}
         {tab === "ledger" && <AdminLedgerPanel />}
       </div>
     </div>
