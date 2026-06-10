@@ -122,7 +122,7 @@ function PricingPage() {
     await supabase.from("subscription_requests").insert(payload);
     const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
     const msg = `${label} ${selected.name} (${priceOf(selected).text})\n${user.email}`;
-    window.open(whatsappLink(msg), "_blank");
+    window.open(whatsappLinkFromInfo(contact, msg), "_blank");
     setSelected(null);
   };
 
