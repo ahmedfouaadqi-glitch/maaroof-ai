@@ -123,6 +123,8 @@ const planPayload = z
     active: z.boolean().optional(),
     sort_order: z.number().int().optional(),
     features: z.array(z.string()).optional(),
+    discount_badge_enabled: z.boolean().optional(),
+    discount_badge_text: z.string().max(80).nullable().optional(),
   })
   .strict();
 

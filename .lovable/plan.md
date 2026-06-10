@@ -1,23 +1,55 @@
-## تطبيق تعدد العملات على تبويب الخطط (Plans)
+## المشكلة
 
-### المشكلة
-تبويب **Plans** في `src/routes/admin.tsx` (دالة `PlansTab` و `PlanRow`) لا يزال يستخدم حقل `price_iqd` فقط للقراءة والكتابة، بينما باقي اللوحات (المصفوفة، الإضافات، أسعار الأدوات) تدعم العملات المتعددة.
+في صفحة الأسعار حالياً:
+1. تحت السعر تظهر كلمة **"شهرياً"** دائماً مهما كانت مدة الخطة. لو الإدارة كتبت 180 يوم لازم يظهر "كل 6 أشهر"، 90 يوم → "كل 3 أشهر"، 365 → "سنوياً"، الخ.
+2. شارة الخصم (الأخضر فوق الكرت) تظهر **تلقائياً** لأي خطة مدتها ≥ 365 يوم، والإدارة ما تقدر تتحكم بها ولا تكتب نص الخصم.
 
-### التغييرات في `src/routes/admin.tsx`
+## المطلوب
 
-1. **`PlansTab.create`** — استبدال القيم الافتراضية لاستخدام `prices: { USD: 0 }` و `default_currency: "USD"` بدل `price_iqd: 0`.
+### 1) نص الفترة الديناميكي
+حساب تلقائي من `duration_days`:
+- 7 → أسبوعياً
+- 14 → كل أسبوعين
+- 30 → شهرياً
+- 60 → كل شهرين
+- 90 → كل 3 أشهر
+- 180 → كل 6 أشهر
+- 270 → كل 9 أشهر
+- 365 → سنوياً
+- 730 → كل سنتين
+- أي قيمة أخرى → "كل N يوم/شهر" حسب الأقرب
 
-2. **`PlanRow` (وضع العرض)** — بدل عرض `{plan.price_iqd} IQD` ثابت، استخدم `pickPrice(plan.prices, userCountry, plan.default_currency)` + `formatMoney` لإظهار سعر العملة المختارة (مع الرجوع إلى `price_iqd`/`price_usd` القديمة كاحتياط للسجلات القديمة).
+يُطبَّق في كرت الخطة في `src/routes/pricing.tsx` (السطر 193) وكذلك تحت السعر الموحّد. مدعوم بالعربي/الإنجليزي/الكردي.
 
-3. **`PlanRow` (وضع التحرير)** — استبدال حقل `Price (IQD)` بمحرر `PricesEditor` كامل (مع `default_currency` radio). تمرير `prices` (بعد `normalizePrices`) و `default_currency` ضمن الـ patch المُرسَل إلى `adminUpdatePlan`.
+### 2) شارة الخصم تحت تحكم الإدارة
+إضافة حقلين جديدين لكل خطة في قاعدة البيانات:
+- `discount_badge_enabled` (boolean) — تشغيل/إيقاف الشارة
+- `discount_badge_text` (text, nullable) — نص حر يكتبه الأدمن (مثلاً "وفّر 20%" أو "عرض خاص")
 
-4. **Hook بسيط**: استخدام `useI18n().lang` و `useCountry()` داخل `PlanRow` لاختيار العرض، تماماً كما في `AdminPlansMatrixPanel`.
+استبدال الشرط الحالي `isYearly` بـ `p.discount_badge_enabled && p.discount_badge_text`. إذا الشارة مفعّلة بدون نص نعرض نص افتراضي بسيط ("خصم").
 
-### التحقق
-- إنشاء خطة جديدة من هذا التبويب → ترى `USD: 0` افتراضياً وتستطيع إضافة IQD/SAR/AED.
-- تحرير خطة موجودة → الأسعار القديمة (`price_iqd`) تظهر تلقائياً في المحرر كقيمة IQD ابتدائية إن لم يوجد `prices`.
-- العرض للزائر في `/pricing` لم يتغير لأنه يعتمد بالفعل على `prices` / `default_currency`.
+### 3) محرر الإدارة
+في `src/routes/admin.tsx` داخل `PlanRow` (وضع التحرير) إضافة:
+- **Switch**: "إظهار شارة خصم"
+- **Input** نصي: "نص الشارة" (يظهر فقط لما السويتش مفعّل)
 
-### الملفات
-- `src/routes/admin.tsx` فقط (دوال `PlansTab` و `PlanRow`).
-- لا تغييرات على قاعدة البيانات أو على `admin.functions.ts` (الـ schema يقبل `prices` و `default_currency` بالفعل).
+تمرير الحقلين ضمن `adminUpdatePlan` patch، وإضافتهما في `planPayload` في `src/lib/admin.functions.ts`.
+
+## التفاصيل التقنية
+
+**Migration**
+```sql
+ALTER TABLE public.subscription_plans
+  ADD COLUMN IF NOT EXISTS discount_badge_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS discount_badge_text text;
+```
+
+**ملف جديد**: `src/lib/period-label.ts` يصدّر `formatPeriod(days, locale)` لإعادة الاستخدام.
+
+**ملفات تتعدّل**:
+- `src/routes/pricing.tsx` — استبدال السطر 193 و270 بـ `formatPeriod`، وشرط الشارة بـ `discount_badge_enabled`.
+- `src/routes/admin.tsx` — حقول التحرير الجديدة في `PlanRow`.
+- `src/lib/admin.functions.ts` — توسيع `planPayload` بالحقلين.
+- `src/lib/i18n.tsx` — مفاتيح الفترات (`period_weekly`, `period_every_n_months`, …).
+
+**ملاحظة**: الحقول `pr_monthly` و `pr_save_50k` و `pr_yearly_first` تبقى كـfallback ولا تُحذف.
