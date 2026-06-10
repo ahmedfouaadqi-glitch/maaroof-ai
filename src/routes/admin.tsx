@@ -42,7 +42,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "ledger";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "contact" | "ledger";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
@@ -76,6 +76,7 @@ function AdminPage() {
     if (k === "requests") return t("admin_requests" as any) || "Requests";
     if (k === "boost") return "Brand Boost";
     if (k === "content") return "Content";
+    if (k === "contact") return lang === "ar" ? "معلومات الاتصال" : lang === "ku" ? "زانیاری پەیوەندی" : "Contact Info";
     if (k === "ledger") return t("admin_ledger") || "Ledger";
     return k;
   };
@@ -100,7 +101,7 @@ function AdminPage() {
 
 
         <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users_pricing","requests","boost","content","ledger"] as Tab[]).map((k) => (
+          {(["overview","users_pricing","requests","boost","content","contact","ledger"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
@@ -132,6 +133,7 @@ function AdminPage() {
         {tab === "requests" && <RequestsTab />}
         {tab === "boost" && <BoostTab />}
         {tab === "content" && <ContentTab />}
+        {tab === "contact" && <ContactInfoTab />}
         {tab === "ledger" && <AdminLedgerPanel />}
       </div>
     </div>
@@ -1374,3 +1376,113 @@ function ContentTab() {
   );
 }
 
+
+// ============= Contact Info Editor =============
+function ContactInfoTab() {
+  const { lang } = useI18n();
+  const [info, setInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [statusMsg, setStatusMsg] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { DEFAULT_CONTACT_INFO } = await import("@/lib/contact-info");
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "contact_info").maybeSingle();
+      const merged = { ...DEFAULT_CONTACT_INFO, ...(data?.value && typeof data.value === "object" ? data.value : {}) };
+      setInfo(merged);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading || !info) return <div className="p-6 text-muted-foreground">Loading…</div>;
+
+  const update = (k: string, v: string) => setInfo((p: any) => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true); setStatusMsg("");
+    try {
+      await adminSetAppSetting({ data: { key: "contact_info", value: info } });
+      try { localStorage.setItem("geo-contact-info", JSON.stringify(info)); } catch {}
+      setStatusMsg(lang === "ar" ? "✓ تم الحفظ — حدّث الصفحة لرؤية التغييرات" : lang === "ku" ? "✓ پاشەکەوتکرا" : "✓ Saved — refresh to see changes");
+    } catch (e: any) {
+      setStatusMsg("✗ " + (e?.message || "save failed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const L = (ar: string, en: string, ku: string) => lang === "ar" ? ar : lang === "ku" ? ku : en;
+
+  const renderField = (k: string, label: string, placeholder?: string, dir: "ltr" | "rtl" = "ltr") => (
+    <div key={k}>
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <input
+        type="text"
+        value={info[k] || ""}
+        onChange={(e) => update(k, e.target.value)}
+        placeholder={placeholder}
+        dir={dir}
+        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+      />
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border-2 border-border bg-card/95 p-4">
+        <h2 className="font-display text-xl font-bold">{L("معلومات الاتصال", "Contact Information", "زانیاری پەیوەندی")}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{L("تظهر هذه المعلومات في صفحة \"اتصل بنا\"، نافذة الاشتراك، وصفحة الأسعار.", "Shown on the Contact page, Subscribe modal, and Pricing page.", "لە پەڕەی پەیوەندی و پەنجەرەی بەشداربوون و پەڕەی نرخەکان دەردەکەوێت.")}</p>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
+        <h3 className="font-semibold text-sm">{L("الاتصال المباشر", "Direct contact", "پەیوەندی ڕاستەوخۆ")}</h3>
+        <div className="grid gap-3 md:grid-cols-3">
+          {renderField("whatsapp_number", L("رقم واتساب (أرقام فقط، يشمل كود الدولة)", "WhatsApp number (digits only, with country code)", "ژمارەی واتساپ"), "9647733570130")}
+          {renderField("phone_display", L("الرقم المعروض", "Display phone", "ژمارەی پیشاندان"), "+964 773 357 0130")}
+          {renderField("email", L("البريد الإلكتروني", "Email", "ئیمەیڵ"), "support@example.com")}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
+        <h3 className="font-semibold text-sm">{L("العنوان", "Address", "ناونیشان")}</h3>
+        <div className="grid gap-3 md:grid-cols-3">
+          {renderField("address_ar", "العربية", "", "rtl")}
+          {renderField("address_en", "English")}
+          {renderField("address_ku", "کوردی", "", "rtl")}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
+        <h3 className="font-semibold text-sm">{L("ساعات العمل", "Working hours", "کاتژمێری کار")}</h3>
+        <div className="grid gap-3 md:grid-cols-3">
+          {renderField("hours_ar", "العربية", "", "rtl")}
+          {renderField("hours_en", "English")}
+          {renderField("hours_ku", "کوردی", "", "rtl")}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
+        <h3 className="font-semibold text-sm">{L("شبكات التواصل الاجتماعي (اختياري)", "Social networks (optional)", "تۆڕە کۆمەڵایەتییەکان (هەڵبژاردە)")}</h3>
+        <div className="grid gap-3 md:grid-cols-2">
+          {renderField("facebook", "Facebook URL", "https://facebook.com/...")}
+          {renderField("instagram", "Instagram URL", "https://instagram.com/...")}
+          {renderField("twitter", "X / Twitter URL", "https://x.com/...")}
+          {renderField("linkedin", "LinkedIn URL", "https://linkedin.com/company/...")}
+          {renderField("telegram", "Telegram URL", "https://t.me/...")}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="rounded-full bg-gradient-to-r from-primary to-accent px-6 py-2.5 text-sm font-bold text-primary-foreground shadow disabled:opacity-50"
+        >
+          {saving ? "..." : L("حفظ", "Save", "پاشەکەوت")}
+        </button>
+        {statusMsg && <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs">{statusMsg}</div>}
+      </div>
+    </div>
+  );
+}

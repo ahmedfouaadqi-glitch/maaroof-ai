@@ -22,7 +22,7 @@ const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
   grok:       { model: "openai/gpt-5-nano",            proxy: true  },
   mistral:    { model: "google/gemini-2.5-flash-lite", proxy: true  },
   deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
-  kimi:       { model: "google/gemini-2.5-flash-lite", proxy: true  },
+  kimi:       { model: "google/gemini-2.5-pro",        proxy: true  }, // Kimi K2 ≈ long-context Pro proxy
 };
 
 async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000) {

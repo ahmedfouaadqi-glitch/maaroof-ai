@@ -4,7 +4,7 @@ import { I18nProvider, useI18n, PLAN_KEY_BY_NAME, ADDON_KEY_BY_NAME } from "@/li
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { whatsappLink } from "@/lib/whatsapp";
+import { useContactInfo, whatsappLinkFromInfo } from "@/lib/contact-info";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 import { usePageGuard } from "@/lib/visibility";
 import { useCountry } from "@/lib/use-country";
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/pricing")({
   ),
 });
 
-const SUPPORT_EMAIL = "ahmedfouaad.qi@gmail.com";
+
 
 const EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
   Starter: { who: "ex_starter_who", use: "ex_starter_use" },
@@ -48,6 +48,8 @@ const AGENT_EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
 
 function PricingPage() {
   const { t, lang } = useI18n();
+  const contact = useContactInfo();
+  const SUPPORT_EMAIL = contact.email;
   const { user } = useAuth();
   const { info: country } = useCountry();
   const userCountry = country?.code || null;
@@ -120,7 +122,7 @@ function PricingPage() {
     await supabase.from("subscription_requests").insert(payload);
     const label = selectedKind === "agent" ? t("pr_label_agent") : t("pr_label_plan");
     const msg = `${label} ${selected.name} (${priceOf(selected).text})\n${user.email}`;
-    window.open(whatsappLink(msg), "_blank");
+    window.open(whatsappLinkFromInfo(contact, msg), "_blank");
     setSelected(null);
   };
 
@@ -343,7 +345,7 @@ function PricingPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-success to-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
               >
                 <MessageCircle className="size-4" />
-                {t("pr_whatsapp")} — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>+964 773 357 0130</span>
+                {t("pr_whatsapp")} — <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{contact.phone_display}</span>
               </button>
               <button
                 onClick={sendEmail}
