@@ -604,6 +604,26 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
           <Field label="Monthly analyses"><input type="number" value={f.monthly_analyses} onChange={(e) => setF({ ...f, monthly_analyses: e.target.value as any })} className={inp} /></Field>
           <Field label="Monthly suggestions"><input type="number" value={f.monthly_suggestions} onChange={(e) => setF({ ...f, monthly_suggestions: e.target.value as any })} className={inp} /></Field>
           <Field label="Features (one per line)" full><textarea value={f.features} onChange={(e) => setF({ ...f, features: e.target.value })} className={`${inp} h-24`} /></Field>
+          <Field label="Discount badge">
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={f.discount_badge_enabled}
+                onChange={(e) => setF({ ...f, discount_badge_enabled: e.target.checked })}
+              />
+              <span>Show discount badge on this plan</span>
+            </label>
+          </Field>
+          <Field label="Discount badge text">
+            <input
+              type="text"
+              value={f.discount_badge_text}
+              onChange={(e) => setF({ ...f, discount_badge_text: e.target.value })}
+              placeholder="e.g. Save 20% · وفّر 20%"
+              disabled={!f.discount_badge_enabled}
+              className={inp}
+            />
+          </Field>
           <div className="md:col-span-2 flex justify-end">
             <button onClick={submit} className="rounded-full bg-gradient-to-r from-success to-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">Save</button>
           </div>
