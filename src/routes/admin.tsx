@@ -549,6 +549,8 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
     monthly_analyses: plan.monthly_analyses, monthly_suggestions: plan.monthly_suggestions,
     sort_order: plan.sort_order,
     features: Array.isArray(plan.features) ? plan.features.join("\n") : "",
+    discount_badge_enabled: !!plan.discount_badge_enabled,
+    discount_badge_text: plan.discount_badge_text || "",
   });
   const submit = () => {
     onSave({
@@ -559,6 +561,8 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
       monthly_analyses: Number(f.monthly_analyses) || 0, monthly_suggestions: Number(f.monthly_suggestions) || 0,
       sort_order: Number(f.sort_order) || 0,
       features: f.features.split("\n").map((x: string) => x.trim()).filter(Boolean),
+      discount_badge_enabled: f.discount_badge_enabled,
+      discount_badge_text: f.discount_badge_enabled ? (f.discount_badge_text.trim() || null) : null,
     });
     setEdit(false);
   };
