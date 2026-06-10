@@ -159,7 +159,8 @@ function PricingPage() {
           <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {plans.map((p) => {
               const isPopular = p.name === "Pro";
-              const isYearly = p.name === "Pro Yearly";
+              const showDiscount = !!p.discount_badge_enabled;
+              const discountText = (p.discount_badge_text && String(p.discount_badge_text).trim()) || t("pr_save_50k");
               const exKeys = EXAMPLE_KEYS[p.name];
               const exWho = exKeys ? t(exKeys.who as any) : "";
               const exUse = exKeys ? t(exKeys.use as any) : "";
@@ -177,9 +178,9 @@ function PricingPage() {
                       <Star className="size-3" /> {t("pr_most_popular")}
                     </span>
                   )}
-                  {isYearly && (
+                  {showDiscount && !isPopular && (
                     <span className="absolute -top-3 start-1/2 -translate-x-1/2 rounded-full bg-success px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      {t("pr_save_50k")}
+                      {discountText}
                     </span>
                   )}
                   <h3 className="font-display text-xl font-bold">{p.name}</h3>
@@ -191,7 +192,7 @@ function PricingPage() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {p.duration_days >= 365 ? t("pr_yearly_first") : t("pr_monthly")}
+                    {formatPeriod(p.duration_days, lang as any)}
                   </div>
 
                   {exWho && (
