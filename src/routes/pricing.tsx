@@ -9,6 +9,7 @@ import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from
 import { usePageGuard } from "@/lib/visibility";
 import { useCountry } from "@/lib/use-country";
 import { pickPrice, formatMoney } from "@/lib/currencies";
+import { formatPeriod } from "@/lib/period-label";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
