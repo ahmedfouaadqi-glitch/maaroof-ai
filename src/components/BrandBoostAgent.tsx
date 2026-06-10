@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { VisibilityPanel } from "@/components/AIVisibility";
 import { SmartResearch } from "@/components/SmartResearch";
 import { CompanyOutreach } from "@/components/CompanyOutreach";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
@@ -394,6 +395,12 @@ export function BrandBoostAgent() {
             </button>
           </div>
           <HandoffMenu source="boost" getText={() => `${brand}\n${report.summary || ""}\n\n${(report.plan || []).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).join(", ")}`).join("\n")}`} />
+          <ProactiveNextStep
+            toolKey="brand_boost"
+            inputSummary={`brand=${brand} kw=${kw} platforms=${sel.join(",")}`}
+            outputSummary={`${report.summary || ""}\n${(report.plan || []).slice(0, 3).map((p: any) => `${p.platform}: ${(p.recommended_actions || []).slice(0, 2).join("; ")}`).join("\n")}`}
+            handoffText={`${brand}\n${report.summary || ""}`}
+          />
         </div>
       )}
         </TabsContent>
