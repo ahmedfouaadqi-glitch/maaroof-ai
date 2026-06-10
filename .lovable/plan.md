@@ -1,113 +1,93 @@
-# خطة التنفيذ الشاملة
+# Phase B — طبقة الإدراك والنية (Cognitive Layer)
 
-## 1) CMS كامل للنصوص والمحتوى (Content Studio)
+Phase A اكتمل (CMS + Header + Export). الآن ننفّذ الطبقة الإدراكية الاستباقية لكل الأدوات.
 
-**جدول جديد `site_content`**
-```
-key text PK         -- مثل: home.hero.title, tool.brand_boost.tab.outreach
-namespace text      -- home | tool:<key> | header | footer | page:<slug>
-ar text, en text, ku text
-updated_by uuid, updated_at timestamptz
-```
-+ GRANT + RLS (read: anon/auth; write: admin فقط).
+## 1) قاعدة البيانات
 
-**Resolver واحد `useContent(key, fallback)`**:
-- يقرأ من `site_content` (cache في localStorage + realtime invalidate)
-- يرجع للـ `i18n` الحالي كـ fallback (لا كسر للموجود)
-- جميع المكونات تستبدل `t("…")` تدريجياً بـ `useContent("…", t("…"))`
+جدول `user_intent_profile` موجود مسبقاً من Phase A migration (user_id, detected_intent jsonb, context_summary text, last_signals jsonb, updated_at). لا حاجة لتعديله — فقط نتأكد من الأعمدة ونضيف فهرس على `updated_at` إن لزم.
 
-**سكربت bootstrap لمرة واحدة** يمشي على ملف `src/lib/i18n.tsx` ويحقن كل المفاتيح الحالية في `site_content` (ar/en/ku) فيظهرون فوراً في لوحة الإدارة.
+## 2) محرك الإدراك (server-side)
 
-**تبويب جديد في `admin.tsx` → "Content Studio"** يحتوي:
-- بحث + فلترة حسب namespace (الواجهة الرئيسية، الهيدر، الفوتر، كل أداة على حدة، الفوتر، صفحات مخصصة…).
-- محرر جدول بثلاث خانات (ar/en/ku) لكل مفتاح.
-- زر **"ترجمة تلقائية"** لكل صف أو دفعة → يستدعي `translateText` serverFn الموجود مسبقاً.
-- زر **"إنشاء صفحة جديدة"**: يفتح حوار (slug + عنوان + محتوى Markdown) → يخزن في جدول `custom_pages` ويظهر تلقائياً تحت route ديناميكي `/p/$slug` بكل اللغات (مع ترجمة تلقائية للنسخ الفارغة).
-
-**تبويبات الأدوات الداخلية**: كل tab key يُسجّل في `site_content` بـ namespace=`tool:<toolKey>` فيمكن تعديل تسميته بكل اللغات من Content Studio.
-
-**التحكم في الهيدر** (إخفاء/إظهار الوكيل + روابط):
-- توسيع `app_settings.key='header_config'` إلى `{ show_agent: bool, show_pricing: bool, extra_links: [{href,label_ar,label_en,label_ku}], extra_phones: [{number, desc_ar, desc_en, desc_ku}] }`
-- لوحة جديدة في الإدارة "Header & Navigation" مع زر ترجمة تلقائية لأي وصف.
-- `SiteHeader.tsx` و `contact.tsx` يقرؤون منها.
-
-## 2) التصدير لكل أداة + ربط مع منشئ التقارير
-
-- توسيع `app_settings.key='export_config'` إلى:
+**`src/lib/cognition.server.ts`** (server-only helper):
+- `extractIntent({ userId, toolKey, input, output })` — يستدعي `google/gemini-2.5-flash` بـ JSON schema صغير ومحدود (لتجنّب Gemini state limit):
   ```
-  { mode: "per_tool" | "report_only" | "both",
-    per_tool_enabled: { [toolKey]: boolean } }
+  { primary_goal: enum[growth, crisis, competitor, launch, retention, exploration],
+    audience: string(≤80),
+    gap: string(≤120),
+    opportunity: string(≤120),
+    urgency: enum[low, medium, high],
+    next_tool: string,           // toolKey مقترح
+    next_reason_ar/en/ku: string(≤140) }
   ```
-- لوحة إدارة جديدة "Exports" تتيح:
-  - وضع موحّد (التصدير من منشئ التقارير فقط) أو
-  - تفعيل/تعطيل التصدير لكل أداة على حدة.
-- مكوّن `<ExportButtons>` يقرأ الإعداد ويظهر/يختفي تلقائياً.
-- كل أداة لا تحتوي تصديراً تحصل على `<ExportButtons>` + زر **"إرسال إلى منشئ التقارير"** (يخزن المخرج في `report_drafts` جديد).
+- `updateContextSummary(prev, newSignal)` — طي تدريجي (آخر 10 إشارات + ملخص نصّي ≤500 char).
+- `buildSystemContext(profile)` — يحوّل الـ profile إلى prompt prefix يُحقن في كل أداة.
 
-## 3) تطابق لغة الواجهة ولغة المخرجات
+**`src/lib/cognition.functions.ts`** (createServerFn):
+- `runCognition` — يُستدعى بعد انتهاء أي أداة، يحدّث `user_intent_profile` ويرجع `{ proactive_next_step }`.
+- `getUserIntelligence` (admin only) — قائمة المستخدمين + النيات.
+- `refreshUserIntent` (admin only) — إعادة فحص.
 
-**المشكلة**: تبويبات الأدوات (مثل تعزيز العلامة) تبقى بلغة قديمة بعد تغيير اللغة.
+## 3) دمج في الأدوات
 
-**الإصلاح**:
-- كل لوحة أداة (`BrandBoostAgent`, `CompetitorCompare`, `AIVisibility`, `AppliedRanking`, `PostSuggester`, …) تستبدل أي نص ثابت بـ `useContent`/`t` المرتبط بـ `lang` reactive.
-- إضافة `useEffect` يعيد فحص أسماء التبويبات + النتائج المخزنة عند تغيير `lang`، ويستدعي `translateText` تلقائياً للنتائج النصية القديمة (toggle: "ترجم النتائج إلى لغة الواجهة").
-- مراجعة كل ملفات `src/components/*` و `src/routes/*` لاستئصال السلاسل العربية المباشرة (≈ 40 ملف) وتحويلها لمفاتيح `site_content`.
+نقطتا تكامل لكل أداة:
+- **قبل التشغيل**: serverFn الأداة يقرأ `user_intent_profile` ويحقن `buildSystemContext()` في الـ system prompt الحالي (سطر/فقرة إضافية، بدون كسر السلوك).
+- **بعد التشغيل**: الواجهة (component) تستدعي `runCognition({ toolKey, inputSummary, outputSummary })` بشكل async (لا يحجب النتيجة) وتعرض `<ProactiveNextStep />` عند الانتهاء.
 
-## 4) منطق الإدراك والنية الاستباقي (Cognitive Layer)
+ملفات API المعدّلة (حقن السياق فقط، تغيير صغير في system prompt):
+`brand-boost.ts, compare.ts, visibility.ts, applied-ranking.ts, suggest.ts, research.ts, bizdev.ts, feasibility.ts, brand-authority.ts, social-analysis.ts, competitor-monitor.ts, what-if.ts, geo-strategist.ts, analyze.ts, geo-rewrite.ts, company-email.ts`.
 
-**جدول جديد `user_intent_profile`**
-```
-user_id uuid PK
-specialty, brand_name, brand_keywords  -- موجود في profiles، يُرفع هنا
-detected_intent jsonb     -- { primary_goal, audience, gap, opportunity, urgency }
-context_summary text      -- ملخص متراكم (آخر 10 تشغيلات)
-last_signals jsonb        -- مدخلات/مخرجات آخر 10 أدوات
-updated_at timestamptz
-```
+## 4) المكوّن الاستباقي
 
-**Middleware جديد `withCognition`** يُلف حول كل tool serverFn:
-1. **قبل التشغيل**: يستدعي Lovable AI (`gemini-2.5-flash`) بـ JSON schema لاستخراج:
-   - النية الأساسية (نمو/أزمة/استكشاف منافس/إطلاق منتج…)
-   - الجمهور المستهدف
-   - الفجوة المحتملة
-   - الفرصة الاستباقية
-2. **يحقن** هذا السياق في system prompt كل أداة (يعزز جودة المخرج لكل الأدوات دون استثناء).
-3. **بعد التشغيل**: يحدّث `context_summary` + `last_signals` (طي تدريجي بـ summarizer).
-4. **يعيد للأداة** حقل `proactive_next_step` يُعرض كـ بطاقة CTA في نهاية كل نتيجة:
-   _"بناءً على هدفك (X) والفجوة (Y) — ننصح بتشغيل أداة Z الآن"_ مع زر مباشر.
+**`src/components/ProactiveNextStep.tsx`**:
+بطاقة CTA تظهر أسفل نتيجة كل أداة:
+> _"بناءً على هدفك ({primary_goal}) والفجوة ({gap}) — ننصح بتشغيل **{next_tool}** الآن"_
++ زر مباشر يفتح الأداة المقترحة عبر `tool-handoff.ts` الموجود.
+النصوص بكل اللغات (تأتي من `next_reason_ar/en/ku`).
 
-**لوحة إدارة جديدة "User Intelligence"**:
-- جدول بكل المستخدمين + النية المُكتشفة + ملخص السياق + آخر 10 إشارات.
-- بحث/فلترة حسب specialty / intent / urgency.
-- زر "أعد فحص النية" لمستخدم معين.
+## 5) لوحة الإدارة
 
-**Insights عامة**: tab "Cognitive Insights" يعرض clusters: أكثر النوايا شيوعاً، أكثر الفجوات تكراراً، الفرص الجماعية.
+تبويبان جديدان في `admin.tsx`:
 
----
+**A) User Intelligence** (`src/components/admin/UserIntelligenceTab.tsx`):
+جدول: email | specialty | primary_goal | urgency | context_summary | last_run | actions (إعادة فحص).
+بحث + فلترة حسب intent/urgency/specialty.
 
-## التفاصيل التقنية (للمراجعة)
+**B) Cognitive Insights** (`src/components/admin/CognitiveInsightsTab.tsx`):
+- توزيع `primary_goal` (chart bars بسيطة)
+- أكثر الفجوات تكراراً (top 10)
+- أكثر الفرص الجماعية
+- توزيع urgency
+
+## 6) ربط مع المنطق الموجود
+
+- `user-context.server.ts` الحالي يبقى — `cognition.server` يبني فوقه ولا يستبدله.
+- `tool-handoff.ts` يُستخدم لزر "الخطوة التالية".
+- نضيف namespace جديد في `site_content` بـ `cognition:*` للنصوص (عنوان البطاقة، التسميات، شارات urgency) — كلها قابلة للتعديل من Content Studio بكل اللغات.
+
+## التفاصيل التقنية
 
 **ملفات جديدة**:
-- `supabase/migrations/*_content_cms.sql` — `site_content`, `custom_pages`, `report_drafts`, `user_intent_profile` (+ GRANT + RLS + triggers updated_at)
-- `src/lib/content.ts` — `useContent()` + cache + realtime
-- `src/lib/cognition.server.ts` — `withCognition` middleware + intent extractor
-- `src/lib/cognition.functions.ts` — `detectIntent`, `getUserIntelligence` (admin), `refreshUserIntent`
-- `src/routes/p.$slug.tsx` — صفحات مخصصة ديناميكية
-- `src/components/admin/ContentStudioTab.tsx`
-- `src/components/admin/HeaderConfigTab.tsx`
-- `src/components/admin/ExportConfigTab.tsx`
+- `src/lib/cognition.server.ts`
+- `src/lib/cognition.functions.ts`
+- `src/components/ProactiveNextStep.tsx`
 - `src/components/admin/UserIntelligenceTab.tsx`
-- `src/components/ProactiveNextStep.tsx` — البطاقة الاستباقية في نهاية كل أداة
-- `scripts/bootstrap-content.ts` — يهجّر مفاتيح i18n الحالية إلى site_content
+- `src/components/admin/CognitiveInsightsTab.tsx`
 
-**ملفات تُعدَّل**:
-- `src/routes/admin.tsx` — 4 تبويبات جديدة
-- `src/lib/i18n.tsx` — يبقى كـ fallback؛ يتكامل مع `useContent`
-- `src/components/SiteHeader.tsx` — إخفاء الوكيل/روابط ديناميكية
-- `src/components/ExportButtons.tsx` — يقرأ `export_config`
-- كل ملف API tool في `src/routes/api/*.ts` — يُلف بـ `withCognition`
-- كل لوحات الأدوات: استبدال السلاسل المباشرة بـ `useContent`
+**ملفات معدّلة**:
+- `src/routes/admin.tsx` — تبويبان جديدان.
+- 16 ملف API tool — سطرين فقط لكل واحد (قراءة profile + حقن في system prompt).
+- لوحات الأدوات الـ16 — استدعاء `runCognition` بعد النتيجة + عرض `<ProactiveNextStep />`.
 
-**التكلفة الزمنية المتوقعة**: تنفيذ على دفعتين — (أ) CMS + الهيدر + التصدير + تطابق اللغة، (ب) طبقة الإدراك والنية. أوصي بالموافقة على الخطة كاملة ثم تنفيذ الدفعة (أ) أولاً للتحقق قبل الدفعة (ب).
+**حقوق الوصول**: 
+- `user_intent_profile`: select/update فقط للمستخدم نفسه + admin.
+- جداول admin tabs تستخدم `has_role(auth.uid(), 'admin')`.
 
-هل أبدأ بالتنفيذ؟ أو تريد تعديل أي قسم قبل الانطلاق؟
+**التكلفة**: استدعاء واحد إضافي لـ `gemini-2.5-flash` بعد كل تشغيل أداة (تكلفة دقيقة، JSON صغير). يمكن تعطيله من admin عبر `app_settings.cognition_enabled` (سأضيفه كـ toggle).
+
+## ملاحظات
+
+- بطاقة الـ Proactive لن تظهر إذا كان النموذج غير واثق (urgency=low + ليس هناك next_tool).
+- التحديث async ولا يبطئ تجربة المستخدم.
+- النصوص تُولَّد بنفس لغة الواجهة (lang param يُمرَّر للمحرك).
+
+هل أبدأ التنفيذ كاملاً؟

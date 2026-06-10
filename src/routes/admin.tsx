@@ -13,6 +13,8 @@ import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
 import { ContentStudioTab } from "@/components/admin/ContentStudioTab";
 import { HeaderConfigTab } from "@/components/admin/HeaderConfigTab";
 import { ExportConfigTab } from "@/components/admin/ExportConfigTab";
+import { UserIntelligenceTab } from "@/components/admin/UserIntelligenceTab";
+import { CognitiveInsightsTab } from "@/components/admin/CognitiveInsightsTab";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
@@ -45,7 +47,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "ledger";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "ledger";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
@@ -83,6 +85,8 @@ function AdminPage() {
     if (k === "header") return lang === "ar" ? "الهيدر والروابط" : lang === "ku" ? "هێدەر و بەستەرەکان" : "Header & Nav";
     if (k === "exports") return lang === "ar" ? "التصدير" : lang === "ku" ? "هەناردەکردن" : "Exports";
     if (k === "contact") return lang === "ar" ? "معلومات الاتصال" : lang === "ku" ? "زانیاری پەیوەندی" : "Contact Info";
+    if (k === "intelligence") return lang === "ar" ? "ذكاء المستخدمين" : lang === "ku" ? "زیرەکی بەکارهێنەران" : "User Intelligence";
+    if (k === "insights") return lang === "ar" ? "رؤى الإدراك" : lang === "ku" ? "تێگەیشتنەکان" : "Cognitive Insights";
     if (k === "ledger") return t("admin_ledger") || "Ledger";
     return k;
   };
@@ -107,7 +111,7 @@ function AdminPage() {
 
 
         <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","ledger"] as Tab[]).map((k) => (
+          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","intelligence","insights","ledger"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
@@ -143,6 +147,8 @@ function AdminPage() {
         {tab === "header" && <HeaderConfigTab />}
         {tab === "exports" && <ExportConfigTab />}
         {tab === "contact" && <ContactInfoTab />}
+        {tab === "intelligence" && <UserIntelligenceTab />}
+        {tab === "insights" && <CognitiveInsightsTab />}
         {tab === "ledger" && <AdminLedgerPanel />}
       </div>
     </div>
