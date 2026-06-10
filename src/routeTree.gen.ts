@@ -24,6 +24,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
 import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
@@ -118,6 +119,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
 const ToolsSlugRoute = ToolsSlugRouteImport.update({
   id: '/tools/$slug',
   path: '/tools/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuideGeoVsAeoRoute = GuideGeoVsAeoRouteImport.update({
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
@@ -368,6 +377,7 @@ export interface FileRouteTypes {
     | '/api/visibility'
     | '/api/what-if'
     | '/guide/geo-vs-aeo'
+    | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/api/visibility'
     | '/api/what-if'
     | '/guide/geo-vs-aeo'
+    | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
@@ -442,6 +453,7 @@ export interface FileRouteTypes {
     | '/api/visibility'
     | '/api/what-if'
     | '/guide/geo-vs-aeo'
+    | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
     | '/api/public/brand/$slug'
@@ -479,6 +491,7 @@ export interface RootRouteChildren {
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiWhatIfRoute: typeof ApiWhatIfRoute
+  PSlugRoute: typeof PSlugRoute
   ToolsSlugRoute: typeof ToolsSlugRoute
   UUsernameRoute: typeof UUsernameRoute
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/tools/$slug'
       fullPath: '/tools/$slug'
       preLoaderRoute: typeof ToolsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide/geo-vs-aeo': {
@@ -776,6 +796,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiWhatIfRoute: ApiWhatIfRoute,
+  PSlugRoute: PSlugRoute,
   ToolsSlugRoute: ToolsSlugRoute,
   UUsernameRoute: UUsernameRoute,
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
