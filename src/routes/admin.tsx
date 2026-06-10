@@ -101,7 +101,7 @@ function AdminPage() {
 
 
         <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users_pricing","requests","boost","content","ledger"] as Tab[]).map((k) => (
+          {(["overview","users_pricing","requests","boost","content","contact","ledger"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
