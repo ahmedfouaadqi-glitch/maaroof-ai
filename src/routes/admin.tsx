@@ -10,6 +10,9 @@ import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
 import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
 import { AdminPlansMatrixPanel } from "@/components/admin/AdminPlansMatrixPanel";
 import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
+import { ContentStudioTab } from "@/components/admin/ContentStudioTab";
+import { HeaderConfigTab } from "@/components/admin/HeaderConfigTab";
+import { ExportConfigTab } from "@/components/admin/ExportConfigTab";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
