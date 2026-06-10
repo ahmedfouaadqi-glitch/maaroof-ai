@@ -13,6 +13,8 @@ import { AdminLedgerPanel } from "@/components/admin/AdminLedgerPanel";
 import { ContentStudioTab } from "@/components/admin/ContentStudioTab";
 import { HeaderConfigTab } from "@/components/admin/HeaderConfigTab";
 import { ExportConfigTab } from "@/components/admin/ExportConfigTab";
+import { UserIntelligenceTab } from "@/components/admin/UserIntelligenceTab";
+import { CognitiveInsightsTab } from "@/components/admin/CognitiveInsightsTab";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
