@@ -76,6 +76,7 @@ function AdminPage() {
     if (k === "requests") return t("admin_requests" as any) || "Requests";
     if (k === "boost") return "Brand Boost";
     if (k === "content") return "Content";
+    if (k === "contact") return lang === "ar" ? "معلومات الاتصال" : lang === "ku" ? "زانیاری پەیوەندی" : "Contact Info";
     if (k === "ledger") return t("admin_ledger") || "Ledger";
     return k;
   };
