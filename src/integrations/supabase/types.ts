@@ -835,6 +835,8 @@ export type Database = {
           daily_tokens: number
           default_currency: string
           description: string | null
+          discount_badge_enabled: boolean
+          discount_badge_text: string | null
           duration_days: number
           features: Json
           id: string
@@ -856,6 +858,8 @@ export type Database = {
           daily_tokens?: number
           default_currency?: string
           description?: string | null
+          discount_badge_enabled?: boolean
+          discount_badge_text?: string | null
           duration_days?: number
           features?: Json
           id?: string
@@ -877,6 +881,8 @@ export type Database = {
           daily_tokens?: number
           default_currency?: string
           description?: string | null
+          discount_badge_enabled?: boolean
+          discount_badge_text?: string | null
           duration_days?: number
           features?: Json
           id?: string
