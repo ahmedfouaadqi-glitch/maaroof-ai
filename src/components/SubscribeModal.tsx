@@ -1,11 +1,11 @@
 import { Phone, MessageCircle, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { WHATSAPP_NUMBER, whatsappLink } from "@/lib/whatsapp";
+import { useContactInfo, whatsappLinkFromInfo } from "@/lib/contact-info";
 
 export function SubscribeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
+  const info = useContactInfo();
   if (!open) return null;
-  const display = "+964 773 357 0130";
   const msg = t("whatsapp_msg");
   return (
     <div
@@ -29,19 +29,19 @@ export function SubscribeModal({ open, onClose }: { open: boolean; onClose: () =
 
         <div className="mt-5 rounded-xl border border-border bg-background/60 p-4 text-center">
           <div className="text-xs uppercase tracking-widest text-muted-foreground">{t("contact_phone")}</div>
-          <div className="mt-1 font-display text-xl font-bold tracking-wider" dir="ltr" style={{ unicodeBidi: "isolate" }}>{display}</div>
+          <div className="mt-1 font-display text-xl font-bold tracking-wider" dir="ltr" style={{ unicodeBidi: "isolate" }}>{info.phone_display}</div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <a
-            href={whatsappLink(msg)}
+            href={whatsappLinkFromInfo(info, msg)}
             target="_blank" rel="noreferrer"
             className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-success to-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
           >
             <MessageCircle className="size-4" /> {t("whatsapp_cta")}
           </a>
           <a
-            href={`tel:+${WHATSAPP_NUMBER}`}
+            href={`tel:+${info.whatsapp_number}`}
             className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-3 text-sm font-semibold text-primary"
           >
             <Phone className="size-4" /> {t("call_cta")}
