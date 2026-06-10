@@ -48,6 +48,8 @@ const AGENT_EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
 
 function PricingPage() {
   const { t, lang } = useI18n();
+  const contact = useContactInfo();
+  const SUPPORT_EMAIL = contact.email;
   const { user } = useAuth();
   const { info: country } = useCountry();
   const userCountry = country?.code || null;
