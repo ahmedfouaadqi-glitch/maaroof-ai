@@ -31,7 +31,7 @@ export const Route = createFileRoute("/pricing")({
   ),
 });
 
-const SUPPORT_EMAIL = "ahmedfouaad.qi@gmail.com";
+
 
 const EXAMPLE_KEYS: Record<string, { who: string; use: string }> = {
   Starter: { who: "ex_starter_who", use: "ex_starter_use" },
