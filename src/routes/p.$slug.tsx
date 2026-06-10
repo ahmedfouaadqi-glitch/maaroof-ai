@@ -58,11 +58,12 @@ function CustomPage() {
   if (!page) throw notFound();
 
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
-  const title = (page as any)[`title_${L}`] || page.title_en || page.title_ar || page.slug;
-  const body = (page as any)[`body_${L}`] || page.body_en || page.body_ar || "";
+  const title = page ? ((page as any)[`title_${L}`] || page.title_en || page.title_ar || page.slug) : "";
+  const body = page ? ((page as any)[`body_${L}`] || page.body_en || page.body_ar || "") : "";
 
   useEffect(() => {
-    if (title) document.title = `${title} · MAAROOF Ai`;
+    if (!page || !title) return;
+    document.title = `${title} · MAAROOF Ai`;
     const desc = (page as any)[`meta_description_${L}`] || page.meta_description_en;
     if (desc) {
       let m = document.querySelector('meta[name="description"]');
@@ -70,6 +71,8 @@ function CustomPage() {
       m.setAttribute("content", desc);
     }
   }, [title, L, page]);
+
+  if (!page) throw notFound();
 
   return (
     <div className="min-h-screen">
