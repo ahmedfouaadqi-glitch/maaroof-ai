@@ -4,7 +4,7 @@ import { I18nProvider, useI18n, PLAN_KEY_BY_NAME, ADDON_KEY_BY_NAME } from "@/li
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { whatsappLink } from "@/lib/whatsapp";
+import { useContactInfo, whatsappLinkFromInfo } from "@/lib/contact-info";
 import { Check, MessageCircle, Mail, Loader2, X, Sparkles, Star, Bot, Zap } from "lucide-react";
 import { usePageGuard } from "@/lib/visibility";
 import { useCountry } from "@/lib/use-country";
