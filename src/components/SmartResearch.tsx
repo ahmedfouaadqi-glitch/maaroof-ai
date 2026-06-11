@@ -224,6 +224,12 @@ export function SmartResearch() {
             </div>
           )}
           <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
+          <ProactiveNextStep
+            toolKey="research"
+            inputSummary={summarizeInput({ query: q, mode })}
+            outputSummary={summarizeOutput(out)}
+            handoffText={`${q}\n\n${out.sge_summary || out.answer || ""}`}
+          />
         </div>
       )}
     </div>
