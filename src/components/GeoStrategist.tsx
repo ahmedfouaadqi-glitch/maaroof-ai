@@ -4,6 +4,8 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 const GOALS = [
   { id: "awareness", label: "الوعي" },
@@ -94,6 +96,12 @@ export function GeoStrategist() {
           )}
           {res.kpi_targets && <div><b>أهداف KPI:</b> <span className="text-muted-foreground">{Object.entries(res.kpi_targets).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span></div>}
           {res.risks?.length > 0 && <div className="text-destructive"><b>مخاطر:</b> {res.risks.join("، ")}</div>}
+          <ProactiveNextStep
+            toolKey="geo_strategist"
+            inputSummary={summarizeInput({ brand, keywords, selected, budget })}
+            outputSummary={summarizeOutput(res)}
+            handoffText={`${brand}\n${res.summary || ""}`}
+          />
         </div>
       )}
     </div>

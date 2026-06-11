@@ -9,6 +9,8 @@ import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 
@@ -223,6 +225,12 @@ export function FeasibilityStudy() {
           )}
 
           <HandoffMenu source="feasibility" getText={() => `${form.project_name}\n${result.executive_summary || ""}\n\n${(result.next_steps || []).join("\n")}`} />
+          <ProactiveNextStep
+            toolKey="feasibility"
+            inputSummary={summarizeInput(form)}
+            outputSummary={summarizeOutput(result)}
+            handoffText={`${form.project_name}\n${result.executive_summary || ""}`}
+          />
         </div>
       )}
     </div>

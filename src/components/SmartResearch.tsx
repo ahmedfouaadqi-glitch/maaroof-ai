@@ -8,6 +8,8 @@ import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelect
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
@@ -222,6 +224,12 @@ export function SmartResearch() {
             </div>
           )}
           <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
+          <ProactiveNextStep
+            toolKey="research"
+            inputSummary={summarizeInput({ query: q, mode })}
+            outputSummary={summarizeOutput(out)}
+            handoffText={`${q}\n\n${out.sge_summary || out.answer || ""}`}
+          />
         </div>
       )}
     </div>

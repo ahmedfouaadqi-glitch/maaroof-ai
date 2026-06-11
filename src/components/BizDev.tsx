@@ -9,6 +9,8 @@ import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 
@@ -187,6 +189,12 @@ export function BizDev() {
           )}
 
           <HandoffMenu source="bizdev" getText={() => `${form.business_name}\n${result.stage_assessment || ""}\n\n${(result.quick_wins || []).join("\n")}`} />
+          <ProactiveNextStep
+            toolKey="bizdev"
+            inputSummary={summarizeInput(form)}
+            outputSummary={summarizeOutput(result)}
+            handoffText={`${form.business_name}\n${result.stage_assessment || ""}`}
+          />
         </div>
       )}
     </div>

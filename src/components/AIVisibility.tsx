@@ -10,6 +10,8 @@ import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { ENGINES } from "@/components/engine-logos";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 type PanelProps = {
   /** Initial brand name (still editable by the user). */
@@ -178,6 +180,12 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </div>
           )}
 
+          <ProactiveNextStep
+            toolKey="visibility"
+            inputSummary={summarizeInput({ brand, keywords })}
+            outputSummary={summarizeOutput(out)}
+            handoffText={`${brand}\n${out.appearance_summary || ""}`}
+          />
         </div>
       )}
     </>
