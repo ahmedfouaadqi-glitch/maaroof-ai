@@ -6,6 +6,8 @@ import { apiFetch } from "@/lib/api-client";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { HandoffMenu } from "./HandoffMenu";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { Layers, Globe2, Smartphone, Tag, Loader2, Sparkles, CheckCircle2, AlertCircle, Lock } from "lucide-react";
 import type { Lang } from "@/lib/i18n";
@@ -338,6 +340,12 @@ export function AppliedRanking() {
               ];
               return lines.join("\n");
             }}
+          />
+          <ProactiveNextStep
+            toolKey="applied_ranking"
+            inputSummary={summarizeInput({ brand, keywords, sector, website })}
+            outputSummary={summarizeOutput(result)}
+            handoffText={`${brand} — Applied Ranking ${result?.overall}/100`}
           />
         </div>
       )}

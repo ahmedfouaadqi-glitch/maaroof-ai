@@ -9,6 +9,8 @@ import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelect
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 type Mode = "email" | "brand";
 
@@ -195,6 +197,12 @@ export function CompanyOutreach() {
 
 
           <HandoffMenu source="outreach" getText={() => `${company}\n${out.company_brief || ""}\n\n${out.email_body || ""}`} />
+          <ProactiveNextStep
+            toolKey="company_email"
+            inputSummary={summarizeInput({ company, sector, goal, mode, notes })}
+            outputSummary={summarizeOutput(out)}
+            handoffText={`${company}\n${out.company_brief || ""}`}
+          />
         </div>
       )}
     </div>

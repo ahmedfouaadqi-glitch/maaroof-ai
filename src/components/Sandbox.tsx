@@ -13,6 +13,8 @@ import type { ExportPayload } from "@/lib/exports";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
 import { HandoffMenu } from "@/components/HandoffMenu";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 
@@ -500,6 +502,14 @@ export function Sandbox() {
       {showSuggester && <div className="mt-5"><PostSuggester initialSourceText={text} compact /></div>}
 
       {result && <HandoffMenu source="analyze" getText={() => [result.ai_view, ...(result.recommendations || [])].filter(Boolean).join("\n\n") || text} />}
+      {result && (
+        <ProactiveNextStep
+          toolKey="analyze"
+          inputSummary={summarizeInput({ text })}
+          outputSummary={summarizeOutput(result)}
+          handoffText={[result.ai_view, ...(result.recommendations || [])].filter(Boolean).join("\n\n") || text}
+        />
+      )}
     </div>
   );
 }

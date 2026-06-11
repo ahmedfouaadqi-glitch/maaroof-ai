@@ -11,6 +11,8 @@ import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { toast } from "sonner";
 
 type Brand = {
@@ -442,6 +444,12 @@ export function CompetitorCompare() {
           )}
 
           <HandoffMenu source="compare" getText={() => `${brand} vs ${competitors}\n${result.overview || ""}\n\n${(result.recommendations || []).join("\n")}`} />
+          <ProactiveNextStep
+            toolKey="compare"
+            inputSummary={summarizeInput({ brand, competitors, keywords })}
+            outputSummary={summarizeOutput(result)}
+            handoffText={`${brand} vs ${competitors}\n${result.overview || ""}`}
+          />
         </div>
       )}
     </div>

@@ -10,6 +10,8 @@ import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
 import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
@@ -524,7 +526,15 @@ export function PostSuggester({
       )}
 
       {(result || post) && (
-        <HandoffMenu source="suggest" getText={() => result?.variants?.map((v) => v.content).join("\n\n---\n\n") || post || ""} />
+        <>
+          <HandoffMenu source="suggest" getText={() => result?.variants?.map((v) => v.content).join("\n\n---\n\n") || post || ""} />
+          <ProactiveNextStep
+            toolKey="suggest"
+            inputSummary={summarizeInput({ desc, platforms, goal, contentType })}
+            outputSummary={summarizeOutput({ post, variants: result?.variants })}
+            handoffText={result?.variants?.[0]?.content || post || ""}
+          />
+        </>
       )}
     </div>
   );
