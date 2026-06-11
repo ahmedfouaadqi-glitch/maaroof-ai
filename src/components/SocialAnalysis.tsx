@@ -4,6 +4,8 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
+import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 export function SocialAnalysis() {
   const { lang } = useI18n();
@@ -78,6 +80,12 @@ export function SocialAnalysis() {
             </div>
           )}
           {res.hashtags?.length > 0 && <p className="text-xs text-muted-foreground">هاشتاجات: {res.hashtags.join(" ")}</p>}
+          <ProactiveNextStep
+            toolKey="social_analysis"
+            inputSummary={summarizeInput({ brand, keywords })}
+            outputSummary={summarizeOutput(res)}
+            handoffText={`${brand}\n${res.summary || ""}`}
+          />
         </div>
       )}
     </div>
