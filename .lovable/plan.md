@@ -1,93 +1,74 @@
-# Phase B — طبقة الإدراك والنية (Cognitive Layer)
+## Phase B-2 — تعميم الطبقة الإدراكية على بقية الأدوات
 
-Phase A اكتمل (CMS + Header + Export). الآن ننفّذ الطبقة الإدراكية الاستباقية لكل الأدوات.
+تم في Phase B تركيب `<ProactiveNextStep />` في `BrandBoostAgent` فقط. الآن نُعمّمها على باقي الأدوات الـ15، مع التأكد أن كل أداة تُرسل ملخصات صحيحة للمحرك الإدراكي (`runCognition`) وتعرض البطاقة الاستباقية بنفس لغة الواجهة.
 
-## 1) قاعدة البيانات
+### 1) الأدوات المستهدفة (15)
+`SmartResearch`, `CompetitorCompare`, `AIVisibility`, `AppliedRanking`, `PostSuggester`, `BizDev`, `FeasibilityStudy`, `SocialAnalysis`, `CompetitorMonitor`, `WhatIfSimulator`, `GeoStrategist`, `CompanyOutreach` (company_email), `BrandAuthority`(عبر packs), `GeoRewrite` (داخل المكوّن المناسب), `Sandbox/analyze`.
 
-جدول `user_intent_profile` موجود مسبقاً من Phase A migration (user_id, detected_intent jsonb, context_summary text, last_signals jsonb, updated_at). لا حاجة لتعديله — فقط نتأكد من الأعمدة ونضيف فهرس على `updated_at` إن لزم.
+### 2) نمط الدمج الموحّد لكل مكوّن
+في كل ملف مكوّن أداة، بعد كتلة عرض النتيجة:
+```tsx
+<ProactiveNextStep
+  toolKey="<tool_key>"
+  inputSummary={shortInputString}
+  outputSummary={shortOutputString}
+  handoffText={textForNextTool}
+  hidden={!result}
+/>
+```
+- `toolKey` يطابق المفاتيح في `KNOWN_TOOLS` داخل `cognition.functions.ts`.
+- `inputSummary` ≤ 2000 char (يُقصّ).
+- `outputSummary` ≤ 4000 char (مختصر من الحقول الأهم: title/summary/score/recommendations).
+- `handoffText` نص مقترح للأداة التالية (إن لم يُمرَّر، يستخدم `outputSummary`).
 
-## 2) محرك الإدراك (server-side)
+### 3) helper مشترك
+إنشاء `src/lib/cognition-summary.ts` (client-safe) — دوال صغيرة:
+- `summarizeInput(obj, max=1500)` — يجمع الحقول النصّية ويقصّ.
+- `summarizeOutput(obj, max=3500)` — نفس الشيء للنتائج (يتعامل مع arrays/objects/markdown).
+هكذا لا يتكرّر الكود في كل مكوّن.
 
-**`src/lib/cognition.server.ts`** (server-only helper):
-- `extractIntent({ userId, toolKey, input, output })` — يستدعي `google/gemini-2.5-flash` بـ JSON schema صغير ومحدود (لتجنّب Gemini state limit):
-  ```
-  { primary_goal: enum[growth, crisis, competitor, launch, retention, exploration],
-    audience: string(≤80),
-    gap: string(≤120),
-    opportunity: string(≤120),
-    urgency: enum[low, medium, high],
-    next_tool: string,           // toolKey مقترح
-    next_reason_ar/en/ku: string(≤140) }
-  ```
-- `updateContextSummary(prev, newSignal)` — طي تدريجي (آخر 10 إشارات + ملخص نصّي ≤500 char).
-- `buildSystemContext(profile)` — يحوّل الـ profile إلى prompt prefix يُحقن في كل أداة.
+### 4) ضمان تطابق اللغة (نقطة 3 من طلب المستخدم)
+- `<ProactiveNextStep />` يقرأ `useI18n().lang` ويعرض `next_reason_{lang}`.
+- نتأكد أن `runCognition` يستقبل `lang` ويُمرّره لـ `extractIntent` ليولّد الحقول الثلاثة (`next_reason_ar/en/ku`) — حالياً موجودة لكن نضيف معامل `lang` صريح كاحتياط ونحقن "respond in {lang}" في الـ system prompt للمحرك.
 
-**`src/lib/cognition.functions.ts`** (createServerFn):
-- `runCognition` — يُستدعى بعد انتهاء أي أداة، يحدّث `user_intent_profile` ويرجع `{ proactive_next_step }`.
-- `getUserIntelligence` (admin only) — قائمة المستخدمين + النيات.
-- `refreshUserIntent` (admin only) — إعادة فحص.
+### 5) منع الازدواجية والضوضاء
+- البطاقة مخفية تلقائياً إذا `urgency=low` بدون `next_tool` (موجود مسبقاً).
+- نضيف debounce بسيط داخل `ProactiveNextStep` (يستخدم `outputSummary` كمفتاح effect) لمنع نداءات متعددة لنفس النتيجة — موجود جزئياً، نتأكد أن المفتاح هو hash مختصر بدل النص الكامل.
 
-## 3) دمج في الأدوات
+### 6) Admin توجيه عام
+في `UserIntelligenceTab` نضيف زر صغير "تعطيل لمستخدم محدد" يكتب في `user_intent_profile.detected_intent.disabled=true` — يحترمها `runCognition`.
 
-نقطتا تكامل لكل أداة:
-- **قبل التشغيل**: serverFn الأداة يقرأ `user_intent_profile` ويحقن `buildSystemContext()` في الـ system prompt الحالي (سطر/فقرة إضافية، بدون كسر السلوك).
-- **بعد التشغيل**: الواجهة (component) تستدعي `runCognition({ toolKey, inputSummary, outputSummary })` بشكل async (لا يحجب النتيجة) وتعرض `<ProactiveNextStep />` عند الانتهاء.
+### 7) لا تغييرات على Server prompts للأدوات
+حقن `specialtyHint(ctx, lang)` المُعزَّز بـ `buildIntentHint` تم بالفعل في `user-context.server.ts`. الأدوات التي تستخدم `getUserContext` ستحصل تلقائياً على سياق النية بدون تعديل كل ملف API.
 
-ملفات API المعدّلة (حقن السياق فقط، تغيير صغير في system prompt):
-`brand-boost.ts, compare.ts, visibility.ts, applied-ranking.ts, suggest.ts, research.ts, bizdev.ts, feasibility.ts, brand-authority.ts, social-analysis.ts, competitor-monitor.ts, what-if.ts, geo-strategist.ts, analyze.ts, geo-rewrite.ts, company-email.ts`.
+**الأدوات التي لا تستخدم `getUserContext` بعد** (نضيف سطرين فقط: استدعاء `getUserContext` + إلحاق `specialtyHint` بـ system prompt): سنفحصها سريعاً ونحدّث ما يلزم — متوقع 4-6 ملفات API صغيرة.
 
-## 4) المكوّن الاستباقي
+### الملفات
 
-**`src/components/ProactiveNextStep.tsx`**:
-بطاقة CTA تظهر أسفل نتيجة كل أداة:
-> _"بناءً على هدفك ({primary_goal}) والفجوة ({gap}) — ننصح بتشغيل **{next_tool}** الآن"_
-+ زر مباشر يفتح الأداة المقترحة عبر `tool-handoff.ts` الموجود.
-النصوص بكل اللغات (تأتي من `next_reason_ar/en/ku`).
+**جديد**:
+- `src/lib/cognition-summary.ts`
 
-## 5) لوحة الإدارة
+**معدّل (إضافة `<ProactiveNextStep />`)**:
+- `src/components/SmartResearch.tsx`
+- `src/components/CompetitorCompare.tsx`
+- `src/components/AIVisibility.tsx`
+- `src/components/AppliedRanking.tsx`
+- `src/components/PostSuggester.tsx`
+- `src/components/BizDev.tsx`
+- `src/components/FeasibilityStudy.tsx`
+- `src/components/SocialAnalysis.tsx`
+- `src/components/CompetitorMonitor.tsx`
+- `src/components/WhatIfSimulator.tsx`
+- `src/components/GeoStrategist.tsx`
+- `src/components/CompanyOutreach.tsx`
+- `src/components/Sandbox.tsx` (analyze)
 
-تبويبان جديدان في `admin.tsx`:
+**معدّل (إن لزم — حقن السياق إذا غير مفعّل)**:
+- 4-6 ملفات `src/routes/api/*.ts` (سطرين لكل واحد).
 
-**A) User Intelligence** (`src/components/admin/UserIntelligenceTab.tsx`):
-جدول: email | specialty | primary_goal | urgency | context_summary | last_run | actions (إعادة فحص).
-بحث + فلترة حسب intent/urgency/specialty.
+**معدّل (تحسينات صغيرة)**:
+- `src/lib/cognition.functions.ts` — قبول `lang` اختياري.
+- `src/components/admin/UserIntelligenceTab.tsx` — زر تعطيل لمستخدم.
 
-**B) Cognitive Insights** (`src/components/admin/CognitiveInsightsTab.tsx`):
-- توزيع `primary_goal` (chart bars بسيطة)
-- أكثر الفجوات تكراراً (top 10)
-- أكثر الفرص الجماعية
-- توزيع urgency
-
-## 6) ربط مع المنطق الموجود
-
-- `user-context.server.ts` الحالي يبقى — `cognition.server` يبني فوقه ولا يستبدله.
-- `tool-handoff.ts` يُستخدم لزر "الخطوة التالية".
-- نضيف namespace جديد في `site_content` بـ `cognition:*` للنصوص (عنوان البطاقة، التسميات، شارات urgency) — كلها قابلة للتعديل من Content Studio بكل اللغات.
-
-## التفاصيل التقنية
-
-**ملفات جديدة**:
-- `src/lib/cognition.server.ts`
-- `src/lib/cognition.functions.ts`
-- `src/components/ProactiveNextStep.tsx`
-- `src/components/admin/UserIntelligenceTab.tsx`
-- `src/components/admin/CognitiveInsightsTab.tsx`
-
-**ملفات معدّلة**:
-- `src/routes/admin.tsx` — تبويبان جديدان.
-- 16 ملف API tool — سطرين فقط لكل واحد (قراءة profile + حقن في system prompt).
-- لوحات الأدوات الـ16 — استدعاء `runCognition` بعد النتيجة + عرض `<ProactiveNextStep />`.
-
-**حقوق الوصول**: 
-- `user_intent_profile`: select/update فقط للمستخدم نفسه + admin.
-- جداول admin tabs تستخدم `has_role(auth.uid(), 'admin')`.
-
-**التكلفة**: استدعاء واحد إضافي لـ `gemini-2.5-flash` بعد كل تشغيل أداة (تكلفة دقيقة، JSON صغير). يمكن تعطيله من admin عبر `app_settings.cognition_enabled` (سأضيفه كـ toggle).
-
-## ملاحظات
-
-- بطاقة الـ Proactive لن تظهر إذا كان النموذج غير واثق (urgency=low + ليس هناك next_tool).
-- التحديث async ولا يبطئ تجربة المستخدم.
-- النصوص تُولَّد بنفس لغة الواجهة (lang param يُمرَّر للمحرك).
-
-هل أبدأ التنفيذ كاملاً؟
+### تأكيد قبل التنفيذ
+هل أبدأ التعميم على الأدوات الـ13 المذكورة دفعة واحدة؟
