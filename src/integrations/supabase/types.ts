@@ -585,6 +585,24 @@ export type Database = {
         }
         Relationships: []
       }
+      firecrawl_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       firecrawl_usage: {
         Row: {
           cache_hit: boolean
