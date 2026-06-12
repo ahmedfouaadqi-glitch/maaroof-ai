@@ -70,7 +70,15 @@ export function ContentStudioTab() {
   const autoFill = async (keys: string[]) => {
     if (!keys.length) return;
     setBusy(true);
-    try { await bulk({ data: { keys: keys.slice(0, 50) } }); invalidateContent(); await reload(); }
+    try {
+      const r: any = await bulk({ data: { keys: keys.slice(0, 50) } });
+      invalidateContent();
+      await reload();
+      const fc = (r?.failed || []).length;
+      alert(`تمت ترجمة ${r?.count || 0} من ${keys.length}.${fc ? ` فشل: ${fc}` : ""}`);
+    } catch (e: any) {
+      alert(`فشل: ${e?.message || e}`);
+    }
     finally { setBusy(false); }
   };
 
