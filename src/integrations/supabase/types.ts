@@ -585,6 +585,63 @@ export type Database = {
         }
         Relationships: []
       }
+      firecrawl_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
+      firecrawl_usage: {
+        Row: {
+          cache_hit: boolean
+          created_at: string
+          id: string
+          latency_ms: number | null
+          op: string
+          query_hash: string | null
+          status: number | null
+          tool_key: string | null
+          units: number
+          user_id: string | null
+        }
+        Insert: {
+          cache_hit?: boolean
+          created_at?: string
+          id?: string
+          latency_ms?: number | null
+          op: string
+          query_hash?: string | null
+          status?: number | null
+          tool_key?: string | null
+          units?: number
+          user_id?: string | null
+        }
+        Update: {
+          cache_hit?: boolean
+          created_at?: string
+          id?: string
+          latency_ms?: number | null
+          op?: string
+          query_hash?: string | null
+          status?: number | null
+          tool_key?: string | null
+          units?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       geo_strategies: {
         Row: {
           brand: string
@@ -765,6 +822,36 @@ export type Database = {
           usage_day_start?: string
           usage_period_start?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      provider_rates: {
+        Row: {
+          id: string
+          model: string | null
+          notes: string | null
+          provider: string
+          unit: string
+          updated_at: string
+          usd_per_unit: number
+        }
+        Insert: {
+          id?: string
+          model?: string | null
+          notes?: string | null
+          provider: string
+          unit: string
+          updated_at?: string
+          usd_per_unit?: number
+        }
+        Update: {
+          id?: string
+          model?: string | null
+          notes?: string | null
+          provider?: string
+          unit?: string
+          updated_at?: string
+          usd_per_unit?: number
         }
         Relationships: []
       }

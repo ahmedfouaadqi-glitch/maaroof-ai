@@ -2,8 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, BarChart3 } from "lucide-react";
 import { getUserIntelligence } from "@/lib/cognition.functions";
+import { useAdminL } from "./admin-i18n";
 
 export function CognitiveInsightsTab() {
+  const L = useAdminL({
+    overview: { ar: "نظرة عامة", en: "Overview", ku: "گشتی" },
+    aggregated: { ar: "مُجمَّع من {n} ملف نوايا للمستخدمين.", en: "Aggregated from {n} user intent profiles.", ku: "" },
+    goals: { ar: "الأهداف الرئيسية", en: "Primary goals", ku: "ئامانجەکان" },
+    urgency: { ar: "درجة الإلحاح", en: "Urgency", ku: "پەلەکردن" },
+    gaps: { ar: "أبرز الفجوات", en: "Top gaps", ku: "بۆشاییەکان" },
+    ops: { ar: "أبرز الفرص", en: "Top opportunities", ku: "دەرفەتەکان" },
+    none: { ar: "لا توجد بيانات بعد.", en: "No data yet.", ku: "هیچ داتایەک نییە." },
+  });
   const call = useServerFn(getUserIntelligence);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,26 +44,26 @@ export function CognitiveInsightsTab() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card/60 p-4">
-        <div className="mb-2 flex items-center gap-2"><BarChart3 className="size-4 text-primary" /><h3 className="font-semibold">Overview</h3></div>
-        <p className="text-xs text-muted-foreground">Aggregated from {stats.total} user intent profiles.</p>
+        <div className="mb-2 flex items-center gap-2"><BarChart3 className="size-4 text-primary" /><h3 className="font-semibold">{L.overview}</h3></div>
+        <p className="text-xs text-muted-foreground">{L.aggregated.replace("{n}", String(stats.total))}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Block title="Primary goals" rows={stats.goals} max={stats.total} />
-        <Block title="Urgency" rows={stats.urgency} max={stats.total} />
-        <Block title="Top gaps" rows={stats.gaps} max={stats.total} />
-        <Block title="Top opportunities" rows={stats.ops} max={stats.total} />
+        <Block title={L.goals} empty={L.none} rows={stats.goals} max={stats.total} />
+        <Block title={L.urgency} empty={L.none} rows={stats.urgency} max={stats.total} />
+        <Block title={L.gaps} empty={L.none} rows={stats.gaps} max={stats.total} />
+        <Block title={L.ops} empty={L.none} rows={stats.ops} max={stats.total} />
       </div>
     </div>
   );
 }
 
-function Block({ title, rows, max }: { title: string; rows: [string, number][]; max: number }) {
+function Block({ title, empty, rows, max }: { title: string; empty: string; rows: [string, number][]; max: number }) {
   return (
     <section className="rounded-xl border border-border bg-card/60 p-4">
       <h4 className="mb-3 text-sm font-semibold">{title}</h4>
       {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No data yet.</p>
+        <p className="text-xs text-muted-foreground">{empty}</p>
       ) : (
         <div className="space-y-1.5">
           {rows.map(([k, v]) => (

@@ -1,11 +1,33 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, RefreshCw, Brain, Search, Save } from "lucide-react";
+import { Loader2, RefreshCw, Brain, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getUserIntelligence, refreshUserIntent } from "@/lib/cognition.functions";
 import { adminSetAppSetting } from "@/lib/admin.functions";
+import { useAdminL } from "./admin-i18n";
 
 export function UserIntelligenceTab() {
+  const L = useAdminL({
+    title: { ar: "طبقة الإدراك", en: "Cognitive layer", ku: "چینی تێگەیشتن" },
+    toggleOn: { ar: "مُفعَّل", en: "Enabled", ku: "چالاکە" },
+    toggleOff: { ar: "مُعطَّل", en: "Disabled", ku: "ناچالاکە" },
+    toggleHelp: { ar: "كشف النوايا بعد كل تشغيل أداة.", en: "(intent detection after each tool run)", ku: "" },
+    searchPh: { ar: "بحث بالبريد / التخصص / الملخّص", en: "Search email / specialty / summary", ku: "گەڕان" },
+    allGoals: { ar: "كل الأهداف", en: "All goals", ku: "هەموو ئامانجەکان" },
+    allUrgency: { ar: "كل درجات الإلحاح", en: "All urgency", ku: "هەموو" },
+    reload: { ar: "إعادة تحميل", en: "Reload", ku: "نوێکردنەوە" },
+    empty: { ar: "لا توجد ملفّات نوايا بعد. تظهر بعد تشغيل المستخدمين للأدوات.", en: "No intent profiles yet. They appear after users run tools.", ku: "" },
+    email: { ar: "البريد", en: "Email", ku: "ئیمەیڵ" },
+    specialty: { ar: "التخصص", en: "Specialty", ku: "بوار" },
+    goal: { ar: "الهدف", en: "Goal", ku: "ئامانج" },
+    urgency: { ar: "الإلحاح", en: "Urgency", ku: "پەلە" },
+    audience: { ar: "الجمهور", en: "Audience", ku: "ئامادەبووان" },
+    gap: { ar: "الفجوة", en: "Gap", ku: "بۆشایی" },
+    opportunity: { ar: "الفرصة", en: "Opportunity", ku: "دەرفەت" },
+    signals: { ar: "الإشارات", en: "Signals", ku: "نیشانە" },
+    reset: { ar: "تصفير", en: "Reset", ku: "ڕێسیت" },
+    resetTitle: { ar: "تصفير ملف النوايا", en: "Reset intent", ku: "ڕێسیت" },
+  });
   const callList = useServerFn(getUserIntelligence);
   const callRefresh = useServerFn(refreshUserIntent);
   const setSetting = useServerFn(adminSetAppSetting);
@@ -51,11 +73,11 @@ export function UserIntelligenceTab() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Brain className="size-5 text-primary" />
-            <h3 className="font-semibold">Cognitive layer</h3>
+            <h3 className="font-semibold">{L.title}</h3>
           </div>
           <label className="inline-flex items-center gap-2 text-xs">
             <input type="checkbox" checked={enabled} onChange={(e) => toggle(e.target.checked)} disabled={savingToggle} />
-            <span>{enabled ? "Enabled" : "Disabled"} (intent detection after each tool run)</span>
+            <span>{enabled ? L.toggleOn : L.toggleOff} {L.toggleHelp}</span>
           </label>
         </div>
       </section>
@@ -64,39 +86,39 @@ export function UserIntelligenceTab() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="pointer-events-none absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search email / specialty / summary"
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L.searchPh}
               className="rounded-lg border border-border bg-background/60 ps-7 pe-3 py-1.5 text-xs" />
           </div>
           <select value={filterGoal} onChange={(e) => setFilterGoal(e.target.value)} className="rounded-lg border border-border bg-background/60 px-2 py-1.5 text-xs">
-            <option value="">All goals</option>
+            <option value="">{L.allGoals}</option>
             {["growth","crisis","competitor","launch","retention","exploration"].map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
           <select value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)} className="rounded-lg border border-border bg-background/60 px-2 py-1.5 text-xs">
-            <option value="">All urgency</option>
+            <option value="">{L.allUrgency}</option>
             {["low","medium","high"].map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
           <button onClick={load} className="ms-auto inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs">
-            <RefreshCw className="size-3.5" /> Reload
+            <RefreshCw className="size-3.5" /> {L.reload}
           </button>
         </div>
 
         {loading ? (
           <div className="grid h-40 place-items-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-xs text-muted-foreground py-6">No intent profiles yet. They appear after users run tools.</p>
+          <p className="text-center text-xs text-muted-foreground py-6">{L.empty}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border/60">
-                  <th className="px-2 py-2 text-start">Email</th>
-                  <th className="px-2 py-2 text-start">Specialty</th>
-                  <th className="px-2 py-2 text-start">Goal</th>
-                  <th className="px-2 py-2 text-start">Urgency</th>
-                  <th className="px-2 py-2 text-start">Audience</th>
-                  <th className="px-2 py-2 text-start">Gap</th>
-                  <th className="px-2 py-2 text-start">Opportunity</th>
-                  <th className="px-2 py-2 text-end">Signals</th>
+                  <th className="px-2 py-2 text-start">{L.email}</th>
+                  <th className="px-2 py-2 text-start">{L.specialty}</th>
+                  <th className="px-2 py-2 text-start">{L.goal}</th>
+                  <th className="px-2 py-2 text-start">{L.urgency}</th>
+                  <th className="px-2 py-2 text-start">{L.audience}</th>
+                  <th className="px-2 py-2 text-start">{L.gap}</th>
+                  <th className="px-2 py-2 text-start">{L.opportunity}</th>
+                  <th className="px-2 py-2 text-end">{L.signals}</th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -115,7 +137,7 @@ export function UserIntelligenceTab() {
                       <td className="px-2 py-2 text-end font-mono">{r.signal_count}</td>
                       <td className="px-2 py-2">
                         <button onClick={async () => { await callRefresh({ data: { userId: r.user_id } }); await load(); }}
-                          className="rounded-md border border-border px-2 py-1 text-[10px]" title="Reset intent">Reset</button>
+                          className="rounded-md border border-border px-2 py-1 text-[10px]" title={L.resetTitle}>{L.reset}</button>
                       </td>
                     </tr>
                   );
