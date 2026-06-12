@@ -81,9 +81,9 @@ async function readCache(op: string, hash: string, ttlHours: number): Promise<an
   try {
     const db = await getAdmin();
     const since = new Date(Date.now() - ttlHours * 3600_000).toISOString();
-    const { data } = await db.from("analysis_cache")
+    const { data } = await db.from("firecrawl_cache")
       .select("payload, created_at")
-      .eq("cache_key", `firecrawl:${op}:${hash}`)
+      .eq("cache_key", `${op}:${hash}`)
       .gte("created_at", since)
       .maybeSingle();
     return (data as any)?.payload || null;
@@ -92,8 +92,8 @@ async function readCache(op: string, hash: string, ttlHours: number): Promise<an
 async function writeCache(op: string, hash: string, payload: any): Promise<void> {
   try {
     const db = await getAdmin();
-    await db.from("analysis_cache").upsert({
-      cache_key: `firecrawl:${op}:${hash}`,
+    await db.from("firecrawl_cache").upsert({
+      cache_key: `${op}:${hash}`,
       payload,
       created_at: new Date().toISOString(),
     }, { onConflict: "cache_key" });
