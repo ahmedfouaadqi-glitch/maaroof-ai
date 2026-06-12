@@ -5,6 +5,7 @@ import {
   adminListContent, adminUpsertContent, adminDeleteContent, adminBulkAutoFill,
 } from "@/lib/cms.functions";
 import { invalidateContent } from "@/lib/content";
+import { useAdminL } from "./admin-i18n";
 
 type Row = {
   key: string; namespace: string;
@@ -13,6 +14,20 @@ type Row = {
 };
 
 export function ContentStudioTab() {
+  const L = useAdminL({
+    search: { ar: "بحث في المفتاح / النص…", en: "Search key / text…", ku: "گەڕان…" },
+    allNs: { ar: "كل الأقسام", en: "All namespaces", ku: "هەموو" },
+    newKey: { ar: "مفتاح جديد", en: "New key", ku: "کلیلی نوێ" },
+    auto: { ar: "ترجمة تلقائية للمفقود", en: "Auto-translate missing", ku: "وەرگێڕانی خۆکار" },
+    save: { ar: "حفظ", en: "Save", ku: "هەڵگرتن" },
+    keyNs: { ar: "المفتاح / القسم", en: "Key / NS", ku: "کلیل" },
+    deletePrompt: { ar: "حذف هذا المفتاح؟", en: "Delete this key?", ku: "بسڕیتەوە؟" },
+    newKeyPrompt: { ar: "مفتاح جديد (مثال: home.hero.title):", en: "New content key (e.g. home.hero.title):", ku: "کلیلی نوێ:" },
+    nsPrompt: { ar: "القسم (مثال: home, header, tool:brand_boost):", en: "Namespace (e.g. home, header, tool:brand_boost):", ku: "بەش:" },
+    empty: { ar: "لا توجد مفاتيح. اضغط \"مفتاح جديد\" للبدء.", en: "No keys. Click \"New key\" to start.", ku: "هیچ نییە." },
+    autoTitle: { ar: "ترجمة تلقائية", en: "Auto-translate", ku: "وەرگێڕان" },
+    deleteTitle: { ar: "حذف", en: "Delete", ku: "سڕینەوە" },
+  });
   const list = useServerFn(adminListContent);
   const upsert = useServerFn(adminUpsertContent);
   const del = useServerFn(adminDeleteContent);
@@ -75,24 +90,24 @@ export function ContentStudioTab() {
       invalidateContent();
       await reload();
       const fc = (r?.failed || []).length;
-      alert(`تمت ترجمة ${r?.count || 0} من ${keys.length}.${fc ? ` فشل: ${fc}` : ""}`);
+      alert(`${r?.count || 0} / ${keys.length}${fc ? ` — failed: ${fc}` : ""}`);
     } catch (e: any) {
-      alert(`فشل: ${e?.message || e}`);
+      alert(`Error: ${e?.message || e}`);
     }
     finally { setBusy(false); }
   };
 
   const removeKey = async (k: string) => {
-    if (!confirm(`Delete "${k}"?`)) return;
+    if (!confirm(`${L.deletePrompt} "${k}"`)) return;
     setBusy(true);
     try { await del({ data: { key: k } }); invalidateContent(); await reload(); }
     finally { setBusy(false); }
   };
 
   const addNew = () => {
-    const k = prompt("New content key (e.g. home.hero.title):");
+    const k = prompt(L.newKeyPrompt);
     if (!k) return;
-    const newNs = prompt("Namespace (e.g. home, header, tool:brand_boost):", ns || "misc") || "misc";
+    const newNs = prompt(L.nsPrompt, ns || "misc") || "misc";
     setRows((r) => [{ key: k, namespace: newNs, ar: "", en: "", ku: "", notes: null }, ...r]);
     setDirty((d) => ({ ...d, [k]: { key: k, namespace: newNs, ar: "", en: "", ku: "", notes: null } }));
   };
@@ -106,26 +121,26 @@ export function ContentStudioTab() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute start-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search key / text…"
+          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={L.search}
             className="w-full rounded-lg border border-border bg-background/60 ps-8 pe-3 py-2 text-sm" />
         </div>
         <select value={ns} onChange={(e) => setNs(e.target.value)}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm">
-          <option value="">All namespaces</option>
+          <option value="">{L.allNs}</option>
           {namespaces.map((n) => <option key={n} value={n}>{n}</option>)}
         </select>
         <button onClick={addNew} className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
-          <Plus className="size-3.5" /> New key
+          <Plus className="size-3.5" /> {L.newKey}
         </button>
         <button onClick={() => autoFill(filtered.filter((r) => !r.ar || !r.en || !r.ku).map((r) => r.key))}
           disabled={busy}
           className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-50">
-          <Wand2 className="size-3.5" /> Auto-translate missing
+          <Wand2 className="size-3.5" /> {L.auto}
         </button>
         <button onClick={saveAll} disabled={busy || dirtyCount === 0}
           className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-          Save {dirtyCount > 0 ? `(${dirtyCount})` : ""}
+          {L.save} {dirtyCount > 0 ? `(${dirtyCount})` : ""}
         </button>
       </div>
 
@@ -133,7 +148,7 @@ export function ContentStudioTab() {
         <table className="w-full text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="p-2 text-start">Key / NS</th>
+              <th className="p-2 text-start">{L.keyNs}</th>
               <th className="p-2 text-start">AR</th>
               <th className="p-2 text-start">EN</th>
               <th className="p-2 text-start">KU</th>
@@ -164,9 +179,9 @@ export function ContentStudioTab() {
                   </td>
                   <td className="p-2 align-top">
                     <div className="flex flex-col gap-1">
-                      <button onClick={() => autoFill([r.key])} title="Auto-translate" disabled={busy}
+                      <button onClick={() => autoFill([r.key])} title={L.autoTitle} disabled={busy}
                         className="rounded p-1 text-accent hover:bg-accent/10 disabled:opacity-50"><Wand2 className="size-3.5" /></button>
-                      <button onClick={() => removeKey(r.key)} title="Delete" disabled={busy}
+                      <button onClick={() => removeKey(r.key)} title={L.deleteTitle} disabled={busy}
                         className="rounded p-1 text-destructive hover:bg-destructive/10 disabled:opacity-50"><Trash2 className="size-3.5" /></button>
                     </div>
                   </td>
@@ -174,7 +189,7 @@ export function ContentStudioTab() {
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No keys. Click "New key" to start, or trigger the i18n bootstrap from the README.</td></tr>
+              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{L.empty}</td></tr>
             )}
           </tbody>
         </table>
