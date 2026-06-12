@@ -42,7 +42,12 @@ function ensureLoaded() {
   refreshContent();
 }
 
-export function invalidateContent() { loaded = false; ensureLoaded(); }
+export function invalidateContent() {
+  loaded = false;
+  CONTENT_MAP = null;
+  try { localStorage.removeItem(CONTENT_CACHE_KEY); } catch {}
+  ensureLoaded();
+}
 
 export function useContent(key: string, fallback?: string): string {
   const { lang } = useI18n();

@@ -136,22 +136,35 @@ export const adminBulkAutoFill = createServerFn({ method: "POST" })
       .from("site_content").select("key, namespace, ar, en, ku").in("key", data.keys);
     if (error) throw new Response(error.message, { status: 400 });
     const updated: any[] = [];
+    const failed: { key: string; error: string }[] = [];
     for (const r of rows || []) {
-      const source: "ar" | "en" | "ku" | null = r.ar ? "ar" : r.en ? "en" : r.ku ? "ku" : null;
-      if (!source) continue;
-      const text = (r as any)[source] as string;
-      const out: any = { ...r, updated_by: userId, updated_at: new Date().toISOString() };
-      for (const lang of ["ar", "en", "ku"] as const) {
-        if (lang === source || (r as any)[lang]) continue;
-        out[lang] = await translateOne(text, source, lang);
+      try {
+        const ar = (r.ar || "").trim();
+        const en = (r.en || "").trim();
+        const ku = (r.ku || "").trim();
+        const source: "ar" | "en" | "ku" | null = en ? "en" : ar ? "ar" : ku ? "ku" : null;
+        if (!source) { failed.push({ key: r.key, error: "all_empty" }); continue; }
+        const text = (r as any)[source] as string;
+        const out: any = { ...r, updated_by: userId, updated_at: new Date().toISOString() };
+        for (const lang of ["ar", "en", "ku"] as const) {
+          if (lang === source) continue;
+          if (((r as any)[lang] || "").trim()) continue;
+          try {
+            out[lang] = await translateOne(text, source, lang);
+          } catch (e: any) {
+            failed.push({ key: r.key, error: `${lang}: ${e?.message || "translate_failed"}` });
+          }
+        }
+        updated.push(out);
+      } catch (e: any) {
+        failed.push({ key: r.key, error: e?.message || "row_failed" });
       }
-      updated.push(out);
     }
     if (updated.length) {
       const { error: upErr } = await supabaseAdmin.from("site_content").upsert(updated, { onConflict: "key" });
       if (upErr) throw new Response(upErr.message, { status: 400 });
     }
-    return { ok: true, count: updated.length };
+    return { ok: true, count: updated.length, failed };
   });
 
 // ---------- custom_pages ----------
