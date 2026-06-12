@@ -1,74 +1,65 @@
-## Phase B-2 — تعميم الطبقة الإدراكية على بقية الأدوات
+# خطة التحسين الشاملة (5 محاور)
 
-تم في Phase B تركيب `<ProactiveNextStep />` في `BrandBoostAgent` فقط. الآن نُعمّمها على باقي الأدوات الـ15، مع التأكد أن كل أداة تُرسل ملخصات صحيحة للمحرك الإدراكي (`runCognition`) وتعرض البطاقة الاستباقية بنفس لغة الواجهة.
+## 1) رفع جودة الأدوات والموقع — "نادر ومميز وحقيقي"
+- تشديد قواعد المصدر في كل برومبت أدوات (Smart Research / Compare / Visibility / AppliedRanking / BizDev / Feasibility / Social / GeoStrategist / WhatIf / CompanyOutreach):
+  - منع التخمين: إذا لم يوجد دليل من Firecrawl/إدخال المستخدم → يُصرَّح بـ`evidence_missing` ويُخفّض الـconfidence (موجود جزئياً في `FACTUAL_SAFETY_PROMPT`، سيُفرض في كل API).
+  - إضافة حقل `sources[]` (url + snippet) إلزامي في مخرجات كل أداة، وعرضه في الواجهة كـ"المصادر" قابل للنقر.
+  - إضافة `rarity_score` و`uniqueness_notes` (لماذا هذه التوصية غير شائعة) في الأدوات التحليلية.
+- تحسين السكور: استبدال أي قيم ثابتة/افتراضية بحسابات من المدخلات الفعلية + Firecrawl.
+- تنقيح صفحات الموقع العامة (index/guide/pricing): مراجعة العناوين الفارغة، إضافة `og:image` المفقودة، تشديد H1 الموحّد.
 
-### 1) الأدوات المستهدفة (15)
-`SmartResearch`, `CompetitorCompare`, `AIVisibility`, `AppliedRanking`, `PostSuggester`, `BizDev`, `FeasibilityStudy`, `SocialAnalysis`, `CompetitorMonitor`, `WhatIfSimulator`, `GeoStrategist`, `CompanyOutreach` (company_email), `BrandAuthority`(عبر packs), `GeoRewrite` (داخل المكوّن المناسب), `Sandbox/analyze`.
+## 2) تكلفة حقيقية لكل أداة/طلب/مستخدم في لوحة الإدارة
+الحالة الحالية: `AdminLedgerPanel` يعرض tokens + usd من `token_ledger`، لكن `usd_cost` يُحتسب حالياً من جدول تسعير ثابت لا من الاستهلاك الفعلي.
+التغييرات:
+- توسيع `token_ledger.meta` ليُسجّل لكل طلب: `provider` (lovable-ai/firecrawl/semrush)، `model`، `prompt_tokens`، `completion_tokens`، `firecrawl_units` (search=1, scrape=1, deep=5)، `latency_ms`، `endpoint`.
+- إنشاء helper `recordSpend({userId, toolKey, runId, items[]})` في `src/lib/spend.server.ts` يحوّل وحدات كل مزوّد إلى USD وفق جدول `provider_rates` جديد (Lovable AI per 1M tokens حسب الموديل + Firecrawl per credit + Semrush per call).
+- استبدال نداءات `chargeTokens` المباشرة في كل API route بـ wrapper جديد يُسجّل الكلفة الحقيقية + يخصم التوكن.
+- إضافة تبويب جديد في الإدارة "تكلفة المزوّدين" يعرض: تكلفة/مستخدم، تكلفة/أداة، تكلفة/طلب، توزيع المزوّدين (Lovable AI vs Firecrawl)، Margin مقابل ما يدفعه المستخدم.
+- إثراء `AdminLedgerPanel` بأعمدة: المزوّد، الموديل، Firecrawl units، Latency.
 
-### 2) نمط الدمج الموحّد لكل مكوّن
-في كل ملف مكوّن أداة، بعد كتلة عرض النتيجة:
-```tsx
-<ProactiveNextStep
-  toolKey="<tool_key>"
-  inputSummary={shortInputString}
-  outputSummary={shortOutputString}
-  handoffText={textForNextTool}
-  hidden={!result}
-/>
-```
-- `toolKey` يطابق المفاتيح في `KNOWN_TOOLS` داخل `cognition.functions.ts`.
-- `inputSummary` ≤ 2000 char (يُقصّ).
-- `outputSummary` ≤ 4000 char (مختصر من الحقول الأهم: title/summary/score/recommendations).
-- `handoffText` نص مقترح للأداة التالية (إن لم يُمرَّر، يستخدم `outputSummary`).
+## 3) مراقبة Firecrawl وتقليل الاستهلاك + سياسة استخدام
+- جدول جديد `firecrawl_usage` (user_id, tool_key, op: search|scrape, units, query_hash, cache_hit, created_at).
+- في `src/lib/firecrawl.ts`:
+  - **كاش 24h**: قبل النداء، فحص `analysis_cache` بمفتاح `firecrawl:{op}:{hash}` — إن وُجد، يُعاد بدون نداء API ويُسجَّل `cache_hit=true`.
+  - **حدود**: قراءة `app_settings.firecrawl_policy` (يومي/شهري لكل أداة ولكل مستخدم + سقف عالمي). تجاوز السقف → خطأ واضح "تم بلوغ حد الاستهلاك".
+  - **خفض الكلفة الافتراضية**: تقليل `limit` الافتراضي للبحث من 6 إلى 4، تعطيل `deep` ما لم يُطلب صراحة، استخدام `onlyMainContent:true` دائماً.
+- تبويب إدارة جديد "Firecrawl" يعرض: استخدام يومي/شهري، أعلى المستخدمين، أعلى الأدوات، نسبة الـcache hits، أزرار تعديل الحدود لكل أداة (مثل: `brand_boost`: 200/شهر، `competitor_monitor`: 50/يوم …).
 
-### 3) helper مشترك
-إنشاء `src/lib/cognition-summary.ts` (client-safe) — دوال صغيرة:
-- `summarizeInput(obj, max=1500)` — يجمع الحقول النصّية ويقصّ.
-- `summarizeOutput(obj, max=3500)` — نفس الشيء للنتائج (يتعامل مع arrays/objects/markdown).
-هكذا لا يتكرّر الكود في كل مكوّن.
+## 4) تعريب تبويبات الإدارة الجديدة
+كل النصوص الإنجليزية الحالية في الملفات التالية ستُستبدل بـ`useI18n()` + قاموس ثلاثي (ar/en/ku) مع تبسيط الصياغة:
+- `ContentStudioTab.tsx` — "محرر المحتوى" (مفاتيح، الكل، بحث، حفظ، حذف، ترجمة تلقائية…)
+- `HeaderConfigTab.tsx` — "الهيدر والروابط" (الإظهار، روابط إضافية، أرقام تواصل…)
+- `ExportConfigTab.tsx` — "إعدادات التصدير"
+- `UserIntelligenceTab.tsx` — "ذكاء المستخدمين"
+- `CognitiveInsightsTab.tsx` — "رؤى الإدراك"
+- تسميات التبويبات نفسها في `src/routes/admin.tsx` تُعرّب وفق `useI18n().lang`.
 
-### 4) ضمان تطابق اللغة (نقطة 3 من طلب المستخدم)
-- `<ProactiveNextStep />` يقرأ `useI18n().lang` ويعرض `next_reason_{lang}`.
-- نتأكد أن `runCognition` يستقبل `lang` ويُمرّره لـ `extractIntent` ليولّد الحقول الثلاثة (`next_reason_ar/en/ku`) — حالياً موجودة لكن نضيف معامل `lang` صريح كاحتياط ونحقن "respond in {lang}" في الـ system prompt للمحرك.
+## 5) إصلاح الترجمة التلقائية في CMS
+المشكلة: زر "Auto-translate missing" في `ContentStudioTab` يستدعي `adminBulkAutoFill` لكن بعض الحالات لا تُحدّث الواجهة بسبب:
+- النتائج تُكتب في DB لكن لا يُعاد تحميل الـmap بشكل صحيح (الـlocalStorage cache يطغى).
+- المصدر يختار الحقل الأول الموجود (ar أولاً) ما يجعل ar=null + en=value + ku=null لا يترجم لـar (لأنه يبدأ من ar).
+- عدم وجود لوغ/رسالة عند فشل عنصر واحد فيُلغى الباتش الكامل.
 
-### 5) منع الازدواجية والضوضاء
-- البطاقة مخفية تلقائياً إذا `urgency=low` بدون `next_tool` (موجود مسبقاً).
-- نضيف debounce بسيط داخل `ProactiveNextStep` (يستخدم `outputSummary` كمفتاح effect) لمنع نداءات متعددة لنفس النتيجة — موجود جزئياً، نتأكد أن المفتاح هو hash مختصر بدل النص الكامل.
+التصحيحات:
+- في `adminBulkAutoFill`: تحديد المصدر = أول حقل **غير فارغ** (بالفعل صحيح، لكن نضيف trim + معالجة `""`).
+- معالجة كل صف داخل `try/catch` منفصل وإرجاع `{ok, count, failed[]}`.
+- بعد النجاح: `invalidateContent()` يمسح `localStorage[geo-site-content-v1]` ويُعيد التحميل (إضافة `localStorage.removeItem` داخل `invalidateContent`).
+- إظهار toast بعدد المترجم/الفاشل.
+- إضافة زر "ترجمة تلقائية" لكل صف حتى لو الحقول كلها فارغة عدا واحد، مع تحديد لغة المصدر يدوياً عبر dropdown صغير عند الحاجة.
+- نفس الإصلاح يُطبّق على `adminUpsertPage` (custom pages).
 
-### 6) Admin توجيه عام
-في `UserIntelligenceTab` نضيف زر صغير "تعطيل لمستخدم محدد" يكتب في `user_intent_profile.detected_intent.disabled=true` — يحترمها `runCognition`.
+---
 
-### 7) لا تغييرات على Server prompts للأدوات
-حقن `specialtyHint(ctx, lang)` المُعزَّز بـ `buildIntentHint` تم بالفعل في `user-context.server.ts`. الأدوات التي تستخدم `getUserContext` ستحصل تلقائياً على سياق النية بدون تعديل كل ملف API.
+## التقنيات
+- ملفات جديدة: `src/lib/spend.server.ts`، `src/components/admin/ProviderCostTab.tsx`، `src/components/admin/FirecrawlMonitorTab.tsx`.
+- migration واحد: `firecrawl_usage` (RLS admin-only)، `provider_rates` (admin-managed)، تحديث `app_settings` keys: `firecrawl_policy`.
+- تعديل: `firecrawl.ts`، 7 ملفات API، 5 تبويبات إدارة، `admin.tsx`، `cms.functions.ts`، `content.ts`.
 
-**الأدوات التي لا تستخدم `getUserContext` بعد** (نضيف سطرين فقط: استدعاء `getUserContext` + إلحاق `specialtyHint` بـ system prompt): سنفحصها سريعاً ونحدّث ما يلزم — متوقع 4-6 ملفات API صغيرة.
-
-### الملفات
-
-**جديد**:
-- `src/lib/cognition-summary.ts`
-
-**معدّل (إضافة `<ProactiveNextStep />`)**:
-- `src/components/SmartResearch.tsx`
-- `src/components/CompetitorCompare.tsx`
-- `src/components/AIVisibility.tsx`
-- `src/components/AppliedRanking.tsx`
-- `src/components/PostSuggester.tsx`
-- `src/components/BizDev.tsx`
-- `src/components/FeasibilityStudy.tsx`
-- `src/components/SocialAnalysis.tsx`
-- `src/components/CompetitorMonitor.tsx`
-- `src/components/WhatIfSimulator.tsx`
-- `src/components/GeoStrategist.tsx`
-- `src/components/CompanyOutreach.tsx`
-- `src/components/Sandbox.tsx` (analyze)
-
-**معدّل (إن لزم — حقن السياق إذا غير مفعّل)**:
-- 4-6 ملفات `src/routes/api/*.ts` (سطرين لكل واحد).
-
-**معدّل (تحسينات صغيرة)**:
-- `src/lib/cognition.functions.ts` — قبول `lang` اختياري.
-- `src/components/admin/UserIntelligenceTab.tsx` — زر تعطيل لمستخدم.
-
-### تأكيد قبل التنفيذ
-هل أبدأ التعميم على الأدوات الـ13 المذكورة دفعة واحدة؟
+## الترتيب التنفيذي
+1. Migration (firecrawl_usage + provider_rates).
+2. `firecrawl.ts` كاش + حدود + خفض الافتراضي + تسجيل usage.
+3. `spend.server.ts` + استبدال chargeTokens في API routes.
+4. تبويبَا ProviderCost + FirecrawlMonitor + تحسين AdminLedgerPanel.
+5. تعريب 5 تبويبات إدارة.
+6. إصلاح الترجمة التلقائية + invalidateContent.
+7. تشديد برومبتات الأدوات + `sources[]` + `rarity_score` + عرضها.
