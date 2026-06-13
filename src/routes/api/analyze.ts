@@ -91,7 +91,8 @@ export const Route = createFileRoute("/api/analyze")({
             userId = data.user?.id || null;
           }
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "analyze" });
+          const runId = crypto.randomUUID();
+          const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/analyze" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota
@@ -152,7 +153,25 @@ export const Route = createFileRoute("/api/analyze")({
               return Response.json({ error: "ai_error" }, { status: 500 });
             }
             const data = await resp.json();
+            const usage = data?.usage || {};
             const content = data?.choices?.[0]?.message?.content || "{}";
+            // Enrich the just-inserted ledger row with real AI token usage & USD
+            try {
+              const { logFirecrawlSpend: _ } = await import("@/lib/spend.server"); // ensure module bundle
+              const inT = Number(usage.prompt_tokens) || 0;
+              const outT = Number(usage.completion_tokens) || 0;
+              await admin.from("token_ledger").update({
+                meta: {
+                  provider: "lovable_ai",
+                  model: "google/gemini-2.5-flash-lite",
+                  endpoint: "/api/analyze",
+                  input_tokens: inT,
+                  output_tokens: outT,
+                  latency_ms: null,
+                  real_usd_cost: ((inT + outT) / 1_000_000) * 0.30,
+                },
+              }).eq("run_id", runId);
+            } catch {}
             const parsed = extractJsonObject(content);
             if (parsed) {
               const clamp = (n: any) => Math.max(0, Math.min(100, parseInt(n, 10) || 0));

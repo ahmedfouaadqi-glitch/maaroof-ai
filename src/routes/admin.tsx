@@ -16,6 +16,7 @@ import { ExportConfigTab } from "@/components/admin/ExportConfigTab";
 import { UserIntelligenceTab } from "@/components/admin/UserIntelligenceTab";
 import { CognitiveInsightsTab } from "@/components/admin/CognitiveInsightsTab";
 import { FirecrawlMonitorTab } from "@/components/admin/FirecrawlMonitorTab";
+import { ProviderCostTab } from "@/components/admin/ProviderCostTab";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
@@ -48,7 +49,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "ledger";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "cost" | "ledger";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
@@ -89,6 +90,7 @@ function AdminPage() {
     if (k === "intelligence") return lang === "ar" ? "ذكاء المستخدمين" : lang === "ku" ? "زیرەکی بەکارهێنەران" : "User Intelligence";
     if (k === "insights") return lang === "ar" ? "رؤى الإدراك" : lang === "ku" ? "تێگەیشتنەکان" : "Cognitive Insights";
     if (k === "firecrawl") return lang === "ar" ? "مراقبة Firecrawl" : lang === "ku" ? "چاودێری Firecrawl" : "Firecrawl";
+    if (k === "cost") return lang === "ar" ? "تكلفة المزوّدين" : lang === "ku" ? "تێچووی دابینکەرەکان" : "Provider Cost";
     if (k === "ledger") return t("admin_ledger") || "Ledger";
     return k;
   };
@@ -113,7 +115,7 @@ function AdminPage() {
 
 
         <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","intelligence","insights","firecrawl","ledger"] as Tab[]).map((k) => (
+          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","intelligence","insights","firecrawl","cost","ledger"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
@@ -152,6 +154,7 @@ function AdminPage() {
         {tab === "intelligence" && <UserIntelligenceTab />}
         {tab === "insights" && <CognitiveInsightsTab />}
         {tab === "firecrawl" && <FirecrawlMonitorTab />}
+        {tab === "cost" && <ProviderCostTab />}
         {tab === "ledger" && <AdminLedgerPanel />}
       </div>
     </div>
