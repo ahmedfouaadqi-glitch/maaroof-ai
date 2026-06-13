@@ -181,6 +181,10 @@ export async function fcSearch(query: string, opts: { limit?: number; lang?: str
   const json = await res.json();
   await writeCache("search", hash, json);
   await logUsage({ ...ctx, op: "search", units: limit, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
+  try {
+    const { logFirecrawlSpend } = await import("./spend.server");
+    await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units: limit, latencyMs: latency, endpoint: "fc.search" });
+  } catch {}
   return json;
 }
 
@@ -211,6 +215,11 @@ export async function fcScrape(url: string, opts: { deep?: boolean } = {}, ctx: 
   }
   const json = await res.json();
   await writeCache("scrape", hash, json);
-  await logUsage({ ...ctx, op: "scrape", units: deep ? 5 : 1, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
+  const units = deep ? 5 : 1;
+  await logUsage({ ...ctx, op: "scrape", units, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
+  try {
+    const { logFirecrawlSpend } = await import("./spend.server");
+    await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units, latencyMs: latency, endpoint: "fc.scrape" });
+  } catch {}
   return json;
 }
