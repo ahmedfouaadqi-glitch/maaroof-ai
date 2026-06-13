@@ -1,65 +1,90 @@
-# خطة التحسين الشاملة (5 محاور)
+# خطة الإكمال — المرحلتان 1 و 2
 
-## 1) رفع جودة الأدوات والموقع — "نادر ومميز وحقيقي"
-- تشديد قواعد المصدر في كل برومبت أدوات (Smart Research / Compare / Visibility / AppliedRanking / BizDev / Feasibility / Social / GeoStrategist / WhatIf / CompanyOutreach):
-  - منع التخمين: إذا لم يوجد دليل من Firecrawl/إدخال المستخدم → يُصرَّح بـ`evidence_missing` ويُخفّض الـconfidence (موجود جزئياً في `FACTUAL_SAFETY_PROMPT`، سيُفرض في كل API).
-  - إضافة حقل `sources[]` (url + snippet) إلزامي في مخرجات كل أداة، وعرضه في الواجهة كـ"المصادر" قابل للنقر.
-  - إضافة `rarity_score` و`uniqueness_notes` (لماذا هذه التوصية غير شائعة) في الأدوات التحليلية.
-- تحسين السكور: استبدال أي قيم ثابتة/افتراضية بحسابات من المدخلات الفعلية + Firecrawl.
-- تنقيح صفحات الموقع العامة (index/guide/pricing): مراجعة العناوين الفارغة، إضافة `og:image` المفقودة، تشديد H1 الموحّد.
-
-## 2) تكلفة حقيقية لكل أداة/طلب/مستخدم في لوحة الإدارة
-الحالة الحالية: `AdminLedgerPanel` يعرض tokens + usd من `token_ledger`، لكن `usd_cost` يُحتسب حالياً من جدول تسعير ثابت لا من الاستهلاك الفعلي.
-التغييرات:
-- توسيع `token_ledger.meta` ليُسجّل لكل طلب: `provider` (lovable-ai/firecrawl/semrush)، `model`، `prompt_tokens`، `completion_tokens`، `firecrawl_units` (search=1, scrape=1, deep=5)، `latency_ms`، `endpoint`.
-- إنشاء helper `recordSpend({userId, toolKey, runId, items[]})` في `src/lib/spend.server.ts` يحوّل وحدات كل مزوّد إلى USD وفق جدول `provider_rates` جديد (Lovable AI per 1M tokens حسب الموديل + Firecrawl per credit + Semrush per call).
-- استبدال نداءات `chargeTokens` المباشرة في كل API route بـ wrapper جديد يُسجّل الكلفة الحقيقية + يخصم التوكن.
-- إضافة تبويب جديد في الإدارة "تكلفة المزوّدين" يعرض: تكلفة/مستخدم، تكلفة/أداة، تكلفة/طلب، توزيع المزوّدين (Lovable AI vs Firecrawl)، Margin مقابل ما يدفعه المستخدم.
-- إثراء `AdminLedgerPanel` بأعمدة: المزوّد، الموديل، Firecrawl units، Latency.
-
-## 3) مراقبة Firecrawl وتقليل الاستهلاك + سياسة استخدام
-- جدول جديد `firecrawl_usage` (user_id, tool_key, op: search|scrape, units, query_hash, cache_hit, created_at).
-- في `src/lib/firecrawl.ts`:
-  - **كاش 24h**: قبل النداء، فحص `analysis_cache` بمفتاح `firecrawl:{op}:{hash}` — إن وُجد، يُعاد بدون نداء API ويُسجَّل `cache_hit=true`.
-  - **حدود**: قراءة `app_settings.firecrawl_policy` (يومي/شهري لكل أداة ولكل مستخدم + سقف عالمي). تجاوز السقف → خطأ واضح "تم بلوغ حد الاستهلاك".
-  - **خفض الكلفة الافتراضية**: تقليل `limit` الافتراضي للبحث من 6 إلى 4، تعطيل `deep` ما لم يُطلب صراحة، استخدام `onlyMainContent:true` دائماً.
-- تبويب إدارة جديد "Firecrawl" يعرض: استخدام يومي/شهري، أعلى المستخدمين، أعلى الأدوات، نسبة الـcache hits، أزرار تعديل الحدود لكل أداة (مثل: `brand_boost`: 200/شهر، `competitor_monitor`: 50/يوم …).
-
-## 4) تعريب تبويبات الإدارة الجديدة
-كل النصوص الإنجليزية الحالية في الملفات التالية ستُستبدل بـ`useI18n()` + قاموس ثلاثي (ar/en/ku) مع تبسيط الصياغة:
-- `ContentStudioTab.tsx` — "محرر المحتوى" (مفاتيح، الكل، بحث، حفظ، حذف، ترجمة تلقائية…)
-- `HeaderConfigTab.tsx` — "الهيدر والروابط" (الإظهار، روابط إضافية، أرقام تواصل…)
-- `ExportConfigTab.tsx` — "إعدادات التصدير"
-- `UserIntelligenceTab.tsx` — "ذكاء المستخدمين"
-- `CognitiveInsightsTab.tsx` — "رؤى الإدراك"
-- تسميات التبويبات نفسها في `src/routes/admin.tsx` تُعرّب وفق `useI18n().lang`.
-
-## 5) إصلاح الترجمة التلقائية في CMS
-المشكلة: زر "Auto-translate missing" في `ContentStudioTab` يستدعي `adminBulkAutoFill` لكن بعض الحالات لا تُحدّث الواجهة بسبب:
-- النتائج تُكتب في DB لكن لا يُعاد تحميل الـmap بشكل صحيح (الـlocalStorage cache يطغى).
-- المصدر يختار الحقل الأول الموجود (ar أولاً) ما يجعل ar=null + en=value + ku=null لا يترجم لـar (لأنه يبدأ من ar).
-- عدم وجود لوغ/رسالة عند فشل عنصر واحد فيُلغى الباتش الكامل.
-
-التصحيحات:
-- في `adminBulkAutoFill`: تحديد المصدر = أول حقل **غير فارغ** (بالفعل صحيح، لكن نضيف trim + معالجة `""`).
-- معالجة كل صف داخل `try/catch` منفصل وإرجاع `{ok, count, failed[]}`.
-- بعد النجاح: `invalidateContent()` يمسح `localStorage[geo-site-content-v1]` ويُعيد التحميل (إضافة `localStorage.removeItem` داخل `invalidateContent`).
-- إظهار toast بعدد المترجم/الفاشل.
-- إضافة زر "ترجمة تلقائية" لكل صف حتى لو الحقول كلها فارغة عدا واحد، مع تحديد لغة المصدر يدوياً عبر dropdown صغير عند الحاجة.
-- نفس الإصلاح يُطبّق على `adminUpsertPage` (custom pages).
+أكملنا سابقاً: Firecrawl monitoring + cache + سياسات، تعريب تبويبات الإدارة، إصلاح الترجمة التلقائية في CMS.
+الآن نُكمل الجزأين المتبقيين من طلبك السابق.
 
 ---
 
-## التقنيات
-- ملفات جديدة: `src/lib/spend.server.ts`، `src/components/admin/ProviderCostTab.tsx`، `src/components/admin/FirecrawlMonitorTab.tsx`.
-- migration واحد: `firecrawl_usage` (RLS admin-only)، `provider_rates` (admin-managed)، تحديث `app_settings` keys: `firecrawl_policy`.
-- تعديل: `firecrawl.ts`، 7 ملفات API، 5 تبويبات إدارة، `admin.tsx`، `cms.functions.ts`، `content.ts`.
+## المرحلة 1 — جودة الأدوات: "نادر، مميز، حقيقي"
 
-## الترتيب التنفيذي
-1. Migration (firecrawl_usage + provider_rates).
-2. `firecrawl.ts` كاش + حدود + خفض الافتراضي + تسجيل usage.
-3. `spend.server.ts` + استبدال chargeTokens في API routes.
-4. تبويبَا ProviderCost + FirecrawlMonitor + تحسين AdminLedgerPanel.
-5. تعريب 5 تبويبات إدارة.
-6. إصلاح الترجمة التلقائية + invalidateContent.
-7. تشديد برومبتات الأدوات + `sources[]` + `rarity_score` + عرضها.
+**الهدف:** منع المخرجات العامة/المُختلَقة وإلزام كل أداة بمصادر حقيقية.
+
+### تغييرات على البنية المشتركة
+- إضافة `src/lib/tool-quality.server.ts`:
+  - `buildEvidencePack(query, scope)` → يستدعي `fcSearch` + `fcScrape` للنتائج العليا ويعيد `sources[]` (url, title, snippet, fetched_at).
+  - `assertEvidence(sources, minCount=2)` → يرمي خطأً واضحاً لو لم تتوفر أدلة كافية، لتجبر النموذج على وضع `evidence_missing: true` بدلاً من تأليف أرقام.
+  - `qualityShell(prompt)` → يحقن في كل برومبت:
+    - "استخدم فقط الحقائق من `sources` المُرفقة."
+    - "كل ادعاء رقمي يحتاج `source_index`."
+    - أخرِج `rarity_score (0-100)` و `uniqueness_notes` و `evidence_missing`.
+
+### تكامل مع 8 مسارات أساسية
+`analyze.ts`, `research.ts`, `compare.ts`, `suggest.ts`, `feasibility.ts`, `bizdev.ts`, `geo-strategist.ts`, `visibility.ts`:
+- استدعاء `buildEvidencePack` قبل LLM.
+- تمرير `sources[]` ضمن الـ payload للنموذج وإلزام JSON schema بـ `sources_used: number[]` و `rarity_score`.
+- إذا `evidence_missing` → الواجهة تعرض بانر "تحتاج رابط/بيانات إضافية" بدلاً من نتيجة وهمية.
+
+### مكوّن واجهة جديد
+`src/components/SourcesList.tsx` — يعرض المصادر المستخدمة كروابط قابلة للنقر مع snippet ووقت السحب، وشارة `Rarity 87/100` بجانب العنوان.
+يُدمج تحت نتائج الأدوات الثماني أعلاه.
+
+### تحسينات صفحات الموقع العامة
+- `index.tsx`, `guide.tsx`, `pricing.tsx`: استبدال أي نص "lorem-style" بمحتوى مدفوع من `site_content` فقط (لا fallback عام).
+
+---
+
+## المرحلة 2 — تتبع التكلفة الحقيقية لكل توكن/طلب/مستخدم
+
+### قاعدة البيانات (هجرة جديدة)
+- توسيع `token_ledger.meta` (موجود JSONB) بحقول قياسية موثّقة: `provider`, `model`, `input_tokens`, `output_tokens`, `firecrawl_units`, `latency_ms`, `endpoint`, `request_id`.
+- جدول `provider_rates` موجود — نضيف بذور:
+  - Lovable AI: `google/gemini-2.5-flash`, `gemini-2.5-pro`, `gpt-5-mini` (USD لكل 1M توكن دخل/خرج).
+  - Firecrawl: USD لكل credit.
+  - Semrush: USD لكل call.
+
+### طبقة قياس مركزية
+`src/lib/spend.server.ts`:
+```ts
+recordSpend({ userId, toolKey, provider, model, inputTokens, outputTokens,
+              firecrawlUnits, latencyMs, endpoint, runId })
+```
+- يقرأ `provider_rates` ويحسب `usd_cost` الحقيقي.
+- يستدعي `charge_tokens` RPC مع `_meta` غني.
+- يرجع `{ tokens, usdCost, breakdown }`.
+
+استبدال كل `charge_tokens` المباشر في 10 مسارات API بـ `recordSpend()`.
+
+### تبويب إدارة جديد: "تكلفة المزوّدين"
+`src/components/admin/ProviderCostTab.tsx`:
+- بطاقات: إجمالي USD اليوم/الشهر، متوسط تكلفة الطلب، هامش (مدفوع - تكلفة).
+- جدول لكل مستخدم: عدد الطلبات، توكنات الدخل/الخرج، USD، توزيع المزوّدين.
+- جدول لكل أداة: نفس الأعمدة + متوسط الزمن.
+- جدول آخر العمليات (100 صف) مع `request_id` وفلتر زمني.
+- تصدير CSV.
+
+تعريب كامل عبر `useAdminL` (ar/en/ku).
+
+### تكامل مع `firecrawl.ts`
+- بعد كل عملية، إضافة `firecrawl_units` للـ ledger الرئيسي عبر `recordSpend` (بالإضافة إلى `firecrawl_usage` المخصص للمراقبة).
+
+---
+
+## الملفات
+
+**جديد (5):**
+- `src/lib/tool-quality.server.ts`
+- `src/lib/spend.server.ts`
+- `src/components/SourcesList.tsx`
+- `src/components/admin/ProviderCostTab.tsx`
+- هجرة بذور `provider_rates` + توثيق `token_ledger.meta`.
+
+**تعديل (~14):**
+- 8 مسارات API (Phase 1 + spend)
+- `src/lib/firecrawl.ts` (spend hook)
+- `src/routes/admin.tsx` (تسجيل التبويب)
+- مكوّنات الأدوات الثماني لعرض `SourcesList` و `rarity_score`
+
+## ملاحظات
+- لا تغييرات على RLS أو السياسات الأمنية القائمة.
+- لا تأثير على المستخدمين الحاليين — المصادر تظهر فقط عند توفرها.
+- التكاليف ستبدأ بالظهور للطلبات الجديدة فور النشر؛ السجلات القديمة تبقى كما هي.
