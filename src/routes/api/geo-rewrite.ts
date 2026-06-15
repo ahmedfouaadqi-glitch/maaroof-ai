@@ -74,7 +74,9 @@ export const Route = createFileRoute("/api/geo-rewrite")({
             userId = data.user?.id || null;
           }
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "geo_rewrite" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "geo_rewrite", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/geo-rewrite" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Charge against the analyses quota (this combines rewrite + rescore).

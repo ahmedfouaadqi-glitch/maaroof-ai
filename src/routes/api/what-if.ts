@@ -20,7 +20,9 @@ export const Route = createFileRoute("/api/what-if")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-        const _chg = await chargeTokens({ userId, toolKey: "what_if" });
+        const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "what_if", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/what-if" } });
         if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();

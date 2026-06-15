@@ -54,7 +54,9 @@ export const Route = createFileRoute("/api/brand-authority")({
           const { admin, userId, profile, err } = await authUser(request);
           if (err) return err;
 
-          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-authority" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota check (same model as brand-boost)

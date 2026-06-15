@@ -173,7 +173,9 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
 
-          const _chg = await chargeTokens({ userId, toolKey: "visibility" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/visibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const { data: roleRow } = await admin

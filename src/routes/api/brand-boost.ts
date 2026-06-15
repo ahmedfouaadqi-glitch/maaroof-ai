@@ -106,7 +106,9 @@ export const Route = createFileRoute("/api/brand-boost")({
           const userId = userData?.user?.id;
           if (userErr || !userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
-          const _chg = await chargeTokens({ userId, toolKey: "brand_boost" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();

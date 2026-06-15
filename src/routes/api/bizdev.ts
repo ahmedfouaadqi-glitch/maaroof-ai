@@ -159,7 +159,9 @@ export const Route = createFileRoute("/api/bizdev")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "bizdev" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "bizdev", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/bizdev" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
