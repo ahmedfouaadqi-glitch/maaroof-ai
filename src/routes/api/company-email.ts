@@ -78,11 +78,6 @@ You write STRICTLY in language code: ${lang}. ${modeInstruction} Use only the su
             return Response.json({ error: "ai_error" }, { status: 500 });
           }
           const j: any = await ai.json();
-          try {
-            const _u: any = (j as any)?.usage || {};
-            const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/company-email", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
-          } catch {}
 
           const parsed: any = extractJsonObject(j?.choices?.[0]?.message?.content) || {};
           return Response.json({ ...parsed, mode: m, sources, specialty: userCtx.specialty });

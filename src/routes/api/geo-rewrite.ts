@@ -109,11 +109,6 @@ export const Route = createFileRoute("/api/geo-rewrite")({
           if (!resp.ok) return Response.json({ error: "ai_error" }, { status: 500 });
 
           const data = await resp.json();
-          try {
-            const _u: any = (data as any)?.usage || {};
-            const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/geo-rewrite", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
-          } catch {}
 
           const content = data?.choices?.[0]?.message?.content || "{}";
           const parsed: any = extractJsonObject(content);

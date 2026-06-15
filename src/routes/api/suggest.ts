@@ -236,11 +236,6 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           }
 
           const data = await resp.json();
-          try {
-            const _u: any = (data as any)?.usage || {};
-            const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/suggest", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
-          } catch {}
 
           const call = data?.choices?.[0]?.message?.tool_calls?.[0];
           let parsed: any = null;

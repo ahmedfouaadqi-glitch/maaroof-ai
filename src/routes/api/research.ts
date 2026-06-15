@@ -11,11 +11,6 @@ export const Route = createFileRoute("/api/research")({
       POST: async ({ request }) => {
         try {
           const reqBody = await request.json();
-          try {
-            const _u: any = (reqBody as any)?.usage || {};
-            const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/research", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
-          } catch {}
 
           const { query, lang = "en", scope, mode = "web" } = reqBody;
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });

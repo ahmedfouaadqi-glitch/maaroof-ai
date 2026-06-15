@@ -41,11 +41,6 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const body = await request.json();
-          try {
-            const _u: any = (body as any)?.usage || {};
-            const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
-          } catch {}
 
         const { action, id, brand, competitors = [], frequency_hours = 24, lang = "ar", scope } = body;
 
