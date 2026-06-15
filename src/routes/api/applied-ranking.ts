@@ -127,7 +127,9 @@ export const Route = createFileRoute("/api/applied-ranking")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "applied_ranking" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "applied_ranking", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/applied-ranking" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota: counts against monthly_analyses (premium tool, costs 2 by default but 1 per call here)
@@ -230,6 +232,12 @@ Return the JSON now. All text fields MUST be in language code "${lang}".`;
           }
 
           const j: any = await resp.json();
+          try {
+            const _u: any = (j as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/applied-ranking", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
           const content = String(j?.choices?.[0]?.message?.content || "{}");
           const parsed: any = extractJsonObject(content) || {};
 

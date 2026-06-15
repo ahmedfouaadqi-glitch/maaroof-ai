@@ -86,7 +86,9 @@ export const Route = createFileRoute("/api/suggest")({
           const { data: u } = await admin.auth.getUser(token);
           const userId = u.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "suggest" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "suggest", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/suggest" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota
@@ -234,6 +236,12 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           }
 
           const data = await resp.json();
+          try {
+            const _u: any = (data as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/suggest", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
           const call = data?.choices?.[0]?.message?.tool_calls?.[0];
           let parsed: any = null;
           try { parsed = call?.function?.arguments ? JSON.parse(call.function.arguments) : null; } catch {}

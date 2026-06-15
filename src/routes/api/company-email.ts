@@ -28,7 +28,9 @@ export const Route = createFileRoute("/api/company-email")({
           const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
           const userId = userData?.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "company_email" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "company_email", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/company-email" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           const userCtx = await getUserContext(admin, userId);
 
@@ -76,6 +78,12 @@ You write STRICTLY in language code: ${lang}. ${modeInstruction} Use only the su
             return Response.json({ error: "ai_error" }, { status: 500 });
           }
           const j: any = await ai.json();
+          try {
+            const _u: any = (j as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/company-email", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
           const parsed: any = extractJsonObject(j?.choices?.[0]?.message?.content) || {};
           return Response.json({ ...parsed, mode: m, sources, specialty: userCtx.specialty });
         } catch (e) {

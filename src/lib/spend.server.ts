@@ -119,3 +119,37 @@ export async function logFirecrawlSpend(opts: {
     });
   } catch {}
 }
+
+/**
+ * Enrich an existing token_ledger row (identified by runId) with real AI usage,
+ * latency, model + endpoint, and a computed real_usd_cost. Safe no-op on any error.
+ */
+export async function enrichLedger(opts: {
+  runId?: string | null;
+  provider?: string;
+  model?: string | null;
+  endpoint?: string | null;
+  inputTokens?: number;
+  outputTokens?: number;
+  latencyMs?: number | null;
+}): Promise<void> {
+  if (!opts.runId) return;
+  try {
+    const rates = await getRates();
+    const inT = Math.max(0, Math.round(opts.inputTokens || 0));
+    const outT = Math.max(0, Math.round(opts.outputTokens || 0));
+    const aiRate = rateFor(rates, opts.provider || "lovable_ai", "per_1m_tokens", opts.model || null);
+    const usd = Number((((inT + outT) / 1_000_000) * aiRate).toFixed(6));
+    await admin().from("token_ledger").update({
+      meta: {
+        provider: opts.provider || "lovable_ai",
+        model: opts.model || null,
+        endpoint: opts.endpoint || null,
+        input_tokens: inT,
+        output_tokens: outT,
+        latency_ms: opts.latencyMs ?? null,
+        real_usd_cost: usd,
+      },
+    }).eq("run_id", opts.runId);
+  } catch {}
+}

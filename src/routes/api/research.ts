@@ -11,6 +11,7 @@ export const Route = createFileRoute("/api/research")({
       POST: async ({ request }) => {
         try {
           const reqBody = await request.json();
+
           const { query, lang = "en", scope, mode = "web" } = reqBody;
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });
           const limited = String(query).slice(0, 300);
@@ -28,7 +29,9 @@ export const Route = createFileRoute("/api/research")({
           const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
           const userId = userData?.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "research" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/research" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           const userCtx = await getUserContext(admin, userId);
 
@@ -93,6 +96,11 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
             });
             if (ai.ok) {
               const j: any = await ai.json();
+          try {
+            const _u: any = (j as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/research", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
               const raw = j?.choices?.[0]?.message?.content || "{}";
               try {
                 const p = extractJsonObject(raw) || {};

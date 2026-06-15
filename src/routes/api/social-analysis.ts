@@ -29,7 +29,9 @@ export const Route = createFileRoute("/api/social-analysis")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-        const _chg = await chargeTokens({ userId, toolKey: "social_analysis" });
+        const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "social_analysis", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/social-analysis" } });
         if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -42,6 +44,7 @@ export const Route = createFileRoute("/api/social-analysis")({
         }
 
         const body = await request.json();
+
         const { brand, keywords = "", lang = "ar" } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 
@@ -95,6 +98,11 @@ Given evidence of brand mentions across social platforms, return ONLY valid JSON
           if (r.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (r.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           const j: any = await r.json();
+          try {
+            const _u: any = (j as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/social-analysis", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
           parsed = extractJsonObject(String(j?.choices?.[0]?.message?.content || "{}")) || {};
         } catch {}
 

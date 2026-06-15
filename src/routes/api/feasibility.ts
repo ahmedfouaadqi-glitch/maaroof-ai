@@ -150,7 +150,9 @@ export const Route = createFileRoute("/api/feasibility")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          const _chg = await chargeTokens({ userId, toolKey: "feasibility" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId, toolKey: "feasibility", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/feasibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota piggybacks on monthly_analyses_used
@@ -221,6 +223,12 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
           }
 
           const data = await resp.json();
+          try {
+            const _u: any = (data as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/feasibility", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
           const content = String(data?.choices?.[0]?.message?.content || "{}");
           const result = normalize(extractJsonObject(content) || {});
 

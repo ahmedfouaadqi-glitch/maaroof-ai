@@ -54,7 +54,9 @@ export const Route = createFileRoute("/api/brand-authority")({
           const { admin, userId, profile, err } = await authUser(request);
           if (err) return err;
 
-          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority" });
+          const _runId = crypto.randomUUID();
+          const _t0 = Date.now();
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-authority" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota check (same model as brand-boost)
@@ -68,6 +70,7 @@ export const Route = createFileRoute("/api/brand-authority")({
           }
 
           const body = await request.json();
+
           const brand_name = String(body?.brand_name || "").trim();
           const brand_keywords = String(body?.brand_keywords || "").trim();
           const source_url = String(body?.source_url || "").trim();
@@ -123,6 +126,11 @@ ${evidenceText || "(no source content)"}`;
           if (r.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           if (r.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           const j: any = await r.json().catch(() => ({}));
+          try {
+            const _u: any = (j as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-authority", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
           const content = String(j?.choices?.[0]?.message?.content || "");
           const parsed = extractJsonObject<any>(content) || {};
 
