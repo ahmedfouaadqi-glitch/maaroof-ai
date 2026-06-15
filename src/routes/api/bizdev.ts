@@ -229,6 +229,11 @@ Return the JSON business-development plan now. All string fields MUST be in lang
           }
 
           const data = await resp.json();
+          try {
+            const _u: any = (data as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/bizdev", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
 
           const content = String(data?.choices?.[0]?.message?.content || "{}");
           const result = normalize(extractJsonObject(content) || {});

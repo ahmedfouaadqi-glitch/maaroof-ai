@@ -98,6 +98,11 @@ Given evidence of brand mentions across social platforms, return ONLY valid JSON
           if (r.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (r.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           const j: any = await r.json();
+          try {
+            const _u: any = (j as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/social-analysis", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
           parsed = extractJsonObject(String(j?.choices?.[0]?.message?.content || "{}")) || {};
         } catch {}
 
