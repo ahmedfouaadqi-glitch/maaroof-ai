@@ -133,6 +133,12 @@ export const Route = createFileRoute("/api/brand-boost")({
           }
 
           const body = await request.json();
+          try {
+            const _u: any = (body as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
 

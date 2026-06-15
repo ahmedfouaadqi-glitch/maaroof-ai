@@ -44,6 +44,12 @@ export const Route = createFileRoute("/api/social-analysis")({
         }
 
         const body = await request.json();
+          try {
+            const _u: any = (body as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/social-analysis", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
         const { brand, keywords = "", lang = "ar" } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 

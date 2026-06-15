@@ -70,6 +70,12 @@ export const Route = createFileRoute("/api/brand-authority")({
           }
 
           const body = await request.json();
+          try {
+            const _u: any = (body as any)?.usage || {};
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-authority", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+          } catch {}
+
           const brand_name = String(body?.brand_name || "").trim();
           const brand_keywords = String(body?.brand_keywords || "").trim();
           const source_url = String(body?.source_url || "").trim();
