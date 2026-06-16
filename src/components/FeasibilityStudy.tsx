@@ -226,7 +226,9 @@ export function FeasibilityStudy() {
             </div>
           )}
 
+          <SourcesList sources={(result as any).sources} sourcesUsed={(result as any).sources_used} rarityScore={(result as any).rarity_score} uniquenessNotes={(result as any).uniqueness_notes} evidenceMissing={(result as any).evidence_missing} />
           <HandoffMenu source="feasibility" getText={() => `${form.project_name}\n${result.executive_summary || ""}\n\n${(result.next_steps || []).join("\n")}`} />
+
           <ProactiveNextStep
             toolKey="feasibility"
             inputSummary={summarizeInput(form)}
