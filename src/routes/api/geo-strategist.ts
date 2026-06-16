@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/geo-strategist")({
 
         const market = describeMarket(scope);
         const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish Sorani" : "English";
-        const sys = `${FACTUAL_SAFETY_PROMPT}
+        const baseSys = `${FACTUAL_SAFETY_PROMPT}
 You are a senior GEO strategist for ${market.market}. Reply ONLY in ${langName}.
 Based on the brand's goals and the last brand-boost report (if any), produce a 12-week GEO action plan.
 Return ONLY valid JSON:
@@ -60,11 +60,16 @@ Return ONLY valid JSON:
   "kpi_targets": {"visibility":"e.g. +15%","mentions":"...","backlinks":"..."},
   "risks": ["risk1"]
 }`;
+        const sys = qualityShell(baseSys);
+        const pack = await buildEvidencePack(`${brand} ${keywords} ${market.region}`.trim(), { limit: 4, lang });
         const user = `Brand: ${brand}
 Keywords: ${keywords || "-"}
 Goals: ${JSON.stringify(goals)}
 Market: ${market.region}
-Last brand-boost report (if any): ${lastReport ? JSON.stringify((lastReport as any).report).slice(0, 4000) : "(none)"}`;
+Last brand-boost report (if any): ${lastReport ? JSON.stringify((lastReport as any).report).slice(0, 4000) : "(none)"}
+
+${pack.context_block}`;
+
 
         let parsed: any = {};
         try {
