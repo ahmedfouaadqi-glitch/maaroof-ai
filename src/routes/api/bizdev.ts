@@ -257,7 +257,7 @@ Return the JSON business-development plan now. All string fields MUST be in lang
           });
           await admin.from("activity_log").insert({ user_id: userId, action: "bizdev", metadata: { name, score: result.growth_score } });
 
-          return Response.json({ ok: true, result });
+          return Response.json({ ok: true, result, sources: pack.sources, ...pickQualityFields(result) });
         } catch (e) {
           console.error("[api/bizdev] fatal", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
