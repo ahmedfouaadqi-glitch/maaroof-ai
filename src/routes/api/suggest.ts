@@ -172,7 +172,11 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             return Response.json({ error: "Provide description, sourceText, or image" }, { status: 400 });
           }
 
+          const _evQuery = (body.brand || body.description || body.sourceText || "").toString().slice(0, 200);
+          const _evPack = _evQuery ? await buildEvidencePack(_evQuery, { limit: 3, lang: body.lang }) : { sources: [], context_block: "" } as any;
+          if (_evPack.context_block) instruction += `\n\n${_evPack.context_block}`;
           userParts.push({ type: "text", text: instruction });
+
           if (body.imageBase64) {
             const url = body.imageBase64.startsWith("data:")
               ? body.imageBase64
