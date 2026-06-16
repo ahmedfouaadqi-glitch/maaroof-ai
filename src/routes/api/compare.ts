@@ -547,7 +547,9 @@ export const Route = createFileRoute("/api/compare")({
           });
 
           const _evPack = evidenceFromResults(`${brand} vs ${competitors.join(", ")}`, sources.map((s: any) => ({ title: s.title, url: s.url, snippet: s.snippet })), 8);
-          return Response.json({ ok: true, result, sources: _evPack.sources, ...pickQualityFields(result) });
+          const _q = pickQualityFields(result);
+          return Response.json({ ok: true, result: { ...result, sources: _evPack.sources, ..._q }, sources: _evPack.sources, ..._q });
+
 
         } catch (e) {
           console.error("[api/compare] fatal", e);
