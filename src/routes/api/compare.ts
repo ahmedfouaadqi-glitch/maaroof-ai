@@ -546,7 +546,9 @@ export const Route = createFileRoute("/api/compare")({
             result: { ...result, lang, keywords, competitors, brand },
           });
 
-          return Response.json({ ok: true, result });
+          const _evPack = evidenceFromResults(`${brand} vs ${competitors.join(", ")}`, sources.map((s: any) => ({ title: s.title, url: s.url, snippet: s.snippet })), 8);
+          return Response.json({ ok: true, result, sources: _evPack.sources, ...pickQualityFields(result) });
+
         } catch (e) {
           console.error("[api/compare] fatal", e);
           return Response.json({ error: e instanceof Error ? e.message : "unknown_error" }, { status: 500 });
