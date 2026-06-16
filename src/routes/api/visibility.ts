@@ -242,17 +242,19 @@ export const Route = createFileRoute("/api/visibility")({
           const market = describeMarket(body.scope);
           const SYSTEM = buildSystem(market);
           const prompt = `REPORT_LANGUAGE: ${lang}\nBrand: ${brand}\nKeywords: ${keywords || "(unspecified)"}\nMarket: ${market.region}\n\nReturn the JSON now. All text fields MUST be in language code "${lang}".`;
+          const pack = await buildEvidencePack(`${brand} ${keywords || ""} ${market.region} AI visibility`.trim(), { limit: 4, lang });
           const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
               model: "google/gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}` },
-                { role: "user", content: prompt },
+                { role: "system", content: `${qualityShell(SYSTEM)}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}` },
+                { role: "user", content: `${prompt}\n\n${pack.context_block}` },
               ]
             }),
           });
+
 
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
