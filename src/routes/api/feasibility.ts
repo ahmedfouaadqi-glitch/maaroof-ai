@@ -200,6 +200,8 @@ Extra notes: ${body.notes || "(none)"}
 
 Return the JSON feasibility report now. All string fields MUST be in language "${lang}".`;
 
+          const pack = await buildEvidencePack(`${project} ${body.sector || ""} ${body.city || ""} ${market.region}`.trim(), { limit: 4, lang });
+
           const langGuide: Record<string, string> = {
             ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
             en: "Write all string values inside the JSON in clear English.",
@@ -211,11 +213,12 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
             body: JSON.stringify({
               model: "google/gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
-                { role: "user", content: userPrompt },
+                { role: "system", content: `${qualityShell(SYSTEM)}\n\n${langGuide[lang] || langGuide.en}` },
+                { role: "user", content: `${userPrompt}\n\n${pack.context_block}` },
               ]
             }),
           });
+
 
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
