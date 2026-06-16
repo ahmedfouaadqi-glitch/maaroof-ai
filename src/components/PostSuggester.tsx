@@ -518,8 +518,10 @@ export function PostSuggester({
               <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{v.content}</pre>
             </div>
           ))}
+          <SourcesList sources={(result as any).sources} sourcesUsed={(result as any).sources_used} rarityScore={(result as any).rarity_score} uniquenessNotes={(result as any).uniqueness_notes} evidenceMissing={(result as any).evidence_missing} />
         </div>
       )}
+
 
       {!result && post && (
         <div className="mt-5 rounded-xl border border-border bg-background/60 p-4">
