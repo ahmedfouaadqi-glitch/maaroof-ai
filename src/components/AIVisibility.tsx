@@ -12,6 +12,8 @@ import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelect
 import { ENGINES } from "@/components/engine-logos";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
+import { SourcesList } from "@/components/SourcesList";
+
 
 type PanelProps = {
   /** Initial brand name (still editable by the user). */
