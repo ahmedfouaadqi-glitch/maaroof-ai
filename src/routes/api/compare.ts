@@ -306,7 +306,7 @@ export const Route = createFileRoute("/api/compare")({
               model,
               max_tokens: 4096,
               messages: [
-                { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\n\nمهم جداً: أعد JSON صالحاً فقط دون أي نص قبله أو بعده ودون علامات markdown.` },
+                { role: "system", content: `${qualityShell(SYSTEM)}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\n\nمهم جداً: أعد JSON صالحاً فقط دون أي نص قبله أو بعده ودون علامات markdown.` },
                 { role: "user", content: prompt },
               ]
             }),
