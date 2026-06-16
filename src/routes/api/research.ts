@@ -68,13 +68,17 @@ export const Route = createFileRoute("/api/research")({
           let key_findings: string[] = [];
           let sge_summary = "";
           let visibility_opportunities: string[] = [];
+          let sources_used: number[] = [];
+          let rarity_score: number | null = null;
+          let uniqueness_notes = "";
+          let evidence_missing = false;
           if (lovableKey) {
             const brandLine = userCtx.brand_name ? `\nUser brand to position: ${userCtx.brand_name}${userCtx.brand_keywords ? ` (${userCtx.brand_keywords})` : ""}` : "";
-            const sys = `${FACTUAL_SAFETY_PROMPT}
+            const baseSys = `${FACTUAL_SAFETY_PROMPT}
 
 You are a precise research assistant that mimics a Generative Search Experience (SGE). Write STRICTLY in language code: ${lang}.
 ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/brand. Build a concise company profile from the supplied snippets only: what they do, sector, geography, official website if visible, products/services, target customers, public reputation signals. Do NOT fabricate revenue, headcount, dates, founders, awards, or contacts.\n` : ""}Rules:
-- Cite EVERY non-trivial claim inline as [1], [2] matching the source list order.
+- Cite EVERY non-trivial claim inline as [1], [2] matching the EVIDENCE_SOURCES list order.
 - If sources contradict, say so explicitly.
 - Never invent facts not present in the snippets.
 - Output JSON with these keys EXACTLY:
@@ -84,7 +88,8 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
     "key_findings": string[] (3-6 short bullets, each with at least one [n]),
     "visibility_opportunities": string[] (3-5 concrete actions ${isCompany ? "to reach or partner with this company, or to position your brand against it" : "the user/brand can take to BE CITED by AI engines on this topic"} — content angles, missing entities, structured-data ideas, channels to publish on)
   }${specialtyHint(userCtx, lang as any)}${brandLine}`;
-            const ctx = results.map((r: any, i: number) => `[${i + 1}] ${r.title} — ${r.domain} (${r.url})\n${r.snippet}`).join("\n\n");
+            const sys = qualityShell(baseSys);
+            const pack = evidenceFromResults(limited, results, 8);
             const ai = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
               method: "POST",
               headers: lovableAiHeaders(lovableKey),
@@ -92,7 +97,7 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
                 model: "google/gemini-2.5-flash-lite",
                 messages: [
                   { role: "system", content: sys },
-                  { role: "user", content: `Question: ${limited}\n\nSources:\n${ctx}\n\nReturn the JSON object now.` },
+                  { role: "user", content: `Question: ${limited}\n\n${pack.context_block}\n\nReturn the JSON object now.` },
                 ]
               }),
             });
@@ -110,9 +115,15 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
                 answer = String(p.answer || "").slice(0, 4000);
                 key_findings = Array.isArray(p.key_findings) ? p.key_findings.slice(0, 6).map((s: any) => String(s).slice(0, 240)) : [];
                 visibility_opportunities = Array.isArray(p.visibility_opportunities) ? p.visibility_opportunities.slice(0, 5).map((s: any) => String(s).slice(0, 280)) : [];
+                const q = pickQualityFields(p);
+                sources_used = q.sources_used;
+                rarity_score = q.rarity_score;
+                uniqueness_notes = q.uniqueness_notes;
+                evidence_missing = q.evidence_missing;
               } catch { answer = raw; }
             }
           }
+
 
           // Optional: discover communication channels related to the topic
           let channels: Array<{ type: string; label: string; url: string; source?: string }> = [];
