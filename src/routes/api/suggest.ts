@@ -271,7 +271,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           }).eq("id", userId);
           await admin.from("activity_log").insert({ user_id: userId, action: "suggest", metadata: { mode: body.sourceText ? "improve" : body.imageBase64 ? "image" : "text" } });
 
-          return Response.json({ post, ...parsed });
+          return Response.json({ post, ...parsed, sources: _evPack.sources });
         } catch (e) {
           console.error("suggest error", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
