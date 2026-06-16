@@ -225,7 +225,9 @@ export function SmartResearch() {
               </ul>
             </div>
           )}
+          <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
+
           <ProactiveNextStep
             toolKey="research"
             inputSummary={summarizeInput({ query: q, mode })}
