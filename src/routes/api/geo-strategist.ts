@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
+
 
 const COST = 3;
 
