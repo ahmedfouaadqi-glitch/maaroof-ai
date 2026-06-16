@@ -13,6 +13,8 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { SourcesList } from "@/components/SourcesList";
+
 
 export function BizDev() {
   const { t, lang } = useI18n();
@@ -188,7 +190,9 @@ export function BizDev() {
             </div>
           )}
 
+          <SourcesList sources={result.sources} sourcesUsed={result.sources_used} rarityScore={result.rarity_score} uniquenessNotes={result.uniqueness_notes} evidenceMissing={result.evidence_missing} />
           <HandoffMenu source="bizdev" getText={() => `${form.business_name}\n${result.stage_assessment || ""}\n\n${(result.quick_wins || []).join("\n")}`} />
+
           <ProactiveNextStep
             toolKey="bizdev"
             inputSummary={summarizeInput(form)}

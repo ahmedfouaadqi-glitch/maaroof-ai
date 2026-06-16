@@ -13,6 +13,8 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { SourcesList } from "@/components/SourcesList";
+
 
 type Result = any;
 
@@ -224,7 +226,9 @@ export function FeasibilityStudy() {
             </div>
           )}
 
+          <SourcesList sources={(result as any).sources} sourcesUsed={(result as any).sources_used} rarityScore={(result as any).rarity_score} uniquenessNotes={(result as any).uniqueness_notes} evidenceMissing={(result as any).evidence_missing} />
           <HandoffMenu source="feasibility" getText={() => `${form.project_name}\n${result.executive_summary || ""}\n\n${(result.next_steps || []).join("\n")}`} />
+
           <ProactiveNextStep
             toolKey="feasibility"
             inputSummary={summarizeInput(form)}

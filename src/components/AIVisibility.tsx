@@ -12,6 +12,8 @@ import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelect
 import { ENGINES } from "@/components/engine-logos";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
+import { SourcesList } from "@/components/SourcesList";
+
 
 type PanelProps = {
   /** Initial brand name (still editable by the user). */
@@ -180,7 +182,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </div>
           )}
 
+          <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <ProactiveNextStep
+
             toolKey="visibility"
             inputSummary={summarizeInput({ brand, keywords })}
             outputSummary={summarizeOutput(out)}

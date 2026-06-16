@@ -14,6 +14,8 @@ import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { toast } from "sonner";
+import { SourcesList } from "@/components/SourcesList";
+
 
 type Brand = {
   name: string;
@@ -443,7 +445,9 @@ export function CompetitorCompare() {
             </div>
           )}
 
+          <SourcesList sources={(result as any).sources} sourcesUsed={(result as any).sources_used} rarityScore={(result as any).rarity_score} uniquenessNotes={(result as any).uniqueness_notes} evidenceMissing={(result as any).evidence_missing} />
           <HandoffMenu source="compare" getText={() => `${brand} vs ${competitors}\n${result.overview || ""}\n\n${(result.recommendations || []).join("\n")}`} />
+
           <ProactiveNextStep
             toolKey="compare"
             inputSummary={summarizeInput({ brand, competitors, keywords })}

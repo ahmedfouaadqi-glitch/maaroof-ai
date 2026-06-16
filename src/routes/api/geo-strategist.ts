@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
+
 
 const COST = 3;
 
@@ -45,7 +47,7 @@ export const Route = createFileRoute("/api/geo-strategist")({
 
         const market = describeMarket(scope);
         const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish Sorani" : "English";
-        const sys = `${FACTUAL_SAFETY_PROMPT}
+        const baseSys = `${FACTUAL_SAFETY_PROMPT}
 You are a senior GEO strategist for ${market.market}. Reply ONLY in ${langName}.
 Based on the brand's goals and the last brand-boost report (if any), produce a 12-week GEO action plan.
 Return ONLY valid JSON:
@@ -58,11 +60,16 @@ Return ONLY valid JSON:
   "kpi_targets": {"visibility":"e.g. +15%","mentions":"...","backlinks":"..."},
   "risks": ["risk1"]
 }`;
+        const sys = qualityShell(baseSys);
+        const pack = await buildEvidencePack(`${brand} ${keywords} ${market.region}`.trim(), { limit: 4, lang });
         const user = `Brand: ${brand}
 Keywords: ${keywords || "-"}
 Goals: ${JSON.stringify(goals)}
 Market: ${market.region}
-Last brand-boost report (if any): ${lastReport ? JSON.stringify((lastReport as any).report).slice(0, 4000) : "(none)"}`;
+Last brand-boost report (if any): ${lastReport ? JSON.stringify((lastReport as any).report).slice(0, 4000) : "(none)"}
+
+${pack.context_block}`;
+
 
         let parsed: any = {};
         try {
@@ -88,7 +95,7 @@ Last brand-boost report (if any): ${lastReport ? JSON.stringify((lastReport as a
         await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
         await admin.from("activity_log").insert({ user_id: userId, action: "geo_strategist", metadata: { brand, cost: COST } });
 
-        return Response.json({ id: (row as any)?.id, ...parsed });
+        return Response.json({ id: (row as any)?.id, ...parsed, sources: pack.sources, ...pickQualityFields(parsed) });
       },
     },
   },

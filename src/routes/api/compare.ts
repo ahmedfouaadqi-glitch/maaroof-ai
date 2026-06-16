@@ -7,6 +7,8 @@ import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type 
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
+
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
@@ -304,7 +306,7 @@ export const Route = createFileRoute("/api/compare")({
               model,
               max_tokens: 4096,
               messages: [
-                { role: "system", content: `${SYSTEM}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\n\nمهم جداً: أعد JSON صالحاً فقط دون أي نص قبله أو بعده ودون علامات markdown.` },
+                { role: "system", content: `${qualityShell(SYSTEM)}\n\n${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\n\nمهم جداً: أعد JSON صالحاً فقط دون أي نص قبله أو بعده ودون علامات markdown.` },
                 { role: "user", content: prompt },
               ]
             }),
@@ -544,7 +546,11 @@ export const Route = createFileRoute("/api/compare")({
             result: { ...result, lang, keywords, competitors, brand },
           });
 
-          return Response.json({ ok: true, result });
+          const _evPack = evidenceFromResults(`${brand} vs ${competitors.join(", ")}`, sources.map((s: any) => ({ title: s.title, url: s.url, snippet: s.snippet })), 8);
+          const _q = pickQualityFields(result);
+          return Response.json({ ok: true, result: { ...result, sources: _evPack.sources, ..._q }, sources: _evPack.sources, ..._q });
+
+
         } catch (e) {
           console.error("[api/compare] fatal", e);
           return Response.json({ error: e instanceof Error ? e.message : "unknown_error" }, { status: 500 });

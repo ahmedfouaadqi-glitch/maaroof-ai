@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
+
 
 type Body = {
   project_name?: string;
@@ -198,6 +200,8 @@ Extra notes: ${body.notes || "(none)"}
 
 Return the JSON feasibility report now. All string fields MUST be in language "${lang}".`;
 
+          const pack = await buildEvidencePack(`${project} ${body.sector || ""} ${body.city || ""} ${market.region}`.trim(), { limit: 4, lang });
+
           const langGuide: Record<string, string> = {
             ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
             en: "Write all string values inside the JSON in clear English.",
@@ -209,11 +213,12 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
             body: JSON.stringify({
               model: "google/gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: `${SYSTEM}\n\n${langGuide[lang] || langGuide.en}` },
-                { role: "user", content: userPrompt },
+                { role: "system", content: `${qualityShell(SYSTEM)}\n\n${langGuide[lang] || langGuide.en}` },
+                { role: "user", content: `${userPrompt}\n\n${pack.context_block}` },
               ]
             }),
           });
+
 
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
@@ -247,7 +252,9 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
           });
           await admin.from("activity_log").insert({ user_id: userId, action: "feasibility", metadata: { project, score: result.viability_score } });
 
-          return Response.json({ ok: true, result });
+          const _q = pickQualityFields(result);
+          return Response.json({ ok: true, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q });
+
         } catch (e) {
           console.error("[api/feasibility] fatal", e);
           return Response.json({ error: "internal_error" }, { status: 500 });

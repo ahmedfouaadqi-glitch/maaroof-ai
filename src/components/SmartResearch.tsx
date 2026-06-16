@@ -10,6 +10,8 @@ import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
+import { SourcesList } from "@/components/SourcesList";
+
 
 const CHANNEL_OPTIONS = [
   "website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email",
@@ -223,7 +225,9 @@ export function SmartResearch() {
               </ul>
             </div>
           )}
+          <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
+
           <ProactiveNextStep
             toolKey="research"
             inputSummary={summarizeInput({ query: q, mode })}

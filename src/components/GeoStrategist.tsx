@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
+import { SourcesList } from "@/components/SourcesList";
+
 
 const GOALS = [
   { id: "awareness", label: "الوعي" },
@@ -96,7 +98,9 @@ export function GeoStrategist() {
           )}
           {res.kpi_targets && <div><b>أهداف KPI:</b> <span className="text-muted-foreground">{Object.entries(res.kpi_targets).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span></div>}
           {res.risks?.length > 0 && <div className="text-destructive"><b>مخاطر:</b> {res.risks.join("، ")}</div>}
+          <SourcesList sources={res.sources} sourcesUsed={res.sources_used} rarityScore={res.rarity_score} uniquenessNotes={res.uniqueness_notes} evidenceMissing={res.evidence_missing} />
           <ProactiveNextStep
+
             toolKey="geo_strategist"
             inputSummary={summarizeInput({ brand, keywords, selected, budget })}
             outputSummary={summarizeOutput(res)}

@@ -60,6 +60,43 @@ export function assertEnoughEvidence(pack: EvidencePack, min = 2): boolean {
 }
 
 /**
+ * Build an EvidencePack from already-fetched search results — avoids any
+ * additional Firecrawl credits. Use this whenever a route already called fcSearch.
+ */
+export function evidenceFromResults(
+  query: string,
+  results: Array<{ title?: string; url: string; snippet?: string; description?: string; domain?: string }>,
+  limit = 6,
+): EvidencePack {
+  const sources: EvidenceSource[] = (results || []).slice(0, limit).map((r, i) => ({
+    index: i + 1,
+    url: String(r.url || ""),
+    title: String(r.title || r.url || "").slice(0, 180),
+    snippet: String(r.snippet || r.description || "").slice(0, 500),
+    domain: r.domain || domainOf(r.url || ""),
+    fetched_at: new Date().toISOString(),
+  })).filter((s) => s.url);
+  const context_block = sources.length
+    ? "EVIDENCE_SOURCES (use ONLY these facts; cite each claim as [n]):\n" +
+      sources.map((s) => `[${s.index}] ${s.title} — ${s.domain} (${s.url})\n${s.snippet}`).join("\n\n")
+    : "EVIDENCE_SOURCES: (none available — return evidence_missing: true)";
+  return { sources, query, context_block };
+}
+
+/**
+ * Pull the quality fields out of any parsed JSON returned by the model.
+ */
+export function pickQualityFields(p: any) {
+  return {
+    sources_used: Array.isArray(p?.sources_used) ? p.sources_used.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n)) : [],
+    rarity_score: Number.isFinite(Number(p?.rarity_score)) ? Math.max(0, Math.min(100, Math.round(Number(p.rarity_score)))) : null,
+    uniqueness_notes: typeof p?.uniqueness_notes === "string" ? String(p.uniqueness_notes).slice(0, 400) : "",
+    evidence_missing: !!p?.evidence_missing,
+  };
+}
+
+
+/**
  * Wraps a tool-specific system prompt with a strict, anti-hallucination contract
  * and forces the model to emit rarity / uniqueness / evidence fields.
  */

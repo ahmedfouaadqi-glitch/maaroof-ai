@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, buildEvidencePack } from "@/lib/tool-quality.server";
+
 
 type Body = {
   description?: string;
@@ -170,7 +172,11 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             return Response.json({ error: "Provide description, sourceText, or image" }, { status: 400 });
           }
 
+          const _evQuery = (body.brand || body.description || body.sourceText || "").toString().slice(0, 200);
+          const _evPack = _evQuery ? await buildEvidencePack(_evQuery, { limit: 3, lang: body.lang }) : { sources: [], context_block: "" } as any;
+          if (_evPack.context_block) instruction += `\n\n${_evPack.context_block}`;
           userParts.push({ type: "text", text: instruction });
+
           if (body.imageBase64) {
             const url = body.imageBase64.startsWith("data:")
               ? body.imageBase64
@@ -219,7 +225,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             body: JSON.stringify({
               model: "google/gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: buildSystem(describeMarket(body.scope)) },
+                { role: "system", content: qualityShell(buildSystem(describeMarket(body.scope))) },
                 { role: "user", content: userParts },
               ],
               tools: [tool],
@@ -265,7 +271,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           }).eq("id", userId);
           await admin.from("activity_log").insert({ user_id: userId, action: "suggest", metadata: { mode: body.sourceText ? "improve" : body.imageBase64 ? "image" : "text" } });
 
-          return Response.json({ post, ...parsed });
+          return Response.json({ post, ...parsed, sources: _evPack.sources });
         } catch (e) {
           console.error("suggest error", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
