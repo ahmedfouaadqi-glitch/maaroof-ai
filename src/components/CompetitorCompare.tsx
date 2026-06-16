@@ -14,6 +14,8 @@ import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { toast } from "sonner";
+import { SourcesList } from "@/components/SourcesList";
+
 
 type Brand = {
   name: string;
