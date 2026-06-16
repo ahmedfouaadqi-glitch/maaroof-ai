@@ -15,6 +15,8 @@ import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
+import { SourcesList } from "@/components/SourcesList";
+
 
 function tokensToast(l: "ar" | "en" | "ku") {
   const msg = l === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
