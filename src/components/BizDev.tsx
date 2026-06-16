@@ -190,7 +190,9 @@ export function BizDev() {
             </div>
           )}
 
+          <SourcesList sources={result.sources} sourcesUsed={result.sources_used} rarityScore={result.rarity_score} uniquenessNotes={result.uniqueness_notes} evidenceMissing={result.evidence_missing} />
           <HandoffMenu source="bizdev" getText={() => `${form.business_name}\n${result.stage_assessment || ""}\n\n${(result.quick_wins || []).join("\n")}`} />
+
           <ProactiveNextStep
             toolKey="bizdev"
             inputSummary={summarizeInput(form)}
