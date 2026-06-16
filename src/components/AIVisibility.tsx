@@ -182,7 +182,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </div>
           )}
 
+          <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <ProactiveNextStep
+
             toolKey="visibility"
             inputSummary={summarizeInput({ brand, keywords })}
             outputSummary={summarizeOutput(out)}
