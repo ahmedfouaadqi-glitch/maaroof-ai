@@ -300,7 +300,7 @@ export const Route = createFileRoute("/api/visibility")({
             console.error("[api/visibility] task insert failed:", taskErr.message);
           }
 
-          return Response.json({ ok: true, taskId: taskRow?.id ?? null, result });
+          return Response.json({ ok: true, taskId: taskRow?.id ?? null, result, sources: pack.sources, ...pickQualityFields(parsed || {}) });
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
           return Response.json({ error: "internal_error" }, { status: 500 });
