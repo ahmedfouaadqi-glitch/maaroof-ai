@@ -163,7 +163,7 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
             } catch { /* non-fatal */ }
           }
 
-          return Response.json({ query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty });
+          return Response.json({ query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty, sources_used, rarity_score, uniqueness_notes, evidence_missing });
         } catch (e) {
           console.error("[api/research] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
