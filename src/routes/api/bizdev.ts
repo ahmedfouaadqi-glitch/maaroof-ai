@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
+
 
 type Body = {
   business_name?: string;
