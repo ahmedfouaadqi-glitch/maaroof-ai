@@ -252,7 +252,7 @@ Return the JSON feasibility report now. All string fields MUST be in language "$
           });
           await admin.from("activity_log").insert({ user_id: userId, action: "feasibility", metadata: { project, score: result.viability_score } });
 
-          return Response.json({ ok: true, result });
+          return Response.json({ ok: true, result, sources: pack.sources, ...pickQualityFields(result) });
         } catch (e) {
           console.error("[api/feasibility] fatal", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
