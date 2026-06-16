@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
+import { SourcesList } from "@/components/SourcesList";
+
 
 const GOALS = [
   { id: "awareness", label: "الوعي" },
