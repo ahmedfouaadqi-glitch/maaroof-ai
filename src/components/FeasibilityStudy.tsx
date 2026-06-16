@@ -13,6 +13,8 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { SourcesList } from "@/components/SourcesList";
+
 
 type Result = any;
 
