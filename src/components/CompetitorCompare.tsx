@@ -445,7 +445,9 @@ export function CompetitorCompare() {
             </div>
           )}
 
+          <SourcesList sources={(result as any).sources} sourcesUsed={(result as any).sources_used} rarityScore={(result as any).rarity_score} uniquenessNotes={(result as any).uniqueness_notes} evidenceMissing={(result as any).evidence_missing} />
           <HandoffMenu source="compare" getText={() => `${brand} vs ${competitors}\n${result.overview || ""}\n\n${(result.recommendations || []).join("\n")}`} />
+
           <ProactiveNextStep
             toolKey="compare"
             inputSummary={summarizeInput({ brand, competitors, keywords })}
