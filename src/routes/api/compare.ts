@@ -7,6 +7,8 @@ import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type 
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
+
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
 
