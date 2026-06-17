@@ -49,7 +49,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "cost" | "ledger";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "finance";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
