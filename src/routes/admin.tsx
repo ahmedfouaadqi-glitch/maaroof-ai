@@ -153,8 +153,7 @@ function AdminPage() {
         {tab === "intelligence" && <UserIntelligenceTab />}
         {tab === "insights" && <CognitiveInsightsTab />}
         {tab === "firecrawl" && <FirecrawlMonitorTab />}
-        {tab === "cost" && <ProviderCostTab />}
-        {tab === "ledger" && <AdminLedgerPanel />}
+        {tab === "finance" && <AdminFinanceTab />}
       </div>
     </div>
   );
