@@ -90,8 +90,7 @@ function AdminPage() {
     if (k === "intelligence") return lang === "ar" ? "ذكاء المستخدمين" : lang === "ku" ? "زیرەکی بەکارهێنەران" : "User Intelligence";
     if (k === "insights") return lang === "ar" ? "رؤى الإدراك" : lang === "ku" ? "تێگەیشتنەکان" : "Cognitive Insights";
     if (k === "firecrawl") return lang === "ar" ? "مراقبة Firecrawl" : lang === "ku" ? "چاودێری Firecrawl" : "Firecrawl";
-    if (k === "cost") return lang === "ar" ? "تكلفة المزوّدين" : lang === "ku" ? "تێچووی دابینکەرەکان" : "Provider Cost";
-    if (k === "ledger") return t("admin_ledger") || "Ledger";
+    if (k === "finance") return lang === "ar" ? "المالية الموحّدة" : lang === "ku" ? "دارایی یەکگرتوو" : "Finance";
     return k;
   };
 
