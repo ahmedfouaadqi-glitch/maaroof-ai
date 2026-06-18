@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, DollarSign, Download, RefreshCw, Search } from "lucide-react";
+import { Loader2, DollarSign, Download, RefreshCw, Search, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminL } from "./admin-i18n";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { useI18n } from "@/lib/i18n";
+
 
 type LedgerRow = {
   id: string;
