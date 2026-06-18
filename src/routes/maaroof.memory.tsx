@@ -7,7 +7,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Brain, Trash2, Plus, Loader2, ArrowLeft, Star } from "lucide-react";
 
 export const Route = createFileRoute("/maaroof/memory")({
-  head: () => ({ meta: [{ title: "ذاكرة معروف" }] }),
+  head: () => ({
+    meta: [
+      { title: "ذاكرة معروف · MAAROOF Ai" },
+      { name: "description", content: "Manage Maaroof's long-term memory: review, edit and prioritize the facts and preferences the AI agent uses to personalize your GEO workflows." },
+      { property: "og:title", content: "Maaroof Memory · MAAROOF Ai" },
+      { property: "og:description", content: "Review and curate the long-term memory of the Maaroof AI agent." },
+      { property: "og:url", content: "https://geoiraq.com/maaroof/memory" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/maaroof/memory" }],
+  }),
   component: () => <I18nProvider><AuthProvider><MemoryPage /></AuthProvider></I18nProvider>,
 });
 
