@@ -156,6 +156,7 @@ function AdminPage() {
         {tab === "insights" && <CognitiveInsightsTab />}
         {tab === "firecrawl" && <FirecrawlMonitorTab />}
         {tab === "finance" && <AdminFinanceTab />}
+        {tab === "health" && <SystemHealthTab />}
       </div>
     </div>
   );
