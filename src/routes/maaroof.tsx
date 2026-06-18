@@ -6,8 +6,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
 const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: n.ar, en: n.en }));
-import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain, FileDown } from "lucide-react";
+import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain } from "lucide-react";
 import { exportToPDF } from "@/lib/exports";
+import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 
 export const Route = createFileRoute("/maaroof")({
   head: () => ({ meta: [{ title: "معروف — الوكيل الذكي" }, { name: "description", content: "Maaroof: a Manus+Kimi-style intelligent agent for global GEO marketing." }] }),
@@ -221,25 +222,19 @@ function MaaroofPage() {
             </div>
           </div>
 
-          {/* Stream */}
-          <div ref={scrollRef} className="rounded-lg border bg-card p-3 max-h-[60vh] overflow-y-auto space-y-2">
-            {events.length === 0 && !running && (
-              <div className="text-center text-muted-foreground py-12">
-                <Bot className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p>مرحباً، أنا <strong>معروف</strong>. حدّد هدفك وسأخطّط وأنفّذ.</p>
-              </div>
-            )}
-            {events.map((e, i) => <EventCard key={i} ev={e} />)}
-            {finalText && (
-              <div className="border-t pt-3 mt-3">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs font-semibold text-primary">الإجابة النهائية</div>
-                  <button onClick={exportFinal} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><FileDown className="w-3 h-3" /> تصدير PDF</button>
-                </div>
-                <div className="whitespace-pre-wrap text-sm">{finalText}</div>
-              </div>
-            )}
-          </div>
+          {/* Visual Stage */}
+          <MaaroofStage
+            events={events}
+            running={running}
+            geoMode={geoMode}
+            country={country}
+            detected={detected}
+            finalText={finalText}
+            onExport={exportFinal}
+            onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
+          />
+          <div ref={scrollRef} className="hidden" />
+
         </main>
       </div>
     </div>
