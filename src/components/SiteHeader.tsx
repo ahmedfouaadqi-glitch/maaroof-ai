@@ -61,6 +61,7 @@ export function SiteHeader() {
           {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
           {auth?.user && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
           {auth?.user && hdr.show_agent && <Link to="/agent" className="hover:text-foreground">{t("nav_agent")}</Link>}
+          {auth?.user && <Link to="/maaroof" className="font-semibold text-primary hover:text-foreground">معروف ✨</Link>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
           {hdr.show_contact && <Link to="/contact" className="hover:text-foreground">{t("nav_contact")}</Link>}
