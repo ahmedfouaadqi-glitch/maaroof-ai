@@ -205,11 +205,21 @@ export function AdminFinanceTab() {
         </div>
       </div>
 
+      {/* Legacy banner */}
+      {stats.unmeteredCount > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <strong className="font-semibold">{stats.unmeteredCount}</strong> {L.unmetered}. {L.legacyBanner}
+          </div>
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <DualStat label={L.today} charged={stats.dC} real={stats.dR} sub={`${stats.dN} ${L.requests}`} L={L} marginColor={marginColor} />
         <DualStat label={`${days}d`} charged={stats.mC} real={stats.mR} sub={`${stats.mN} ${L.requests}`} L={L} marginColor={marginColor} />
-        <SingleStat label={L.avgReal} value={fmt(stats.avgReal, 5)} />
+        <SingleStat label={L.avgMetered} value={fmt(stats.avgReal, 5)} sub={L.avgReal} />
         <SingleStat label={L.perToken} value={fmt(stats.perTokReal, 5)} sub={`${stats.mTok.toLocaleString()} tok`} />
       </div>
 
