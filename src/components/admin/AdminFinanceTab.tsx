@@ -125,23 +125,31 @@ export function AdminFinanceTab() {
     const now = Date.now(); const dayStart = now - 86400_000;
     let dC = 0, dR = 0, dN = 0;
     let mC = 0, mR = 0, mN = 0, mTok = 0;
-    const byTool: Record<string, { charged: number; real: number; req: number; tokens: number; latSum: number; latN: number }> = {};
-    const byUser: Record<string, { charged: number; real: number; req: number; tokens: number }> = {};
+    let unmeteredCount = 0;
+    // Aggregates that EXCLUDE unmetered rows so averages aren't diluted
+    let mRealReq = 0, mRealTok = 0;
+    const byTool: Record<string, { charged: number; real: number; req: number; tokens: number; latSum: number; latN: number; meteredReq: number; meteredReal: number }> = {};
+    const byUser: Record<string, { charged: number; real: number; req: number; tokens: number; meteredReq: number; meteredReal: number }> = {};
     const byProv: Record<string, { charged: number; real: number; req: number }> = {};
     for (const r of filtered) {
       const t = new Date(r.created_at).getTime();
       const c = Number(r.usd_cost) || 0;
       const real = realCostOf(r);
       const tk = tokensOf(r);
+      const metered = isMetered(r);
+      if (!metered) unmeteredCount++;
       mC += c; mR += real; mN++; mTok += tk;
+      if (metered) { mRealReq++; mRealTok += tk; }
       if (t >= dayStart) { dC += c; dR += real; dN++; }
       const tool = r.tool_key || "—";
-      byTool[tool] = byTool[tool] || { charged: 0, real: 0, req: 0, tokens: 0, latSum: 0, latN: 0 };
+      byTool[tool] = byTool[tool] || { charged: 0, real: 0, req: 0, tokens: 0, latSum: 0, latN: 0, meteredReq: 0, meteredReal: 0 };
       byTool[tool].charged += c; byTool[tool].real += real; byTool[tool].req++; byTool[tool].tokens += tk;
+      if (metered) { byTool[tool].meteredReq++; byTool[tool].meteredReal += real; }
       const lat = r.meta?.latency_ms; if (typeof lat === "number") { byTool[tool].latSum += lat; byTool[tool].latN++; }
       const uid = r.user_id || "—";
-      byUser[uid] = byUser[uid] || { charged: 0, real: 0, req: 0, tokens: 0 };
+      byUser[uid] = byUser[uid] || { charged: 0, real: 0, req: 0, tokens: 0, meteredReq: 0, meteredReal: 0 };
       byUser[uid].charged += c; byUser[uid].real += real; byUser[uid].req++; byUser[uid].tokens += tk;
+      if (metered) { byUser[uid].meteredReq++; byUser[uid].meteredReal += real; }
       const prov = `${r.meta?.provider || "unknown"}${r.meta?.model ? ` · ${r.meta.model}` : ""}`;
       byProv[prov] = byProv[prov] || { charged: 0, real: 0, req: 0 };
       byProv[prov].charged += c; byProv[prov].real += real; byProv[prov].req++;
@@ -149,8 +157,9 @@ export function AdminFinanceTab() {
     const sort = <T extends { real: number }>(m: Record<string, T>) => Object.entries(m).sort((a, b) => b[1].real - a[1].real);
     return {
       dC, dR, dN, mC, mR, mN, mTok,
-      avgReal: mN ? mR / mN : 0,
-      perTokReal: mTok ? (mR / mTok) * 1000 : 0,
+      unmeteredCount,
+      avgReal: mRealReq ? mR / mRealReq : 0,
+      perTokReal: mRealTok ? (mR / mRealTok) * 1000 : 0,
       tools: sort(byTool).slice(0, 30),
       users: sort(byUser).slice(0, 30),
       provs: sort(byProv),
