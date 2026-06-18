@@ -117,11 +117,12 @@ function MaaroofPage() {
     if (!text) return;
     exportToPDF({
       title: "تقرير معروف",
-      brand: "MAAROOF Ai",
-      lang: (lang as any) || "ar",
-      generatedAt: new Date().toISOString(),
-      sections: [{ heading: "الهدف", body: goal }, { heading: "الإجابة النهائية", body: text }],
-    } as any);
+      lang: "ar",
+      sections: [
+        { heading: "الهدف", kind: "text", text: goal },
+        { heading: "الإجابة النهائية", kind: "text", text },
+      ],
+    });
   }
 
   if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
