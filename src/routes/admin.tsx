@@ -18,6 +18,7 @@ import { CognitiveInsightsTab } from "@/components/admin/CognitiveInsightsTab";
 import { FirecrawlMonitorTab } from "@/components/admin/FirecrawlMonitorTab";
 import { AdminFinanceTab } from "@/components/admin/AdminFinanceTab";
 import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
+import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "finance" | "health";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "finance" | "health" | "maaroof";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
@@ -93,6 +94,7 @@ function AdminPage() {
     if (k === "firecrawl") return lang === "ar" ? "مراقبة Firecrawl" : lang === "ku" ? "چاودێری Firecrawl" : "Firecrawl";
     if (k === "finance") return lang === "ar" ? "المالية الموحّدة" : lang === "ku" ? "دارایی یەکگرتوو" : "Finance";
     if (k === "health") return lang === "ar" ? "صحة النظام" : lang === "ku" ? "تەندروستی" : "System Health";
+    if (k === "maaroof") return lang === "ar" ? "معروف ✨" : lang === "ku" ? "ماعروف ✨" : "Maaroof ✨";
     return k;
   };
 
@@ -116,7 +118,7 @@ function AdminPage() {
 
 
         <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","intelligence","insights","firecrawl","finance","health"] as Tab[]).map((k) => (
+          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","intelligence","insights","firecrawl","finance","health","maaroof"] as Tab[]).map((k) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
@@ -157,6 +159,7 @@ function AdminPage() {
         {tab === "firecrawl" && <FirecrawlMonitorTab />}
         {tab === "finance" && <AdminFinanceTab />}
         {tab === "health" && <SystemHealthTab />}
+        {tab === "maaroof" && <MaaroofAdminTab />}
       </div>
     </div>
   );

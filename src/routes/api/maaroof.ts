@@ -19,8 +19,14 @@ export const Route = createFileRoute("/api/maaroof")({
         const userId = u.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
+        const { getMaaroofSettings } = await import("@/lib/maaroof/settings.server");
+        const settings = await getMaaroofSettings();
+        if (settings.kill_switch) {
+          return Response.json({ error: "disabled", message: { ar: "تم تعطيل معروف مؤقتاً من قبل الإدارة.", en: "Maaroof is temporarily disabled by admin.", ku: "ماعروف بۆ کاتێک ناچالاککراوە." } }, { status: 503 });
+        }
+
         const body = await request.json().catch(() => ({} as any));
-        const goal = String(body?.goal || "").trim();
+        const goal = String(body?.goal || "").trim().slice(0, settings.max_goal_chars);
         if (!goal) return Response.json({ error: "goal_required" }, { status: 400 });
         const lang = (body?.lang as "ar" | "en" | "ku") || "ar";
         const geoScope = (body?.geo_scope as GeoScope) || undefined;
@@ -28,14 +34,14 @@ export const Route = createFileRoute("/api/maaroof")({
         const detectedGeo = detectGeoFromRequest(request);
         const origin = new URL(request.url).origin;
 
-        // Trial cap: 5 runs/day if user has no metering/subscription configured
+        // Trial cap from admin settings
         const today = new Date(); today.setUTCHours(0, 0, 0, 0);
         const { count } = await admin.from("maaroof_runs").select("id", { count: "exact", head: true })
           .eq("user_id", userId).gte("started_at", today.toISOString());
         const { data: prof } = await admin.from("profiles").select("is_subscribed, tokens_balance").eq("id", userId).maybeSingle();
         const paid = !!(prof as any)?.is_subscribed || Number((prof as any)?.tokens_balance) > 0;
-        if (!paid && (count || 0) >= 5) {
-          return Response.json({ error: "trial_limit", message: { ar: "تجاوزت 5 جلسات يومياً للتجربة.", en: "Daily trial limit (5) reached.", ku: "سنووری ڕۆژانە تەواو بووە." } }, { status: 402 });
+        if (!paid && (count || 0) >= settings.trial_daily_cap) {
+          return Response.json({ error: "trial_limit", message: { ar: `تجاوزت ${settings.trial_daily_cap} جلسات يومياً للتجربة. اشترك للمزيد.`, en: `Daily trial limit (${settings.trial_daily_cap}) reached. Upgrade for more.`, ku: "سنووری ڕۆژانە تەواو بووە." } }, { status: 402 });
         }
 
         const encoder = new TextEncoder();

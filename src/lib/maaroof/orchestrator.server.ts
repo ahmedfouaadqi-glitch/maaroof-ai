@@ -6,6 +6,7 @@ import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
+import { getMaaroofSettings } from "./settings.server";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -13,9 +14,6 @@ function db() {
   _db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
   return _db as any;
 }
-
-const MODEL = "google/gemini-2.5-pro";
-const MAX_STEPS = 50;
 
 // Map tool keys -> internal API path + body builder
 type ToolCall = { tool: string; input: any; reason?: string };
@@ -63,7 +61,15 @@ export type RunContext = {
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const apiKey = process.env.LOVABLE_API_KEY!;
+  const settings = await getMaaroofSettings();
+  if (settings.kill_switch) {
+    await ctx.emit("error", { message: "تم تعطيل معروف مؤقتاً من قبل الإدارة." });
+    throw new Error("maaroof_disabled");
+  }
+  const MODEL = settings.planner_model;
+  const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
+
 
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
@@ -96,7 +102,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10);
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const systemPrompt = buildSystemPrompt(ctx, geo, memories);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories);
+    const systemPrompt = settings.system_prompt_extra ? `${baseSystemPrompt}\n\n[Admin guidance]\n${settings.system_prompt_extra}` : baseSystemPrompt;
 
     // 3) PLAN
     await ctx.emit("phase", { phase: "planning" });
@@ -123,8 +130,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await logMsg("tool_call", step);
 
       const path = toolPath(step.tool);
-      if (!path) {
-        const err = { error: "unknown_tool", tool: step.tool };
+      if (!path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
+        const err = { error: path ? "tool_disabled" : "unknown_tool", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
         await logMsg("tool_result", err);
@@ -133,7 +140,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const body = { ...(step.input || {}), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
-        const toolTimer = setTimeout(() => toolCtl.abort(), 45000);
+        const toolTimer = setTimeout(() => toolCtl.abort(), settings.tool_timeout_ms);
         const onAbort = () => toolCtl.abort();
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
