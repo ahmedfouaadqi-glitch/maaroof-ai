@@ -3,7 +3,7 @@
 // Manus/Kimi cost report.
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity, Bot } from "lucide-react";
 import { getSystemHealth, type HealthSnapshot } from "@/lib/system-health.functions";
 import { useI18n } from "@/lib/i18n";
 
