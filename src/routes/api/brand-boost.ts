@@ -25,7 +25,8 @@ const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
   kimi:       { model: "google/gemini-2.5-pro",        proxy: true  }, // Kimi K2 ≈ long-context Pro proxy
 };
 
-async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000) {
+type TokenAcc = { in: number; out: number };
+async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000, acc?: TokenAcc) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -35,6 +36,16 @@ async function callGateway(apiKey: string, model: string, messages: any[], timeo
     body: JSON.stringify({ model, messages }),
       signal: controller.signal,
   });
+    // Tap the response stream so the caller can still read it, while we capture usage
+    if (r.ok && acc) {
+      try {
+        const cloned = r.clone();
+        const j: any = await cloned.json().catch(() => null);
+        const u = j?.usage || {};
+        acc.in += Number(u.prompt_tokens) || 0;
+        acc.out += Number(u.completion_tokens) || 0;
+      } catch {}
+    }
     return r;
   } finally {
     clearTimeout(timeout);
