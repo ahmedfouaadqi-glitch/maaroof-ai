@@ -41,6 +41,16 @@ export type HealthSnapshot = {
   firecrawlSpike: { day: string; units: number; avg7d: number; ratio: number } | null;
   profilesNoMetering: number;
   recentErrors: { action: string; count: number }[];
+  maaroof: {
+    runs_7d: number;
+    done_7d: number;
+    error_7d: number;
+    total_usd_7d: number;
+    avg_usd_per_run: number;
+    avg_cost_alert: boolean;
+    top_goals: { goal: string; usd: number; runs: number }[];
+    recent: { id: string; user_id: string; goal: string; status: string; steps: number; usd: number; started_at: string }[];
+  };
 };
 
 export const getSystemHealth = createServerFn({ method: "POST" })
