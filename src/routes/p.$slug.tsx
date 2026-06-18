@@ -3,8 +3,6 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 
 type Page = {
   slug: string;
@@ -15,6 +13,36 @@ type Page = {
 };
 
 export const Route = createFileRoute("/p/$slug")({
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("custom_pages")
+      .select("slug,title_ar,title_en,title_ku,body_ar,body_en,body_ku,meta_description_ar,meta_description_en,meta_description_ku,published")
+      .eq("slug", params.slug)
+      .eq("published", true)
+      .maybeSingle();
+    if (!data) throw notFound();
+    return data as Page;
+  },
+  head: ({ params, loaderData }) => {
+    const p = loaderData as Page | undefined;
+    const title = p ? (p.title_en || p.title_ar || p.title_ku || p.slug) : params.slug;
+    const desc = p ? (p.meta_description_en || p.meta_description_ar || p.meta_description_ku || "") : "";
+    const url = `https://geoiraq.com/p/${params.slug}`;
+    const meta: Array<{ title?: string; name?: string; property?: string; content?: string }> = [
+      { title: `${title} · MAAROOF Ai` },
+      { property: "og:title", content: `${title} · MAAROOF Ai` },
+      { property: "og:url", content: url },
+      { property: "og:type", content: "article" },
+    ];
+    if (desc) {
+      meta.push({ name: "description", content: desc });
+      meta.push({ property: "og:description", content: desc });
+    }
+    return {
+      meta,
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: () => (
     <I18nProvider>
       <AuthProvider>
@@ -31,48 +59,11 @@ export const Route = createFileRoute("/p/$slug")({
 });
 
 function CustomPage() {
-  const { slug } = Route.useParams();
+  const page = Route.useLoaderData() as Page;
   const { lang } = useI18n();
-  const [page, setPage] = useState<Page | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("custom_pages")
-        .select("slug,title_ar,title_en,title_ku,body_ar,body_en,body_ku,meta_description_ar,meta_description_en,meta_description_ku,published")
-        .eq("slug", slug)
-        .eq("published", true)
-        .maybeSingle();
-      setPage(data as Page | null);
-      setLoading(false);
-    })();
-  }, [slug]);
-
-  if (loading) return (
-    <div className="min-h-screen">
-      <SiteHeader />
-      <div className="grid h-[60vh] place-items-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
-    </div>
-  );
-  if (!page) throw notFound();
-
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
-  const title = page ? ((page as any)[`title_${L}`] || page.title_en || page.title_ar || page.slug) : "";
-  const body = page ? ((page as any)[`body_${L}`] || page.body_en || page.body_ar || "") : "";
-
-  useEffect(() => {
-    if (!page || !title) return;
-    document.title = `${title} · MAAROOF Ai`;
-    const desc = (page as any)[`meta_description_${L}`] || page.meta_description_en;
-    if (desc) {
-      let m = document.querySelector('meta[name="description"]');
-      if (!m) { m = document.createElement("meta"); m.setAttribute("name", "description"); document.head.appendChild(m); }
-      m.setAttribute("content", desc);
-    }
-  }, [title, L, page]);
-
-  if (!page) throw notFound();
+  const title = (page as any)[`title_${L}`] || page.title_en || page.title_ar || page.slug;
+  const body = (page as any)[`body_${L}`] || page.body_en || page.body_ar || "";
 
   return (
     <div className="min-h-screen">

@@ -6,17 +6,17 @@ import { AuthProvider } from "@/lib/auth";
 export const Route = createFileRoute("/guide/geo-vs-aeo")({
   head: () => ({
     meta: [
-      { title: "GEO vs AEO — Generative vs Answer Engine Optimization Explained" },
+      { title: "GEO vs AEO — Generative vs Answer Engine Optimization" },
       {
         name: "description",
         content:
-          "Is Answer Engine Optimization (AEO) the same as Generative Engine Optimization (GEO)? Compare both strategies, the engines they target, and how MAAROOF Ai bridges them.",
+          "Compare GEO and AEO: what each optimizes, which engines cite you, and how MAAROOF Ai bridges both to win citations across the AI ecosystem.",
       },
       { property: "og:title", content: "GEO vs AEO — Generative vs Answer Engine Optimization" },
       {
         property: "og:description",
         content:
-          "Side-by-side comparison of GEO and AEO: what each optimizes, which engines cite you, and how to win citations across the AI ecosystem.",
+          "Side-by-side comparison of GEO and AEO: what each optimizes and how to win citations across AI engines.",
       },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://geoiraq.com/guide/geo-vs-aeo" },
