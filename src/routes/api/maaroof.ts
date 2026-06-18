@@ -34,14 +34,30 @@ export const Route = createFileRoute("/api/maaroof")({
         const detectedGeo = detectGeoFromRequest(request);
         const origin = new URL(request.url).origin;
 
-        // Trial cap from admin settings
-        const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-        const { count } = await admin.from("maaroof_runs").select("id", { count: "exact", head: true })
-          .eq("user_id", userId).gte("started_at", today.toISOString());
-        const { data: prof } = await admin.from("profiles").select("is_subscribed, tokens_balance").eq("id", userId).maybeSingle();
-        const paid = !!(prof as any)?.is_subscribed || Number((prof as any)?.tokens_balance) > 0;
-        if (!paid && (count || 0) >= settings.trial_daily_cap) {
-          return Response.json({ error: "trial_limit", message: { ar: `تجاوزت ${settings.trial_daily_cap} جلسات يومياً للتجربة. اشترك للمزيد.`, en: `Daily trial limit (${settings.trial_daily_cap}) reached. Upgrade for more.`, ku: "سنووری ڕۆژانە تەواو بووە." } }, { status: 402 });
+        // Plan/token gate — treats Maaroof as a regular tool.
+        const { chargeTokens, chargeFailureBody, resolveToolCost } = await import("@/lib/tokens.server");
+        const cost = await resolveToolCost(userId, "maaroof");
+        const { data: prof } = await admin.from("profiles").select("is_subscribed, tokens_balance, tokens_daily_limit, tokens_monthly_limit").eq("id", userId).maybeSingle();
+        const hasMeter = Number((prof as any)?.tokens_balance) > 0 || (prof as any)?.tokens_daily_limit != null || (prof as any)?.tokens_monthly_limit != null;
+
+        if ((cost.source as any) === "disabled_by_admin") {
+          return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
+        }
+        if (hasMeter) {
+          const charge = await chargeTokens({ userId, toolKey: "maaroof", meta: { goal: goal.slice(0, 200) } });
+          if (!charge.ok) {
+            const status = charge.reason === "unpriced" ? 402 : charge.reason === "balance" || charge.reason === "daily_limit" || charge.reason === "monthly_limit" ? 402 : 403;
+            return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status });
+          }
+        } else {
+          // Free-tier trial path: enforce daily session cap from admin settings
+          const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+          const { count } = await admin.from("maaroof_runs").select("id", { count: "exact", head: true })
+            .eq("user_id", userId).gte("started_at", today.toISOString());
+          const paid = !!(prof as any)?.is_subscribed;
+          if (!paid && (count || 0) >= settings.trial_daily_cap) {
+            return Response.json({ error: "trial_limit", message: { ar: `تجاوزت ${settings.trial_daily_cap} جلسات يومياً للتجربة. اشترك للمزيد.`, en: `Daily trial limit (${settings.trial_daily_cap}) reached. Upgrade for more.`, ku: "سنووری ڕۆژانە تەواو بووە." } }, { status: 402 });
+          }
         }
 
         const encoder = new TextEncoder();

@@ -82,6 +82,7 @@ export type HeaderConfig = {
   show_profile: boolean;
   show_guide: boolean;
   show_contact: boolean;
+  show_maaroof: boolean;
   extra_links: ExtraLink[];
   extra_phones: ExtraPhone[];
 };
@@ -92,6 +93,7 @@ export const DEFAULT_HEADER_CONFIG: HeaderConfig = {
   show_profile: true,
   show_guide: true,
   show_contact: true,
+  show_maaroof: true,
   extra_links: [],
   extra_phones: [],
 };

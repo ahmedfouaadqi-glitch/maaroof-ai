@@ -18,6 +18,7 @@ export type ToolKey =
   | "what_if"
   | "brand_authority"
   | "geo_rewrite"
+  | "maaroof"
   | "agent.command"
   | "agent.run_targets"
   | "agent.visibility";
