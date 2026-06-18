@@ -61,7 +61,15 @@ export type RunContext = {
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const apiKey = process.env.LOVABLE_API_KEY!;
+  const settings = await getMaaroofSettings();
+  if (settings.kill_switch) {
+    await ctx.emit("error", { message: "تم تعطيل معروف مؤقتاً من قبل الإدارة." });
+    throw new Error("maaroof_disabled");
+  }
+  const MODEL = settings.planner_model;
+  const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
+
 
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
