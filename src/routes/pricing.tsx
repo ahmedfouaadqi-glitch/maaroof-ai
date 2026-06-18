@@ -330,7 +330,7 @@ function PricingPage() {
       {selected && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur">
           <div className="relative w-full max-w-md rounded-2xl border border-primary/30 bg-card p-6 shadow-[var(--shadow-glow)]">
-            <button onClick={() => setSelected(null)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
+            <button onClick={() => setSelected(null)} aria-label="Close" className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
               <X className="size-5" />
             </button>
             <h3 className="font-display text-xl font-bold">{t("pr_confirm_title")}</h3>

@@ -159,10 +159,10 @@ function MaaroofPage() {
         {/* Sidebar */}
         <aside className="space-y-2">
           <div className="rounded-lg border bg-card p-3">
-            <div className="flex items-center justify-between gap-2 font-semibold mb-2">
+            <h2 className="flex items-center justify-between gap-2 font-semibold mb-2 text-base">
               <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
-              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1"><Brain className="w-3 h-3" /> الذاكرة</Link>
-            </div>
+              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"><Brain className="w-3 h-3" /> الذاكرة</Link>
+            </h2>
             <ul className="space-y-1 max-h-[60vh] overflow-y-auto text-sm">
               {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات بعد.</li>}
               {runs.map((r) => (
@@ -195,7 +195,7 @@ function MaaroofPage() {
           {/* Geo bar */}
           <div className="rounded-lg border bg-card p-3 flex items-center gap-2 flex-wrap text-sm">
             <Globe className="w-4 h-4 text-primary" />
-            <span className="font-medium">النطاق الجغرافي:</span>
+            <h2 className="font-medium text-sm m-0">النطاق الجغرافي:</h2>
             <select value={geoMode} onChange={(e) => setGeoMode(e.target.value as any)} className="border rounded px-2 py-1 bg-background">
               <option value="auto">تلقائي (حسب IP)</option>
               <option value="country">دولة محددة</option>
@@ -217,6 +217,7 @@ function MaaroofPage() {
 
           {/* Input */}
           <div className="rounded-lg border bg-card p-3">
+            <h2 className="sr-only">إدخال المهمة</h2>
             <textarea
               value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder="مرحباً، أنا معروف. ما الهدف؟ (مثال: حلّل ظهور علامتي في السوق السعودي واقترح خطة محتوى لشهر)"
