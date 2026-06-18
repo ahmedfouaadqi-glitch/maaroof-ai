@@ -96,6 +96,34 @@ function MaaroofPage() {
 
   function stop() { abortRef.current?.abort(); setRunning(false); }
 
+  async function loadRun(runId: string) {
+    if (running) return;
+    setEvents([{ type: "phase", data: { phase: "loading_history" }, t: Date.now() }]);
+    const { data: run } = await supabase.from("maaroof_runs").select("goal, plan, detected_geo").eq("id", runId).maybeSingle();
+    if (run) {
+      setGoal((run as any).goal || "");
+      const dg = (run as any).detected_geo; if (dg) setDetected({ country: dg.country, city: dg.city });
+    }
+    const { data: msgs } = await supabase.from("maaroof_messages").select("role, parts, created_at").eq("run_id", runId).order("created_at");
+    const evs: Event[] = ((msgs as any[]) || []).map((m) => {
+      const map: Record<string, string> = { plan: "plan", tool_call: "tool_call", tool_result: "tool_result", reflection: "reflection", assistant: "final" };
+      return { type: map[m.role] || "phase", data: m.parts, t: new Date(m.created_at).getTime() };
+    });
+    setEvents(evs);
+  }
+
+  function exportFinal() {
+    const text = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
+    if (!text) return;
+    exportToPDF({
+      title: "تقرير معروف",
+      brand: "MAAROOF Ai",
+      lang: (lang as any) || "ar",
+      generatedAt: new Date().toISOString(),
+      sections: [{ heading: "الهدف", body: goal }, { heading: "الإجابة النهائية", body: text }],
+    } as any);
+  }
+
   if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
   if (!user) return (
     <div className="min-h-screen">
