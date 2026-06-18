@@ -161,6 +161,31 @@ export const getSystemHealth = createServerFn({ method: "POST" })
       .eq("tokens_balance", 0);
 
     const total = metered + unmetered;
+
+    // 5) Maaroof orchestrator stats (last 7d)
+    const since7 = new Date(Date.now() - 7 * 86400000).toISOString();
+    const { data: mruns } = await supabaseAdmin
+      .from("maaroof_runs")
+      .select("id, user_id, goal, status, steps_count, total_usd, started_at")
+      .gte("started_at", since7)
+      .order("started_at", { ascending: false })
+      .limit(500);
+    const mr = (mruns || []) as any[];
+    const done = mr.filter((r) => r.status === "done").length;
+    const errs = mr.filter((r) => r.status === "error").length;
+    const sumUsd = mr.reduce((s, r) => s + (Number(r.total_usd) || 0), 0);
+    const avg = mr.length ? sumUsd / mr.length : 0;
+    const byGoal = new Map<string, { usd: number; runs: number }>();
+    for (const r of mr) {
+      const g = String(r.goal || "").slice(0, 120);
+      const cur = byGoal.get(g) || { usd: 0, runs: 0 };
+      cur.usd += Number(r.total_usd) || 0; cur.runs++;
+      byGoal.set(g, cur);
+    }
+    const topGoals = Array.from(byGoal.entries())
+      .map(([goal, v]) => ({ goal, usd: Number(v.usd.toFixed(4)), runs: v.runs }))
+      .sort((a, b) => b.usd - a.usd).slice(0, 10);
+
     return {
       generatedAt: new Date().toISOString(),
       totals: {
@@ -179,5 +204,19 @@ export const getSystemHealth = createServerFn({ method: "POST" })
       firecrawlSpike,
       profilesNoMetering: Number(profilesNoMetering) || 0,
       recentErrors,
+      maaroof: {
+        runs_7d: mr.length,
+        done_7d: done,
+        error_7d: errs,
+        total_usd_7d: Number(sumUsd.toFixed(4)),
+        avg_usd_per_run: Number(avg.toFixed(4)),
+        avg_cost_alert: avg > 0.5,
+        top_goals: topGoals,
+        recent: mr.slice(0, 20).map((r) => ({
+          id: r.id, user_id: r.user_id, goal: String(r.goal || "").slice(0, 200),
+          status: r.status, steps: Number(r.steps_count) || 0,
+          usd: Number(r.total_usd) || 0, started_at: r.started_at,
+        })),
+      },
     };
   });
