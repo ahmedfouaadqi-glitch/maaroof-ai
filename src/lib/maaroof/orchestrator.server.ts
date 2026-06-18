@@ -132,17 +132,38 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
       try {
         const body = { ...(step.input || {}), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
-        const resp = await fetch(`${ctx.origin}${path}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
-          body: JSON.stringify(body),
-          signal: ctx.signal,
-        });
+        const toolCtl = new AbortController();
+        const toolTimer = setTimeout(() => toolCtl.abort(), 45000);
+        const onAbort = () => toolCtl.abort();
+        ctx.signal.addEventListener("abort", onAbort);
+        let resp: Response;
+        try {
+          resp = await fetch(`${ctx.origin}${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+            body: JSON.stringify(body),
+            signal: toolCtl.signal,
+          });
+        } finally {
+          clearTimeout(toolTimer);
+          ctx.signal.removeEventListener("abort", onAbort);
+        }
         const json = await resp.json().catch(() => ({}));
         const ok = resp.ok;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
         await logMsg("tool_result", { tool: step.tool, ok, output: json });
+        // Record tool usage in token_ledger for finance/health tracking.
+        try {
+          await db().from("token_ledger").insert({
+            user_id: ctx.userId,
+            tool_key: `maaroof.${step.tool}`,
+            tokens: 0,
+            usd_cost: 0,
+            run_id: runId,
+            meta: { maaroof_run_id: runId, step_index: i, tool: step.tool, geo: { country: geo.country, city: geo.city }, ok },
+          });
+        } catch {}
       } catch (e: any) {
         const err = { error: String(e?.message || e) };
         results.push({ tool: step.tool, ok: false, output: err });
