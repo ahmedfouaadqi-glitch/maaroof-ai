@@ -1,0 +1,290 @@
+// System Health admin tab — surfaces diagnostics, cost-tracking gaps,
+// negative-margin tools, unpriced calls, Firecrawl spikes, and the
+// Manus/Kimi cost report.
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity } from "lucide-react";
+import { getSystemHealth, type HealthSnapshot } from "@/lib/system-health.functions";
+import { useI18n } from "@/lib/i18n";
+
+const fmt$ = (n: number, d = 4) => `$${(Number(n) || 0).toFixed(d)}`;
+
+export function SystemHealthTab() {
+  const { lang } = useI18n();
+  const ar = lang === "ar"; const ku = lang === "ku";
+  const t = (a: string, e: string, k: string) => (ar ? a : ku ? k : e);
+  const run = useServerFn(getSystemHealth);
+  const [data, setData] = useState<HealthSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true); setErr(null);
+    try { setData(await run({} as any) as any); }
+    catch (e: any) { setErr(e?.message || "error"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  if (loading && !data) return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
+  if (err) return <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{err}</div>;
+  if (!data) return null;
+
+  const issues =
+    data.negativeMargin.length +
+    data.unmeteredTools.length +
+    data.toolsMissingInstrumentation.length +
+    data.unpriced402.length +
+    (data.firecrawlSpike ? 1 : 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-2xl font-bold text-gradient">
+            {t("صحة النظام", "System Health", "تەندروستی سیستەم")}
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            {t("آخر فحص", "Last scan", "دوایین")}: {new Date(data.generatedAt).toLocaleString()} · {issues} {t("مشكلة", "issues", "کێشە")}
+          </p>
+        </div>
+        <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs hover:border-primary">
+          {loading ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />} {t("تحديث", "Refresh", "نوێ")}
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Stat icon={<Activity />} label={t("صفوف 30 يوم", "Rows / 30d", "ڕیز")} value={String(data.totals.ledger_rows_30d)} />
+        <Stat icon={<Gauge />} label={t("نسبة المُقاسة", "% Metered", "ڕێژەی")} value={`${data.totals.metered_pct}%`}
+          tone={data.totals.metered_pct < 50 ? "warn" : "ok"} />
+        <Stat icon={<TrendingDown />} label={t("تكلفة حقيقية 30 يوم", "Real cost 30d", "تێچوون")} value={fmt$(data.totals.real_usd_30d)} />
+        <Stat icon={<CheckCircle2 />} label={t("الهامش", "Margin", "هامش")} value={fmt$(data.totals.margin_usd_30d, 2)}
+          tone={data.totals.margin_usd_30d < 0 ? "bad" : "ok"} />
+      </div>
+
+      {/* Negative margin */}
+      <Section
+        title={t("هامش سالب (الأداة تكلف أكثر مما يدفع المستخدم)", "Negative margin (tool costs more than charged)", "هامشی نەرێنی")}
+        icon={<TrendingDown className="size-4 text-destructive" />}
+        empty={data.negativeMargin.length === 0}
+        emptyText={t("لا توجد أدوات بهامش سالب — ممتاز.", "No tools with negative margin — great.", "هیچ.")}
+      >
+        <table className="w-full text-xs">
+          <thead className="bg-background/40 text-muted-foreground">
+            <tr>
+              <th className="p-2 text-start">{t("الأداة", "Tool", "ئامراز")}</th>
+              <th className="p-2 text-end">{t("مُحصَّل", "Charged", "وەرگیراو")}</th>
+              <th className="p-2 text-end">{t("حقيقي", "Real", "ڕاستی")}</th>
+              <th className="p-2 text-end">{t("الهامش", "Margin", "هامش")}</th>
+              <th className="p-2 text-end">{t("الطلبات", "Requests", "داواکاری")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.negativeMargin.map((r) => (
+              <tr key={r.tool_key} className="border-t border-border/40">
+                <td className="p-2 font-mono">{r.tool_key}</td>
+                <td className="p-2 text-end">{fmt$(r.charged, 4)}</td>
+                <td className="p-2 text-end">{fmt$(r.real, 4)}</td>
+                <td className="p-2 text-end text-destructive">{fmt$(r.margin, 4)}</td>
+                <td className="p-2 text-end">{r.requests}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {t("الإصلاح: ارفع السعر من «المالية ← السعر المقترح» أو من خطة المستخدم.", "Fix: raise charged price from Finance → Suggested charge.", "ڕاستکردنەوە")}
+        </p>
+      </Section>
+
+      {/* Tools missing instrumentation */}
+      <Section
+        title={t("أدوات لا تسجّل التكلفة الحقيقية", "Tools missing real-cost instrumentation", "ئامرازی بێ پێوانە")}
+        icon={<Bug className="size-4 text-warning" />}
+        empty={data.toolsMissingInstrumentation.length === 0}
+        emptyText={t("كل الأدوات تسجّل التكلفة.", "All tools record cost.", "هەموو.")}
+      >
+        <div className="flex flex-wrap gap-2">
+          {data.toolsMissingInstrumentation.map((k) => (
+            <span key={k} className="rounded-full border border-warning/40 bg-warning/10 px-3 py-1 font-mono text-xs text-warning">{k}</span>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {t("الإصلاح: أضف enrichLedger بعد كل استدعاء AI في هذه الـ routes.", "Fix: add enrichLedger after every AI call in these routes.", "ڕاستکردنەوە")}
+        </p>
+      </Section>
+
+      {/* Unmetered legacy data */}
+      <Section
+        title={t("بيانات قديمة غير مُقاسة", "Legacy unmetered data", "داتای بێ پێوانە")}
+        icon={<AlertTriangle className="size-4 text-muted-foreground" />}
+        empty={data.unmeteredTools.length === 0}
+        emptyText={t("لا يوجد.", "None.", "هیچ.")}
+      >
+        <table className="w-full text-xs">
+          <thead className="bg-background/40 text-muted-foreground">
+            <tr>
+              <th className="p-2 text-start">{t("الأداة", "Tool", "ئامراز")}</th>
+              <th className="p-2 text-end">{t("صفوف غير مُقاسة", "Unmetered rows", "ڕیز")}</th>
+              <th className="p-2 text-end">{t("آخر مشاهدة", "Last seen", "دوایی")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.unmeteredTools.map((r) => (
+              <tr key={r.tool_key} className="border-t border-border/40">
+                <td className="p-2 font-mono">{r.tool_key}</td>
+                <td className="p-2 text-end">{r.rows}</td>
+                <td className="p-2 text-end text-muted-foreground">{r.last_seen ? new Date(r.last_seen).toLocaleDateString() : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Section>
+
+      {/* Unpriced 402s */}
+      <Section
+        title={t("محاولات بدون سعر (unpriced 402)", "Unpriced 402 attempts", "بێ نرخ")}
+        icon={<AlertTriangle className="size-4 text-warning" />}
+        empty={data.unpriced402.length === 0}
+        emptyText={t("لا يوجد.", "None.", "هیچ.")}
+      >
+        <div className="flex flex-wrap gap-2">
+          {data.unpriced402.map((r) => (
+            <span key={r.tool_key} className="rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs">
+              <span className="font-mono">{r.tool_key}</span> · {r.count}
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {t("الإصلاح: حدّد سعر الأداة في «الخطط × الأدوات» أو عبر تجاوز يدوي للمستخدم.", "Fix: set a price in Plans × Tools matrix or per-user override.", "ڕاستکردنەوە")}
+        </p>
+      </Section>
+
+      {/* Firecrawl spike */}
+      {data.firecrawlSpike && (
+        <Section
+          title={t("ارتفاع غير عادي في Firecrawl", "Firecrawl usage spike", "بەرزبوونەوە")}
+          icon={<AlertTriangle className="size-4 text-warning" />}
+          empty={false}
+        >
+          <p className="text-sm">
+            {t("اليوم", "Today", "ئەمڕۆ")} <b>{data.firecrawlSpike.day}</b>: <b>{data.firecrawlSpike.units}</b> units
+            ({data.firecrawlSpike.ratio}× {t("متوسط 7 أيام", "of 7-day avg", "ناوەند")} {data.firecrawlSpike.avg7d}).
+          </p>
+        </Section>
+      )}
+
+      {/* Profiles no metering */}
+      {data.profilesNoMetering > 0 && (
+        <Section title={t("مستخدمون بلا metering", "Users without metering", "بەکارهێنەر")} icon={<Gauge className="size-4 text-muted-foreground" />} empty={false}>
+          <p className="text-sm">{data.profilesNoMetering} {t("ملف شخصي بلا حد توكن — التكلفة الحقيقية لا تُحاسب عليهم.", "profiles with no token balance/limit — real cost not billed.", "پرۆفایل")}</p>
+        </Section>
+      )}
+
+      {/* Recent errors */}
+      {data.recentErrors.length > 0 && (
+        <Section title={t("أكثر الأخطاء تكراراً", "Top recent errors", "هەڵە")} icon={<Bug className="size-4 text-destructive" />} empty={false}>
+          <ul className="space-y-1 text-xs">
+            {data.recentErrors.map((r) => (
+              <li key={r.action} className="flex items-center justify-between font-mono">
+                <span>{r.action}</span><span className="text-muted-foreground">×{r.count}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {/* Cost report */}
+      <Section title={t("تقرير تكلفة بناء وكيل مثل Manus/Kimi", "Cost report: building a Manus/Kimi-like agent", "تێچوون")} icon={<FileText className="size-4 text-primary" />} empty={false}>
+        <CostReport lang={lang as any} />
+      </Section>
+    </div>
+  );
+}
+
+function Section({ title, icon, empty, emptyText, children }: { title: string; icon: React.ReactNode; empty: boolean; emptyText?: string; children?: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card/60 p-4 backdrop-blur">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold">{icon} {title}</div>
+      {empty ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><CheckCircle2 className="size-3.5 text-success" /> {emptyText}</div>
+      ) : children}
+    </div>
+  );
+}
+
+function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone?: "ok" | "warn" | "bad" }) {
+  const c = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-warning" : "text-gradient";
+  return (
+    <div className="rounded-2xl border border-border bg-card/70 p-4 backdrop-blur">
+      <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+        <span className="text-primary">{icon}</span> {label}
+      </div>
+      <div className={`font-display text-2xl font-bold ${c}`}>{value}</div>
+    </div>
+  );
+}
+
+function CostReport({ lang }: { lang: "ar" | "en" | "ku" }) {
+  if (lang === "ar") return (
+    <div className="prose prose-invert max-w-none text-sm leading-relaxed">
+      <h4>أ) بناء وكيل «Manus-lite» داخل مشروعك الحالي</h4>
+      <table>
+        <thead><tr><th>البند</th><th>التفصيل</th><th>التقدير</th></tr></thead>
+        <tbody>
+          <tr><td>تطوير</td><td>ربط الأدوات الـ16 + UI + memory</td><td>~150–300 ائتمان Lovable</td></tr>
+          <tr><td>نموذج (شغل)</td><td>Gemini 2.5 Flash عبر AI Gateway: $0.075/M in + $0.30/M out</td><td>~$0.04–0.10 لكل مهمة</td></tr>
+          <tr><td>Firecrawl</td><td>~50 crawl/مهمة</td><td>~$0.05/مهمة</td></tr>
+          <tr><td>Supabase</td><td>حتى 10K طلب/شهر</td><td>ضمن المجاني</td></tr>
+          <tr><td><b>الإجمالي/مستخدم نشط</b></td><td>30 مهمة/شهر</td><td><b>~$3–5/شهر</b> → بيع $9.99–$19.99</td></tr>
+        </tbody>
+      </table>
+      <h4>ب) بناء منتج مستقل بمستوى Manus التجاري</h4>
+      <ul>
+        <li>فريق MVP (3–6 شهور): 2 ML + 2 full-stack + designer + PM → <b>$300K–$700K</b></li>
+        <li>GPU + observability + DB: <b>$30K–$100K/شهر</b></li>
+        <li>استئجار النماذج (Anthropic/OpenAI/Google) عند 100K مستخدم: <b>$50K+/شهر</b></li>
+        <li>تدريب open-source بديل: <b>$1M+ one-time</b></li>
+        <li>بحث + alignment + RLHF: <b>$200K–$500K</b></li>
+        <li><b>MVP بمستوى Manus: $1M – $3M/سنة</b></li>
+      </ul>
+      <h4>ج) بمستوى Kimi (long-context LLM مع agent)</h4>
+      <p>يتطلب pretraining كامل لنموذج اللغة → <b>$10M – $50M+</b> في السنة الأولى. الفرق ليس في الكود، بل في امتلاك النموذج وبنية GPU.</p>
+      <h4>د) الخلاصة العملية لك الآن</h4>
+      <p>بناء «Manus-lite» داخل Lovable ممكن خلال يومين بأقل من <b>$100</b> تطوير + <b>$3–5/مستخدم/شهر</b> تشغيل، مع هامش ربح صحي لو بعت $14.99–$19.99/شهر.</p>
+    </div>
+  );
+  if (lang === "ku") return (
+    <div className="prose prose-invert max-w-none text-sm">
+      <p>«Manus-lite» لە ناو Lovable: ~$3–5/بەکارهێنەر/مانگ، نرخی فرۆش $9.99–$19.99. بەرهەمێکی سەربەخۆی Manus-ئاست: $1M–$3M/ساڵ. Kimi-ئاست: $10M+.</p>
+    </div>
+  );
+  return (
+    <div className="prose prose-invert max-w-none text-sm">
+      <h4>A) Building a "Manus-lite" agent inside this project</h4>
+      <table>
+        <thead><tr><th>Item</th><th>Detail</th><th>Estimate</th></tr></thead>
+        <tbody>
+          <tr><td>Development</td><td>Wire 16 tools + UI + memory</td><td>~150–300 Lovable credits</td></tr>
+          <tr><td>Model runtime</td><td>Gemini 2.5 Flash: $0.075/M in + $0.30/M out</td><td>~$0.04–0.10 / task</td></tr>
+          <tr><td>Firecrawl</td><td>~50 crawls / task</td><td>~$0.05 / task</td></tr>
+          <tr><td>Supabase / Cloud</td><td>Up to 10K req/month</td><td>Free tier</td></tr>
+          <tr><td><b>Per active user (30 tasks/mo)</b></td><td></td><td><b>~$3–5/mo</b> → sell at $9.99–$19.99</td></tr>
+        </tbody>
+      </table>
+      <h4>B) Standalone Manus-grade product</h4>
+      <ul>
+        <li>MVP team (3–6 mo): 2 ML + 2 full-stack + designer + PM → <b>$300K–$700K</b></li>
+        <li>Infra (GPU + observability + DB): <b>$30K–$100K/mo</b></li>
+        <li>Model rental @ 100K users: <b>$50K+/mo</b></li>
+        <li>Custom OSS training: <b>$1M+ one-time</b></li>
+        <li>Alignment + RLHF: <b>$200K–$500K</b></li>
+        <li><b>Year-1 total: $1M – $3M</b></li>
+      </ul>
+      <h4>C) Kimi-grade (long-context LLM + agent)</h4>
+      <p>Requires full pretraining: <b>$10M – $50M+</b> year one. The gap is GPU + owning the model, not application code.</p>
+      <h4>D) Bottom line for you</h4>
+      <p>You can ship a "Manus-lite" inside Lovable in ~2 days for under <b>$100</b> dev + <b>$3–5/user/month</b> runtime, with healthy margin at $14.99–$19.99/month pricing.</p>
+    </div>
+  );
+}
