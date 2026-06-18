@@ -231,7 +231,10 @@ function MaaroofPage() {
             {events.map((e, i) => <EventCard key={i} ev={e} />)}
             {finalText && (
               <div className="border-t pt-3 mt-3">
-                <div className="text-xs font-semibold text-primary mb-1">الإجابة النهائية</div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs font-semibold text-primary">الإجابة النهائية</div>
+                  <button onClick={exportFinal} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><FileDown className="w-3 h-3" /> تصدير PDF</button>
+                </div>
                 <div className="whitespace-pre-wrap text-sm">{finalText}</div>
               </div>
             )}
