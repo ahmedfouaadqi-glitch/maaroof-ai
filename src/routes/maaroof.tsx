@@ -11,7 +11,16 @@ import { exportToPDF } from "@/lib/exports";
 import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 
 export const Route = createFileRoute("/maaroof")({
-  head: () => ({ meta: [{ title: "معروف — الوكيل الذكي" }, { name: "description", content: "Maaroof: a Manus+Kimi-style intelligent agent for global GEO marketing." }] }),
+  head: () => ({
+    meta: [
+      { title: "معروف — الوكيل الذكي · MAAROOF Ai" },
+      { name: "description", content: "Maaroof is the MAAROOF Ai autonomous agent: plans, researches and executes global GEO marketing tasks across 9 AI engines in Arabic, Kurdish and English." },
+      { property: "og:title", content: "Maaroof — Autonomous GEO Agent · MAAROOF Ai" },
+      { property: "og:description", content: "Plans, researches and executes global GEO marketing tasks across 9 AI engines in AR, KU and EN." },
+      { property: "og:url", content: "https://geoiraq.com/maaroof" },
+    ],
+    links: [{ rel: "canonical", href: "https://geoiraq.com/maaroof" }],
+  }),
   component: () => (
     <I18nProvider><AuthProvider><MaaroofPage /></AuthProvider></I18nProvider>
   ),
