@@ -711,6 +711,142 @@ export type Database = {
         }
         Relationships: []
       }
+      maaroof_memory: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          importance: number
+          kind: string
+          last_accessed_at: string
+          run_id: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          importance?: number
+          kind: string
+          last_accessed_at?: string
+          run_id?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          importance?: number
+          kind?: string
+          last_accessed_at?: string
+          run_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_memory_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maaroof_messages: {
+        Row: {
+          created_at: string
+          id: string
+          parts: Json
+          role: string
+          run_id: string
+          tokens: number
+          usd: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parts?: Json
+          role: string
+          run_id: string
+          tokens?: number
+          usd?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parts?: Json
+          role?: string
+          run_id?: string
+          tokens?: number
+          usd?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_messages_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maaroof_runs: {
+        Row: {
+          created_at: string
+          detected_geo: Json | null
+          error: string | null
+          finished_at: string | null
+          geo_scope: Json | null
+          goal: string
+          id: string
+          language: string | null
+          model: string | null
+          plan: Json
+          started_at: string
+          status: string
+          steps_count: number
+          total_tokens: number
+          total_usd: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detected_geo?: Json | null
+          error?: string | null
+          finished_at?: string | null
+          geo_scope?: Json | null
+          goal: string
+          id?: string
+          language?: string | null
+          model?: string | null
+          plan?: Json
+          started_at?: string
+          status?: string
+          steps_count?: number
+          total_tokens?: number
+          total_usd?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detected_geo?: Json | null
+          error?: string | null
+          finished_at?: string | null
+          geo_scope?: Json | null
+          goal?: string
+          id?: string
+          language?: string | null
+          model?: string | null
+          plan?: Json
+          started_at?: string
+          status?: string
+          steps_count?: number
+          total_tokens?: number
+          total_usd?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           brand_keywords: string | null

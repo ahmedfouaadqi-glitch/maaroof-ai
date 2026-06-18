@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as MaaroofRouteImport } from './routes/maaroof'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -31,6 +32,7 @@ import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
+import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
@@ -74,6 +76,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaaroofRoute = MaaroofRouteImport.update({
+  id: '/maaroof',
+  path: '/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuideRoute = GuideRouteImport.update({
@@ -154,6 +161,11 @@ const ApiSocialAnalysisRoute = ApiSocialAnalysisRouteImport.update({
 const ApiResearchRoute = ApiResearchRouteImport.update({
   id: '/api/research',
   path: '/api/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
+  id: '/api/maaroof',
+  path: '/api/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
@@ -237,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
+  '/maaroof': typeof MaaroofRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -254,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -275,6 +289,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
+  '/maaroof': typeof MaaroofRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -292,6 +307,7 @@ export interface FileRoutesByTo {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -314,6 +330,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
+  '/maaroof': typeof MaaroofRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -331,6 +348,7 @@ export interface FileRoutesById {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -354,6 +372,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/guide'
+    | '/maaroof'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -371,6 +390,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -392,6 +412,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/guide'
+    | '/maaroof'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -409,6 +430,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -430,6 +452,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/guide'
+    | '/maaroof'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -447,6 +470,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -469,6 +493,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   GuideRoute: typeof GuideRouteWithChildren
+  MaaroofRoute: typeof MaaroofRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -486,6 +511,7 @@ export interface RootRouteChildren {
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
+  ApiMaaroofRoute: typeof ApiMaaroofRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
@@ -541,6 +567,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maaroof': {
+      id: '/maaroof'
+      path: '/maaroof'
+      fullPath: '/maaroof'
+      preLoaderRoute: typeof MaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -653,6 +686,13 @@ declare module '@tanstack/react-router' {
       path: '/api/research'
       fullPath: '/api/research'
       preLoaderRoute: typeof ApiResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/maaroof': {
+      id: '/api/maaroof'
+      path: '/api/maaroof'
+      fullPath: '/api/maaroof'
+      preLoaderRoute: typeof ApiMaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/geo-strategist': {
@@ -774,6 +814,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   GuideRoute: GuideRouteWithChildren,
+  MaaroofRoute: MaaroofRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
@@ -791,6 +832,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
+  ApiMaaroofRoute: ApiMaaroofRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,
   ApiSuggestRoute: ApiSuggestRoute,

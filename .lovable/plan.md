@@ -1,110 +1,119 @@
-# خطة المراجعة والإصلاح الشاملة
 
-## 1) ربط تتبّع التكلفة الحقيقية بكل الـ 16 endpoint
+## الهدف
+بناء **الوكيل الذكي «معروف»** — Orchestrator احترافي بنمط Manus (Plan→Act→Reflect) + ذاكرة طويلة Kimi-like، يعمل **عالمياً** (وليس العراق فقط) فوق الأدوات الـ16 القائمة، بدون كسر الوكيل الحالي.
 
-اليوم `enrichLedger` مربوط فقط بـ `analyze.ts` و `brand-boost.ts`. سأنشئ helper موحّد ثم أربطه بالباقي.
+## الهوية
+- **الاسم:** معروف (Maaroof) — "وكيلك الذكي للتسويق الرقمي والـ GEO حول العالم"
+- يظهر في system prompt، header، sidebar، empty state، تذييل التقارير
 
-**ملف جديد:** `src/lib/ai-call.server.ts`
-- دالة `callLovableAI({ userId, toolKey, runId, model, messages, ... })` تغلّف `fetch` إلى بوابة Lovable AI، تلتقط `usage.prompt_tokens` / `completion_tokens`، تستدعي `enrichLedger` تلقائياً، وترجع `{ json, usage, latencyMs, realUsdCost }`.
-- نمط `TokenAcc` للأدوات متعددة الاستدعاءات (مثل brand-boost) مع `flush()` نهائي.
+## النطاق الجغرافي (العالمي)
 
-**تعديل 14 ملف routes/api:**
-`suggest.ts, research.ts, compare.ts, feasibility.ts, bizdev.ts, visibility.ts, geo-strategist.ts, geo-rewrite.ts, applied-ranking.ts, brand-authority.ts, company-email.ts, social-analysis.ts, what-if.ts, competitor-monitor.ts` + `public/hooks/agent-runner.ts` + `src/lib/translate.functions.ts` + `src/lib/cognition.server.ts` + `src/lib/platform-probe.server.ts`.
+### كشف موقع المستخدم
+- **IP geolocation** عند بدء كل run عبر Cloudflare headers المتاحة في Worker:
+  - `request.headers.get('cf-ipcountry')` → كود الدولة (IQ, SA, US, …)
+  - `cf-ipcity`, `cf-iplongitude`, `cf-iplatitude` (إن وُجدت)
+- Fallback: استدعاء `ipapi.co/json` أو `ip-api.com` إن لم تتوفر headers
+- النتيجة تُحفظ في `maaroof_runs.detected_geo jsonb`
 
-استبدال كل `fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, …)` بـ `callLovableAI(...)`. لا تغيير في منطق `chargeTokens` أو الواجهة.
+### اختيار يدوي
+- في واجهة `/maaroof`: قائمة منسدلة "النطاق الجغرافي" مع:
+  - **تلقائي (حسب IP)** — افتراضي
+  - **دولة محددة** — Combobox بكل دول العالم (ISO 3166-1)
+  - **مدينة محددة** — text input اختياري
+  - **عالمي** — بدون قيد جغرافي
+- الاختيار يُحفظ في `maaroof_runs.geo_scope jsonb`: `{country, city, mode}`
+- يُحفظ كتفضيل دائم في `maaroof_memory` (kind=preference) ليُستدعى تلقائياً في الـ runs التالية
 
-## 2) تبويب «System Health» في الأدمن
+### استخدام النطاق في التخطيط والتنفيذ
+- يُحقن في system prompt: "موقع المستخدم: {country}, {city}. خطط أهدافاً ملائمة لهذا السوق (لغة، عملة، منافسون، قنوات)"
+- يُمرر كمعامل `geo` إلى كل أداة تدعم النطاق (analyze, research, geo-strategist, visibility, compare, applied-ranking)
+- التقارير تُترجم وتُكتب باللغة المناسبة (عربي للدول العربية، إنجليزي افتراضياً، أو حسب تفضيل المستخدم)
 
-**ملف جديد:** `src/components/admin/SystemHealthTab.tsx` + تسجيله في `src/routes/admin.tsx`.
+## 1) قاعدة البيانات (Migration واحدة)
 
-server fn: `src/lib/system-health.functions.ts` يفحص ويعرض:
+### جداول جديدة
+- **`maaroof_runs`**: `id, user_id, goal, status, plan jsonb, detected_geo jsonb, geo_scope jsonb, language text, total_usd, total_tokens, model, started_at, finished_at`
+- **`maaroof_memory`**: `id, user_id, run_id nullable, kind (fact|preference|task_result|summary), content text, embedding vector(768), importance int, created_at, last_accessed_at`
+- **`maaroof_messages`**: `id, run_id, role, parts jsonb, tokens, usd, created_at`
 
-| فحص | منطق |
+### الصلاحيات
+- `pgvector` extension
+- GRANT (`authenticated` + `service_role`) للجداول الثلاثة
+- RLS: المالك فقط + admin
+- ivfflat index على `maaroof_memory.embedding`
+
+## 2) طبقة التنسيق `src/lib/maaroof/`
+
+- **`geo-detector.server.ts`** (جديد): يقرأ Cloudflare headers + fallback إلى ipapi
+- **`planner.server.ts`**: Gemini 2.5 Pro، يستقبل goal + geo + memory → خطة JSON
+- **`executor.server.ts`**: ينفذ الـ16 endpoint عبر AI SDK tools، يمرر `geo` لكل أداة
+- **`reflector.server.ts`**: تقييم كل 3-5 خطوات
+- **`memory.server.ts`**: recall/remember/summarize عبر embeddings
+- **`cost-tracker.server.ts`**: enrichLedger بعد كل خطوة، يجمع في `maaroof_runs.total_usd`
+
+### `src/routes/api/maaroof.ts` (جديد)
+- POST مع `streamText` + tools + `stepCountIs(50)` + `toUIMessageStreamResponse`
+- يستدعي `detectGeo(request)` أول شيء
+- system prompt يبدأ بهوية معروف + الموقع المكتشف
+- نموذج: `google/gemini-2.5-pro` افتراضي
+
+## 3) الواجهة `/maaroof`
+
+- AI Elements (Conversation, Message, Tool, PromptInput, Shimmer)
+- **Header**: شعار معروف + الاسم + التكلفة الجارية + عدد الخطوات + الوقت
+- **شريط الموقع**: 🌍 "العراق، بغداد (تلقائي)" مع زر تغيير → modal اختيار يدوي
+- **message.parts**: plan قابلة للطي، tool-call مع icon، tool-result مضغوط، reflection ملون
+- **Sidebar**: runs سابقة + رابط ذاكرة معروف
+- **Empty state**: "مرحباً، أنا معروف. حددت موقعك: {country}. ما الهدف؟"
+- زر إيقاف (AbortController)
+
+### `/maaroof/memory` (مرحلة B)
+- عرض ذاكرة معروف + حذف/تعديل
+
+## 4) الذاكرة الطويلة (Kimi-like)
+- قبل كل run: `recall(userId, goal)` يجلب أعلى 10 ذكريات + التفضيلات الجغرافية → system prompt
+- بعد كل run: `summarize()` يحفظ ملخص + تفضيلات مكتشفة (دولة، لغة، صناعة)
+- LRU عند تجاوز 1000 ذكرى/مستخدم
+
+## 5) تتبع التكلفة الحقيقية
+- كل LLM call عبر `callLovableAI` المركزي
+- كل tool execution → صف في `token_ledger` مع `meta.maaroof_run_id` + `meta.geo`
+- `maaroof_runs.total_usd` = SUM real cost
+
+## 6) الأمان والحدود
+- `requireSupabaseAuth` على كل server fns
+- Trial: 5 runs/يوم
+- باقي الخطط: محسوبة من `total_usd` ضمن حد شهري قابل للضبط من الأدمن
+- لا تُسرَّب headers أو IP المستخدم في الواجهة (تُخزَّن server-side فقط)
+
+## التفاصيل التقنية
+
+| العنصر | القيمة |
 |---|---|
-| Endpoints غير مُقاسة | جدول endpoints التي لم يُسجَّل لها أي `meta.real_usd_cost` خلال آخر 30 يوم |
-| هامش سالب | `tool_key` حيث `Σ real_usd_cost > Σ usd_cost` |
-| توكن بلا سعر | محاولات `unpriced` (من `activity_log`) |
-| أدوات بدون `enrichLedger` | scan ثابت لقائمة routes vs قائمة tool_keys في `token_ledger` |
-| Firecrawl Spike | `firecrawl_usage` >120% من متوسط 7 أيام |
-| RLS/GRANT مفقود | استعلام `information_schema` لجداول `public` بلا `GRANT SELECT … TO authenticated/service_role` |
-| Quota لمستخدمين بلا metering | profiles بلا balance ولا limits |
-| أخطاء 402 متكررة | تجميع آخر 7 أيام من السجل |
+| نموذج التخطيط | `google/gemini-2.5-pro` |
+| نموذج المهام الحرجة | `openai/gpt-5` |
+| Embedding | `google/gemini-embedding-001` (768d) |
+| Geo detection | Cloudflare `cf-ipcountry` + ipapi.co fallback |
+| stopWhen | `stepCountIs(50)` |
+| UI | AI Elements + streamText |
 
-كل صف فيه «إصلاح موصى به» نصياً.
-
-## 3) تنبيهات تلقائية للهامش السالب
-
-**ملف جديد:** `src/lib/margin-alerts.server.ts`
-- بعد كل `enrichLedger` ناجح: لو `real_usd_cost > usd_cost × 0.9` نُدرج صف في `user_notifications` للأدمن (نوع `margin_warning`) + جرس في `AlertsBell`.
-- threshold قابل للتخصيص من `app_settings.margin_alert_ratio` (افتراضي 0.9).
-
-## 4) احتساب تلقائي للسعر المقترح
-
-في `AdminFinanceTab.tsx`:
-- زر **«تطبيق السعر المقترح»** بجوار كل صف per-tool/per-user → يحدّث `per_user_tool_overrides` أو `tool_plan_access` بـ `usd_per_use = avg_real × 1.5` و `tokens_per_use = round(usd × 1000)`.
-- زر جماعي **«تطبيق على كل الأدوات لخطة X»**.
-- markup قابل للتخصيص (1.2× / 1.5× / 2× / مخصّص).
-- يكتب صف audit في `activity_log`.
-
-## 5) Agent مركزي (Manus-like)
-
-**ملف جديد:** `src/routes/api/agent-orchestrator.ts` + `src/components/AgentOrchestrator.tsx` (تبويب جديد في `/agent`).
-
-- يستخدم AI SDK `streamText` مع `tools` تغلّف كل أداة من الـ16 (`analyze`, `suggest`, `research`, …) كـ `tool({ inputSchema, execute })`.
-- `stopWhen: stepCountIs(50)` للسماح بـ planning + execution + reflection.
-- يخزّن المحادثة في جدول جديد `agent_runs` (`id, user_id, goal, steps jsonb[], status, total_usd, created_at`).
-- يستفيد من نفس `callLovableAI` فيحصل على تتبّع تكلفة دقيق.
-- UI: تدفّق `message.parts` يعرض كل tool call + نتيجته (مثل ChatGPT/Manus).
-
-## 6) إصلاحات تجربة المستخدم في الأدوات
-
-- توحيد رسائل 402 بصيغة موحّدة (toast + CTA لشحن التوكن) في كل الأدوات بدل سلاسل مبعثرة.
-- إصلاح تحذير `DialogContent` بدون `Description` في `TokensBar` (إضافة `DialogDescription`).
-- إكمال handoff للأدوات الناقصة في `HANDOFF_MAP` (geo-strategist, geo-rewrite, applied-ranking, brand-authority, what-if, social-analysis).
-- زر «ترجمة» موحّد في كل النتائج الطويلة.
-
-## 7) فحص الأمان وRLS
-
-- تشغيل `security--run_security_scan` ومعالجة كل high/critical.
-- migration واحد يضيف `GRANT` المفقود + يصلح أي policy ناقص للجداول الـ 38 الحالية.
-- التأكد أن `agent_runs` الجديد يتبع نمط `GRANT … TO authenticated; GRANT ALL … TO service_role` + RLS بـ `auth.uid() = user_id`.
-
-## 8) تقرير تكلفة Manus/Kimi (يُسلَّم داخل التبويب الجديد كـ Markdown)
-
-### أ) تقدير بناء وكيل مشابه داخل مشروعك الحالي على Lovable
-
-| البند | التفصيل | التقدير |
-|---|---|---|
-| تطوير (بمساعدة Lovable) | البنود 1–6 أعلاه | ~150–300 credit (يوم–يومان عمل) |
-| تشغيل شهري — نموذج | `gemini-2.5-flash` عبر AI Gateway: $0.075/M in + $0.30/M out | لكل مهمة وكيل (~50K token in + 20K out × 10 خطوات) ≈ **$0.04–0.10 لكل مهمة** |
-| تشغيل شهري — Firecrawl | 50 crawl/مهمة | ~$0.05/مهمة |
-| Supabase / Cloud | حتى ~10K طلب/شهر | ضمن الـ free tier للـ Lovable Cloud |
-| **الإجمالي/مستخدم نشط** (30 مهمة/شهر) | | **~$3–5/شهر تكلفة فعلية** → سعر بيع مقترح $9.99–$19.99 |
-
-### ب) تقدير بناء منتج مستقل بمستوى Manus/Kimi تجارياً
-
-| البند | التفصيل | التقدير |
-|---|---|---|
-| فريق MVP (3–6 شهور) | 2 ML eng + 2 full-stack + 1 designer + PM | **$300K – $700K** |
-| البنية التحتية | GPU clusters (تدريب/تخصيص) + DB + observability | $30K–$100K/شهر |
-| النماذج | إما استئجار (Anthropic/OpenAI/Google) أو تدريب open-source (Qwen/DeepSeek) | استئجار: $50K+/شهر عند 100K user · تدريب: $1M+ one-time |
-| البحث والـ alignment | RLHF + سلامة + benchmarks | $200K–$500K |
-| **MVP بمستوى Manus** | full-stack agent + browser tool + code tool + memory | **$1M – $3M في السنة الأولى** |
-| **Kimi-level (long-context LLM + agent)** | يتطلب pretraining كامل | **$10M – $50M+** |
-
-### ج) المقارنة المختصرة
-
-> داخل Lovable يمكنك بناء **«Manus-lite»** على نماذج جاهزة بتكلفة تطوير = أقل من $100 ائتمان + تكلفة تشغيل $3–5/مستخدم/شهر. أما بناء Manus/Kimi كمنتج مستقل من الصفر فيتطلب $1M+ في السنة الأولى ($10M+ لمستوى Kimi). الفرق ليس في الكود بل في امتلاك النموذج وبنية GPU.
-
-## الاستثناءات
-- لا تغييرات على نظام `chargeTokens` أو RPC الحالي.
-- لا حذف بيانات قديمة — الصفوف غير المُقاسة تبقى كـ audit trail.
-- لا تغيير في مفاتيح API أو الـ secrets.
+## ما لا يتغير
+- `/agent` القديم وجداوله
+- الـ16 endpoint وعقودها (نضيف معامل `geo` اختيارياً، backward-compatible)
+- `chargeTokens`, `tool_plan_access`, `per_user_tool_overrides`
+- `SystemHealthTab`, `AdminFinanceTab` (نضيف قسم Maaroof فقط)
 
 ## معايير القبول
-1. كل أداة بعد تشغيلها تكتب `real_usd_cost` في `token_ledger.meta`.
-2. تبويب System Health يفتح ويعرض كل قسم.
-3. هامش سالب يظهر تنبيه في `AlertsBell` خلال 60 ثانية.
-4. زر «تطبيق السعر المقترح» يحدّث `per_user_tool_overrides` فعلياً.
-5. `/agent` يشغّل خطة متعدّدة الأدوات بدون أخطاء، ويسجّل التكلفة الكلية.
-6. تقرير التكلفة ظاهر داخل تبويب System Health.
+1. `/maaroof` يكشف موقع المستخدم من IP تلقائياً ويعرضه
+2. المستخدم يستطيع تغيير الدولة/المدينة يدوياً، والتفضيل يُحفظ
+3. الخطة والأدوات تتكيف مع النطاق الجغرافي (لغة، سوق، منافسون)
+4. streaming كامل لـ plan/tool/reflection
+5. التكلفة الحقيقية تُحفظ لحظياً
+6. الذاكرة الطويلة تعمل عبر runs متعددة
+7. الـ16 أداة كلها متاحة كـ tools لمعروف
+8. الوكيل القديم يعمل بدون كسر
+9. RLS + GRANT صحيحة
+
+## تنفيذ على مرحلتين
+- **A (هذا الـ build):** Migration + geo-detector + maaroof backend + `/maaroof` UI مع شريط الموقع + ذاكرة + تتبع تكلفة + هوية
+- **B (لاحق):** صفحة ذاكرة، export PDF، تكامل عميق مع AdminFinanceTab، تعديل الخطة وسط التنفيذ
