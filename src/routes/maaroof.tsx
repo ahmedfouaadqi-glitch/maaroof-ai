@@ -195,7 +195,7 @@ function MaaroofPage() {
           {/* Geo bar */}
           <div className="rounded-lg border bg-card p-3 flex items-center gap-2 flex-wrap text-sm">
             <Globe className="w-4 h-4 text-primary" />
-            <span className="font-medium">النطاق الجغرافي:</span>
+            <h2 className="font-medium text-sm m-0">النطاق الجغرافي:</h2>
             <select value={geoMode} onChange={(e) => setGeoMode(e.target.value as any)} className="border rounded px-2 py-1 bg-background">
               <option value="auto">تلقائي (حسب IP)</option>
               <option value="country">دولة محددة</option>
