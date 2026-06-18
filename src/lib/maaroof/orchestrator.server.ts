@@ -6,6 +6,7 @@ import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
+import { getMaaroofSettings } from "./settings.server";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -13,9 +14,6 @@ function db() {
   _db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
   return _db as any;
 }
-
-const MODEL = "google/gemini-2.5-pro";
-const MAX_STEPS = 50;
 
 // Map tool keys -> internal API path + body builder
 type ToolCall = { tool: string; input: any; reason?: string };
