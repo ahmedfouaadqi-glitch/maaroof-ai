@@ -271,11 +271,12 @@ REAL PUBLIC EVIDENCE (numbered):
 ${evidenceBlock}`;
 
           let planParsed: any = {};
+          const _t0 = Date.now();
           try {
             const planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
               { role: "system", content: planSys },
               { role: "user", content: planUser },
-            ], 18000);
+            ], 18000, _tokAcc);
             if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
             if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
             const planText = planRes.ok ? await readGatewayMessage(planRes) : { content: "", error: await planRes.text().catch(() => `http_${planRes.status}`) };
@@ -284,6 +285,14 @@ ${evidenceBlock}`;
           } catch (e) {
             console.error("[brand-boost] plan timeout/fallback", e);
           }
+          // Enrich ledger with real provider USD cost (sum across all gateway calls)
+          try {
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({
+              runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-boost",
+              inputTokens: _tokAcc.in, outputTokens: _tokAcc.out, latencyMs: Date.now() - _t0,
+            });
+          } catch {}
           if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
