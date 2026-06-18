@@ -254,18 +254,24 @@ export function AdminFinanceTab() {
               <th className="px-1 py-1 text-end">{L.tokens}</th>
               <th className="px-1 py-1 text-end text-primary">{L.charged}</th>
               <th className="px-1 py-1 text-end text-amber-500">{L.real}</th>
+              <th className="px-1 py-1 text-end text-amber-500">{L.avgReal}</th>
+              <th className="px-1 py-1 text-end text-emerald-500">{L.suggested}</th>
               <th className="px-1 py-1 text-end">{L.margin}</th>
               <th className="px-1 py-1 text-end">ms</th>
             </tr></thead>
             <tbody>{stats.tools.map(([k, v]) => {
               const m = v.charged - v.real;
+              const avg = v.meteredReq ? v.meteredReal / v.meteredReq : 0;
+              const suggested = avg * 1.5;
               return (
                 <tr key={k} className="border-t border-border/40">
                   <td className="px-1 py-1.5">{toolLabel(k as any, lang as any)}</td>
-                  <td className="px-1 py-1.5 text-end font-mono">{v.req}</td>
+                  <td className="px-1 py-1.5 text-end font-mono">{v.req}{v.meteredReq < v.req && <span className="ml-1 text-[9px] text-amber-500">({v.req - v.meteredReq} {L.unmetered})</span>}</td>
                   <td className="px-1 py-1.5 text-end font-mono">{v.tokens.toLocaleString()}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-primary">{fmt(v.charged)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-amber-500">{fmt(v.real)}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{v.meteredReq ? fmt(avg, 5) : "—"}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-emerald-500">{v.meteredReq ? fmt(suggested, 5) : "—"}</td>
                   <td className={`px-1 py-1.5 text-end font-mono ${marginColor(m)}`}>{fmt(m)} <span className="opacity-60">({pct(v.charged, v.real)})</span></td>
                   <td className="px-1 py-1.5 text-end font-mono text-muted-foreground">{v.latN ? Math.round(v.latSum / v.latN) : "—"}</td>
                 </tr>
@@ -282,10 +288,12 @@ export function AdminFinanceTab() {
               <th className="px-1 py-1 text-end">{L.tokens}</th>
               <th className="px-1 py-1 text-end text-primary">{L.charged}</th>
               <th className="px-1 py-1 text-end text-amber-500">{L.real}</th>
+              <th className="px-1 py-1 text-end text-amber-500">{L.avgReal}</th>
               <th className="px-1 py-1 text-end">{L.margin}</th>
             </tr></thead>
             <tbody>{stats.users.map(([uid, v]) => {
               const m = v.charged - v.real;
+              const avg = v.meteredReq ? v.meteredReal / v.meteredReq : 0;
               return (
                 <tr key={uid} className="border-t border-border/40">
                   <td className="px-1 py-1.5 truncate max-w-[180px]">{userLabel(uid)}</td>
@@ -293,6 +301,7 @@ export function AdminFinanceTab() {
                   <td className="px-1 py-1.5 text-end font-mono">{v.tokens.toLocaleString()}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-primary">{fmt(v.charged)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-amber-500">{fmt(v.real)}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{v.meteredReq ? fmt(avg, 5) : "—"}</td>
                   <td className={`px-1 py-1.5 text-end font-mono ${marginColor(m)}`}>{fmt(m)}</td>
                 </tr>
               );
