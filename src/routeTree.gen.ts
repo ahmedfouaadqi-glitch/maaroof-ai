@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as MaaroofRouteImport } from './routes/maaroof'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -75,6 +76,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaaroofRoute = MaaroofRouteImport.update({
+  id: '/maaroof',
+  path: '/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuideRoute = GuideRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
+  '/maaroof': typeof MaaroofRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
+  '/maaroof': typeof MaaroofRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
+  '/maaroof': typeof MaaroofRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -363,6 +372,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/guide'
+    | '/maaroof'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/guide'
+    | '/maaroof'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/guide'
+    | '/maaroof'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -481,6 +493,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   GuideRoute: typeof GuideRouteWithChildren
+  MaaroofRoute: typeof MaaroofRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -554,6 +567,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maaroof': {
+      id: '/maaroof'
+      path: '/maaroof'
+      fullPath: '/maaroof'
+      preLoaderRoute: typeof MaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -794,6 +814,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   GuideRoute: GuideRouteWithChildren,
+  MaaroofRoute: MaaroofRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
