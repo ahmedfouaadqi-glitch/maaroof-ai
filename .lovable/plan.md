@@ -1,119 +1,68 @@
 
-## الهدف
-بناء **الوكيل الذكي «معروف»** — Orchestrator احترافي بنمط Manus (Plan→Act→Reflect) + ذاكرة طويلة Kimi-like، يعمل **عالمياً** (وليس العراق فقط) فوق الأدوات الـ16 القائمة، بدون كسر الوكيل الحالي.
+## المرحلة B — استكمال «معروف»
 
-## الهوية
-- **الاسم:** معروف (Maaroof) — "وكيلك الذكي للتسويق الرقمي والـ GEO حول العالم"
-- يظهر في system prompt، header، sidebar، empty state، تذييل التقارير
+المرحلة A اكتملت (الجداول + orchestrator + `/api/maaroof` SSE + واجهة `/maaroof` مع شريط الموقع وكشف IP). الآن نُكمل بقية معايير القبول.
 
-## النطاق الجغرافي (العالمي)
+## 1) دمج مع الوكيل القديم
+- **بانر في `/agent`**: شريط أعلى الصفحة "جرّب وكيلنا الجديد معروف — تخطيط متعدد الخطوات + ذاكرة طويلة + كل أدوات GEO" مع زر للذهاب لـ `/maaroof`. قابل للإخفاء (localStorage).
+- **رابط في `SiteHeader`**: عنصر قائمة "معروف ✨" بجانب "الوكيل".
+- **رابط من `/index`** (الصفحة الرئيسية) لمن لم يجرّبه بعد.
 
-### كشف موقع المستخدم
-- **IP geolocation** عند بدء كل run عبر Cloudflare headers المتاحة في Worker:
-  - `request.headers.get('cf-ipcountry')` → كود الدولة (IQ, SA, US, …)
-  - `cf-ipcity`, `cf-iplongitude`, `cf-iplatitude` (إن وُجدت)
-- Fallback: استدعاء `ipapi.co/json` أو `ip-api.com` إن لم تتوفر headers
-- النتيجة تُحفظ في `maaroof_runs.detected_geo jsonb`
+## 2) صفحة ذاكرة معروف `/maaroof/memory`
+- جدول للذكريات الحالية (kind, content, importance, last_accessed).
+- إجراءات: حذف، تعديل importance، حذف الكل.
+- زر "تذكّر هذا" يدوي لإضافة fact/preference.
+- يستخدم RLS الموجود (المستخدم يرى ويعدّل بياناته فقط).
 
-### اختيار يدوي
-- في واجهة `/maaroof`: قائمة منسدلة "النطاق الجغرافي" مع:
-  - **تلقائي (حسب IP)** — افتراضي
-  - **دولة محددة** — Combobox بكل دول العالم (ISO 3166-1)
-  - **مدينة محددة** — text input اختياري
-  - **عالمي** — بدون قيد جغرافي
-- الاختيار يُحفظ في `maaroof_runs.geo_scope jsonb`: `{country, city, mode}`
-- يُحفظ كتفضيل دائم في `maaroof_memory` (kind=preference) ليُستدعى تلقائياً في الـ runs التالية
+## 3) تكامل مع لوحة الأدمن
+في `SystemHealthTab` (موجود): قسم جديد **«Maaroof»**:
+- إجمالي الـ runs آخر 7 أيام، متوسط التكلفة، نسبة الفشل.
+- أعلى 10 أهداف من حيث التكلفة (لاكتشاف الإساءة).
+- تنبيه إن تجاوز متوسط التكلفة عتبة (مثلاً $0.50).
+- جدول آخر 20 run مع: المستخدم، الهدف، الحالة، steps، USD، الوقت.
 
-### استخدام النطاق في التخطيط والتنفيذ
-- يُحقن في system prompt: "موقع المستخدم: {country}, {city}. خطط أهدافاً ملائمة لهذا السوق (لغة، عملة، منافسون، قنوات)"
-- يُمرر كمعامل `geo` إلى كل أداة تدعم النطاق (analyze, research, geo-strategist, visibility, compare, applied-ranking)
-- التقارير تُترجم وتُكتب باللغة المناسبة (عربي للدول العربية، إنجليزي افتراضياً، أو حسب تفضيل المستخدم)
+في `AdminFinanceTab` (إن وُجد، وإلا نضيف بطاقة في `SystemHealthTab`):
+- إيرادات Maaroof = SUM(`token_ledger.usd_cost` WHERE `meta->>'maaroof_run_id' IS NOT NULL`).
+- التكلفة الحقيقية = SUM(`maaroof_runs.total_usd`).
+- الهامش.
 
-## 1) قاعدة البيانات (Migration واحدة)
+## 4) تتبع التكلفة عبر `token_ledger`
+حالياً المرحلة A تحفظ التكلفة في `maaroof_runs.total_usd` فقط. نضيف:
+- بعد كل استدعاء أداة داخل orchestrator، نسجّل صفاً في `token_ledger` عبر `enrichLedger` (الموجود في `system-health.functions.ts` أو نستخدم `chargeTokens` للأدوات الفعلية).
+- الـ meta يحتوي `{ maaroof_run_id, step_index, tool, geo }`.
+- استدعاءات LLM (planner/reflector/final) تُسجَّل بـ tool_key=`maaroof.llm`.
 
-### جداول جديدة
-- **`maaroof_runs`**: `id, user_id, goal, status, plan jsonb, detected_geo jsonb, geo_scope jsonb, language text, total_usd, total_tokens, model, started_at, finished_at`
-- **`maaroof_memory`**: `id, user_id, run_id nullable, kind (fact|preference|task_result|summary), content text, embedding vector(768), importance int, created_at, last_accessed_at`
-- **`maaroof_messages`**: `id, run_id, role, parts jsonb, tokens, usd, created_at`
+## 5) تحسينات UX على `/maaroof`
+- **حفظ خيار اللغة والنطاق الجغرافي تلقائياً** كـ `preference` في `maaroof_memory` (الآن يُحفظ فقط بعد done — ننقله لبدء الجلسة).
+- **تحميل جلسة سابقة**: النقر على جلسة من sidebar يعرض رسائلها (قراءة من `maaroof_messages`).
+- **زر "تصدير PDF"** للإجابة النهائية (يستخدم `src/lib/exports.ts` الموجود).
+- **إعادة محاولة عند خطأ 402/429**: رسالة واضحة + زر "أعد المحاولة" أو "ترقية الخطة".
+- **تركيز تلقائي** على textarea عند فتح الصفحة وبعد كل جلسة.
 
-### الصلاحيات
-- `pgvector` extension
-- GRANT (`authenticated` + `service_role`) للجداول الثلاثة
-- RLS: المالك فقط + admin
-- ivfflat index على `maaroof_memory.embedding`
+## 6) تحسينات backend
+- **حد الـ trial**: حالياً 5/يوم. نضيف رسالة عربية واضحة + رابط `/pricing`.
+- **حماية ضد goal فارغ/طويل جداً**: max 2000 char.
+- **timeout** على كل استدعاء أداة (45 ثانية) لمنع الـ run المعلّق.
+- **fallback model**: إن فشل Gemini 2.5 Pro بـ 429، حاول `google/gemini-2.5-flash`.
 
-## 2) طبقة التنسيق `src/lib/maaroof/`
+## ما يبقى دون تغيير
+- مخطط قواعد البيانات (المرحلة A كافية).
+- `/agent` القديم وعقوده.
+- الـ16 endpoint.
+- `tokens.server.ts` و`chargeTokens`.
 
-- **`geo-detector.server.ts`** (جديد): يقرأ Cloudflare headers + fallback إلى ipapi
-- **`planner.server.ts`**: Gemini 2.5 Pro، يستقبل goal + geo + memory → خطة JSON
-- **`executor.server.ts`**: ينفذ الـ16 endpoint عبر AI SDK tools، يمرر `geo` لكل أداة
-- **`reflector.server.ts`**: تقييم كل 3-5 خطوات
-- **`memory.server.ts`**: recall/remember/summarize عبر embeddings
-- **`cost-tracker.server.ts`**: enrichLedger بعد كل خطوة، يجمع في `maaroof_runs.total_usd`
+## معايير القبول النهائية
+1. زائر `/agent` يرى بانر «معروف» ويستطيع الانتقال بنقرة.
+2. `/maaroof/memory` تعرض ذكريات المستخدم وتسمح بحذف/تعديل.
+3. `SystemHealthTab` يحتوي قسم Maaroof مع الإحصاءات والتنبيهات.
+4. كل استدعاء أداة داخل run يظهر صفاً في `token_ledger` مع `maaroof_run_id`.
+5. تحميل جلسة سابقة من sidebar يعرض رسائلها كاملة.
+6. زر تصدير PDF يعمل على الإجابة النهائية.
+7. لا كسر للوكيل القديم أو الأدوات.
 
-### `src/routes/api/maaroof.ts` (جديد)
-- POST مع `streamText` + tools + `stepCountIs(50)` + `toUIMessageStreamResponse`
-- يستدعي `detectGeo(request)` أول شيء
-- system prompt يبدأ بهوية معروف + الموقع المكتشف
-- نموذج: `google/gemini-2.5-pro` افتراضي
-
-## 3) الواجهة `/maaroof`
-
-- AI Elements (Conversation, Message, Tool, PromptInput, Shimmer)
-- **Header**: شعار معروف + الاسم + التكلفة الجارية + عدد الخطوات + الوقت
-- **شريط الموقع**: 🌍 "العراق، بغداد (تلقائي)" مع زر تغيير → modal اختيار يدوي
-- **message.parts**: plan قابلة للطي، tool-call مع icon، tool-result مضغوط، reflection ملون
-- **Sidebar**: runs سابقة + رابط ذاكرة معروف
-- **Empty state**: "مرحباً، أنا معروف. حددت موقعك: {country}. ما الهدف؟"
-- زر إيقاف (AbortController)
-
-### `/maaroof/memory` (مرحلة B)
-- عرض ذاكرة معروف + حذف/تعديل
-
-## 4) الذاكرة الطويلة (Kimi-like)
-- قبل كل run: `recall(userId, goal)` يجلب أعلى 10 ذكريات + التفضيلات الجغرافية → system prompt
-- بعد كل run: `summarize()` يحفظ ملخص + تفضيلات مكتشفة (دولة، لغة، صناعة)
-- LRU عند تجاوز 1000 ذكرى/مستخدم
-
-## 5) تتبع التكلفة الحقيقية
-- كل LLM call عبر `callLovableAI` المركزي
-- كل tool execution → صف في `token_ledger` مع `meta.maaroof_run_id` + `meta.geo`
-- `maaroof_runs.total_usd` = SUM real cost
-
-## 6) الأمان والحدود
-- `requireSupabaseAuth` على كل server fns
-- Trial: 5 runs/يوم
-- باقي الخطط: محسوبة من `total_usd` ضمن حد شهري قابل للضبط من الأدمن
-- لا تُسرَّب headers أو IP المستخدم في الواجهة (تُخزَّن server-side فقط)
-
-## التفاصيل التقنية
-
-| العنصر | القيمة |
-|---|---|
-| نموذج التخطيط | `google/gemini-2.5-pro` |
-| نموذج المهام الحرجة | `openai/gpt-5` |
-| Embedding | `google/gemini-embedding-001` (768d) |
-| Geo detection | Cloudflare `cf-ipcountry` + ipapi.co fallback |
-| stopWhen | `stepCountIs(50)` |
-| UI | AI Elements + streamText |
-
-## ما لا يتغير
-- `/agent` القديم وجداوله
-- الـ16 endpoint وعقودها (نضيف معامل `geo` اختيارياً، backward-compatible)
-- `chargeTokens`, `tool_plan_access`, `per_user_tool_overrides`
-- `SystemHealthTab`, `AdminFinanceTab` (نضيف قسم Maaroof فقط)
-
-## معايير القبول
-1. `/maaroof` يكشف موقع المستخدم من IP تلقائياً ويعرضه
-2. المستخدم يستطيع تغيير الدولة/المدينة يدوياً، والتفضيل يُحفظ
-3. الخطة والأدوات تتكيف مع النطاق الجغرافي (لغة، سوق، منافسون)
-4. streaming كامل لـ plan/tool/reflection
-5. التكلفة الحقيقية تُحفظ لحظياً
-6. الذاكرة الطويلة تعمل عبر runs متعددة
-7. الـ16 أداة كلها متاحة كـ tools لمعروف
-8. الوكيل القديم يعمل بدون كسر
-9. RLS + GRANT صحيحة
-
-## تنفيذ على مرحلتين
-- **A (هذا الـ build):** Migration + geo-detector + maaroof backend + `/maaroof` UI مع شريط الموقع + ذاكرة + تتبع تكلفة + هوية
-- **B (لاحق):** صفحة ذاكرة، export PDF، تكامل عميق مع AdminFinanceTab، تعديل الخطة وسط التنفيذ
+## ترتيب التنفيذ (دفعة واحدة)
+1. بانر `/agent` + رابط Header.
+2. تكامل `token_ledger` في orchestrator + fallback model + timeout.
+3. صفحة `/maaroof/memory`.
+4. تحميل جلسة سابقة + تصدير PDF في `/maaroof`.
+5. قسم Maaroof في `SystemHealthTab`.
