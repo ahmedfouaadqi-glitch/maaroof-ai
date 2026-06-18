@@ -193,7 +193,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await ctx.emit("final", { text: finalResp.text });
     await logMsg("assistant", { text: finalResp.text }, finalResp.tokens, finalResp.usd);
 
-    // 6) Persist totals + summarize to memory
+    // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
       total_tokens: totalTokens,
@@ -201,6 +201,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps_count: steps.length,
       finished_at: new Date().toISOString(),
     }).eq("id", runId);
+
+    try {
+      await db().from("token_ledger").insert({
+        user_id: ctx.userId,
+        tool_key: "maaroof.llm",
+        tokens: totalTokens,
+        usd_cost: totalUsd,
+        run_id: runId,
+        meta: { maaroof_run_id: runId, model: MODEL, geo: { country: geo.country, city: geo.city }, steps: steps.length },
+      });
+    } catch {}
 
     await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
     if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
