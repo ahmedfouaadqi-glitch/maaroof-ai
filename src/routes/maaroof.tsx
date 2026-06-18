@@ -241,28 +241,3 @@ function MaaroofPage() {
   );
 }
 
-function EventCard({ ev }: { ev: Event }) {
-  const colors: Record<string, string> = {
-    plan: "border-blue-500/30 bg-blue-500/5",
-    tool_call: "border-amber-500/30 bg-amber-500/5",
-    tool_result: "border-green-500/30 bg-green-500/5",
-    reflection: "border-purple-500/30 bg-purple-500/5",
-    error: "border-destructive/40 bg-destructive/5",
-    memory: "border-muted bg-muted/40",
-    phase: "border-muted bg-muted/30",
-    final: "hidden",
-    done: "hidden",
-    run: "hidden",
-  };
-  const labels: Record<string, string> = {
-    plan: "📋 الخطة", tool_call: "🔧 استدعاء أداة", tool_result: "✅ نتيجة الأداة",
-    reflection: "🤔 تأمل", memory: "🧠 ذاكرة", phase: "⏳ مرحلة", error: "❌ خطأ",
-  };
-  if (colors[ev.type] === "hidden") return null;
-  return (
-    <details open={ev.type !== "tool_result"} className={`border rounded p-2 text-xs ${colors[ev.type] || "border-muted"}`}>
-      <summary className="cursor-pointer font-semibold">{labels[ev.type] || ev.type}</summary>
-      <pre className="mt-2 whitespace-pre-wrap overflow-x-auto text-[11px]">{JSON.stringify(ev.data, null, 2).slice(0, 2000)}</pre>
-    </details>
-  );
-}
