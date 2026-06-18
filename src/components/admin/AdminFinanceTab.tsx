@@ -363,18 +363,22 @@ export function AdminFinanceTab() {
               const tk = tokensOf(r);
               const m = c - real;
               const per1k = tk ? (real / tk) * 1000 : 0;
+              const metered = isMetered(r);
               return (
-                <tr key={r.id} className="border-t border-border/40">
+                <tr key={r.id} className={`border-t border-border/40 ${!metered ? "opacity-70" : ""}`}>
                   <td className="px-1 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
                   <td className="px-1 py-1.5 truncate max-w-[140px]">{userLabel(r.user_id)}</td>
-                  <td className="px-1 py-1.5">{toolLabel((r.tool_key || "") as any, lang as any) || "—"}</td>
+                  <td className="px-1 py-1.5">
+                    {toolLabel((r.tool_key || "") as any, lang as any) || "—"}
+                    {!metered && <span className="ml-1 inline-block rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-600 dark:text-amber-400">{L.unmetered}</span>}
+                  </td>
                   <td className="px-1 py-1.5">{r.meta?.provider || "—"}</td>
                   <td className="px-1 py-1.5 text-[10px] font-mono">{r.meta?.model || "—"}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-[10px]">{(r.meta?.input_tokens ?? "—")}/{(r.meta?.output_tokens ?? "—")}</td>
                   <td className="px-1 py-1.5 text-end font-mono">{tk.toLocaleString()}</td>
                   <td className="px-1 py-1.5 text-end font-mono">{r.meta?.firecrawl_units ?? ""}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-primary">{fmt(c, 5)}</td>
-                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{fmt(real, 5)}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{metered ? fmt(real, 5) : "—"}</td>
                   <td className={`px-1 py-1.5 text-end font-mono ${marginColor(m)}`}>{fmt(m, 5)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-muted-foreground">{fmt(per1k, 5)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-muted-foreground">{r.meta?.latency_ms ?? "—"}</td>
