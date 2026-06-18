@@ -135,6 +135,7 @@ export const Route = createFileRoute("/api/analyze")({
               en: "Write all string fields in clear English only.",
               ku: "هەموو دەقەکان تەنها بە کوردی سۆرانی بنووسە.",
             };
+            const _t0 = Date.now();
             const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
               method: "POST",
               headers: lovableAiHeaders(apiKey),
@@ -155,22 +156,15 @@ export const Route = createFileRoute("/api/analyze")({
             const data = await resp.json();
             const usage = data?.usage || {};
             const content = data?.choices?.[0]?.message?.content || "{}";
-            // Enrich the just-inserted ledger row with real AI token usage & USD
+            // Enrich the just-inserted ledger row with REAL provider USD cost (from provider_rates)
             try {
-              const { logFirecrawlSpend: _ } = await import("@/lib/spend.server"); // ensure module bundle
-              const inT = Number(usage.prompt_tokens) || 0;
-              const outT = Number(usage.completion_tokens) || 0;
-              await admin.from("token_ledger").update({
-                meta: {
-                  provider: "lovable_ai",
-                  model: "google/gemini-2.5-flash-lite",
-                  endpoint: "/api/analyze",
-                  input_tokens: inT,
-                  output_tokens: outT,
-                  latency_ms: null,
-                  real_usd_cost: ((inT + outT) / 1_000_000) * 0.30,
-                },
-              }).eq("run_id", runId);
+              const { enrichLedger: _el } = await import("@/lib/spend.server");
+              await _el({
+                runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/analyze",
+                inputTokens: Number(usage.prompt_tokens) || 0,
+                outputTokens: Number(usage.completion_tokens) || 0,
+                latencyMs: Date.now() - _t0,
+              });
             } catch {}
             const parsed = extractJsonObject(content);
             if (parsed) {

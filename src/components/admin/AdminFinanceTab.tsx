@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, DollarSign, Download, RefreshCw, Search } from "lucide-react";
+import { Loader2, DollarSign, Download, RefreshCw, Search, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminL } from "./admin-i18n";
 import { TOOL_CATALOG, toolLabel } from "@/lib/tool-catalog";
 import { useI18n } from "@/lib/i18n";
+
 
 type LedgerRow = {
   id: string;
@@ -17,6 +18,13 @@ type LedgerRow = {
 };
 type Profile = { id: string; email: string | null; username: string | null };
 
+function isMetered(row: LedgerRow): boolean {
+  const m = row.meta || {};
+  if (typeof m.real_usd_cost === "number") return true;
+  if (typeof m.input_tokens === "number" || typeof m.output_tokens === "number") return true;
+  if (m.breakdown && typeof m.breakdown === "object") return true;
+  return false;
+}
 function realCostOf(row: LedgerRow): number {
   const m = row.meta || {};
   if (typeof m.real_usd_cost === "number") return m.real_usd_cost;
@@ -63,6 +71,14 @@ export function AdminFinanceTab() {
     allTools: { ar: "كل الأدوات", en: "All tools", ku: "هەموو" },
     allUsers: { ar: "كل المستخدمين", en: "All users", ku: "هەموو" },
     none: { ar: "لا توجد بيانات.", en: "No data.", ku: "هیچ." },
+    unmetered: { ar: "غير مُقاس", en: "unmetered", ku: "بێ پێوانە" },
+    suggested: { ar: "السعر المقترح (+50%)", en: "Suggested charge (+50%)", ku: "نرخی پێشنیار" },
+    avgMetered: { ar: "متوسط (المُقاسة فقط)", en: "Avg (metered only)", ku: "ناوەند" },
+    legacyBanner: {
+      ar: "العمليات الأقدم لم تكن تُسجّل التكلفة الحقيقية. تظهر هنا كـ «غير مُقاسة» وتُستثنى من إجمالي «حقيقي $» والمتوسطات. القياس الحقيقي يبدأ من الآن لكل طلب جديد.",
+      en: "Older runs did not record real provider cost. They appear as 'unmetered' and are excluded from real-cost totals and averages. Real metering applies to every new run from now on.",
+      ku: "ئەو کارانەی پێشتر تۆمار نەکراون لێرە وەک «بێ پێوانە» دەردەکەون و لە کۆکراوەی ڕاستی دادەبڕێن.",
+    },
   });
 
   const [rows, setRows] = useState<LedgerRow[]>([]);
@@ -109,23 +125,31 @@ export function AdminFinanceTab() {
     const now = Date.now(); const dayStart = now - 86400_000;
     let dC = 0, dR = 0, dN = 0;
     let mC = 0, mR = 0, mN = 0, mTok = 0;
-    const byTool: Record<string, { charged: number; real: number; req: number; tokens: number; latSum: number; latN: number }> = {};
-    const byUser: Record<string, { charged: number; real: number; req: number; tokens: number }> = {};
+    let unmeteredCount = 0;
+    // Aggregates that EXCLUDE unmetered rows so averages aren't diluted
+    let mRealReq = 0, mRealTok = 0;
+    const byTool: Record<string, { charged: number; real: number; req: number; tokens: number; latSum: number; latN: number; meteredReq: number; meteredReal: number }> = {};
+    const byUser: Record<string, { charged: number; real: number; req: number; tokens: number; meteredReq: number; meteredReal: number }> = {};
     const byProv: Record<string, { charged: number; real: number; req: number }> = {};
     for (const r of filtered) {
       const t = new Date(r.created_at).getTime();
       const c = Number(r.usd_cost) || 0;
       const real = realCostOf(r);
       const tk = tokensOf(r);
+      const metered = isMetered(r);
+      if (!metered) unmeteredCount++;
       mC += c; mR += real; mN++; mTok += tk;
+      if (metered) { mRealReq++; mRealTok += tk; }
       if (t >= dayStart) { dC += c; dR += real; dN++; }
       const tool = r.tool_key || "—";
-      byTool[tool] = byTool[tool] || { charged: 0, real: 0, req: 0, tokens: 0, latSum: 0, latN: 0 };
+      byTool[tool] = byTool[tool] || { charged: 0, real: 0, req: 0, tokens: 0, latSum: 0, latN: 0, meteredReq: 0, meteredReal: 0 };
       byTool[tool].charged += c; byTool[tool].real += real; byTool[tool].req++; byTool[tool].tokens += tk;
+      if (metered) { byTool[tool].meteredReq++; byTool[tool].meteredReal += real; }
       const lat = r.meta?.latency_ms; if (typeof lat === "number") { byTool[tool].latSum += lat; byTool[tool].latN++; }
       const uid = r.user_id || "—";
-      byUser[uid] = byUser[uid] || { charged: 0, real: 0, req: 0, tokens: 0 };
+      byUser[uid] = byUser[uid] || { charged: 0, real: 0, req: 0, tokens: 0, meteredReq: 0, meteredReal: 0 };
       byUser[uid].charged += c; byUser[uid].real += real; byUser[uid].req++; byUser[uid].tokens += tk;
+      if (metered) { byUser[uid].meteredReq++; byUser[uid].meteredReal += real; }
       const prov = `${r.meta?.provider || "unknown"}${r.meta?.model ? ` · ${r.meta.model}` : ""}`;
       byProv[prov] = byProv[prov] || { charged: 0, real: 0, req: 0 };
       byProv[prov].charged += c; byProv[prov].real += real; byProv[prov].req++;
@@ -133,8 +157,9 @@ export function AdminFinanceTab() {
     const sort = <T extends { real: number }>(m: Record<string, T>) => Object.entries(m).sort((a, b) => b[1].real - a[1].real);
     return {
       dC, dR, dN, mC, mR, mN, mTok,
-      avgReal: mN ? mR / mN : 0,
-      perTokReal: mTok ? (mR / mTok) * 1000 : 0,
+      unmeteredCount,
+      avgReal: mRealReq ? mR / mRealReq : 0,
+      perTokReal: mRealTok ? (mR / mRealTok) * 1000 : 0,
       tools: sort(byTool).slice(0, 30),
       users: sort(byUser).slice(0, 30),
       provs: sort(byProv),
@@ -180,11 +205,21 @@ export function AdminFinanceTab() {
         </div>
       </div>
 
+      {/* Legacy banner */}
+      {stats.unmeteredCount > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <strong className="font-semibold">{stats.unmeteredCount}</strong> {L.unmetered}. {L.legacyBanner}
+          </div>
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <DualStat label={L.today} charged={stats.dC} real={stats.dR} sub={`${stats.dN} ${L.requests}`} L={L} marginColor={marginColor} />
         <DualStat label={`${days}d`} charged={stats.mC} real={stats.mR} sub={`${stats.mN} ${L.requests}`} L={L} marginColor={marginColor} />
-        <SingleStat label={L.avgReal} value={fmt(stats.avgReal, 5)} />
+        <SingleStat label={L.avgMetered} value={fmt(stats.avgReal, 5)} sub={L.avgReal} />
         <SingleStat label={L.perToken} value={fmt(stats.perTokReal, 5)} sub={`${stats.mTok.toLocaleString()} tok`} />
       </div>
 
@@ -219,18 +254,24 @@ export function AdminFinanceTab() {
               <th className="px-1 py-1 text-end">{L.tokens}</th>
               <th className="px-1 py-1 text-end text-primary">{L.charged}</th>
               <th className="px-1 py-1 text-end text-amber-500">{L.real}</th>
+              <th className="px-1 py-1 text-end text-amber-500">{L.avgReal}</th>
+              <th className="px-1 py-1 text-end text-emerald-500">{L.suggested}</th>
               <th className="px-1 py-1 text-end">{L.margin}</th>
               <th className="px-1 py-1 text-end">ms</th>
             </tr></thead>
             <tbody>{stats.tools.map(([k, v]) => {
               const m = v.charged - v.real;
+              const avg = v.meteredReq ? v.meteredReal / v.meteredReq : 0;
+              const suggested = avg * 1.5;
               return (
                 <tr key={k} className="border-t border-border/40">
                   <td className="px-1 py-1.5">{toolLabel(k as any, lang as any)}</td>
-                  <td className="px-1 py-1.5 text-end font-mono">{v.req}</td>
+                  <td className="px-1 py-1.5 text-end font-mono">{v.req}{v.meteredReq < v.req && <span className="ml-1 text-[9px] text-amber-500">({v.req - v.meteredReq} {L.unmetered})</span>}</td>
                   <td className="px-1 py-1.5 text-end font-mono">{v.tokens.toLocaleString()}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-primary">{fmt(v.charged)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-amber-500">{fmt(v.real)}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{v.meteredReq ? fmt(avg, 5) : "—"}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-emerald-500">{v.meteredReq ? fmt(suggested, 5) : "—"}</td>
                   <td className={`px-1 py-1.5 text-end font-mono ${marginColor(m)}`}>{fmt(m)} <span className="opacity-60">({pct(v.charged, v.real)})</span></td>
                   <td className="px-1 py-1.5 text-end font-mono text-muted-foreground">{v.latN ? Math.round(v.latSum / v.latN) : "—"}</td>
                 </tr>
@@ -247,10 +288,12 @@ export function AdminFinanceTab() {
               <th className="px-1 py-1 text-end">{L.tokens}</th>
               <th className="px-1 py-1 text-end text-primary">{L.charged}</th>
               <th className="px-1 py-1 text-end text-amber-500">{L.real}</th>
+              <th className="px-1 py-1 text-end text-amber-500">{L.avgReal}</th>
               <th className="px-1 py-1 text-end">{L.margin}</th>
             </tr></thead>
             <tbody>{stats.users.map(([uid, v]) => {
               const m = v.charged - v.real;
+              const avg = v.meteredReq ? v.meteredReal / v.meteredReq : 0;
               return (
                 <tr key={uid} className="border-t border-border/40">
                   <td className="px-1 py-1.5 truncate max-w-[180px]">{userLabel(uid)}</td>
@@ -258,6 +301,7 @@ export function AdminFinanceTab() {
                   <td className="px-1 py-1.5 text-end font-mono">{v.tokens.toLocaleString()}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-primary">{fmt(v.charged)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-amber-500">{fmt(v.real)}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{v.meteredReq ? fmt(avg, 5) : "—"}</td>
                   <td className={`px-1 py-1.5 text-end font-mono ${marginColor(m)}`}>{fmt(m)}</td>
                 </tr>
               );
@@ -319,18 +363,22 @@ export function AdminFinanceTab() {
               const tk = tokensOf(r);
               const m = c - real;
               const per1k = tk ? (real / tk) * 1000 : 0;
+              const metered = isMetered(r);
               return (
-                <tr key={r.id} className="border-t border-border/40">
+                <tr key={r.id} className={`border-t border-border/40 ${!metered ? "opacity-70" : ""}`}>
                   <td className="px-1 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
                   <td className="px-1 py-1.5 truncate max-w-[140px]">{userLabel(r.user_id)}</td>
-                  <td className="px-1 py-1.5">{toolLabel((r.tool_key || "") as any, lang as any) || "—"}</td>
+                  <td className="px-1 py-1.5">
+                    {toolLabel((r.tool_key || "") as any, lang as any) || "—"}
+                    {!metered && <span className="ml-1 inline-block rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-600 dark:text-amber-400">{L.unmetered}</span>}
+                  </td>
                   <td className="px-1 py-1.5">{r.meta?.provider || "—"}</td>
                   <td className="px-1 py-1.5 text-[10px] font-mono">{r.meta?.model || "—"}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-[10px]">{(r.meta?.input_tokens ?? "—")}/{(r.meta?.output_tokens ?? "—")}</td>
                   <td className="px-1 py-1.5 text-end font-mono">{tk.toLocaleString()}</td>
                   <td className="px-1 py-1.5 text-end font-mono">{r.meta?.firecrawl_units ?? ""}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-primary">{fmt(c, 5)}</td>
-                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{fmt(real, 5)}</td>
+                  <td className="px-1 py-1.5 text-end font-mono text-amber-500">{metered ? fmt(real, 5) : "—"}</td>
                   <td className={`px-1 py-1.5 text-end font-mono ${marginColor(m)}`}>{fmt(m, 5)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-muted-foreground">{fmt(per1k, 5)}</td>
                   <td className="px-1 py-1.5 text-end font-mono text-muted-foreground">{r.meta?.latency_ms ?? "—"}</td>

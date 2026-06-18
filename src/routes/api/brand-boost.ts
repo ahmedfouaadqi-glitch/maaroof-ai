@@ -25,7 +25,8 @@ const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
   kimi:       { model: "google/gemini-2.5-pro",        proxy: true  }, // Kimi K2 ≈ long-context Pro proxy
 };
 
-async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000) {
+type TokenAcc = { in: number; out: number };
+async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000, acc?: TokenAcc) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -35,6 +36,16 @@ async function callGateway(apiKey: string, model: string, messages: any[], timeo
     body: JSON.stringify({ model, messages }),
       signal: controller.signal,
   });
+    // Tap the response stream so the caller can still read it, while we capture usage
+    if (r.ok && acc) {
+      try {
+        const cloned = r.clone();
+        const j: any = await cloned.json().catch(() => null);
+        const u = j?.usage || {};
+        acc.in += Number(u.prompt_tokens) || 0;
+        acc.out += Number(u.completion_tokens) || 0;
+      } catch {}
+    }
     return r;
   } finally {
     clearTimeout(timeout);
@@ -201,6 +212,7 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
             .replace("{keywords}", brand_keywords ? ` (topics: ${brand_keywords})` : "")
             .replace("{market}", market.region);
 
+          const _tokAcc: TokenAcc = { in: 0, out: 0 };
           const probes = await Promise.all(
             targets.map(async (p) => {
               const cfg = PLATFORM_MODEL[p];
@@ -208,7 +220,7 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
                 const r = await callGateway(lovableKey, cfg.model, [
                   { role: "system", content: probeSys },
                   { role: "user", content: probeUser },
-                ], 12000);
+                ], 12000, _tokAcc);
                 if (r.status === 429) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "rate_limited" };
                 if (r.status === 402) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "credits_exhausted" };
                 if (!r.ok) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: `http_${r.status}` };
@@ -259,11 +271,12 @@ REAL PUBLIC EVIDENCE (numbered):
 ${evidenceBlock}`;
 
           let planParsed: any = {};
+          const _planT0 = Date.now();
           try {
             const planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
               { role: "system", content: planSys },
               { role: "user", content: planUser },
-            ], 18000);
+            ], 18000, _tokAcc);
             if (planRes.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
             if (planRes.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
             const planText = planRes.ok ? await readGatewayMessage(planRes) : { content: "", error: await planRes.text().catch(() => `http_${planRes.status}`) };
@@ -272,6 +285,14 @@ ${evidenceBlock}`;
           } catch (e) {
             console.error("[brand-boost] plan timeout/fallback", e);
           }
+          // Enrich ledger with real provider USD cost (sum across all gateway calls)
+          try {
+            const { enrichLedger: _el } = await import("@/lib/spend.server");
+            await _el({
+              runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-boost",
+              inputTokens: _tokAcc.in, outputTokens: _tokAcc.out, latencyMs: Date.now() - _planT0,
+            });
+          } catch {}
           if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
