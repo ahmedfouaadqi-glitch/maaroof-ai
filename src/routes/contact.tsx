@@ -15,6 +15,25 @@ export const Route = createFileRoute("/contact")({
       { property: "og:url", content: "https://geoiraq.com/contact" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/contact" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          name: "MAAROOF Ai",
+          url: "https://geoiraq.com/contact",
+          email: "ahmedfouaad.qi@gmail.com",
+          telephone: "+964 773 357 0130",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Baghdad",
+            addressCountry: "IQ",
+          },
+          areaServed: "IQ",
+        }),
+      },
+    ],
   }),
   component: () => (
     <I18nProvider><AuthProvider><ContactPage /></AuthProvider></I18nProvider>
