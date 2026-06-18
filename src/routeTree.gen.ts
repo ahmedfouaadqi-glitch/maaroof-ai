@@ -31,6 +31,7 @@ import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
+import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
@@ -156,6 +157,11 @@ const ApiResearchRoute = ApiResearchRouteImport.update({
   path: '/api/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
+  id: '/api/maaroof',
+  path: '/api/maaroof',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
   id: '/api/geo-strategist',
   path: '/api/geo-strategist',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -292,6 +299,7 @@ export interface FileRoutesByTo {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -447,6 +458,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -486,6 +498,7 @@ export interface RootRouteChildren {
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
+  ApiMaaroofRoute: typeof ApiMaaroofRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
@@ -655,6 +668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/maaroof': {
+      id: '/api/maaroof'
+      path: '/api/maaroof'
+      fullPath: '/api/maaroof'
+      preLoaderRoute: typeof ApiMaaroofRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/geo-strategist': {
       id: '/api/geo-strategist'
       path: '/api/geo-strategist'
@@ -791,6 +811,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
+  ApiMaaroofRoute: ApiMaaroofRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,
   ApiSuggestRoute: ApiSuggestRoute,
