@@ -217,6 +217,7 @@ function MaaroofPage() {
 
           {/* Input */}
           <div className="rounded-lg border bg-card p-3">
+            <h2 className="sr-only">إدخال المهمة</h2>
             <textarea
               value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder="مرحباً، أنا معروف. ما الهدف؟ (مثال: حلّل ظهور علامتي في السوق السعودي واقترح خطة محتوى لشهر)"
