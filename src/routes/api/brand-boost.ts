@@ -271,7 +271,7 @@ REAL PUBLIC EVIDENCE (numbered):
 ${evidenceBlock}`;
 
           let planParsed: any = {};
-          const _t0 = Date.now();
+          const _planT0 = Date.now();
           try {
             const planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
               { role: "system", content: planSys },
