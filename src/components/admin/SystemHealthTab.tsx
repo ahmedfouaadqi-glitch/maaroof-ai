@@ -3,7 +3,7 @@
 // Manus/Kimi cost report.
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity, Bot } from "lucide-react";
 import { getSystemHealth, type HealthSnapshot } from "@/lib/system-health.functions";
 import { useI18n } from "@/lib/i18n";
 
@@ -197,6 +197,51 @@ export function SystemHealthTab() {
       {/* Cost report */}
       <Section title={t("تقرير تكلفة بناء وكيل مثل Manus/Kimi", "Cost report: building a Manus/Kimi-like agent", "تێچوون")} icon={<FileText className="size-4 text-primary" />} empty={false}>
         <CostReport lang={lang as any} />
+      </Section>
+
+      {/* Maaroof orchestrator */}
+      <Section title={t("معروف — الوكيل الذكي", "Maaroof Agent", "مەعروف")} icon={<Bot className="size-4 text-primary" />}
+        empty={data.maaroof.runs_7d === 0} emptyText={t("لا توجد جلسات هذا الأسبوع.", "No runs this week.", "—")}>
+        <div className="grid gap-3 md:grid-cols-4 mb-3">
+          <Stat icon={<Activity />} label={t("جلسات 7ي", "Runs / 7d", "—")} value={String(data.maaroof.runs_7d)} />
+          <Stat icon={<CheckCircle2 />} label={t("ناجحة", "Done", "—")} value={String(data.maaroof.done_7d)} />
+          <Stat icon={<AlertTriangle />} label={t("أخطاء", "Errors", "—")} value={String(data.maaroof.error_7d)}
+            tone={data.maaroof.error_7d > 0 ? "warn" : "ok"} />
+          <Stat icon={<Gauge />} label={t("متوسط $/جلسة", "Avg $/run", "—")} value={fmt$(data.maaroof.avg_usd_per_run)}
+            tone={data.maaroof.avg_cost_alert ? "warn" : "ok"} />
+        </div>
+        <div className="text-xs text-muted-foreground mb-2">
+          {t("إجمالي التكلفة 7ي:", "Total cost 7d:", "—")} <b>{fmt$(data.maaroof.total_usd_7d)}</b>
+          {data.maaroof.avg_cost_alert && <span className="ms-2 text-warning">⚠ {t("متوسط مرتفع (>$0.50)", "High avg (>$0.50)", "—")}</span>}
+        </div>
+        {data.maaroof.top_goals.length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs font-semibold mb-1">{t("أعلى الأهداف تكلفة", "Top goals by cost", "—")}</div>
+            <ul className="space-y-1 text-xs">
+              {data.maaroof.top_goals.slice(0, 5).map((g, i) => (
+                <li key={i} className="flex items-center gap-2"><span className="flex-1 truncate">{g.goal}</span><span className="text-muted-foreground">{g.runs}×</span><span className="font-mono">{fmt$(g.usd)}</span></li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {data.maaroof.recent.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-muted-foreground"><tr><th className="text-start p-1">الوقت</th><th className="text-start p-1">الهدف</th><th className="p-1">الحالة</th><th className="p-1">خطوات</th><th className="p-1">USD</th></tr></thead>
+              <tbody>
+                {data.maaroof.recent.slice(0, 10).map((r) => (
+                  <tr key={r.id} className="border-t border-border/40">
+                    <td className="p-1 whitespace-nowrap text-muted-foreground">{new Date(r.started_at).toLocaleString()}</td>
+                    <td className="p-1 max-w-xs truncate">{r.goal}</td>
+                    <td className={`p-1 text-center ${r.status === "error" ? "text-destructive" : r.status === "done" ? "text-success" : "text-muted-foreground"}`}>{r.status}</td>
+                    <td className="p-1 text-center">{r.steps}</td>
+                    <td className="p-1 text-center font-mono">{fmt$(r.usd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Section>
     </div>
   );

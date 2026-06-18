@@ -6,7 +6,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
 const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: n.ar, en: n.en }));
-import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History } from "lucide-react";
+import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain, FileDown } from "lucide-react";
+import { exportToPDF } from "@/lib/exports";
 
 export const Route = createFileRoute("/maaroof")({
   head: () => ({ meta: [{ title: "معروف — الوكيل الذكي" }, { name: "description", content: "Maaroof: a Manus+Kimi-style intelligent agent for global GEO marketing." }] }),
@@ -95,6 +96,35 @@ function MaaroofPage() {
 
   function stop() { abortRef.current?.abort(); setRunning(false); }
 
+  async function loadRun(runId: string) {
+    if (running) return;
+    setEvents([{ type: "phase", data: { phase: "loading_history" }, t: Date.now() }]);
+    const { data: run } = await supabase.from("maaroof_runs").select("goal, plan, detected_geo").eq("id", runId).maybeSingle();
+    if (run) {
+      setGoal((run as any).goal || "");
+      const dg = (run as any).detected_geo; if (dg) setDetected({ country: dg.country, city: dg.city });
+    }
+    const { data: msgs } = await supabase.from("maaroof_messages").select("role, parts, created_at").eq("run_id", runId).order("created_at");
+    const evs: Event[] = ((msgs as any[]) || []).map((m) => {
+      const map: Record<string, string> = { plan: "plan", tool_call: "tool_call", tool_result: "tool_result", reflection: "reflection", assistant: "final" };
+      return { type: map[m.role] || "phase", data: m.parts, t: new Date(m.created_at).getTime() };
+    });
+    setEvents(evs);
+  }
+
+  function exportFinal() {
+    const text = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
+    if (!text) return;
+    exportToPDF({
+      title: "تقرير معروف",
+      lang: "ar",
+      sections: [
+        { heading: "الهدف", kind: "text", text: goal },
+        { heading: "الإجابة النهائية", kind: "text", text },
+      ],
+    });
+  }
+
   if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
   if (!user) return (
     <div className="min-h-screen">
@@ -119,15 +149,20 @@ function MaaroofPage() {
         {/* Sidebar */}
         <aside className="space-y-2">
           <div className="rounded-lg border bg-card p-3">
-            <div className="flex items-center gap-2 font-semibold mb-2"><History className="w-4 h-4" /> الجلسات السابقة</div>
+            <div className="flex items-center justify-between gap-2 font-semibold mb-2">
+              <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
+              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1"><Brain className="w-3 h-3" /> الذاكرة</Link>
+            </div>
             <ul className="space-y-1 max-h-[60vh] overflow-y-auto text-sm">
               {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات بعد.</li>}
               {runs.map((r) => (
-                <li key={r.id} className="p-2 rounded hover:bg-muted">
-                  <div className="line-clamp-2">{r.goal}</div>
-                  <div className="text-[10px] text-muted-foreground flex justify-between mt-1">
-                    <span>{r.status}</span><span>${Number(r.total_usd).toFixed(4)}</span>
-                  </div>
+                <li key={r.id}>
+                  <button onClick={() => loadRun(r.id)} className="w-full text-start p-2 rounded hover:bg-muted">
+                    <div className="line-clamp-2">{r.goal}</div>
+                    <div className="text-[10px] text-muted-foreground flex justify-between mt-1">
+                      <span>{r.status}</span><span>${Number(r.total_usd).toFixed(4)}</span>
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -197,7 +232,10 @@ function MaaroofPage() {
             {events.map((e, i) => <EventCard key={i} ev={e} />)}
             {finalText && (
               <div className="border-t pt-3 mt-3">
-                <div className="text-xs font-semibold text-primary mb-1">الإجابة النهائية</div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs font-semibold text-primary">الإجابة النهائية</div>
+                  <button onClick={exportFinal} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><FileDown className="w-3 h-3" /> تصدير PDF</button>
+                </div>
                 <div className="whitespace-pre-wrap text-sm">{finalText}</div>
               </div>
             )}

@@ -132,17 +132,38 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
       try {
         const body = { ...(step.input || {}), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
-        const resp = await fetch(`${ctx.origin}${path}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
-          body: JSON.stringify(body),
-          signal: ctx.signal,
-        });
+        const toolCtl = new AbortController();
+        const toolTimer = setTimeout(() => toolCtl.abort(), 45000);
+        const onAbort = () => toolCtl.abort();
+        ctx.signal.addEventListener("abort", onAbort);
+        let resp: Response;
+        try {
+          resp = await fetch(`${ctx.origin}${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+            body: JSON.stringify(body),
+            signal: toolCtl.signal,
+          });
+        } finally {
+          clearTimeout(toolTimer);
+          ctx.signal.removeEventListener("abort", onAbort);
+        }
         const json = await resp.json().catch(() => ({}));
         const ok = resp.ok;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
         await logMsg("tool_result", { tool: step.tool, ok, output: json });
+        // Record tool usage in token_ledger for finance/health tracking.
+        try {
+          await db().from("token_ledger").insert({
+            user_id: ctx.userId,
+            tool_key: `maaroof.${step.tool}`,
+            tokens: 0,
+            usd_cost: 0,
+            run_id: runId,
+            meta: { maaroof_run_id: runId, step_index: i, tool: step.tool, geo: { country: geo.country, city: geo.city }, ok },
+          });
+        } catch {}
       } catch (e: any) {
         const err = { error: String(e?.message || e) };
         results.push({ tool: step.tool, ok: false, output: err });
@@ -172,7 +193,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await ctx.emit("final", { text: finalResp.text });
     await logMsg("assistant", { text: finalResp.text }, finalResp.tokens, finalResp.usd);
 
-    // 6) Persist totals + summarize to memory
+    // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
       total_tokens: totalTokens,
@@ -180,6 +201,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps_count: steps.length,
       finished_at: new Date().toISOString(),
     }).eq("id", runId);
+
+    try {
+      await db().from("token_ledger").insert({
+        user_id: ctx.userId,
+        tool_key: "maaroof.llm",
+        tokens: totalTokens,
+        usd_cost: totalUsd,
+        run_id: runId,
+        meta: { maaroof_run_id: runId, model: MODEL, geo: { country: geo.country, city: geo.city }, steps: steps.length },
+      });
+    } catch {}
 
     await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
     if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
