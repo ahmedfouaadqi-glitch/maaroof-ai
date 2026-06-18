@@ -26,6 +26,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as MaaroofMemoryRouteImport } from './routes/maaroof.memory'
 import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
 import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
@@ -132,6 +133,11 @@ const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MaaroofMemoryRoute = MaaroofMemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
+  getParentRoute: () => MaaroofRoute,
 } as any)
 const GuideGeoVsAeoRoute = GuideGeoVsAeoRouteImport.update({
   id: '/geo-vs-aeo',
@@ -249,7 +255,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
-  '/maaroof': typeof MaaroofRoute
+  '/maaroof': typeof MaaroofRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/maaroof/memory': typeof MaaroofMemoryRoute
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
@@ -289,7 +296,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
-  '/maaroof': typeof MaaroofRoute
+  '/maaroof': typeof MaaroofRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/maaroof/memory': typeof MaaroofMemoryRoute
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
@@ -330,7 +338,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
-  '/maaroof': typeof MaaroofRoute
+  '/maaroof': typeof MaaroofRouteWithChildren
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/maaroof/memory': typeof MaaroofMemoryRoute
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
@@ -397,6 +406,7 @@ export interface FileRouteTypes {
     | '/api/visibility'
     | '/api/what-if'
     | '/guide/geo-vs-aeo'
+    | '/maaroof/memory'
     | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
@@ -437,6 +447,7 @@ export interface FileRouteTypes {
     | '/api/visibility'
     | '/api/what-if'
     | '/guide/geo-vs-aeo'
+    | '/maaroof/memory'
     | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
@@ -477,6 +488,7 @@ export interface FileRouteTypes {
     | '/api/visibility'
     | '/api/what-if'
     | '/guide/geo-vs-aeo'
+    | '/maaroof/memory'
     | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
@@ -493,7 +505,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   GuideRoute: typeof GuideRouteWithChildren
-  MaaroofRoute: typeof MaaroofRoute
+  MaaroofRoute: typeof MaaroofRouteWithChildren
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -645,6 +657,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/maaroof/memory': {
+      id: '/maaroof/memory'
+      path: '/memory'
+      fullPath: '/maaroof/memory'
+      preLoaderRoute: typeof MaaroofMemoryRouteImport
+      parentRoute: typeof MaaroofRoute
     }
     '/guide/geo-vs-aeo': {
       id: '/guide/geo-vs-aeo'
@@ -806,6 +825,17 @@ const GuideRouteChildren: GuideRouteChildren = {
 
 const GuideRouteWithChildren = GuideRoute._addFileChildren(GuideRouteChildren)
 
+interface MaaroofRouteChildren {
+  MaaroofMemoryRoute: typeof MaaroofMemoryRoute
+}
+
+const MaaroofRouteChildren: MaaroofRouteChildren = {
+  MaaroofMemoryRoute: MaaroofMemoryRoute,
+}
+
+const MaaroofRouteWithChildren =
+  MaaroofRoute._addFileChildren(MaaroofRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -814,7 +844,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   GuideRoute: GuideRouteWithChildren,
-  MaaroofRoute: MaaroofRoute,
+  MaaroofRoute: MaaroofRouteWithChildren,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
