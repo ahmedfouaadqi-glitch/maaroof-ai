@@ -92,6 +92,7 @@ function AdminPage() {
     if (k === "insights") return lang === "ar" ? "رؤى الإدراك" : lang === "ku" ? "تێگەیشتنەکان" : "Cognitive Insights";
     if (k === "firecrawl") return lang === "ar" ? "مراقبة Firecrawl" : lang === "ku" ? "چاودێری Firecrawl" : "Firecrawl";
     if (k === "finance") return lang === "ar" ? "المالية الموحّدة" : lang === "ku" ? "دارایی یەکگرتوو" : "Finance";
+    if (k === "health") return lang === "ar" ? "صحة النظام" : lang === "ku" ? "تەندروستی" : "System Health";
     return k;
   };
 
