@@ -290,7 +290,7 @@ ${evidenceBlock}`;
             const { enrichLedger: _el } = await import("@/lib/spend.server");
             await _el({
               runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-boost",
-              inputTokens: _tokAcc.in, outputTokens: _tokAcc.out, latencyMs: Date.now() - _t0,
+              inputTokens: _tokAcc.in, outputTokens: _tokAcc.out, latencyMs: Date.now() - _planT0,
             });
           } catch {}
           if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
