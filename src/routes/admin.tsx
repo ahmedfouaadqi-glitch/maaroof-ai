@@ -17,6 +17,7 @@ import { UserIntelligenceTab } from "@/components/admin/UserIntelligenceTab";
 import { CognitiveInsightsTab } from "@/components/admin/CognitiveInsightsTab";
 import { FirecrawlMonitorTab } from "@/components/admin/FirecrawlMonitorTab";
 import { AdminFinanceTab } from "@/components/admin/AdminFinanceTab";
+import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
