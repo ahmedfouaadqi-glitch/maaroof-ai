@@ -102,7 +102,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10);
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const systemPrompt = buildSystemPrompt(ctx, geo, memories);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories);
+    const systemPrompt = settings.system_prompt_extra ? `${baseSystemPrompt}\n\n[Admin guidance]\n${settings.system_prompt_extra}` : baseSystemPrompt;
 
     // 3) PLAN
     await ctx.emit("phase", { phase: "planning" });
