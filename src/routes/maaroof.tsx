@@ -6,7 +6,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
 const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: n.ar, en: n.en }));
-import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History } from "lucide-react";
+import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain, FileDown } from "lucide-react";
+import { exportToPDF } from "@/lib/exports";
 
 export const Route = createFileRoute("/maaroof")({
   head: () => ({ meta: [{ title: "معروف — الوكيل الذكي" }, { name: "description", content: "Maaroof: a Manus+Kimi-style intelligent agent for global GEO marketing." }] }),
