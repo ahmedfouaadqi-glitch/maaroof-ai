@@ -18,6 +18,13 @@ type LedgerRow = {
 };
 type Profile = { id: string; email: string | null; username: string | null };
 
+function isMetered(row: LedgerRow): boolean {
+  const m = row.meta || {};
+  if (typeof m.real_usd_cost === "number") return true;
+  if (typeof m.input_tokens === "number" || typeof m.output_tokens === "number") return true;
+  if (m.breakdown && typeof m.breakdown === "object") return true;
+  return false;
+}
 function realCostOf(row: LedgerRow): number {
   const m = row.meta || {};
   if (typeof m.real_usd_cost === "number") return m.real_usd_cost;
