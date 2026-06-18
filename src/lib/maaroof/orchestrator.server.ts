@@ -129,8 +129,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await logMsg("tool_call", step);
 
       const path = toolPath(step.tool);
-      if (!path) {
-        const err = { error: "unknown_tool", tool: step.tool };
+      if (!path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
+        const err = { error: path ? "tool_disabled" : "unknown_tool", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
         await logMsg("tool_result", err);
@@ -139,7 +139,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const body = { ...(step.input || {}), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
-        const toolTimer = setTimeout(() => toolCtl.abort(), 45000);
+        const toolTimer = setTimeout(() => toolCtl.abort(), settings.tool_timeout_ms);
         const onAbort = () => toolCtl.abort();
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
