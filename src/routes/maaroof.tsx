@@ -120,15 +120,20 @@ function MaaroofPage() {
         {/* Sidebar */}
         <aside className="space-y-2">
           <div className="rounded-lg border bg-card p-3">
-            <div className="flex items-center gap-2 font-semibold mb-2"><History className="w-4 h-4" /> الجلسات السابقة</div>
+            <div className="flex items-center justify-between gap-2 font-semibold mb-2">
+              <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
+              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1"><Brain className="w-3 h-3" /> الذاكرة</Link>
+            </div>
             <ul className="space-y-1 max-h-[60vh] overflow-y-auto text-sm">
               {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات بعد.</li>}
               {runs.map((r) => (
-                <li key={r.id} className="p-2 rounded hover:bg-muted">
-                  <div className="line-clamp-2">{r.goal}</div>
-                  <div className="text-[10px] text-muted-foreground flex justify-between mt-1">
-                    <span>{r.status}</span><span>${Number(r.total_usd).toFixed(4)}</span>
-                  </div>
+                <li key={r.id}>
+                  <button onClick={() => loadRun(r.id)} className="w-full text-start p-2 rounded hover:bg-muted">
+                    <div className="line-clamp-2">{r.goal}</div>
+                    <div className="text-[10px] text-muted-foreground flex justify-between mt-1">
+                      <span>{r.status}</span><span>${Number(r.total_usd).toFixed(4)}</span>
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>
