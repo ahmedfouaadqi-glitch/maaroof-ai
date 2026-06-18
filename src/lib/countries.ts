@@ -10,7 +10,7 @@ function flagFromCode(cc: string): string {
   return String.fromCodePoint(c.charCodeAt(0) + FLAG_OFFSET, c.charCodeAt(1) + FLAG_OFFSET);
 }
 
-const NAMES: Record<string, { ar: string; en: string; ku?: string }> = {
+export const NAMES: Record<string, { ar: string; en: string; ku?: string }> = {
   IQ: { ar: "العراق", en: "Iraq", ku: "عێراق" },
   SA: { ar: "السعودية", en: "Saudi Arabia" },
   AE: { ar: "الإمارات", en: "UAE" },
