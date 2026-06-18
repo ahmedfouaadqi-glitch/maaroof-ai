@@ -159,10 +159,10 @@ function MaaroofPage() {
         {/* Sidebar */}
         <aside className="space-y-2">
           <div className="rounded-lg border bg-card p-3">
-            <div className="flex items-center justify-between gap-2 font-semibold mb-2">
+            <h2 className="flex items-center justify-between gap-2 font-semibold mb-2 text-base">
               <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
-              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1"><Brain className="w-3 h-3" /> الذاكرة</Link>
-            </div>
+              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"><Brain className="w-3 h-3" /> الذاكرة</Link>
+            </h2>
             <ul className="space-y-1 max-h-[60vh] overflow-y-auto text-sm">
               {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات بعد.</li>}
               {runs.map((r) => (
