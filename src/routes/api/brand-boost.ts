@@ -212,6 +212,7 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
             .replace("{keywords}", brand_keywords ? ` (topics: ${brand_keywords})` : "")
             .replace("{market}", market.region);
 
+          const _tokAcc: TokenAcc = { in: 0, out: 0 };
           const probes = await Promise.all(
             targets.map(async (p) => {
               const cfg = PLATFORM_MODEL[p];
@@ -219,7 +220,7 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
                 const r = await callGateway(lovableKey, cfg.model, [
                   { role: "system", content: probeSys },
                   { role: "user", content: probeUser },
-                ], 12000);
+                ], 12000, _tokAcc);
                 if (r.status === 429) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "rate_limited" };
                 if (r.status === 402) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: "credits_exhausted" };
                 if (!r.ok) return { platform: p, model_used: cfg.model, is_proxy: cfg.proxy, current_answer: "", error: `http_${r.status}` };
