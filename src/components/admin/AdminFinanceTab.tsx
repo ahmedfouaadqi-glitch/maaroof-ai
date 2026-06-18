@@ -71,6 +71,14 @@ export function AdminFinanceTab() {
     allTools: { ar: "كل الأدوات", en: "All tools", ku: "هەموو" },
     allUsers: { ar: "كل المستخدمين", en: "All users", ku: "هەموو" },
     none: { ar: "لا توجد بيانات.", en: "No data.", ku: "هیچ." },
+    unmetered: { ar: "غير مُقاس", en: "unmetered", ku: "بێ پێوانە" },
+    suggested: { ar: "السعر المقترح (+50%)", en: "Suggested charge (+50%)", ku: "نرخی پێشنیار" },
+    avgMetered: { ar: "متوسط (المُقاسة فقط)", en: "Avg (metered only)", ku: "ناوەند" },
+    legacyBanner: {
+      ar: "العمليات الأقدم لم تكن تُسجّل التكلفة الحقيقية. تظهر هنا كـ «غير مُقاسة» وتُستثنى من إجمالي «حقيقي $» والمتوسطات. القياس الحقيقي يبدأ من الآن لكل طلب جديد.",
+      en: "Older runs did not record real provider cost. They appear as 'unmetered' and are excluded from real-cost totals and averages. Real metering applies to every new run from now on.",
+      ku: "ئەو کارانەی پێشتر تۆمار نەکراون لێرە وەک «بێ پێوانە» دەردەکەون و لە کۆکراوەی ڕاستی دادەبڕێن.",
+    },
   });
 
   const [rows, setRows] = useState<LedgerRow[]>([]);
