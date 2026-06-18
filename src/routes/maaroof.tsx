@@ -4,7 +4,8 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { COUNTRIES } from "@/lib/countries";
+import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
+const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: n.ar, en: n.en }));
 import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History } from "lucide-react";
 
 export const Route = createFileRoute("/maaroof")({
