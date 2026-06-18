@@ -607,3 +607,22 @@ function AgentPage() {
     </div>
   );
 }
+
+function MaaroofBanner() {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => { setHidden(typeof window !== "undefined" && localStorage.getItem("maaroof_banner_hidden") === "1"); }, []);
+  if (hidden) return null;
+  return (
+    <div className="mb-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 p-4 flex items-start gap-3">
+      <Sparkles className="size-6 text-primary shrink-0 mt-0.5" />
+      <div className="flex-1">
+        <div className="font-bold mb-1">جرّب وكيلنا الجديد «معروف» ✨</div>
+        <div className="text-xs text-muted-foreground mb-2">تخطيط متعدد الخطوات، ذاكرة طويلة بنمط Kimi، يستخدم كل أدوات GEO الـ16، ويتكيّف مع موقعك الجغرافي تلقائياً.</div>
+        <div className="flex gap-2">
+          <Link to="/maaroof" className="inline-block rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">افتح معروف</Link>
+          <button onClick={() => { localStorage.setItem("maaroof_banner_hidden", "1"); setHidden(true); }} className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">إخفاء</button>
+        </div>
+      </div>
+    </div>
+  );
+}
