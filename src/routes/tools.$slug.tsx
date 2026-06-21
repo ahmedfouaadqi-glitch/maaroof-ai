@@ -1,8 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles, Lock } from "lucide-react";
+import { ArrowRight, Sparkles, Lock, Info, PlayCircle, HelpCircle } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useVisibility, useToolPrice, usePageGuard } from "@/lib/visibility";
