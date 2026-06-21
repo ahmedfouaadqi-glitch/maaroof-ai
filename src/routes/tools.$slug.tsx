@@ -1,8 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles, Lock } from "lucide-react";
+import { ArrowRight, Sparkles, Lock, Info, PlayCircle, HelpCircle } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useVisibility, useToolPrice, usePageGuard } from "@/lib/visibility";
@@ -129,6 +130,25 @@ function Page() {
     );
   }
 
+  type Tab = "overview" | "how" | "start";
+  const storageKey = `tool-tab:${def.key}`;
+  const [tab, setTab] = useState<Tab>("overview");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey) as Tab | null;
+      if (saved === "overview" || saved === "how" || saved === "start") setTab(saved);
+    } catch { /* ignore */ }
+  }, [storageKey]);
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, tab); } catch { /* ignore */ }
+  }, [tab, storageKey]);
+
+  const tabLabels = {
+    ar: { overview: "نظرة عامة", how: "كيف تعمل", start: "ابدأ التشغيل" },
+    en: { overview: "Overview", how: "How it works", start: "Start" },
+    ku: { overview: "گشتی", how: "چۆن کار دەکات", start: "دەستپێبکە" },
+  }[L];
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -142,28 +162,61 @@ function Page() {
         <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-gradient">{m.title}</h1>
         <p className="mt-4 text-base text-muted-foreground">{m.desc}</p>
 
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <Card title={Lc.what} body={m.desc} />
-          <Card title={Lc.when} body={m.when} />
-          <Card title={Lc.get} body={TOOL_CATALOG.find((x) => x.key === def.key)?.labels[L] || name} />
+        {/* Sticky tab bar */}
+        <div className="sticky top-16 z-10 -mx-4 mt-8 border-b border-border bg-background/85 px-4 backdrop-blur">
+          <nav role="tablist" aria-label={name} className="flex gap-1 overflow-x-auto">
+            <TabBtn active={tab === "overview"} onClick={() => setTab("overview")} icon={<Info className="size-3.5" />} label={tabLabels.overview} />
+            <TabBtn active={tab === "how"} onClick={() => setTab("how")} icon={<HelpCircle className="size-3.5" />} label={tabLabels.how} />
+            <TabBtn active={tab === "start"} onClick={() => setTab("start")} icon={<PlayCircle className="size-3.5" />} label={tabLabels.start} />
+          </nav>
         </div>
 
-        <div className="mt-8">
-          <HowItWorks toolKey={def.key} />
-        </div>
-
-        <div className="mt-10 flex flex-wrap items-center gap-3">
-          <Link
-            to={def.to}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02]"
-          >
-            {Lc.start} <ArrowRight className="size-4" />
-          </Link>
-          <Link to="/" className="text-sm text-muted-foreground hover:text-primary">{Lc.backHome}</Link>
+        <div className="mt-6">
+          {tab === "overview" && (
+            <div role="tabpanel" className="grid gap-4 sm:grid-cols-3">
+              <Card title={Lc.what} body={m.desc} />
+              <Card title={Lc.when} body={m.when} />
+              <Card title={Lc.get} body={TOOL_CATALOG.find((x) => x.key === def.key)?.labels[L] || name} />
+            </div>
+          )}
+          {tab === "how" && (
+            <div role="tabpanel">
+              <HowItWorks toolKey={def.key} />
+            </div>
+          )}
+          {tab === "start" && (
+            <div role="tabpanel" className="rounded-2xl border border-border bg-card/60 p-6">
+              <p className="text-sm text-muted-foreground">{Lc.what}: {m.desc}</p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link
+                  to={def.to}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02]"
+                >
+                  {Lc.start} <ArrowRight className="size-4" />
+                </Link>
+                <Link to="/" className="text-sm text-muted-foreground hover:text-primary">{Lc.backHome}</Link>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition ${
+        active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import DOMPurify from "isomorphic-dompurify";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -29,7 +30,7 @@ function Page() {
       <main>
         <article className="prose prose-invert mx-auto max-w-3xl px-4 py-12 md:px-6">
           <h1 className="font-display text-4xl font-bold text-gradient">{t("terms_title")}</h1>
-          <div className="mt-6 space-y-4 text-foreground/85" dangerouslySetInnerHTML={{ __html: c }} />
+          <div className="mt-6 space-y-4 text-foreground/85" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(c) }} />
           <div className="mt-10"><Link to="/" className="text-sm text-primary hover:underline">← {t("back_home")}</Link></div>
         </article>
       </main>

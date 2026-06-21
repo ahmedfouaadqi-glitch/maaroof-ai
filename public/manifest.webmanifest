@@ -2,26 +2,66 @@
   "name": "MAAROOF Ai · Become the Source AI Trusts",
   "short_name": "MAAROOF Ai",
   "description": "Generative Engine Optimization for Iraq. Test, score and optimize your content so ChatGPT, Gemini and Claude cite you.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "id": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#0f2454",
   "theme_color": "#0f2454",
-  "lang": "en",
-  "dir": "auto",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "productivity", "marketing"],
+  "launch_handler": { "client_mode": "auto" },
   "icons": [
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
     {
       "src": "/icon-512.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open your GEO dashboard",
+      "url": "/dashboard?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-512.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI Visibility",
+      "short_name": "Visibility",
+      "description": "Run an AI visibility check across 9 engines",
+      "url": "/tools/visibility?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-512.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "GEO Analysis",
+      "short_name": "Analyze",
+      "description": "Analyze a paragraph for citation-worthiness",
+      "url": "/tools/analyze?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-512.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Brand Boost Agent",
+      "short_name": "Agent",
+      "description": "Open the 30-day autonomous agent",
+      "url": "/agent?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-512.png", "sizes": "192x192" }]
     }
   ]
 }
