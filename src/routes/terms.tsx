@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import DOMPurify from "isomorphic-dompurify";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 
