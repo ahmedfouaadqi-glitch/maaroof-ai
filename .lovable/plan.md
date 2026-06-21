@@ -1,54 +1,88 @@
+# خطة التحسين الشاملة
 
-# خطة العمل: تحسين الأدوات + PWA + الأمان
+تركيز على ثلاث طبقات: **نظام التصميم (الجذر)**، **صفحة الأدوات والنتائج**، **الكرافيك والأنميشن**.
 
-## 1) تحسين عمل الأدوات والتبويبات (`src/routes/tools.$slug.tsx`, `SiteHeader.tsx`, `tool-catalog.ts`)
+## 1) نظام التصميم — مستوحى من شعار MAAROOF Ai
 
-- توحيد تجربة فتح الأداة: عرض الأداة في صفحة مخصصة منظمة بتبويبات ثابتة (نظرة عامة / المدخلات / النتائج / السجل / مساعدة) بدل التمرير الطويل.
-- إضافة شريط جانبي/قائمة منسدلة سريعة للتنقل بين الأدوات داخل نفس الصفحة (بدون إعادة تحميل).
-- حفظ آخر تبويب مفتوح لكل أداة في `localStorage` لاستعادة السياق.
-- تحسين حالات التحميل (skeleton) ورسائل الخطأ والنتائج الفارغة بشكل موحد.
-- زر "نسخ النتيجة" + "تصدير" + "إعادة التشغيل بنفس المدخلات" في كل أداة.
-- بحث سريع (Ctrl/Cmd+K) داخل قائمة الأدوات في الهيدر.
+استخراج الألوان من `src/assets/maaroof-ai-mark.png` (إنديغو عميق + سماوي/بنفسجي متوهج + ذهبي خفيف للأكسنت) وإعادة بناء `src/styles.css`:
 
-## 2) طريقة فتح الأدوات وعرضها
+- إعادة معايرة `--primary` و`--accent` و`--cyber*` لتطابق درجات الشعار بدقة (oklch).
+- إضافة طبقة سطوح متدرجة: `--surface-1/2/3` بدل الاعتماد على `card/muted` فقط، لإعطاء عمق احترافي.
+- خطوط: **Instrument Serif** للعناوين + **Work Sans** للجسم، مع fallback عربي (`Noto Kufi Arabic`, `Vazirmatn`). تحميلها عبر `<link>` في `src/routes/__root.tsx` (لا `@import` لروابط في styles.css).
+- درجات ظلال/توهج جديدة: `--shadow-soft`, `--shadow-glow-strong`, `--ring-focus` متسقة عبر الموقع.
+- تحديث `--gradient-hero` و`--gradient-text` بألوان الشعار، وإضافة `--gradient-border` (conic) للبطاقات المميزة.
+- توحيد `--radius` على نظام (sm/md/lg/xl/2xl) واستخدامه بانتظام.
 
-- استبدال الفتح المباشر بمعاينة (Drawer) سريعة للأداة من أي مكان، مع زر "فتح في صفحة كاملة".
-- على الجوال: Bottom Sheet بدل المودال الكبير، مع إيماءات السحب للإغلاق.
-- مؤشر تقدم واضح للعمليات الطويلة + إمكانية الإلغاء.
-- عرض تكلفة التوكنز المتوقعة قبل التشغيل.
+## 2) صفحة الأدوات `src/routes/tools.$slug.tsx`
 
-## 3) تحسينات PWA (`public/manifest.webmanifest`, `__root.tsx`)
+إعادة تصميم بنية الصفحة لتبدو كتطبيق SaaS احترافي:
 
-- مراجعة الـ manifest: أسماء، أيقونات maskable، theme_color، shortcuts للأدوات الأكثر استخداماً.
-- إضافة `display_override` و `launch_handler` لتجربة أفضل عند التثبيت.
-- تحسين شاشة البداية (apple-touch-icon، splash) واتجاه RTL.
-- ملاحظة مهمة: حسب توجيهات Lovable للـ PWA، لن نضيف Service Worker للتخزين دون طلب صريح للعمل بدون إنترنت (لتجنب كسر المعاينة). الاكتفاء بدعم التثبيت + الأيقونات.
+```text
+┌─────────────────────────────────────────────────────┐
+│  Sticky Sub-header: [icon] اسم الأداة · CostBadge · │
+│                     [Run] [Reset] [Export] [Share]  │
+├──────────────┬──────────────────────────────────────┤
+│ Sidebar      │  Tabs: نظرة · المدخلات · النتائج ·   │
+│ (الأدوات)    │        السجل · المساعدة              │
+│ + بحث ⌘K    │  ────────────────────────────────    │
+│ + مفضلة      │  Panel content (مع skeleton/empty/   │
+│              │   error حالات احترافية)              │
+└──────────────┴──────────────────────────────────────┘
+```
 
-## 4) معالجة الثغرات الأمنية — تقييم النقاط المذكورة
+تفاصيل:
+- **Sidebar تبديل سريع** بين الأدوات بدون مغادرة الصفحة (مع تصنيفات: تحليل/توليد/مراقبة).
+- **بحث `⌘K`** عبر `cmdk` (موجود في shadcn) لفتح أي أداة.
+- **التبويبات** sticky تحت الهيدر مع underline متحرك.
+- **عرض النتائج**: بطاقات منظمة (Summary cards + Details accordion + Sources list) بدل json خام؛ ExportButtons في كل قسم.
+- **حالات**: Skeleton أثناء التحميل، Empty state مصور، Error مع زر إعادة المحاولة.
+- **شريط تقدم** للعمليات الطويلة + زر إلغاء.
+- حفظ آخر تبويب نشط في localStorage (موجود — يبقى).
+- **موبايل**: Sidebar يتحول إلى Drawer سفلي، التبويبات scrollable أفقياً.
 
-سأقوم أولاً بمراجعة حقيقية عبر `security--run_security_scan` و `supabase--linter` لاكتشاف الثغرات الفعلية، ثم معالجتها. التقييم المبدئي بناءً على بنية المشروع الحالية (Supabase + RLS + TanStack Start):
+## 3) الصفحة الرئيسية والأقسام الرئيسية
 
-| # | الثغرة | الحالة في مشروعك | الإجراء |
-|---|--------|------------------|---------|
-| 1 | SQL Injection | غير مطبّق — كل الاستعلامات عبر Supabase client (parameterized) | لا حاجة لإجراء، تأكيد فقط |
-| 2 | IDOR | يجب التحقق: مراجعة كل سياسات RLS على الجداول الحساسة (`maaroof_runs`, `analyses`, `profiles`...) للتأكد أن كل SELECT/UPDATE مقيّد بـ `auth.uid()` | تشغيل linter + تدقيق السياسات وإصلاح أي ثغرة |
-| 3 | Rate Limiting | غير موجود (مذكور صراحة في توجيهات Lovable أن البنية لا تدعمه بعد) | لن نضيفه إلا بطلب صريح منك مع قبول الحل المؤقت |
-| 4 | مدة روابط استعادة كلمة المرور | تُدار من Supabase Auth (الافتراضي قصير) | فحص الإعدادات والتأكد ≤ 1 ساعة |
-| 5 | JWT Misconfig | Supabase يدير التوكنز بشكل آمن (HTTPOnly عبر مكتبته) | تأكيد فقط |
-| 6 | Overposting (isAdmin=true) | يوجد بالفعل trigger `guard_profile_privileged_updates` يمنعه | تأكيد عمله + فحص بقية الجداول |
-| 7 | XSS | فحص أي استخدام لـ `dangerouslySetInnerHTML` في الكود وتعقيمه بـ DOMPurify إن وُجد | بحث ومعالجة |
-| 8 | Hardcoded Secrets | كل المفاتيح في Lovable Secrets، فقط `VITE_*` public في الكود | تأكيد عدم وجود مفاتيح سرية مسربة |
-| 9 | Logging Sensitive Data | مراجعة `error-capture.ts` و server functions للتأكد من عدم تسجيل توكنز/كلمات مرور | فحص ومعالجة |
-| 10 | Unrestricted File Uploads | لا توجد storage buckets حالياً → غير مطبّق | لا حاجة |
+- **Hero** (`src/routes/index.tsx`): تجديد التركيب — عنوان Instrument Serif كبير + sub-headline + CTA مزدوج + بصريات (Globe/EnginesOrbit) متناسبة مع الشبكة، Gradient mesh هادئ، RTL متقن.
+- **SiteHeader**: شفافية ذكية على scroll، تحت scroll = blur + border، فوق = شفاف. زر CTA بارز.
+- **Pricing / Guide / Maaroof**: مواءمة spacing وtypography مع النظام الجديد دون تغيير الوظائف.
+- توحيد بطاقات الميزات على نمط واحد (نفس padding/radius/hover).
 
-## التنفيذ المقترح بالترتيب
+## 4) الكرافيك والأنميشن (مستوى 3 — متوازن)
 
-1. **فحص أمني شامل** عبر `security--run_security_scan` + `supabase--linter` + بحث في الكود عن `dangerouslySetInnerHTML` والمفاتيح المكشوفة وتسجيل البيانات الحساسة.
-2. **إصلاح الثغرات الحقيقية فقط** المكتشفة (RLS مفقود، XSS، تسجيل حساس).
-3. **تحسين الأدوات والتبويبات** (Drawer + tabs ثابتة + حفظ الحالة).
-4. **تحسينات PWA** (manifest محسّن + shortcuts + maskable icons).
+- **Framer Motion** (موجود) لـ:
+  - دخول الأقسام: `fade-in + slide-up` خفيف عند scroll (IntersectionObserver).
+  - تبديل التبويبات: cross-fade 200ms.
+  - بطاقات: hover-lift دقيق (translateY -2px + shadow-glow).
+  - أرقام/إحصائيات: count-up.
+- **Micro-interactions**: ripple على الأزرار الرئيسية، underline متحرك في الروابط (`story-link`).
+- **Background**: Aurora/Grid Pattern خفيف من MagicUI خلف الهيرو + شبكة dot-pattern في الأقسام الداخلية.
+- **EnginesOrbit / MaaroofGlobe**: تنعيم الحركة، تقليل CPU، إيقاف عند `prefers-reduced-motion`.
+- **Page transitions**: fade خفيف بين الراوتس.
 
-## تأكيد قبل البدء
+## 5) PWA + RTL polish
 
-- هل توافق على **عدم إضافة Rate Limiting** الآن (لعدم وجود بنية تحتية له، وفق سياسة Lovable)، أو تريد حلاً مؤقتاً بقاعدة البيانات؟
-- هل تريد تطبيق التغييرات الثلاثة (الأدوات + PWA + الأمان) دفعة واحدة، أم نبدأ بالأمان أولاً ثم نكمل؟
+- مراجعة `theme_color` و`background_color` في `public/manifest.webmanifest` ليطابقا اللون الجديد.
+- ضمان أن كل المكونات الجديدة `dir="rtl"`-safe (logical properties: `ms/me/ps/pe`).
+
+---
+
+## ملفات ستُعدّل (تقدير)
+
+- `src/styles.css` — إعادة بناء tokens + gradients + shadows.
+- `src/routes/__root.tsx` — تحميل الخطوط.
+- `src/routes/tools.$slug.tsx` — البنية الجديدة (sidebar + tabs + result panels).
+- `src/components/SiteHeader.tsx` — سلوك scroll + بحث ⌘K.
+- `src/routes/index.tsx` — تجديد Hero والأقسام.
+- `src/components/EnginesOrbit.tsx`, `MaaroofGlobe.tsx` — تنعيم الأنميشن.
+- مكونات مشتركة جديدة: `ToolShell.tsx`, `ResultCard.tsx`, `EmptyState.tsx`, `SectionReveal.tsx`.
+- `public/manifest.webmanifest` — لون الثيم.
+
+## خارج النطاق (لن يُلمس)
+
+- المنطق الخلفي وserver functions.
+- مخطط قاعدة البيانات وRLS.
+- محتوى المقالات/الأدلة.
+
+---
+
+**هل أبدأ التنفيذ بهذا الترتيب؟** (1) نظام التصميم → (2) صفحة الأدوات → (3) الرئيسية → (4) الأنميشن → (5) لمسات PWA/RTL.

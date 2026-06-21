@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles, Lock, Info, PlayCircle, HelpCircle } from "lucide-react";
+import { ArrowRight, Sparkles, Lock, Info, PlayCircle, HelpCircle, CheckCircle2, Zap } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useVisibility, useToolPrice, usePageGuard } from "@/lib/visibility";
@@ -152,49 +152,95 @@ function Page() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 py-12">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-            <Sparkles className="size-3" /> {name}
-          </span>
-          <CostBadge tokens={price.tokens} usd={price.usd} compact />
-        </div>
-        <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-gradient">{m.title}</h1>
-        <p className="mt-4 text-base text-muted-foreground">{m.desc}</p>
 
-        {/* Sticky tab bar */}
-        <div className="sticky top-16 z-10 -mx-4 mt-8 border-b border-border bg-background/85 px-4 backdrop-blur">
-          <nav role="tablist" aria-label={name} className="flex gap-1 overflow-x-auto">
+      {/* Hero header */}
+      <div className="relative overflow-hidden border-b border-border/60">
+        <div className="absolute inset-0 grid-bg opacity-60" aria-hidden />
+        <div className="absolute -top-32 -right-24 size-[420px] rounded-full bg-primary/20 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-40 -left-24 size-[420px] rounded-full bg-accent/15 blur-3xl" aria-hidden />
+
+        <main className="relative mx-auto max-w-5xl px-4 pb-10 pt-12 sm:pt-16">
+          <div className="reveal-up flex flex-wrap items-center gap-2">
+            <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">{Lc.backHome}</Link>
+            <span className="text-xs text-muted-foreground/60">/</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+              <Sparkles className="size-3" /> {name}
+            </span>
+            <CostBadge tokens={price.tokens} usd={price.usd} compact />
+          </div>
+
+          <div className="reveal-up delay-100 mt-5 flex items-start gap-4 sm:gap-5">
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 -m-1 rounded-2xl bg-[var(--gradient-border)] opacity-70 blur-md gradient-shift" aria-hidden />
+              <div className="relative grid size-14 place-items-center rounded-2xl glass-strong text-primary sm:size-16">
+                <Zap className="size-6 sm:size-7" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-display text-3xl leading-tight text-gradient sm:text-5xl">{m.title}</h1>
+              <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">{m.desc}</p>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Sticky tab bar */}
+      <div className="sticky top-14 z-20 border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto max-w-5xl px-4">
+          <nav role="tablist" aria-label={name} className="relative flex gap-1 overflow-x-auto">
             <TabBtn active={tab === "overview"} onClick={() => setTab("overview")} icon={<Info className="size-3.5" />} label={tabLabels.overview} />
             <TabBtn active={tab === "how"} onClick={() => setTab("how")} icon={<HelpCircle className="size-3.5" />} label={tabLabels.how} />
             <TabBtn active={tab === "start"} onClick={() => setTab("start")} icon={<PlayCircle className="size-3.5" />} label={tabLabels.start} />
           </nav>
         </div>
+      </div>
 
-        <div className="mt-6">
+      <main className="mx-auto max-w-5xl px-4 py-10">
+        <div key={tab} className="reveal-up">
           {tab === "overview" && (
             <div role="tabpanel" className="grid gap-4 sm:grid-cols-3">
-              <Card title={Lc.what} body={m.desc} />
-              <Card title={Lc.when} body={m.when} />
-              <Card title={Lc.get} body={TOOL_CATALOG.find((x) => x.key === def.key)?.labels[L] || name} />
+              <FeatureCard title={Lc.what} body={m.desc} accent="primary" />
+              <FeatureCard title={Lc.when} body={m.when} accent="accent" />
+              <FeatureCard title={Lc.get} body={TOOL_CATALOG.find((x) => x.key === def.key)?.labels[L] || name} accent="gold" />
             </div>
           )}
           {tab === "how" && (
-            <div role="tabpanel">
+            <div role="tabpanel" className="rounded-2xl glass p-2 sm:p-6">
               <HowItWorks toolKey={def.key} />
             </div>
           )}
           {tab === "start" && (
-            <div role="tabpanel" className="rounded-2xl border border-border bg-card/60 p-6">
-              <p className="text-sm text-muted-foreground">{Lc.what}: {m.desc}</p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  to={def.to}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02]"
-                >
-                  {Lc.start} <ArrowRight className="size-4" />
-                </Link>
-                <Link to="/" className="text-sm text-muted-foreground hover:text-primary">{Lc.backHome}</Link>
+            <div role="tabpanel" className="relative overflow-hidden rounded-3xl glass-strong p-6 sm:p-10">
+              <div className="absolute -top-24 -right-16 size-72 rounded-full bg-primary/20 blur-3xl" aria-hidden />
+              <div className="absolute -bottom-24 -left-16 size-72 rounded-full bg-accent/15 blur-3xl" aria-hidden />
+
+              <div className="relative">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-semibold text-primary">
+                  <PlayCircle className="size-3.5" /> {tabLabels.start}
+                </div>
+                <h2 className="mt-3 font-display text-2xl text-foreground sm:text-3xl">{m.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{m.desc}</p>
+
+                <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+                  {[m.when, Lc.get].map((line, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-foreground/85">
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Link
+                    to={def.to}
+                    className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-primary via-primary to-accent px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:shadow-[var(--shadow-glow-strong)]"
+                  >
+                    <span className="relative z-10">{Lc.start}</span>
+                    <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180" />
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" aria-hidden />
+                  </Link>
+                  <CostBadge tokens={price.tokens} usd={price.usd} compact />
+                </div>
               </div>
             </div>
           )}
@@ -210,21 +256,36 @@ function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: ()
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition ${
-        active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+      className={`relative inline-flex shrink-0 items-center gap-1.5 px-4 py-3.5 text-sm font-semibold transition-colors ${
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground"
       }`}
     >
       {icon}
       {label}
+      <span
+        className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full transition-all duration-300 ${
+          active ? "bg-gradient-to-r from-primary to-accent opacity-100" : "opacity-0"
+        }`}
+        aria-hidden
+      />
     </button>
   );
 }
 
-function Card({ title, body }: { title: string; body: string }) {
+function FeatureCard({ title, body, accent }: { title: string; body: string; accent: "primary" | "accent" | "gold" }) {
+  const accentClass =
+    accent === "primary" ? "from-primary/40 to-primary/0"
+      : accent === "accent" ? "from-accent/40 to-accent/0"
+      : "from-gold/40 to-gold/0";
+  const ringClass =
+    accent === "primary" ? "text-primary"
+      : accent === "accent" ? "text-accent"
+      : "text-gold";
   return (
-    <div className="rounded-2xl border border-border bg-card/60 p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-primary">{title}</div>
-      <div className="mt-1.5 text-sm text-foreground/85 leading-relaxed">{body}</div>
+    <div className="group relative rounded-2xl glass p-5 hover-lift hover:border-primary/40 hover:shadow-[var(--shadow-glow)]">
+      <div className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${accentClass}`} aria-hidden />
+      <div className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${ringClass}`}>{title}</div>
+      <div className="mt-2 text-sm leading-relaxed text-foreground/85">{body}</div>
     </div>
   );
 }
