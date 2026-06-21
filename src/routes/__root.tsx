@@ -88,7 +88,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Generative Engine Optimization for Iraq. Test, score and optimize your content so ChatGPT, Gemini and Claude cite you in EN, AR, KU." },
       { property: "og:image", content: "https://geoiraq.com/og-maaroof.png" },
       { name: "twitter:image", content: "https://geoiraq.com/og-maaroof.png" },
-      { name: "theme-color", content: "#0f2454" },
+      { name: "theme-color", content: "#0b0b1f" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "MAAROOF Ai" },
@@ -102,7 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Fira+Sans:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Work+Sans:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap",
       },
       {
         rel: "stylesheet",
