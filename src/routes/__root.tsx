@@ -178,8 +178,20 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <CountryProvider>
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </CountryProvider>
     </QueryClientProvider>
+  );
+}
+
+function PageTransition({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = router.state.location.pathname;
+  return (
+    <div key={pathname} className="motion-fade-in">
+      {children}
+    </div>
   );
 }
