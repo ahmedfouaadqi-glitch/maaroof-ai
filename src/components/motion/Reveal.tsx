@@ -63,8 +63,8 @@ export function Reveal<T extends RevealTag = "div">({
       ref={ref as never}
       data-revealed={revealed ? "true" : "false"}
       className={cn("reveal", className)}
-      style={{ transitionDelay: delay ? `${delay}ms` : undefined, ...style }}
-      {...rest}
+      style={{ transitionDelay: delay ? `${delay}ms` : undefined, ...(style as React.CSSProperties | undefined) }}
+      {...(rest as Record<string, unknown>)}
     >
       {children}
     </Tag>
