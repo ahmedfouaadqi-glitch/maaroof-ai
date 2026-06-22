@@ -1,88 +1,68 @@
-# خطة التحسين الشاملة
+# نظام أنميشن موحّد للموقع بالكامل
 
-تركيز على ثلاث طبقات: **نظام التصميم (الجذر)**، **صفحة الأدوات والنتائج**، **الكرافيك والأنميشن**.
+## الهدف
+استبدال الأنميشنات المتفرقة (durations/easings عشوائية، حركات مكررة في كل مكون) بنظام واحد متّسق يحترم `prefers-reduced-motion`، ويُطبَّق على: التبويبات، الأزرار، التحميل (skeleton/spinner)، فتح/إغلاق الـ dialogs/sheets، ظهور الأقسام عند التمرير، وانتقالات الصفحات.
 
-## 1) نظام التصميم — مستوحى من شعار MAAROOF Ai
-
-استخراج الألوان من `src/assets/maaroof-ai-mark.png` (إنديغو عميق + سماوي/بنفسجي متوهج + ذهبي خفيف للأكسنت) وإعادة بناء `src/styles.css`:
-
-- إعادة معايرة `--primary` و`--accent` و`--cyber*` لتطابق درجات الشعار بدقة (oklch).
-- إضافة طبقة سطوح متدرجة: `--surface-1/2/3` بدل الاعتماد على `card/muted` فقط، لإعطاء عمق احترافي.
-- خطوط: **Instrument Serif** للعناوين + **Work Sans** للجسم، مع fallback عربي (`Noto Kufi Arabic`, `Vazirmatn`). تحميلها عبر `<link>` في `src/routes/__root.tsx` (لا `@import` لروابط في styles.css).
-- درجات ظلال/توهج جديدة: `--shadow-soft`, `--shadow-glow-strong`, `--ring-focus` متسقة عبر الموقع.
-- تحديث `--gradient-hero` و`--gradient-text` بألوان الشعار، وإضافة `--gradient-border` (conic) للبطاقات المميزة.
-- توحيد `--radius` على نظام (sm/md/lg/xl/2xl) واستخدامه بانتظام.
-
-## 2) صفحة الأدوات `src/routes/tools.$slug.tsx`
-
-إعادة تصميم بنية الصفحة لتبدو كتطبيق SaaS احترافي:
-
-```text
-┌─────────────────────────────────────────────────────┐
-│  Sticky Sub-header: [icon] اسم الأداة · CostBadge · │
-│                     [Run] [Reset] [Export] [Share]  │
-├──────────────┬──────────────────────────────────────┤
-│ Sidebar      │  Tabs: نظرة · المدخلات · النتائج ·   │
-│ (الأدوات)    │        السجل · المساعدة              │
-│ + بحث ⌘K    │  ────────────────────────────────    │
-│ + مفضلة      │  Panel content (مع skeleton/empty/   │
-│              │   error حالات احترافية)              │
-└──────────────┴──────────────────────────────────────┘
+## 1) طبقة التوكنز (`src/styles.css`)
+إضافة متغيّرات حركة موحّدة:
 ```
+--motion-duration-fast: 150ms
+--motion-duration-base: 240ms
+--motion-duration-slow: 420ms
+--motion-ease-standard: cubic-bezier(.2,.7,.2,1)
+--motion-ease-emphasized: cubic-bezier(.2,.9,.1,1)
+--motion-ease-exit: cubic-bezier(.4,.0,1,1)
+```
++ بلوك `@media (prefers-reduced-motion: reduce)` يصفّر كل durations ويعطّل الـ transforms.
 
-تفاصيل:
-- **Sidebar تبديل سريع** بين الأدوات بدون مغادرة الصفحة (مع تصنيفات: تحليل/توليد/مراقبة).
-- **بحث `⌘K`** عبر `cmdk` (موجود في shadcn) لفتح أي أداة.
-- **التبويبات** sticky تحت الهيدر مع underline متحرك.
-- **عرض النتائج**: بطاقات منظمة (Summary cards + Details accordion + Sources list) بدل json خام؛ ExportButtons في كل قسم.
-- **حالات**: Skeleton أثناء التحميل، Empty state مصور، Error مع زر إعادة المحاولة.
-- **شريط تقدم** للعمليات الطويلة + زر إلغاء.
-- حفظ آخر تبويب نشط في localStorage (موجود — يبقى).
-- **موبايل**: Sidebar يتحول إلى Drawer سفلي، التبويبات scrollable أفقياً.
+## 2) Keyframes/Utilities مشتركة (Tailwind v4 عبر `@theme` في styles.css)
+- `fade-in`, `fade-in-up`, `scale-in`, `slide-in-right/left`, `shimmer`, `pulse-soft`
+- utility classes: `.motion-safe-fade`, `.motion-press` (نقرة الأزرار: scale .98)، `.hover-lift`, `.reveal` (للظهور عند التمرير).
 
-## 3) الصفحة الرئيسية والأقسام الرئيسية
+## 3) مكوّن `Reveal` موحّد
+`src/components/motion/Reveal.tsx` يستخدم `IntersectionObserver` (بدون مكتبة جديدة) ويطبّق `fade-in-up` عند الظهور. يحلّ محل أي `framer-motion` متفرّق في الأقسام، ويُحترم فيه reduced-motion.
 
-- **Hero** (`src/routes/index.tsx`): تجديد التركيب — عنوان Instrument Serif كبير + sub-headline + CTA مزدوج + بصريات (Globe/EnginesOrbit) متناسبة مع الشبكة، Gradient mesh هادئ، RTL متقن.
-- **SiteHeader**: شفافية ذكية على scroll، تحت scroll = blur + border، فوق = شفاف. زر CTA بارز.
-- **Pricing / Guide / Maaroof**: مواءمة spacing وtypography مع النظام الجديد دون تغيير الوظائف.
-- توحيد بطاقات الميزات على نمط واحد (نفس padding/radius/hover).
+## 4) الأزرار (`src/components/ui/button.tsx`)
+- `transition-[transform,background,box-shadow,opacity] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)]`
+- `active:scale-[.98]` + `hover:-translate-y-[1px]` للـ variant الأساسي
+- حالة `loading`: spinner موحّد + `aria-busy`.
 
-## 4) الكرافيك والأنميشن (مستوى 3 — متوازن)
+## 5) التبويبات (`src/components/ui/tabs.tsx` + استخدامها في `tools.$slug.tsx`)
+- مؤشر متحرّك (underline) عبر `data-state=active` + `transition-all` بمدة `base`
+- محتوى التبويب: `data-[state=inactive]:opacity-0 data-[state=active]:animate-fade-in` بدل cross-fades يدوية.
 
-- **Framer Motion** (موجود) لـ:
-  - دخول الأقسام: `fade-in + slide-up` خفيف عند scroll (IntersectionObserver).
-  - تبديل التبويبات: cross-fade 200ms.
-  - بطاقات: hover-lift دقيق (translateY -2px + shadow-glow).
-  - أرقام/إحصائيات: count-up.
-- **Micro-interactions**: ripple على الأزرار الرئيسية، underline متحرك في الروابط (`story-link`).
-- **Background**: Aurora/Grid Pattern خفيف من MagicUI خلف الهيرو + شبكة dot-pattern في الأقسام الداخلية.
-- **EnginesOrbit / MaaroofGlobe**: تنعيم الحركة، تقليل CPU، إيقاف عند `prefers-reduced-motion`.
-- **Page transitions**: fade خفيف بين الراوتس.
+## 6) التحميل (Skeleton/Spinner)
+- `src/components/ui/skeleton.tsx`: shimmer موحّد يعتمد التوكنز.
+- مكوّن `Spinner` صغير موحّد يُستخدم في الأزرار والصفحات بدلاً من spinners مختلفة.
 
-## 5) PWA + RTL polish
+## 7) الـ Overlays (Dialog/Sheet/Drawer/Popover)
+ضبط classes الـ Radix لتستخدم نفس التوكنز:
+- enter: `fade-in` + `scale-in` (duration base)
+- exit: `fade-out` + `scale-out` (duration fast, ease-exit)
+- backdrop: fade فقط.
 
-- مراجعة `theme_color` و`background_color` في `public/manifest.webmanifest` ليطابقا اللون الجديد.
-- ضمان أن كل المكونات الجديدة `dir="rtl"`-safe (logical properties: `ms/me/ps/pe`).
+## 8) انتقالات الصفحات (Router-wide)
+في `src/routes/__root.tsx` تغليف `<Outlet />` بـ `<div key={location.pathname} className="animate-fade-in">` لانتقال موحّد بين الصفحات (بدون مكتبة).
 
----
+## 9) تطبيق على كل الصفحات/الأقسام
+- `index.tsx` (Hero + الأقسام): استبدال أي حركات مخصّصة بـ `<Reveal>` + utilities.
+- `tools.$slug.tsx`: tabs/cards/results عبر النظام الجديد.
+- `pricing.tsx`, `guide.*`, `maaroof.tsx`, `contact.tsx`, `dashboard.tsx`, `admin.tsx`: تمرير الأقسام داخل `<Reveal>` وإزالة الـ inline animations المتكرّرة.
+- مكوّنات: `EnginesOrbit`, `MaaroofGlobe`, `MatrixRain` تبقى كما هي لكن تُعطَّل تلقائياً عند reduced-motion عبر CSS guard.
 
-## ملفات ستُعدّل (تقدير)
+## 10) Reduced Motion (إلزامي)
+- CSS guard عام في `styles.css`.
+- داخل `Reveal` نتحقّق من `window.matchMedia('(prefers-reduced-motion: reduce)')` ونعرض المحتوى فوراً بدون transform.
 
-- `src/styles.css` — إعادة بناء tokens + gradients + shadows.
-- `src/routes/__root.tsx` — تحميل الخطوط.
-- `src/routes/tools.$slug.tsx` — البنية الجديدة (sidebar + tabs + result panels).
-- `src/components/SiteHeader.tsx` — سلوك scroll + بحث ⌘K.
-- `src/routes/index.tsx` — تجديد Hero والأقسام.
-- `src/components/EnginesOrbit.tsx`, `MaaroofGlobe.tsx` — تنعيم الأنميشن.
-- مكونات مشتركة جديدة: `ToolShell.tsx`, `ResultCard.tsx`, `EmptyState.tsx`, `SectionReveal.tsx`.
-- `public/manifest.webmanifest` — لون الثيم.
+## الملفات المتأثرة
+- `src/styles.css` (توكنز + keyframes + utilities + reduced-motion guard)
+- جديد: `src/components/motion/Reveal.tsx`, `src/components/ui/spinner.tsx`
+- تعديل: `src/components/ui/button.tsx`, `tabs.tsx`, `dialog.tsx`, `sheet.tsx`, `drawer.tsx`, `popover.tsx`, `skeleton.tsx`
+- `src/routes/__root.tsx` (page transition)
+- صفحات: `index.tsx`, `tools.$slug.tsx`, `pricing.tsx`, `guide*.tsx`, `maaroof.tsx`, `contact.tsx`, `dashboard.tsx`, `admin.tsx`
 
-## خارج النطاق (لن يُلمس)
+## خارج النطاق
+- لا تغييرات على المنطق/الـ backend.
+- لا إضافة مكتبات جديدة (نعتمد CSS + IntersectionObserver فقط).
 
-- المنطق الخلفي وserver functions.
-- مخطط قاعدة البيانات وRLS.
-- محتوى المقالات/الأدلة.
-
----
-
-**هل أبدأ التنفيذ بهذا الترتيب؟** (1) نظام التصميم → (2) صفحة الأدوات → (3) الرئيسية → (4) الأنميشن → (5) لمسات PWA/RTL.
+هل أبدأ التنفيذ بهذا الترتيب: (1) التوكنز والـ utilities → (2) الأزرار/التبويبات/الـ overlays → (3) Reveal وانتقال الصفحات → (4) تمرير الأقسام في كل الصفحات؟
