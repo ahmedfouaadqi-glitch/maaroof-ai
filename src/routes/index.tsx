@@ -14,8 +14,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "MAAROOF Ai — GEO for Iraq, Cited by ChatGPT & Gemini" },
       { name: "description", content: "MAAROOF Ai is the Generative Engine Optimization platform for Iraq & MENA. Score, optimize and publish content so 9 AI engines cite your brand in EN, AR & KU." },
-      { property: "og:title", content: "MAAROOF Ai — GEO for Iraq, Cited by AI Engines" },
-      { property: "og:description", content: "Generative Engine Optimization platform for Iraq & MENA. Make 9 AI engines cite your brand in EN, AR, KU." },
+      { property: "og:title", content: "MAAROOF Ai — GEO for Iraq, Cited by ChatGPT & Gemini" },
+      { property: "og:description", content: "MAAROOF Ai is the Generative Engine Optimization platform for Iraq & MENA. Score, optimize and publish content so 9 AI engines cite your brand in EN, AR & KU." },
       { property: "og:url", content: "https://geoiraq.com/" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/" }],
