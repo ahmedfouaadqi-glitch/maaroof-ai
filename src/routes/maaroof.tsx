@@ -9,6 +9,8 @@ const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: 
 import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain } from "lucide-react";
 import { exportToPDF } from "@/lib/exports";
 import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
+import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
+import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
 
 export const Route = createFileRoute("/maaroof")({
   head: () => ({
