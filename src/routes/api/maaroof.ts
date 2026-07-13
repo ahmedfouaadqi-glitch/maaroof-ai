@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/maaroof")({
             };
             try {
               await runMaaroof({
-                userId, goal, language: lang, detectedGeo, geoScope,
+                userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
                 authBearer: auth, origin, emit, signal: abortCtl.signal,
               });
             } catch (e: any) {
