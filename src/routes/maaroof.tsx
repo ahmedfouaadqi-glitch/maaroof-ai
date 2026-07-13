@@ -195,6 +195,11 @@ function MaaroofPage() {
           <div className="rounded-lg border bg-card p-4 flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 font-bold text-lg"><Sparkles className="w-5 h-5 text-primary" /> معروف</div>
             <span className="text-xs text-muted-foreground">وكيلك الذكي للتسويق الرقمي وGEO حول العالم</span>
+            {activeWs && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary">
+                {activeWs.name}
+              </span>
+            )}
             <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
               <span>الخطوات: {stepsCount}</span>
               <span>التكلفة: ${totalUsd.toFixed(4)}</span>
