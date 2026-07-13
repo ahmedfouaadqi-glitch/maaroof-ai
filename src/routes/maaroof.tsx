@@ -42,6 +42,7 @@ function MaaroofPage() {
   const [country, setCountry] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [runs, setRuns] = useState<RunRow[]>([]);
+  const [activeWs, setActiveWs] = useState<Workspace | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -50,10 +51,12 @@ function MaaroofPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("maaroof_runs").select("id, goal, status, started_at, total_usd").order("started_at", { ascending: false }).limit(20);
+      let q = supabase.from("maaroof_runs").select("id, goal, status, started_at, total_usd").order("started_at", { ascending: false }).limit(20);
+      if (activeWs) q = q.eq("workspace_id", activeWs.id);
+      const { data } = await q;
       setRuns((data as any) || []);
     })();
-  }, [user, running]);
+  }, [user, running, activeWs]);
 
   async function start() {
     if (!goal.trim() || running || !user) return;
