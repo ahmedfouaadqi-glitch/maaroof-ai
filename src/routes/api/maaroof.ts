@@ -30,6 +30,14 @@ export const Route = createFileRoute("/api/maaroof")({
         if (!goal) return Response.json({ error: "goal_required" }, { status: 400 });
         const lang = (body?.lang as "ar" | "en" | "ku") || "ar";
         const geoScope = (body?.geo_scope as GeoScope) || undefined;
+        const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
+
+        // Verify workspace ownership if provided.
+        let verifiedWorkspaceId: string | null = null;
+        if (workspaceId) {
+          const { data: ws } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+          if (ws) verifiedWorkspaceId = workspaceId;
+        }
 
         const detectedGeo = detectGeoFromRequest(request);
         const origin = new URL(request.url).origin;
