@@ -75,8 +75,8 @@ export const updateWorkspace = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { id, ...rest } = data;
-    const patch: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(rest)) if (v !== undefined) patch[k] = v;
+    const patch: Partial<typeof rest> = {};
+    for (const [k, v] of Object.entries(rest)) if (v !== undefined) (patch as Record<string, unknown>)[k] = v;
     const { data: row, error } = await supabase
       .from("workspaces")
       .update(patch)
