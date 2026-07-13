@@ -77,6 +77,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     .from("maaroof_runs")
     .insert({
       user_id: ctx.userId,
+      workspace_id: ctx.workspaceId || null,
       goal: ctx.goal,
       status: "running",
       detected_geo: ctx.detectedGeo,
