@@ -53,6 +53,7 @@ export type RunContext = {
   language: "ar" | "en" | "ku";
   detectedGeo: DetectedGeo;
   geoScope?: GeoScope;
+  workspaceId?: string | null;
   authBearer: string; // forwarded to internal /api calls
   origin: string;     // base URL for internal fetches
   emit: (event: string, data: any) => Promise<void>;
