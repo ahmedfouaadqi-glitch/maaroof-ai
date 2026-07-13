@@ -163,14 +163,16 @@ function MaaroofPage() {
       <SiteHeader />
       <div className="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
         {/* Sidebar */}
-        <aside className="space-y-2">
+        <aside className="space-y-3">
+          <WorkspaceSwitcher onChange={setActiveWs} />
+
           <div className="rounded-lg border bg-card p-3">
             <h2 className="flex items-center justify-between gap-2 font-semibold mb-2 text-base">
               <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
               <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"><Brain className="w-3 h-3" /> الذاكرة</Link>
             </h2>
-            <ul className="space-y-1 max-h-[60vh] overflow-y-auto text-sm">
-              {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات بعد.</li>}
+            <ul className="space-y-1 max-h-[40vh] overflow-y-auto text-sm">
+              {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات {activeWs ? "في هذه المساحة" : ""} بعد.</li>}
               {runs.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => loadRun(r.id)} className="w-full text-start p-2 rounded hover:bg-muted">
@@ -183,6 +185,8 @@ function MaaroofPage() {
               ))}
             </ul>
           </div>
+
+          <SchedulesPanel workspaceId={activeWs?.id ?? null} defaultPrompt={goal} />
         </aside>
 
         {/* Main */}
