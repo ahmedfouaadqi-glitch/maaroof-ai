@@ -9,6 +9,8 @@ const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: 
 import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain } from "lucide-react";
 import { exportToPDF } from "@/lib/exports";
 import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
+import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
+import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
 
 export const Route = createFileRoute("/maaroof")({
   head: () => ({
@@ -40,6 +42,7 @@ function MaaroofPage() {
   const [country, setCountry] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [runs, setRuns] = useState<RunRow[]>([]);
+  const [activeWs, setActiveWs] = useState<Workspace | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -48,10 +51,12 @@ function MaaroofPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("maaroof_runs").select("id, goal, status, started_at, total_usd").order("started_at", { ascending: false }).limit(20);
+      let q = supabase.from("maaroof_runs").select("id, goal, status, started_at, total_usd").order("started_at", { ascending: false }).limit(20);
+      if (activeWs) q = q.eq("workspace_id", activeWs.id);
+      const { data } = await q;
       setRuns((data as any) || []);
     })();
-  }, [user, running]);
+  }, [user, running, activeWs]);
 
   async function start() {
     if (!goal.trim() || running || !user) return;
@@ -67,6 +72,7 @@ function MaaroofPage() {
         body: JSON.stringify({
           goal: goal.trim(),
           lang,
+          workspace_id: activeWs?.id,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
         signal: ctl.signal,
@@ -157,14 +163,16 @@ function MaaroofPage() {
       <SiteHeader />
       <div className="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
         {/* Sidebar */}
-        <aside className="space-y-2">
+        <aside className="space-y-3">
+          <WorkspaceSwitcher onChange={setActiveWs} />
+
           <div className="rounded-lg border bg-card p-3">
             <h2 className="flex items-center justify-between gap-2 font-semibold mb-2 text-base">
               <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
               <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"><Brain className="w-3 h-3" /> الذاكرة</Link>
             </h2>
-            <ul className="space-y-1 max-h-[60vh] overflow-y-auto text-sm">
-              {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات بعد.</li>}
+            <ul className="space-y-1 max-h-[40vh] overflow-y-auto text-sm">
+              {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات {activeWs ? "في هذه المساحة" : ""} بعد.</li>}
               {runs.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => loadRun(r.id)} className="w-full text-start p-2 rounded hover:bg-muted">
@@ -177,6 +185,8 @@ function MaaroofPage() {
               ))}
             </ul>
           </div>
+
+          <SchedulesPanel workspaceId={activeWs?.id ?? null} defaultPrompt={goal} />
         </aside>
 
         {/* Main */}
@@ -185,6 +195,11 @@ function MaaroofPage() {
           <div className="rounded-lg border bg-card p-4 flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 font-bold text-lg"><Sparkles className="w-5 h-5 text-primary" /> معروف</div>
             <span className="text-xs text-muted-foreground">وكيلك الذكي للتسويق الرقمي وGEO حول العالم</span>
+            {activeWs && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary">
+                {activeWs.name}
+              </span>
+            )}
             <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
               <span>الخطوات: {stepsCount}</span>
               <span>التكلفة: ${totalUsd.toFixed(4)}</span>

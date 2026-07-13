@@ -132,6 +132,7 @@ export type Database = {
           target_id: string | null
           task_type: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           approval_channel_id?: string | null
@@ -148,6 +149,7 @@ export type Database = {
           target_id?: string | null
           task_type: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           approval_channel_id?: string | null
@@ -164,6 +166,7 @@ export type Database = {
           target_id?: string | null
           task_type?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -178,6 +181,13 @@ export type Database = {
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "agent_targets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -721,6 +731,7 @@ export type Database = {
           last_accessed_at: string
           run_id: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           content: string
@@ -731,6 +742,7 @@ export type Database = {
           last_accessed_at?: string
           run_id?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           content?: string
@@ -741,6 +753,7 @@ export type Database = {
           last_accessed_at?: string
           run_id?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -748,6 +761,13 @@ export type Database = {
             columns: ["run_id"]
             isOneToOne: false
             referencedRelation: "maaroof_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maaroof_memory_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -792,6 +812,7 @@ export type Database = {
       }
       maaroof_runs: {
         Row: {
+          auto_run: boolean
           created_at: string
           detected_geo: Json | null
           error: string | null
@@ -801,15 +822,19 @@ export type Database = {
           id: string
           language: string | null
           model: string | null
+          parent_run_id: string | null
           plan: Json
+          schedule_id: string | null
           started_at: string
           status: string
           steps_count: number
           total_tokens: number
           total_usd: number
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
+          auto_run?: boolean
           created_at?: string
           detected_geo?: Json | null
           error?: string | null
@@ -819,15 +844,19 @@ export type Database = {
           id?: string
           language?: string | null
           model?: string | null
+          parent_run_id?: string | null
           plan?: Json
+          schedule_id?: string | null
           started_at?: string
           status?: string
           steps_count?: number
           total_tokens?: number
           total_usd?: number
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
+          auto_run?: boolean
           created_at?: string
           detected_geo?: Json | null
           error?: string | null
@@ -837,15 +866,110 @@ export type Database = {
           id?: string
           language?: string | null
           model?: string | null
+          parent_run_id?: string | null
           plan?: Json
+          schedule_id?: string | null
           started_at?: string
           status?: string
           steps_count?: number
           total_tokens?: number
           total_usd?: number
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_runs_parent_run_id_fkey"
+            columns: ["parent_run_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maaroof_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maaroof_schedules: {
+        Row: {
+          approval_mode: string
+          cadence: string
+          created_at: string
+          cron_expr: string | null
+          ends_at: string | null
+          force_tools: string[]
+          id: string
+          language: string
+          last_run_at: string | null
+          max_runs: number
+          meta: Json
+          name: string
+          next_run_at: string | null
+          prompt: string
+          runs_done: number
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_mode?: string
+          cadence?: string
+          created_at?: string
+          cron_expr?: string | null
+          ends_at?: string | null
+          force_tools?: string[]
+          id?: string
+          language?: string
+          last_run_at?: string | null
+          max_runs?: number
+          meta?: Json
+          name: string
+          next_run_at?: string | null
+          prompt: string
+          runs_done?: number
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_mode?: string
+          cadence?: string
+          created_at?: string
+          cron_expr?: string | null
+          ends_at?: string | null
+          force_tools?: string[]
+          id?: string
+          language?: string
+          last_run_at?: string | null
+          max_runs?: number
+          meta?: Json
+          name?: string
+          next_run_at?: string | null
+          prompt?: string
+          runs_done?: number
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       maaroof_settings: {
         Row: {
@@ -1651,6 +1775,83 @@ export type Database = {
           id?: string
           projection?: Json
           user_id?: string
+        }
+        Relationships: []
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          brand_summary: string | null
+          brand_url: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          keywords: string[]
+          kind: string
+          language: string
+          meta: Json
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          brand_summary?: string | null
+          brand_url?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          kind?: string
+          language?: string
+          meta?: Json
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          brand_summary?: string | null
+          brand_url?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          kind?: string
+          language?: string
+          meta?: Json
+          name?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
