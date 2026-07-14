@@ -723,35 +723,44 @@ export type Database = {
       }
       maaroof_memory: {
         Row: {
+          capability: string | null
           content: string
           created_at: string
           id: string
           importance: number
           kind: string
           last_accessed_at: string
+          links: Json
           run_id: string | null
+          source_run_id: string | null
           user_id: string
           workspace_id: string | null
         }
         Insert: {
+          capability?: string | null
           content: string
           created_at?: string
           id?: string
           importance?: number
           kind: string
           last_accessed_at?: string
+          links?: Json
           run_id?: string | null
+          source_run_id?: string | null
           user_id: string
           workspace_id?: string | null
         }
         Update: {
+          capability?: string | null
           content?: string
           created_at?: string
           id?: string
           importance?: number
           kind?: string
           last_accessed_at?: string
+          links?: Json
           run_id?: string | null
+          source_run_id?: string | null
           user_id?: string
           workspace_id?: string | null
         }
@@ -814,6 +823,7 @@ export type Database = {
         Row: {
           auto_run: boolean
           created_at: string
+          decision_log: Json
           detected_geo: Json | null
           error: string | null
           finished_at: string | null
@@ -836,6 +846,7 @@ export type Database = {
         Insert: {
           auto_run?: boolean
           created_at?: string
+          decision_log?: Json
           detected_geo?: Json | null
           error?: string | null
           finished_at?: string | null
@@ -858,6 +869,7 @@ export type Database = {
         Update: {
           auto_run?: boolean
           created_at?: string
+          decision_log?: Json
           detected_geo?: Json | null
           error?: string | null
           finished_at?: string | null
