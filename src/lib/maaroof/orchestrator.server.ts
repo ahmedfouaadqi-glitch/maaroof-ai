@@ -2,7 +2,7 @@
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
-import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
