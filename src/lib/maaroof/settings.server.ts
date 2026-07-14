@@ -1,6 +1,15 @@
 // Maaroof dynamic settings — cached for 60s. Read by orchestrator + api/maaroof.
 import { createClient } from "@supabase/supabase-js";
 
+export type CouncilSettings = {
+  /** Turn the Expert Council deliberation phase on/off (default: on). */
+  enabled: boolean;
+  /** Max experts consulted in one run. */
+  max_experts: number;
+  /** If true, council writes each opinion into maaroof_runs.decision_log. */
+  log_decisions: boolean;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -11,6 +20,7 @@ export type MaaroofSettings = {
   enabled_tools: string[];
   system_prompt_extra: string;
   kill_switch: boolean;
+  council: CouncilSettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
@@ -27,6 +37,7 @@ const DEFAULTS: MaaroofSettings = {
   ],
   system_prompt_extra: "",
   kill_switch: false,
+  council: { enabled: true, max_experts: 3, log_decisions: true },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;

@@ -2,7 +2,7 @@
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
-import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
@@ -122,6 +122,91 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
+
+    // 3.5) EXPERT COUNCIL — deliberate before acting.
+    //      Each capability required by the plan gets a short opinion from
+    //      the best-fit expert (data-only, driven by tool-catalog DNA).
+    //      Opinions are appended to maaroof_runs.decision_log for audit.
+    const decisionLog: any[] = [];
+    if (settings.council?.enabled) {
+      await ctx.emit("phase", { phase: "council" });
+      const requiredCaps = new Set<Capability>();
+      for (const s of steps) {
+        const def = TOOL_CATALOG.find((t) => t.key === s.tool);
+        for (const c of def?.capabilities || []) requiredCaps.add(c);
+      }
+      const capsList = Array.from(requiredCaps).slice(0, settings.council.max_experts);
+      for (const cap of capsList) {
+        if (ctx.signal.aborted) break;
+        const experts = findExpertsByCapability(cap);
+        const expert: ToolDef | undefined = experts[0];
+        if (!expert) continue;
+        try {
+          const cResp = await callGateway(apiKey, MODEL, [
+            {
+              role: "system",
+              content: `You are the "${expert.labels.en}" expert (DNA: ${expert.dna || expert.labels.en}). ` +
+                `Strengths: ${(expert.strengths || []).join(", ") || "—"}. ` +
+                `Weaknesses: ${(expert.weaknesses || []).join(", ") || "—"}. ` +
+                `Reply with a JSON object: { "opinion": "<one paragraph>", "objection": "<empty or issue>", "suggest_tools": ["tool_key", ...], "confidence": 0-100 }. ` +
+                `Use the user's language (${ctx.language}).`,
+            },
+            {
+              role: "user",
+              content: `Goal: ${ctx.goal}\nCapability under review: ${cap}\nProposed plan (JSON):\n${JSON.stringify(planObj).slice(0, 2500)}\n\nGive your expert opinion.`,
+            },
+          ], { signal: ctx.signal });
+          totalUsd += cResp.usd; totalTokens += cResp.tokens;
+          const parsed = extractJsonObject<any>(cResp.text) || { opinion: cResp.text };
+          const entry = {
+            phase: "council",
+            capability: cap,
+            expert: expert.key,
+            opinion: parsed.opinion || parsed.text || cResp.text.slice(0, 400),
+            objection: parsed.objection || null,
+            suggest_tools: parsed.suggest_tools || [],
+            confidence: Number(parsed.confidence) || null,
+            at: new Date().toISOString(),
+          };
+          decisionLog.push(entry);
+          await ctx.emit("council", entry);
+          await logMsg("council", entry, cResp.tokens, cResp.usd);
+        } catch (e: any) {
+          const entry = { phase: "council", capability: cap, expert: expert.key, error: String(e?.message || e), at: new Date().toISOString() };
+          decisionLog.push(entry);
+          await ctx.emit("council", entry);
+        }
+      }
+
+      // Maaroof's final decision on the council opinions.
+      if (decisionLog.length) {
+        try {
+          const dResp = await callGateway(apiKey, MODEL, [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: `Council opinions (JSON): ${JSON.stringify(decisionLog).slice(0, 4000)}\n\nWrite a brief final decision (1-2 sentences in ${ctx.language}): keep plan, adjust, or add a step. Return JSON: { "decision": "...", "rationale": "..." }`,
+            },
+          ], { signal: ctx.signal });
+          totalUsd += dResp.usd; totalTokens += dResp.tokens;
+          const d = extractJsonObject<any>(dResp.text) || { decision: dResp.text };
+          const finalEntry = { phase: "decision", decision: d.decision, rationale: d.rationale, at: new Date().toISOString() };
+          decisionLog.push(finalEntry);
+          await ctx.emit("decision", finalEntry);
+          await logMsg("decision", finalEntry, dResp.tokens, dResp.usd);
+          if (settings.council.log_decisions) {
+            try {
+              await remember({
+                userId: ctx.userId, runId, kind: "decision",
+                content: `${d.decision || ""} — ${d.rationale || ""}`.slice(0, 500),
+                importance: 3, sourceRunId: runId,
+              });
+            } catch {}
+          }
+        } catch {}
+        await db().from("maaroof_runs").update({ decision_log: decisionLog }).eq("id", runId);
+      }
+    }
 
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];

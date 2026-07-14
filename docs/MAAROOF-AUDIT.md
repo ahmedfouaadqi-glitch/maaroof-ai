@@ -268,3 +268,51 @@
 - **Approval mode**: `per_run` (يسأل قبل كل تشغيل) / `auto_within_quota` (يشغّل تلقائياً حتى نفاد الحصة) / `first_time_then_auto`.
 - **Real cost**: `token_ledger.meta.real_usd_cost` من `usage` في رد Lovable AI Gateway.
 - **Unmetered**: صف قديم لا يحمل `real_usd_cost` — لا يُحتسب في تحليل الهامش.
+
+---
+
+## 9. Constitution Compliance Matrix (v1 — الجزء 1)
+
+مبدأ التنفيذ الحاكم: **طوّر لا تستبدل**. الجدول التالي يوثّق ما هو قائم مقابل ما يطلبه دستور Executive AI OS، والقرار المتَّخذ في هذه الجلسة.
+
+| مكوّن الدستور | القائم في المشروع | القرار | ملف/سطر |
+|---|---|---|---|
+| Capability Registry | `TOOL_CATALOG` قائم كقائمة أدوات | **طُوِّر** — أضيفت `capabilities/strengths/weaknesses/preferredModels/costProfile/dna` + دوال `findExpertsByCapability` / `pickExpertForCapability` / `listCapabilities`. لا جدول DB جديد. | `src/lib/tool-catalog.ts` |
+| Expert Council | `orchestrator` كان Plan→Act→Reflect مفرد | **طُوِّر** — أضيفت مرحلة `council` بعد `plan`: لكل قدرة يستدعي رأي خبير موجز، ثم قرار نهائي، دون حذف Plan/Act/Reflect. | `src/lib/maaroof/orchestrator.server.ts` (بعد `plan`) |
+| Living Memory | `maaroof_memory` (LRU + importance) | **طُوِّر** — أعمدة `links jsonb`, `source_run_id uuid`, `capability text` + فهرس. نوعان جديدان: `knowledge`, `decision`. `recall` يقبل `capability`. | `maaroof_memory` (ALTER) + `memory.server.ts` |
+| Decision Intelligence | لا سجل قرارات مستقل | **طُوِّر** — عمود `decision_log jsonb` على `maaroof_runs` يُكتب من مرحلة المجلس، ونسخة ملخّصة في الذاكرة. | `maaroof_runs.decision_log` + orchestrator |
+| Sub Agents | `parent_run_id` قائم أصلاً | **مُستخدَم كما هو** — لا تكرار. | `maaroof_runs.parent_run_id` |
+| Cost System | `token_ledger` + `chargeTokens` | **مُستخدَم كما هو** — كل نداء مجلس/قرار يُحسَب ضمن `totalTokens/totalUsd` للـrun. | `orchestrator` `callGateway` |
+| Workspaces | جدول `workspaces` + `workspace_id` في الجولات | **مُستخدَم كما هو** — الذاكرة والقرارات تبقى على مستوى المستخدم؛ عزل الـworkspace في الـrun نفسه. | `workspaces` (بلا تغيير) |
+| Backward compatibility | كل الحقول القديمة | **محفوظة** — الأنواع القديمة (`fact/preference/task_result/summary`) لا تزال مقبولة، الإعدادات القديمة تعمل بالقيم الافتراضية. | — |
+
+### كيف يعمل مجلس الخبراء عملياً
+
+```text
+plan()   → JSON steps
+   │
+   ▼
+council()  ── لكل capability في steps:
+   │   ├─ اختر أفضل خبير (from tool-catalog DNA)
+   │   ├─ اسأله: opinion / objection / suggest_tools / confidence
+   │   └─ append → decisionLog[]
+   │
+decide()  ── معروف يلخّص الآراء → { decision, rationale }
+   │         يُحفظ في maaroof_runs.decision_log
+   │         ويُحفَظ ملخّص كذاكرة kind="decision"
+   ▼
+act()    → كما هو (خطوات الخطة)
+reflect() → كما هو
+```
+
+- **kill switch**: `maaroof_settings.council.enabled = false` يعطّل المرحلة بالكامل دون كسر أي شيء.
+- **max_experts**: يحدّ عدد آراء الخبراء لكل run (افتراضياً 3) لضبط التكلفة.
+- **log_decisions**: يحفظ القرار النهائي كذاكرة `kind=decision` للاستدعاء لاحقاً.
+
+### خارج نطاق الجزء 1 (سيُعالَج مع الأجزاء 2+)
+
+- Hybrid MCP للمستخدمين النهائيين (توسيع اتصالات خارجية).
+- Future-Driven Engine (تنبّؤات طويلة المدى).
+- Knowledge Graph مع embeddings حقيقية (تمّ حجز عمود `links jsonb` استعداداً).
+- Platform Intelligence (تحليلات عبر المستخدمين).
+
