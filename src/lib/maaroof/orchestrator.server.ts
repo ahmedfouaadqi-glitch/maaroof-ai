@@ -71,6 +71,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
 
+  // Load workspace profile if scoped — used by envision/plan/council.
+  let workspaceProfile: any = null;
+  if (ctx.workspaceId) {
+    try {
+      const { data } = await db()
+        .from("workspaces")
+        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
+        .eq("id", ctx.workspaceId)
+        .maybeSingle();
+      workspaceProfile = data || null;
+    } catch {}
+  }
 
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
@@ -100,21 +112,46 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   await logMsg("user", { text: ctx.goal });
 
   try {
-    // 2) Recall memory
-    const memories = await recall(ctx.userId, ctx.goal, 10);
+    // 2) Recall memory (workspace-scoped when available)
+    const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
     const systemPrompt = settings.system_prompt_extra ? `${baseSystemPrompt}\n\n[Admin guidance]\n${settings.system_prompt_extra}` : baseSystemPrompt;
 
-    // 3) PLAN
+    // 2.5) ENVISION — Future-Driven step (Part 2). Derive a future_goal and
+    //      backward_chain BEFORE planning. Kill-switchable; returns to Part 1
+    //      behaviour when disabled.
+    const decisionLog: any[] = [];
+    let envision: any = null;
+    if (settings.council?.envision_enabled !== false) {
+      try {
+        await ctx.emit("phase", { phase: "envision" });
+        const eResp = await callGateway(apiKey, MODEL, [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Goal: ${ctx.goal}\n\nApply Future-Driven thinking. Return JSON only:\n{ "future_goal": "<1-2 sentence outcome to aim for>", "backward_chain": ["step working backwards from the future", "..."], "success_metrics": ["..."] }\nUse the user's language (${ctx.language}).`,
+          },
+        ], { signal: ctx.signal });
+        totalUsd += eResp.usd; totalTokens += eResp.tokens;
+        envision = extractJsonObject<any>(eResp.text) || null;
+        if (envision) {
+          decisionLog.push({ phase: "envision", ...envision, at: new Date().toISOString() });
+          await ctx.emit("envision", envision);
+          await logMsg("envision", envision, eResp.tokens, eResp.usd);
+        }
+      } catch {}
+    }
+
+    // 3) PLAN (uses envision output when present)
     await ctx.emit("phase", { phase: "planning" });
+    const planUserMsg =
+      (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
+      `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
     const planResp = await callGateway(apiKey, MODEL, [
       { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`,
-      },
+      { role: "user", content: planUserMsg },
     ], { signal: ctx.signal });
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
@@ -127,7 +164,6 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     //      Each capability required by the plan gets a short opinion from
     //      the best-fit expert (data-only, driven by tool-catalog DNA).
     //      Opinions are appended to maaroof_runs.decision_log for audit.
-    const decisionLog: any[] = [];
     if (settings.council?.enabled) {
       await ctx.emit("phase", { phase: "council" });
       const requiredCaps = new Set<Capability>();
@@ -319,8 +355,27 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
 }
 
-function buildSystemPrompt(ctx: RunContext, geo: { country: string; city?: string; label: string }, memories: string[]): string {
+function buildSystemPrompt(
+  ctx: RunContext,
+  geo: { country: string; city?: string; label: string },
+  memories: string[],
+  workspaceProfile?: any,
+): string {
   const memBlock = memories.length ? `\n\nLong-term memory about this user:\n${memories.slice(0, 10).join("\n")}` : "";
+  let wsBlock = "";
+  if (workspaceProfile) {
+    const wp = workspaceProfile;
+    const bits: string[] = [];
+    if (wp.name) bits.push(`Workspace: ${wp.name} (${wp.kind || "brand"})`);
+    if (wp.brand_url) bits.push(`Site: ${wp.brand_url}`);
+    if (wp.brand_summary) bits.push(`Brand: ${String(wp.brand_summary).slice(0, 400)}`);
+    if (Array.isArray(wp.keywords) && wp.keywords.length) bits.push(`Keywords: ${wp.keywords.slice(0, 10).join(", ")}`);
+    if (wp.profile && Object.keys(wp.profile).length) bits.push(`Profile: ${JSON.stringify(wp.profile).slice(0, 600)}`);
+    if (Array.isArray(wp.goals) && wp.goals.length) bits.push(`Goals: ${JSON.stringify(wp.goals).slice(0, 400)}`);
+    if (wp.policies && Object.keys(wp.policies).length) bits.push(`Policies: ${JSON.stringify(wp.policies).slice(0, 400)}`);
+    if (wp.risk_level) bits.push(`Risk level: ${wp.risk_level}`);
+    if (bits.length) wsBlock = `\n\n[Workspace context]\n${bits.join("\n")}`;
+  }
   return `أنت "معروف" — وكيل ذكي محترف للتسويق الرقمي وتحسين الظهور في محركات البحث الذكية (GEO) حول العالم.
 You are "Maaroof" — a Manus-style intelligent agent that PLANS, USES TOOLS, and REFLECTS to achieve the user's goal.
 
@@ -334,7 +389,7 @@ Rules:
 - Be evidence-based; never invent facts, numbers, or sources.
 - Prefer 2-5 well-chosen tool steps over many shallow ones.
 - For each tool, provide minimal valid input; the executor injects "scope" and "lang" automatically.
-- Reply concisely in JSON when asked.${memBlock}`;
+- Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
 async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal } = {}): Promise<{ text: string; tokens: number; usd: number }> {

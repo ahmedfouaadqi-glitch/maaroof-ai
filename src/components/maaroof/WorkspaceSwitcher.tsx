@@ -33,7 +33,7 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
       setLoading(true);
       try {
         const res = await list();
-        const arr = (res.items as Workspace[]) || [];
+        const arr = (res.items as unknown as Workspace[]) || [];
         setItems(arr);
         const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
         const found = arr.find((w) => w.id === saved) || arr[0] || null;
@@ -59,7 +59,7 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
     setCreating(true);
     try {
       const res = await create({ data: { name: name.trim(), kind, brand_url: brandUrl.trim() || undefined, keywords: [], language: "ar" } });
-      const w = res.workspace as Workspace;
+      const w = res.workspace as unknown as Workspace;
       setItems((p) => [w, ...p]);
       pick(w);
       setName(""); setBrandUrl(""); setShowForm(false);

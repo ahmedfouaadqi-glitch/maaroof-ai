@@ -1,72 +1,60 @@
 
-# خطة تطوير معروف — Executive AI OS (الجزء 1)
+# الجزء 2 — Cognitive Architecture (تطوير لا استبدال)
 
-مبدأ حاكم: **طوّر لا تستبدل**. لا نُنشئ جدولاً/API/مكوّناً جديداً ما لم يكن الموجود عاجزاً كلياً. كل خطوة توثَّق في `docs/MAAROOF-AUDIT.md`.
+يُطبَّق دستور المشروع: كل بند من الجزء 2 يُدمَج داخل ما هو قائم (workspaces, maaroof_memory, maaroof_runs, orchestrator, schedules)، بدون جداول/مسارات/مكوّنات جديدة إلا حيث لا يوجد مكافئ.
 
-## المرحلة 0 — تدقيق قبل التنفيذ (لا كود)
+## مصفوفة الامتثال (Part 2)
 
-تحديث `docs/MAAROOF-AUDIT.md` بجدول مقارنة لكل مكوّن مطلوب في الدستور مقابل ما هو قائم:
-
-| مطلوب الدستور | القائم اليوم | القرار |
+| مكوّن الدستور | القائم | القرار |
 |---|---|---|
-| Capability Registry | `src/lib/tool-catalog.ts` (قائمة أدوات + خطط) | **يُطوَّر** — إضافة حقول قدرات |
-| Expert Council | `orchestrator.server.ts` (Plan-Act-Reflect مفرد) | **يُطوَّر** — طبقة نقاش داخلية |
-| Living Memory | `maaroof_memory` (LRU + importance) | **يُطوَّر** — إضافة روابط ونوع "knowledge" |
-| Sub Agents | `parent_run_id` موجود بالفعل | **يُستخدم كما هو** |
-| Decision Intelligence | لا يوجد سجل قرارات مستقل | **يُضاف عبر تطوير `maaroof_runs`** (عمود `decision_log jsonb`) |
-| Cost System | `token_ledger` + `chargeTokens` | **يُستخدم كما هو** |
-| Workspaces | جدول `workspaces` قائم | **يُستخدم كما هو** |
+| Future-Driven thinking | `plan()` مفرد | **تطوير**: إضافة مرحلة `envision()` قبل `plan` تُنتج future_goal + backward_chain — تُخزَّن في `decision_log` |
+| Executive Thinking (Understand→…→Evolve) | Plan-Council-Act-Reflect | **تطوير**: إعادة تسمية داخلية للمراحل ودمج Predict/Simulate/Evaluate ضمن `council` الحالي، وObserve/Optimize/Learn ضمن `reflect` — بلا كسر التسلسل |
+| Workspace Intelligence (Profile/Policies/Goals/Graph/Timeline…) | `workspaces` (name, kind, brand_url, brand_summary, keywords, language, country, city) | **تطوير**: إضافة أعمدة jsonb: `profile`, `policies`, `goals`, `success_metrics`, `preferred_models`, `preferred_experts`, `preferred_mcp`, `risk_level`, `budget`. Timeline/Decisions/Costs تُشتَق من `maaroof_runs` مُفلترة بـ`workspace_id` — لا جدول جديد |
+| Workspace Memory / Brand Memory | `maaroof_memory` (user-scoped) | **تطوير**: إضافة `workspace_id uuid` + فهرس؛ الاستدعاء يرجّح الذاكرة داخل نفس الـworkspace أولاً |
+| Memory Intelligence (Confidence/Freshness/Reliability/Source/UsageCount/DecisionImpact/LearningScore) | `importance`, `last_accessed_at` | **تطوير**: إضافة أعمدة `confidence numeric`, `freshness_at timestamptz`, `reliability numeric`, `source text`, `usage_count int`, `decision_impact numeric`, `learning_score numeric`. `recall` يُدمج هذه في ترجيح النتائج |
+| Memory Layers (working/short/long/semantic/project/workspace/brand/decision/capability/agent/subagent/platform) | `MemoryKind` enum: fact/preference/task_result/summary/knowledge/decision | **تطوير**: توسيع الـenum بالطبقات الجديدة — الأنواع القديمة تبقى مقبولة |
+| Knowledge Refresh (Firecrawl/Search/CompetitorScan → versioning) | `firecrawl.ts` + `schedules` + `competitor_watch` قائم | **تطوير**: schedule template جاهز اسمه `knowledge_refresh` يستدعي الأدوات القائمة ويحفظ الناتج كـ`memory kind=knowledge` مع `links.previous_version` (Versioning عبر السلسلة، بلا حذف) |
+| Knowledge Graph | `maaroof_memory.links jsonb` محجوز أصلاً | **تطوير**: helpers جديدة في `memory.server.ts` تبني/تقرأ الحواف من نفس العمود — لا جدول |
+| Decision DNA | `maaroof_runs.decision_log` موجود | **تطوير**: توسيع شكل عنصر السجل ليشمل: rejected_alternatives, tool_choice_reason, model_choice_reason, agent_choice_reason, replan_reason |
+| Learning DNA | reflect ينتج ملخص فقط | **تطوير**: `reflect()` يكتب سجل `memory kind=learning` (what_worked/what_failed/what_to_repeat/what_to_avoid) على مستوى workspace |
+| Platform Intelligence (aggregate, no PII) | لا يوجد | **جديد مبرَّر**: view/materialized `platform_intelligence_v` فقط (تجميع بدون user_id) — لا جدول خام. لوحة الإدارة تعرضها في تبويب Cognitive Insights القائم |
 
-مخرج المرحلة: قسم جديد في ملف التدقيق باسم "Constitution Compliance Matrix".
+## التنفيذ (مراحل صغيرة قابلة للتحقق)
 
-## المرحلة 1 — Capability Registry (تطوير `tool-catalog.ts`)
+### Phase 2A — Workspace Intelligence
+- Migration واحدة: `ALTER workspaces ADD profile jsonb, policies jsonb, goals jsonb, success_metrics jsonb, preferred_models jsonb, preferred_experts jsonb, preferred_mcp jsonb, risk_level text, budget jsonb`.
+- توسيع `workspaces.functions.ts` (نفس الملف): حقول اختيارية في update/create + قراءة كاملة.
+- تبويب "Brand Profile" داخل `WorkspaceSwitcher.tsx` القائم (بدون route جديد) لتحرير الحقول.
+- Orchestrator يقرأ الـprofile ويُمرّره ضمن `RunContext` كـ`workspaceProfile` — تُستخدَم في `plan/council` تلقائياً.
 
-بدل جدول جديد، نضيف إلى نفس الملف حقولاً لكل أداة:
-```ts
-capabilities: Capability[]     // ["competitor_analysis","seo","forecasting",...]
-strengths: string[]
-weaknesses: string[]
-preferred_models: string[]
-cost_profile: "light"|"medium"|"heavy"
-```
-+ دالة `findExpertsByCapability(cap)` تُستخدم من الأوركستريتور بدل `tool by name`.
-- **لا جدول DB جديد** (المعلومات ثابتة إعلانية).
-- تحديث `MaaroofAdminTab` لعرض المصفوفة (قراءة فقط) لتأكيد عدم التكرار.
+### Phase 2B — Living Memory Evolution
+- Migration: `ALTER maaroof_memory ADD workspace_id uuid, confidence numeric, freshness_at timestamptz, reliability numeric, source text, usage_count int DEFAULT 0, decision_impact numeric, learning_score numeric` + فهرس `(workspace_id, kind, importance)`.
+- توسيع `MemoryKind` في `memory.server.ts` (backward compatible).
+- `recall()`: ترجيح مركّب = `importance*0.35 + freshness*0.2 + reliability*0.15 + confidence*0.15 + decision_impact*0.1 + learning*0.05`، مع أولوية لنفس `workspace_id` ثم capability.
+- `remember()`: يقبل الحقول الجديدة بقيم افتراضية معقولة، ويزيد `usage_count` عند كل recall.
+- Knowledge Graph helpers: `linkMemories(aId, bId, relation)` تُخزّن الحواف في `links[]`.
 
-## المرحلة 2 — Expert Council (تطوير الأوركستريتور)
+### Phase 2C — Future-Driven & Executive Thinking
+- في `orchestrator.server.ts` (نفس الملف): مرحلة `envision(goal, workspaceProfile) → { future_goal, backward_chain[] }` قبل `plan()`. الناتج يُحقن في برومبت `plan` القائم.
+- `council()` يوسَّع داخلياً: Predict + Simulate + Evaluate تُطلَب من كل خبير في نفس النداء (بدون زيادة نداءات LLM).
+- `reflect()` يوسَّع لإخراج Learning DNA وحفظه كذاكرة `kind=learning` مع `learning_score`.
+- kill-switch جديد في `maaroof_settings.council.envision_enabled`.
 
-داخل `src/lib/maaroof/orchestrator.server.ts` نضيف مرحلة `deliberate()` قبل `act()`:
-1. `plan()` كما هو → يُنتج مهمة.
-2. **جديد**: `council()` — لكل capability مطلوبة نستدعي "خبير" (نداء LLM موجز بشخصية الأداة) لإبداء الرأي/الاعتراض.
-3. `decide()` — يُلخّص معروف الآراء ويختار الخطة النهائية ويكتبها في `decision_log`.
-4. `act()` و `reflect()` كما هو.
+### Phase 2D — Decision & Learning DNA
+- شكل موحّد لعناصر `decision_log`: `{ stage, decision, rationale, rejected_alternatives, tool_choice_reason, model_choice_reason, agent_choice_reason, replan_reason, confidence }`.
+- `MaaroofAdminTab` القائم يعرض هذه الحقول (تعديل عرض فقط، لا مكوّن جديد).
 
-- كل خبير عبارة عن **بيانات** (DNA من tool-catalog) + قالب برومبت — بلا جداول/APIs جديدة.
-- إعداد "kill switch" و "council depth" في `maaroof_settings` القائم (عمود jsonb `council` جديد).
+### Phase 2E — Knowledge Refresh (schedule template)
+- بدل جدول جديد: نضيف `template` معروف اسمه `knowledge_refresh` داخل `SchedulesPanel.tsx` القائم. يستخدم Firecrawl + `research` + `competitor_monitor` القائمة، ويكتب `memory kind=knowledge` مع `links.previous_version_id` (Versioning عبر السلسلة).
 
-## المرحلة 3 — Living Memory (تطوير `maaroof_memory`)
+### Phase 2F — Platform Intelligence
+- Migration: `CREATE VIEW platform_intelligence_v AS SELECT` تجميع (best_plans, best_tool_orderings, avg_cost, avg_quality) من `maaroof_runs + token_ledger` بدون `user_id`.
+- عرضها في تبويب `CognitiveInsightsTab.tsx` القائم (لا تبويب جديد).
 
-- إضافة أعمدة عبر migration واحدة: `links jsonb`, `source_run_id uuid`, `capability text`, `embedding` (اختياري لاحقاً).
-- تحديث `memory.server.ts`: `recall` تُرجّح حسب `capability` المطلوبة + last_accessed + importance.
-- نوع جديد ضمن `MemoryKind`: `"knowledge"` (حقائق مستدامة) و `"decision"` (قرارات مجلس).
-- عرض في `/maaroof.memory` مع فلاتر بحسب capability.
+## التحقق بعد التنفيذ
+- backward compatibility: الجولات القديمة (بلا workspace_id) تعمل كما هي.
+- kill-switches: `council.enabled=false` و`council.envision_enabled=false` تُرجع للسلوك السابق حرفياً.
+- توثيق: قسم "Part 2 Compliance" في `docs/MAAROOF-AUDIT.md` بعد كل Phase.
 
-## المرحلة 4 — Decision Intelligence
-
-- Migration: `ALTER TABLE maaroof_runs ADD COLUMN decision_log jsonb DEFAULT '[]'`.
-- الأوركستريتور يكتب كل قرار (خيار، رأي مجلس، سبب، تكلفة متوقعة).
-- تبويب `MaaroofAdminTab` يضيف قسم "Decision Audit" مع تصدير CSV (يُعيد استخدام `ExportButtons`).
-
-## قواعد التنفيذ
-
-- كل PR في هذه الخطة يبدأ بقراءة الملف الهدف كاملاً وتوثيق "ما القائم" قبل التعديل.
-- لا جداول جديدة عدا `ALTER` على القائم.
-- لا مسارات API جديدة — `/api/maaroof` القائم يستضيف كل التحسينات.
-- بعد كل مرحلة: قسم "Audit after implementation" في `docs/MAAROOF-AUDIT.md`.
-
-## خارج النطاق الآن (ينتظر الأجزاء 2+)
-
-Hybrid MCP للمستخدم النهائي، Future-Driven Engine، Knowledge Graph بـ embeddings، Platform Intelligence — نتناولها عند وصول بقية أجزاء الدستور.
-
----
-عند الموافقة أبدأ بالمرحلة 0 (تحديث ملف التدقيق) ثم المرحلة 1.
+## خارج النطاق (ينتظر الجزء 3)
+Agent Factory، Dynamic Sub-Agents، Hybrid MCP، Cost Intelligence، Admin Intelligence.

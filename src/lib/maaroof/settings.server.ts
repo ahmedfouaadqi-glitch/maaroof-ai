@@ -8,6 +8,14 @@ export type CouncilSettings = {
   max_experts: number;
   /** If true, council writes each opinion into maaroof_runs.decision_log. */
   log_decisions: boolean;
+  /**
+   * Future-Driven "envision" phase (Part 2). When true, orchestrator runs a
+   * brief envision() step before plan() to derive a future_goal + backward_chain.
+   * Kill-switching this returns behaviour to Part 1 exactly.
+   */
+  envision_enabled?: boolean;
+  /** Persist Learning DNA to memory kind=learning after each run. */
+  learning_enabled?: boolean;
 };
 
 export type MaaroofSettings = {
@@ -37,7 +45,7 @@ const DEFAULTS: MaaroofSettings = {
   ],
   system_prompt_extra: "",
   kill_switch: false,
-  council: { enabled: true, max_experts: 3, log_decisions: true },
+  council: { enabled: true, max_experts: 3, log_decisions: true, envision_enabled: true, learning_enabled: true },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
