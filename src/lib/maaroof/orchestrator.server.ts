@@ -71,6 +71,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
 
+  // Load workspace profile if scoped — used by envision/plan/council.
+  let workspaceProfile: any = null;
+  if (ctx.workspaceId) {
+    try {
+      const { data } = await db()
+        .from("workspaces")
+        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
+        .eq("id", ctx.workspaceId)
+        .maybeSingle();
+      workspaceProfile = data || null;
+    } catch {}
+  }
 
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
@@ -100,12 +112,53 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   await logMsg("user", { text: ctx.goal });
 
   try {
-    // 2) Recall memory
-    const memories = await recall(ctx.userId, ctx.goal, 10);
+    // 2) Recall memory (workspace-scoped when available)
+    const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
     const systemPrompt = settings.system_prompt_extra ? `${baseSystemPrompt}\n\n[Admin guidance]\n${settings.system_prompt_extra}` : baseSystemPrompt;
+
+    // 2.5) ENVISION — Future-Driven step (Part 2). Derive a future_goal and
+    //      backward_chain BEFORE planning. Kill-switchable; returns to Part 1
+    //      behaviour when disabled.
+    const decisionLog: any[] = [];
+    let envision: any = null;
+    if (settings.council?.envision_enabled !== false) {
+      try {
+        await ctx.emit("phase", { phase: "envision" });
+        const eResp = await callGateway(apiKey, MODEL, [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Goal: ${ctx.goal}\n\nApply Future-Driven thinking. Return JSON only:\n{ "future_goal": "<1-2 sentence outcome to aim for>", "backward_chain": ["step working backwards from the future", "..."], "success_metrics": ["..."] }\nUse the user's language (${ctx.language}).`,
+          },
+        ], { signal: ctx.signal });
+        totalUsd += eResp.usd; totalTokens += eResp.tokens;
+        envision = extractJsonObject<any>(eResp.text) || null;
+        if (envision) {
+          decisionLog.push({ phase: "envision", ...envision, at: new Date().toISOString() });
+          await ctx.emit("envision", envision);
+          await logMsg("envision", envision, eResp.tokens, eResp.usd);
+        }
+      } catch {}
+    }
+
+    // 3) PLAN (uses envision output when present)
+    await ctx.emit("phase", { phase: "planning" });
+    const planUserMsg =
+      (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
+      `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
+    const planResp = await callGateway(apiKey, MODEL, [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: planUserMsg },
+    ], { signal: ctx.signal });
+    totalUsd += planResp.usd; totalTokens += planResp.tokens;
+    const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
+    const steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
+    await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
+    await logMsg("plan", planObj, planResp.tokens, planResp.usd);
+    await ctx.emit("plan", { plan: planObj });
 
     // 3) PLAN
     await ctx.emit("phase", { phase: "planning" });
