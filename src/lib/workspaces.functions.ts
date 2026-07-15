@@ -101,7 +101,7 @@ export const updateWorkspace = createServerFn({ method: "POST" })
     for (const [k, v] of Object.entries(rest)) if (v !== undefined) patch[k] = v;
     const { data: row, error } = await supabase
       .from("workspaces")
-      .update(patch)
+      .update(patch as any)
       .eq("id", id)
       .eq("owner_id", userId)
       .select(WORKSPACE_COLUMNS)
