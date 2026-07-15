@@ -724,43 +724,64 @@ export type Database = {
       maaroof_memory: {
         Row: {
           capability: string | null
+          confidence: number | null
           content: string
           created_at: string
+          decision_impact: number | null
+          freshness_at: string | null
           id: string
           importance: number
           kind: string
           last_accessed_at: string
+          learning_score: number | null
           links: Json
+          reliability: number | null
           run_id: string | null
+          source: string | null
           source_run_id: string | null
+          usage_count: number
           user_id: string
           workspace_id: string | null
         }
         Insert: {
           capability?: string | null
+          confidence?: number | null
           content: string
           created_at?: string
+          decision_impact?: number | null
+          freshness_at?: string | null
           id?: string
           importance?: number
           kind: string
           last_accessed_at?: string
+          learning_score?: number | null
           links?: Json
+          reliability?: number | null
           run_id?: string | null
+          source?: string | null
           source_run_id?: string | null
+          usage_count?: number
           user_id: string
           workspace_id?: string | null
         }
         Update: {
           capability?: string | null
+          confidence?: number | null
           content?: string
           created_at?: string
+          decision_impact?: number | null
+          freshness_at?: string | null
           id?: string
           importance?: number
           kind?: string
           last_accessed_at?: string
+          learning_score?: number | null
           links?: Json
+          reliability?: number | null
           run_id?: string | null
+          source?: string | null
           source_run_id?: string | null
+          usage_count?: number
           user_id?: string
           workspace_id?: string | null
         }
@@ -1823,9 +1844,11 @@ export type Database = {
         Row: {
           brand_summary: string | null
           brand_url: string | null
+          budget: Json
           city: string | null
           country: string | null
           created_at: string
+          goals: Json
           id: string
           keywords: string[]
           kind: string
@@ -1833,14 +1856,23 @@ export type Database = {
           meta: Json
           name: string
           owner_id: string
+          policies: Json
+          preferred_experts: Json
+          preferred_mcp: Json
+          preferred_models: Json
+          profile: Json
+          risk_level: string | null
+          success_metrics: Json
           updated_at: string
         }
         Insert: {
           brand_summary?: string | null
           brand_url?: string | null
+          budget?: Json
           city?: string | null
           country?: string | null
           created_at?: string
+          goals?: Json
           id?: string
           keywords?: string[]
           kind?: string
@@ -1848,14 +1880,23 @@ export type Database = {
           meta?: Json
           name: string
           owner_id: string
+          policies?: Json
+          preferred_experts?: Json
+          preferred_mcp?: Json
+          preferred_models?: Json
+          profile?: Json
+          risk_level?: string | null
+          success_metrics?: Json
           updated_at?: string
         }
         Update: {
           brand_summary?: string | null
           brand_url?: string | null
+          budget?: Json
           city?: string | null
           country?: string | null
           created_at?: string
+          goals?: Json
           id?: string
           keywords?: string[]
           kind?: string
@@ -1863,12 +1904,32 @@ export type Database = {
           meta?: Json
           name?: string
           owner_id?: string
+          policies?: Json
+          preferred_experts?: Json
+          preferred_mcp?: Json
+          preferred_models?: Json
+          profile?: Json
+          risk_level?: string | null
+          success_metrics?: Json
           updated_at?: string
         }
         Relationships: []
       }
     }
     Views: {
+      platform_intelligence_v: {
+        Row: {
+          avg_decisions: number | null
+          avg_steps: number | null
+          avg_tokens: number | null
+          avg_usd: number | null
+          day: string | null
+          runs: number | null
+          runs_done: number | null
+          runs_error: number | null
+        }
+        Relationships: []
+      }
       v_user_tool_spend: {
         Row: {
           last_used_at: string | null
