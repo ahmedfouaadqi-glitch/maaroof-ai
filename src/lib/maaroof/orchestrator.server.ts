@@ -160,27 +160,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
 
-    // 3) PLAN
-    await ctx.emit("phase", { phase: "planning" });
-    const planResp = await callGateway(apiKey, MODEL, [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`,
-      },
-    ], { signal: ctx.signal });
-    totalUsd += planResp.usd; totalTokens += planResp.tokens;
-    const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    const steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
-    await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
-    await logMsg("plan", planObj, planResp.tokens, planResp.usd);
-    await ctx.emit("plan", { plan: planObj });
-
     // 3.5) EXPERT COUNCIL — deliberate before acting.
     //      Each capability required by the plan gets a short opinion from
     //      the best-fit expert (data-only, driven by tool-catalog DNA).
     //      Opinions are appended to maaroof_runs.decision_log for audit.
-    const decisionLog: any[] = [];
     if (settings.council?.enabled) {
       await ctx.emit("phase", { phase: "council" });
       const requiredCaps = new Set<Capability>();
