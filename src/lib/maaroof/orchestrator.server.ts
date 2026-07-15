@@ -355,8 +355,27 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
 }
 
-function buildSystemPrompt(ctx: RunContext, geo: { country: string; city?: string; label: string }, memories: string[]): string {
+function buildSystemPrompt(
+  ctx: RunContext,
+  geo: { country: string; city?: string; label: string },
+  memories: string[],
+  workspaceProfile?: any,
+): string {
   const memBlock = memories.length ? `\n\nLong-term memory about this user:\n${memories.slice(0, 10).join("\n")}` : "";
+  let wsBlock = "";
+  if (workspaceProfile) {
+    const wp = workspaceProfile;
+    const bits: string[] = [];
+    if (wp.name) bits.push(`Workspace: ${wp.name} (${wp.kind || "brand"})`);
+    if (wp.brand_url) bits.push(`Site: ${wp.brand_url}`);
+    if (wp.brand_summary) bits.push(`Brand: ${String(wp.brand_summary).slice(0, 400)}`);
+    if (Array.isArray(wp.keywords) && wp.keywords.length) bits.push(`Keywords: ${wp.keywords.slice(0, 10).join(", ")}`);
+    if (wp.profile && Object.keys(wp.profile).length) bits.push(`Profile: ${JSON.stringify(wp.profile).slice(0, 600)}`);
+    if (Array.isArray(wp.goals) && wp.goals.length) bits.push(`Goals: ${JSON.stringify(wp.goals).slice(0, 400)}`);
+    if (wp.policies && Object.keys(wp.policies).length) bits.push(`Policies: ${JSON.stringify(wp.policies).slice(0, 400)}`);
+    if (wp.risk_level) bits.push(`Risk level: ${wp.risk_level}`);
+    if (bits.length) wsBlock = `\n\n[Workspace context]\n${bits.join("\n")}`;
+  }
   return `أنت "معروف" — وكيل ذكي محترف للتسويق الرقمي وتحسين الظهور في محركات البحث الذكية (GEO) حول العالم.
 You are "Maaroof" — a Manus-style intelligent agent that PLANS, USES TOOLS, and REFLECTS to achieve the user's goal.
 
@@ -370,7 +389,7 @@ Rules:
 - Be evidence-based; never invent facts, numbers, or sources.
 - Prefer 2-5 well-chosen tool steps over many shallow ones.
 - For each tool, provide minimal valid input; the executor injects "scope" and "lang" automatically.
-- Reply concisely in JSON when asked.${memBlock}`;
+- Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
 async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal } = {}): Promise<{ text: string; tokens: number; usd: number }> {
