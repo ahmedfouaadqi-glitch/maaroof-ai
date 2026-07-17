@@ -7,6 +7,7 @@ import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
 import { getMaaroofSettings } from "./settings.server";
+import { getOrCreateAgent, finalizeAgent, type MaaroofAgent } from "./agents.server";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -111,6 +112,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   };
   await logMsg("user", { text: ctx.goal });
 
+  let activeAgent: MaaroofAgent | null = null;
   try {
     // 2) Recall memory (workspace-scoped when available)
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
@@ -160,6 +162,52 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
 
+    // 3.1) AGENT FACTORY — reuse a warm agent or mint a new one for this run.
+    //      DNA is derived from the plan's required capabilities + workspace prefs.
+    //      Backward compatible: if agent_factory.enabled is false, we skip entirely.
+    // (activeAgent hoisted above the try block so catch can finalize it)
+    if (settings.agent_factory?.enabled !== false) {
+      try {
+        const requiredCapsForDna = new Set<Capability>();
+        for (const s of steps) {
+          const def = TOOL_CATALOG.find((t) => t.key === s.tool);
+          for (const c of def?.capabilities || []) requiredCapsForDna.add(c);
+        }
+        const dna = {
+          capabilities: Array.from(requiredCapsForDna),
+          preferred_experts: (workspaceProfile?.preferred_experts as string[]) || [],
+          preferred_models: (workspaceProfile?.preferred_models as string[]) || [MODEL],
+          preferred_mcp: (workspaceProfile?.preferred_mcp as string[]) || [],
+          decision_style: workspaceProfile?.risk_level ? `risk:${workspaceProfile.risk_level}` : "balanced",
+          thinking_style: envision ? "future-driven" : "reactive",
+        };
+        // Pick a concise role from the goal (first ~48 chars) — evolvable later.
+        const role = (workspaceProfile?.name ? `${workspaceProfile.name} Executive` : "Maaroof Executive").slice(0, 80);
+        const mission = String(ctx.goal).slice(0, 240);
+        const { agent, reused } = await getOrCreateAgent({
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId || null,
+          role,
+          mission,
+          dna,
+          warmReuse: settings.agent_factory?.warm_reuse_enabled !== false,
+          minSuccessRate: 0.5,
+        });
+        activeAgent = agent;
+        if (agent) {
+          await ctx.emit("agent", {
+            id: agent.id,
+            role: agent.role,
+            version: agent.version,
+            lifecycle_state: agent.lifecycle_state,
+            reused,
+            success_rate: agent.success_rate,
+          });
+        }
+      } catch {}
+    }
+
+
     // 3.5) EXPERT COUNCIL — deliberate before acting.
     //      Each capability required by the plan gets a short opinion from
     //      the best-fit expert (data-only, driven by tool-catalog DNA).
@@ -207,6 +255,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           decisionLog.push(entry);
           await ctx.emit("council", entry);
           await logMsg("council", entry, cResp.tokens, cResp.usd);
+          // Emit needs_human when confidence falls below threshold.
+          const minConf = settings.agent_factory?.min_confidence ?? 40;
+          if (entry.confidence != null && entry.confidence < minConf) {
+            await ctx.emit("needs_human", {
+              expert: expert.key,
+              capability: cap,
+              confidence: entry.confidence,
+              objection: entry.objection,
+              threshold: minConf,
+            });
+          }
         } catch (e: any) {
           const entry = { phase: "council", capability: cap, expert: expert.key, error: String(e?.message || e), at: new Date().toISOString() };
           decisionLog.push(entry);
@@ -346,10 +405,33 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
     if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
 
+    // Finalize agent lifecycle + metrics.
+    if (activeAgent) {
+      const okCount = results.filter((r) => r.ok).length;
+      const success = results.length === 0 ? true : okCount / results.length >= 0.5;
+      const councilConfs = decisionLog
+        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+        .map((d: any) => d.confidence as number);
+      const avgConf = councilConfs.length ? councilConfs.reduce((a, b) => a + b, 0) / councilConfs.length : null;
+      await finalizeAgent({
+        agentId: activeAgent.id,
+        runId,
+        success,
+        confidence: { council_avg: avgConf, tools_success: results.length ? okCount / results.length : null },
+        costBreakdown: { total_usd: totalUsd, total_tokens: totalTokens, steps: steps.length, tools_ok: okCount, tools_total: results.length },
+      });
+      await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
+    }
+
     await ctx.emit("done", { runId, totalUsd, totalTokens, steps: steps.length });
     return { runId };
   } catch (e: any) {
     await db().from("maaroof_runs").update({ status: "error", error: String(e?.message || e), finished_at: new Date().toISOString() }).eq("id", runId);
+    if (activeAgent) {
+      try {
+        await finalizeAgent({ agentId: activeAgent.id, runId, success: false, confidence: {}, costBreakdown: { total_usd: totalUsd, total_tokens: totalTokens } });
+      } catch {}
+    }
     await ctx.emit("error", { message: String(e?.message || e) });
     throw e;
   }

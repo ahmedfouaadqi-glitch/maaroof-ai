@@ -18,6 +18,15 @@ export type CouncilSettings = {
   learning_enabled?: boolean;
 };
 
+export type AgentFactorySettings = {
+  /** Master toggle for the Agent Factory (warm reuse + versioning). When false, orchestrator behaves as before. */
+  enabled: boolean;
+  /** Reuse standby agents whose success_rate >= threshold instead of creating a new one. */
+  warm_reuse_enabled: boolean;
+  /** Minimum council confidence (0-100) before Maaroof emits a needs_human event. */
+  min_confidence: number;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -29,6 +38,7 @@ export type MaaroofSettings = {
   system_prompt_extra: string;
   kill_switch: boolean;
   council: CouncilSettings;
+  agent_factory: AgentFactorySettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
@@ -46,6 +56,7 @@ const DEFAULTS: MaaroofSettings = {
   system_prompt_extra: "",
   kill_switch: false,
   council: { enabled: true, max_experts: 3, log_decisions: true, envision_enabled: true, learning_enabled: true },
+  agent_factory: { enabled: true, warm_reuse_enabled: true, min_confidence: 40 },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
