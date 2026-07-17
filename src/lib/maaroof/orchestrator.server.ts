@@ -161,6 +161,52 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
 
+    // 3.1) AGENT FACTORY — reuse a warm agent or mint a new one for this run.
+    //      DNA is derived from the plan's required capabilities + workspace prefs.
+    //      Backward compatible: if agent_factory.enabled is false, we skip entirely.
+    let activeAgent: MaaroofAgent | null = null;
+    if (settings.agent_factory?.enabled !== false) {
+      try {
+        const requiredCapsForDna = new Set<Capability>();
+        for (const s of steps) {
+          const def = TOOL_CATALOG.find((t) => t.key === s.tool);
+          for (const c of def?.capabilities || []) requiredCapsForDna.add(c);
+        }
+        const dna = {
+          capabilities: Array.from(requiredCapsForDna),
+          preferred_experts: (workspaceProfile?.preferred_experts as string[]) || [],
+          preferred_models: (workspaceProfile?.preferred_models as string[]) || [MODEL],
+          preferred_mcp: (workspaceProfile?.preferred_mcp as string[]) || [],
+          decision_style: workspaceProfile?.risk_level ? `risk:${workspaceProfile.risk_level}` : "balanced",
+          thinking_style: envision ? "future-driven" : "reactive",
+        };
+        // Pick a concise role from the goal (first ~48 chars) — evolvable later.
+        const role = (workspaceProfile?.name ? `${workspaceProfile.name} Executive` : "Maaroof Executive").slice(0, 80);
+        const mission = String(ctx.goal).slice(0, 240);
+        const { agent, reused } = await getOrCreateAgent({
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId || null,
+          role,
+          mission,
+          dna,
+          warmReuse: settings.agent_factory?.warm_reuse_enabled !== false,
+          minSuccessRate: 0.5,
+        });
+        activeAgent = agent;
+        if (agent) {
+          await ctx.emit("agent", {
+            id: agent.id,
+            role: agent.role,
+            version: agent.version,
+            lifecycle_state: agent.lifecycle_state,
+            reused,
+            success_rate: agent.success_rate,
+          });
+        }
+      } catch {}
+    }
+
+
     // 3.5) EXPERT COUNCIL — deliberate before acting.
     //      Each capability required by the plan gets a short opinion from
     //      the best-fit expert (data-only, driven by tool-catalog DNA).
