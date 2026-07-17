@@ -165,7 +165,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 3.1) AGENT FACTORY — reuse a warm agent or mint a new one for this run.
     //      DNA is derived from the plan's required capabilities + workspace prefs.
     //      Backward compatible: if agent_factory.enabled is false, we skip entirely.
-    let activeAgent: MaaroofAgent | null = null;
+    // (activeAgent hoisted above the try block so catch can finalize it)
     if (settings.agent_factory?.enabled !== false) {
       try {
         const requiredCapsForDna = new Set<Capability>();
