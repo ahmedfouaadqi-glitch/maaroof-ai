@@ -88,7 +88,7 @@ function AgentsSection() {
             <div className="flex-1 min-w-[220px]">
               <div className="flex items-center gap-2 font-semibold">
                 <Bot className="w-4 h-4 text-primary" />
-                <span>{a.name || a.role || "agent"}</span>
+                <span>{a.role || "agent"}</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted">v{a.version}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                   a.lifecycle_state === "active" ? "bg-emerald-500/15 text-emerald-600" :
@@ -98,10 +98,10 @@ function AgentsSection() {
               </div>
               {a.mission && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.mission}</div>}
               <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-3">
-                <span>Runs: {a.total_runs ?? 0}</span>
+                <span>Runs: {a.runs_count ?? 0}</span>
                 <span>Success: {typeof a.success_rate === "number" ? `${(a.success_rate * 100).toFixed(0)}%` : "—"}</span>
-                <span>Cost: ${Number(a.total_usd || 0).toFixed(4)}</span>
-                <span>Last: {a.last_used_at ? new Date(a.last_used_at).toLocaleString() : "—"}</span>
+                <span>Cost: ${Number(a.cost_breakdown?.total_usd || 0).toFixed(4)}</span>
+                <span>Last: {a.updated_at ? new Date(a.updated_at).toLocaleString() : "—"}</span>
               </div>
             </div>
             <div className="flex items-center gap-1">
