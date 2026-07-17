@@ -45,7 +45,7 @@ function AgentsSection() {
 
   async function load() {
     setLoading(true);
-    let q = supabase.from("maaroof_agents").select("*").order("last_used_at", { ascending: false, nullsFirst: false }).limit(200);
+    let q = supabase.from("maaroof_agents").select("*").order("updated_at", { ascending: false, nullsFirst: false }).limit(200);
     if (filter !== "all") q = q.eq("lifecycle_state", filter);
     const { data } = await q;
     setRows((data as any) || []);
