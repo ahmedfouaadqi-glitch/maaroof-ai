@@ -404,10 +404,33 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
     if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
 
+    // Finalize agent lifecycle + metrics.
+    if (activeAgent) {
+      const okCount = results.filter((r) => r.ok).length;
+      const success = results.length === 0 ? true : okCount / results.length >= 0.5;
+      const councilConfs = decisionLog
+        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+        .map((d: any) => d.confidence as number);
+      const avgConf = councilConfs.length ? councilConfs.reduce((a, b) => a + b, 0) / councilConfs.length : null;
+      await finalizeAgent({
+        agentId: activeAgent.id,
+        runId,
+        success,
+        confidence: { council_avg: avgConf, tools_success: results.length ? okCount / results.length : null },
+        costBreakdown: { total_usd: totalUsd, total_tokens: totalTokens, steps: steps.length, tools_ok: okCount, tools_total: results.length },
+      });
+      await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
+    }
+
     await ctx.emit("done", { runId, totalUsd, totalTokens, steps: steps.length });
     return { runId };
   } catch (e: any) {
     await db().from("maaroof_runs").update({ status: "error", error: String(e?.message || e), finished_at: new Date().toISOString() }).eq("id", runId);
+    if (activeAgent) {
+      try {
+        await finalizeAgent({ agentId: activeAgent.id, runId, success: false, confidence: {}, costBreakdown: { total_usd: totalUsd, total_tokens: totalTokens } });
+      } catch {}
+    }
     await ctx.emit("error", { message: String(e?.message || e) });
     throw e;
   }
