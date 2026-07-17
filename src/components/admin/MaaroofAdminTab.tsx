@@ -1,15 +1,17 @@
-// Admin tab for Maaroof: Overview / Runs / Memory / Controls
+// Admin tab for Maaroof: Overview / Runs / Memory / Agents / Controls
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power } from "lucide-react";
+import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive } from "lucide-react";
 
 type RunRow = { id: string; user_id: string; goal: string; status: string; started_at: string; finished_at: string | null; total_usd: number | string | null; total_tokens: number | null; steps_count: number | null; detected_geo: any; geo_scope: any; error: string | null };
 type MemRow = { id: string; user_id: string; kind: string; content: string; importance: number; last_accessed_at: string; created_at: string };
 type SettingRow = { key: string; value: any; updated_at: string };
+type AgentRow = { id: string; name: string; role: string | null; mission: string | null; version: number; lifecycle_state: string; success_rate: number | null; total_runs: number | null; total_usd: number | string | null; last_used_at: string | null; created_at: string; capabilities: any };
 
 const SUB_TABS = [
   { k: "overview", label: "نظرة عامة", Icon: Activity },
   { k: "runs", label: "الجلسات", Icon: ListChecks },
+  { k: "agents", label: "الوكلاء", Icon: Bot },
   { k: "memory", label: "الذاكرة", Icon: Brain },
   { k: "controls", label: "التحكم", Icon: Settings2 },
 ] as const;
@@ -28,11 +30,103 @@ export function MaaroofAdminTab() {
       </div>
       {sub === "overview" && <OverviewSection />}
       {sub === "runs" && <RunsSection />}
+      {sub === "agents" && <AgentsSection />}
       {sub === "memory" && <MemorySection />}
       {sub === "controls" && <ControlsSection />}
     </div>
   );
 }
+
+/* ---------- Agents Registry ---------- */
+function AgentsSection() {
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<AgentRow[]>([]);
+  const [filter, setFilter] = useState<"all" | "active" | "standby" | "archived">("all");
+
+  async function load() {
+    setLoading(true);
+    let q = supabase.from("maaroof_agents").select("*").order("last_used_at", { ascending: false, nullsFirst: false }).limit(200);
+    if (filter !== "all") q = q.eq("lifecycle_state", filter);
+    const { data } = await q;
+    setRows((data as any) || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, [filter]);
+
+  async function setState(id: string, state: string) {
+    await supabase.from("maaroof_agents").update({ lifecycle_state: state }).eq("id", id);
+    load();
+  }
+  async function remove(id: string) {
+    if (!confirm("حذف الوكيل نهائياً؟")) return;
+    await supabase.from("maaroof_agents").delete().eq("id", id);
+    load();
+  }
+
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin inline" /></div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">التصفية:</span>
+        {(["all", "active", "standby", "archived"] as const).map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`text-xs px-2 py-1 rounded-full border ${filter === f ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>
+            {f}
+          </button>
+        ))}
+        <button onClick={load} className="text-xs px-2 py-1 rounded-full border hover:bg-muted ms-auto flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" /> تحديث
+        </button>
+      </div>
+
+      {rows.length === 0 && <div className="text-sm text-muted-foreground p-6 text-center">لا يوجد وكلاء بعد.</div>}
+
+      <div className="grid gap-2">
+        {rows.map((a) => (
+          <div key={a.id} className="rounded-lg border bg-card p-3 flex flex-wrap items-start gap-3">
+            <div className="flex-1 min-w-[220px]">
+              <div className="flex items-center gap-2 font-semibold">
+                <Bot className="w-4 h-4 text-primary" />
+                <span>{a.name || a.role || "agent"}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted">v{a.version}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  a.lifecycle_state === "active" ? "bg-emerald-500/15 text-emerald-600" :
+                  a.lifecycle_state === "standby" ? "bg-amber-500/15 text-amber-600" :
+                  "bg-muted text-muted-foreground"
+                }`}>{a.lifecycle_state}</span>
+              </div>
+              {a.mission && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.mission}</div>}
+              <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-3">
+                <span>Runs: {a.total_runs ?? 0}</span>
+                <span>Success: {typeof a.success_rate === "number" ? `${(a.success_rate * 100).toFixed(0)}%` : "—"}</span>
+                <span>Cost: ${Number(a.total_usd || 0).toFixed(4)}</span>
+                <span>Last: {a.last_used_at ? new Date(a.last_used_at).toLocaleString() : "—"}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {a.lifecycle_state !== "standby" && (
+                <button onClick={() => setState(a.id, "standby")} title="Standby"
+                  className="text-xs px-2 py-1 rounded border hover:bg-muted">Standby</button>
+              )}
+              {a.lifecycle_state !== "archived" && (
+                <button onClick={() => setState(a.id, "archived")} title="Archive"
+                  className="text-xs px-2 py-1 rounded border hover:bg-muted flex items-center gap-1">
+                  <Archive className="w-3 h-3" /> Archive
+                </button>
+              )}
+              <button onClick={() => remove(a.id)} title="حذف"
+                className="text-xs px-2 py-1 rounded border border-destructive/40 text-destructive hover:bg-destructive/10">
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 /* ---------- Overview ---------- */
 function OverviewSection() {
