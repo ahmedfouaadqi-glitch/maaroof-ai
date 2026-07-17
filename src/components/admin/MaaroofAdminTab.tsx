@@ -6,7 +6,7 @@ import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Pow
 type RunRow = { id: string; user_id: string; goal: string; status: string; started_at: string; finished_at: string | null; total_usd: number | string | null; total_tokens: number | null; steps_count: number | null; detected_geo: any; geo_scope: any; error: string | null };
 type MemRow = { id: string; user_id: string; kind: string; content: string; importance: number; last_accessed_at: string; created_at: string };
 type SettingRow = { key: string; value: any; updated_at: string };
-type AgentRow = { id: string; name: string; role: string | null; mission: string | null; version: number; lifecycle_state: string; success_rate: number | null; total_runs: number | null; total_usd: number | string | null; last_used_at: string | null; created_at: string; capabilities: any };
+type AgentRow = { id: string; role: string | null; mission: string | null; dna: any; version: number; lifecycle_state: string; success_rate: number | null; runs_count: number | null; cost_breakdown: any; updated_at: string | null; created_at: string };
 
 const SUB_TABS = [
   { k: "overview", label: "نظرة عامة", Icon: Activity },
