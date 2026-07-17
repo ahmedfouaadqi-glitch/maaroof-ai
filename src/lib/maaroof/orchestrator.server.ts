@@ -112,6 +112,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   };
   await logMsg("user", { text: ctx.goal });
 
+  let activeAgent: MaaroofAgent | null = null;
   try {
     // 2) Recall memory (workspace-scoped when available)
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
