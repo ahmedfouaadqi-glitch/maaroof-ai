@@ -254,6 +254,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           decisionLog.push(entry);
           await ctx.emit("council", entry);
           await logMsg("council", entry, cResp.tokens, cResp.usd);
+          // Emit needs_human when confidence falls below threshold.
+          const minConf = settings.agent_factory?.min_confidence ?? 40;
+          if (entry.confidence != null && entry.confidence < minConf) {
+            await ctx.emit("needs_human", {
+              expert: expert.key,
+              capability: cap,
+              confidence: entry.confidence,
+              objection: entry.objection,
+              threshold: minConf,
+            });
+          }
         } catch (e: any) {
           const entry = { phase: "council", capability: cap, expert: expert.key, error: String(e?.message || e), at: new Date().toISOString() };
           decisionLog.push(entry);
