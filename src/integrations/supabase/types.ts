@@ -118,13 +118,17 @@ export type Database = {
       }
       agent_tasks: {
         Row: {
+          agent_id: string | null
           approval_channel_id: string | null
           approval_status: string | null
           approved_at: string | null
+          confidence: Json | null
           created_at: string
           error: string | null
           id: string
           input: string | null
+          lifecycle_state: string | null
+          parent_agent_id: string | null
           result: Json | null
           run_id: string | null
           run_started_at: string | null
@@ -135,13 +139,17 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          agent_id?: string | null
           approval_channel_id?: string | null
           approval_status?: string | null
           approved_at?: string | null
+          confidence?: Json | null
           created_at?: string
           error?: string | null
           id?: string
           input?: string | null
+          lifecycle_state?: string | null
+          parent_agent_id?: string | null
           result?: Json | null
           run_id?: string | null
           run_started_at?: string | null
@@ -152,13 +160,17 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          agent_id?: string | null
           approval_channel_id?: string | null
           approval_status?: string | null
           approved_at?: string | null
+          confidence?: Json | null
           created_at?: string
           error?: string | null
           id?: string
           input?: string | null
+          lifecycle_state?: string | null
+          parent_agent_id?: string | null
           result?: Json | null
           run_id?: string | null
           run_started_at?: string | null
@@ -170,10 +182,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "agent_tasks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_agents"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agent_tasks_approval_channel_id_fkey"
             columns: ["approval_channel_id"]
             isOneToOne: false
             referencedRelation: "publish_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tasks_parent_agent_id_fkey"
+            columns: ["parent_agent_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_agents"
             referencedColumns: ["id"]
           },
           {
@@ -720,6 +746,78 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      maaroof_agents: {
+        Row: {
+          confidence: Json
+          cost_breakdown: Json
+          created_at: string
+          dna: Json
+          id: string
+          last_run_id: string | null
+          lifecycle_state: string
+          mission: string | null
+          parent_agent_id: string | null
+          role: string
+          runs_count: number
+          success_rate: number | null
+          updated_at: string
+          user_id: string
+          version: number
+          workspace_id: string | null
+        }
+        Insert: {
+          confidence?: Json
+          cost_breakdown?: Json
+          created_at?: string
+          dna?: Json
+          id?: string
+          last_run_id?: string | null
+          lifecycle_state?: string
+          mission?: string | null
+          parent_agent_id?: string | null
+          role: string
+          runs_count?: number
+          success_rate?: number | null
+          updated_at?: string
+          user_id: string
+          version?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          confidence?: Json
+          cost_breakdown?: Json
+          created_at?: string
+          dna?: Json
+          id?: string
+          last_run_id?: string | null
+          lifecycle_state?: string
+          mission?: string | null
+          parent_agent_id?: string | null
+          role?: string
+          runs_count?: number
+          success_rate?: number | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_agents_parent_agent_id_fkey"
+            columns: ["parent_agent_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maaroof_agents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       maaroof_memory: {
         Row: {
