@@ -200,6 +200,24 @@ function MaaroofPage() {
                 {activeWs.name}
               </span>
             )}
+            {(() => {
+              const agentEvt = [...events].reverse().find((e) => e.type === "agent");
+              if (!agentEvt) return null;
+              const a = agentEvt.data as any;
+              return (
+                <span
+                  title={a.reused ? "Warm agent reused" : "New agent"}
+                  className="text-xs px-2 py-0.5 rounded-full bg-accent/10 border border-accent/40 text-accent flex items-center gap-1"
+                >
+                  <Bot className="w-3 h-3" />
+                  {a.role} · v{a.version}
+                  {a.reused && <span className="opacity-70">· warm</span>}
+                  {typeof a.success_rate === "number" && (
+                    <span className="opacity-70">· {(a.success_rate * 100).toFixed(0)}%</span>
+                  )}
+                </span>
+              );
+            })()}
             <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
               <span>الخطوات: {stepsCount}</span>
               <span>التكلفة: ${totalUsd.toFixed(4)}</span>
