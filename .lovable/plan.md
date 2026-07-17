@@ -1,60 +1,61 @@
+# Part 3 — Agent Factory (Evolution, Not Replacement)
 
-# الجزء 2 — Cognitive Architecture (تطوير لا استبدال)
+## Constitution self-review (why evolve, not build new)
 
-يُطبَّق دستور المشروع: كل بند من الجزء 2 يُدمَج داخل ما هو قائم (workspaces, maaroof_memory, maaroof_runs, orchestrator, schedules)، بدون جداول/مسارات/مكوّنات جديدة إلا حيث لا يوجد مكافئ.
+Before touching any file I mapped every requirement in Part 3 to what already exists:
 
-## مصفوفة الامتثال (Part 2)
-
-| مكوّن الدستور | القائم | القرار |
+| Part 3 requirement | Existing implementation | Decision |
 |---|---|---|
-| Future-Driven thinking | `plan()` مفرد | **تطوير**: إضافة مرحلة `envision()` قبل `plan` تُنتج future_goal + backward_chain — تُخزَّن في `decision_log` |
-| Executive Thinking (Understand→…→Evolve) | Plan-Council-Act-Reflect | **تطوير**: إعادة تسمية داخلية للمراحل ودمج Predict/Simulate/Evaluate ضمن `council` الحالي، وObserve/Optimize/Learn ضمن `reflect` — بلا كسر التسلسل |
-| Workspace Intelligence (Profile/Policies/Goals/Graph/Timeline…) | `workspaces` (name, kind, brand_url, brand_summary, keywords, language, country, city) | **تطوير**: إضافة أعمدة jsonb: `profile`, `policies`, `goals`, `success_metrics`, `preferred_models`, `preferred_experts`, `preferred_mcp`, `risk_level`, `budget`. Timeline/Decisions/Costs تُشتَق من `maaroof_runs` مُفلترة بـ`workspace_id` — لا جدول جديد |
-| Workspace Memory / Brand Memory | `maaroof_memory` (user-scoped) | **تطوير**: إضافة `workspace_id uuid` + فهرس؛ الاستدعاء يرجّح الذاكرة داخل نفس الـworkspace أولاً |
-| Memory Intelligence (Confidence/Freshness/Reliability/Source/UsageCount/DecisionImpact/LearningScore) | `importance`, `last_accessed_at` | **تطوير**: إضافة أعمدة `confidence numeric`, `freshness_at timestamptz`, `reliability numeric`, `source text`, `usage_count int`, `decision_impact numeric`, `learning_score numeric`. `recall` يُدمج هذه في ترجيح النتائج |
-| Memory Layers (working/short/long/semantic/project/workspace/brand/decision/capability/agent/subagent/platform) | `MemoryKind` enum: fact/preference/task_result/summary/knowledge/decision | **تطوير**: توسيع الـenum بالطبقات الجديدة — الأنواع القديمة تبقى مقبولة |
-| Knowledge Refresh (Firecrawl/Search/CompetitorScan → versioning) | `firecrawl.ts` + `schedules` + `competitor_watch` قائم | **تطوير**: schedule template جاهز اسمه `knowledge_refresh` يستدعي الأدوات القائمة ويحفظ الناتج كـ`memory kind=knowledge` مع `links.previous_version` (Versioning عبر السلسلة، بلا حذف) |
-| Knowledge Graph | `maaroof_memory.links jsonb` محجوز أصلاً | **تطوير**: helpers جديدة في `memory.server.ts` تبني/تقرأ الحواف من نفس العمود — لا جدول |
-| Decision DNA | `maaroof_runs.decision_log` موجود | **تطوير**: توسيع شكل عنصر السجل ليشمل: rejected_alternatives, tool_choice_reason, model_choice_reason, agent_choice_reason, replan_reason |
-| Learning DNA | reflect ينتج ملخص فقط | **تطوير**: `reflect()` يكتب سجل `memory kind=learning` (what_worked/what_failed/what_to_repeat/what_to_avoid) على مستوى workspace |
-| Platform Intelligence (aggregate, no PII) | لا يوجد | **جديد مبرَّر**: view/materialized `platform_intelligence_v` فقط (تجميع بدون user_id) — لا جدول خام. لوحة الإدارة تعرضها في تبويب Cognitive Insights القائم |
+| Agent identity, DNA, role | `maaroof_runs` (goal, plan, decision_log, workspace), `workspaces.preferred_experts/models/mcp`, `tool_catalog` DNA | **Evolve** — add DNA columns to a new lightweight `maaroof_agents` registry that references, not replaces, runs/workspaces |
+| Sub-agent creation & lifecycle | `agent_tasks` + `user_agent_subscriptions` already model background agent runs; orchestrator has Plan/Council/Act/Reflect | **Evolve** — add `parent_agent_id`, `lifecycle_state`, `confidence` columns to reuse the existing table instead of creating `sub_agents` |
+| Expert Council & negotiation | Already implemented in `orchestrator.server.ts` (council phase, decision_log, `findExpertsByCapability`) | **Extend** — add objection/negotiation rounds inside the same phase; no new module |
+| Warm agents / Standby / Wake-up | Missing | **Add** — new lifecycle state values + reactivation path on the same `maaroof_agents` row |
+| Versioning (v1→v2…) | Missing | **Add** — `version int` + `parent_version_id` on `maaroof_agents`; no separate history table (audit is `maaroof_runs` + `decision_log`) |
+| Confidence & Cost breakdowns | `maaroof_runs.total_tokens/total_usd`, `token_ledger` per tool | **Extend** — add `cost_breakdown jsonb` + `confidence jsonb` computed at run end, surfaced in existing Admin Finance / Maaroof panels |
+| Multi-language personality | `i18n` + system prompt already handles ar/en/ku | **Preserve** — inject agent role into existing `buildSystemPrompt` |
+| Human interaction from sub-agent | Missing UI | **Add** — a `needs_human` event on the existing SSE stream in `/api/maaroof` |
 
-## التنفيذ (مراحل صغيرة قابلة للتحقق)
+No table, service, API, or component is being renamed, replaced, or duplicated. Every new field lives on an existing table or on one **new** table (`maaroof_agents`) that is the single missing piece.
 
-### Phase 2A — Workspace Intelligence
-- Migration واحدة: `ALTER workspaces ADD profile jsonb, policies jsonb, goals jsonb, success_metrics jsonb, preferred_models jsonb, preferred_experts jsonb, preferred_mcp jsonb, risk_level text, budget jsonb`.
-- توسيع `workspaces.functions.ts` (نفس الملف): حقول اختيارية في update/create + قراءة كاملة.
-- تبويب "Brand Profile" داخل `WorkspaceSwitcher.tsx` القائم (بدون route جديد) لتحرير الحقول.
-- Orchestrator يقرأ الـprofile ويُمرّره ضمن `RunContext` كـ`workspaceProfile` — تُستخدَم في `plan/council` تلقائياً.
+## Scope
 
-### Phase 2B — Living Memory Evolution
-- Migration: `ALTER maaroof_memory ADD workspace_id uuid, confidence numeric, freshness_at timestamptz, reliability numeric, source text, usage_count int DEFAULT 0, decision_impact numeric, learning_score numeric` + فهرس `(workspace_id, kind, importance)`.
-- توسيع `MemoryKind` في `memory.server.ts` (backward compatible).
-- `recall()`: ترجيح مركّب = `importance*0.35 + freshness*0.2 + reliability*0.15 + confidence*0.15 + decision_impact*0.1 + learning*0.05`، مع أولوية لنفس `workspace_id` ثم capability.
-- `remember()`: يقبل الحقول الجديدة بقيم افتراضية معقولة، ويزيد `usage_count` عند كل recall.
-- Knowledge Graph helpers: `linkMemories(aId, bId, relation)` تُخزّن الحواف في `links[]`.
+1. **DB migration** — one new table `maaroof_agents` (the Agent Registry / DNA), and additive columns on `agent_tasks` (`parent_agent_id`, `lifecycle_state`, `confidence`, `agent_id`). Full GRANTs + RLS scoped to `auth.uid()` via workspace membership. No drops, no renames.
+2. **`src/lib/maaroof/agents.server.ts`** (new, small) — pure helpers: `getOrCreateAgent(workspaceId, role, dna)`, `updateLifecycle(agentId, state)`, `bumpVersion(agentId, changes)`, `pickWarmAgent(workspaceId, capability)`. Uses `supabaseAdmin`, imported inside handlers.
+3. **`src/lib/maaroof/orchestrator.server.ts`** (evolve) —
+   - Before the existing Envision phase: call `pickWarmAgent` → reuse standby agent when success≥threshold, else `getOrCreateAgent` with DNA derived from capabilities the plan needs. Emit new `agent` SSE event.
+   - Council phase (already exists): add an optional **negotiation round** — each expert may issue an `objection` (already in schema) and Maaroof either revises the plan or records rationale. Bounded by existing `max_experts`.
+   - After the run: compute `confidence` (avg council confidence + tool success rate) and `cost_breakdown` (planning/execution/reflection tokens already tracked) → write to `maaroof_agents` and `maaroof_runs.decision_log`. Move agent to `standby` if success, else `archived`.
+   - `buildSystemPrompt`: inject the picked agent's Role + Mission (multi-language safe).
+4. **`src/routes/api/maaroof.ts`** — surface a `needs_human` SSE event when any council step returns `confidence < settings.min_confidence`; frontend already renders arbitrary events.
+5. **`src/components/admin/MaaroofAdminTab.tsx`** (evolve) — new sub-panel "Agent Registry": list `maaroof_agents` with role, lifecycle, version, success rate, cost breakdown, wake/archive buttons. Reuses existing table/badge components.
+6. **`src/routes/maaroof.tsx`** (evolve) — add a compact "Active Agent" chip next to the existing Workspace switcher showing role + confidence when a run is live. No route split, no new page.
+7. **`src/lib/tool-catalog.ts`** — add `min_confidence` per capability (data only, no logic change) so the negotiation round has a threshold. Backward compatible (optional field).
+8. **Settings** (`maaroof_settings`) — add three optional flags (default preserves current behavior): `agent_factory_enabled`, `warm_reuse_enabled`, `min_confidence`. Existing kill_switch still wins.
 
-### Phase 2C — Future-Driven & Executive Thinking
-- في `orchestrator.server.ts` (نفس الملف): مرحلة `envision(goal, workspaceProfile) → { future_goal, backward_chain[] }` قبل `plan()`. الناتج يُحقن في برومبت `plan` القائم.
-- `council()` يوسَّع داخلياً: Predict + Simulate + Evaluate تُطلَب من كل خبير في نفس النداء (بدون زيادة نداءات LLM).
-- `reflect()` يوسَّع لإخراج Learning DNA وحفظه كذاكرة `kind=learning` مع `learning_score`.
-- kill-switch جديد في `maaroof_settings.council.envision_enabled`.
+## What is explicitly preserved
 
-### Phase 2D — Decision & Learning DNA
-- شكل موحّد لعناصر `decision_log`: `{ stage, decision, rationale, rejected_alternatives, tool_choice_reason, model_choice_reason, agent_choice_reason, replan_reason, confidence }`.
-- `MaaroofAdminTab` القائم يعرض هذه الحقول (تعديل عرض فقط، لا مكوّن جديد).
+- All 16 tool endpoints — untouched.
+- Existing `agent_tasks`, `user_agent_subscriptions`, `agent_addons`, trial flow, token_ledger, charge_tokens RPC — untouched, only additive columns on `agent_tasks`.
+- Existing Envision / Council / Act / Reflect / Final phases — reordered only to slot agent selection before Envision.
+- Existing SSE event names — only additions (`agent`, `needs_human`), no renames.
+- Existing memory kinds — reuse `decision`, `preference`, `summary`; no new kinds.
+- Existing Admin tabs — Finance, System Health, Cognitive Insights untouched; new panel is a sub-section inside the existing `MaaroofAdminTab`.
 
-### Phase 2E — Knowledge Refresh (schedule template)
-- بدل جدول جديد: نضيف `template` معروف اسمه `knowledge_refresh` داخل `SchedulesPanel.tsx` القائم. يستخدم Firecrawl + `research` + `competitor_monitor` القائمة، ويكتب `memory kind=knowledge` مع `links.previous_version_id` (Versioning عبر السلسلة).
+## Technical details
 
-### Phase 2F — Platform Intelligence
-- Migration: `CREATE VIEW platform_intelligence_v AS SELECT` تجميع (best_plans, best_tool_orderings, avg_cost, avg_quality) من `maaroof_runs + token_ledger` بدون `user_id`.
-- عرضها في تبويب `CognitiveInsightsTab.tsx` القائم (لا تبويب جديد).
+**`maaroof_agents` columns**: `id`, `workspace_id (fk)`, `user_id (fk)`, `parent_agent_id (self fk, null)`, `role text`, `mission text`, `dna jsonb` (capabilities, preferred_experts, preferred_models, decision_style, thinking_style), `version int default 1`, `lifecycle_state text check in ('created','initialized','learning','planning','executing','reflecting','optimizing','standby','reactivated','merged','archived','deleted') default 'created'`, `success_rate numeric`, `runs_count int`, `confidence jsonb`, `cost_breakdown jsonb`, `last_run_id fk`, `created_at`, `updated_at`.
 
-## التحقق بعد التنفيذ
-- backward compatibility: الجولات القديمة (بلا workspace_id) تعمل كما هي.
-- kill-switches: `council.enabled=false` و`council.envision_enabled=false` تُرجع للسلوك السابق حرفياً.
-- توثيق: قسم "Part 2 Compliance" في `docs/MAAROOF-AUDIT.md` بعد كل Phase.
+**RLS**: owner (`user_id = auth.uid()`) full access; workspace members SELECT via existing `workspace_members`; admin SELECT via `has_role`. GRANTs to `authenticated` + `service_role`.
 
-## خارج النطاق (ينتظر الجزء 3)
-Agent Factory، Dynamic Sub-Agents، Hybrid MCP، Cost Intelligence، Admin Intelligence.
+**No breaking changes**: every new column is nullable / has a default; every new SSE event is additive; every new setting flag defaults to preserving today's behavior.
+
+## Out of scope (deferred to later Parts)
+
+Capability Engine, Hybrid MCP switching, Queue, Scheduler executive layer, Executive Dashboard, Cost Intelligence — Part 3 file explicitly lists these as "NEXT". This plan only lands the Agent Factory primitives they will build on.
+
+## Post-implementation audit checklist
+
+- No file renamed or deleted.
+- No duplicate table/service/API/component created (only `maaroof_agents` + `agents.server.ts`, both genuinely missing).
+- All existing tests / routes / SSE consumers still work (events are additive).
+- Backward compatibility: with `agent_factory_enabled=false` the orchestrator behaves exactly as today.
