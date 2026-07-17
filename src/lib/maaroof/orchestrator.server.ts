@@ -7,6 +7,7 @@ import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
 import { getMaaroofSettings } from "./settings.server";
+import { getOrCreateAgent, finalizeAgent, type MaaroofAgent } from "./agents.server";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
