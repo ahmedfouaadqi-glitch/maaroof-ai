@@ -56,9 +56,27 @@ export type Capability =
   | "monitoring"
   | "planning"
   | "knowledge_extraction"
-  | "social_analysis";
+  | "social_analysis"
+  // ---- Part 4 additions (Capability OS) ----
+  | "decision_making"
+  | "summarization"
+  | "validation"
+  | "reflection"
+  | "translation"
+  | "localization"
+  | "memory_retrieval"
+  | "memory_learning"
+  | "knowledge_refresh"
+  | "knowledge_graph"
+  | "automation"
+  | "scheduling"
+  | "reasoning"
+  | "image_analysis"
+  | "document_analysis"
+  | "video_analysis";
 
 export type CostProfile = "light" | "medium" | "heavy";
+export type RiskLevel = "low" | "medium" | "high";
 
 export type ToolDef = {
   key: ToolKey;
@@ -73,6 +91,12 @@ export type ToolDef = {
   costProfile?: CostProfile;
   /** One-line expert persona used by the council prompt. */
   dna?: string;
+  // ---- Part 4 optional metadata (all additive) ----
+  avgQuality?: number;         // 0-100 baseline quality
+  avgLatencyMs?: number;       // typical latency
+  riskLevel?: RiskLevel;
+  requiredPolicies?: string[];
+  requiredKnowledge?: string[];
 };
 
 export const TOOL_CATALOG: ToolDef[] = [
