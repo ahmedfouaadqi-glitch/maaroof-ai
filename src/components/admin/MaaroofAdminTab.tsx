@@ -1,17 +1,19 @@
-// Admin tab for Maaroof: Overview / Runs / Memory / Agents / Controls
+// Admin tab for Maaroof: Overview / Runs / Agents / Capabilities / Memory / Controls
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive } from "lucide-react";
+import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive, Network } from "lucide-react";
 
 type RunRow = { id: string; user_id: string; goal: string; status: string; started_at: string; finished_at: string | null; total_usd: number | string | null; total_tokens: number | null; steps_count: number | null; detected_geo: any; geo_scope: any; error: string | null };
 type MemRow = { id: string; user_id: string; kind: string; content: string; importance: number; last_accessed_at: string; created_at: string };
 type SettingRow = { key: string; value: any; updated_at: string };
 type AgentRow = { id: string; role: string | null; mission: string | null; dna: any; version: number; lifecycle_state: string; success_rate: number | null; runs_count: number | null; cost_breakdown: any; updated_at: string | null; created_at: string };
+type CapRow = { capability: string; runs: number | null; success_rate: number | null; avg_usd: number | null; avg_tokens: number | null; last_used_at: string | null; top_tool: string | null };
 
 const SUB_TABS = [
   { k: "overview", label: "نظرة عامة", Icon: Activity },
   { k: "runs", label: "الجلسات", Icon: ListChecks },
   { k: "agents", label: "الوكلاء", Icon: Bot },
+  { k: "capabilities", label: "القدرات", Icon: Network },
   { k: "memory", label: "الذاكرة", Icon: Brain },
   { k: "controls", label: "التحكم", Icon: Settings2 },
 ] as const;
