@@ -33,8 +33,62 @@ export function MaaroofAdminTab() {
       {sub === "overview" && <OverviewSection />}
       {sub === "runs" && <RunsSection />}
       {sub === "agents" && <AgentsSection />}
+      {sub === "capabilities" && <CapabilitiesSection />}
       {sub === "memory" && <MemorySection />}
       {sub === "controls" && <ControlsSection />}
+    </div>
+  );
+}
+
+/* ---------- Capabilities (Part 4) ---------- */
+function CapabilitiesSection() {
+  const [rows, setRows] = useState<CapRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from("capability_scores_v" as any).select("*");
+    setRows(((data as any) || []) as CapRow[]);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin inline" /></div>;
+  const sorted = [...rows].sort((a, b) => (b.runs || 0) - (a.runs || 0));
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">مصفوفة القدرات الحية — تُبنى تلقائياً من سجلات الجلسات.</span>
+        <button onClick={load} className="text-xs px-2 py-1 rounded border hover:bg-muted ms-auto flex items-center gap-1"><RefreshCw className="w-3 h-3" /> تحديث</button>
+      </div>
+      {sorted.length === 0 ? (
+        <div className="text-sm text-muted-foreground p-6 text-center">لا توجد بيانات بعد — شغّل بعض الجلسات أولاً.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="border-b text-muted-foreground">
+              <th className="p-2 text-start">القدرة</th>
+              <th className="p-2">الخبير الأعلى</th>
+              <th className="p-2">جلسات</th>
+              <th className="p-2">النجاح</th>
+              <th className="p-2">م. التكلفة $</th>
+              <th className="p-2">م. التوكن</th>
+              <th className="p-2">آخر استخدام</th>
+            </tr></thead>
+            <tbody>
+              {sorted.map((r) => (
+                <tr key={r.capability} className="border-b hover:bg-muted/30">
+                  <td className="p-2 font-mono">{r.capability}</td>
+                  <td className="p-2 text-center font-mono">{r.top_tool || "—"}</td>
+                  <td className="p-2 text-center">{r.runs ?? 0}</td>
+                  <td className="p-2 text-center">{r.success_rate == null ? "—" : `${(Number(r.success_rate) * 100).toFixed(0)}%`}</td>
+                  <td className="p-2 text-center font-mono">{r.avg_usd == null ? "—" : Number(r.avg_usd).toFixed(4)}</td>
+                  <td className="p-2 text-center font-mono">{r.avg_tokens == null ? "—" : Math.round(Number(r.avg_tokens))}</td>
+                  <td className="p-2 text-center whitespace-nowrap">{r.last_used_at ? new Date(r.last_used_at).toLocaleDateString("ar-IQ") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
