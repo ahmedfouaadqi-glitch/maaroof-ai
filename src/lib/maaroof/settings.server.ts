@@ -51,6 +51,7 @@ export type MaaroofSettings = {
   kill_switch: boolean;
   council: CouncilSettings;
   agent_factory: AgentFactorySettings;
+  capability_os: CapabilityOsSettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
@@ -69,6 +70,7 @@ const DEFAULTS: MaaroofSettings = {
   kill_switch: false,
   council: { enabled: true, max_experts: 3, log_decisions: true, envision_enabled: true, learning_enabled: true },
   agent_factory: { enabled: true, warm_reuse_enabled: true, min_confidence: 40 },
+  capability_os: { enabled: true, scoring_enabled: true, graph_enabled: true, mcp_registry_enabled: false },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
