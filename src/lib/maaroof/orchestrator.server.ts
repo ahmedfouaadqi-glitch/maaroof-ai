@@ -210,9 +210,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
 
     // 3.5) EXPERT COUNCIL — deliberate before acting.
-    //      Each capability required by the plan gets a short opinion from
-    //      the best-fit expert (data-only, driven by tool-catalog DNA).
-    //      Opinions are appended to maaroof_runs.decision_log for audit.
+    //      Part 4: implementations are chosen via the Capability OS
+    //      (live scores + DNA + workspace preferences), not just the static
+    //      picker. Backward compatible via settings.capability_os.enabled.
+    const capScores = settings.capability_os?.scoring_enabled !== false ? await loadCapabilityScores() : {};
+    if (settings.capability_os?.graph_enabled !== false) {
+      try {
+        const graph = buildCapabilityGraph(capScores);
+        await ctx.emit("graph", { nodes: graph.slice(0, 40) });
+      } catch {}
+    }
+
     if (settings.council?.enabled) {
       await ctx.emit("phase", { phase: "council" });
       const requiredCaps = new Set<Capability>();
@@ -223,8 +231,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       const capsList = Array.from(requiredCaps).slice(0, settings.council.max_experts);
       for (const cap of capsList) {
         if (ctx.signal.aborted) break;
-        const experts = findExpertsByCapability(cap);
-        const expert: ToolDef | undefined = experts[0];
+        const preferred = (workspaceProfile?.preferred_experts as string[]) || [];
+        const maxRisk = (workspaceProfile?.risk_level as "low" | "medium" | "high") || undefined;
+        const choice = settings.capability_os?.enabled !== false
+          ? chooseImplementation({ capability: cap, scores: capScores, preferredExperts: preferred, maxRiskLevel: maxRisk })
+          : null;
+        const expert: ToolDef | undefined = choice?.expert || findExpertsByCapability(cap)[0];
+        if (choice) {
+          await ctx.emit("capability_choice", {
+            capability: cap, expert: choice.expert.key, score: choice.score,
+            reason: choice.reason, alternatives: choice.alternatives,
+          });
+        }
         if (!expert) continue;
         try {
           const cResp = await callGateway(apiKey, MODEL, [
