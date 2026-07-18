@@ -1,0 +1,1 @@
+ALTER VIEW public.capability_scores_v SET (security_invoker = on);

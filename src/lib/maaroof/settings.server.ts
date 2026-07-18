@@ -27,6 +27,18 @@ export type AgentFactorySettings = {
   min_confidence: number;
 };
 
+/** Part 4 — Capability Operating System toggles. Additive; defaults preserve Part 3. */
+export type CapabilityOsSettings = {
+  /** Master toggle. When false, the orchestrator uses static tool-catalog picking. */
+  enabled: boolean;
+  /** Use `capability_scores_v` metrics to score implementations. */
+  scoring_enabled: boolean;
+  /** Emit the `graph` SSE event for the UI. */
+  graph_enabled: boolean;
+  /** Consult the mcp_providers registry when a capability declares mcp binding. */
+  mcp_registry_enabled: boolean;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -39,6 +51,7 @@ export type MaaroofSettings = {
   kill_switch: boolean;
   council: CouncilSettings;
   agent_factory: AgentFactorySettings;
+  capability_os: CapabilityOsSettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
@@ -57,6 +70,7 @@ const DEFAULTS: MaaroofSettings = {
   kill_switch: false,
   council: { enabled: true, max_experts: 3, log_decisions: true, envision_enabled: true, learning_enabled: true },
   agent_factory: { enabled: true, warm_reuse_enabled: true, min_confidence: 40 },
+  capability_os: { enabled: true, scoring_enabled: true, graph_enabled: true, mcp_registry_enabled: false },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;

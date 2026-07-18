@@ -940,9 +940,11 @@ export type Database = {
       }
       maaroof_runs: {
         Row: {
+          attempts: number
           auto_run: boolean
           created_at: string
           decision_log: Json
+          depends_on_run_id: string | null
           detected_geo: Json | null
           error: string | null
           finished_at: string | null
@@ -951,8 +953,11 @@ export type Database = {
           id: string
           language: string | null
           model: string | null
+          next_attempt_at: string | null
           parent_run_id: string | null
           plan: Json
+          priority: number
+          queue_state: string
           schedule_id: string | null
           started_at: string
           status: string
@@ -963,9 +968,11 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          attempts?: number
           auto_run?: boolean
           created_at?: string
           decision_log?: Json
+          depends_on_run_id?: string | null
           detected_geo?: Json | null
           error?: string | null
           finished_at?: string | null
@@ -974,8 +981,11 @@ export type Database = {
           id?: string
           language?: string | null
           model?: string | null
+          next_attempt_at?: string | null
           parent_run_id?: string | null
           plan?: Json
+          priority?: number
+          queue_state?: string
           schedule_id?: string | null
           started_at?: string
           status?: string
@@ -986,9 +996,11 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          attempts?: number
           auto_run?: boolean
           created_at?: string
           decision_log?: Json
+          depends_on_run_id?: string | null
           detected_geo?: Json | null
           error?: string | null
           finished_at?: string | null
@@ -997,8 +1009,11 @@ export type Database = {
           id?: string
           language?: string | null
           model?: string | null
+          next_attempt_at?: string | null
           parent_run_id?: string | null
           plan?: Json
+          priority?: number
+          queue_state?: string
           schedule_id?: string | null
           started_at?: string
           status?: string
@@ -1028,7 +1043,11 @@ export type Database = {
       maaroof_schedules: {
         Row: {
           approval_mode: string
+          approval_rules: Json | null
           cadence: string
+          capabilities: Json | null
+          conditions: Json | null
+          cost_limit_usd: number | null
           created_at: string
           cron_expr: string | null
           ends_at: string | null
@@ -1041,16 +1060,22 @@ export type Database = {
           name: string
           next_run_at: string | null
           prompt: string
+          retry_rules: Json | null
           runs_done: number
           starts_at: string
           status: string
+          token_limit: number | null
           updated_at: string
           user_id: string
           workspace_id: string | null
         }
         Insert: {
           approval_mode?: string
+          approval_rules?: Json | null
           cadence?: string
+          capabilities?: Json | null
+          conditions?: Json | null
+          cost_limit_usd?: number | null
           created_at?: string
           cron_expr?: string | null
           ends_at?: string | null
@@ -1063,16 +1088,22 @@ export type Database = {
           name: string
           next_run_at?: string | null
           prompt: string
+          retry_rules?: Json | null
           runs_done?: number
           starts_at?: string
           status?: string
+          token_limit?: number | null
           updated_at?: string
           user_id: string
           workspace_id?: string | null
         }
         Update: {
           approval_mode?: string
+          approval_rules?: Json | null
           cadence?: string
+          capabilities?: Json | null
+          conditions?: Json | null
+          cost_limit_usd?: number | null
           created_at?: string
           cron_expr?: string | null
           ends_at?: string | null
@@ -1085,9 +1116,11 @@ export type Database = {
           name?: string
           next_run_at?: string | null
           prompt?: string
+          retry_rules?: Json | null
           runs_done?: number
           starts_at?: string
           status?: string
+          token_limit?: number | null
           updated_at?: string
           user_id?: string
           workspace_id?: string | null
@@ -1122,6 +1155,74 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      mcp_providers: {
+        Row: {
+          auth_kind: string
+          avg_cost_usd: number | null
+          avg_latency_ms: number | null
+          capabilities: Json
+          created_at: string
+          description: string | null
+          enabled: boolean
+          endpoint: string | null
+          id: string
+          limits: Json
+          name: string
+          policies: Json
+          reliability: number | null
+          scopes: string[]
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          auth_kind?: string
+          avg_cost_usd?: number | null
+          avg_latency_ms?: number | null
+          capabilities?: Json
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          endpoint?: string | null
+          id?: string
+          limits?: Json
+          name: string
+          policies?: Json
+          reliability?: number | null
+          scopes?: string[]
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          auth_kind?: string
+          avg_cost_usd?: number | null
+          avg_latency_ms?: number | null
+          capabilities?: Json
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          endpoint?: string | null
+          id?: string
+          limits?: Json
+          name?: string
+          policies?: Json
+          reliability?: number | null
+          scopes?: string[]
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_providers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -2015,6 +2116,21 @@ export type Database = {
       }
     }
     Views: {
+      capability_scores_v: {
+        Row: {
+          avg_duration_s: number | null
+          avg_usd: number | null
+          capability: string | null
+          error_runs: number | null
+          invocations: number | null
+          ok_runs: number | null
+          runs: number | null
+          success_rate: number | null
+          total_tokens: number | null
+          total_usd: number | null
+        }
+        Relationships: []
+      }
       platform_intelligence_v: {
         Row: {
           avg_decisions: number | null

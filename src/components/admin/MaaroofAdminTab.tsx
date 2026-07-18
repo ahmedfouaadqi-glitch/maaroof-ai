@@ -1,17 +1,19 @@
-// Admin tab for Maaroof: Overview / Runs / Memory / Agents / Controls
+// Admin tab for Maaroof: Overview / Runs / Agents / Capabilities / Memory / Controls
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive } from "lucide-react";
+import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive, Network } from "lucide-react";
 
 type RunRow = { id: string; user_id: string; goal: string; status: string; started_at: string; finished_at: string | null; total_usd: number | string | null; total_tokens: number | null; steps_count: number | null; detected_geo: any; geo_scope: any; error: string | null };
 type MemRow = { id: string; user_id: string; kind: string; content: string; importance: number; last_accessed_at: string; created_at: string };
 type SettingRow = { key: string; value: any; updated_at: string };
 type AgentRow = { id: string; role: string | null; mission: string | null; dna: any; version: number; lifecycle_state: string; success_rate: number | null; runs_count: number | null; cost_breakdown: any; updated_at: string | null; created_at: string };
+type CapRow = { capability: string; runs: number | null; success_rate: number | null; avg_usd: number | null; avg_tokens: number | null; last_used_at: string | null; top_tool: string | null };
 
 const SUB_TABS = [
   { k: "overview", label: "نظرة عامة", Icon: Activity },
   { k: "runs", label: "الجلسات", Icon: ListChecks },
   { k: "agents", label: "الوكلاء", Icon: Bot },
+  { k: "capabilities", label: "القدرات", Icon: Network },
   { k: "memory", label: "الذاكرة", Icon: Brain },
   { k: "controls", label: "التحكم", Icon: Settings2 },
 ] as const;
@@ -31,8 +33,62 @@ export function MaaroofAdminTab() {
       {sub === "overview" && <OverviewSection />}
       {sub === "runs" && <RunsSection />}
       {sub === "agents" && <AgentsSection />}
+      {sub === "capabilities" && <CapabilitiesSection />}
       {sub === "memory" && <MemorySection />}
       {sub === "controls" && <ControlsSection />}
+    </div>
+  );
+}
+
+/* ---------- Capabilities (Part 4) ---------- */
+function CapabilitiesSection() {
+  const [rows, setRows] = useState<CapRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from("capability_scores_v" as any).select("*");
+    setRows(((data as any) || []) as CapRow[]);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin inline" /></div>;
+  const sorted = [...rows].sort((a, b) => (b.runs || 0) - (a.runs || 0));
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">مصفوفة القدرات الحية — تُبنى تلقائياً من سجلات الجلسات.</span>
+        <button onClick={load} className="text-xs px-2 py-1 rounded border hover:bg-muted ms-auto flex items-center gap-1"><RefreshCw className="w-3 h-3" /> تحديث</button>
+      </div>
+      {sorted.length === 0 ? (
+        <div className="text-sm text-muted-foreground p-6 text-center">لا توجد بيانات بعد — شغّل بعض الجلسات أولاً.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="border-b text-muted-foreground">
+              <th className="p-2 text-start">القدرة</th>
+              <th className="p-2">الخبير الأعلى</th>
+              <th className="p-2">جلسات</th>
+              <th className="p-2">النجاح</th>
+              <th className="p-2">م. التكلفة $</th>
+              <th className="p-2">م. التوكن</th>
+              <th className="p-2">آخر استخدام</th>
+            </tr></thead>
+            <tbody>
+              {sorted.map((r) => (
+                <tr key={r.capability} className="border-b hover:bg-muted/30">
+                  <td className="p-2 font-mono">{r.capability}</td>
+                  <td className="p-2 text-center font-mono">{r.top_tool || "—"}</td>
+                  <td className="p-2 text-center">{r.runs ?? 0}</td>
+                  <td className="p-2 text-center">{r.success_rate == null ? "—" : `${(Number(r.success_rate) * 100).toFixed(0)}%`}</td>
+                  <td className="p-2 text-center font-mono">{r.avg_usd == null ? "—" : Number(r.avg_usd).toFixed(4)}</td>
+                  <td className="p-2 text-center font-mono">{r.avg_tokens == null ? "—" : Math.round(Number(r.avg_tokens))}</td>
+                  <td className="p-2 text-center whitespace-nowrap">{r.last_used_at ? new Date(r.last_used_at).toLocaleDateString("ar-IQ") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
