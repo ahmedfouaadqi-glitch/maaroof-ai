@@ -115,6 +115,16 @@ export async function recall(
   return top.map((r) => `[${r.kind}${r.capability ? `:${r.capability}` : ""}] ${r.content}`);
 }
 
+/** Read the caller's consent tier: 'none' | 'dna_only' | 'full'. Defaults to 'dna_only'. */
+export async function getCognitiveConsent(userId: string): Promise<"none" | "dna_only" | "full"> {
+  try {
+    const { data } = await db().from("profiles").select("cognitive_consent").eq("id", userId).maybeSingle();
+    const v = (data as any)?.cognitive_consent;
+    if (v === "none" || v === "dna_only" || v === "full") return v;
+  } catch {}
+  return "dna_only";
+}
+
 export async function remember(opts: {
   userId: string;
   runId?: string;
@@ -130,7 +140,13 @@ export async function remember(opts: {
   source?: string;
   decisionImpact?: number;
   learningScore?: number;
+  /** Which memory tier this row belongs to. Defaults to 'user'. */
+  scope?: "user" | "workspace" | "agent" | "platform";
 }) {
+  // Part 5 consent enforcement. Platform/agent scopes are anonymized elsewhere.
+  const consent = await getCognitiveConsent(opts.userId);
+  const scope = opts.scope || "user";
+  if ((scope === "user" || scope === "workspace") && consent !== "full") return;
   await db().from("maaroof_memory").insert({
     user_id: opts.userId,
     run_id: opts.runId || null,
@@ -147,8 +163,9 @@ export async function remember(opts: {
     decision_impact: clamp01(opts.decisionImpact),
     learning_score: clamp01(opts.learningScore),
     freshness_at: new Date().toISOString(),
+    scope,
+    consent_level: consent,
   });
-  // LRU cap @ 1000 per user (unchanged).
   const { count } = await db().from("maaroof_memory").select("id", { count: "exact", head: true }).eq("user_id", opts.userId);
   if ((count || 0) > 1000) {
     const { data: old } = await db()

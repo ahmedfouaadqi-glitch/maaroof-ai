@@ -442,6 +442,28 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
     }
 
+    // Part 5 — anonymized Platform DNA extraction (opt-in via settings.cognitive.dna_enabled).
+    try {
+      const s: any = settings;
+      if (s?.cognitive?.enabled && s?.cognitive?.dna_enabled) {
+        const { recordDna } = await import("./cognition.server");
+        const okCount = results.filter((r) => r.ok).length;
+        await recordDna({
+          kind: "execution",
+          sourceRunId: runId,
+          payload: {
+            steps: steps.length,
+            tools_ok: okCount,
+            tools_total: results.length,
+            total_usd: Number(totalUsd.toFixed(6)),
+            total_tokens: totalTokens,
+            capability_choices: decisionLog.filter((d: any) => d.phase === "council").map((d: any) => ({ capability: d.capability, expert: d.expert })).slice(0, 8),
+          },
+          weight: 1,
+        });
+      }
+    } catch {}
+
     await ctx.emit("done", { runId, totalUsd, totalTokens, steps: steps.length });
     return { runId };
   } catch (e: any) {
