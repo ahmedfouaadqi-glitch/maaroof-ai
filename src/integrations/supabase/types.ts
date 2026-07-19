@@ -819,10 +819,38 @@ export type Database = {
           },
         ]
       }
+      maaroof_evolution_reports: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          period: string
+          period_end: string
+          period_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          period: string
+          period_end: string
+          period_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          period?: string
+          period_end?: string
+          period_start?: string
+        }
+        Relationships: []
+      }
       maaroof_memory: {
         Row: {
           capability: string | null
           confidence: number | null
+          consent_level: string
           content: string
           created_at: string
           decision_impact: number | null
@@ -835,6 +863,7 @@ export type Database = {
           links: Json
           reliability: number | null
           run_id: string | null
+          scope: string
           source: string | null
           source_run_id: string | null
           usage_count: number
@@ -844,6 +873,7 @@ export type Database = {
         Insert: {
           capability?: string | null
           confidence?: number | null
+          consent_level?: string
           content: string
           created_at?: string
           decision_impact?: number | null
@@ -856,6 +886,7 @@ export type Database = {
           links?: Json
           reliability?: number | null
           run_id?: string | null
+          scope?: string
           source?: string | null
           source_run_id?: string | null
           usage_count?: number
@@ -865,6 +896,7 @@ export type Database = {
         Update: {
           capability?: string | null
           confidence?: number | null
+          consent_level?: string
           content?: string
           created_at?: string
           decision_impact?: number | null
@@ -877,6 +909,7 @@ export type Database = {
           links?: Json
           reliability?: number | null
           run_id?: string | null
+          scope?: string
           source?: string | null
           source_run_id?: string | null
           usage_count?: number
@@ -1224,10 +1257,38 @@ export type Database = {
           },
         ]
       }
+      platform_dna: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          source_run_id: string | null
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          source_run_id?: string | null
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          source_run_id?: string | null
+          weight?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           brand_keywords: string | null
           brand_name: string | null
+          cognitive_consent: string
           created_at: string
           daily_analyses_used: number
           daily_suggestions_used: number
@@ -1265,6 +1326,7 @@ export type Database = {
         Insert: {
           brand_keywords?: string | null
           brand_name?: string | null
+          cognitive_consent?: string
           created_at?: string
           daily_analyses_used?: number
           daily_suggestions_used?: number
@@ -1302,6 +1364,7 @@ export type Database = {
         Update: {
           brand_keywords?: string | null
           brand_name?: string | null
+          cognitive_consent?: string
           created_at?: string
           daily_analyses_used?: number
           daily_suggestions_used?: number
@@ -2131,6 +2194,70 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_scores_v: {
+        Row: {
+          avg_tokens: number | null
+          avg_usd: number | null
+          expert: string | null
+          last_used_at: string | null
+          runs: number | null
+        }
+        Relationships: []
+      }
+      mcp_scores_v: {
+        Row: {
+          avg_cost_usd: number | null
+          avg_latency_ms: number | null
+          capabilities: Json | null
+          enabled: boolean | null
+          id: string | null
+          name: string | null
+          reliability: number | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          avg_cost_usd?: never
+          avg_latency_ms?: never
+          capabilities?: Json | null
+          enabled?: boolean | null
+          id?: string | null
+          name?: string | null
+          reliability?: never
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          avg_cost_usd?: never
+          avg_latency_ms?: never
+          capabilities?: Json | null
+          enabled?: boolean | null
+          id?: string | null
+          name?: string | null
+          reliability?: never
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_providers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      model_scores_v: {
+        Row: {
+          avg_tokens: number | null
+          avg_usd: number | null
+          calls: number | null
+          last_used_at: string | null
+          model: string | null
+        }
+        Relationships: []
+      }
       platform_intelligence_v: {
         Row: {
           avg_decisions: number | null
@@ -2141,6 +2268,14 @@ export type Database = {
           runs: number | null
           runs_done: number | null
           runs_error: number | null
+        }
+        Relationships: []
+      }
+      policy_scores_v: {
+        Row: {
+          last_updated_at: string | null
+          policy: string | null
+          workspaces: number | null
         }
         Relationships: []
       }
