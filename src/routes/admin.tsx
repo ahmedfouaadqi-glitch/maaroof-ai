@@ -96,6 +96,7 @@ function AdminPage() {
     if (k === "finance") return lang === "ar" ? "المالية الموحّدة" : lang === "ku" ? "دارایی یەکگرتوو" : "Finance";
     if (k === "health") return lang === "ar" ? "صحة النظام" : lang === "ku" ? "تەندروستی" : "System Health";
     if (k === "maaroof") return lang === "ar" ? "معروف ✨" : lang === "ku" ? "ماعروف ✨" : "Maaroof ✨";
+    if (k === "maaroof_center") return lang === "ar" ? "مركز ذكاء معروف 🧠" : lang === "ku" ? "ناوەندی زیرەکی ماعروف 🧠" : "Intelligence Center 🧠";
     return k;
   };
 
