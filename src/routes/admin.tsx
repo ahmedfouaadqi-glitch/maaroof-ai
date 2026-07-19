@@ -162,6 +162,7 @@ function AdminPage() {
         {tab === "finance" && <AdminFinanceTab />}
         {tab === "health" && <SystemHealthTab />}
         {tab === "maaroof" && <MaaroofAdminTab />}
+        {tab === "maaroof_center" && <MaaroofIntelligenceCenter />}
       </div>
     </div>
   );
