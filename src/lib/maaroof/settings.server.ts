@@ -64,6 +64,7 @@ export type MaaroofSettings = {
   council: CouncilSettings;
   agent_factory: AgentFactorySettings;
   capability_os: CapabilityOsSettings;
+  cognitive: CognitiveSettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
