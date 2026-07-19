@@ -84,6 +84,7 @@ const DEFAULTS: MaaroofSettings = {
   council: { enabled: true, max_experts: 3, log_decisions: true, envision_enabled: true, learning_enabled: true },
   agent_factory: { enabled: true, warm_reuse_enabled: true, min_confidence: 40 },
   capability_os: { enabled: true, scoring_enabled: true, graph_enabled: true, mcp_registry_enabled: false },
+  cognitive: { enabled: true, dna_enabled: true, peer_review_enabled: false, evolution_reports_enabled: true },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
