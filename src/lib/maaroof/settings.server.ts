@@ -39,6 +39,18 @@ export type CapabilityOsSettings = {
   mcp_registry_enabled: boolean;
 };
 
+/** Part 5 — Cognitive Intelligence Platform toggles. Additive; defaults preserve Part 4. */
+export type CognitiveSettings = {
+  /** Master toggle for the Cognitive Intelligence Engine. */
+  enabled: boolean;
+  /** Extract anonymized Platform DNA at the end of each successful run. */
+  dna_enabled: boolean;
+  /** Enable peer/expert post-run review on top of self-review. */
+  peer_review_enabled: boolean;
+  /** Generate periodic Evolution Reports (week/month/quarter). */
+  evolution_reports_enabled: boolean;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
