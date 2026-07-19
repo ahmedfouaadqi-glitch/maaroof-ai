@@ -19,6 +19,7 @@ import { FirecrawlMonitorTab } from "@/components/admin/FirecrawlMonitorTab";
 import { AdminFinanceTab } from "@/components/admin/AdminFinanceTab";
 import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
 import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
+import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenceCenter";
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
