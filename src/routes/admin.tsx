@@ -52,7 +52,7 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "finance" | "health" | "maaroof";
+type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "finance" | "health" | "maaroof" | "maaroof_center";
 type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
 
 function AdminPage() {
