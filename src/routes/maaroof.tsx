@@ -43,6 +43,7 @@ function MaaroofPage() {
   const [city, setCity] = useState<string>("");
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [activeWs, setActiveWs] = useState<Workspace | null>(null);
+  const [executionMode, setExecutionMode] = useState<"simulation" | "recommendation" | "execution">("execution");
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
