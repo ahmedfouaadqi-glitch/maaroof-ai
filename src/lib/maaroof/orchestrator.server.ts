@@ -345,6 +345,29 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
     }
 
+    // Part 6 — Simulation mode: after council deliberation, persist a scenario
+    // to whatif_scenarios and stop before any tool execution.
+    if (executionMode === "simulation") {
+      await ctx.emit("phase", { phase: "simulation" });
+      try {
+        await db().from("whatif_scenarios").insert({
+          user_id: ctx.userId,
+          brand: workspaceProfile?.name || ctx.goal.slice(0, 80),
+          changes: { plan: planObj },
+          projection: { council: decisionLog, envision },
+          kind: "plan",
+          axes: { workspace: workspaceProfile?.id || null, geo: { country: geo.country, city: geo.city } },
+        });
+      } catch {}
+      await ctx.emit("final", { text: "**Simulation complete** — plan and council opinions were captured as a scenario. No tools were executed." });
+      await db().from("maaroof_runs").update({
+        status: "done", total_tokens: totalTokens, total_usd: totalUsd,
+        steps_count: 0, finished_at: new Date().toISOString(),
+      }).eq("id", runId);
+      await ctx.emit("done", { runId, totalUsd, totalTokens, steps: 0, executionMode });
+      return { runId };
+    }
+
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
     for (let i = 0; i < steps.length; i++) {
