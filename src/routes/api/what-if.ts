@@ -85,7 +85,7 @@ Baseline brand-boost summary: ${(lastBoost as any)?.report?.summary || "(none)"}
           parsed = extractJsonObject(String(j?.choices?.[0]?.message?.content || "{}")) || {};
         } catch {}
 
-        await admin.from("whatif_scenarios").insert({ user_id: userId, brand, changes, projection: parsed });
+        await admin.from("whatif_scenarios").insert({ user_id: userId, brand, changes, projection: parsed, kind, axes });
         await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
         await admin.from("activity_log").insert({ user_id: userId, action: "what_if", metadata: { brand, cost: COST } });
 
