@@ -100,6 +100,13 @@ const DEFAULTS: MaaroofSettings = {
   agent_factory: { enabled: true, warm_reuse_enabled: true, min_confidence: 40 },
   capability_os: { enabled: true, scoring_enabled: true, graph_enabled: true, mcp_registry_enabled: false },
   cognitive: { enabled: true, dna_enabled: true, peer_review_enabled: false, evolution_reports_enabled: true },
+  platform_evolution: {
+    simulation_engine_enabled: false,
+    execution_modes_enabled: false,
+    workflow_graph_enabled: false,
+    quality_score_enabled: false,
+    capability_marketplace_enabled: false,
+  },
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
