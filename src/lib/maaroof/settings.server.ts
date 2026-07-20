@@ -79,6 +79,7 @@ export type MaaroofSettings = {
   agent_factory: AgentFactorySettings;
   capability_os: CapabilityOsSettings;
   cognitive: CognitiveSettings;
+  platform_evolution: PlatformEvolutionSettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
