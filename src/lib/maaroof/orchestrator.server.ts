@@ -174,6 +174,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
 
+    // Part 6 — Recommendation mode: stop after producing the plan.
+    if (executionMode === "recommendation") {
+      await ctx.emit("phase", { phase: "recommendation" });
+      await ctx.emit("final", { text: `**Recommended plan** (not executed):\n\n${JSON.stringify(planObj, null, 2)}` });
+      await db().from("maaroof_runs").update({
+        status: "done", total_tokens: totalTokens, total_usd: totalUsd,
+        steps_count: 0, finished_at: new Date().toISOString(),
+      }).eq("id", runId);
+      await ctx.emit("done", { runId, totalUsd, totalTokens, steps: 0, executionMode });
+      return { runId };
+    }
+
     // 3.1) AGENT FACTORY — reuse a warm agent or mint a new one for this run.
     //      DNA is derived from the plan's required capabilities + workspace prefs.
     //      Backward compatible: if agent_factory.enabled is false, we skip entirely.
