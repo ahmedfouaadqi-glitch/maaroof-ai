@@ -65,7 +65,7 @@ export function validateGraph(g: unknown): { ok: true; graph: WorkflowGraph } | 
  */
 export async function markWorkflowState(runId: string, state: WorkflowState): Promise<void> {
   try {
-    await db().from("maaroof_runs").update({ workflow_state: state }).eq("id", runId);
+    await (db() as any).from("maaroof_runs").update({ workflow_state: state }).eq("id", runId);
   } catch {}
 }
 
