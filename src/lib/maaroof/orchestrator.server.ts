@@ -49,6 +49,8 @@ function toolsDescription(): string {
     .join("\n");
 }
 
+export type ExecutionMode = "simulation" | "recommendation" | "execution";
+
 export type RunContext = {
   userId: string;
   goal: string;
@@ -60,6 +62,8 @@ export type RunContext = {
   origin: string;     // base URL for internal fetches
   emit: (event: string, data: any) => Promise<void>;
   signal: AbortSignal;
+  /** Part 6 — three-way execution mode. Defaults to "execution" for backward compat. */
+  executionMode?: ExecutionMode;
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
