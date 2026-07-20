@@ -90,6 +90,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
   }
 
+  // Part 6 — three-way execution mode. Backward compatible: defaults to "execution".
+  const executionMode: ExecutionMode =
+    settings.platform_evolution?.execution_modes_enabled && ctx.executionMode
+      ? ctx.executionMode
+      : "execution";
+
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
     .from("maaroof_runs")
@@ -102,12 +108,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       geo_scope: ctx.geoScope || { mode: "auto" },
       language: ctx.language,
       model: MODEL,
+      execution_mode: executionMode,
     })
     .select("id")
     .single();
   if (runErr || !runIns) throw new Error(runErr?.message || "run_create_failed");
   const runId = (runIns as any).id as string;
-  await ctx.emit("run", { runId, geo });
+  await ctx.emit("run", { runId, geo, executionMode });
 
   let totalUsd = 0;
   let totalTokens = 0;
