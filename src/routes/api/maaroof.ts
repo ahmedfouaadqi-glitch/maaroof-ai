@@ -31,6 +31,7 @@ export const Route = createFileRoute("/api/maaroof")({
         const lang = (body?.lang as "ar" | "en" | "ku") || "ar";
         const geoScope = (body?.geo_scope as GeoScope) || undefined;
         const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
+        const executionMode = (["simulation","recommendation","execution"] as const).includes(body?.execution_mode) ? body.execution_mode as "simulation"|"recommendation"|"execution" : undefined;
 
         // Verify workspace ownership if provided.
         let verifiedWorkspaceId: string | null = null;
