@@ -258,12 +258,32 @@ function MaaroofPage() {
               placeholder="مرحباً، أنا معروف. ما الهدف؟ (مثال: حلّل ظهور علامتي في السوق السعودي واقترح خطة محتوى لشهر)"
               className="w-full min-h-[80px] p-2 bg-background border rounded outline-none resize-y" disabled={running}
             />
-            <div className="flex justify-end gap-2 mt-2">
-              {running ? (
-                <button onClick={stop} className="px-4 py-2 rounded bg-destructive text-destructive-foreground flex items-center gap-2"><StopCircle className="w-4 h-4" /> إيقاف</button>
-              ) : (
-                <button onClick={start} disabled={!goal.trim()} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"><Send className="w-4 h-4" /> ابدأ</button>
-              )}
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+              <div className="inline-flex rounded-lg border overflow-hidden text-xs" role="group" aria-label="نمط التنفيذ">
+                {([
+                  { key: "simulation", label: "محاكاة" },
+                  { key: "recommendation", label: "توصية" },
+                  { key: "execution", label: "تنفيذ" },
+                ] as const).map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    disabled={running}
+                    onClick={() => setExecutionMode(m.key)}
+                    className={`px-3 py-1.5 transition ${executionMode === m.key ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+                    aria-pressed={executionMode === m.key}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                {running ? (
+                  <button onClick={stop} className="px-4 py-2 rounded bg-destructive text-destructive-foreground flex items-center gap-2"><StopCircle className="w-4 h-4" /> إيقاف</button>
+                ) : (
+                  <button onClick={start} disabled={!goal.trim()} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"><Send className="w-4 h-4" /> ابدأ</button>
+                )}
+              </div>
             </div>
           </div>
 
