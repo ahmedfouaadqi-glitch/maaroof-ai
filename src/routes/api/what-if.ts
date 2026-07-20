@@ -36,7 +36,7 @@ export const Route = createFileRoute("/api/what-if")({
 
         const body = await request.json();
 
-        const { brand, changes = {}, lang = "ar" } = body;
+        const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 
         // Use last analysis or brand-boost report as baseline
