@@ -81,7 +81,7 @@ export const Route = createFileRoute("/api/maaroof")({
             try {
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: abortCtl.signal,
+                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
