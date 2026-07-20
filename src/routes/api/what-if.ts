@@ -36,7 +36,7 @@ export const Route = createFileRoute("/api/what-if")({
 
         const body = await request.json();
 
-        const { brand, changes = {}, lang = "ar" } = body;
+        const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 
         // Use last analysis or brand-boost report as baseline
@@ -58,8 +58,12 @@ Estimate the LIKELY directional impact of the proposed changes on the brand's vi
   "risks": ["..."],
   "final_recommendation": "go|wait|skip + 1-line reason"
 }`;
+        const axesBlock = axes && typeof axes === "object"
+          ? `\nSimulation axes (Part 6 — Future Decision Simulator):\n${JSON.stringify(axes).slice(0, 1500)}`
+          : "";
         const user = `Brand: ${brand}
-Proposed changes: ${JSON.stringify(changes)}
+Simulation kind: ${kind}
+Proposed changes: ${JSON.stringify(changes)}${axesBlock}
 Baseline analysis score: ${(lastAnalysis as any)?.score ?? "unknown"}
 Baseline brand-boost summary: ${(lastBoost as any)?.report?.summary || "(none)"}`;
 
@@ -81,7 +85,7 @@ Baseline brand-boost summary: ${(lastBoost as any)?.report?.summary || "(none)"}
           parsed = extractJsonObject(String(j?.choices?.[0]?.message?.content || "{}")) || {};
         } catch {}
 
-        await admin.from("whatif_scenarios").insert({ user_id: userId, brand, changes, projection: parsed });
+        await admin.from("whatif_scenarios").insert({ user_id: userId, brand, changes, projection: parsed, kind, axes });
         await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
         await admin.from("activity_log").insert({ user_id: userId, action: "what_if", metadata: { brand, cost: COST } });
 

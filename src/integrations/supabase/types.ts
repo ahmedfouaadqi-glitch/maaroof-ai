@@ -980,6 +980,7 @@ export type Database = {
           depends_on_run_id: string | null
           detected_geo: Json | null
           error: string | null
+          execution_mode: string
           finished_at: string | null
           geo_scope: Json | null
           goal: string
@@ -990,6 +991,7 @@ export type Database = {
           parent_run_id: string | null
           plan: Json
           priority: number
+          quality_score: Json | null
           queue_state: string
           schedule_id: string | null
           started_at: string
@@ -998,6 +1000,7 @@ export type Database = {
           total_tokens: number
           total_usd: number
           user_id: string
+          workflow_state: string | null
           workspace_id: string | null
         }
         Insert: {
@@ -1008,6 +1011,7 @@ export type Database = {
           depends_on_run_id?: string | null
           detected_geo?: Json | null
           error?: string | null
+          execution_mode?: string
           finished_at?: string | null
           geo_scope?: Json | null
           goal: string
@@ -1018,6 +1022,7 @@ export type Database = {
           parent_run_id?: string | null
           plan?: Json
           priority?: number
+          quality_score?: Json | null
           queue_state?: string
           schedule_id?: string | null
           started_at?: string
@@ -1026,6 +1031,7 @@ export type Database = {
           total_tokens?: number
           total_usd?: number
           user_id: string
+          workflow_state?: string | null
           workspace_id?: string | null
         }
         Update: {
@@ -1036,6 +1042,7 @@ export type Database = {
           depends_on_run_id?: string | null
           detected_geo?: Json | null
           error?: string | null
+          execution_mode?: string
           finished_at?: string | null
           geo_scope?: Json | null
           goal?: string
@@ -1046,6 +1053,7 @@ export type Database = {
           parent_run_id?: string | null
           plan?: Json
           priority?: number
+          quality_score?: Json | null
           queue_state?: string
           schedule_id?: string | null
           started_at?: string
@@ -1054,6 +1062,7 @@ export type Database = {
           total_tokens?: number
           total_usd?: number
           user_id?: string
+          workflow_state?: string | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -1100,6 +1109,7 @@ export type Database = {
           token_limit: number | null
           updated_at: string
           user_id: string
+          workflow_graph: Json | null
           workspace_id: string | null
         }
         Insert: {
@@ -1128,6 +1138,7 @@ export type Database = {
           token_limit?: number | null
           updated_at?: string
           user_id: string
+          workflow_graph?: Json | null
           workspace_id?: string | null
         }
         Update: {
@@ -1156,6 +1167,7 @@ export type Database = {
           token_limit?: number | null
           updated_at?: string
           user_id?: string
+          workflow_graph?: Json | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -2048,26 +2060,32 @@ export type Database = {
       }
       whatif_scenarios: {
         Row: {
+          axes: Json | null
           brand: string
           changes: Json
           created_at: string
           id: string
+          kind: string
           projection: Json
           user_id: string
         }
         Insert: {
+          axes?: Json | null
           brand: string
           changes?: Json
           created_at?: string
           id?: string
+          kind?: string
           projection?: Json
           user_id: string
         }
         Update: {
+          axes?: Json | null
           brand?: string
           changes?: Json
           created_at?: string
           id?: string
+          kind?: string
           projection?: Json
           user_id?: string
         }
@@ -2276,6 +2294,23 @@ export type Database = {
           last_updated_at: string | null
           policy: string | null
           workspaces: number | null
+        }
+        Relationships: []
+      }
+      run_quality_v: {
+        Row: {
+          avg_capability: number | null
+          avg_cost_efficiency: number | null
+          avg_decision: number | null
+          avg_execution: number | null
+          avg_expert: number | null
+          avg_learning: number | null
+          avg_memory: number | null
+          avg_planning: number | null
+          avg_reflection: number | null
+          avg_simulation: number | null
+          avg_user_satisfaction: number | null
+          scored_runs: number | null
         }
         Relationships: []
       }

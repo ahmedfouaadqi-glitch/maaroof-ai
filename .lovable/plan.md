@@ -1,68 +1,66 @@
-# Part 5 — Cognitive Intelligence Platform (Evolution)
+# Part 6 — Platform Evolution (Fusion, not Rebuild)
 
-## Constitution self-review — what already exists
+Following the Constitution: every requirement below maps to something that already exists and gets **evolved**. Nothing is rebuilt. One new table only where no home exists.
 
-Before proposing anything, I mapped every Part 5 requirement to the current codebase. Nothing gets rebuilt.
+## Constitution audit — requirement → current asset → decision
 
-| Part 5 requirement | Exists today | Decision |
+| Part 6 requirement | Exists today | Decision |
 |---|---|---|
-| Memory separation (User / Workspace / Agent / Platform) | `maaroof_memory` with `kind` + `workspace_id` + `user_id`; `platform_intelligence_v` view; `maaroof_agents.dna` | **Evolve** — add a `scope` column (`user`/`workspace`/`agent`/`platform`) + a `consent_level` column; keep existing rows valid (default `scope='user'`). |
-| User consent → don't store conversation/results/prompts, only DNA | Profiles/workspaces exist; no consent flag; orchestrator writes conversation-heavy memory rows | **Extend** — add `profiles.cognitive_consent` (`none`/`dna_only`/`full`, default `dna_only`); orchestrator branches on it. |
-| Decision DNA / Reasoning / Planning / Execution / Capability / Learning / Cost / Future / Policy / Tool / MCP DNA | Partial: `maaroof_runs.decision_log`, `capability_scores_v`, `token_ledger`, `maaroof_agents.dna` | **Evolve** — one anonymized `platform_dna` table (kind + payload jsonb + weights). NOT per-DNA-kind tables (would be 12-table duplication). Existing decision_log is the source; a small extractor writes anonymized DNA rows post-run. |
-| Platform Intelligence learns only best capabilities/experts/models/MCP/policies — no personal data | `capability_scores_v` already aggregates by capability | **Extend** the view family with `expert_scores_v`, `model_scores_v`, `mcp_scores_v`, `policy_scores_v` (SQL views over existing tables — no new writer paths). |
-| Self Review per agent | Reflect phase exists in orchestrator | **Evolve** — expand reflect to emit a structured `self_review` block (necessary? wasted tokens? tool fit? cost/quality deltas) into `maaroof_runs.decision_log`. |
-| Peer Review between agents | Not implemented | **Add** as an optional final step inside the existing Reflect phase when `peer_review_enabled=true`. Uses existing council pattern; no new module. |
-| Expert Review (council re-evaluates plan/decisions/tools/results/cost) | Council exists pre-plan | **Extend** — reuse `runCouncil()` for a post-run pass gated by `expert_post_review_enabled`. Same function, second call site. |
-| Final Reflection report (lessons/errors/opportunities) | Reflect writes summary memory | **Extend** — write a `kind='reflection'` memory row with structured fields; already supported by `maaroof_memory`. |
-| AI Evolution Report (weekly/monthly/quarterly) | Not implemented | **Add** ONE server function `generateEvolutionReport(period)` reading existing views + `maaroof_runs` + `capability_scores_v`; store in new `maaroof_evolution_reports` table (period, generated_at, payload jsonb, admin-only RLS). This is genuinely missing. |
-| **Maaroof Intelligence Center** admin section with 22 sub-panels | `MaaroofAdminTab.tsx` has agents/capabilities/replay sub-tabs; `SystemHealthTab`, `AdminFinanceTab`, `CognitiveInsightsTab`, `ProviderCostTab`, `UserIntelligenceTab`, `FirecrawlMonitorTab` all exist | **Evolve, do NOT duplicate** — the 22 requested panels already exist as separate admin tabs. Create a single `MaaroofIntelligenceCenter.tsx` **shell** that groups them under 22 named sections via a sidebar/menu, **reusing** the existing tab components as-is. New panels only for what's truly missing: Decision Center, Future Center, Policies Center, MCP Center, Audit Center, Documentation Center, Evolution Reports. |
-| Per-section tables/charts/heatmaps/graphs/timeline/replay/exports | Replay & tables exist in `MaaroofAdminTab`; charts in Finance/Cognitive | **Extend** inside the missing panels only; reuse existing chart primitives. |
-| Executive Dashboard (users, agents, workspaces, capabilities, cost, quality, confidence) | Numbers spread across existing tabs | **Add** ONE `ExecutiveDashboard.tsx` panel that aggregates counts from existing tables via a single admin server fn — no new tables. |
-| Cost Intelligence (cost per agent/expert/capability/tool/mcp/model/workspace/user, ROI, margin, forecast) | `AdminFinanceTab` + `ProviderCostTab` cover most of it | **Extend** Finance tab with capability/agent/workspace breakdowns (already queryable from `token_ledger` + `maaroof_runs`). Forecast = simple 30-day rolling projection. |
-| Security (RLS/Workspace isolation/policy/audit/HMAC/OAuth/encryption/secrets/rate limits) | RLS everywhere; policy validation exists; webhooks HMAC-verified; secrets in connectors | **Surface**, not build — a Security Center panel that displays the existing state (RLS coverage, recent audits from `activity_log`, secret age from connectors metadata). No new security primitives. |
-| Documentation auto-generation (13 markdown files under `docs/`) | Only `docs/MAAROOF-AUDIT.md` exists | **Add** a documentation generator: single admin server fn that reads schema + tool catalog + capability registry and writes the 13 md files. Run manually from the Documentation Center panel. |
+| Discovery Engine (search before create) | Constitutional workflow only | **Process** — encode as pre-implementation checklist in `.lovable/plan.md`. No code. |
+| Fusion Architecture pipeline (Discover→…→Document) | Orchestrator has Envision→Plan→Council→Act→Reflect | **Extend** — add `discover`/`measure`/`document` SSE phase labels; no new engine. |
+| System Preservation | Entire codebase | **Policy** — no deletions in this part. |
+| **Simulation Engine** | `src/components/WhatIfSimulator.tsx` + `src/routes/api/what-if.ts` + `whatif_scenarios` table | **Evolve** — promote existing What-If into `Future Decision Simulator`. Add scenario axes (market/competitors/costs/time/risks/growth/agent-decisions/tools/MCP/models) as optional inputs; add `kind` column to `whatif_scenarios` (`market`/`plan`/`decision`/…, default `market`). Reuse the endpoint and component. |
+| **Execution Modes** (Simulation / Recommendation / Execution) | `maaroof_runs` has `queue_state`; orchestrator runs directly | **Extend** — add `execution_mode text default 'execution'` (check in `simulation`/`recommendation`/`execution`) to `maaroof_runs`. Orchestrator branches: `simulation` stops after Envision+Council with a scenario written to `whatif_scenarios`; `recommendation` stops after Plan with a proposal memory row + human-approval SSE event; `execution` = current path. UI toggle in `/maaroof` chat composer (three-way switch). |
+| **Capability Marketplace** | `src/lib/tool-catalog.ts` (Capability Registry with implementations[]) + `capability_scores_v` | **Evolve into surface** — add a `CapabilityMarketplacePanel` under Intelligence Center that lists capabilities, compares implementations side-by-side (cost, quality, latency, risk from `capability_scores_v`) and lets admins pin a preferred implementation per capability into `app_settings` key `capability_preferences`. No new registry. |
+| **Plugin SDK** | Capability Registry + `mcp_providers` + agent definitions in DB | **Evolve** — expose one typed contract file `src/lib/maaroof/plugin-sdk.ts` re-exporting existing registration helpers (`registerCapability`, `registerAgent`, `registerMcp` as thin wrappers over existing inserts) + a `docs/PLUGIN-SDK.md` spec. Kernel unchanged. |
+| **Workflow Graph Engine** (branches/loops/approvals/parallel/retry/rollback/pause/resume/human/agent/mcp/tool tasks) | `maaroof_schedules` already has `capabilities`, `conditions`, `approval_rules`, `retry_rules`; `agent_tasks` has parent/depends; orchestrator queues sub-runs via `parent_run_id`/`depends_on_run_id` | **Evolve** — add `workflow_graph jsonb` column to `maaroof_schedules` (nodes+edges). New helper `src/lib/maaroof/workflow.server.ts` interprets the graph by dispatching to the existing orchestrator, existing MCP dispatcher, and existing approval queue — no parallel engine. Add `workflow_state` (`pending`/`running`/`paused`/`awaiting_approval`/`done`/`failed`/`rolled_back`) to `maaroof_runs`. Reuse existing SSE `graph` event to stream node transitions. |
+| **Future Graph** (Goal → Vision/Objectives/Milestones/Capabilities/Agents/Experts/Knowledge/Memory/Models/MCP/Simulation/Costs/Timeline/Risks/Confidence) | Envision phase already produces vision+goals; workspace has `future_goal`, policies, risk profile | **Evolve** — Envision writes a structured `future_graph` block into `maaroof_memory` (scope=workspace, kind=`future_graph`, payload jsonb) with all 15 dimensions filled from existing sources (capability registry, agents table, capability_scores_v, whatif_scenarios). Render read-only in `FutureCenterPanel` (already scoped in Part 5 plan). |
+| **Executive Quality Score** (11 dimensions) | Reflect writes summary; `capability_scores_v` covers cost/success | **Evolve** — Reflect emits a `quality_score jsonb` (decision/planning/expert/capability/memory/simulation/execution/reflection/learning/cost_efficiency/user_satisfaction each 0–1) stored on `maaroof_runs.quality_score`. Aggregate view `run_quality_v` for admin. Add column to `maaroof_runs`. |
+| **Zero Regression Policy** | Constitution | **Process** — plan.md checklist + typecheck before finalize. |
+| **Self Audit** after each phase | Part 5 added structured self_review to decision_log | **Extend** — add optional `technical_debt`, `duplicates_found`, `better_design` fields to the self_review block. No new writer. |
+| **Document Synchronization** | Part 5 added `regenerateMaaroofDocs()` server fn | **Extend** — include new artifacts (workflow graph schema, plugin SDK, execution modes) in the same generator. No new generator. |
 
-## What is preserved verbatim
+## Additive migration (single migration)
 
-- Every existing memory row, agent row, run row, ledger row, RLS policy, admin tab, orchestrator phase, SSE event, and translation key.
-- Every existing admin panel remains reachable via its current path.
-- Default consent = `dna_only` maps 1:1 to today's behavior for existing users (nothing new is stored *about* them; DNA extraction only runs when the toggle is opt-in, so a fresh install is byte-identical to Part 4).
+1. `ALTER TABLE maaroof_runs ADD COLUMN execution_mode text NOT NULL DEFAULT 'execution' CHECK (execution_mode IN ('simulation','recommendation','execution'))`
+2. `ALTER TABLE maaroof_runs ADD COLUMN workflow_state text` (nullable — only set when driven by workflow graph)
+3. `ALTER TABLE maaroof_runs ADD COLUMN quality_score jsonb`
+4. `ALTER TABLE maaroof_schedules ADD COLUMN workflow_graph jsonb`
+5. `ALTER TABLE whatif_scenarios ADD COLUMN kind text NOT NULL DEFAULT 'market'` + `ADD COLUMN axes jsonb`
+6. `CREATE OR REPLACE VIEW run_quality_v` (security_invoker=on) aggregating `quality_score` averages per agent/capability
+7. No new tables. No RLS changes. Existing rows remain valid (all new columns nullable or defaulted).
 
-## Scope of this change
+## Code changes (evolution only)
 
-### 1. Single additive migration
-- `ALTER profiles ADD COLUMN cognitive_consent text default 'dna_only'` (nullable-safe, checked in {'none','dna_only','full'}).
-- `ALTER maaroof_memory ADD COLUMN scope text default 'user', consent_level text default 'full'` — old rows read as `user`/`full`.
-- `CREATE TABLE platform_dna (id, kind, payload jsonb, weight numeric, source_run_id nullable, created_at)` + GRANT + RLS admin-only. Anonymized: NO user_id, NO workspace_id.
-- `CREATE TABLE maaroof_evolution_reports (id, period text, period_start, period_end, payload jsonb, created_at)` + admin-only RLS + GRANT.
-- Views: `expert_scores_v`, `model_scores_v`, `mcp_scores_v`, `policy_scores_v` (all `security_invoker=on`).
-- No table drops, no column drops, no policy tightening on existing tables.
+- **`src/lib/maaroof/settings.server.ts`** — add flags: `simulation_engine_enabled`, `execution_modes_enabled`, `workflow_graph_enabled`, `quality_score_enabled`, `capability_marketplace_enabled`. All default **off** → Part 5 behavior byte-identical.
+- **`src/lib/maaroof/orchestrator.server.ts`** — branch on `execution_mode`; emit `discover`/`measure`/`document` SSE labels; write `future_graph` memory row from Envision; compute `quality_score` in Reflect. All additive, guarded by flags.
+- **`src/lib/maaroof/workflow.server.ts`** — NEW small interpreter (one file). Reads `workflow_graph`, dispatches nodes via existing orchestrator/MCP/approval-queue. No parallel engine.
+- **`src/lib/maaroof/plugin-sdk.ts`** — NEW re-export module (one file). Thin wrappers only.
+- **`src/routes/api/what-if.ts`** — accept optional `axes` and `kind`; existing shape still works.
+- **`src/components/WhatIfSimulator.tsx`** — add collapsible advanced axes; unchanged for basic users.
+- **`src/routes/maaroof.tsx`** — three-way execution-mode switch above composer (default `execution`).
+- **`src/components/admin/MaaroofIntelligenceCenter.tsx`** — mount three new small panels (`CapabilityMarketplacePanel`, `FutureCenterPanel` completing Part 5 stub, `WorkflowGraphPanel`) plus quality tab. Each reuses existing charts/tables.
+- **`src/lib/maaroof/cognition.server.ts`** — extend `regenerateMaaroofDocs()` to write `docs/PLUGIN-SDK.md`, `docs/WORKFLOW-GRAPH.md`, `docs/EXECUTION-MODES.md`, `docs/FUTURE-GRAPH.md`, `docs/QUALITY-SCORE.md` from live schema.
 
-### 2. Server logic (evolve existing modules; ONE new file only)
-- **`src/lib/maaroof/memory.server.ts`** — respect `cognitive_consent`: `store()` skips conversation-heavy kinds when consent is `dna_only`; DNA extraction always writes to `platform_dna` (anonymized).
-- **`src/lib/maaroof/orchestrator.server.ts`** — extend Reflect: emit `self_review` block; optional `peer_review` and `expert_post_review` gated by settings; write final reflection memory; call new DNA extractor.
-- **`src/lib/maaroof/settings.server.ts`** — add flags `peer_review_enabled`, `expert_post_review_enabled`, `evolution_reports_enabled`, `platform_intelligence_enabled` (all default off → Part 4 behavior identical).
-- **`src/lib/maaroof/cognition.server.ts`** — NEW, small helper. Only new file. Exports `extractDNA(run)` (writes anonymized DNA rows) and `generateEvolutionReport(period)`. Everything else lives in existing modules.
+## Backward compatibility guarantees
 
-### 3. Admin surfaces (evolve — group, don't duplicate)
-- **`src/components/admin/MaaroofIntelligenceCenter.tsx`** — NEW shell component with a 22-item sidebar. Each item renders an **existing** tab component (SystemHealthTab, AdminFinanceTab, ProviderCostTab, UserIntelligenceTab, CognitiveInsightsTab, FirecrawlMonitorTab, MaaroofAdminTab's Agents/Capabilities/Replay sub-tabs) or one of the small new panels below.
-- New small panels (each ~150 lines, reusing existing UI primitives): `ExecutiveDashboardPanel`, `DecisionCenterPanel` (queries `decision_log`), `FutureCenterPanel` (workspace future_goal + envision output), `PoliciesCenterPanel` (workspace policies + risk profiles), `MCPCenterPanel` (existing `mcp_providers` table), `AuditCenterPanel` (existing `activity_log`), `DocumentationCenterPanel` (button to regenerate docs, lists last generation), `EvolutionReportsPanel` (list + generate).
-- **`src/routes/admin.tsx`** — add one tab "مركز ذكاء معروف" that mounts `MaaroofIntelligenceCenter`. Existing tabs stay so nothing regresses.
+- Every new column is nullable or defaulted so existing writes keep working.
+- Every new behavior sits behind a settings flag defaulted **off**. Fresh install = Part 5 exactly.
+- No renames, no deletions, no policy tightening.
+- `/api/what-if`, `/api/maaroof`, all tool endpoints keep their current request/response shape.
+- The three new SDK exports wrap existing DB inserts — no kernel change.
 
-### 4. User-facing consent UI (minimal)
-- **`src/routes/profile.tsx`** — add a small "خصوصية الذكاء المعرفي" card with 3 radio options (none/dna_only/full). Reads/writes `profiles.cognitive_consent`.
+## Out of scope (deferred)
 
-### 5. Documentation generator
-- Admin-only server fn `regenerateMaaroofDocs()` writes 13 files under `docs/` from live schema + tool catalog + capability registry + agent registry. Idempotent; safe to run repeatedly. `MAAROOF-AUDIT.md` is preserved (appended to, not replaced).
-
-## Out of scope (deferred to Part 6+)
-- Automatic scheduled evolution reports (cron). This lands as a manual button now; wiring `pg_cron` comes later.
-- Full knowledge-graph visualization (nodes/edges renderer). Data model exists (capability graph); a heavy graph UI is Part 6.
-- Encryption-at-rest key rotation UI — status display only for now.
+- Full visual graph editor UI (drag-drop nodes). Data model + JSON editor only in Part 6.
+- Rollback of arbitrary tool side-effects — workflow rollback covers state marker + compensating agent tasks, not third-party APIs.
+- Auto-selection of execution_mode by risk score — always user-chosen in Part 6.
 
 ## Post-implementation audit checklist
-- Fresh install with all new flags **off** and `cognitive_consent='dna_only'` reproduces Part 4 behavior byte-for-byte.
-- Every "new" admin panel that references an existing tab renders the existing component unchanged; no duplicate component was created.
-- `platform_dna` contains zero user_id/workspace_id columns; RLS blocks all non-admin reads.
-- `docs/` regeneration preserves `MAAROOF-AUDIT.md` history.
-- No renamed/removed tables, columns, RLS policies, SSE events, or translation keys.
+
+- Flags all off ⇒ Part 5 byte-identical (chat, memory writes, admin tabs).
+- No table dropped, no column dropped, no policy loosened.
+- `docs/` regen still preserves `MAAROOF-AUDIT.md`.
+- `capability_scores_v`, `expert/model/mcp/policy_scores_v` still return rows.
+- `WhatIfSimulator` legacy calls (without `axes`/`kind`) still succeed.
+- Typecheck clean; no duplicate registries, engines, or endpoints introduced.

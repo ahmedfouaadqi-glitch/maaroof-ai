@@ -49,6 +49,8 @@ function toolsDescription(): string {
     .join("\n");
 }
 
+export type ExecutionMode = "simulation" | "recommendation" | "execution";
+
 export type RunContext = {
   userId: string;
   goal: string;
@@ -60,6 +62,8 @@ export type RunContext = {
   origin: string;     // base URL for internal fetches
   emit: (event: string, data: any) => Promise<void>;
   signal: AbortSignal;
+  /** Part 6 — three-way execution mode. Defaults to "execution" for backward compat. */
+  executionMode?: ExecutionMode;
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
@@ -86,6 +90,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
   }
 
+  // Part 6 — three-way execution mode. Backward compatible: defaults to "execution".
+  const executionMode: ExecutionMode =
+    settings.platform_evolution?.execution_modes_enabled && ctx.executionMode
+      ? ctx.executionMode
+      : "execution";
+
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
     .from("maaroof_runs")
@@ -98,12 +108,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       geo_scope: ctx.geoScope || { mode: "auto" },
       language: ctx.language,
       model: MODEL,
+      execution_mode: executionMode,
     })
     .select("id")
     .single();
   if (runErr || !runIns) throw new Error(runErr?.message || "run_create_failed");
   const runId = (runIns as any).id as string;
-  await ctx.emit("run", { runId, geo });
+  await ctx.emit("run", { runId, geo, executionMode });
 
   let totalUsd = 0;
   let totalTokens = 0;
@@ -162,6 +173,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
+
+    // Part 6 — Recommendation mode: stop after producing the plan.
+    if (executionMode === "recommendation") {
+      await ctx.emit("phase", { phase: "recommendation" });
+      await ctx.emit("final", { text: `**Recommended plan** (not executed):\n\n${JSON.stringify(planObj, null, 2)}` });
+      await db().from("maaroof_runs").update({
+        status: "done", total_tokens: totalTokens, total_usd: totalUsd,
+        steps_count: 0, finished_at: new Date().toISOString(),
+      }).eq("id", runId);
+      await ctx.emit("done", { runId, totalUsd, totalTokens, steps: 0, executionMode });
+      return { runId };
+    }
 
     // 3.1) AGENT FACTORY — reuse a warm agent or mint a new one for this run.
     //      DNA is derived from the plan's required capabilities + workspace prefs.
@@ -322,6 +345,29 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
     }
 
+    // Part 6 — Simulation mode: after council deliberation, persist a scenario
+    // to whatif_scenarios and stop before any tool execution.
+    if (executionMode === "simulation") {
+      await ctx.emit("phase", { phase: "simulation" });
+      try {
+        await db().from("whatif_scenarios").insert({
+          user_id: ctx.userId,
+          brand: workspaceProfile?.name || ctx.goal.slice(0, 80),
+          changes: { plan: planObj },
+          projection: { council: decisionLog, envision },
+          kind: "plan",
+          axes: { workspace: workspaceProfile?.id || null, geo: { country: geo.country, city: geo.city } },
+        });
+      } catch {}
+      await ctx.emit("final", { text: "**Simulation complete** — plan and council opinions were captured as a scenario. No tools were executed." });
+      await db().from("maaroof_runs").update({
+        status: "done", total_tokens: totalTokens, total_usd: totalUsd,
+        steps_count: 0, finished_at: new Date().toISOString(),
+      }).eq("id", runId);
+      await ctx.emit("done", { runId, totalUsd, totalTokens, steps: 0, executionMode });
+      return { runId };
+    }
+
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
     for (let i = 0; i < steps.length; i++) {
@@ -401,6 +447,33 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await ctx.emit("final", { text: finalResp.text });
     await logMsg("assistant", { text: finalResp.text }, finalResp.tokens, finalResp.usd);
 
+    // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
+    // observed signals to avoid additional LLM cost. Flag-gated.
+    let qualityScore: Record<string, number> | null = null;
+    if (settings.platform_evolution?.quality_score_enabled) {
+      const okCount = results.filter((r) => r.ok).length;
+      const okRatio = results.length ? okCount / results.length : 1;
+      const councilConfs = decisionLog
+        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+        .map((d: any) => d.confidence as number / 100);
+      const avgConf = councilConfs.length ? councilConfs.reduce((a, b) => a + b, 0) / councilConfs.length : 0.7;
+      const clamp = (v: number) => Math.max(0, Math.min(1, Number(v.toFixed(3))));
+      qualityScore = {
+        decision: clamp(avgConf),
+        planning: clamp(steps.length > 0 && steps.length <= 6 ? 0.85 : 0.6),
+        expert: clamp(avgConf),
+        capability: clamp(okRatio),
+        memory: clamp(memories.length > 0 ? 0.8 : 0.5),
+        simulation: clamp(envision ? 0.85 : 0.5),
+        execution: clamp(okRatio),
+        reflection: clamp(0.75),
+        learning: clamp(settings.cognitive?.dna_enabled ? 0.8 : 0.5),
+        cost_efficiency: clamp(totalUsd < 0.05 ? 0.9 : totalUsd < 0.2 ? 0.75 : 0.55),
+        user_satisfaction: clamp(okRatio * 0.9 + 0.1),
+      };
+      await ctx.emit("quality_score", qualityScore);
+    }
+
     // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
@@ -408,6 +481,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       total_usd: totalUsd,
       steps_count: steps.length,
       finished_at: new Date().toISOString(),
+      ...(qualityScore ? { quality_score: qualityScore } : {}),
     }).eq("id", runId);
 
     try {
