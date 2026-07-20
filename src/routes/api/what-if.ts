@@ -58,8 +58,12 @@ Estimate the LIKELY directional impact of the proposed changes on the brand's vi
   "risks": ["..."],
   "final_recommendation": "go|wait|skip + 1-line reason"
 }`;
+        const axesBlock = axes && typeof axes === "object"
+          ? `\nSimulation axes (Part 6 — Future Decision Simulator):\n${JSON.stringify(axes).slice(0, 1500)}`
+          : "";
         const user = `Brand: ${brand}
-Proposed changes: ${JSON.stringify(changes)}
+Simulation kind: ${kind}
+Proposed changes: ${JSON.stringify(changes)}${axesBlock}
 Baseline analysis score: ${(lastAnalysis as any)?.score ?? "unknown"}
 Baseline brand-boost summary: ${(lastBoost as any)?.report?.summary || "(none)"}`;
 
