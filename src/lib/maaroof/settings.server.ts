@@ -51,6 +51,20 @@ export type CognitiveSettings = {
   evolution_reports_enabled: boolean;
 };
 
+/** Part 6 — Platform Evolution toggles. Additive; defaults preserve Part 5. */
+export type PlatformEvolutionSettings = {
+  /** Advanced Future Decision Simulator axes (market/competitors/costs/…). */
+  simulation_engine_enabled: boolean;
+  /** Three-way execution mode switch: simulation / recommendation / execution. */
+  execution_modes_enabled: boolean;
+  /** Workflow Graph interpreter (branches/loops/approvals). */
+  workflow_graph_enabled: boolean;
+  /** Emit Executive Quality Score (11 dims) into maaroof_runs.quality_score. */
+  quality_score_enabled: boolean;
+  /** Capability Marketplace admin surface + preferred implementation pins. */
+  capability_marketplace_enabled: boolean;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
