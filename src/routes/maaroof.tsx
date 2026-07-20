@@ -74,6 +74,7 @@ function MaaroofPage() {
           goal: goal.trim(),
           lang,
           workspace_id: activeWs?.id,
+          execution_mode: executionMode,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
         signal: ctl.signal,
