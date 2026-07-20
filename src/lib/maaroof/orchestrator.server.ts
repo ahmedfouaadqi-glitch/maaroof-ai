@@ -447,6 +447,33 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await ctx.emit("final", { text: finalResp.text });
     await logMsg("assistant", { text: finalResp.text }, finalResp.tokens, finalResp.usd);
 
+    // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
+    // observed signals to avoid additional LLM cost. Flag-gated.
+    let qualityScore: Record<string, number> | null = null;
+    if (settings.platform_evolution?.quality_score_enabled) {
+      const okCount = results.filter((r) => r.ok).length;
+      const okRatio = results.length ? okCount / results.length : 1;
+      const councilConfs = decisionLog
+        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+        .map((d: any) => d.confidence as number / 100);
+      const avgConf = councilConfs.length ? councilConfs.reduce((a, b) => a + b, 0) / councilConfs.length : 0.7;
+      const clamp = (v: number) => Math.max(0, Math.min(1, Number(v.toFixed(3))));
+      qualityScore = {
+        decision: clamp(avgConf),
+        planning: clamp(steps.length > 0 && steps.length <= 6 ? 0.85 : 0.6),
+        expert: clamp(avgConf),
+        capability: clamp(okRatio),
+        memory: clamp(memories.length > 0 ? 0.8 : 0.5),
+        simulation: clamp(envision ? 0.85 : 0.5),
+        execution: clamp(okRatio),
+        reflection: clamp(0.75),
+        learning: clamp(settings.cognitive?.dna_enabled ? 0.8 : 0.5),
+        cost_efficiency: clamp(totalUsd < 0.05 ? 0.9 : totalUsd < 0.2 ? 0.75 : 0.55),
+        user_satisfaction: clamp(okRatio * 0.9 + 0.1),
+      };
+      await ctx.emit("quality_score", qualityScore);
+    }
+
     // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
@@ -454,6 +481,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       total_usd: totalUsd,
       steps_count: steps.length,
       finished_at: new Date().toISOString(),
+      ...(qualityScore ? { quality_score: qualityScore } : {}),
     }).eq("id", runId);
 
     try {
