@@ -293,14 +293,24 @@ export function HermesOfficeSection() {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          {(["observatory", "inbox", "office"] as const).map((t) => (
+          {(["observatory", "inbox", "office", "tasks"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`rounded-lg px-2.5 py-1.5 text-xs ${tab === t ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted/40"}`}>
-              {t === "observatory" ? "المرصد التنفيذي" : t === "inbox" ? `صندوق المؤسس (${pending.length})` : "مكتب هرمس"}
+              {t === "observatory" ? "المرصد التنفيذي" : t === "inbox" ? `صندوق المؤسس (${pending.length})` : t === "office" ? "مكتب هرمس" : "مركز المهام"}
             </button>
           ))}
         </div>
       </div>
+
+      {tab === "tasks" && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <ListChecks className="size-3.5" /> إدارة المهام التنفيذية من التحضير حتى التقرير والتصدير.
+          </div>
+          <HermesTaskCenter />
+        </div>
+      )}
+
 
       {tab === "observatory" && (
         <div className="space-y-3">
