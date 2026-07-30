@@ -130,6 +130,35 @@ export type KnowledgeSettings = {
   min_confidence: number;
 };
 
+/** Part 12 — AI Model Governance & Evolution. */
+export type ModelGovernanceSettings = {
+  /** Master switch. OFF => planner_model/fallback_model are used verbatim. */
+  enabled: boolean;
+  /** Pick a model per decision phase instead of one model per run. */
+  per_phase_selection: boolean;
+  /** Record success/failure/latency per model. */
+  health_tracking: boolean;
+  /** Allow Maaroof to file upgrade proposals for admin approval. */
+  auto_proposals: boolean;
+  /** Allow admin-triggered benchmark runs. */
+  benchmark_enabled: boolean;
+  /** Use registry prices instead of the hardcoded estimate. */
+  use_registry_pricing: boolean;
+};
+
+/** Part 13 — Executive Decision Intelligence. */
+export type DecisionSettings = {
+  enabled: boolean;
+  /** Persist the 20-stage pipeline into decision_traces. */
+  trace_enabled: boolean;
+  /** Compare 2-3 candidate plans on quality/cost/time before executing. */
+  cost_aware_alternatives: boolean;
+  /** Compute and store a Decision Score for each run. */
+  score_enabled: boolean;
+};
+
+
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
