@@ -60,6 +60,8 @@ export function BlurText({
   startDelay = 0,
   center = true,
   segmentClassName = "",
+  repeat = true,
+  repeatDelay = 4000,
 }: BlurTextProps) {
   const Tag = (as ?? "p") as ElementType;
   const MotionSpan = motion.span;
@@ -86,14 +88,17 @@ export function BlurText({
       ([entry]) => {
         if (entry.isIntersecting) {
           setInView(true);
-          observer.disconnect();
+          if (!repeat) observer.disconnect();
+        } else if (repeat) {
+          // pause the loop while off-screen
+          setInView(false);
         }
       },
       { threshold, rootMargin },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [threshold, rootMargin]);
+  }, [threshold, rootMargin, repeat]);
 
   const defaultFrom = useMemo<Snapshot>(
     () =>
