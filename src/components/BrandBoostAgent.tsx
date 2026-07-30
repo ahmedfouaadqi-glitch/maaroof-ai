@@ -18,9 +18,11 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { ENGINES } from "@/components/engine-logos";
+import EngineSelector from "@/components/EngineSelector";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"];
-const MAX_PLATFORMS_PER_RUN = 5;
+import { ENGINE_KEYS } from "@/lib/ai-engines";
+const PLATFORMS: string[] = [...ENGINE_KEYS];
+const MAX_PLATFORMS_PER_RUN = 9;
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
@@ -187,15 +189,8 @@ export function BrandBoostAgent() {
         <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder={t("boost_keywords")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
       </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {PLATFORMS.map((p) => (
-          <button key={p} onClick={() => setSel(sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p].slice(0, MAX_PLATFORMS_PER_RUN))}
-            className={`rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${sel.includes(p) ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"}`}
-            disabled={!sel.includes(p) && sel.length >= MAX_PLATFORMS_PER_RUN}>
-            {p}
-          </button>
-        ))}
-      </div>
+      <EngineSelector className="mt-3" value={sel} onChange={setSel} maxOverride={MAX_PLATFORMS_PER_RUN} />
+
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <select value={freq} onChange={(e) => setFreq(e.target.value as any)}
           className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm">

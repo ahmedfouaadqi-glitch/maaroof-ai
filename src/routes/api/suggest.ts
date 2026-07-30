@@ -4,6 +4,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack } from "@/lib/tool-quality.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 
 type Body = {
@@ -90,7 +91,9 @@ export const Route = createFileRoute("/api/suggest")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "suggest", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/suggest" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          const _chg = await chargeTokens({ userId, toolKey: "suggest", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/suggest" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota
@@ -223,7 +226,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
+              model: _MODEL,
               messages: [
                 { role: "system", content: qualityShell(buildSystem(describeMarket(body.scope))) },
                 { role: "user", content: userParts },
@@ -245,7 +248,7 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           try {
             const _u: any = (data as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/suggest", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/suggest", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
 
           const call = data?.choices?.[0]?.message?.tool_calls?.[0];

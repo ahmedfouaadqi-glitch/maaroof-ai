@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -92,7 +93,9 @@ export const Route = createFileRoute("/api/analyze")({
           }
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const runId = crypto.randomUUID();
-          const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/analyze" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota
@@ -140,7 +143,7 @@ export const Route = createFileRoute("/api/analyze")({
               method: "POST",
               headers: lovableAiHeaders(apiKey),
               body: JSON.stringify({
-                model: "google/gemini-2.5-flash-lite",
+                model: _MODEL,
                 messages: [
                   { role: "system", content: `${buildSys(scope)}\n\n${langGuide[lang] || langGuide.en}` },
                   { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) STRICTLY in language code "${lang}". Do not mix languages, even if the source text below is in a different language.\n\nContent to analyze:\n"""${text}"""` },
@@ -160,7 +163,7 @@ export const Route = createFileRoute("/api/analyze")({
             try {
               const { enrichLedger: _el } = await import("@/lib/spend.server");
               await _el({
-                runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/analyze",
+                runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze",
                 inputTokens: Number(usage.prompt_tokens) || 0,
                 outputTokens: Number(usage.completion_tokens) || 0,
                 latencyMs: Date.now() - _t0,

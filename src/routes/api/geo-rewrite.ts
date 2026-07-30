@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -76,7 +77,9 @@ export const Route = createFileRoute("/api/geo-rewrite")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "geo_rewrite", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/geo-rewrite" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          const _chg = await chargeTokens({ userId, toolKey: "geo_rewrite", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/geo-rewrite" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Charge against the analyses quota (this combines rewrite + rescore).
@@ -97,7 +100,7 @@ export const Route = createFileRoute("/api/geo-rewrite")({
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
+              model: _MODEL,
               messages: [
                 { role: "system", content: buildSys(lang, scope) },
                 { role: "user", content: `LANGUAGE: ${lang}\n\nOriginal short post:\n"""${text}"""` },
@@ -112,7 +115,7 @@ export const Route = createFileRoute("/api/geo-rewrite")({
           try {
             const _u: any = (data as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/geo-rewrite", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/geo-rewrite", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
 
           const content = data?.choices?.[0]?.message?.content || "{}";

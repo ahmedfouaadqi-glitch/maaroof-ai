@@ -4,26 +4,18 @@ import { describeMarket } from "@/lib/geo-scope.server";
 import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { ENGINE_CATALOG, ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
+import { applyEntitlement, enginesAllowedForUser, resolveEngineModels, resolveToolModel } from "@/lib/ai-engines.server";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"] as const;
-type Platform = typeof PLATFORMS[number];
+
+// Engine catalog + engine⇄model mapping now live in the shared source of truth
+// (`src/lib/ai-engines.ts` + `ai-engines.server.ts`) so every tool, the UI and
+// the admin registry stay in sync. `proxy: true` means we cannot probe the
+// engine directly; we use a similar-family model and disclose it to the user.
+const PLATFORMS = ENGINE_KEYS;
+type Platform = EngineKey;
 const BRAND_BOOST_COST = 5;
-const MAX_PLATFORMS_PER_RUN = 5;
 
-// Map each user-facing AI engine to the closest model available on the Lovable AI Gateway.
-// `proxy: true` means we cannot probe the engine directly; we use a similar-family model and
-// disclose it transparently to the user.
-const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
-  chatgpt:    { model: "openai/gpt-5-mini",            proxy: false },
-  gemini:     { model: "google/gemini-2.5-flash",      proxy: false },
-  copilot:    { model: "openai/gpt-5-nano",            proxy: true  }, // Bing/Copilot ≈ OpenAI family
-  perplexity: { model: "google/gemini-2.5-flash",      proxy: true  }, // grounded via real Firecrawl evidence
-  claude:     { model: "openai/gpt-5-mini",            proxy: true  },
-  grok:       { model: "openai/gpt-5-nano",            proxy: true  },
-  mistral:    { model: "google/gemini-2.5-flash-lite", proxy: true  },
-  deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
-  kimi:       { model: "google/gemini-2.5-pro",        proxy: true  }, // Kimi K2 ≈ long-context Pro proxy
-};
 
 type TokenAcc = { in: number; out: number };
 async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000, acc?: TokenAcc) {
@@ -196,14 +188,17 @@ export const Route = createFileRoute("/api/brand-boost")({
             ? evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.snippet}`).join("\n\n")
             : "(no public evidence retrieved)";
 
-          // ── Step 2: probe each selected platform with its mapped model
-          // Allow admin to restrict the platform set globally
+          // ── Step 2: probe each selected engine with its governed model
+          // Admin may restrict the engine set globally; the user's plan caps how
+          // many of the nine engines a single run may probe (MARK 1/2/3 = 3/6/9).
           const adminAllowed: Platform[] | null = Array.isArray(adminCfg.enabled_platforms) && adminCfg.enabled_platforms.length
             ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
             : null;
-          const requested = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
-          const targets = (adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested).slice(0, MAX_PLATFORMS_PER_RUN);
+          const entitlement = await enginesAllowedForUser(admin, userId);
+          const requested = applyEntitlement(platforms, entitlement);
+          const targets = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
           if (!targets.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
+          const engineModels = await resolveEngineModels(targets, "final");
           const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
 If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
           const probeUserTpl = String(adminCfg.probe_prompt || `What do you know about the brand "{brand}"{keywords} in the context of {market}? Mention concrete facts only.`);
@@ -215,7 +210,9 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
           const _tokAcc: TokenAcc = { in: 0, out: 0 };
           const probes = await Promise.all(
             targets.map(async (p) => {
-              const cfg = PLATFORM_MODEL[p];
+              const resolved = engineModels[p];
+              const cfg = { model: resolved?.model || ENGINE_CATALOG[p].defaultModel, proxy: ENGINE_CATALOG[p].proxy };
+
               try {
                 const r = await callGateway(lovableKey, cfg.model, [
                   { role: "system", content: probeSys },
@@ -272,8 +269,9 @@ ${evidenceBlock}`;
 
           let planParsed: any = {};
           const _planT0 = Date.now();
+          const planModel = await resolveToolModel("google/gemini-2.5-flash", "planning");
           try {
-            const planRes = await callGateway(lovableKey, "google/gemini-2.5-flash", [
+            const planRes = await callGateway(lovableKey, planModel, [
               { role: "system", content: planSys },
               { role: "user", content: planUser },
             ], 18000, _tokAcc);
@@ -289,10 +287,11 @@ ${evidenceBlock}`;
           try {
             const { enrichLedger: _el } = await import("@/lib/spend.server");
             await _el({
-              runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-boost",
+              runId: _runId, provider: "lovable_ai", model: planModel, endpoint: "/api/brand-boost",
               inputTokens: _tokAcc.in, outputTokens: _tokAcc.out, latencyMs: Date.now() - _planT0,
             });
           } catch {}
+
           if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
@@ -326,7 +325,15 @@ ${evidenceBlock}`;
             summary: planParsed.summary || "",
             evidence,
             plan: merged,
+            engines: {
+              plan: entitlement.plan,
+              limit: entitlement.limit,
+              allowed: entitlement.allowed,
+              locked: entitlement.locked,
+              used: targets,
+            },
           });
+
         } catch (e) {
           console.error("[api/brand-boost] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });

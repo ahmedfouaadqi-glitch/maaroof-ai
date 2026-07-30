@@ -5,6 +5,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { slugify } from "@/lib/crawler-bots";
 import { pingIndexNow } from "@/lib/indexnow.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 const AUTHORITY_COST = 3;
 
@@ -56,7 +57,9 @@ export const Route = createFileRoute("/api/brand-authority")({
 
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-authority" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/brand-authority" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota check (same model as brand-boost)
@@ -119,7 +122,7 @@ ${evidenceText || "(no source content)"}`;
             method: "POST",
             headers: lovableAiHeaders(lovableKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: _MODEL,
               messages: [{ role: "system", content: sys }, { role: "user", content: usr }],
             }),
           });
@@ -129,7 +132,7 @@ ${evidenceText || "(no source content)"}`;
           try {
             const _u: any = (j as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/brand-authority", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/brand-authority", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
           const content = String(j?.choices?.[0]?.message?.content || "");
           const parsed = extractJsonObject<any>(content) || {};
