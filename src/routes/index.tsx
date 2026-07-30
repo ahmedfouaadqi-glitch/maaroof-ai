@@ -58,12 +58,28 @@ function Page() {
         <div className="border-b border-accent/30 bg-gradient-to-r from-accent/15 via-primary/10 to-accent/15">
           <Link to="/pricing" className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-xs hover:bg-accent/10 md:text-sm">
             <Bot className="size-4 text-accent" />
-            <span className="font-semibold text-accent">{t("agent_banner_title")}</span>
-            <span className="text-muted-foreground">— {t("agent_banner_desc")}</span>
+            <BlurText
+              as="span"
+              text={t("agent_banner_title")}
+              delay={30}
+              stepDuration={0.2}
+              center={false}
+              className="font-semibold text-accent"
+            />
+            <BlurText
+              as="span"
+              text={`— ${t("agent_banner_desc")}`}
+              delay={18}
+              stepDuration={0.18}
+              startDelay={180}
+              center={false}
+              className="text-muted-foreground"
+            />
             <span className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">
               {t("agent_banner_cta")} <ArrowRight className="size-3" />
             </span>
           </Link>
+
         </div>
 
         {/* HERO — 9 engines, concise */}
