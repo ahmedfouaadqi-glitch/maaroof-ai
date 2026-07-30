@@ -446,6 +446,8 @@ function ControlsSection() {
 
       <LawsControls settings={settings} set={set} />
 
+      <LearningControls settings={settings} set={set} />
+
 
       <div className="rounded-lg border bg-card p-3">
         <label className="text-sm font-semibold block mb-1">توجيهات نظام إضافية (تُلحَق بالـ system prompt)</label>
@@ -547,6 +549,81 @@ function LawsControls({ settings, set }: { settings: Record<string, any>; set: (
           <span className="text-xs text-muted-foreground">حد الثقة الأدنى للقانون 13 (%)</span>
           <input type="number" value={laws.min_trust ?? 55} onChange={(e) => patch("min_trust", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
         </label>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Parts 9-11 — Expert Learning & Living Knowledge controls ---------- */
+function LearningControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const ex = (settings.experts || {}) as Record<string, any>;
+  const kn = (settings.knowledge || {}) as Record<string, any>;
+  const pex = (k: string, v: any) => set("experts", { ...ex, [k]: v });
+  const pkn = (k: string, v: any) => set("knowledge", { ...kn, [k]: v });
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-4">
+      <div className="space-y-2">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!ex.enabled} onChange={(e) => pex("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">محرّك تعلّم الخبراء (الأجزاء 9-10)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">مقابلة إدراكية مع كل أداة، ولقطة فهم معتمدة يقرأها الوكيل بدل تعريف الأداة الخام. تكلفة التعلّم على ميزانية النظام فقط ولا تمس رصيد المستخدمين.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${ex.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          <label className="rounded border p-2 flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={!!ex.use_snapshots} onChange={(e) => pex("use_snapshots", e.target.checked)} />
+            <span>
+              <span className="text-sm font-medium block">استخدام لقطات الخبراء في التخطيط</span>
+              <span className="text-[11px] text-muted-foreground">تُحقن خلاصة الفهم في نفس الـ system prompt — بلا طلب إضافي.</span>
+            </span>
+          </label>
+          <label className="rounded border p-2 flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={!!ex.auto_relearn_on_change} onChange={(e) => pex("auto_relearn_on_change", e.target.checked)} />
+            <span>
+              <span className="text-sm font-medium block">إعادة التعلّم عند تغيّر تعريف الأداة</span>
+              <span className="text-[11px] text-muted-foreground">بدونها يُعاد استخدام اللقطة مجاناً ما دام التعريف ثابتاً.</span>
+            </span>
+          </label>
+          <label className="rounded border p-2 block">
+            <span className="text-xs text-muted-foreground">نموذج التعلّم</span>
+            <input type="text" value={ex.learning_model ?? "google/gemini-2.5-flash"} onChange={(e) => pex("learning_model", e.target.value)} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1 font-mono" />
+          </label>
+          <label className="rounded border p-2 block">
+            <span className="text-xs text-muted-foreground">سقف ميزانية التعلّم الشهري ($)</span>
+            <input type="number" step="0.5" value={ex.monthly_budget_usd ?? 5} onChange={(e) => pex("monthly_budget_usd", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
+          </label>
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!kn.enabled} onChange={(e) => pkn("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">المعرفة الحيّة — تسع طبقات (الجزء 11)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">رسم معرفي بثقة وحداثة وموثوقية لكل عقدة، فوق الذاكرة الحالية لا بديلاً عنها.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${kn.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          <label className="rounded border p-2 flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={!!kn.capture_enabled} onChange={(e) => pkn("capture_enabled", e.target.checked)} />
+            <span>
+              <span className="text-sm font-medium block">التقاط المعرفة بعد كل جلسة</span>
+              <span className="text-[11px] text-muted-foreground">بلا تكلفة نموذج — يكتب خلاصة الجلسة كعقدة معرفية.</span>
+            </span>
+          </label>
+          <label className="rounded border p-2 flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={!!kn.recall_enabled} onChange={(e) => pkn("recall_enabled", e.target.checked)} />
+            <span>
+              <span className="text-sm font-medium block">استدعاء المعرفة أثناء التخطيط</span>
+              <span className="text-[11px] text-muted-foreground">أقوى العقد فقط، ضمن نفس التوجيه.</span>
+            </span>
+          </label>
+          <label className="rounded border p-2 block">
+            <span className="text-xs text-muted-foreground">مدة الحداثة (أيام)</span>
+            <input type="number" value={kn.freshness_days ?? 30} onChange={(e) => pkn("freshness_days", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
+          </label>
+          <label className="rounded border p-2 block">
+            <span className="text-xs text-muted-foreground">أدنى ثقة للاستدعاء (%)</span>
+            <input type="number" value={kn.min_confidence ?? 40} onChange={(e) => pkn("min_confidence", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
+          </label>
+        </div>
       </div>
     </div>
   );
