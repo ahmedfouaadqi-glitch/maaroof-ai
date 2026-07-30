@@ -16,6 +16,25 @@ export const Route = createFileRoute("/guide")({
       { property: "og:url", content: "https://geoiraq.com/guide" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/guide" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "MAAROOF Ai Guide",
+          description:
+            "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more.",
+          url: "https://geoiraq.com/guide",
+          isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://geoiraq.com" },
+          hasPart: TOOL_CATALOG.map((td) => ({
+            "@type": "WebPage",
+            name: td.labels.en,
+            url: `https://geoiraq.com/tools/${td.key}`,
+          })),
+        }),
+      },
+    ],
   }),
   component: () => <I18nProvider><GuidePage /></I18nProvider>,
 });
