@@ -27,6 +27,7 @@ import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as MaaroofMemoryRouteImport } from './routes/maaroof.memory'
+import { Route as GuideWhatIsGeoRouteImport } from './routes/guide.what-is-geo'
 import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
 import { Route as GuideArabicKurdishGeoRouteImport } from './routes/guide.arabic-kurdish-geo'
 import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
@@ -139,6 +140,11 @@ const MaaroofMemoryRoute = MaaroofMemoryRouteImport.update({
   id: '/memory',
   path: '/memory',
   getParentRoute: () => MaaroofRoute,
+} as any)
+const GuideWhatIsGeoRoute = GuideWhatIsGeoRouteImport.update({
+  id: '/what-is-geo',
+  path: '/what-is-geo',
+  getParentRoute: () => GuideRoute,
 } as any)
 const GuideGeoVsAeoRoute = GuideGeoVsAeoRouteImport.update({
   id: '/geo-vs-aeo',
@@ -287,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/guide/what-is-geo': typeof GuideWhatIsGeoRoute
   '/maaroof/memory': typeof MaaroofMemoryRoute
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
@@ -329,6 +336,7 @@ export interface FileRoutesByTo {
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/guide/what-is-geo': typeof GuideWhatIsGeoRoute
   '/maaroof/memory': typeof MaaroofMemoryRoute
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
+  '/guide/what-is-geo': typeof GuideWhatIsGeoRoute
   '/maaroof/memory': typeof MaaroofMemoryRoute
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
@@ -416,6 +425,7 @@ export interface FileRouteTypes {
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
+    | '/guide/what-is-geo'
     | '/maaroof/memory'
     | '/p/$slug'
     | '/tools/$slug'
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
+    | '/guide/what-is-geo'
     | '/maaroof/memory'
     | '/p/$slug'
     | '/tools/$slug'
@@ -500,6 +511,7 @@ export interface FileRouteTypes {
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
+    | '/guide/what-is-geo'
     | '/maaroof/memory'
     | '/p/$slug'
     | '/tools/$slug'
@@ -677,6 +689,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MaaroofMemoryRouteImport
       parentRoute: typeof MaaroofRoute
     }
+    '/guide/what-is-geo': {
+      id: '/guide/what-is-geo'
+      path: '/what-is-geo'
+      fullPath: '/guide/what-is-geo'
+      preLoaderRoute: typeof GuideWhatIsGeoRouteImport
+      parentRoute: typeof GuideRoute
+    }
     '/guide/geo-vs-aeo': {
       id: '/guide/geo-vs-aeo'
       path: '/geo-vs-aeo'
@@ -837,11 +856,13 @@ declare module '@tanstack/react-router' {
 interface GuideRouteChildren {
   GuideArabicKurdishGeoRoute: typeof GuideArabicKurdishGeoRoute
   GuideGeoVsAeoRoute: typeof GuideGeoVsAeoRoute
+  GuideWhatIsGeoRoute: typeof GuideWhatIsGeoRoute
 }
 
 const GuideRouteChildren: GuideRouteChildren = {
   GuideArabicKurdishGeoRoute: GuideArabicKurdishGeoRoute,
   GuideGeoVsAeoRoute: GuideGeoVsAeoRoute,
+  GuideWhatIsGeoRoute: GuideWhatIsGeoRoute,
 }
 
 const GuideRouteWithChildren = GuideRoute._addFileChildren(GuideRouteChildren)
