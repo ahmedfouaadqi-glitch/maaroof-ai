@@ -301,11 +301,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           : null;
         const expert: ToolDef | undefined = choice?.expert || findExpertsByCapability(cap)[0];
         if (choice) {
+          capabilityChoices++;
           await ctx.emit("capability_choice", {
             capability: cap, expert: choice.expert.key, score: choice.score,
             reason: choice.reason, alternatives: choice.alternatives,
           });
         }
+
         if (!expert) continue;
         try {
           const cResp = await callGateway(apiKey, MODEL, [
