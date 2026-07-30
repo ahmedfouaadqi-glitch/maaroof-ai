@@ -12,6 +12,8 @@ import { getOrCreateAgent, finalizeAgent, evolvePersonality, readPersonality, pe
 import { assessTiming, type TimingDecision } from "./timing.server";
 import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
 import { evaluateLaws, lawsPromptBlock, hardLawNotice, type LawEvaluation } from "./laws.server";
+import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
+import { DecisionTracer, chooseAlternative } from "./decisions.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -151,6 +153,47 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await db().from("maaroof_messages").insert({ run_id: runId, role, parts, tokens, usd });
   };
   await logMsg("user", { text: ctx.goal });
+
+  // Part 12/13 — every gateway call goes through one governed entry point:
+  // it resolves the phase model, prices the call from the registry and feeds
+  // model health. Behaviour with governance off is identical to before.
+  const call = async (phase: ModelPhase, messages: any[]) => {
+    const choice = await modelFor(phase);
+    const t0 = Date.now();
+    try {
+      const r = await callGateway(apiKey, choice.model, messages, {
+        signal: ctx.signal,
+        registry: mg.use_registry_pricing ? modelRegistry : undefined,
+      });
+      if (mg.health_tracking !== false) {
+        void recordModelCall({ model: choice.model, ok: true, latencyMs: Date.now() - t0, tokens: r.tokens, usd: r.usd });
+      }
+      return r;
+    } catch (e: any) {
+      if (mg.health_tracking !== false) {
+        void recordModelCall({ model: choice.model, ok: false, latencyMs: Date.now() - t0, error: String(e?.message || e) });
+      }
+      // Governed fallback: retry once on the phase fallback model.
+      if (choice.governed && choice.fallback && choice.fallback !== choice.model) {
+        const r = await callGateway(apiKey, choice.fallback, messages, {
+          signal: ctx.signal,
+          registry: mg.use_registry_pricing ? modelRegistry : undefined,
+        });
+        return r;
+      }
+      throw e;
+    }
+  };
+
+  // Part 13 — Executive Decision Intelligence trace (opt-in).
+  const dec = settings.decision || ({} as any);
+  const tracer = new DecisionTracer({
+    enabled: !!(dec.enabled && dec.trace_enabled),
+    runId,
+    userId: ctx.userId,
+    workspaceId: ctx.workspaceId || null,
+    emit: ctx.emit,
+  });
 
   let activeAgent: MaaroofAgent | null = null;
   try {
@@ -915,7 +958,7 @@ Rules:
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
-async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal } = {}): Promise<{ text: string; tokens: number; usd: number }> {
+async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[] } = {}): Promise<{ text: string; tokens: number; usd: number }> {
   const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: lovableAiHeaders(apiKey),
@@ -933,6 +976,9 @@ async function callGateway(apiKey: string, model: string, messages: any[], opts:
   // Rough USD estimate from gateway response header if absent (Gemini 2.5 Pro pricing approx)
   const inTok = Number(usage.prompt_tokens || 0);
   const outTok = Number(usage.completion_tokens || 0);
-  const usd = inTok * 1.25e-6 + outTok * 10e-6; // $1.25/M in, $10/M out
+  // Part 12 — real pricing from the model registry when governance provides it.
+  const usd = opts.registry?.length
+    ? costOf(model, inTok, outTok, opts.registry as any)
+    : inTok * 1.25e-6 + outTok * 10e-6; // legacy estimate ($1.25/M in, $10/M out)
   return { text, tokens, usd };
 }
