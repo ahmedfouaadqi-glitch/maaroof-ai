@@ -94,7 +94,7 @@ function Page() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-10">
-        <BlurText as="h1" text={TITLE} delay={70} stepDuration={0.28} center={false} className="font-display text-3xl font-bold text-gradient" />
+        <BlurText as="h1" text={TITLE} delay={70} stepDuration={0.28} center={false} segmentClassName="text-gradient" className="font-display text-3xl font-bold" />
         <p className="mt-3 text-sm text-muted-foreground">{DESC}</p>
 
         <Section title="The short definition">

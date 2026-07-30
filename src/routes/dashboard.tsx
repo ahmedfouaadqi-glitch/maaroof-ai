@@ -98,7 +98,8 @@ function DashboardPage() {
           delay={60}
           stepDuration={0.26}
           center={false}
-          className="break-words font-display text-2xl font-bold text-gradient sm:text-3xl"
+          segmentClassName="text-gradient"
+          className="break-words font-display text-2xl font-bold sm:text-3xl"
         />
         <p className="mt-1 text-sm text-muted-foreground">{profile?.email}</p>
 

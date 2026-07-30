@@ -150,7 +150,7 @@ function PricingPage() {
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
             <Sparkles className="size-3.5" /> {t("pr_badge")}
           </span>
-          <BlurText as="h1" text={t("pr_title")} delay={70} stepDuration={0.28} className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl" />
+          <BlurText as="h1" text={t("pr_title")} delay={70} stepDuration={0.28} segmentClassName="text-gradient" className="mt-5 font-display text-4xl font-bold md:text-5xl" />
           <p className="mt-3 text-muted-foreground">
             {t("pr_intro_1")} <b>{t("pr_whatsapp")}</b> {t("pr_or")} <b>{t("pr_email_word")}</b> {t("pr_intro_2")}
           </p>

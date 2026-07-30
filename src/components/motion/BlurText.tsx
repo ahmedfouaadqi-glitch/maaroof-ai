@@ -30,6 +30,9 @@ export type BlurTextProps = {
   startDelay?: number;
   /** Center the wrapped segments (default true, matches hero layouts). */
   center?: boolean;
+  /** Class applied to each animated segment (use for text-gradient, which
+   * cannot clip across animated children). */
+  segmentClassName?: string;
 };
 
 /**
@@ -52,6 +55,7 @@ export function BlurText({
   as,
   startDelay = 0,
   center = true,
+  segmentClassName = "",
 }: BlurTextProps) {
   const Tag = (as ?? "p") as ElementType;
   const MotionSpan = motion.span;
@@ -133,7 +137,7 @@ export function BlurText({
         };
         return (
           <MotionSpan
-            className="inline-block will-change-[transform,filter,opacity]"
+            className={`inline-block will-change-[transform,filter,opacity] ${segmentClassName}`}
             key={`${text}-${index}`}
             initial={fromSnapshot}
             animate={inView ? animateKeyframes : fromSnapshot}

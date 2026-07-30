@@ -59,7 +59,7 @@ function ContactPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-2xl px-4 py-16">
-        <BlurText as="h1" text={t("nav_contact")} delay={70} stepDuration={0.28} center={false} className="font-display text-3xl font-bold text-gradient" />
+        <BlurText as="h1" text={t("nav_contact")} delay={70} stepDuration={0.28} center={false} segmentClassName="text-gradient" className="font-display text-3xl font-bold" />
         <p className="mt-3 text-sm text-muted-foreground">{t("subscribe_modal_desc")}</p>
 
         <div className="mt-8 rounded-2xl border border-primary/30 bg-card/70 p-6 text-center shadow-[var(--shadow-elevated)]">

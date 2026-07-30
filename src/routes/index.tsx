@@ -93,7 +93,8 @@ function Page() {
                 text={t("hero_title")}
                 delay={70}
                 stepDuration={0.28}
-                className="text-gradient mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl"
+                segmentClassName="text-gradient"
+                className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl"
               />
               <BlurText
                 text={t("hero_sub")}
