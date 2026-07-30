@@ -156,3 +156,82 @@ function PhasePill({ phase, running }: { phase?: string; running: boolean }) {
   const label = phase === "planning" ? "أخطّط…" : phase === "summarizing" ? "أصيغ الإجابة…" : phase === "loading_history" ? "أحمّل الجلسة…" : running ? "أعمل…" : phase || "";
   return <div className="mt-3 text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">{label}</div>;
 }
+
+/** Part 7 — Strategic Time Engine verdict chip. */
+function TimingChip({ events }: { events: StageEvent[] }) {
+  const t = [...events].reverse().find((e) => e.type === "timing")?.data as any;
+  if (!t?.verdict) return null;
+  const LABEL: Record<string, string> = {
+    execute_now: "تنفيذ الآن", delay: "تأجيل", schedule: "جدولة", observe: "مراقبة", cancel: "إلغاء",
+  };
+  const tone = t.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
+    : t.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
+    : "border-amber-500/40 bg-amber-500/5 text-amber-500";
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${tone}`}>
+      <div className="font-semibold mb-1">قرار التوقيت: {LABEL[t.verdict] || t.verdict}</div>
+      {t.reason && <div className="text-muted-foreground">{t.reason}</div>}
+    </div>
+  );
+}
+
+/** Part 7 — Cognitive Conflict Engine resolution card. */
+function ConflictCard({ events }: { events: StageEvent[] }) {
+  const c = [...events].reverse().find((e) => e.type === "conflict")?.data as any;
+  if (!c) return null;
+  return (
+    <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 text-xs">
+      <div className="font-semibold mb-1 text-orange-400">حسم تعارض معرفي</div>
+      {c.why && <div className="text-muted-foreground mb-1">{c.why}</div>}
+      {c.chosen && <div className="text-muted-foreground">الموقف المعتمد: <span className="font-mono">{c.chosen}</span></div>}
+      {c.residual_risk && <div className="text-muted-foreground">مخاطرة متبقية: {c.residual_risk}</div>}
+    </div>
+  );
+}
+
+/** Part 7 — Trust Engine: why this recommendation. */
+function TrustPanel({ events }: { events: StageEvent[] }) {
+  const [open, setOpen] = useState(false);
+  const t = [...events].reverse().find((e) => e.type === "trust")?.data as any;
+  if (!t) return null;
+  const List = ({ label, items }: { label: string; items?: any[] }) =>
+    Array.isArray(items) && items.length ? (
+      <div className="mb-2">
+        <div className="font-semibold text-foreground/80">{label}</div>
+        <ul className="list-disc ms-4 text-muted-foreground">
+          {items.slice(0, 6).map((x, i) => <li key={i}>{typeof x === "string" ? x : JSON.stringify(x).slice(0, 160)}</li>)}
+        </ul>
+      </div>
+    ) : null;
+  return (
+    <div className="mt-3 border-t border-border/50 pt-2 text-xs">
+      <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground">
+        {open ? "إخفاء" : "لماذا هذه التوصية؟"}{typeof t.confidence === "number" ? ` — ثقة ${t.confidence}%` : ""}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          <List label="الأدلة" items={t.evidence} />
+          <List label="الافتراضات" items={t.assumptions} />
+          <List label="الحدود" items={t.limitations} />
+          <List label="البدائل" items={t.alternatives} />
+          <List label="المخاطر" items={t.risks} />
+          {t.expected_outcome && (
+            <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{t.expected_outcome}</span></div>
+          )}
+          {Array.isArray(t.evidence_graph) && t.evidence_graph.length > 0 && (
+            <div className="pt-1">
+              <div className="font-semibold text-foreground/80">شبكة الأدلة</div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {t.evidence_graph.slice(0, 16).map((n: any, i: number) => (
+                  <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n.detail || ""}>
+                    {n.kind}:{n.ref}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
