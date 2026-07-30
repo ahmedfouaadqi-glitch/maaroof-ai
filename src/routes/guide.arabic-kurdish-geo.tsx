@@ -81,7 +81,7 @@ export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
 
 function Page() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12 prose prose-invert">
         <h1 className="text-3xl font-bold mb-4">Arabic &amp; Kurdish GEO — getting cited by AI engines</h1>

@@ -74,7 +74,7 @@ export const Route = createFileRoute("/guide/geo-vs-aeo")({
 
 function Page() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12 prose prose-invert">
         <h1 className="text-3xl font-bold mb-4">GEO vs AEO — what's the difference?</h1>
