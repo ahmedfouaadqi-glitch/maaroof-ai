@@ -500,3 +500,202 @@ export async function listMessages(conversationId: string, userId: string) {
     .order("created_at", { ascending: true }).limit(200);
   return ((data as any[]) || []);
 }
+
+/* ================================================================== */
+/* Part 18 — Executive Command Center                                  */
+/* Evolves the Part 17 office: commands, tasks, history, live monitor. */
+/* ================================================================== */
+
+/** The 30 executive commands the Founder may issue. */
+export const EXECUTIVE_COMMANDS = [
+  "review", "analyze", "monitor", "audit", "optimize", "compare", "predict",
+  "investigate", "research", "create_proposal", "update_roadmap",
+  "evaluate_experts", "evaluate_models", "evaluate_mcp", "evaluate_architecture",
+  "evaluate_costs", "evaluate_revenue", "evaluate_geo", "evaluate_seo", "evaluate_aso",
+  "evaluate_branding", "evaluate_social", "evaluate_security", "evaluate_memory",
+  "evaluate_trust", "evaluate_knowledge", "evaluate_state", "evaluate_workspaces",
+  "evaluate_users", "evaluate_business",
+] as const;
+export type ExecutiveCommand = (typeof EXECUTIVE_COMMANDS)[number];
+
+export const TASK_STATUSES = [
+  "waiting", "scheduled", "preparing", "learning", "running", "paused", "blocked",
+  "needs_approval", "completed", "cancelled", "archived", "failed", "recovered",
+] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+/** Gathers the real signals a given command needs, from existing tables only. */
+export async function buildCommandBrief(command: string, o: Observatory): Promise<Record<string, any>> {
+  const take = async (table: string, cols: string, order?: string, limit = 25) => {
+    let q = db().from(table).select(cols).limit(limit);
+    if (order) q = q.order(order, { ascending: false });
+    const { data } = await q;
+    return ((data as any[]) || []);
+  };
+
+  switch (command) {
+    case "evaluate_experts":
+      return { experts: await take("expert_profiles", "tool_key, mastery_score, sessions_count, updated_at", "mastery_score") };
+    case "evaluate_models":
+      return { models: await take("ai_models", "model_key, provider, status, quality_score, cost_per_1m_input, cost_per_1m_output", "quality_score", 40),
+               health: await take("ai_model_health", "model_key, status, error_rate, avg_latency_ms", "checked_at", 40) };
+    case "evaluate_mcp":
+      return { mcp: await take("mcp_providers", "name, kind, status, success_count, failure_count, avg_latency_ms", "updated_at", 40) };
+    case "evaluate_trust":
+      return { weakest: o.weakestLinks, profiles: await take("trust_profiles", "entity_type, entity_key, trust_score, samples", "trust_score", 30) };
+    case "evaluate_knowledge":
+      return { nodes: await take("knowledge_nodes", "layer, title, quality_score, confidence, updated_at", "quality_score", 30) };
+    case "evaluate_memory":
+      return { memory: await take("maaroof_memory", "kind, key, importance, updated_at", "importance", 30) };
+    case "evaluate_state":
+      return { anchors: await take("state_anchors", "level, scope_id, health_score, drift_score, updated_at", "updated_at", 30) };
+    case "evaluate_workspaces":
+      return { workspaces: await take("workspaces", "id, name, industry, created_at", "created_at", 30) };
+    case "evaluate_users":
+      return { users: o.users, requests: await take("subscription_requests", "status, plan_key, created_at", "created_at", 30) };
+    case "evaluate_costs":
+    case "evaluate_revenue":
+    case "evaluate_business":
+      return { economics: o.economics, topCostTools: o.topCostTools, plans: await take("subscription_plans", "key, name_ar, price_iqd, tokens_monthly", "price_iqd", 20) };
+    case "evaluate_security":
+      return { activity: await take("activity_log", "action, created_at", "created_at", 30) };
+    case "evaluate_geo":
+    case "evaluate_seo":
+    case "evaluate_aso":
+    case "evaluate_branding":
+    case "evaluate_social":
+      return { publications: await take("publications", "platform, status, created_at", "created_at", 30),
+               metrics: await take("publication_metrics", "platform, impressions, clicks, created_at", "created_at", 30) };
+    case "evaluate_architecture":
+    case "audit":
+    case "review":
+      return { runs: o.runs, economics: o.economics, models: o.models, proposals: o.proposals,
+               decisions: await take("decision_traces", "stage, score, created_at", "created_at", 25) };
+    default:
+      return { runs: o.runs, economics: o.economics, topCostTools: o.topCostTools, proposals: o.proposals };
+  }
+}
+
+/* ---------------------------- Tasks ------------------------------- */
+
+export type TaskInput = Record<string, any>;
+
+export async function listTasks(filter?: { status?: string; workspaceId?: string | null }) {
+  let q = db().from("hermes_tasks").select("*")
+    .order("priority", { ascending: true })
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (filter?.status) q = q.eq("status", filter.status);
+  if (filter?.workspaceId) q = q.eq("workspace_id", filter.workspaceId);
+  const { data } = await q;
+  return ((data as any[]) || []);
+}
+
+export async function getTask(taskId: string) {
+  const [{ data: task }, { data: events }] = await Promise.all([
+    db().from("hermes_tasks").select("*").eq("id", taskId).maybeSingle(),
+    db().from("hermes_task_events").select("*").eq("task_id", taskId).order("created_at", { ascending: false }).limit(200),
+  ]);
+  return { task: task as any, events: ((events as any[]) || []) };
+}
+
+export async function logTaskEvent(input: { taskId: string; actorId?: string | null; kind: string; summary?: string; payload?: any }) {
+  await db().from("hermes_task_events").insert({
+    task_id: input.taskId,
+    actor_id: input.actorId || null,
+    kind: input.kind,
+    summary: (input.summary || "").slice(0, 500) || null,
+    payload: input.payload || {},
+  });
+}
+
+export async function createTask(input: TaskInput, founderId: string) {
+  const { data, error } = await db().from("hermes_tasks")
+    .insert({ ...input, created_by: founderId })
+    .select().maybeSingle();
+  if (error) throw new Error(error.message);
+  await logTaskEvent({ taskId: (data as any).id, actorId: founderId, kind: "created", summary: (data as any).title });
+  return data as any;
+}
+
+export async function updateTask(taskId: string, patch: TaskInput, founderId: string) {
+  const { data, error } = await db().from("hermes_tasks").update(patch).eq("id", taskId).select().maybeSingle();
+  if (error) throw new Error(error.message);
+  await logTaskEvent({ taskId, actorId: founderId, kind: patch.status ? "status_changed" : "updated", summary: patch.status || "تحديث", payload: patch });
+  return data as any;
+}
+
+/** Executive result — assembled from measured signals, never invented. */
+export async function buildTaskReport(taskId: string, founderId: string) {
+  const { task } = await getTask(taskId);
+  if (!task) throw new Error("not_found");
+  const observatory = await observePlatform();
+  const budget = num(task.cost_budget_usd);
+  const spent = num(task.spent_usd);
+
+  const report = {
+    generated_at: new Date().toISOString(),
+    executive_summary: `«${task.title}» — الحالة ${task.status}، التقدّم ${num(task.progress)}%، الكلفة المصروفة ${round(spent)}$ من ميزانية ${budget ? round(budget) + "$" : "غير محددة"}.`,
+    detailed_report: task.description || "لا وصف مسجّل.",
+    architecture_impact: (task.required_tools || []).concat(task.required_mcp || []).join("، ") || "غير محدد",
+    business_impact: task.business_goal || "غير محدد",
+    knowledge_impact: Array.isArray(task.knowledge_sources) && task.knowledge_sources.length ? `${task.knowledge_sources.length} مصدر معرفي مرتبط` : "لا مصادر مرتبطة",
+    trust_impact: observatory.weakestLinks.length ? `${observatory.weakestLinks.length} حلقة ضعيفة قائمة على مستوى المنصة` : "لا حلقات ضعيفة مقاسة",
+    performance_impact: `نجاح التشغيل على مستوى المنصة ${Math.round(observatory.runs.successRatio * 100)}%`,
+    revenue_impact: observatory.economics.marginPct != null ? `هامش المنصة ${observatory.economics.marginPct}%` : "الهامش غير مقاس بعد",
+    cost_analysis: {
+      spent_usd: round(spent),
+      budget_usd: budget || null,
+      remaining_usd: budget ? round(budget - spent) : null,
+      spent_tokens: num(task.spent_tokens),
+      token_budget: task.token_budget ?? null,
+    },
+    recommendations: [
+      budget && spent > budget ? "تجاوزت الميزانية — أعد تقدير النطاق قبل الاستمرار." : "الكلفة ضمن الميزانية المرصودة.",
+      num(task.progress) < 100 ? "المهمة غير مكتملة — راجع الاعتماديات والحواجز." : "المهمة مكتملة؛ وثّق الدروس.",
+    ],
+    lessons_learned: [] as string[],
+    next_actions: (task.dependencies || []).length ? ["مراجعة المهام المعتمدة على هذه المهمة"] : ["إغلاق المهمة أو أرشفتها"],
+  };
+
+  await db().from("hermes_tasks").update({ result: report }).eq("id", taskId);
+  await logTaskEvent({ taskId, actorId: founderId, kind: "report", summary: "تقرير تنفيذي" });
+  return report;
+}
+
+/* ------------------------- Live monitor --------------------------- */
+
+export async function executiveMonitor() {
+  const since = new Date(Date.now() - 24 * 36e5).toISOString();
+  const [tasks, runs, ledger, learning, knowledge, trust, state] = await Promise.all([
+    db().from("hermes_tasks").select("id, title, status, progress, execution_mode, spent_usd, spent_tokens, expert_assignment, required_models, required_mcp").in("status", ["running", "preparing", "learning", "needs_approval", "paused", "blocked"]).limit(100),
+    db().from("maaroof_runs").select("id, status, total_tokens, total_usd, started_at").gte("started_at", since).limit(300),
+    db().from("token_ledger").select("tokens, usd_cost, meta").gte("created_at", since).limit(1000),
+    db().from("learning_budget_ledger").select("usd, tokens").gte("created_at", since).limit(500),
+    db().from("knowledge_nodes").select("id").gte("updated_at", since).limit(500),
+    db().from("trust_profiles").select("entity_key").gte("updated_at", since).limit(500),
+    db().from("state_timeline").select("id").gte("created_at", since).limit(500),
+  ]);
+
+  const taskRows = (tasks.data as any[]) || [];
+  const runRows = (runs.data as any[]) || [];
+  const ledgerRows = (ledger.data as any[]) || [];
+
+  return {
+    window_hours: 24,
+    tasks: taskRows,
+    activeExperts: [...new Set(taskRows.flatMap((t) => t.expert_assignment || []))],
+    activeModels: [...new Set(taskRows.flatMap((t) => t.required_models || []))],
+    activeMcp: [...new Set(taskRows.flatMap((t) => t.required_mcp || []))],
+    runningRuns: runRows.filter((r) => r.status === "running").length,
+    runs24h: runRows.length,
+    tokens24h: ledgerRows.reduce((a, r) => a + num(r.tokens), 0),
+    realUsd24h: round(ledgerRows.reduce((a, r) => a + num(r?.meta?.real_usd_cost), 0)),
+    chargedUsd24h: round(ledgerRows.reduce((a, r) => a + num(r.usd_cost), 0)),
+    learningUsd24h: round(((learning.data as any[]) || []).reduce((a, r) => a + num(r.usd), 0)),
+    knowledgeUpdates24h: ((knowledge.data as any[]) || []).length,
+    trustUpdates24h: ((trust.data as any[]) || []).length,
+    stateUpdates24h: ((state.data as any[]) || []).length,
+  };
+}
+
