@@ -250,3 +250,106 @@ export function exportToCSV(payload: ExportPayload) {
   URL.revokeObjectURL(url);
 }
 
+/* ------------------------------------------------------------------ */
+/* Part 18 — Export Center: JSON, Markdown, Word, PowerPoint.          */
+/* Same ExportPayload shape as PDF/Excel/CSV — no parallel format.     */
+/* ------------------------------------------------------------------ */
+
+function download(content: BlobPart, mime: string, ext: string, title: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Raw structured export — for pipelines and archiving. */
+export function exportToJSON(payload: ExportPayload) {
+  const lang = payload.lang || "ar";
+  const body = JSON.stringify(
+    { brand: BRAND, site: SITE, generated_at: new Date().toISOString(), language: lang, ...payload, disclaimer: DISCLAIMER[lang] },
+    null, 2,
+  );
+  download(body, "application/json;charset=utf-8", "json", payload.title);
+}
+
+export function payloadToMarkdown(payload: ExportPayload): string {
+  const lang = payload.lang || "ar";
+  const out: string[] = [`# ${payload.title}`];
+  if (payload.subtitle) out.push(`_${payload.subtitle}_`);
+  out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`, "");
+  for (const s of payload.sections) {
+    out.push(`## ${s.heading}`);
+    if (s.kind === "text" && s.text) out.push(s.text, "");
+    else if (s.kind === "list" && s.list) out.push(...s.list.map((x) => `- ${x}`), "");
+    else if (s.kind === "kv" && s.rows) {
+      out.push("| | |", "|---|---|", ...s.rows.map(([k, v]) => `| ${k} | ${v} |`), "");
+    } else if (s.kind === "table" && s.table) {
+      out.push(
+        `| ${s.table.columns.join(" | ")} |`,
+        `| ${s.table.columns.map(() => "---").join(" | ")} |`,
+        ...s.table.data.map((r) => `| ${r.join(" | ")} |`),
+        "",
+      );
+    }
+  }
+  out.push("---", DISCLAIMER[lang]);
+  return out.join("\n");
+}
+
+export function exportToMarkdown(payload: ExportPayload) {
+  download(payloadToMarkdown(payload), "text/markdown;charset=utf-8", "md", payload.title);
+}
+
+/** Word-compatible HTML document (.doc) — opens natively in Word. */
+export function exportToWord(payload: ExportPayload) {
+  const lang = payload.lang || "ar";
+  const dir = lang === "en" ? "ltr" : "rtl";
+  const html = `<!doctype html><html lang="${lang}" dir="${dir}"><head><meta charset="utf-8"/>
+<title>${escapeHtml(payload.title)}</title>
+<style>body{font-family:Arial,sans-serif;direction:${dir}}h1{font-size:20pt}h2{font-size:14pt;margin-top:18pt}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:6px;font-size:10pt;text-align:${dir === "rtl" ? "right" : "left"}}
+.small{color:#666;font-size:9pt}</style></head><body>
+<h1>${escapeHtml(payload.title)}</h1>
+${payload.subtitle ? `<p class="small">${escapeHtml(payload.subtitle)}</p>` : ""}
+<p class="small">${BRAND} · ${SITE} — ${UI[lang].generated} ${escapeHtml(new Date().toLocaleString())}</p>
+${payload.sections.map(sectionHtml).join("")}
+<hr/><p class="small">${escapeHtml(DISCLAIMER[lang])}</p>
+</body></html>`;
+  download(html, "application/msword;charset=utf-8", "doc", payload.title);
+}
+
+/** Slide deck — one slide per section. Loaded lazily to keep the bundle light. */
+export async function exportToPowerPoint(payload: ExportPayload) {
+  const lang = payload.lang || "ar";
+  const { default: PptxGenJS } = await import("pptxgenjs");
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_16x9";
+
+  const cover = pptx.addSlide();
+  cover.addText(payload.title, { x: 0.5, y: 2, w: 9, h: 1, fontSize: 30, bold: true, align: "center" });
+  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}`, { x: 0.5, y: 3.1, w: 9, h: 1, fontSize: 14, align: "center", color: "666666" });
+
+  for (const s of payload.sections) {
+    const slide = pptx.addSlide();
+    slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.7, fontSize: 22, bold: true });
+    if (s.kind === "table" && s.table) {
+      slide.addTable(
+        [s.table.columns.map((c) => ({ text: String(c), options: { bold: true } })), ...s.table.data.map((r) => r.map((c) => String(c)))] as any,
+        { x: 0.4, y: 1.1, w: 9.2, fontSize: 10, border: { pt: 1, color: "CCCCCC" } },
+      );
+    } else {
+      const body = s.kind === "kv" && s.rows ? s.rows.map(([k, v]) => `• ${k}: ${v}`).join("\n")
+        : s.kind === "list" && s.list ? s.list.map((x) => `• ${x}`).join("\n")
+        : s.text || "";
+      slide.addText(body, { x: 0.4, y: 1.1, w: 9.2, h: 4, fontSize: 13, valign: "top" });
+    }
+  }
+
+  const last = pptx.addSlide();
+  last.addText(DISCLAIMER[lang], { x: 0.5, y: 2, w: 9, h: 2, fontSize: 10, color: "666666", align: "center" });
+
+  await pptx.writeFile({ fileName: `${payload.title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.pptx` });
+}

@@ -2,12 +2,15 @@
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Anchor, Crown, RefreshCw, Loader2, Check, X, Clock, Send, AlertTriangle, History } from "lucide-react";
+import { Anchor, Crown, RefreshCw, Loader2, Check, X, Clock, Send, AlertTriangle, History, Paperclip, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import {
   getStateCenter, getRecoveryPoint,
   getHermesCenter, refreshHermesProposals, decideHermesProposal, askHermes, getHermesMessages,
 } from "@/lib/maaroof-state-hermes.functions";
+import { EXECUTIVE_COMMANDS, COMMAND_LABELS_AR } from "@/lib/hermes-commands";
+import { HermesTaskCenter } from "@/components/admin/HermesTaskCenter";
+
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -190,11 +193,15 @@ export function HermesOfficeSection() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [tab, setTab] = useState<"observatory" | "inbox" | "office">("observatory");
+  const [tab, setTab] = useState<"observatory" | "inbox" | "office" | "tasks">("observatory");
   const [note, setNote] = useState<Record<string, string>>({});
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [draft, setDraft] = useState("");
+  const [command, setCommand] = useState<string>("");
+  const [chatLang, setChatLang] = useState<"ar" | "en" | "ku">("ar");
+  const [attachments, setAttachments] = useState<Array<{ kind: "image" | "file"; name: string; dataUrl: string }>>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const refresh = async () => {
@@ -236,15 +243,38 @@ export function HermesOfficeSection() {
     const text = draft.trim();
     if (!text) return;
     setDraft("");
+    const files = attachments;
+    setAttachments([]);
     setMessages((m) => [...m, { id: `tmp-${Date.now()}`, role: "user", content: text }]);
     setBusy("ask");
     try {
-      const r: any = await ask({ data: { message: text, conversation_id: conversationId } });
+      const r: any = await ask({
+        data: {
+          message: text,
+          conversation_id: conversationId,
+          command: command || null,
+          language: chatLang,
+          attachments: files.length ? files : undefined,
+        },
+      });
       if (r.conversationId) setConversationId(r.conversationId);
       setMessages((m) => [...m, { id: `a-${Date.now()}`, role: "assistant", content: r.reply, usd: r.usd, tokens: r.tokens }]);
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setBusy(null); }
   };
+
+  const pickFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const picked = await Promise.all(Array.from(files).slice(0, 4).map((f) => new Promise<any>((res, rej) => {
+      if (f.size > 5_000_000) { rej(new Error(`${f.name}: الحجم أكبر من 5 ميغابايت`)); return; }
+      const reader = new FileReader();
+      reader.onload = () => res({ kind: f.type.startsWith("image/") ? "image" : "file", name: f.name, dataUrl: String(reader.result) });
+      reader.onerror = () => rej(new Error("تعذّر قراءة الملف"));
+      reader.readAsDataURL(f);
+    }))).catch((e) => { toast.error(String(e?.message || e)); return []; });
+    if (picked.length) setAttachments((a) => [...a, ...picked].slice(0, 4));
+  };
+
 
   const openConversation = async (id: string) => {
     setConversationId(id);
@@ -263,14 +293,24 @@ export function HermesOfficeSection() {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          {(["observatory", "inbox", "office"] as const).map((t) => (
+          {(["observatory", "inbox", "office", "tasks"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`rounded-lg px-2.5 py-1.5 text-xs ${tab === t ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted/40"}`}>
-              {t === "observatory" ? "المرصد التنفيذي" : t === "inbox" ? `صندوق المؤسس (${pending.length})` : "مكتب هرمس"}
+              {t === "observatory" ? "المرصد التنفيذي" : t === "inbox" ? `صندوق المؤسس (${pending.length})` : t === "office" ? "مكتب هرمس" : "مركز المهام"}
             </button>
           ))}
         </div>
       </div>
+
+      {tab === "tasks" && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <ListChecks className="size-3.5" /> إدارة المهام التنفيذية من التحضير حتى التقرير والتصدير.
+          </div>
+          <HermesTaskCenter />
+        </div>
+      )}
+
 
       {tab === "observatory" && (
         <div className="space-y-3">
@@ -441,19 +481,49 @@ export function HermesOfficeSection() {
               ))}
               <div ref={endRef} />
             </div>
-            <div className="border-t border-border/60 p-2 flex items-center gap-2">
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-                placeholder="اكتب إلى هرمس…"
-                className="flex-1 rounded-lg border border-border/60 bg-background px-2.5 py-2 text-xs"
-              />
-              <button onClick={() => void send()} disabled={busy === "ask"}
-                className="rounded-lg bg-primary/15 text-primary px-3 py-2 text-xs flex items-center gap-1.5">
-                {busy === "ask" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال
-              </button>
+            <div className="border-t border-border/60 p-2 space-y-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <select value={command} onChange={(e) => setCommand(e.target.value)}
+                  className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px]">
+                  <option value="">بلا أمر تنفيذي</option>
+                  {EXECUTIVE_COMMANDS.map((c) => (
+                    <option key={c} value={c}>{COMMAND_LABELS_AR[c] || c}</option>
+                  ))}
+                </select>
+                <select value={chatLang} onChange={(e) => setChatLang(e.target.value as any)}
+                  className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px]">
+                  <option value="ar">العربية</option>
+                  <option value="en">English</option>
+                  <option value="ku">کوردی</option>
+                </select>
+                <button onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-[11px] hover:bg-muted/40">
+                  <Paperclip className="size-3.5" /> إرفاق
+                </button>
+                <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.md,.json" className="hidden"
+                  onChange={(e) => { void pickFiles(e.target.files); e.currentTarget.value = ""; }} />
+                {attachments.map((a, i) => (
+                  <span key={`${a.name}-${i}`} className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px]">
+                    {a.name}
+                    <button onClick={() => setAttachments((list) => list.filter((_, j) => j !== i))}><X className="size-3" /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+                  placeholder="اكتب إلى هرمس…"
+                  className="flex-1 rounded-lg border border-border/60 bg-background px-2.5 py-2 text-xs"
+                />
+                <button onClick={() => void send()} disabled={busy === "ask"}
+                  className="rounded-lg bg-primary/15 text-primary px-3 py-2 text-xs flex items-center gap-1.5">
+                  {busy === "ask" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
       )}
