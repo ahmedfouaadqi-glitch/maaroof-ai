@@ -18,9 +18,11 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { ENGINES } from "@/components/engine-logos";
+import EngineSelector from "@/components/EngineSelector";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"];
-const MAX_PLATFORMS_PER_RUN = 5;
+import { ENGINE_KEYS } from "@/lib/ai-engines";
+const PLATFORMS: string[] = [...ENGINE_KEYS];
+const MAX_PLATFORMS_PER_RUN = 9;
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
