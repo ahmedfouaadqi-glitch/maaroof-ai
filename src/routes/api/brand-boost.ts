@@ -269,7 +269,7 @@ ${evidenceBlock}`;
 
           let planParsed: any = {};
           const _planT0 = Date.now();
-          const planModel = await resolveToolModel("google/gemini-2.5-flash", "reasoning");
+          const planModel = await resolveToolModel("google/gemini-2.5-flash", "planning");
           try {
             const planRes = await callGateway(lovableKey, planModel, [
               { role: "system", content: planSys },
