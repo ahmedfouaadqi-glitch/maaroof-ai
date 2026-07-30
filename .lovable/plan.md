@@ -1,30 +1,30 @@
 ## Goal
-Use the React Bits `OrbitImages` motion component as the central hero animation, instead of the current morph video clip in `src/components/EnginesOrbit.tsx`.
+Adopt the React Bits **Lightfall** WebGL effect as the ambient background for the whole project (all pages), tuned to MAAROOF's brand and readability standards — not as a one-off hero widget.
 
-## Current state (verified)
-- `src/components/EnginesOrbit.tsx` renders a `<video>` (webm/mp4 + poster) inside a rounded glass plate, wrapped by badge/title/subtitle and the two CTA buttons.
-- The `motion` package is NOT in `package.json` dependencies — it must be installed.
-- The nine engine marks are React SVG components (`ENGINES[].Logo`) in `src/components/engine-logos.tsx`, not image URLs.
-- `HexBadge` exists and matches the MAAROOF hexagon look, good for the orbit center.
+## What gets built
 
-## What changes
+1. **Dependency**: install `ogl`.
 
-1. **Install `motion`** (Motion for React, provides `motion/react`).
+2. **Component** — `src/components/backgrounds/Lightfall.tsx` + `Lightfall.css`
+   - Full source from the spec, converted to TypeScript with a typed props interface (all documented props kept, same defaults).
+   - Client-only safety: WebGL init stays inside `useEffect`, and the effect array is stabilized so a new `colors` array literal doesn't rebuild the renderer every render (memoize the colors key).
+   - Graceful no-op if WebGL context creation fails (falls back to nothing rendered, page stays intact).
 
-2. **Add the component** at `src/components/orbit/OrbitImages.tsx` + `src/components/orbit/OrbitImages.css`, copied from the provided source, with two minimal adaptations:
-   - Converted to TypeScript with typed props (same prop names/defaults as the reference table).
-   - Adds an optional `items?: ReactNode[]` prop alongside `images`, so we can orbit the real SVG logo components instead of raster URLs. When `items` is absent it behaves exactly as documented with `images`.
-   - CSS imported from the component file (local file import, allowed — only remote `@import` in `styles.css` is forbidden).
+3. **Global wrapper** — `src/components/backgrounds/SiteBackground.tsx`
+   - Renders Lightfall in a `fixed inset-0 -z-10 pointer-events-none` layer so it sits behind every page without capturing clicks.
+   - Respects `prefers-reduced-motion` → renders a static brand gradient instead.
+   - Lowers cost on small screens / low-end devices: reduced `dpr`, fewer streaks; pauses when the tab is hidden.
+   - Colors pulled from the existing brand tokens rather than the demo blue/pink, with low `opacity` + `backgroundGlow` so text contrast and the existing surfaces stay readable in both light and dark themes.
 
-3. **Use it in `EnginesOrbit.tsx`**
-   - Remove the `<video>`, poster `<img>` and the three `*.asset.json` imports.
-   - Render `<OrbitImages />` in the same slot with the nine engine logos as `items`, `shape="ellipse"`, `responsive`, a `baseWidth`-scaled ellipse, `duration={40}`, `itemSize` sized so the marks stay as legible as the current animation, and `centerContent` = the MAAROOF hexagon (`HexBadge`) so the middle isn't empty.
-   - Each orbiting mark sits on a small bordered circular plate (`bg-card/70 border-border`) so light and dark themes both read well.
-   - Keep the ambient glow, badge, heading, subheading, tagline, the two CTAs, the `useVisibility("engines_orbit")` gate, and all i18n strings untouched.
-   - `prefers-reduced-motion`: pass `paused` so the logos render in a static ring instead of spinning.
+4. **Wire-up** — `src/routes/__root.tsx`
+   - Mount `<SiteBackground />` once inside `RootComponent`, above `<Outlet />` in DOM order but behind it visually. Every route inherits it automatically; no per-page edits.
 
-4. Delete the now-unused morph asset pointer files (`engines-morph.webm/.mp4/-poster.jpg.asset.json`).
+5. **Existing hero**: the `OrbitImages` engine orbit stays exactly as is — Lightfall renders behind it, tuned so it doesn't compete with the orbiting logos.
 
-## Notes
-- The orbit is decorative; it keeps `aria-hidden` plus the existing screen-reader text.
-- Nothing outside this component changes — no engine logic, routes, or data.
+## Verification
+- Visual capture of the home page plus one tool page and one admin page, light and dark, confirming readability and that the background doesn't block interaction.
+- Confirm reduced-motion fallback and that no console/WebGL errors appear.
+
+## Technical notes
+- Only presentation code changes: two new component files, one dependency, one root-route mount.
+- `mouseInteraction` will be enabled on desktop only (disabled under a touch/small-screen check) to avoid pointer cost on mobile.

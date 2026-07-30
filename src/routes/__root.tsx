@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { attachGlobalClickSound } from "@/lib/sound";
 import { attachDevtoolsGuard } from "@/lib/devtools-guard";
 import { CountryProvider } from "@/lib/use-country";
+import SiteBackground from "@/components/backgrounds/SiteBackground";
 
 function NotFoundComponent() {
   return (
@@ -179,6 +180,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <CountryProvider>
+        <SiteBackground />
         <PageTransition>
           <Outlet />
         </PageTransition>
