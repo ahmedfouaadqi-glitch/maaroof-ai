@@ -27,7 +27,9 @@ export const Route = createFileRoute("/guide")({
             "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more.",
           url: "https://geoiraq.com/guide",
           isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://geoiraq.com" },
-          hasPart: TOOL_CATALOG.map((td) => ({
+          hasPart: TOOL_CATALOG.filter((td) =>
+            ["analyze", "suggest", "compare", "visibility", "brand_boost"].includes(td.key),
+          ).map((td) => ({
             "@type": "WebPage",
             name: td.labels.en,
             url: `https://geoiraq.com/tools/${td.key}`,
