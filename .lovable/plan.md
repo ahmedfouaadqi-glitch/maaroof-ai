@@ -1,25 +1,30 @@
 ## Goal
-Replace the circular "engines orbit" animation in the middle of the home page with your uploaded morphing-logos motion clip, at the same size and visual clarity.
+Use the React Bits `OrbitImages` motion component as the central hero animation, instead of the current morph video clip in `src/components/EnginesOrbit.tsx`.
 
-## What it is now
-`src/components/EnginesOrbit.tsx` renders a 380×380 canvas: SVG rings + beams, nine rotating engine chips, and the central MAAROOF hexagon logo. It sits inside the hero section of `src/routes/index.tsx`.
+## Current state (verified)
+- `src/components/EnginesOrbit.tsx` renders a `<video>` (webm/mp4 + poster) inside a rounded glass plate, wrapped by badge/title/subtitle and the two CTA buttons.
+- The `motion` package is NOT in `package.json` dependencies — it must be installed.
+- The nine engine marks are React SVG components (`ENGINES[].Logo`) in `src/components/engine-logos.tsx`, not image URLs.
+- `HexBadge` exists and matches the MAAROOF hexagon look, good for the orbit center.
 
 ## What changes
 
-1. **Prepare the clip** (`output_1.mp4`, 600×1068, 16s, cream background):
-   - Crop to the centered square region that contains the animation, so it drops into the same 380×380 slot with no letterboxing.
-   - Key out the cream background and export a transparent WebM (VP9 + alpha) so the animation floats over the site's own gradient/glow in both light and dark themes.
-   - Keep a trimmed MP4 as a fallback source for browsers without alpha-WebM support (it renders on a soft rounded plate so it still looks intentional).
-   - Both files are uploaded as CDN assets (`lovable-assets`), not committed binaries.
+1. **Install `motion`** (Motion for React, provides `motion/react`).
 
-2. **Swap the visual in `EnginesOrbit.tsx`**:
-   - Remove the SVG rings/beams block, the rotating engine-chip ring, and the central logo block.
-   - Render a `<video autoplay loop muted playsinline>` in the same wrapper, same 380px box, `max-width: 100%`, `object-contain`, `aria-hidden` + a visually-hidden text alternative for accessibility.
-   - Keep the ambient glow layers, the badge, heading, subheading, tagline and the two CTA buttons exactly as they are.
-   - Keep the `useVisibility("engines_orbit")` gate and the i18n strings untouched.
-   - Respect `prefers-reduced-motion`: pause the video and show its first frame instead.
+2. **Add the component** at `src/components/orbit/OrbitImages.tsx` + `src/components/orbit/OrbitImages.css`, copied from the provided source, with two minimal adaptations:
+   - Converted to TypeScript with typed props (same prop names/defaults as the reference table).
+   - Adds an optional `items?: ReactNode[]` prop alongside `images`, so we can orbit the real SVG logo components instead of raster URLs. When `items` is absent it behaves exactly as documented with `images`.
+   - CSS imported from the component file (local file import, allowed — only remote `@import` in `styles.css` is forbidden).
 
-3. Nothing else changes — no other page, no engine logic, no data.
+3. **Use it in `EnginesOrbit.tsx`**
+   - Remove the `<video>`, poster `<img>` and the three `*.asset.json` imports.
+   - Render `<OrbitImages />` in the same slot with the nine engine logos as `items`, `shape="ellipse"`, `responsive`, a `baseWidth`-scaled ellipse, `duration={40}`, `itemSize` sized so the marks stay as legible as the current animation, and `centerContent` = the MAAROOF hexagon (`HexBadge`) so the middle isn't empty.
+   - Each orbiting mark sits on a small bordered circular plate (`bg-card/70 border-border`) so light and dark themes both read well.
+   - Keep the ambient glow, badge, heading, subheading, tagline, the two CTAs, the `useVisibility("engines_orbit")` gate, and all i18n strings untouched.
+   - `prefers-reduced-motion`: pass `paused` so the logos render in a static ring instead of spinning.
 
-## Note
-The nine brand icons stay in use everywhere else (hero chips, selector, results, admin map); only the central orbit animation is replaced.
+4. Delete the now-unused morph asset pointer files (`engines-morph.webm/.mp4/-poster.jpg.asset.json`).
+
+## Notes
+- The orbit is decorative; it keeps `aria-hidden` plus the existing screen-reader text.
+- Nothing outside this component changes — no engine logic, routes, or data.
