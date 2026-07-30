@@ -146,6 +146,42 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const runId = (runIns as any).id as string;
   await ctx.emit("run", { runId, geo, executionMode });
 
+  // Part 16 — Living State Anchor. The run gets an identity anchor inherited
+  // from the platform (and its workspace) BEFORE anything executes. Disabled by
+  // default, and never fatal: a failure here degrades to the previous behaviour.
+  const anchorCfg = (settings as any).state_anchor || {};
+  let runAnchor: any = null;
+  let anchorValidation: any = null;
+  if (anchorCfg.enabled) {
+    try {
+      const { upsertAnchor, validateBeforeExecution } = await import("@/lib/maaroof/state.server");
+      if (anchorCfg.validate_before_execution !== false) {
+        anchorValidation = await validateBeforeExecution({
+          goal: ctx.goal,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId || null,
+          language: ctx.language,
+        });
+        await ctx.emit("state_anchor", { validation: anchorValidation });
+      }
+      runAnchor = await upsertAnchor({
+        level: "run",
+        scopeId: runId,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId || null,
+        runId,
+        label: ctx.goal.slice(0, 80),
+        currentGoal: ctx.goal,
+        language: ctx.language,
+        geo: { country: geo.country, city: geo.city },
+      });
+    } catch (e) {
+      await ctx.emit("state_anchor_error", { message: String((e as any)?.message || e) });
+    }
+  }
+
+
+
   let totalUsd = 0;
   let totalTokens = 0;
 
