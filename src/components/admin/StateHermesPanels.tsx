@@ -481,19 +481,49 @@ export function HermesOfficeSection() {
               ))}
               <div ref={endRef} />
             </div>
-            <div className="border-t border-border/60 p-2 flex items-center gap-2">
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-                placeholder="اكتب إلى هرمس…"
-                className="flex-1 rounded-lg border border-border/60 bg-background px-2.5 py-2 text-xs"
-              />
-              <button onClick={() => void send()} disabled={busy === "ask"}
-                className="rounded-lg bg-primary/15 text-primary px-3 py-2 text-xs flex items-center gap-1.5">
-                {busy === "ask" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال
-              </button>
+            <div className="border-t border-border/60 p-2 space-y-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <select value={command} onChange={(e) => setCommand(e.target.value)}
+                  className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px]">
+                  <option value="">بلا أمر تنفيذي</option>
+                  {EXECUTIVE_COMMANDS.map((c) => (
+                    <option key={c} value={c}>{COMMAND_LABELS_AR[c] || c}</option>
+                  ))}
+                </select>
+                <select value={chatLang} onChange={(e) => setChatLang(e.target.value as any)}
+                  className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px]">
+                  <option value="ar">العربية</option>
+                  <option value="en">English</option>
+                  <option value="ku">کوردی</option>
+                </select>
+                <button onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-[11px] hover:bg-muted/40">
+                  <Paperclip className="size-3.5" /> إرفاق
+                </button>
+                <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.md,.json" className="hidden"
+                  onChange={(e) => { void pickFiles(e.target.files); e.currentTarget.value = ""; }} />
+                {attachments.map((a, i) => (
+                  <span key={`${a.name}-${i}`} className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px]">
+                    {a.name}
+                    <button onClick={() => setAttachments((list) => list.filter((_, j) => j !== i))}><X className="size-3" /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+                  placeholder="اكتب إلى هرمس…"
+                  className="flex-1 rounded-lg border border-border/60 bg-background px-2.5 py-2 text-xs"
+                />
+                <button onClick={() => void send()} disabled={busy === "ask"}
+                  className="rounded-lg bg-primary/15 text-primary px-3 py-2 text-xs flex items-center gap-1.5">
+                  {busy === "ask" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
       )}
