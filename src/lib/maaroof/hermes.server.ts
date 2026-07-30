@@ -347,9 +347,14 @@ export async function listProposals(status?: string) {
   return ((data as any[]) || []);
 }
 
+/** Founder decision. Part 18 widens the vocabulary: modify / postpone / archive
+ *  are added next to the original approve / reject / defer without changing
+ *  the behaviour of the existing three. */
+export type FounderDecision = "approved" | "rejected" | "deferred" | "modified" | "postponed" | "archived";
+
 export async function decideProposal(input: {
   proposalId: string;
-  decision: "approved" | "rejected" | "deferred";
+  decision: FounderDecision;
   note?: string | null;
   founderId: string;
 }) {
@@ -361,9 +366,14 @@ export async function decideProposal(input: {
     decided_by: input.founderId,
     decided_at: new Date().toISOString(),
   }).eq("id", input.proposalId);
-  await learnFromDecision({ proposal, decision: input.decision, note: input.note });
+  // DNA only learns from the three decisive signals; the softer ones are logged
+  // but must not distort risk tolerance.
+  if (input.decision === "approved" || input.decision === "rejected" || input.decision === "deferred") {
+    await learnFromDecision({ proposal, decision: input.decision, note: input.note });
+  }
   return { ok: true as const };
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Hermes Office — the Founder's private conversation                  */
