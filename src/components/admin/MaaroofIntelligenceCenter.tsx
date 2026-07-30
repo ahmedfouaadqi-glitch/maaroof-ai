@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Activity, Brain, Coins, ShieldCheck, Sparkles, Network, Bot,
-  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap,
+  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap, Send,
 } from "lucide-react";
 import { MaaroofAdminTab } from "./MaaroofAdminTab";
 import { SystemHealthTab } from "./SystemHealthTab";
@@ -14,13 +14,14 @@ import { CognitiveInsightsTab } from "./CognitiveInsightsTab";
 import { UserIntelligenceTab } from "./UserIntelligenceTab";
 import { ExpertAcademySection, LearningBudgetSection, KnowledgeObservatorySection } from "./ExpertAcademyPanels";
 import { AiModelCenterSection, DecisionCenterSection } from "./ModelDecisionPanels";
+import { PublishingCenterSection, TrustCenterSection } from "./PublishingTrustPanels";
 
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
   | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws"
   | "academy" | "learning_budget" | "knowledge"
-  | "model_center" | "decision_center";
+  | "model_center" | "decision_center" | "publishing_center" | "trust_center";
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
@@ -42,6 +43,8 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
 
   { k: "model_center",   label: "مركز نماذج الذكاء",     Icon: Layers,      group: "governance" },
   { k: "decision_center",label: "مركز القرار التنفيذي",   Icon: ScrollText,  group: "governance" },
+  { k: "publishing_center", label: "منظومة النشر",        Icon: Send,        group: "governance" },
+  { k: "trust_center",   label: "هندسة الثقة",            Icon: ShieldCheck, group: "governance" },
 
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
@@ -101,6 +104,8 @@ export function MaaroofIntelligenceCenter() {
 
         {section === "model_center"   && <AiModelCenterSection />}
         {section === "decision_center" && <DecisionCenterSection />}
+        {section === "publishing_center" && <PublishingCenterSection />}
+        {section === "trust_center"   && <TrustCenterSection />}
 
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
