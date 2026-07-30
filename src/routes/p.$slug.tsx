@@ -62,6 +62,7 @@ export const Route = createFileRoute("/p/$slug")({
         },
       ],
     };
+  },
   component: () => (
     <I18nProvider>
       <AuthProvider>
