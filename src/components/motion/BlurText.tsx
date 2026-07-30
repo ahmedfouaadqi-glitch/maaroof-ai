@@ -33,6 +33,10 @@ export type BlurTextProps = {
   /** Class applied to each animated segment (use for text-gradient, which
    * cannot clip across animated children). */
   segmentClassName?: string;
+  /** Loop the reveal indefinitely while visible (default true). */
+  repeat?: boolean;
+  /** Idle time (ms) between loops. */
+  repeatDelay?: number;
 };
 
 /**
