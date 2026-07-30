@@ -16,6 +16,27 @@ export const Route = createFileRoute("/guide")({
       { property: "og:url", content: "https://geoiraq.com/guide" },
     ],
     links: [{ rel: "canonical", href: "https://geoiraq.com/guide" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "MAAROOF Ai Guide",
+          description:
+            "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more.",
+          url: "https://geoiraq.com/guide",
+          isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://geoiraq.com" },
+          hasPart: TOOL_CATALOG.filter((td) =>
+            ["analyze", "suggest", "compare", "visibility", "brand_boost"].includes(td.key),
+          ).map((td) => ({
+            "@type": "WebPage",
+            name: td.labels.en,
+            url: `https://geoiraq.com/tools/${td.key}`,
+          })),
+        }),
+      },
+    ],
   }),
   component: () => <I18nProvider><GuidePage /></I18nProvider>,
 });
@@ -60,6 +81,20 @@ function GuidePage() {
           <BookOpen /> {t("guide_title")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">{t("guide_intro")}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link to="/guide/what-is-geo" className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm font-semibold text-primary hover:underline">
+            What is GEO? →
+          </Link>
+          <Link to="/guide/geo-vs-aeo" className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm font-semibold text-primary hover:underline">
+            GEO vs AEO →
+          </Link>
+          <Link to="/guide/arabic-kurdish-geo" className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm font-semibold text-primary hover:underline">
+            Arabic & Kurdish GEO →
+          </Link>
+        </div>
+
+
 
         <Section icon={<Wrench className="size-5" />} title={t("guide_tools_section")}>
           {tools.map((td) => (

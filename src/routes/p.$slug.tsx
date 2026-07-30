@@ -41,6 +41,26 @@ export const Route = createFileRoute("/p/$slug")({
     return {
       meta,
       links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: `${title}`,
+            ...(desc ? { description: desc } : {}),
+            inLanguage: ["ar", "en", "ku"],
+            mainEntityOfPage: url,
+            url,
+            author: { "@type": "Organization", name: "MAAROOF Ai" },
+            publisher: {
+              "@type": "Organization",
+              name: "MAAROOF Ai",
+              logo: { "@type": "ImageObject", url: "https://geoiraq.com/icon-512.png" },
+            },
+          }),
+        },
+      ],
     };
   },
   component: () => (
