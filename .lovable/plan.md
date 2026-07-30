@@ -1,61 +1,46 @@
-# الأجزاء 9 → 17: طبقات إدارية فوق معمارية معروف القائمة
+# الموجة الثانية — الجزء 12 (حوكمة النماذج) + الجزء 13 (مركز القرار التنفيذي)
 
-قرأت الملفات التسعة. أغلب ما تطلبه هذه الأجزاء **موجود جزئياً** داخل المحرّكات التي بنيناها في الأجزاء 1–8، لذلك — التزاماً بالدستور — لن أُنشئ محرّكات موازية. سأقيّم الموجود، أطوّره، ثم أدمج المتطلب الجديد فيه.
+بناءً على الدستور: تطوير للموجود لا استبدال. الموجود فعلاً: `settings.server.ts` (planner_model / fallback_model / learning_model)، `capability.server.ts` (اختيار التنفيذ بالمقاييس)، `provider_rates` (أسعار المزودين)، `maaroof_runs.decision_log` (سجل قرارات مبدئي)، وتقدير تكلفة ثابت داخل `callGateway`. الناقص: سجل نماذج مركزي، اختيار نموذج لكل مهمة، مقترحات/بنشمارك/صحة النماذج، وسجل قرار كامل قابل للتدقيق والتصدير.
 
-## ما هو موجود فعلاً مقابل الجديد
+## 1) سجل النماذج (Model Registry)
 
-| الجزء | المكوّن القائم الذي يغطي جزءاً منه | الفجوة الحقيقية التي سأبنيها |
-|---|---|---|
-| 9 — Expert Learning | `tool-catalog.ts` (Capability Registry)، `capability.server.ts`، `agents.server.ts` (DNA) | جلسة حوار معرفي مع كل أداة + Expert Registry + Understanding Score + Expert Academy |
-| 10 — Learning Governance | `token_ledger`، `charge_tokens`، `spend.server.ts` | ميزانية تعلّم منفصلة لا تمسّ رصيد المستخدم + سبب صفرية التكلفة + Snapshots + تقرير الفروقات |
-| 11 — Living Knowledge | `maaroof_memory` (scope/confidence/freshness)، `platform_dna` | طبقات المعرفة التسع + Knowledge Graph (عُقد/علاقات) + تحقّق وتعارض + Knowledge Observatory |
-| 12 — Model Governance | `model_scores_v`، `provider_rates`، `maaroof_settings.planner_model` | سجل نماذج + اختيار مُعلَّل لكل مهمة + مقترحات تحديث + AI Model Center |
-| 13 — Decision Intelligence | `decision_log`، Expert Council، Capability OS، `timing.server.ts` | خط قرار موحّد + بدائل مرفوضة وأسبابها + Decision Center |
-| 14 — Publishing | `publish_channels`، `publish_log`، `ApprovalQueue`، `brand_boost_jobs` | Publication Strategy + Platform Profiles + حملات + Publishing Center |
-| 15 — Trust Architecture | Trust Engine (الجزء 7) + `buildEvidenceGraph` | Trust Profile لكل كيان (خبير/نموذج/MCP/معرفة) يتطوّر مع الزمن + Trust Center |
-| 16 — State Anchor | `workspaces`، `maaroof_runs`، `maaroof_agents` | مرساة حالة متعددة المستويات + كشف الانحراف (Drift) + استرجاع بعد الفشل + State Center |
-| 17 — HERMES | لا يوجد | كيان مراقبة يقترح ولا ينفّذ + Founder Inbox + Founder DNA |
+جداول جديدة (مع GRANT + RLS: قراءة للمصادَقين، كتابة للأدمن فقط):
+- `ai_models` — model_key, provider, version, capabilities jsonb (reasoning/coding/vision/audio/video/long_context)، speed, latency_ms, reliability, cost_in_usd_per_mtok, cost_out_usd_per_mtok, languages, supported_tools, supported_mcp, recommended_use_cases, limitations, status (active/candidate/deprecated), released_at, last_evaluated_at.
+- `ai_model_proposals` — النموذج المقترح، السبب، المزايا/العيوب، أثر التكلفة/الجودة/السرعة، خطة الترحيل والاختبار والتراجع، status (pending/approved/rejected)، reviewed_by.
+- `ai_model_benchmarks` — نفس المهمة على أكثر من نموذج: الدقة، الزمن، التوكنات، التكلفة، الملاحظات.
+- `ai_model_health` — أخطاء/نجاح/زمن استجابة مجمّع لكل نموذج (يُغذّى من كل نداء).
 
-## الموجة 1 — المعرفة والخبراء (9 + 10 + 11)
+يُزرع السجل بالنماذج المتاحة فعلاً في المنصة (Gemini 2.5 Pro/Flash/Flash-Lite، GPT‑5.x ...) بأسعارها الحقيقية بدل الأرقام المضمّنة في الكود.
 
-- جداول: `expert_profiles` (الـDNA والفهم لكل أداة)، `expert_learning_sessions` (الحوار كاملاً: سؤال/جواب/تكلفة/نموذج)، `expert_snapshots` (نسخ معتمدة)، `knowledge_nodes` + `knowledge_edges` (الرسم المعرفي)، `learning_budget_ledger`.
-- `experts.server.ts`: تشغيل المقابلة المعرفية (مرحلتان: استجواب ثم حوار عكسي)، استخراج الـDNA، حساب Understanding Score، وإصدار Snapshot.
-- الحوكمة: كل استهلاك تعلّم يُقيَّد على ميزانية النظام لا على المستخدم؛ وأي تكلفة صفرية تُسجَّل مع سببها (كاش / Snapshot معاد / بلا نموذج).
-- المنسّق يقرأ Snapshot الخبير بدل الوصف الثابت، ولا يستخدم أداة قبل اكتمال تعلّمها.
-- واجهات إدارة: **Expert Academy** و**Knowledge Observatory** داخل مركز الذكاء القائم (لا صفحات منفصلة).
+## 2) محرك اختيار النموذج
 
-## الموجة 2 — النماذج والقرار (12 + 13)
+ملف جديد `src/lib/maaroof/models.server.ts`:
+- `selectModel({ phase, expert, capability, workspace, risk, budget })` → يعيد `{ model, fallback, reason, expected_cost }` بناءً على قدرات النموذج وتكلفته وسرعته وتفضيلات الـ workspace (`preferred_models`) والحدود المالية.
+- `recordModelCall(...)` → يحدّث `ai_model_health` ويستخدم أسعار `ai_models` الحقيقية بدل التقدير الثابت.
+- `proposeModelUpgrade()` → يولّد Proposal تلقائياً عند رخص أو تحسّن ملحوظ، ولا يُطبَّق شيء دون موافقة الإدارة.
 
-- `ai_models` سجل مركزي + `model_proposals` + `model_benchmarks`.
-- `models.server.ts`: اختيار النموذج لكل خطوة حسب المهمة والتكلفة والسرعة مع تسجيل سبب الاختيار؛ الاختيار خلف مفتاح، والافتراضي يبقى `planner_model` الحالي.
-- توسعة `decision_log` القائم إلى خط قرار كامل: البدائل المطروحة، سبب رفض كل بديل، الخبراء، النماذج، التكلفة، المخاطر.
-- واجهات: **AI Model Center** و**Decision Center** (خط زمني + شجرة قرار + تصدير).
+تعديل `orchestrator.server.ts`: استبدال `const MODEL = settings.planner_model` بنداء `selectModel` لكل مرحلة (تخطيط / مجلس خبراء / تنفيذ / تأمل / إجابة نهائية)، مع الإبقاء على `planner_model` كافتراضي عند إطفاء المفتاح — سلوك مطابق حرفياً عندما `model_governance_enabled = false`.
 
-## الموجة 3 — النشر والثقة (14 + 15)
+## 3) مركز القرار التنفيذي (Part 13)
 
-- تطوير `publish_channels` القائم بدل استبداله: إضافة `platform_profiles` (سلوك كل منصة وأفضل وقت وقيود المحتوى) و`publishing_campaigns` و`publication_strategies`.
-- سير النشر يمرّ عبر مجلس الخبراء ثم بوابة الموافقة الحالية؛ نتائج ما بعد النشر تعود إلى الذاكرة.
-- `trust_profiles`: ملف ثقة متطوّر لكل خبير/نموذج/MCP/عقدة معرفة، يُحدَّث من نتائج التشغيل الفعلية، ويصبح مدخلاً في اختيار الخبير والنموذج.
-- واجهات: **Publishing Center** و**Executive Trust Center**.
+- جدول `decision_traces`: run_id, stage, goal_understanding, strategy, experts, capabilities, tools, models, mcp, cost, risk, time, future_impact, confidence, alternatives_rejected (مع الأسباب)، score.
+- توسيع `decision_log` الحالي في `maaroof_runs` بدل استبداله: كل مرحلة من الـ20 في الـ pipeline تُسجَّل كسطر trace.
+- `src/lib/maaroof/decisions.server.ts`: توليد وتقييم بدائل الخطة (خطتان-ثلاث مقارنة جودة/تكلفة/وقت) واختيار الأفضل مع تعليل، ثم حساب Decision Score.
+- الأوركستريتور يبثّ حدث SSE `decision` لعرض التتبّع في واجهة `/maaroof` داخل بطاقة الثقة الموجودة (TrustPanel) بدل بطاقة جديدة.
 
-## الموجة 4 — مرساة الحالة وهيرمس (16 + 17)
+## 4) واجهة الإدارة
 
-- `state_anchors` بمستويات (platform / workspace / user / run / agent) مع وراثة وعدم جواز مخالفة الأعلى، و`state_events` لسجل التغيير والتراجع.
-- `anchor.server.ts`: تحقّق ما قبل التنفيذ + كشف الانحراف (هدف/سياسة/لغة/ميزانية) + استرجاع بعد الفشل من آخر حالة سليمة بدل إعادة التشغيل الأعمى.
-- HERMES: `hermes_proposals` + `founder_dna`. يراقب ويقترح فقط — لا ينفّذ أي تغيير. كل مقترح يحمل تبريراً اقتصادياً (القيمة المتوقعة > التكلفة) ويُرفض تلقائياً إن لم يحققه. صندوق قرارات المؤسس داخل الإدارة، وكل موافقة أو رفض تُغذّي Founder DNA.
+داخل `MaaroofIntelligenceCenter` الموجود (لا صفحات جديدة منفصلة):
+- لوحة **AI Model Center**: جدول النماذج، الحالة، التكلفة الحقيقية، الصحة، أزرار Benchmark، وقائمة المقترحات مع قبول/رفض.
+- لوحة **Decision Center**: خط زمني للقرارات، شجرة القرار، النتيجة/الثقة/التكلفة/المخاطر، البدائل المرفوضة، بحث وتصفية، وتصدير CSV / JSON / Markdown / PDF (بالاعتماد على مسار التصدير الموجود) بالعربية والإنجليزية والكردية.
 
-## قواعد ملزِمة عبر كل الموجات
+## 5) مفاتيح ووثائق
 
-- كل طبقة جديدة خلف مفتاح في `maaroof_settings` **مُطفأ افتراضياً** — مسار الجزء 8 يبقى مطابقاً حتى تفعّلها.
-- لا صفحات إدارة منفصلة: كل الأقسام الجديدة تُضاف داخل `MaaroofIntelligenceCenter`.
-- كل جدول جديد يُنشأ مع GRANT + RLS من نفس النوع المستخدم حالياً؛ التعلّم الداخلي مقصور على الإدارة، وبيانات المستخدم معزولة بـ`auth.uid()`.
-- التصدير (PDF / Excel / CSV / JSON / Markdown) يعيد استخدام `exports.ts` القائم.
-- بعد كل موجة: تدقيق ذاتي وتحديث `docs/MAAROOF-AUDIT.md` بجدول «القائم / الجديد / سبب التطوير بدل الإنشاء».
+- مفاتيح في `maaroof_settings`: `model_governance_enabled`, `decision_trace_enabled`, `benchmark_enabled` — كلها مطفأة افتراضياً.
+- تحديث `docs/MAAROOF-AUDIT.md` بمبرر التطوير فوق الموجود ومواضع الدمج.
 
-## تفاصيل تقنية
+## ملاحظات تقنية
 
-جميع الجداول في `public` مع GRANT صريح ثم RLS ثم السياسات. المحرّكات الجديدة ملفات `*.server.ts` تُستدعى من `orchestrator.server.ts` عند نقاط حقن محددة فقط، وواجهات الإدارة تقرأ عبر Views مثل `expert_understanding_v` و`trust_ranking_v` و`state_health_v`. جلسات التعلّم تعمل عبر server function إدارية لا عبر مسار المستخدم، لضمان عدم خصم أي توكن من رصيده.
-
-## نطاق التنفيذ
-
-سأبدأ بالموجة 1 كاملة في الدورة القادمة، ثم أتابع الموجات تباعاً — كل موجة بتدقيق وتوثيق مستقل.
+- كل جدول جديد: `CREATE TABLE` → `GRANT` → `ENABLE RLS` → سياسات (قراءة للمصادَقين على `ai_models` فقط؛ الباقي أدمن عبر `has_role`).
+- التكاليف تُقرأ من `ai_models` + `provider_rates` لتظل شاشة المالية متسقة مع التكلفة الحقيقية.
+- لا كسر للتوافق: عند إطفاء المفاتيح، مسار التشغيل الحالي كما هو حرفياً.

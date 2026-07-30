@@ -13,12 +13,14 @@ import { AdminFinanceTab } from "./AdminFinanceTab";
 import { CognitiveInsightsTab } from "./CognitiveInsightsTab";
 import { UserIntelligenceTab } from "./UserIntelligenceTab";
 import { ExpertAcademySection, LearningBudgetSection, KnowledgeObservatorySection } from "./ExpertAcademyPanels";
+import { AiModelCenterSection, DecisionCenterSection } from "./ModelDecisionPanels";
 
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
   | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws"
-  | "academy" | "learning_budget" | "knowledge";
+  | "academy" | "learning_budget" | "knowledge"
+  | "model_center" | "decision_center";
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
@@ -37,6 +39,9 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "academy",        label: "أكاديمية الخبراء",       Icon: GraduationCap, group: "learning" },
   { k: "knowledge",      label: "مرصد المعرفة الحيّة",     Icon: Network,     group: "learning" },
   { k: "learning_budget",label: "ميزانية التعلّم",         Icon: Coins,       group: "learning" },
+
+  { k: "model_center",   label: "مركز نماذج الذكاء",     Icon: Layers,      group: "governance" },
+  { k: "decision_center",label: "مركز القرار التنفيذي",   Icon: ScrollText,  group: "governance" },
 
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
@@ -93,6 +98,9 @@ export function MaaroofIntelligenceCenter() {
         {section === "academy"        && <ExpertAcademySection />}
         {section === "knowledge"      && <KnowledgeObservatorySection />}
         {section === "learning_budget" && <LearningBudgetSection />}
+
+        {section === "model_center"   && <AiModelCenterSection />}
+        {section === "decision_center" && <DecisionCenterSection />}
 
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}

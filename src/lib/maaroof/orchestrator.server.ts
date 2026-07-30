@@ -12,6 +12,8 @@ import { getOrCreateAgent, finalizeAgent, evolvePersonality, readPersonality, pe
 import { assessTiming, type TimingDecision } from "./timing.server";
 import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
 import { evaluateLaws, lawsPromptBlock, hardLawNotice, type LawEvaluation } from "./laws.server";
+import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
+import { DecisionTracer, chooseAlternative } from "./decisions.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -78,6 +80,30 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     throw new Error("maaroof_disabled");
   }
   const MODEL = settings.planner_model;
+  // Part 12 — model governance. When disabled, every phase resolves to MODEL,
+  // pricing keeps the legacy estimate and no telemetry is written.
+  const mg = settings.model_governance || ({} as any);
+  const modelRegistry = mg.enabled || mg.use_registry_pricing ? await loadModelRegistry() : [];
+  const phaseModels = new Map<ModelPhase, ModelChoice>();
+  const modelChoices: any[] = [];
+  async function modelFor(phase: ModelPhase): Promise<ModelChoice> {
+    const hit = phaseModels.get(phase);
+    if (hit) return hit;
+    const choice = await selectModel({
+      phase,
+      enabled: !!(mg.enabled && mg.per_phase_selection),
+      defaultModel: MODEL,
+      fallbackModel: settings.fallback_model,
+      preferredModels: (workspaceProfile?.preferred_models as string[]) || null,
+      riskLevel: (workspaceProfile?.risk_level as string) || null,
+      budgetUsd: Number((workspaceProfile?.budget as any)?.max_usd ?? NaN) || null,
+      registry: modelRegistry,
+    });
+    phaseModels.set(phase, choice);
+    if (choice.governed) modelChoices.push({ phase, model: choice.model, reason: choice.reason });
+    return choice;
+  }
+
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
 
@@ -128,6 +154,47 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   };
   await logMsg("user", { text: ctx.goal });
 
+  // Part 12/13 — every gateway call goes through one governed entry point:
+  // it resolves the phase model, prices the call from the registry and feeds
+  // model health. Behaviour with governance off is identical to before.
+  const call = async (phase: ModelPhase, messages: any[]) => {
+    const choice = await modelFor(phase);
+    const t0 = Date.now();
+    try {
+      const r = await callGateway(apiKey, choice.model, messages, {
+        signal: ctx.signal,
+        registry: mg.use_registry_pricing ? modelRegistry : undefined,
+      });
+      if (mg.health_tracking !== false) {
+        void recordModelCall({ model: choice.model, ok: true, latencyMs: Date.now() - t0, tokens: r.tokens, usd: r.usd });
+      }
+      return r;
+    } catch (e: any) {
+      if (mg.health_tracking !== false) {
+        void recordModelCall({ model: choice.model, ok: false, latencyMs: Date.now() - t0, error: String(e?.message || e) });
+      }
+      // Governed fallback: retry once on the phase fallback model.
+      if (choice.governed && choice.fallback && choice.fallback !== choice.model) {
+        const r = await callGateway(apiKey, choice.fallback, messages, {
+          signal: ctx.signal,
+          registry: mg.use_registry_pricing ? modelRegistry : undefined,
+        });
+        return r;
+      }
+      throw e;
+    }
+  };
+
+  // Part 13 — Executive Decision Intelligence trace (opt-in).
+  const dec = settings.decision || ({} as any);
+  const tracer = new DecisionTracer({
+    enabled: !!(dec.enabled && dec.trace_enabled),
+    runId,
+    userId: ctx.userId,
+    workspaceId: ctx.workspaceId || null,
+    emit: ctx.emit,
+  });
+
   let activeAgent: MaaroofAgent | null = null;
   try {
     // 2) Recall memory (workspace-scoped when available)
@@ -135,6 +202,39 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (memories.length) await ctx.emit("memory", { items: memories });
 
     const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
+
+    // Part 13 — pipeline stages 1..6 (understanding & context).
+    if (tracer.enabled) {
+      await tracer.trace({
+        stage: "goal_understanding",
+        summary: String(ctx.goal).slice(0, 200),
+        payload: { language: ctx.language, execution_mode: executionMode, chars: ctx.goal.length },
+      });
+      await tracer.trace({
+        stage: "context_analysis",
+        summary: `النطاق الجغرافي: ${geo.label || "World"}`,
+        payload: { country: geo.country, city: geo.city, scope: ctx.geoScope || { mode: "auto" } },
+      });
+      await tracer.trace({
+        stage: "workspace_analysis",
+        summary: workspaceProfile?.name ? `مساحة العمل: ${workspaceProfile.name}` : "بدون مساحة عمل",
+        payload: {
+          goals: workspaceProfile?.goals || null,
+          policies: workspaceProfile?.policies || null,
+          risk_level: workspaceProfile?.risk_level || null,
+        },
+      });
+      await tracer.trace({
+        stage: "user_analysis",
+        summary: `المستخدم ${ctx.userId.slice(0, 8)}…`,
+        payload: { workspace_scoped: !!ctx.workspaceId },
+      });
+      await tracer.trace({
+        stage: "memory_analysis",
+        summary: `استُدعيت ${memories.length} ذاكرة ذات صلة.`,
+        payload: { count: memories.length },
+      });
+    }
 
     // 2.4) Learned expert snapshots (Part 9) + living knowledge (Part 11).
     //      Both are additive prompt blocks: disabled ⇒ byte-identical prompt.
@@ -157,6 +257,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         });
         if (nodes.length) await ctx.emit("knowledge", { items: nodes.map((n) => ({ layer: n.layer, title: n.title, quality: n.quality })) });
         learnedBlock += knowledgePromptBlock(nodes);
+        if (tracer.enabled) {
+          await tracer.trace({
+            stage: "knowledge_analysis",
+            summary: `عُقد معرفية مستخدمة: ${nodes.length}`,
+            payload: { layers: nodes.map((n) => n.layer) },
+          });
+        }
       } catch {}
     }
 
@@ -171,19 +278,27 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (settings.council?.envision_enabled !== false) {
       try {
         await ctx.emit("phase", { phase: "envision" });
-        const eResp = await callGateway(apiKey, MODEL, [
+        const eResp = await call("envision", [
           { role: "system", content: systemPrompt },
           {
             role: "user",
             content: `Goal: ${ctx.goal}\n\nApply Future-Driven thinking. Return JSON only:\n{ "future_goal": "<1-2 sentence outcome to aim for>", "backward_chain": ["step working backwards from the future", "..."], "success_metrics": ["..."] }\nUse the user's language (${ctx.language}).`,
           },
-        ], { signal: ctx.signal });
+        ]);
         totalUsd += eResp.usd; totalTokens += eResp.tokens;
         envision = extractJsonObject<any>(eResp.text) || null;
         if (envision) {
           decisionLog.push({ phase: "envision", ...envision, at: new Date().toISOString() });
           await ctx.emit("envision", envision);
           await logMsg("envision", envision, eResp.tokens, eResp.usd);
+          if (tracer.enabled) {
+            await tracer.trace({
+              stage: "future_impact",
+              summary: String(envision.future_goal || "").slice(0, 200),
+              payload: { backward_chain: envision.backward_chain || [], success_metrics: envision.success_metrics || [] },
+              cost_usd: eResp.usd,
+            });
+          }
         }
       } catch {}
     }
@@ -193,16 +308,86 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const planUserMsg =
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
-    const planResp = await callGateway(apiKey, MODEL, [
+    const planResp = await call("planning", [
       { role: "system", content: systemPrompt },
       { role: "user", content: planUserMsg },
-    ], { signal: ctx.signal });
+    ]);
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
     const steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
+
+    // Part 13 — pipeline stages 7..16 recorded from the plan we just built.
+    if (tracer.enabled) {
+      const planCaps = Array.from(
+        new Set(steps.flatMap((st) => TOOL_CATALOG.find((t) => t.key === st.tool)?.capabilities || [])),
+      );
+      const plannerChoice = await modelFor("planning");
+      const finalChoice = await modelFor("final");
+      await tracer.trace({
+        stage: "expert_selection",
+        summary: `خبراء مطلوبون حسب القدرات: ${planCaps.length}`,
+        experts: planCaps.flatMap((c) => findExpertsByCapability(c as Capability).map((t) => t.key)).slice(0, 12),
+        capabilities: planCaps,
+      });
+      await tracer.trace({ stage: "capability_selection", summary: planCaps.join(", ").slice(0, 200), capabilities: planCaps });
+      await tracer.trace({
+        stage: "tool_selection",
+        summary: steps.map((st) => st.tool).join(" → ").slice(0, 200),
+        tools: steps.map((st) => ({ tool: st.tool, reason: st.reason || null })),
+      });
+      await tracer.trace({
+        stage: "mcp_selection",
+        summary: (workspaceProfile?.preferred_mcp || []).length ? "MCP مفضّلة من مساحة العمل" : "لا توجد MCP مطلوبة لهذه المهمة",
+        mcp: workspaceProfile?.preferred_mcp || [],
+      });
+      await tracer.trace({
+        stage: "model_selection",
+        summary: `تخطيط: ${plannerChoice.model} — إجابة: ${finalChoice.model}`,
+        models: [
+          { phase: "planning", model: plannerChoice.model, reason: plannerChoice.reason },
+          { phase: "final", model: finalChoice.model, reason: finalChoice.reason },
+        ],
+        alternatives: plannerChoice.fallback
+          ? [{ option: plannerChoice.fallback, reason: "نموذج احتياطي — يُستخدم فقط عند فشل النموذج الأساسي." }]
+          : [],
+        cost_usd: plannerChoice.expected_cost_per_1k_usd,
+      });
+
+      // Cost-aware decision: compare candidate execution strategies.
+      if (dec.cost_aware_alternatives) {
+        const unit = (await modelFor("planning")).expected_cost_per_1k_usd || 0.005;
+        const options = [
+          { label: `خطة مختصرة (${Math.max(1, Math.min(2, steps.length))} خطوة)`, quality: 62, cost_usd: unit * 2, minutes: 1 },
+          { label: `الخطة المقترحة (${steps.length} خطوة)`, quality: 85, cost_usd: unit * Math.max(2, steps.length), minutes: Math.max(2, steps.length) },
+          { label: `خطة موسّعة (${steps.length + 2} خطوة)`, quality: 90, cost_usd: unit * (steps.length + 4), minutes: steps.length + 4 },
+        ];
+        const pick = chooseAlternative(options);
+        if (pick) {
+          await tracer.trace({
+            stage: "execution_strategy",
+            summary: pick.reason,
+            alternatives: pick.rejected,
+            cost_usd: pick.chosen.cost_usd,
+            confidence: pick.chosen.quality,
+          });
+        }
+      } else {
+        await tracer.trace({ stage: "execution_strategy", summary: `تنفيذ ${steps.length} خطوة بالتسلسل.`, tools: steps.map((st) => st.tool) });
+      }
+      await tracer.trace({
+        stage: "cost_analysis",
+        summary: `تكلفة التخطيط حتى الآن: ${totalUsd.toFixed(5)}$`,
+        cost_usd: totalUsd,
+      });
+      await tracer.trace({
+        stage: "risk_analysis",
+        summary: workspaceProfile?.risk_level ? `مستوى المخاطر: ${workspaceProfile.risk_level}` : "مخاطر قياسية",
+        risk: workspaceProfile?.risk_level === "high" ? 70 : workspaceProfile?.risk_level === "low" ? 20 : 40,
+      });
+    }
 
     // Part 6 — Recommendation mode: stop after producing the plan.
     if (executionMode === "recommendation") {
@@ -336,7 +521,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
         if (!expert) continue;
         try {
-          const cResp = await callGateway(apiKey, MODEL, [
+          const cResp = await call("council", [
             {
               role: "system",
               content: `You are the "${expert.labels.en}" expert (DNA: ${expert.dna || expert.labels.en}). ` +
@@ -349,7 +534,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
               role: "user",
               content: `Goal: ${ctx.goal}\nCapability under review: ${cap}\nProposed plan (JSON):\n${JSON.stringify(planObj).slice(0, 2500)}\n\nGive your expert opinion.`,
             },
-          ], { signal: ctx.signal });
+          ]);
           totalUsd += cResp.usd; totalTokens += cResp.tokens;
           const parsed = extractJsonObject<any>(cResp.text) || { opinion: cResp.text };
           const entry = {
@@ -401,7 +586,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           const conflicted = objections > 0 || spread > threshold || divergentTools;
           if (conflicted && opinions.length > 1) {
             await ctx.emit("phase", { phase: "conflict" });
-            const xResp = await callGateway(apiKey, MODEL, [
+            const xResp = await call("conflict", [
               {
                 role: "system",
                 content:
@@ -414,7 +599,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
                 role: "user",
                 content: `Goal: ${ctx.goal}\nConflict signals: objections=${objections}, confidence_spread=${spread}, divergent_tools=${divergentTools}\nPositions (JSON):\n${JSON.stringify(opinions).slice(0, 4000)}`,
               },
-            ], { signal: ctx.signal });
+            ]);
             totalUsd += xResp.usd; totalTokens += xResp.tokens;
             const parsed = extractJsonObject<any>(xResp.text) || { why: xResp.text.slice(0, 400) };
             const entry = {
@@ -437,13 +622,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Maaroof's final decision on the council opinions.
       if (decisionLog.length) {
         try {
-          const dResp = await callGateway(apiKey, MODEL, [
+          const dResp = await call("council", [
             { role: "system", content: effectivePrompt },
             {
               role: "user",
               content: `Council opinions (JSON): ${JSON.stringify(decisionLog).slice(0, 4000)}\n\nWrite a brief final decision (1-2 sentences in ${ctx.language}): keep plan, adjust, or add a step. Return JSON: { "decision": "...", "rationale": "..." }`,
             },
-          ], { signal: ctx.signal });
+          ]);
           totalUsd += dResp.usd; totalTokens += dResp.tokens;
           const d = extractJsonObject<any>(dResp.text) || { decision: dResp.text };
           const finalEntry = { phase: "decision", decision: d.decision, rationale: d.rationale, at: new Date().toISOString() };
@@ -597,10 +782,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
       // Reflect every 3 steps
       if ((i + 1) % 3 === 0 && i < steps.length - 1) {
-        const ref = await callGateway(apiKey, MODEL, [
+        const ref = await call("reflection", [
           { role: "system", content: effectivePrompt },
           { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
-        ], { signal: ctx.signal });
+        ]);
         totalUsd += ref.usd; totalTokens += ref.tokens;
         await ctx.emit("reflection", { text: ref.text });
         await logMsg("reflection", { text: ref.text }, ref.tokens, ref.usd);
@@ -615,10 +800,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const trustInstruction = trustEnabled
       ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
       : "";
-    const finalResp = await callGateway(apiKey, MODEL, [
+    const finalResp = await call("final", [
       { role: "system", content: effectivePrompt },
       { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
-    ], { signal: ctx.signal });
+    ]);
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
 
     let finalText = finalResp.text;
@@ -713,6 +898,50 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("quality_score", qualityScore);
     }
 
+    // Part 13 — closing pipeline stages + Decision Score.
+    let decisionScore: any = null;
+    if (tracer.enabled) {
+      const okCount = results.filter((r) => r.ok).length;
+      if (timing) {
+        await tracer.trace({
+          stage: "time_analysis",
+          summary: `توقيت التنفيذ: ${timing.verdict}`,
+          payload: timing as any,
+        });
+      }
+      await tracer.trace({
+        stage: "execution",
+        summary: `نُفِّذت ${results.length} خطوة، نجح منها ${okCount}.`,
+        tools: results.map((r) => ({ tool: r.tool, ok: !!r.ok })),
+        cost_usd: totalUsd,
+      });
+      await tracer.trace({
+        stage: "validation",
+        summary: compliance ? `امتثال دستوري: ${(compliance as any).verdict ?? "—"}` : "تحقق داخلي من النتائج",
+        confidence: typeof trust?.confidence === "number" ? trust.confidence : null,
+      });
+      await tracer.trace({
+        stage: "approval",
+        summary: executionMode === "execution" ? "تنفيذ مباشر ضمن صلاحيات المستخدم." : `وضع ${executionMode} — بلا تنفيذ فعلي.`,
+        payload: { execution_mode: executionMode },
+      });
+      await tracer.trace({
+        stage: "learning",
+        summary: "تسجيل النتائج في الذاكرة والحمض المعرفي للاستفادة المستقبلية.",
+        payload: { memory: true, dna: !!settings.cognitive?.dna_enabled },
+      });
+      if (dec.score_enabled) {
+        decisionScore = { ...tracer.score(), models: modelChoices, stages: tracer.snapshot().length };
+        await ctx.emit("decision_score", decisionScore);
+      }
+    }
+
+    // Part 12 — file an upgrade proposal for the admin when the registry shows a
+    // clearly better option. Never applied automatically.
+    if (mg.enabled && mg.auto_proposals) {
+      try { await proposeModelUpgrade(MODEL); } catch {}
+    }
+
     // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
@@ -721,6 +950,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps_count: steps.length,
       finished_at: new Date().toISOString(),
       ...(qualityScore ? { quality_score: qualityScore } : {}),
+      ...(decisionScore ? { decision_log: [...decisionLog, { phase: "decision_score", ...decisionScore }] } : {}),
     }).eq("id", runId);
 
     try {
@@ -730,7 +960,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         tokens: totalTokens,
         usd_cost: totalUsd,
         run_id: runId,
-        meta: { maaroof_run_id: runId, model: MODEL, geo: { country: geo.country, city: geo.city }, steps: steps.length },
+        meta: { maaroof_run_id: runId, model: MODEL, models: modelChoices, geo: { country: geo.country, city: geo.city }, steps: steps.length },
       });
     } catch {}
 
@@ -891,7 +1121,7 @@ Rules:
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
-async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal } = {}): Promise<{ text: string; tokens: number; usd: number }> {
+async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[] } = {}): Promise<{ text: string; tokens: number; usd: number }> {
   const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: lovableAiHeaders(apiKey),
@@ -909,6 +1139,9 @@ async function callGateway(apiKey: string, model: string, messages: any[], opts:
   // Rough USD estimate from gateway response header if absent (Gemini 2.5 Pro pricing approx)
   const inTok = Number(usage.prompt_tokens || 0);
   const outTok = Number(usage.completion_tokens || 0);
-  const usd = inTok * 1.25e-6 + outTok * 10e-6; // $1.25/M in, $10/M out
+  // Part 12 — real pricing from the model registry when governance provides it.
+  const usd = opts.registry?.length
+    ? costOf(model, inTok, outTok, opts.registry as any)
+    : inTok * 1.25e-6 + outTok * 10e-6; // legacy estimate ($1.25/M in, $10/M out)
   return { text, tokens, usd };
 }
