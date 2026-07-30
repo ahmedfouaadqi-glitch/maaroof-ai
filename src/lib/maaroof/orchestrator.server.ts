@@ -685,7 +685,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const { recordDna } = await import("./cognition.server");
         const okCount = results.filter((r) => r.ok).length;
         await recordDna({
-          kind: "future_dna",
+          kind: "future",
           sourceRunId: runId,
           payload: {
             outcome: results.length === 0 ? "no_tools" : okCount / results.length >= 0.5 ? "success" : "failure",
