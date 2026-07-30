@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Activity, Brain, Coins, ShieldCheck, Sparkles, Network, Bot,
-  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap, Send,
+  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap, Send, Anchor, Crown,
 } from "lucide-react";
 import { MaaroofAdminTab } from "./MaaroofAdminTab";
 import { SystemHealthTab } from "./SystemHealthTab";
@@ -48,6 +48,8 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "decision_center",label: "مركز القرار التنفيذي",   Icon: ScrollText,  group: "governance" },
   { k: "publishing_center", label: "منظومة النشر",        Icon: Send,        group: "governance" },
   { k: "trust_center",   label: "هندسة الثقة",            Icon: ShieldCheck, group: "governance" },
+  { k: "state_center",   label: "مرساة الحالة",            Icon: Anchor,      group: "governance" },
+  { k: "hermes",         label: "هرمس — مكتب المؤسس",      Icon: Crown,       group: "governance" },
 
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
@@ -109,6 +111,8 @@ export function MaaroofIntelligenceCenter() {
         {section === "decision_center" && <DecisionCenterSection />}
         {section === "publishing_center" && <PublishingCenterSection />}
         {section === "trust_center"   && <TrustCenterSection />}
+        {section === "state_center"   && <StateCenterSection />}
+        {section === "hermes"         && <HermesOfficeSection />}
 
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
