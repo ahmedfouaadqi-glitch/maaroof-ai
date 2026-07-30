@@ -92,6 +92,9 @@ export function AiModelCenterSection() {
         <Stat label="الحوكمة" value={gov.enabled ? "مُفعّلة" : "مُطفأة"} />
       </div>
 
+      <NineEnginesMap />
+
+
       <div className="overflow-x-auto rounded-xl border border-border/60">
         <table className="w-full text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
