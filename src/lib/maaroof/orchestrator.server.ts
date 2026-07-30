@@ -11,6 +11,8 @@ import { getMaaroofSettings } from "./settings.server";
 import { getOrCreateAgent, finalizeAgent, evolvePersonality, readPersonality, personalityPromptBlock, type MaaroofAgent } from "./agents.server";
 import { assessTiming, type TimingDecision } from "./timing.server";
 import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
+import { evaluateLaws, lawsPromptBlock, hardLawNotice, type LawEvaluation } from "./laws.server";
+
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
