@@ -122,6 +122,8 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
 
           <ConflictCard events={events} />
           <TimingChip events={events} />
+          <ComplianceCard events={events} />
+
 
           {finalText && (
             <div className="rounded-lg border border-primary/40 bg-primary/5 p-4">
