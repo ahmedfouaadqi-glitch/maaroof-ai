@@ -178,6 +178,9 @@ export type MaaroofSettings = {
   laws: LawsSettings;
   experts: ExpertsSettings;
   knowledge: KnowledgeSettings;
+  model_governance: ModelGovernanceSettings;
+  decision: DecisionSettings;
+
 };
 
 
