@@ -177,7 +177,38 @@ function TimingChip({ events }: { events: StageEvent[] }) {
   );
 }
 
+/** Part 8 — Constitutional compliance (30 Laws of Cognitive Intelligence). */
+function ComplianceCard({ events }: { events: StageEvent[] }) {
+  const [open, setOpen] = useState(false);
+  const c = [...events].reverse().find((e) => e.type === "compliance")?.data as any;
+  if (!c) return null;
+  const tone = c.verdict === "violation" ? "border-destructive/40 bg-destructive/5 text-destructive"
+    : c.verdict === "warning" ? "border-amber-500/40 bg-amber-500/5 text-amber-500"
+    : "border-green-500/40 bg-green-500/5 text-green-500";
+  const label = c.verdict === "violation" ? "خرق قانون إلزامي" : c.verdict === "warning" ? "ملاحظات دستورية" : "ملتزم بالدستور";
+  const violations: any[] = Array.isArray(c.violations) ? c.violations : [];
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${tone}`}>
+      <button onClick={() => setOpen((o) => !o)} className="w-full text-start font-semibold">
+        الامتثال الدستوري: {label} — {c.score}% ({c.satisfied?.length ?? 0}/{c.checked} قانون)
+      </button>
+      {open && violations.length > 0 && (
+        <ul className="list-disc ms-4 mt-2 space-y-1 text-muted-foreground">
+          {violations.map((v, i) => (
+            <li key={i}>
+              <span className="font-medium">{v.ar}</span>
+              {v.severity === "hard" && <span className="ms-1 text-[10px] rounded px-1 border border-destructive/50">إلزامي</span>}
+              <span className="block">{v.detail}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** Part 7 — Cognitive Conflict Engine resolution card. */
+
 function ConflictCard({ events }: { events: StageEvent[] }) {
   const c = [...events].reverse().find((e) => e.type === "conflict")?.data as any;
   if (!c) return null;
