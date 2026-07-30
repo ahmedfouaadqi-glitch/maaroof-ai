@@ -125,22 +125,6 @@ function Page() {
             </div>
           </div>
         </section>
-
-        {/* CTA */}
-        <section id="cta" className="relative border-t border-border/60 py-20">
-          <div className="mx-auto max-w-4xl px-4 md:px-6">
-            <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-card to-background p-10 text-center shadow-[var(--shadow-elevated)] md:p-14">
-              <div className="absolute -inset-1 -z-10 bg-gradient-to-r from-primary/30 via-accent/20 to-primary/30 opacity-60 blur-2xl" />
-              <h2 className="font-display text-3xl font-bold md:text-5xl">
-                <span className="text-gradient">{t("cta_title")}</span>
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-muted-foreground">{t("cta_sub")}</p>
-              <Link to="/pricing" className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.02]">
-                {t("cta_button")} <ArrowRight className="size-4" />
-              </Link>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
