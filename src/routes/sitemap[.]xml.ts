@@ -51,6 +51,17 @@ export const Route = createFileRoute("/sitemap.xml")({
               const name = String((u as any).username || "").trim();
               if (name) entries.push({ path: `/u/${name}`, changefreq: "weekly", priority: "0.5" });
             }
+
+            // Published custom pages (/p/$slug)
+            const { data: pages } = await admin
+              .from("custom_pages")
+              .select("slug")
+              .eq("published", true)
+              .limit(5000);
+            for (const p of pages || []) {
+              const slug = String((p as any).slug || "").trim();
+              if (slug) entries.push({ path: `/p/${slug}`, changefreq: "monthly", priority: "0.6" });
+            }
           }
         } catch {
           // Sitemap should still render even if DB is unreachable.
