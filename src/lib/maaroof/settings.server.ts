@@ -190,6 +190,37 @@ export type TrustEngineSettings = {
   weak_link_alerts: boolean;
 };
 
+/** Part 16 — Living State Anchor. */
+export type StateAnchorSettings = {
+  enabled: boolean;
+  /** Validate identity/mission/goal/budget before every run. */
+  validate_before_execution: boolean;
+  /** Measure drift across goal, language, workspace, trust, memory, execution. */
+  drift_detection: boolean;
+  /** Persist every state change to the timeline. */
+  timeline_enabled: boolean;
+  /** Allow resuming from the last healthy rollback point. */
+  recovery_enabled: boolean;
+  /** Severity at or above which a drift is treated as blocking. */
+  drift_threshold: number;
+};
+
+/** Part 17 — HERMES executive steward. */
+export type HermesSettings = {
+  enabled: boolean;
+  /** Derive proposals from measured platform signals. */
+  proposals_enabled: boolean;
+  /** Evolve Founder DNA from real approve/reject decisions. */
+  founder_dna_enabled: boolean;
+  /** Founder-only conversational office. */
+  office_enabled: boolean;
+  /** Model used in the office; steward cost is charged to the system budget. */
+  office_model: string;
+  /** HERMES never executes in production without an explicit approval. */
+  never_execute_without_approval: boolean;
+};
+
+
 
 export type MaaroofSettings = {
   trial_daily_cap: number;
@@ -214,6 +245,9 @@ export type MaaroofSettings = {
   decision: DecisionSettings;
   publishing: PublishingSettings;
   trust_engine: TrustEngineSettings;
+  state_anchor: StateAnchorSettings;
+  hermes: HermesSettings;
+
 
 };
 
@@ -306,6 +340,22 @@ const DEFAULTS: MaaroofSettings = {
     executive_score_enabled: true,
     min_trust: 55,
     weak_link_alerts: true,
+  },
+  state_anchor: {
+    enabled: false,
+    validate_before_execution: true,
+    drift_detection: true,
+    timeline_enabled: true,
+    recovery_enabled: false,
+    drift_threshold: 60,
+  },
+  hermes: {
+    enabled: false,
+    proposals_enabled: true,
+    founder_dna_enabled: true,
+    office_enabled: true,
+    office_model: "google/gemini-2.5-flash",
+    never_execute_without_approval: true,
   },
 };
 

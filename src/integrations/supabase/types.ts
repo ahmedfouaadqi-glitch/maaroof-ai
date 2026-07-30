@@ -1239,6 +1239,305 @@ export type Database = {
         }
         Relationships: []
       }
+      hermes_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          language: string
+          title: string
+          total_tokens: number
+          total_usd: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          language?: string
+          title?: string
+          total_tokens?: number
+          total_usd?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          language?: string
+          title?: string
+          total_tokens?: number
+          total_usd?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hermes_discoveries: {
+        Row: {
+          business_impact: string | null
+          category: string
+          cost_note: string | null
+          created_at: string
+          id: string
+          migration_complexity: string | null
+          recommendation: string | null
+          risk: string | null
+          source: string | null
+          status: string
+          title: string
+          why_it_matters: string | null
+        }
+        Insert: {
+          business_impact?: string | null
+          category: string
+          cost_note?: string | null
+          created_at?: string
+          id?: string
+          migration_complexity?: string | null
+          recommendation?: string | null
+          risk?: string | null
+          source?: string | null
+          status?: string
+          title: string
+          why_it_matters?: string | null
+        }
+        Update: {
+          business_impact?: string | null
+          category?: string
+          cost_note?: string | null
+          created_at?: string
+          id?: string
+          migration_complexity?: string | null
+          recommendation?: string | null
+          risk?: string | null
+          source?: string | null
+          status?: string
+          title?: string
+          why_it_matters?: string | null
+        }
+        Relationships: []
+      }
+      hermes_founder_dna: {
+        Row: {
+          approved_count: number
+          architecture_preferences: Json
+          business_strategy: Json
+          confidence: number
+          cost_philosophy: Json
+          created_at: string
+          founder_key: string
+          growth_strategy: Json
+          id: string
+          innovation_style: Json
+          language_preferences: Json
+          product_philosophy: Json
+          quality_expectations: Json
+          reasoning_style: Json
+          rejected_count: number
+          revenue_strategy: Json
+          risk_tolerance: number
+          security_priorities: Json
+          signals: Json
+          updated_at: string
+          vision: Json
+        }
+        Insert: {
+          approved_count?: number
+          architecture_preferences?: Json
+          business_strategy?: Json
+          confidence?: number
+          cost_philosophy?: Json
+          created_at?: string
+          founder_key?: string
+          growth_strategy?: Json
+          id?: string
+          innovation_style?: Json
+          language_preferences?: Json
+          product_philosophy?: Json
+          quality_expectations?: Json
+          reasoning_style?: Json
+          rejected_count?: number
+          revenue_strategy?: Json
+          risk_tolerance?: number
+          security_priorities?: Json
+          signals?: Json
+          updated_at?: string
+          vision?: Json
+        }
+        Update: {
+          approved_count?: number
+          architecture_preferences?: Json
+          business_strategy?: Json
+          confidence?: number
+          cost_philosophy?: Json
+          created_at?: string
+          founder_key?: string
+          growth_strategy?: Json
+          id?: string
+          innovation_style?: Json
+          language_preferences?: Json
+          product_philosophy?: Json
+          quality_expectations?: Json
+          reasoning_style?: Json
+          rejected_count?: number
+          revenue_strategy?: Json
+          risk_tolerance?: number
+          security_priorities?: Json
+          signals?: Json
+          updated_at?: string
+          vision?: Json
+        }
+        Relationships: []
+      }
+      hermes_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          evidence: Json
+          id: string
+          model: string | null
+          role: string
+          tokens: number
+          usd: number
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          model?: string | null
+          role: string
+          tokens?: number
+          usd?: number
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          model?: string | null
+          role?: string
+          tokens?: number
+          usd?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hermes_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "hermes_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hermes_proposals: {
+        Row: {
+          affected_components: Json
+          alternatives: Json
+          auto_rejected_reason: string | null
+          business_value: string | null
+          confidence: number | null
+          cost_analysis: Json
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          estimated_roi: number | null
+          estimated_runtime_ms: number | null
+          estimated_tokens: number | null
+          evidence: Json
+          executive_summary: string
+          expected_cost_usd: number | null
+          expected_gains: Json
+          expected_value_usd: number | null
+          founder_note: string | null
+          id: string
+          kind: string
+          maintenance_note: string | null
+          priority: number
+          problem: string | null
+          required_approval: string
+          revenue_potential: Json
+          risk_analysis: Json
+          rollback_plan: string | null
+          status: string
+          technical_analysis: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_components?: Json
+          alternatives?: Json
+          auto_rejected_reason?: string | null
+          business_value?: string | null
+          confidence?: number | null
+          cost_analysis?: Json
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          estimated_roi?: number | null
+          estimated_runtime_ms?: number | null
+          estimated_tokens?: number | null
+          evidence?: Json
+          executive_summary: string
+          expected_cost_usd?: number | null
+          expected_gains?: Json
+          expected_value_usd?: number | null
+          founder_note?: string | null
+          id?: string
+          kind: string
+          maintenance_note?: string | null
+          priority?: number
+          problem?: string | null
+          required_approval?: string
+          revenue_potential?: Json
+          risk_analysis?: Json
+          rollback_plan?: string | null
+          status?: string
+          technical_analysis?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_components?: Json
+          alternatives?: Json
+          auto_rejected_reason?: string | null
+          business_value?: string | null
+          confidence?: number | null
+          cost_analysis?: Json
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          estimated_roi?: number | null
+          estimated_runtime_ms?: number | null
+          estimated_tokens?: number | null
+          evidence?: Json
+          executive_summary?: string
+          expected_cost_usd?: number | null
+          expected_gains?: Json
+          expected_value_usd?: number | null
+          founder_note?: string | null
+          id?: string
+          kind?: string
+          maintenance_note?: string | null
+          priority?: number
+          problem?: string | null
+          required_approval?: string
+          revenue_potential?: Json
+          risk_analysis?: Json
+          rollback_plan?: string | null
+          status?: string
+          technical_analysis?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       knowledge_edges: {
         Row: {
           created_at: string
@@ -2559,6 +2858,178 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      state_anchors: {
+        Row: {
+          approval_status: string
+          budget: Json
+          constraints: Json
+          created_at: string
+          current_goal: string | null
+          dna: Json
+          drift: Json
+          future_goal: string | null
+          geo: Json | null
+          health: Json
+          health_score: number | null
+          id: string
+          label: string | null
+          language: string | null
+          last_validated_at: string | null
+          level: string
+          mission: string | null
+          parent_anchor_id: string | null
+          policies: Json
+          priority: number
+          quality_target: number | null
+          risk_target: number | null
+          run_id: string | null
+          scope_id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+          version: number
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_status?: string
+          budget?: Json
+          constraints?: Json
+          created_at?: string
+          current_goal?: string | null
+          dna?: Json
+          drift?: Json
+          future_goal?: string | null
+          geo?: Json | null
+          health?: Json
+          health_score?: number | null
+          id?: string
+          label?: string | null
+          language?: string | null
+          last_validated_at?: string | null
+          level: string
+          mission?: string | null
+          parent_anchor_id?: string | null
+          policies?: Json
+          priority?: number
+          quality_target?: number | null
+          risk_target?: number | null
+          run_id?: string | null
+          scope_id: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          version?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_status?: string
+          budget?: Json
+          constraints?: Json
+          created_at?: string
+          current_goal?: string | null
+          dna?: Json
+          drift?: Json
+          future_goal?: string | null
+          geo?: Json | null
+          health?: Json
+          health_score?: number | null
+          id?: string
+          label?: string | null
+          language?: string | null
+          last_validated_at?: string | null
+          level?: string
+          mission?: string | null
+          parent_anchor_id?: string | null
+          policies?: Json
+          priority?: number
+          quality_target?: number | null
+          risk_target?: number | null
+          run_id?: string | null
+          scope_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          version?: number
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "state_anchors_parent_anchor_id_fkey"
+            columns: ["parent_anchor_id"]
+            isOneToOne: false
+            referencedRelation: "state_anchors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      state_timeline: {
+        Row: {
+          affected: Json
+          anchor_id: string | null
+          change_kind: string
+          cost_usd: number
+          created_at: string
+          drift: Json | null
+          id: string
+          initiated_by: string
+          level: string
+          new_state: Json | null
+          old_state: Json | null
+          reason: string | null
+          rollback_point: boolean
+          run_id: string | null
+          scope_id: string
+          tokens: number
+          user_id: string | null
+        }
+        Insert: {
+          affected?: Json
+          anchor_id?: string | null
+          change_kind: string
+          cost_usd?: number
+          created_at?: string
+          drift?: Json | null
+          id?: string
+          initiated_by?: string
+          level: string
+          new_state?: Json | null
+          old_state?: Json | null
+          reason?: string | null
+          rollback_point?: boolean
+          run_id?: string | null
+          scope_id: string
+          tokens?: number
+          user_id?: string | null
+        }
+        Update: {
+          affected?: Json
+          anchor_id?: string | null
+          change_kind?: string
+          cost_usd?: number
+          created_at?: string
+          drift?: Json | null
+          id?: string
+          initiated_by?: string
+          level?: string
+          new_state?: Json | null
+          old_state?: Json | null
+          reason?: string | null
+          rollback_point?: boolean
+          run_id?: string | null
+          scope_id?: string
+          tokens?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "state_timeline_anchor_id_fkey"
+            columns: ["anchor_id"]
+            isOneToOne: false
+            referencedRelation: "state_anchors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
