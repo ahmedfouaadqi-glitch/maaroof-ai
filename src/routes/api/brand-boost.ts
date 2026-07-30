@@ -5,25 +5,14 @@ import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 
-const PLATFORMS = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"] as const;
-type Platform = typeof PLATFORMS[number];
+// Engine catalog + engine⇄model mapping now live in the shared source of truth
+// (`src/lib/ai-engines.ts` + `ai-engines.server.ts`) so every tool, the UI and
+// the admin registry stay in sync. `proxy: true` means we cannot probe the
+// engine directly; we use a similar-family model and disclose it to the user.
+const PLATFORMS = ENGINE_KEYS;
+type Platform = EngineKey;
 const BRAND_BOOST_COST = 5;
-const MAX_PLATFORMS_PER_RUN = 5;
 
-// Map each user-facing AI engine to the closest model available on the Lovable AI Gateway.
-// `proxy: true` means we cannot probe the engine directly; we use a similar-family model and
-// disclose it transparently to the user.
-const PLATFORM_MODEL: Record<Platform, { model: string; proxy: boolean }> = {
-  chatgpt:    { model: "openai/gpt-5-mini",            proxy: false },
-  gemini:     { model: "google/gemini-2.5-flash",      proxy: false },
-  copilot:    { model: "openai/gpt-5-nano",            proxy: true  }, // Bing/Copilot ≈ OpenAI family
-  perplexity: { model: "google/gemini-2.5-flash",      proxy: true  }, // grounded via real Firecrawl evidence
-  claude:     { model: "openai/gpt-5-mini",            proxy: true  },
-  grok:       { model: "openai/gpt-5-nano",            proxy: true  },
-  mistral:    { model: "google/gemini-2.5-flash-lite", proxy: true  },
-  deepseek:   { model: "google/gemini-2.5-flash-lite", proxy: true  },
-  kimi:       { model: "google/gemini-2.5-pro",        proxy: true  }, // Kimi K2 ≈ long-context Pro proxy
-};
 
 type TokenAcc = { in: number; out: number };
 async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000, acc?: TokenAcc) {
