@@ -119,8 +119,26 @@ export function BlurText({
   const fromSnapshot = animationFrom ?? defaultFrom;
   const toSnapshots = animationTo ?? defaultTo;
   const stepCount = toSnapshots.length + 1;
-  const totalDuration = stepDuration * (stepCount - 1);
-  const times = Array.from({ length: stepCount }, (_, i) => (stepCount === 1 ? 0 : i / (stepCount - 1)));
+  const revealDuration = stepDuration * (stepCount - 1);
+
+  // Looping adds: a hold on the final (visible) frame, then a fade back to the
+  // starting snapshot so the next cycle begins without a visual jump.
+  const holdDuration = Math.max(0.4, repeatDelay / 1000);
+  const outDuration = stepDuration;
+  const loopSnapshots = repeat
+    ? [...toSnapshots, toSnapshots[toSnapshots.length - 1], fromSnapshot]
+    : toSnapshots;
+  const totalDuration = repeat ? revealDuration + holdDuration + outDuration : revealDuration;
+
+  const times = repeat
+    ? [
+        ...Array.from({ length: stepCount }, (_, i) =>
+          stepCount === 1 ? 0 : (i / (stepCount - 1)) * (revealDuration / totalDuration),
+        ),
+        (revealDuration + holdDuration) / totalDuration,
+        1,
+      ]
+    : Array.from({ length: stepCount }, (_, i) => (stepCount === 1 ? 0 : i / (stepCount - 1)));
 
   if (reduced) {
     return (
@@ -137,12 +155,13 @@ export function BlurText({
       style={{ display: "flex", flexWrap: "wrap", justifyContent: center ? "center" : undefined }}
     >
       {elements.map((segment, index) => {
-        const animateKeyframes = buildKeyframes(fromSnapshot, toSnapshots);
+        const animateKeyframes = buildKeyframes(fromSnapshot, loopSnapshots);
         const spanTransition: Transition = {
           duration: totalDuration,
           times,
           delay: (startDelay + index * delay) / 1000,
           ease: "easeOut",
+          ...(repeat ? { repeat: Infinity, repeatType: "loop" as const } : {}),
         };
         return (
           <MotionSpan
