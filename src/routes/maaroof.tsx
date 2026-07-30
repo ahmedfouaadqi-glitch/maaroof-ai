@@ -151,7 +151,7 @@ function MaaroofPage() {
         <Bot className="w-12 h-12 mx-auto mb-4 text-primary" />
         <h1 className="text-2xl font-bold mb-2">معروف — الوكيل الذكي</h1>
         <p className="mb-4 text-muted-foreground">يرجى تسجيل الدخول لاستخدام معروف.</p>
-        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">تسجيل الدخول</Link>
+        <Link to="/auth" search={{}} className="px-4 py-2 bg-primary text-primary-foreground rounded-md">تسجيل الدخول</Link>
       </div>
     </div>
   );
