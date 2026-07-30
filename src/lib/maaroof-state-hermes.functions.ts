@@ -62,13 +62,14 @@ export const refreshHermesProposals = createServerFn({ method: "POST" })
     return await syncProposals();
   });
 
-/** Part 17 — the Founder decides. HERMES never executes on its own. */
+/** Part 17/18 — the Founder decides. HERMES never executes on its own.
+ *  Part 18 widens the vocabulary with modify / postpone / archive. */
 export const decideHermesProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       proposal_id: z.string().uuid(),
-      decision: z.enum(["approved", "rejected", "deferred"]),
+      decision: z.enum(["approved", "rejected", "deferred", "modified", "postponed", "archived"]),
       note: z.string().max(2000).optional().nullable(),
     }).parse(d))
   .handler(async ({ data, context }) => {
@@ -85,13 +86,21 @@ export const decideHermesProposal = createServerFn({ method: "POST" })
     });
   });
 
-/** Part 17 — the Founder's private office. Cost is charged to the system budget. */
+/** Part 17/18 — the Founder's private office. Cost is charged to the system budget.
+ *  Part 18 adds executive commands, language selection and file/image input. */
 export const askHermes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       message: z.string().min(2).max(4000),
       conversation_id: z.string().uuid().optional().nullable(),
+      command: z.string().max(40).optional().nullable(),
+      language: z.enum(["ar", "en", "ku"]).optional(),
+      attachments: z.array(z.object({
+        kind: z.enum(["image", "file"]),
+        name: z.string().max(200).optional(),
+        dataUrl: z.string().max(8_000_000),
+      })).max(4).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
@@ -108,9 +117,13 @@ export const askHermes = createServerFn({ method: "POST" })
       userId: context.userId,
       conversationId: data.conversation_id ?? null,
       message: data.message,
+      command: data.command ?? null,
+      language: data.language ?? "ar",
+      attachments: data.attachments,
     });
     return { conversationId: r.conversationId, reply: r.reply, tokens: r.tokens, usd: r.usd, disabled: false };
   });
+
 
 /** Part 17 — read one office conversation. */
 export const getHermesMessages = createServerFn({ method: "POST" })
