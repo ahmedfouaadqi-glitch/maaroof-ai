@@ -674,9 +674,53 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
           </label>
         </div>
       </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!st.enabled} onChange={(e) => pst("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">مرساة الحالة الحيّة (الجزء 16)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">تحفظ الهوية والرسالة والهدف والميزانية عبر كل المستويات، وترصد الانحراف قبل أن يتحوّل إلى خطأ. حساب محلي بلا تكلفة نموذج.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${st.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(st, pst, "validate_before_execution", "تحقق قبل التنفيذ", "هوية ورسالة وهدف وميزانية تُفحص قبل بدء أي تشغيل.")}
+          {flag(st, pst, "drift_detection", "كشف الانحراف", "هدف، لغة، مساحة عمل، ثقة، ذاكرة، تنفيذ — مع تصحيح مقترح.")}
+          {flag(st, pst, "timeline_enabled", "الخط الزمني للحالة", "كل تغيير موثّق بسببه ومن بدأه وأثره.")}
+          {flag(st, pst, "recovery_enabled", "الاستئناف من آخر حالة سليمة", "بدل إعادة التشغيل الكامل بعد الفشل.")}
+          <label className="rounded border p-2 text-xs space-y-1">
+            <span className="block font-medium">عتبة الانحراف الحرجة</span>
+            <input
+              type="number" min={0} max={100}
+              className="w-full rounded border bg-background p-1"
+              value={Number(st.drift_threshold ?? 60)}
+              onChange={(e) => pst("drift_threshold", Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!hm.enabled} onChange={(e) => phm("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">هرمس — الوكيل التنفيذي للمؤسس (الجزء 17)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">هرمس يراقب المنصة ويقترح بالدليل والكلفة والعائد وخطة التراجع، ولا ينفّذ شيئاً في الإنتاج بلا موافقتك. كلفته على ميزانية النظام لا على رصيد أي مستخدم.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${hm.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(hm, phm, "proposals_enabled", "توليد الاقتراحات", "من مؤشرات حقيقية مقاسة فقط، بلا نداء نموذج.")}
+          {flag(hm, phm, "founder_dna_enabled", "تعلّم حمض المؤسس", "يتطوّر من قراراتك بالموافقة والرفض.")}
+          {flag(hm, phm, "office_enabled", "مكتب هرمس", "حوار تنفيذي خاص بك مبني على بيانات المرصد.")}
+          <label className="rounded border p-2 flex items-start gap-2 opacity-70">
+            <input type="checkbox" className="mt-1" checked readOnly />
+            <span>
+              <span className="text-sm font-medium block">لا تنفيذ بلا موافقة</span>
+              <span className="text-[11px] text-muted-foreground">قيد دستوري ثابت لا يمكن إطفاؤه.</span>
+            </span>
+          </label>
+        </div>
+      </div>
     </div>
   );
 }
+
 
 /* ---------- Parts 9-11 — Expert Learning & Living Knowledge controls ---------- */
 function LearningControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
