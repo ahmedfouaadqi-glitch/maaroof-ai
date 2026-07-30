@@ -659,6 +659,44 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         costBreakdown: { total_usd: totalUsd, total_tokens: totalTokens, steps: steps.length, tools_ok: okCount, tools_total: results.length },
       });
       await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
+
+      // Part 7 — evolve executive personality from this run's signals.
+      if (exec.enabled && exec.personality_enabled) {
+        const traits = await evolvePersonality({
+          agentId: activeAgent.id,
+          signals: {
+            success,
+            toolsSuccessRatio: results.length ? okCount / results.length : null,
+            councilAvgConfidence: avgConf,
+            objections: decisionLog.filter((d: any) => d.phase === "council" && d.objection).length,
+            totalUsd,
+            steps: steps.length,
+            hadEnvision: !!envision,
+            conflictResolved: decisionLog.some((d: any) => d.phase === "conflict"),
+          },
+        });
+        if (traits) await ctx.emit("personality_evolved", { agentId: activeAgent.id, traits });
+      }
+    }
+
+    // Part 7 — Future DNA: anonymized outcome priors for both success and failure.
+    if (exec.enabled && exec.future_dna_enabled) {
+      try {
+        const { recordDna } = await import("./cognition.server");
+        const okCount = results.filter((r) => r.ok).length;
+        await recordDna({
+          kind: "future_dna",
+          sourceRunId: runId,
+          payload: {
+            outcome: results.length === 0 ? "no_tools" : okCount / results.length >= 0.5 ? "success" : "failure",
+            plan_shape: steps.map((s) => s.tool).slice(0, 8),
+            timing_verdict: timing?.verdict || "execute_now",
+            quality_dims: qualityScore || null,
+            total_usd: Number(totalUsd.toFixed(6)),
+          },
+          weight: 1,
+        });
+      } catch {}
     }
 
     // Part 5 — anonymized Platform DNA extraction (opt-in via settings.cognitive.dna_enabled).
