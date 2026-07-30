@@ -203,6 +203,39 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
     const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
 
+    // Part 13 — pipeline stages 1..6 (understanding & context).
+    if (tracer.enabled) {
+      await tracer.trace({
+        stage: "goal_understanding",
+        summary: String(ctx.goal).slice(0, 200),
+        payload: { language: ctx.language, execution_mode: executionMode, chars: ctx.goal.length },
+      });
+      await tracer.trace({
+        stage: "context_analysis",
+        summary: `النطاق الجغرافي: ${geo.label || "World"}`,
+        payload: { country: geo.country, city: geo.city, scope: ctx.geoScope || { mode: "auto" } },
+      });
+      await tracer.trace({
+        stage: "workspace_analysis",
+        summary: workspaceProfile?.name ? `مساحة العمل: ${workspaceProfile.name}` : "بدون مساحة عمل",
+        payload: {
+          goals: workspaceProfile?.goals || null,
+          policies: workspaceProfile?.policies || null,
+          risk_level: workspaceProfile?.risk_level || null,
+        },
+      });
+      await tracer.trace({
+        stage: "user_analysis",
+        summary: `المستخدم ${ctx.userId.slice(0, 8)}…`,
+        payload: { workspace_scoped: !!ctx.workspaceId },
+      });
+      await tracer.trace({
+        stage: "memory_analysis",
+        summary: `استُدعيت ${memories.length} ذاكرة ذات صلة.`,
+        payload: { count: memories.length },
+      });
+    }
+
     // 2.4) Learned expert snapshots (Part 9) + living knowledge (Part 11).
     //      Both are additive prompt blocks: disabled ⇒ byte-identical prompt.
     let learnedBlock = "";
@@ -224,6 +257,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         });
         if (nodes.length) await ctx.emit("knowledge", { items: nodes.map((n) => ({ layer: n.layer, title: n.title, quality: n.quality })) });
         learnedBlock += knowledgePromptBlock(nodes);
+        if (tracer.enabled) {
+          await tracer.trace({
+            stage: "knowledge_analysis",
+            summary: `عُقد معرفية مستخدمة: ${nodes.length}`,
+            payload: { layers: nodes.map((n) => n.layer) },
+          });
+        }
       } catch {}
     }
 
@@ -251,6 +291,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           decisionLog.push({ phase: "envision", ...envision, at: new Date().toISOString() });
           await ctx.emit("envision", envision);
           await logMsg("envision", envision, eResp.tokens, eResp.usd);
+          if (tracer.enabled) {
+            await tracer.trace({
+              stage: "future_impact",
+              summary: String(envision.future_goal || "").slice(0, 200),
+              payload: { backward_chain: envision.backward_chain || [], success_metrics: envision.success_metrics || [] },
+              cost_usd: eResp.usd,
+            });
+          }
         }
       } catch {}
     }
@@ -270,6 +318,76 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
+
+    // Part 13 — pipeline stages 7..16 recorded from the plan we just built.
+    if (tracer.enabled) {
+      const planCaps = Array.from(
+        new Set(steps.flatMap((st) => TOOL_CATALOG.find((t) => t.key === st.tool)?.capabilities || [])),
+      );
+      const plannerChoice = await modelFor("planning");
+      const finalChoice = await modelFor("final");
+      await tracer.trace({
+        stage: "expert_selection",
+        summary: `خبراء مطلوبون حسب القدرات: ${planCaps.length}`,
+        experts: planCaps.flatMap((c) => findExpertsByCapability(c as Capability).map((t) => t.key)).slice(0, 12),
+        capabilities: planCaps,
+      });
+      await tracer.trace({ stage: "capability_selection", summary: planCaps.join(", ").slice(0, 200), capabilities: planCaps });
+      await tracer.trace({
+        stage: "tool_selection",
+        summary: steps.map((st) => st.tool).join(" → ").slice(0, 200),
+        tools: steps.map((st) => ({ tool: st.tool, reason: st.reason || null })),
+      });
+      await tracer.trace({
+        stage: "mcp_selection",
+        summary: (workspaceProfile?.preferred_mcp || []).length ? "MCP مفضّلة من مساحة العمل" : "لا توجد MCP مطلوبة لهذه المهمة",
+        mcp: workspaceProfile?.preferred_mcp || [],
+      });
+      await tracer.trace({
+        stage: "model_selection",
+        summary: `تخطيط: ${plannerChoice.model} — إجابة: ${finalChoice.model}`,
+        models: [
+          { phase: "planning", model: plannerChoice.model, reason: plannerChoice.reason },
+          { phase: "final", model: finalChoice.model, reason: finalChoice.reason },
+        ],
+        alternatives: plannerChoice.fallback
+          ? [{ option: plannerChoice.fallback, reason: "نموذج احتياطي — يُستخدم فقط عند فشل النموذج الأساسي." }]
+          : [],
+        cost_usd: plannerChoice.expected_cost_per_1k_usd,
+      });
+
+      // Cost-aware decision: compare candidate execution strategies.
+      if (dec.cost_aware_alternatives) {
+        const unit = (await modelFor("planning")).expected_cost_per_1k_usd || 0.005;
+        const options = [
+          { label: `خطة مختصرة (${Math.max(1, Math.min(2, steps.length))} خطوة)`, quality: 62, cost_usd: unit * 2, minutes: 1 },
+          { label: `الخطة المقترحة (${steps.length} خطوة)`, quality: 85, cost_usd: unit * Math.max(2, steps.length), minutes: Math.max(2, steps.length) },
+          { label: `خطة موسّعة (${steps.length + 2} خطوة)`, quality: 90, cost_usd: unit * (steps.length + 4), minutes: steps.length + 4 },
+        ];
+        const pick = chooseAlternative(options);
+        if (pick) {
+          await tracer.trace({
+            stage: "execution_strategy",
+            summary: pick.reason,
+            alternatives: pick.rejected,
+            cost_usd: pick.chosen.cost_usd,
+            confidence: pick.chosen.quality,
+          });
+        }
+      } else {
+        await tracer.trace({ stage: "execution_strategy", summary: `تنفيذ ${steps.length} خطوة بالتسلسل.`, tools: steps.map((st) => st.tool) });
+      }
+      await tracer.trace({
+        stage: "cost_analysis",
+        summary: `تكلفة التخطيط حتى الآن: ${totalUsd.toFixed(5)}$`,
+        cost_usd: totalUsd,
+      });
+      await tracer.trace({
+        stage: "risk_analysis",
+        summary: workspaceProfile?.risk_level ? `مستوى المخاطر: ${workspaceProfile.risk_level}` : "مخاطر قياسية",
+        risk: workspaceProfile?.risk_level === "high" ? 70 : workspaceProfile?.risk_level === "low" ? 20 : 40,
+      });
+    }
 
     // Part 6 — Recommendation mode: stop after producing the plan.
     if (executionMode === "recommendation") {
