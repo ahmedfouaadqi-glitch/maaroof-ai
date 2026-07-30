@@ -473,3 +473,42 @@ function TxtField({ label, k, v, set }: { label: string; k: string; v: any; set:
     </label>
   );
 }
+
+/* ---------- Part 7 — Executive Intelligence controls ---------- */
+const EXEC_FLAGS: Array<{ k: string; label: string; hint: string }> = [
+  { k: "personality_enabled", label: "شخصية الوكيل التنفيذية", hint: "تتطور سمات الوكيل بعد كل جلسة (جرأة، حذر، تحليل…)." },
+  { k: "conflict_enabled", label: "محرك التعارض المعرفي", hint: "نقاش إضافي فقط عند اختلاف المجلس — تكلفة إضافية نادرة." },
+  { k: "timing_enabled", label: "محرك التوقيت الاستراتيجي", hint: "يقرر: نفّذ الآن / أجّل / جدول / راقب / ألغِ (بدون تكلفة نموذج)." },
+  { k: "trust_enabled", label: "محرك الثقة والأدلة", hint: "يرفق الأدلة والافتراضات والحدود مع الإجابة النهائية." },
+  { k: "genome_enabled", label: "الجينوم الرقمي", hint: "هوية دائمة للمساحة والوكيل تُحقن في التوجيه." },
+  { k: "future_dna_enabled", label: "حمض المستقبل (Future DNA)", hint: "يسجّل أنماطاً مجهولة الهوية من النجاح والفشل معاً." },
+];
+
+function ExecutiveControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const exec = (settings.executive || {}) as Record<string, any>;
+  const patch = (k: string, v: any) => set("executive", { ...exec, [k]: v });
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-3">
+      <label className="flex items-center gap-3">
+        <input type="checkbox" checked={!!exec.enabled} onChange={(e) => patch("enabled", e.target.checked)} />
+        <span className="font-semibold text-sm">الذكاء التنفيذي (الجزء السابع)</span>
+      </label>
+      <p className="text-xs text-muted-foreground -mt-1">طبقة إضافية فوق مسار التنفيذ الحالي — عند الإيقاف يبقى السلوك كما هو تماماً.</p>
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${exec.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+        {EXEC_FLAGS.map((f) => (
+          <label key={f.k} className="rounded border p-2 flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={!!exec[f.k]} onChange={(e) => patch(f.k, e.target.checked)} />
+            <span>
+              <span className="text-sm font-medium block">{f.label}</span>
+              <span className="text-[11px] text-muted-foreground">{f.hint}</span>
+            </span>
+          </label>
+        ))}
+        <label className="rounded border p-2 block">
+          <span className="text-xs text-muted-foreground">عتبة التعارض (فارق الثقة %)</span>
+          <input type="number" value={exec.conflict_threshold ?? 25} onChange={(e) => patch("conflict_threshold", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
+        </label>
+      </div>
+    </div>
+  );
+}
