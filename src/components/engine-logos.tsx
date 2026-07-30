@@ -100,20 +100,34 @@ export const KimiLogo = (props: LogoProps) => (
 );
 
 export type EngineMeta = {
+  key: EngineKey;
   name: string;
   Logo: ComponentType<LogoProps>;
   tint: string;
+  proxy: boolean;
 };
 
-export const ENGINES: EngineMeta[] = [
-  { name: "ChatGPT",    Logo: ChatGPTLogo,    tint: "from-emerald-400/20 to-emerald-500/5" },
-  { name: "Gemini",     Logo: GeminiLogo,     tint: "from-blue-400/20 to-violet-500/5" },
-  { name: "Claude",     Logo: ClaudeLogo,     tint: "from-orange-400/20 to-amber-500/5" },
-  { name: "Perplexity", Logo: PerplexityLogo, tint: "from-cyan-400/20 to-teal-500/5" },
-  { name: "Copilot",    Logo: CopilotLogo,    tint: "from-sky-400/20 to-blue-500/5" },
-  { name: "Grok",       Logo: GrokLogo,       tint: "from-zinc-300/20 to-zinc-500/5" },
-  { name: "Mistral",    Logo: MistralLogo,    tint: "from-orange-400/20 to-red-500/5" },
-  { name: "DeepSeek",   Logo: DeepSeekLogo,   tint: "from-indigo-400/20 to-blue-600/5" },
-  { name: "Kimi",       Logo: KimiLogo,       tint: "from-violet-400/20 to-cyan-500/5" },
-];
+const LOGO_BY_KEY: Record<EngineKey, ComponentType<LogoProps>> = {
+  chatgpt: ChatGPTLogo,
+  gemini: GeminiLogo,
+  claude: ClaudeLogo,
+  perplexity: PerplexityLogo,
+  copilot: CopilotLogo,
+  grok: GrokLogo,
+  mistral: MistralLogo,
+  deepseek: DeepSeekLogo,
+  kimi: KimiLogo,
+};
+
+/** Derived from the shared engine catalog — never hardcode a second list. */
+export const ENGINES: EngineMeta[] = ENGINE_LIST.map((e) => ({
+  key: e.key,
+  name: e.name,
+  Logo: LOGO_BY_KEY[e.key],
+  tint: e.tint,
+  proxy: e.proxy,
+}));
+
+export const ENGINE_LOGOS = LOGO_BY_KEY;
+
 
