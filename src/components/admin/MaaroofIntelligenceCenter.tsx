@@ -82,6 +82,8 @@ export function MaaroofIntelligenceCenter() {
         {section === "policy_scores"  && <ScoresTable view="policy_scores_v"  cols={["policy","workspaces","last_updated_at"]} />}
         {section === "eqi"            && <EqiSection />}
         {section === "personality"    && <PersonalitySection />}
+        {section === "laws"           && <LawsComplianceSection />}
+
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
         {section === "user_intel"     && <UserIntelligenceTab />}
