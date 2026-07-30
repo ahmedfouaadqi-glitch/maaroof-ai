@@ -82,6 +82,20 @@ function GuidePage() {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">{t("guide_intro")}</p>
 
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link to="/guide/what-is-geo" className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm font-semibold text-primary hover:underline">
+            What is GEO? →
+          </Link>
+          <Link to="/guide/geo-vs-aeo" className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm font-semibold text-primary hover:underline">
+            GEO vs AEO →
+          </Link>
+          <Link to="/guide/arabic-kurdish-geo" className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm font-semibold text-primary hover:underline">
+            Arabic & Kurdish GEO →
+          </Link>
+        </div>
+
+
+
         <Section icon={<Wrench className="size-5" />} title={t("guide_tools_section")}>
           {tools.map((td) => (
             <ToolRow key={td.key} toolKey={td.key} name={td.labels[L]} cost={td.costPerRun} body={t(HOWTO_KEY[td.key] as any)} />
