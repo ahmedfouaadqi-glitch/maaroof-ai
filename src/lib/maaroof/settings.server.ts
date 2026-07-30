@@ -242,9 +242,22 @@ const DEFAULTS: MaaroofSettings = {
     freshness_days: 30,
     min_confidence: 40,
   },
-
-
+  model_governance: {
+    enabled: false,
+    per_phase_selection: false,
+    health_tracking: true,
+    auto_proposals: false,
+    benchmark_enabled: false,
+    use_registry_pricing: false,
+  },
+  decision: {
+    enabled: false,
+    trace_enabled: false,
+    cost_aware_alternatives: false,
+    score_enabled: false,
+  },
 };
+
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
 const TTL_MS = 60_000;
