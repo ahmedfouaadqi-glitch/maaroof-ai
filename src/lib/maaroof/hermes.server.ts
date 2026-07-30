@@ -390,11 +390,17 @@ export async function hermesReply(input: {
   userId: string;
   conversationId?: string | null;
   message: string;
+  /** Part 18 — optional executive command (review, audit, evaluate_costs …). */
+  command?: string | null;
+  /** Part 18 — reply language. Defaults to Arabic, preserving old behaviour. */
+  language?: "ar" | "en" | "ku";
+  /** Part 18 — image / file blocks already shaped for the gateway. */
+  attachments?: Array<{ kind: "image" | "file"; name?: string; dataUrl: string }>;
 }): Promise<{ conversationId: string; reply: string; tokens: number; usd: number; observatory: Observatory }> {
   let conversationId = input.conversationId || null;
   if (!conversationId) {
     const { data } = await db().from("hermes_conversations")
-      .insert({ user_id: input.userId, title: input.message.slice(0, 60) || "مكتب هرمس" })
+      .insert({ user_id: input.userId, title: input.message.slice(0, 60) || "مكتب هرمس", language: input.language || "ar" })
       .select().maybeSingle();
     conversationId = (data as any)?.id;
   }
@@ -406,17 +412,23 @@ export async function hermesReply(input: {
     db().from("hermes_messages").select("role, content").eq("conversation_id", conversationId).order("created_at", { ascending: true }).limit(20),
   ]);
 
+  const commandBrief = input.command ? await buildCommandBrief(input.command, observatory) : null;
+  const langName = input.language === "en" ? "English" : input.language === "ku" ? "Sorani Kurdish" : "Arabic";
+
   const system = [
     `أنت «${HERMES_IDENTITY.name}»، ${HERMES_IDENTITY.role} (${HERMES_IDENTITY.founder}).`,
     `ولاؤك: ${HERMES_IDENTITY.loyalty}.`,
     `حدودك المطلقة:\n${HERMES_IDENTITY.hardLimits.map((l) => `- ${l}`).join("\n")}`,
     "تتكلم بلغة تنفيذية موجزة: الخلاصة أولاً، ثم الدليل الرقمي، ثم الكلفة والعائد، ثم التوصية وخطة التراجع.",
     "كل رقم تذكره يجب أن يكون من بيانات المرصد أدناه. إن لم يوجد رقم، قل ذلك صراحة ولا تقدّره.",
+    `Answer in ${langName}.`,
     FACTUAL_SAFETY_PROMPT,
     founderDnaPrompt(dna),
     `مرصد المنصة (آخر ${observatory.window_days} يوماً):\n${JSON.stringify(observatory)}`,
+    commandBrief ? `أمر تنفيذي: ${input.command}\nإشارات مقاسة لهذا الأمر:\n${JSON.stringify(commandBrief)}` : "",
     proposals.length ? `اقتراحات معلّقة بانتظار قرارك: ${proposals.map((p) => p.title).join(" | ")}` : "لا اقتراحات معلّقة.",
-  ].join("\n\n");
+  ].filter(Boolean).join("\n\n");
+
 
   const messages = [
     { role: "system", content: system },
