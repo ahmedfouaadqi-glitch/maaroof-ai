@@ -1,28 +1,25 @@
 ## Goal
-Use the nine official brand SVGs you uploaded as the engine icons everywhere in the site (home page, engine selector, orbit, answers/results, admin model map).
+Replace the circular "engines orbit" animation in the middle of the home page with your uploaded morphing-logos motion clip, at the same size and visual clarity.
+
+## What it is now
+`src/components/EnginesOrbit.tsx` renders a 380×380 canvas: SVG rings + beams, nine rotating engine chips, and the central MAAROOF hexagon logo. It sits inside the hero section of `src/routes/index.tsx`.
 
 ## What changes
 
-Single file: `src/components/engine-logos.tsx` — rewrite each logo component's SVG path data with the official artwork:
+1. **Prepare the clip** (`output_1.mp4`, 600×1068, 16s, cream background):
+   - Crop to the centered square region that contains the animation, so it drops into the same 380×380 slot with no letterboxing.
+   - Key out the cream background and export a transparent WebM (VP9 + alpha) so the animation floats over the site's own gradient/glow in both light and dark themes.
+   - Keep a trimmed MP4 as a fallback source for browsers without alpha-WebM support (it renders on a soft rounded plate so it still looks intentional).
+   - Both files are uploaded as CDN assets (`lovable-assets`), not committed binaries.
 
-| Engine key | Uploaded file |
-|---|---|
-| chatgpt | `openai.svg` |
-| gemini | `gemini-color.svg` |
-| claude | `claude-color.svg` |
-| perplexity | `perplexity-color.svg` |
-| copilot | `copilot-color.svg` |
-| grok | `grok.svg` |
-| mistral | `mistral-color.svg` |
-| deepseek | `deepseek-color.svg` |
-| kimi | `kimi-color.svg` |
+2. **Swap the visual in `EnginesOrbit.tsx`**:
+   - Remove the SVG rings/beams block, the rotating engine-chip ring, and the central logo block.
+   - Render a `<video autoplay loop muted playsinline>` in the same wrapper, same 380px box, `max-width: 100%`, `object-contain`, `aria-hidden` + a visually-hidden text alternative for accessibility.
+   - Keep the ambient glow layers, the badge, heading, subheading, tagline and the two CTA buttons exactly as they are.
+   - Keep the `useVisibility("engines_orbit")` gate and the i18n strings untouched.
+   - Respect `prefers-reduced-motion`: pause the video and show its first frame instead.
 
-Everything else stays as is: the components keep the same names, the same `{ size }` prop API, `viewBox="0 0 24 24"`, and the `LOGO_BY_KEY` mapping, so all consumers (`index.tsx`, `EngineSelector`, `EnginesOrbit`, `BrandBoostAgent`, `AIVisibility`, `ModelDecisionPanels`) pick the new icons up automatically with no edits.
+3. Nothing else changes — no other page, no engine logic, no data.
 
-## Technical details
-
-- Gradient/`<defs>` IDs in the uploaded Copilot and Gemini files (`lobe-icons-...-_R_0_`) are renamed to unique, stable IDs per component so multiple icons on one page never collide.
-- SVG attributes are converted to JSX (`fill-rule` → `fillRule`, `stop-color` → `stopColor`, inline `style` removed) and `height/width="1em"` replaced by the existing `size` prop.
-- Grok and OpenAI stay `fill="currentColor"` so they follow the theme in light/dark; the rest keep their official brand colors.
-- The Kimi logo has a blue mark on a white shape — a dark rounded background is added behind it so it stays visible on dark surfaces.
-- No changes to `ai-engines.ts`, engine model mapping, or any business logic.
+## Note
+The nine brand icons stay in use everywhere else (hero chips, selector, results, admin map); only the central orbit animation is replaced.
