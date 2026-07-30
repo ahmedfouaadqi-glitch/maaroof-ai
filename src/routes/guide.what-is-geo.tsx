@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BlurText } from "@/components/motion/BlurText";
 import { SiteHeader } from "@/components/SiteHeader";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
@@ -93,7 +94,7 @@ function Page() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="font-display text-3xl font-bold text-gradient">{TITLE}</h1>
+        <BlurText as="h1" text={TITLE} delay={70} stepDuration={0.28} center={false} className="font-display text-3xl font-bold text-gradient" />
         <p className="mt-3 text-sm text-muted-foreground">{DESC}</p>
 
         <Section title="The short definition">

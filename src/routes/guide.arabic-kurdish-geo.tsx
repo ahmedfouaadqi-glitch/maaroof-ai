@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BlurText } from "@/components/motion/BlurText";
 import { SiteHeader } from "@/components/SiteHeader";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
@@ -84,7 +85,7 @@ function Page() {
     <div className="min-h-screen text-foreground">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12 prose prose-invert">
-        <h1 className="text-3xl font-bold mb-4">Arabic &amp; Kurdish GEO — getting cited by AI engines</h1>
+        <BlurText as="h1" text="Arabic & Kurdish GEO — getting cited by AI engines" delay={70} stepDuration={0.28} center={false} className="text-3xl font-bold mb-4" />
         <p className="text-muted-foreground">
           A practical Generative Engine Optimization (GEO) guide for Iraqi and MENA businesses
           who want ChatGPT, Gemini, Claude and Perplexity to mention them when users ask

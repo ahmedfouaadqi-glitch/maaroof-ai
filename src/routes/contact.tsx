@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Phone, MessageCircle, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Linkedin, Send } from "lucide-react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
+import { BlurText } from "@/components/motion/BlurText";
 import { SiteHeader } from "@/components/SiteHeader";
 import { useContactInfo, whatsappLinkFromInfo } from "@/lib/contact-info";
 
@@ -58,7 +59,7 @@ function ContactPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-2xl px-4 py-16">
-        <h1 className="font-display text-3xl font-bold text-gradient">{t("nav_contact")}</h1>
+        <BlurText as="h1" text={t("nav_contact")} delay={70} stepDuration={0.28} center={false} className="font-display text-3xl font-bold text-gradient" />
         <p className="mt-3 text-sm text-muted-foreground">{t("subscribe_modal_desc")}</p>
 
         <div className="mt-8 rounded-2xl border border-primary/30 bg-card/70 p-6 text-center shadow-[var(--shadow-elevated)]">

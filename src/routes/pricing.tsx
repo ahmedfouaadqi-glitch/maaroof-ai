@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { I18nProvider, useI18n, PLAN_KEY_BY_NAME, ADDON_KEY_BY_NAME } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { BlurText } from "@/components/motion/BlurText";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useContactInfo, whatsappLinkFromInfo } from "@/lib/contact-info";
@@ -149,7 +150,7 @@ function PricingPage() {
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
             <Sparkles className="size-3.5" /> {t("pr_badge")}
           </span>
-          <h1 className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl">{t("pr_title")}</h1>
+          <BlurText as="h1" text={t("pr_title")} delay={70} stepDuration={0.28} className="mt-5 font-display text-4xl font-bold text-gradient md:text-5xl" />
           <p className="mt-3 text-muted-foreground">
             {t("pr_intro_1")} <b>{t("pr_whatsapp")}</b> {t("pr_or")} <b>{t("pr_email_word")}</b> {t("pr_intro_2")}
           </p>
