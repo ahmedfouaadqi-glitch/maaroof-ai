@@ -323,7 +323,15 @@ ${evidenceBlock}`;
             summary: planParsed.summary || "",
             evidence,
             plan: merged,
+            engines: {
+              plan: entitlement.plan,
+              limit: entitlement.limit,
+              allowed: entitlement.allowed,
+              locked: entitlement.locked,
+              used: targets,
+            },
           });
+
         } catch (e) {
           console.error("[api/brand-boost] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
