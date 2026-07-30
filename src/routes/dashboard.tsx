@@ -233,8 +233,8 @@ function DashboardPage() {
               <div className="relative">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-25">
                   <MagicRings
-                    color="oklch(0.7 0.18 275)"
-                    colorTwo="oklch(0.78 0.15 200)"
+                    color="#6E3AF7"
+                    colorTwo="#4FC3E8"
                     ringCount={5}
                     speed={0.6}
                     opacity={0.7}
@@ -305,8 +305,8 @@ function ToolGridCard({ icon, title, desc, onOpen, t, toolKey }: { icon: React.R
       {/* Identity face — MagicRings glow behind the content */}
       <div className="pointer-events-none absolute inset-0 -z-0 transition-opacity duration-500" style={{ opacity: hover ? 0.55 : 0.22 }}>
         <MagicRings
-          color="oklch(0.72 0.19 285)"
-          colorTwo="oklch(0.8 0.14 195)"
+          color="#7A46F8"
+          colorTwo="#55B6F0"
           ringCount={6}
           speed={hover ? 1 : 0.5}
           attenuation={12}
