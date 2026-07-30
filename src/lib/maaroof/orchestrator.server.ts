@@ -78,6 +78,30 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     throw new Error("maaroof_disabled");
   }
   const MODEL = settings.planner_model;
+  // Part 12 — model governance. When disabled, every phase resolves to MODEL,
+  // pricing keeps the legacy estimate and no telemetry is written.
+  const mg = settings.model_governance || ({} as any);
+  const modelRegistry = mg.enabled || mg.use_registry_pricing ? await loadModelRegistry() : [];
+  const phaseModels = new Map<ModelPhase, ModelChoice>();
+  const modelChoices: any[] = [];
+  async function modelFor(phase: ModelPhase): Promise<ModelChoice> {
+    const hit = phaseModels.get(phase);
+    if (hit) return hit;
+    const choice = await selectModel({
+      phase,
+      enabled: !!(mg.enabled && mg.per_phase_selection),
+      defaultModel: MODEL,
+      fallbackModel: settings.fallback_model,
+      preferredModels: (workspaceProfile?.preferred_models as string[]) || null,
+      riskLevel: (workspaceProfile?.risk_level as string) || null,
+      budgetUsd: Number((workspaceProfile?.budget as any)?.max_usd ?? NaN) || null,
+      registry: modelRegistry,
+    });
+    phaseModels.set(phase, choice);
+    if (choice.governed) modelChoices.push({ phase, model: choice.model, reason: choice.reason });
+    return choice;
+  }
+
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
 
