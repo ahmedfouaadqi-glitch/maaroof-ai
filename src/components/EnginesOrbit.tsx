@@ -1,27 +1,24 @@
 import { Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import maaroofMark from "@/assets/maaroof-ai-mark.png";
 
 import { useI18n } from "@/lib/i18n";
 import { useVisibility } from "@/lib/visibility";
-import { ENGINES } from "./engine-logos";
+import morphMp4 from "@/assets/engines-morph.mp4.asset.json";
+import morphWebm from "@/assets/engines-morph.webm.asset.json";
+import morphPoster from "@/assets/engines-morph-poster.jpg.asset.json";
 
 
 /**
- * Hero orbit animation:
- * - 9 AI engines orbit a central brand logo
- * - Animated beams converge toward the brand → conveys "AI engines cite YOU"
- * - Tagline reinforces: smart idea = simplicity
+ * Hero motion piece:
+ * - The nine AI engine marks morph into one another on a continuous loop
+ * - Replaces the previous SVG orbit while keeping the same slot, copy and CTAs
  */
 export function EnginesOrbit() {
   const { t } = useI18n();
   const vis = useVisibility();
-  const radius = 140; // px in viewBox space
-  const size = 380;
-  const cx = size / 2;
-  const cy = size / 2;
 
   if (!vis.loading && !vis.isWidgetVisible("engines_orbit")) return null;
+
 
   return (
     <section id="orbit" className="relative border-t border-border/60 py-20 overflow-hidden">
