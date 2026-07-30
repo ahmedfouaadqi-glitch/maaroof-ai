@@ -188,14 +188,17 @@ export const Route = createFileRoute("/api/brand-boost")({
             ? evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.snippet}`).join("\n\n")
             : "(no public evidence retrieved)";
 
-          // ── Step 2: probe each selected platform with its mapped model
-          // Allow admin to restrict the platform set globally
+          // ── Step 2: probe each selected engine with its governed model
+          // Admin may restrict the engine set globally; the user's plan caps how
+          // many of the nine engines a single run may probe (MARK 1/2/3 = 3/6/9).
           const adminAllowed: Platform[] | null = Array.isArray(adminCfg.enabled_platforms) && adminCfg.enabled_platforms.length
             ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
             : null;
-          const requested = (platforms as Platform[]).filter((p) => PLATFORMS.includes(p));
-          const targets = (adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested).slice(0, MAX_PLATFORMS_PER_RUN);
+          const entitlement = await enginesAllowedForUser(admin, userId);
+          const requested = applyEntitlement(platforms, entitlement);
+          const targets = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
           if (!targets.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
+          const engineModels = await resolveEngineModels(targets, "final");
           const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
 If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
           const probeUserTpl = String(adminCfg.probe_prompt || `What do you know about the brand "{brand}"{keywords} in the context of {market}? Mention concrete facts only.`);
@@ -207,7 +210,9 @@ If you have no reliable public knowledge, say so explicitly. Reply in ${langName
           const _tokAcc: TokenAcc = { in: 0, out: 0 };
           const probes = await Promise.all(
             targets.map(async (p) => {
-              const cfg = PLATFORM_MODEL[p];
+              const resolved = engineModels[p];
+              const cfg = { model: resolved?.model || ENGINE_CATALOG[p].defaultModel, proxy: ENGINE_CATALOG[p].proxy };
+
               try {
                 const r = await callGateway(lovableKey, cfg.model, [
                   { role: "system", content: probeSys },
