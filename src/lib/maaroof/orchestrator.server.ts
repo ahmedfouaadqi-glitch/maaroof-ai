@@ -898,6 +898,50 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("quality_score", qualityScore);
     }
 
+    // Part 13 — closing pipeline stages + Decision Score.
+    let decisionScore: any = null;
+    if (tracer.enabled) {
+      const okCount = results.filter((r) => r.ok).length;
+      if (timing) {
+        await tracer.trace({
+          stage: "time_analysis",
+          summary: `توقيت التنفيذ: ${timing.verdict}`,
+          payload: timing as any,
+        });
+      }
+      await tracer.trace({
+        stage: "execution",
+        summary: `نُفِّذت ${results.length} خطوة، نجح منها ${okCount}.`,
+        tools: results.map((r) => ({ tool: r.tool, ok: !!r.ok })),
+        cost_usd: totalUsd,
+      });
+      await tracer.trace({
+        stage: "validation",
+        summary: compliance ? `امتثال دستوري: ${(compliance as any).verdict ?? "—"}` : "تحقق داخلي من النتائج",
+        confidence: typeof trust?.confidence === "number" ? trust.confidence : null,
+      });
+      await tracer.trace({
+        stage: "approval",
+        summary: executionMode === "execution" ? "تنفيذ مباشر ضمن صلاحيات المستخدم." : `وضع ${executionMode} — بلا تنفيذ فعلي.`,
+        payload: { execution_mode: executionMode },
+      });
+      await tracer.trace({
+        stage: "learning",
+        summary: "تسجيل النتائج في الذاكرة والحمض المعرفي للاستفادة المستقبلية.",
+        payload: { memory: true, dna: !!settings.cognitive?.dna_enabled },
+      });
+      if (dec.score_enabled) {
+        decisionScore = { ...tracer.score(), models: modelChoices, stages: tracer.snapshot().length };
+        await ctx.emit("decision_score", decisionScore);
+      }
+    }
+
+    // Part 12 — file an upgrade proposal for the admin when the registry shows a
+    // clearly better option. Never applied automatically.
+    if (mg.enabled && mg.auto_proposals) {
+      try { await proposeModelUpgrade(MODEL); } catch {}
+    }
+
     // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
@@ -906,6 +950,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps_count: steps.length,
       finished_at: new Date().toISOString(),
       ...(qualityScore ? { quality_score: qualityScore } : {}),
+      ...(decisionScore ? { decision_log: [...decisionLog, { phase: "decision_score", ...decisionScore }] } : {}),
     }).eq("id", runId);
 
     try {
@@ -915,7 +960,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         tokens: totalTokens,
         usd_cost: totalUsd,
         run_id: runId,
-        meta: { maaroof_run_id: runId, model: MODEL, geo: { country: geo.country, city: geo.city }, steps: steps.length },
+        meta: { maaroof_run_id: runId, model: MODEL, models: modelChoices, geo: { country: geo.country, city: geo.city }, steps: steps.length },
       });
     } catch {}
 
