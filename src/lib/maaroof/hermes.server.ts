@@ -535,28 +535,28 @@ export async function buildCommandBrief(command: string, o: Observatory): Promis
 
   switch (command) {
     case "evaluate_experts":
-      return { experts: await take("expert_profiles", "tool_key, mastery_score, sessions_count, updated_at", "mastery_score") };
+      return { experts: await take("expert_profiles", "expert_key, understanding_score, sessions_count, status, updated_at", "understanding_score") };
     case "evaluate_models":
       return { models: await take("ai_models", "model_key, provider, status, quality_score, cost_per_1m_input, cost_per_1m_output", "quality_score", 40),
-               health: await take("ai_model_health", "model_key, status, error_rate, avg_latency_ms", "checked_at", 40) };
+               health: await take("ai_model_health", "model_key, last_status, calls, failures, total_latency_ms, total_usd", "updated_at", 40) };
     case "evaluate_mcp":
-      return { mcp: await take("mcp_providers", "name, kind, status, success_count, failure_count, avg_latency_ms", "updated_at", 40) };
+      return { mcp: await take("mcp_providers", "name, enabled, reliability, avg_latency_ms, avg_cost_usd, capabilities", "updated_at", 40) };
     case "evaluate_trust":
       return { weakest: o.weakestLinks, profiles: await take("trust_profiles", "entity_type, entity_key, trust_score, samples", "trust_score", 30) };
     case "evaluate_knowledge":
-      return { nodes: await take("knowledge_nodes", "layer, title, quality_score, confidence, updated_at", "quality_score", 30) };
+      return { nodes: await take("knowledge_nodes", "layer, title, quality, confidence, reliability, updated_at", "quality", 30) };
     case "evaluate_memory":
-      return { memory: await take("maaroof_memory", "kind, key, importance, updated_at", "importance", 30) };
+      return { memory: await take("maaroof_memory", "kind, scope, importance, reliability, usage_count, updated_at", "importance", 30) };
     case "evaluate_state":
-      return { anchors: await take("state_anchors", "level, scope_id, health_score, drift_score, updated_at", "updated_at", 30) };
+      return { anchors: await take("state_anchors", "level, scope_id, health_score, drift, status, updated_at", "updated_at", 30) };
     case "evaluate_workspaces":
-      return { workspaces: await take("workspaces", "id, name, industry, created_at", "created_at", 30) };
+      return { workspaces: await take("workspaces", "id, name, kind, country, risk_level, created_at", "created_at", 30) };
     case "evaluate_users":
-      return { users: o.users, requests: await take("subscription_requests", "status, plan_key, created_at", "created_at", 30) };
+      return { users: o.users, requests: await take("subscription_requests", "status, request_type, created_at", "created_at", 30) };
     case "evaluate_costs":
     case "evaluate_revenue":
     case "evaluate_business":
-      return { economics: o.economics, topCostTools: o.topCostTools, plans: await take("subscription_plans", "key, name_ar, price_iqd, tokens_monthly", "price_iqd", 20) };
+      return { economics: o.economics, topCostTools: o.topCostTools, plans: await take("subscription_plans", "name, price_iqd, price_usd, monthly_tokens, active", "price_iqd", 20) };
     case "evaluate_security":
       return { activity: await take("activity_log", "action, created_at", "created_at", 30) };
     case "evaluate_geo":
@@ -564,8 +564,9 @@ export async function buildCommandBrief(command: string, o: Observatory): Promis
     case "evaluate_aso":
     case "evaluate_branding":
     case "evaluate_social":
-      return { publications: await take("publications", "platform, status, created_at", "created_at", 30),
-               metrics: await take("publication_metrics", "platform, impressions, clicks, created_at", "created_at", 30) };
+      return { publications: await take("publications", "platform_key, status, stage, created_at", "created_at", 30),
+               metrics: await take("publication_metrics", "impressions, clicks, reach, ai_visibility, created_at", "created_at", 30) };
+
     case "evaluate_architecture":
     case "audit":
     case "review":
