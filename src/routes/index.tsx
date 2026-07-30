@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 
 import { ArrowRight, Sparkles, Globe2, Bot, Phone } from "lucide-react";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
+import { BlurText } from "@/components/motion/BlurText";
 import { ENGINES } from "@/components/engine-logos";
 import { useCountry } from "@/lib/use-country";
 
@@ -87,12 +88,20 @@ function Page() {
                 </div>
               )}
 
-              <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl">
-                <span className="text-gradient">{t("hero_title")}</span>
-              </h1>
-              <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
-                {t("hero_sub")}
-              </p>
+              <BlurText
+                as="h1"
+                text={t("hero_title")}
+                delay={70}
+                stepDuration={0.28}
+                className="text-gradient mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl"
+              />
+              <BlurText
+                text={t("hero_sub")}
+                delay={35}
+                stepDuration={0.24}
+                startDelay={220}
+                className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg"
+              />
 
               {/* 9 engine chips */}
               <div className="mx-auto mt-7 flex max-w-3xl flex-wrap items-center justify-center gap-2.5">
