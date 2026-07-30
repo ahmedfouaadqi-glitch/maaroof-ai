@@ -3,12 +3,14 @@
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
 import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
-import { loadCapabilityScores, buildCapabilityGraph, chooseImplementation } from "./capability.server";
+import { loadCapabilityScores, buildCapabilityGraph, chooseImplementation, buildEvidenceGraph } from "./capability.server";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
 import { effectiveGeo } from "./geo.server";
 import { getMaaroofSettings } from "./settings.server";
-import { getOrCreateAgent, finalizeAgent, type MaaroofAgent } from "./agents.server";
+import { getOrCreateAgent, finalizeAgent, evolvePersonality, readPersonality, personalityPromptBlock, type MaaroofAgent } from "./agents.server";
+import { assessTiming, type TimingDecision } from "./timing.server";
+import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -231,6 +233,28 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       } catch {}
     }
 
+    // 3.2) PART 7 — Executive layer prompt enrichment (personality + genome).
+    //      Additive: when settings.executive.enabled is false, `effectivePrompt`
+    //      is byte-identical to the Part 6 systemPrompt.
+    const exec = settings.executive || ({} as any);
+    let effectivePrompt = systemPrompt;
+    if (exec.enabled) {
+      if (exec.personality_enabled && activeAgent) {
+        try {
+          const p = readPersonality(activeAgent);
+          effectivePrompt += personalityPromptBlock(p, ctx.language);
+          await ctx.emit("personality", { agentId: activeAgent.id, traits: p, version: activeAgent.personality_version || 1 });
+        } catch {}
+      }
+      if (exec.genome_enabled && ctx.workspaceId) {
+        try {
+          const g = await readWorkspaceGenome(ctx.workspaceId);
+          effectivePrompt += genomePromptBlock(g);
+          if (g) await ctx.emit("genome", { scope: "workspace", id: g.id, runs: g.runs_count, memories: g.memory_count, risk: g.risk_level });
+        } catch {}
+      }
+    }
+
 
     // 3.5) EXPERT COUNCIL — deliberate before acting.
     //      Part 4: implementations are chosen via the Capability OS
@@ -315,11 +339,60 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         }
       }
 
+      // 3.6) PART 7 — COGNITIVE CONFLICT ENGINE.
+      //      Runs ONE extra deliberation pass only when the council actually
+      //      disagrees (objection, wide confidence spread, or divergent tool
+      //      suggestions). No conflict → zero extra cost, identical to Part 6.
+      if (exec.enabled && exec.conflict_enabled) {
+        try {
+          const opinions = decisionLog.filter((d: any) => d.phase === "council" && !d.error);
+          const confs = opinions.map((d: any) => (typeof d.confidence === "number" ? d.confidence : null)).filter((v: any) => v != null) as number[];
+          const spread = confs.length > 1 ? Math.max(...confs) - Math.min(...confs) : 0;
+          const objections = opinions.filter((d: any) => d.objection && String(d.objection).trim()).length;
+          const toolSets = opinions.map((d: any) => JSON.stringify((d.suggest_tools || []).slice().sort()));
+          const divergentTools = new Set(toolSets).size > 1;
+          const threshold = Number(exec.conflict_threshold ?? 25);
+          const conflicted = objections > 0 || spread > threshold || divergentTools;
+          if (conflicted && opinions.length > 1) {
+            await ctx.emit("phase", { phase: "conflict" });
+            const xResp = await callGateway(apiKey, MODEL, [
+              {
+                role: "system",
+                content:
+                  `You resolve cognitive conflicts between expert positions. There is NO VOTING. ` +
+                  `Weigh each position on: evidence, confidence, expected quality, cost, risk, and available knowledge. ` +
+                  `Return JSON only: { "positions": [ { "expert": "...", "claim": "...", "evidence": 0-1, "risk": 0-1, "cost": 0-1, "score": 0-1 } ], "chosen": "<expert key>", "why": "<1-2 sentences>", "residual_risk": "<short>" }. ` +
+                  `Answer in ${ctx.language}.`,
+              },
+              {
+                role: "user",
+                content: `Goal: ${ctx.goal}\nConflict signals: objections=${objections}, confidence_spread=${spread}, divergent_tools=${divergentTools}\nPositions (JSON):\n${JSON.stringify(opinions).slice(0, 4000)}`,
+              },
+            ], { signal: ctx.signal });
+            totalUsd += xResp.usd; totalTokens += xResp.tokens;
+            const parsed = extractJsonObject<any>(xResp.text) || { why: xResp.text.slice(0, 400) };
+            const entry = {
+              phase: "conflict",
+              positions: parsed.positions || [],
+              weights: { evidence: 0.3, confidence: 0.2, quality: 0.2, cost: 0.15, risk: 0.15 },
+              chosen: parsed.chosen || null,
+              why: parsed.why || null,
+              residual_risk: parsed.residual_risk || null,
+              signals: { objections, spread, divergentTools },
+              at: new Date().toISOString(),
+            };
+            decisionLog.push(entry);
+            await ctx.emit("conflict", entry);
+            await logMsg("conflict", entry, xResp.tokens, xResp.usd);
+          }
+        } catch {}
+      }
+
       // Maaroof's final decision on the council opinions.
       if (decisionLog.length) {
         try {
           const dResp = await callGateway(apiKey, MODEL, [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: effectivePrompt },
             {
               role: "user",
               content: `Council opinions (JSON): ${JSON.stringify(decisionLog).slice(0, 4000)}\n\nWrite a brief final decision (1-2 sentences in ${ctx.language}): keep plan, adjust, or add a step. Return JSON: { "decision": "...", "rationale": "..." }`,
@@ -366,6 +439,57 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }).eq("id", runId);
       await ctx.emit("done", { runId, totalUsd, totalTokens, steps: 0, executionMode });
       return { runId };
+    }
+
+    // 3.9) PART 7 — STRATEGIC TIME ENGINE. Decides WHEN to act. Heuristic
+    //      (no LLM cost). `execute_now` keeps the Part 6 path untouched.
+    let timing: TimingDecision | null = null;
+    if (exec.enabled && exec.timing_enabled) {
+      const opinions = decisionLog.filter((d: any) => d.phase === "council" && !d.error);
+      const confs = opinions.map((d: any) => d.confidence).filter((v: any) => typeof v === "number") as number[];
+      timing = assessTiming({
+        goal: ctx.goal,
+        steps,
+        councilObjections: opinions.filter((d: any) => d.objection && String(d.objection).trim()).length,
+        councilAvgConfidence: confs.length ? confs.reduce((a, b) => a + b, 0) / confs.length : null,
+        spentUsd: totalUsd,
+        workspace: workspaceProfile
+          ? { risk_level: workspaceProfile.risk_level, budget: workspaceProfile.budget, policies: workspaceProfile.policies }
+          : null,
+      });
+      await ctx.emit("timing", timing);
+      try { await db().from("maaroof_runs").update({ timing }).eq("id", runId); } catch {}
+
+      if (timing.verdict !== "execute_now") {
+        if (timing.verdict === "schedule") {
+          try {
+            await db().from("maaroof_schedules").insert({
+              user_id: ctx.userId,
+              workspace_id: ctx.workspaceId || null,
+              name: ctx.goal.slice(0, 80),
+              prompt: ctx.goal,
+              language: ctx.language,
+              cadence: "once",
+              starts_at: timing.suggested_at || new Date().toISOString(),
+              next_run_at: timing.suggested_at || new Date().toISOString(),
+              status: "active",
+              meta: { created_by: "strategic_time_engine", run_id: runId, reason: timing.reason },
+            });
+          } catch {}
+        }
+        const label: Record<string, string> = {
+          delay: "تأجيل", schedule: "جدولة", observe: "مراقبة", cancel: "إلغاء",
+        };
+        await ctx.emit("final", {
+          text: `**قرار التوقيت: ${label[timing.verdict] || timing.verdict}**\n\n${timing.reason}\n\n_لم يتم تنفيذ أي أداة، ولم تُصرف أي تكلفة تنفيذ._`,
+        });
+        await db().from("maaroof_runs").update({
+          status: "done", total_tokens: totalTokens, total_usd: totalUsd,
+          steps_count: 0, finished_at: new Date().toISOString(),
+        }).eq("id", runId);
+        await ctx.emit("done", { runId, totalUsd, totalTokens, steps: 0, executionMode, timing: timing.verdict });
+        return { runId };
+      }
     }
 
     // 4) EXECUTE
@@ -428,7 +552,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Reflect every 3 steps
       if ((i + 1) % 3 === 0 && i < steps.length - 1) {
         const ref = await callGateway(apiKey, MODEL, [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: effectivePrompt },
           { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
         ], { signal: ctx.signal });
         totalUsd += ref.usd; totalTokens += ref.tokens;
@@ -438,14 +562,35 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
     // 5) FINAL ANSWER
+    //    Part 7 — Trust Engine is folded into THIS call (no extra request):
+    //    the model appends a structured envelope after a ---TRUST--- marker.
     await ctx.emit("phase", { phase: "summarizing" });
+    const trustEnabled = !!(exec.enabled && exec.trust_enabled);
+    const trustInstruction = trustEnabled
+      ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
+      : "";
     const finalResp = await callGateway(apiKey, MODEL, [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.` },
+      { role: "system", content: effectivePrompt },
+      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
     ], { signal: ctx.signal });
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
-    await ctx.emit("final", { text: finalResp.text });
-    await logMsg("assistant", { text: finalResp.text }, finalResp.tokens, finalResp.usd);
+
+    let finalText = finalResp.text;
+    let trust: any = null;
+    if (trustEnabled && finalText.includes("---TRUST---")) {
+      const idx = finalText.indexOf("---TRUST---");
+      const tail = finalText.slice(idx + "---TRUST---".length);
+      finalText = finalText.slice(0, idx).trim();
+      trust = extractJsonObject<any>(tail) || null;
+    }
+    if (trustEnabled) {
+      const evidence = buildEvidenceGraph({ memories, decisionLog, results, envision, timing });
+      trust = { ...(trust || {}), evidence_graph: evidence.slice(0, 30) };
+      await ctx.emit("trust", trust);
+      try { await db().from("maaroof_runs").update({ trust }).eq("id", runId); } catch {}
+    }
+    await ctx.emit("final", { text: finalText });
+    await logMsg("assistant", { text: finalText, trust }, finalResp.tokens, finalResp.usd);
 
     // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
     // observed signals to avoid additional LLM cost. Flag-gated.
@@ -514,6 +659,44 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         costBreakdown: { total_usd: totalUsd, total_tokens: totalTokens, steps: steps.length, tools_ok: okCount, tools_total: results.length },
       });
       await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
+
+      // Part 7 — evolve executive personality from this run's signals.
+      if (exec.enabled && exec.personality_enabled) {
+        const traits = await evolvePersonality({
+          agentId: activeAgent.id,
+          signals: {
+            success,
+            toolsSuccessRatio: results.length ? okCount / results.length : null,
+            councilAvgConfidence: avgConf,
+            objections: decisionLog.filter((d: any) => d.phase === "council" && d.objection).length,
+            totalUsd,
+            steps: steps.length,
+            hadEnvision: !!envision,
+            conflictResolved: decisionLog.some((d: any) => d.phase === "conflict"),
+          },
+        });
+        if (traits) await ctx.emit("personality_evolved", { agentId: activeAgent.id, traits });
+      }
+    }
+
+    // Part 7 — Future DNA: anonymized outcome priors for both success and failure.
+    if (exec.enabled && exec.future_dna_enabled) {
+      try {
+        const { recordDna } = await import("./cognition.server");
+        const okCount = results.filter((r) => r.ok).length;
+        await recordDna({
+          kind: "future",
+          sourceRunId: runId,
+          payload: {
+            outcome: results.length === 0 ? "no_tools" : okCount / results.length >= 0.5 ? "success" : "failure",
+            plan_shape: steps.map((s) => s.tool).slice(0, 8),
+            timing_verdict: timing?.verdict || "execute_now",
+            quality_dims: qualityScore || null,
+            total_usd: Number(totalUsd.toFixed(6)),
+          },
+          weight: 1,
+        });
+      } catch {}
     }
 
     // Part 5 — anonymized Platform DNA extraction (opt-in via settings.cognitive.dna_enabled).

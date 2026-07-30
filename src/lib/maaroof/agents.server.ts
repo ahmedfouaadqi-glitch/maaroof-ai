@@ -26,6 +26,31 @@ export type AgentDNA = {
   learning_profile?: string;
 };
 
+/** Part 7 — Executive Personality traits (0..1). Additive to AgentDNA; the
+ *  identity fields (role/mission) are never touched by evolution. */
+export type AgentPersonality = {
+  leadership?: number;
+  thinking?: number;
+  decision?: number;
+  communication?: number;
+  risk?: number;
+  innovation?: number;
+  learning?: number;
+  negotiation?: number;
+  planning?: number;
+  reflection?: number;
+};
+
+export const PERSONALITY_TRAITS: Array<keyof AgentPersonality> = [
+  "leadership", "thinking", "decision", "communication", "risk",
+  "innovation", "learning", "negotiation", "planning", "reflection",
+];
+
+export const DEFAULT_PERSONALITY: Required<AgentPersonality> = {
+  leadership: 0.5, thinking: 0.5, decision: 0.5, communication: 0.5, risk: 0.4,
+  innovation: 0.5, learning: 0.5, negotiation: 0.5, planning: 0.5, reflection: 0.5,
+};
+
 export type MaaroofAgent = {
   id: string;
   user_id: string;
@@ -34,6 +59,8 @@ export type MaaroofAgent = {
   role: string;
   mission: string | null;
   dna: AgentDNA;
+  personality?: AgentPersonality;
+  personality_version?: number;
   version: number;
   lifecycle_state: string;
   success_rate: number | null;
@@ -179,4 +206,79 @@ export async function finalizeAgent(opts: {
       })
       .eq("id", opts.agentId);
   } catch {}
+}
+
+/** Merge stored personality over defaults (backward compatible with rows that
+ *  predate Part 7 and therefore have `{}`). */
+export function readPersonality(agent: Pick<MaaroofAgent, "personality"> | null | undefined): Required<AgentPersonality> {
+  return { ...DEFAULT_PERSONALITY, ...((agent?.personality as AgentPersonality) || {}) };
+}
+
+/** Render personality as a short prompt block so the agent's posture is real,
+ *  not decorative. */
+export function personalityPromptBlock(p: Required<AgentPersonality>, lang: string): string {
+  const band = (v: number) => (v >= 0.66 ? "high" : v >= 0.4 ? "balanced" : "low");
+  const bits = PERSONALITY_TRAITS.map((k) => `${k}=${band(p[k] as number)}`).join(", ");
+  return `\n\n[Executive personality]\n${bits}\nBehave accordingly: ${
+    p.risk >= 0.66 ? "accept bold moves when evidence supports them" : "prefer safe, reversible moves"
+  }; ${p.communication >= 0.66 ? "be direct and executive-brief" : "explain reasoning step by step"}; ${
+    p.reflection >= 0.66 ? "state what could invalidate your advice" : "stay focused on the decision"
+  }. Reply in ${lang}.`;
+}
+
+/**
+ * Part 7 — evolve the 10 executive traits from observed run signals.
+ * Bounded nudges (±0.06 max) so identity drifts slowly and never flips.
+ * Never touches role/mission/dna.
+ */
+export async function evolvePersonality(opts: {
+  agentId: string;
+  signals: {
+    success: boolean;
+    toolsSuccessRatio?: number | null;
+    councilAvgConfidence?: number | null; // 0..100
+    objections?: number;
+    totalUsd?: number;
+    steps?: number;
+    hadEnvision?: boolean;
+    conflictResolved?: boolean;
+  };
+}): Promise<Required<AgentPersonality> | null> {
+  try {
+    const { data } = await db()
+      .from("maaroof_agents")
+      .select("personality, personality_version")
+      .eq("id", opts.agentId)
+      .maybeSingle();
+    const current: Required<AgentPersonality> = { ...DEFAULT_PERSONALITY, ...(((data as any)?.personality as AgentPersonality) || {}) };
+    const s = opts.signals;
+    const clamp = (v: number) => Math.max(0.05, Math.min(0.95, Number(v.toFixed(3))));
+    const nudge = (v: number, delta: number) => clamp(v + Math.max(-0.06, Math.min(0.06, delta)));
+
+    const conf = s.councilAvgConfidence != null ? s.councilAvgConfidence / 100 : 0.6;
+    const ok = s.toolsSuccessRatio ?? (s.success ? 1 : 0);
+    const cheap = (s.totalUsd ?? 0) < 0.05;
+
+    const next: Required<AgentPersonality> = {
+      leadership: nudge(current.leadership, s.success ? 0.02 : -0.02),
+      thinking: nudge(current.thinking, s.hadEnvision ? 0.02 : -0.01),
+      decision: nudge(current.decision, (conf - 0.6) * 0.1),
+      communication: nudge(current.communication, s.success ? 0.01 : 0),
+      risk: nudge(current.risk, s.success ? 0.02 : -0.03),
+      innovation: nudge(current.innovation, (s.steps ?? 0) > 3 && s.success ? 0.02 : -0.01),
+      learning: nudge(current.learning, 0.01),
+      negotiation: nudge(current.negotiation, s.conflictResolved ? 0.03 : 0),
+      planning: nudge(current.planning, ok >= 0.8 ? 0.02 : -0.02),
+      reflection: nudge(current.reflection, (s.objections ?? 0) > 0 ? 0.03 : 0.005),
+    };
+    if (!cheap) next.risk = clamp(next.risk - 0.01);
+
+    await db()
+      .from("maaroof_agents")
+      .update({ personality: next, personality_version: Number((data as any)?.personality_version || 1) + 1 })
+      .eq("id", opts.agentId);
+    return next;
+  } catch {
+    return null;
+  }
 }

@@ -758,6 +758,8 @@ export type Database = {
           lifecycle_state: string
           mission: string | null
           parent_agent_id: string | null
+          personality: Json
+          personality_version: number
           role: string
           runs_count: number
           success_rate: number | null
@@ -776,6 +778,8 @@ export type Database = {
           lifecycle_state?: string
           mission?: string | null
           parent_agent_id?: string | null
+          personality?: Json
+          personality_version?: number
           role: string
           runs_count?: number
           success_rate?: number | null
@@ -794,6 +798,8 @@ export type Database = {
           lifecycle_state?: string
           mission?: string | null
           parent_agent_id?: string | null
+          personality?: Json
+          personality_version?: number
           role?: string
           runs_count?: number
           success_rate?: number | null
@@ -997,8 +1003,10 @@ export type Database = {
           started_at: string
           status: string
           steps_count: number
+          timing: Json | null
           total_tokens: number
           total_usd: number
+          trust: Json | null
           user_id: string
           workflow_state: string | null
           workspace_id: string | null
@@ -1028,8 +1036,10 @@ export type Database = {
           started_at?: string
           status?: string
           steps_count?: number
+          timing?: Json | null
           total_tokens?: number
           total_usd?: number
+          trust?: Json | null
           user_id: string
           workflow_state?: string | null
           workspace_id?: string | null
@@ -1059,8 +1069,10 @@ export type Database = {
           started_at?: string
           status?: string
           steps_count?: number
+          timing?: Json | null
           total_tokens?: number
           total_usd?: number
+          trust?: Json | null
           user_id?: string
           workflow_state?: string | null
           workspace_id?: string | null
@@ -2209,6 +2221,25 @@ export type Database = {
           success_rate: number | null
           total_tokens: number | null
           total_usd: number | null
+        }
+        Relationships: []
+      }
+      executive_quality_index_v: {
+        Row: {
+          avg_usd: number | null
+          capability: number | null
+          cost_efficiency: number | null
+          day: string | null
+          decision: number | null
+          execution: number | null
+          expert: number | null
+          learning: number | null
+          memory: number | null
+          planning: number | null
+          reflection: number | null
+          runs: number | null
+          simulation: number | null
+          user_satisfaction: number | null
         }
         Relationships: []
       }

@@ -65,6 +65,27 @@ export type PlatformEvolutionSettings = {
   capability_marketplace_enabled: boolean;
 };
 
+/** Part 7 — Executive Intelligence toggles. Additive; all default OFF so the
+ *  Part 6 execution path is preserved byte-for-byte until an admin opts in. */
+export type ExecutiveSettings = {
+  /** Master toggle for the whole Part 7 layer. */
+  enabled: boolean;
+  /** Evolve per-agent executive personality traits after each run. */
+  personality_enabled: boolean;
+  /** Cognitive Conflict Engine — extra deliberation ONLY when the council disagrees. */
+  conflict_enabled: boolean;
+  /** Strategic Time Engine — execute_now / delay / schedule / observe / cancel. */
+  timing_enabled: boolean;
+  /** Trust Engine — structured evidence/assumptions/limitations envelope. */
+  trust_enabled: boolean;
+  /** Executive Digital Genome read/merge on workspace + agent. */
+  genome_enabled: boolean;
+  /** Emit anonymized `future_dna` rows for both successful and failed runs. */
+  future_dna_enabled: boolean;
+  /** Confidence spread (0-100) above which the council is treated as conflicted. */
+  conflict_threshold: number;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -80,6 +101,7 @@ export type MaaroofSettings = {
   capability_os: CapabilityOsSettings;
   cognitive: CognitiveSettings;
   platform_evolution: PlatformEvolutionSettings;
+  executive: ExecutiveSettings;
 };
 
 const DEFAULTS: MaaroofSettings = {
@@ -106,6 +128,16 @@ const DEFAULTS: MaaroofSettings = {
     workflow_graph_enabled: false,
     quality_score_enabled: false,
     capability_marketplace_enabled: false,
+  },
+  executive: {
+    enabled: false,
+    personality_enabled: false,
+    conflict_enabled: false,
+    timing_enabled: false,
+    trust_enabled: false,
+    genome_enabled: false,
+    future_dna_enabled: false,
+    conflict_threshold: 25,
   },
 };
 

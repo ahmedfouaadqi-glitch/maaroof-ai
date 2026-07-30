@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Activity, Brain, Coins, ShieldCheck, Sparkles, Network, Bot,
-  BarChart3, ScrollText, Layers, Fingerprint, Radar,
+  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge,
 } from "lucide-react";
 import { MaaroofAdminTab } from "./MaaroofAdminTab";
 import { SystemHealthTab } from "./SystemHealthTab";
@@ -16,7 +16,7 @@ import { UserIntelligenceTab } from "./UserIntelligenceTab";
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
-  | "finance" | "health" | "user_intel";
+  | "finance" | "health" | "user_intel" | "eqi" | "personality";
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
@@ -28,6 +28,8 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "model_scores",   label: "أداء النماذج",           Icon: Layers,      group: "scores" },
   { k: "mcp_scores",     label: "MCP المتصلة",           Icon: Network,     group: "scores" },
   { k: "policy_scores",  label: "السياسات",              Icon: ShieldCheck, group: "scores" },
+  { k: "eqi",            label: "مؤشر الجودة التنفيذية", Icon: Gauge,       group: "scores" },
+  { k: "personality",    label: "شخصيات الوكلاء",        Icon: Fingerprint, group: "scores" },
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
   { k: "user_intel",     label: "ذكاء المستخدمين",       Icon: ScrollText,  group: "ops" },
@@ -76,6 +78,8 @@ export function MaaroofIntelligenceCenter() {
         {section === "model_scores"   && <ScoresTable view="model_scores_v"   cols={["model","calls","avg_usd","avg_tokens","last_used_at"]} />}
         {section === "mcp_scores"     && <ScoresTable view="mcp_scores_v"     cols={["name","enabled","reliability","avg_cost_usd","avg_latency_ms","updated_at"]} />}
         {section === "policy_scores"  && <ScoresTable view="policy_scores_v"  cols={["policy","workspaces","last_updated_at"]} />}
+        {section === "eqi"            && <EqiSection />}
+        {section === "personality"    && <PersonalitySection />}
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
         {section === "user_intel"     && <UserIntelligenceTab />}
@@ -232,6 +236,123 @@ function ScoresTable({ view, cols }: { view: string; cols: string[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ---------- Part 7 — Executive Quality Index ---------- */
+const EQI_DIMS: Array<[string, string]> = [
+  ["decision", "القرار"], ["planning", "التخطيط"], ["expert", "الخبرة"], ["capability", "القدرات"],
+  ["memory", "الذاكرة"], ["simulation", "المحاكاة"], ["execution", "التنفيذ"], ["reflection", "التأمل"],
+  ["learning", "التعلّم"], ["cost_efficiency", "كفاءة التكلفة"], ["user_satisfaction", "رضا المستخدم"],
+];
+
+function EqiSection() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("executive_quality_index_v" as any).select("*").order("day", { ascending: false }).limit(30);
+      setRows((data as any[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
+  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">لا توجد قياسات بعد — فعّل «مؤشر الجودة» ثم شغّل جلسات.</div>;
+  const latest = rows[0];
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold">مؤشر الجودة التنفيذية (EQI)</h3>
+        <p className="text-xs text-muted-foreground mt-1">11 بُعداً تُحتسب من كل جلسة — يوضّح أين يقوى معروف وأين يحتاج تحسيناً.</p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {EQI_DIMS.map(([k, label]) => {
+          const v = latest[k] == null ? null : Number(latest[k]);
+          return (
+            <div key={k} className="rounded-xl border border-border/60 bg-background/40 p-2.5">
+              <div className="text-[11px] text-muted-foreground">{label}</div>
+              <div className="text-lg font-bold">{v == null ? "—" : v.toFixed(1)}</div>
+              <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, v ?? 0))}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead><tr className="border-b text-muted-foreground">
+            <th className="p-2 text-start">اليوم</th><th className="p-2">جلسات</th>
+            {EQI_DIMS.map(([k, l]) => <th key={k} className="p-2">{l}</th>)}
+            <th className="p-2">م. التكلفة $</th>
+          </tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className="border-b hover:bg-muted/30">
+                <td className="p-2 whitespace-nowrap">{new Date(r.day).toLocaleDateString("ar-IQ")}</td>
+                <td className="p-2 text-center">{r.runs}</td>
+                {EQI_DIMS.map(([k]) => <td key={k} className="p-2 text-center font-mono">{r[k] == null ? "—" : Number(r[k]).toFixed(0)}</td>)}
+                <td className="p-2 text-center font-mono">{r.avg_usd == null ? "—" : Number(r.avg_usd).toFixed(4)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Part 7 — Agent personality traits ---------- */
+function PersonalitySection() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("maaroof_agents")
+        .select("id, role, mission, personality, personality_version, success_rate, runs_count, lifecycle_state, updated_at")
+        .not("personality", "is", null)
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .limit(60);
+      setRows((data as any[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
+  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">لا توجد شخصيات بعد — فعّل «شخصية الوكيل التنفيذية» في تحكم معروف.</div>;
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-base font-semibold">شخصيات الوكلاء التنفيذية</h3>
+        <p className="text-xs text-muted-foreground mt-1">تتطور السمات تلقائياً بعد كل جلسة حسب النجاح والثقة والتكلفة.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {rows.map((r) => {
+          const traits = (r.personality || {}) as Record<string, any>;
+          return (
+            <div key={r.id} className="rounded-xl border border-border/60 bg-background/40 p-3">
+              <div className="flex items-center gap-2 text-xs mb-2">
+                <span className="font-semibold">{r.role || "وكيل"}</span>
+                <span className="font-mono text-[10px] text-muted-foreground">v{r.personality_version ?? 1}</span>
+                <span className="ms-auto text-[10px] text-muted-foreground">{r.runs_count ?? 0} جلسة · {r.success_rate == null ? "—" : `${(Number(r.success_rate) * 100).toFixed(0)}%`}</span>
+              </div>
+              <div className="space-y-1">
+                {Object.entries(traits).filter(([, v]) => typeof v === "number").map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <span className="w-28 text-[11px] text-muted-foreground font-mono truncate">{k}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, Number(v)))}%` }} />
+                    </div>
+                    <span className="w-8 text-[10px] text-end font-mono">{Number(v).toFixed(0)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

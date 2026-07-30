@@ -154,3 +154,52 @@ export { listCapabilities };
 
 /** Tool-catalog helper re-export so callers only import from this module. */
 export { TOOL_CATALOG };
+
+/** Part 7 — Evidence Graph node: one traceable justification for the answer. */
+export type EvidenceNode = {
+  kind: "memory" | "capability" | "council" | "tool" | "envision" | "timing";
+  ref: string;
+  detail?: string | null;
+  weight: number; // 0..1
+};
+
+/**
+ * Assemble the Evidence Graph from what the run already collected — no extra
+ * model calls, no new storage. Extends buildCapabilityGraph rather than
+ * replacing it.
+ */
+export function buildEvidenceGraph(input: {
+  memories?: string[];
+  decisionLog?: any[];
+  results?: Array<{ tool: string; ok: boolean; output?: any }>;
+  envision?: any;
+  timing?: { verdict: string; reason: string } | null;
+}): EvidenceNode[] {
+  const out: EvidenceNode[] = [];
+  for (const m of (input.memories || []).slice(0, 8)) {
+    out.push({ kind: "memory", ref: "long_term_memory", detail: String(m).slice(0, 200), weight: 0.5 });
+  }
+  if (input.envision?.future_goal) {
+    out.push({ kind: "envision", ref: "future_goal", detail: String(input.envision.future_goal).slice(0, 200), weight: 0.6 });
+  }
+  for (const d of (input.decisionLog || []).slice(0, 20)) {
+    if (d?.phase === "council") {
+      out.push({
+        kind: "council",
+        ref: `${d.capability || "?"}::${d.expert || "?"}`,
+        detail: String(d.opinion || "").slice(0, 200),
+        weight: typeof d.confidence === "number" ? Math.max(0.1, Math.min(1, d.confidence / 100)) : 0.5,
+      });
+    }
+    if (d?.phase === "capability_choice" || d?.phase === "conflict") {
+      out.push({ kind: "capability", ref: d.phase, detail: JSON.stringify(d).slice(0, 200), weight: 0.6 });
+    }
+  }
+  for (const r of (input.results || []).slice(0, 12)) {
+    out.push({ kind: "tool", ref: r.tool, detail: r.ok ? "ok" : "failed", weight: r.ok ? 0.8 : 0.2 });
+  }
+  if (input.timing) {
+    out.push({ kind: "timing", ref: input.timing.verdict, detail: input.timing.reason, weight: 0.5 });
+  }
+  return out;
+}
