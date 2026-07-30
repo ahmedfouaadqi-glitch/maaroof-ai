@@ -552,7 +552,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Reflect every 3 steps
       if ((i + 1) % 3 === 0 && i < steps.length - 1) {
         const ref = await callGateway(apiKey, MODEL, [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: effectivePrompt },
           { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
         ], { signal: ctx.signal });
         totalUsd += ref.usd; totalTokens += ref.tokens;
@@ -562,14 +562,35 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
     // 5) FINAL ANSWER
+    //    Part 7 — Trust Engine is folded into THIS call (no extra request):
+    //    the model appends a structured envelope after a ---TRUST--- marker.
     await ctx.emit("phase", { phase: "summarizing" });
+    const trustEnabled = !!(exec.enabled && exec.trust_enabled);
+    const trustInstruction = trustEnabled
+      ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
+      : "";
     const finalResp = await callGateway(apiKey, MODEL, [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.` },
+      { role: "system", content: effectivePrompt },
+      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
     ], { signal: ctx.signal });
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
-    await ctx.emit("final", { text: finalResp.text });
-    await logMsg("assistant", { text: finalResp.text }, finalResp.tokens, finalResp.usd);
+
+    let finalText = finalResp.text;
+    let trust: any = null;
+    if (trustEnabled && finalText.includes("---TRUST---")) {
+      const idx = finalText.indexOf("---TRUST---");
+      const tail = finalText.slice(idx + "---TRUST---".length);
+      finalText = finalText.slice(0, idx).trim();
+      trust = extractJsonObject<any>(tail) || null;
+    }
+    if (trustEnabled) {
+      const evidence = buildEvidenceGraph({ memories, decisionLog, results, envision, timing });
+      trust = { ...(trust || {}), evidence_graph: evidence.slice(0, 30) };
+      await ctx.emit("trust", trust);
+      try { await db().from("maaroof_runs").update({ trust }).eq("id", runId); } catch {}
+    }
+    await ctx.emit("final", { text: finalText });
+    await logMsg("assistant", { text: finalText, trust }, finalResp.tokens, finalResp.usd);
 
     // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
     // observed signals to avoid additional LLM cost. Flag-gated.
