@@ -156,6 +156,14 @@ const DEFAULTS: MaaroofSettings = {
     future_dna_enabled: false,
     conflict_threshold: 25,
   },
+  laws: {
+    enabled: false,
+    prompt_injection: false,
+    enforce_hard_laws: false,
+    min_trust: 55,
+    log_compliance: true,
+  },
+
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;
