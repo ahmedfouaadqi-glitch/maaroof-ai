@@ -562,8 +562,13 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
   const dec = (settings.decision || {}) as Record<string, any>;
   const pub = (settings.publishing || {}) as Record<string, any>;
   const tr = (settings.trust_engine || {}) as Record<string, any>;
+  const st = (settings.state_anchor || {}) as Record<string, any>;
+  const hm = (settings.hermes || {}) as Record<string, any>;
   const ppub = (k: string, v: any) => set("publishing", { ...pub, [k]: v });
   const ptr = (k: string, v: any) => set("trust_engine", { ...tr, [k]: v });
+  const pst = (k: string, v: any) => set("state_anchor", { ...st, [k]: v });
+  const phm = (k: string, v: any) => set("hermes", { ...hm, [k]: v });
+
   const pmg = (k: string, v: any) => set("model_governance", { ...mg, [k]: v });
   const pdec = (k: string, v: any) => set("decision", { ...dec, [k]: v });
   const flag = (
