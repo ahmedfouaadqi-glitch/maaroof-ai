@@ -15,13 +15,16 @@ import { UserIntelligenceTab } from "./UserIntelligenceTab";
 import { ExpertAcademySection, LearningBudgetSection, KnowledgeObservatorySection } from "./ExpertAcademyPanels";
 import { AiModelCenterSection, DecisionCenterSection } from "./ModelDecisionPanels";
 import { PublishingCenterSection, TrustCenterSection } from "./PublishingTrustPanels";
+import { StateCenterSection, HermesOfficeSection } from "./StateHermesPanels";
 
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
   | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws"
   | "academy" | "learning_budget" | "knowledge"
-  | "model_center" | "decision_center" | "publishing_center" | "trust_center";
+  | "model_center" | "decision_center" | "publishing_center" | "trust_center"
+  | "state_center" | "hermes";
+
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
