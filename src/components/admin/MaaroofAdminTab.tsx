@@ -515,3 +515,39 @@ function ExecutiveControls({ settings, set }: { settings: Record<string, any>; s
     </div>
   );
 }
+
+/* ---------- Part 8 — Laws of Cognitive Intelligence controls ---------- */
+const LAW_FLAGS: Array<{ k: string; label: string; hint: string }> = [
+  { k: "prompt_injection", label: "حقن الدستور في التوجيه", hint: "يُلحق نص القوانين الثلاثين بالـ system prompt الحالي — بلا طلب إضافي." },
+  { k: "enforce_hard_laws", label: "إلزام القوانين الحرجة", hint: "عند خرق قانون إلزامي تُقدَّم الإجابة موسومة كمسودة لا كتوصية نهائية." },
+  { k: "log_compliance", label: "حفظ سجل الامتثال", hint: "يخزّن نتيجة التقييم في سجل الجلسة للتدقيق والتقارير." },
+];
+
+function LawsControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const laws = (settings.laws || {}) as Record<string, any>;
+  const patch = (k: string, v: any) => set("laws", { ...laws, [k]: v });
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-3">
+      <label className="flex items-center gap-3">
+        <input type="checkbox" checked={!!laws.enabled} onChange={(e) => patch("enabled", e.target.checked)} />
+        <span className="font-semibold text-sm">دستور الذكاء الإدراكي — 30 قانوناً (الجزء الثامن)</span>
+      </label>
+      <p className="text-xs text-muted-foreground -mt-1">طبقة قياس وإلزام فوق المحرّكات القائمة — تقييم محلي بلا أي تكلفة نموذج.</p>
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${laws.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+        {LAW_FLAGS.map((f) => (
+          <label key={f.k} className="rounded border p-2 flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={!!laws[f.k]} onChange={(e) => patch(f.k, e.target.checked)} />
+            <span>
+              <span className="text-sm font-medium block">{f.label}</span>
+              <span className="text-[11px] text-muted-foreground">{f.hint}</span>
+            </span>
+          </label>
+        ))}
+        <label className="rounded border p-2 block">
+          <span className="text-xs text-muted-foreground">حد الثقة الأدنى للقانون 13 (%)</span>
+          <input type="number" value={laws.min_trust ?? 55} onChange={(e) => patch("min_trust", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
+        </label>
+      </div>
+    </div>
+  );
+}
