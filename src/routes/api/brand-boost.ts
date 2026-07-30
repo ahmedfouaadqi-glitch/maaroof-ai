@@ -4,6 +4,9 @@ import { describeMarket } from "@/lib/geo-scope.server";
 import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { ENGINE_CATALOG, ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
+import { applyEntitlement, enginesAllowedForUser, resolveEngineModels } from "@/lib/ai-engines.server";
+
 
 // Engine catalog + engine⇄model mapping now live in the shared source of truth
 // (`src/lib/ai-engines.ts` + `ai-engines.server.ts`) so every tool, the UI and
