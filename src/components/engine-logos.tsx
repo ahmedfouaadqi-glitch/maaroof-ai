@@ -1,4 +1,6 @@
 import type { SVGProps, ComponentType } from "react";
+import { ENGINE_LIST, type EngineKey } from "@/lib/ai-engines";
+
 
 type LogoProps = SVGProps<SVGSVGElement> & { size?: number };
 
