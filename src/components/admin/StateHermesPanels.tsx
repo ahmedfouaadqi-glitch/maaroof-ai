@@ -2,12 +2,15 @@
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Anchor, Crown, RefreshCw, Loader2, Check, X, Clock, Send, AlertTriangle, History } from "lucide-react";
+import { Anchor, Crown, RefreshCw, Loader2, Check, X, Clock, Send, AlertTriangle, History, Paperclip, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import {
   getStateCenter, getRecoveryPoint,
   getHermesCenter, refreshHermesProposals, decideHermesProposal, askHermes, getHermesMessages,
 } from "@/lib/maaroof-state-hermes.functions";
+import { EXECUTIVE_COMMANDS, COMMAND_LABELS_AR } from "@/lib/hermes-commands";
+import { HermesTaskCenter } from "@/components/admin/HermesTaskCenter";
+
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
