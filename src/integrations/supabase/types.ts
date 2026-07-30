@@ -621,6 +621,201 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_learning_sessions: {
+        Row: {
+          budget_source: string
+          confidence: number | null
+          created_at: string
+          created_by: string | null
+          diff: Json | null
+          duration_ms: number | null
+          error: string | null
+          expert_key: string
+          extracted: Json
+          id: string
+          input_tokens: number
+          model: string | null
+          output_tokens: number
+          status: string
+          tokens: number
+          transcript: Json
+          trigger: string
+          understanding_score: number | null
+          usd: number
+          version: number
+          zero_cost_reason: string | null
+        }
+        Insert: {
+          budget_source?: string
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          diff?: Json | null
+          duration_ms?: number | null
+          error?: string | null
+          expert_key: string
+          extracted?: Json
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          status?: string
+          tokens?: number
+          transcript?: Json
+          trigger?: string
+          understanding_score?: number | null
+          usd?: number
+          version?: number
+          zero_cost_reason?: string | null
+        }
+        Update: {
+          budget_source?: string
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          diff?: Json | null
+          duration_ms?: number | null
+          error?: string | null
+          expert_key?: string
+          extracted?: Json
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          status?: string
+          tokens?: number
+          transcript?: Json
+          trigger?: string
+          understanding_score?: number | null
+          usd?: number
+          version?: number
+          zero_cost_reason?: string | null
+        }
+        Relationships: []
+      }
+      expert_profiles: {
+        Row: {
+          capability_graph: Json
+          confidence: number
+          cooperation: Json
+          coverage: Json
+          created_at: string
+          decision_style: string | null
+          dna: Json
+          expert_key: string
+          failure_indicators: Json
+          fingerprint: string | null
+          improvement_suggestions: Json
+          knowledge_graph: Json
+          last_learned_at: string | null
+          limitations: Json
+          policies: Json
+          preferred_mcp: Json
+          preferred_models: Json
+          reasoning_style: string | null
+          risks: Json
+          sessions_count: number
+          status: string
+          strengths: Json
+          success_indicators: Json
+          thinking_style: string | null
+          understanding_score: number
+          updated_at: string
+          version: number
+          weaknesses: Json
+        }
+        Insert: {
+          capability_graph?: Json
+          confidence?: number
+          cooperation?: Json
+          coverage?: Json
+          created_at?: string
+          decision_style?: string | null
+          dna?: Json
+          expert_key: string
+          failure_indicators?: Json
+          fingerprint?: string | null
+          improvement_suggestions?: Json
+          knowledge_graph?: Json
+          last_learned_at?: string | null
+          limitations?: Json
+          policies?: Json
+          preferred_mcp?: Json
+          preferred_models?: Json
+          reasoning_style?: string | null
+          risks?: Json
+          sessions_count?: number
+          status?: string
+          strengths?: Json
+          success_indicators?: Json
+          thinking_style?: string | null
+          understanding_score?: number
+          updated_at?: string
+          version?: number
+          weaknesses?: Json
+        }
+        Update: {
+          capability_graph?: Json
+          confidence?: number
+          cooperation?: Json
+          coverage?: Json
+          created_at?: string
+          decision_style?: string | null
+          dna?: Json
+          expert_key?: string
+          failure_indicators?: Json
+          fingerprint?: string | null
+          improvement_suggestions?: Json
+          knowledge_graph?: Json
+          last_learned_at?: string | null
+          limitations?: Json
+          policies?: Json
+          preferred_mcp?: Json
+          preferred_models?: Json
+          reasoning_style?: string | null
+          risks?: Json
+          sessions_count?: number
+          status?: string
+          strengths?: Json
+          success_indicators?: Json
+          thinking_style?: string | null
+          understanding_score?: number
+          updated_at?: string
+          version?: number
+          weaknesses?: Json
+        }
+        Relationships: []
+      }
+      expert_snapshots: {
+        Row: {
+          approved: boolean
+          created_at: string
+          expert_key: string
+          id: string
+          payload: Json
+          session_id: string | null
+          version: number
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          expert_key: string
+          id?: string
+          payload?: Json
+          session_id?: string | null
+          version: number
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          expert_key?: string
+          id?: string
+          payload?: Json
+          session_id?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       firecrawl_cache: {
         Row: {
           cache_key: string
@@ -744,6 +939,174 @@ export type Database = {
           name_ku?: string
           population_base?: number | null
           slug?: string
+        }
+        Relationships: []
+      }
+      knowledge_edges: {
+        Row: {
+          created_at: string
+          from_node: string
+          id: string
+          relation: string
+          to_node: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          from_node: string
+          id?: string
+          relation: string
+          to_node: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          from_node?: string
+          id?: string
+          relation?: string
+          to_node?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_edges_from_node_fkey"
+            columns: ["from_node"]
+            isOneToOne: false
+            referencedRelation: "knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_edges_to_node_fkey"
+            columns: ["to_node"]
+            isOneToOne: false
+            referencedRelation: "knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_nodes: {
+        Row: {
+          confidence: number
+          created_at: string
+          evidence_score: number
+          freshness_at: string
+          id: string
+          importance: number
+          layer: string
+          node_key: string
+          payload: Json
+          quality: number
+          reliability: number
+          scope: string
+          sources: Json
+          status: string
+          summary: string | null
+          title: string
+          updated_at: string
+          usage_count: number
+          user_id: string | null
+          version: number
+          workspace_id: string | null
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          evidence_score?: number
+          freshness_at?: string
+          id?: string
+          importance?: number
+          layer: string
+          node_key: string
+          payload?: Json
+          quality?: number
+          reliability?: number
+          scope?: string
+          sources?: Json
+          status?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+          usage_count?: number
+          user_id?: string | null
+          version?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          evidence_score?: number
+          freshness_at?: string
+          id?: string
+          importance?: number
+          layer?: string
+          node_key?: string
+          payload?: Json
+          quality?: number
+          reliability?: number
+          scope?: string
+          sources?: Json
+          status?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          usage_count?: number
+          user_id?: string | null
+          version?: number
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      learning_budget_ledger: {
+        Row: {
+          budget_source: string
+          cache_hit: boolean
+          created_at: string
+          expert_key: string | null
+          id: string
+          input_tokens: number
+          latency_ms: number | null
+          meta: Json
+          model: string | null
+          output_tokens: number
+          purpose: string
+          session_id: string | null
+          tokens: number
+          usd: number
+          zero_cost_reason: string | null
+        }
+        Insert: {
+          budget_source?: string
+          cache_hit?: boolean
+          created_at?: string
+          expert_key?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          meta?: Json
+          model?: string | null
+          output_tokens?: number
+          purpose: string
+          session_id?: string | null
+          tokens?: number
+          usd?: number
+          zero_cost_reason?: string | null
+        }
+        Update: {
+          budget_source?: string
+          cache_hit?: boolean
+          created_at?: string
+          expert_key?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          meta?: Json
+          model?: string | null
+          output_tokens?: number
+          purpose?: string
+          session_id?: string | null
+          tokens?: number
+          usd?: number
+          zero_cost_reason?: string | null
         }
         Relationships: []
       }
@@ -2256,6 +2619,74 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_understanding_v: {
+        Row: {
+          capability_coverage: number | null
+          confidence: number | null
+          cooperation_score: number | null
+          decision_coverage: number | null
+          expert_key: string | null
+          knowledge_coverage: number | null
+          last_learned_at: string | null
+          memory_coverage: number | null
+          reasoning_coverage: number | null
+          sessions_count: number | null
+          status: string | null
+          total_sessions: number | null
+          total_usd: number | null
+          understanding_score: number | null
+          version: number | null
+        }
+        Insert: {
+          capability_coverage?: never
+          confidence?: number | null
+          cooperation_score?: never
+          decision_coverage?: never
+          expert_key?: string | null
+          knowledge_coverage?: never
+          last_learned_at?: string | null
+          memory_coverage?: never
+          reasoning_coverage?: never
+          sessions_count?: number | null
+          status?: string | null
+          total_sessions?: never
+          total_usd?: never
+          understanding_score?: number | null
+          version?: number | null
+        }
+        Update: {
+          capability_coverage?: never
+          confidence?: number | null
+          cooperation_score?: never
+          decision_coverage?: never
+          expert_key?: string | null
+          knowledge_coverage?: never
+          last_learned_at?: string | null
+          memory_coverage?: never
+          reasoning_coverage?: never
+          sessions_count?: number | null
+          status?: string | null
+          total_sessions?: never
+          total_usd?: never
+          understanding_score?: number | null
+          version?: number | null
+        }
+        Relationships: []
+      }
+      knowledge_health_v: {
+        Row: {
+          avg_confidence: number | null
+          avg_quality: number | null
+          avg_reliability: number | null
+          conflicts: number | null
+          last_updated_at: string | null
+          layer: string | null
+          nodes: number | null
+          stale: number | null
+          total_usage: number | null
+        }
+        Relationships: []
+      }
       law_compliance_v: {
         Row: {
           day: string | null
@@ -2264,6 +2695,17 @@ export type Database = {
           law_key: string | null
           severity: string | null
           violations: number | null
+        }
+        Relationships: []
+      }
+      learning_budget_v: {
+        Row: {
+          day: string | null
+          free_ops: number | null
+          ops: number | null
+          purpose: string | null
+          tokens: number | null
+          usd: number | null
         }
         Relationships: []
       }
