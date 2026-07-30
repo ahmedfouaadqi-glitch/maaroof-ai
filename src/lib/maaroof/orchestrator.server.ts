@@ -171,13 +171,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (settings.council?.envision_enabled !== false) {
       try {
         await ctx.emit("phase", { phase: "envision" });
-        const eResp = await callGateway(apiKey, MODEL, [
+        const eResp = await call("envision", [
           { role: "system", content: systemPrompt },
           {
             role: "user",
             content: `Goal: ${ctx.goal}\n\nApply Future-Driven thinking. Return JSON only:\n{ "future_goal": "<1-2 sentence outcome to aim for>", "backward_chain": ["step working backwards from the future", "..."], "success_metrics": ["..."] }\nUse the user's language (${ctx.language}).`,
           },
-        ], { signal: ctx.signal });
+        ]);
         totalUsd += eResp.usd; totalTokens += eResp.tokens;
         envision = extractJsonObject<any>(eResp.text) || null;
         if (envision) {
@@ -193,10 +193,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const planUserMsg =
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
-    const planResp = await callGateway(apiKey, MODEL, [
+    const planResp = await call("planning", [
       { role: "system", content: systemPrompt },
       { role: "user", content: planUserMsg },
-    ], { signal: ctx.signal });
+    ]);
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
     const steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
@@ -336,7 +336,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
         if (!expert) continue;
         try {
-          const cResp = await callGateway(apiKey, MODEL, [
+          const cResp = await call("council", [
             {
               role: "system",
               content: `You are the "${expert.labels.en}" expert (DNA: ${expert.dna || expert.labels.en}). ` +
@@ -349,7 +349,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
               role: "user",
               content: `Goal: ${ctx.goal}\nCapability under review: ${cap}\nProposed plan (JSON):\n${JSON.stringify(planObj).slice(0, 2500)}\n\nGive your expert opinion.`,
             },
-          ], { signal: ctx.signal });
+          ]);
           totalUsd += cResp.usd; totalTokens += cResp.tokens;
           const parsed = extractJsonObject<any>(cResp.text) || { opinion: cResp.text };
           const entry = {
@@ -401,7 +401,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           const conflicted = objections > 0 || spread > threshold || divergentTools;
           if (conflicted && opinions.length > 1) {
             await ctx.emit("phase", { phase: "conflict" });
-            const xResp = await callGateway(apiKey, MODEL, [
+            const xResp = await call("conflict", [
               {
                 role: "system",
                 content:
@@ -414,7 +414,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
                 role: "user",
                 content: `Goal: ${ctx.goal}\nConflict signals: objections=${objections}, confidence_spread=${spread}, divergent_tools=${divergentTools}\nPositions (JSON):\n${JSON.stringify(opinions).slice(0, 4000)}`,
               },
-            ], { signal: ctx.signal });
+            ]);
             totalUsd += xResp.usd; totalTokens += xResp.tokens;
             const parsed = extractJsonObject<any>(xResp.text) || { why: xResp.text.slice(0, 400) };
             const entry = {
@@ -437,13 +437,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Maaroof's final decision on the council opinions.
       if (decisionLog.length) {
         try {
-          const dResp = await callGateway(apiKey, MODEL, [
+          const dResp = await call("council", [
             { role: "system", content: effectivePrompt },
             {
               role: "user",
               content: `Council opinions (JSON): ${JSON.stringify(decisionLog).slice(0, 4000)}\n\nWrite a brief final decision (1-2 sentences in ${ctx.language}): keep plan, adjust, or add a step. Return JSON: { "decision": "...", "rationale": "..." }`,
             },
-          ], { signal: ctx.signal });
+          ]);
           totalUsd += dResp.usd; totalTokens += dResp.tokens;
           const d = extractJsonObject<any>(dResp.text) || { decision: dResp.text };
           const finalEntry = { phase: "decision", decision: d.decision, rationale: d.rationale, at: new Date().toISOString() };
@@ -597,10 +597,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
       // Reflect every 3 steps
       if ((i + 1) % 3 === 0 && i < steps.length - 1) {
-        const ref = await callGateway(apiKey, MODEL, [
+        const ref = await call("reflection", [
           { role: "system", content: effectivePrompt },
           { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
-        ], { signal: ctx.signal });
+        ]);
         totalUsd += ref.usd; totalTokens += ref.tokens;
         await ctx.emit("reflection", { text: ref.text });
         await logMsg("reflection", { text: ref.text }, ref.tokens, ref.usd);
@@ -615,10 +615,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const trustInstruction = trustEnabled
       ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
       : "";
-    const finalResp = await callGateway(apiKey, MODEL, [
+    const finalResp = await call("final", [
       { role: "system", content: effectivePrompt },
       { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
-    ], { signal: ctx.signal });
+    ]);
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
 
     let finalText = finalResp.text;
