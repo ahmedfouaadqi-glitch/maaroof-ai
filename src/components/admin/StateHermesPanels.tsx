@@ -193,11 +193,15 @@ export function HermesOfficeSection() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [tab, setTab] = useState<"observatory" | "inbox" | "office">("observatory");
+  const [tab, setTab] = useState<"observatory" | "inbox" | "office" | "tasks">("observatory");
   const [note, setNote] = useState<Record<string, string>>({});
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [draft, setDraft] = useState("");
+  const [command, setCommand] = useState<string>("");
+  const [chatLang, setChatLang] = useState<"ar" | "en" | "ku">("ar");
+  const [attachments, setAttachments] = useState<Array<{ kind: "image" | "file"; name: string; dataUrl: string }>>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const refresh = async () => {
