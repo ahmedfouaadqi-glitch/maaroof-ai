@@ -25,6 +25,9 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 const money = (n: any) => `$${Number(n || 0).toFixed(4)}`;
 
 /** Part 12 — AI Model Center: registry, real cost, health, benchmarks, proposals. */
+import { ENGINES } from "@/components/engine-logos";
+import { getEngineEntitlement } from "@/lib/ai-engines.functions";
+
 /** المحركات التسعة ← النموذج المُختار حالياً لكل محرك (شفافية كاملة للإدارة). */
 function NineEnginesMap() {
   const load = useServerFn(getEngineEntitlement);
