@@ -430,11 +430,26 @@ export async function hermesReply(input: {
   ].filter(Boolean).join("\n\n");
 
 
+  // Text-only stays a plain string (unchanged behaviour); attachments switch to
+  // typed content blocks the gateway understands.
+  const atts = input.attachments || [];
+  const userContent: any = atts.length
+    ? [
+        { type: "text", text: input.message },
+        ...atts.map((a) =>
+          a.kind === "image"
+            ? { type: "image_url", image_url: { url: a.dataUrl } }
+            : { type: "file", file: { filename: a.name || "file", file_data: a.dataUrl } },
+        ),
+      ]
+    : input.message;
+
   const messages = [
     { role: "system", content: system },
     ...(((history.data as any[]) || []).map((m) => ({ role: m.role, content: m.content }))),
-    { role: "user", content: input.message },
+    { role: "user", content: userContent },
   ];
+
 
   const started = Date.now();
   let reply = "";
