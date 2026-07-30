@@ -120,6 +120,9 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
             </div>
           )}
 
+          <ConflictCard events={events} />
+          <TimingChip events={events} />
+
           {finalText && (
             <div className="rounded-lg border border-primary/40 bg-primary/5 p-4">
               <div className="flex items-center justify-between mb-2">
@@ -129,6 +132,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                 )}
               </div>
               <div className="whitespace-pre-wrap text-sm leading-relaxed">{finalText}</div>
+              <TrustPanel events={events} />
             </div>
           )}
 
