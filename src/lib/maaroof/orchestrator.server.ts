@@ -254,8 +254,19 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           effectivePrompt += genomePromptBlock(g);
           if (g) await ctx.emit("genome", { scope: "workspace", id: g.id, runs: g.runs_count, memories: g.memory_count, risk: g.risk_level });
         } catch {}
-      }
     }
+
+    // 3.3) PART 8 — Laws of Cognitive Intelligence. The laws block is injected
+    //      into the SAME system prompt (no extra request). Counters below feed
+    //      the compliance evaluation performed just before the final answer.
+    const laws = (settings as any).laws || {};
+    if (laws.enabled && laws.prompt_injection) {
+      effectivePrompt += lawsPromptBlock(ctx.language);
+    }
+    let capabilityChoices = 0;
+    let needsHumanFlag = false;
+
+
 
 
     // 3.5) EXPERT COUNCIL — deliberate before acting.
