@@ -442,6 +442,8 @@ function ControlsSection() {
         </div>
       </div>
 
+      <ExecutiveControls settings={settings} set={set} />
+
       <div className="rounded-lg border bg-card p-3">
         <label className="text-sm font-semibold block mb-1">توجيهات نظام إضافية (تُلحَق بالـ system prompt)</label>
         <textarea value={settings.system_prompt_extra || ""} onChange={(e) => set("system_prompt_extra", e.target.value)} rows={4} className="w-full border rounded p-2 bg-background text-sm" placeholder="مثال: ركّز على السوق العراقي وأعط أمثلة محلية." />
