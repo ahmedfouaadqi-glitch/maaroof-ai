@@ -1,48 +1,61 @@
-## الجزء 8 — Laws of Cognitive Intelligence (طبقة الامتثال الدستوري)
+# الأجزاء 9 → 17: طبقات إدارية فوق معمارية معروف القائمة
 
-### لماذا تطوير وليس إنشاء
-القوانين الثلاثين ليست محرّكات جديدة — 26 منها مُنفّذ فعلاً داخل المنسّق الحالي (`src/lib/maaroof/orchestrator.server.ts`): Envision (قانون 3/30)، Memory recall قبل الأدوات (11)، Expert Council (12)، Trust Engine (13/7)، Timing (14)، Quality Score (8)، Personality/Genome (18)، Execution Modes + needs_human (21/24)، decision_log (22/23)، `cognitive_consent` + `scope` في الذاكرة (16/17)، Capability OS (5)، Agent Factory (6).
+قرأت الملفات التسعة. أغلب ما تطلبه هذه الأجزاء **موجود جزئياً** داخل المحرّكات التي بنيناها في الأجزاء 1–8، لذلك — التزاماً بالدستور — لن أُنشئ محرّكات موازية. سأقيّم الموجود، أطوّره، ثم أدمج المتطلب الجديد فيه.
 
-لذلك لا نبني محرّكًا جديدًا. نبني **طبقة قياس وإلزام (Compliance Layer)** تقرأ الإشارات الموجودة أصلاً وتحكم عليها، وتحقن القوانين في التعليمات، وتوقف الإجابة عند خرق قانون حرج — دون أي طلب LLM إضافي.
+## ما هو موجود فعلاً مقابل الجديد
 
-### 1) سجل القوانين — ملف واحد جديد
-`src/lib/maaroof/laws.server.ts`
-- `LAWS`: 30 قانونًا (`id`, `key`, `ar`, `en`, `phase`, `severity: hard|soft`, `evidence`).
-- `evaluateLaws(signals)` → `{ score, verdict, violations[], satisfied[] }` حيث `signals` مبنيّة كلها من متغيّرات المنسّق القائمة (envision, memories.length, councilOpinions, trust, timing, qualityScore, totalUsd, consent, workspaceId, decisionLog, finalText).
-- `lawsPromptBlock()` → كتلة مختصرة تُضاف إلى `effectivePrompt` بجانب Personality/Genome (نفس مكان الحقن الحالي، لا مسار جديد).
-- **صفر تكلفة**: كل التقييم استدلالي محلي.
+| الجزء | المكوّن القائم الذي يغطي جزءاً منه | الفجوة الحقيقية التي سأبنيها |
+|---|---|---|
+| 9 — Expert Learning | `tool-catalog.ts` (Capability Registry)، `capability.server.ts`، `agents.server.ts` (DNA) | جلسة حوار معرفي مع كل أداة + Expert Registry + Understanding Score + Expert Academy |
+| 10 — Learning Governance | `token_ledger`، `charge_tokens`، `spend.server.ts` | ميزانية تعلّم منفصلة لا تمسّ رصيد المستخدم + سبب صفرية التكلفة + Snapshots + تقرير الفروقات |
+| 11 — Living Knowledge | `maaroof_memory` (scope/confidence/freshness)، `platform_dna` | طبقات المعرفة التسع + Knowledge Graph (عُقد/علاقات) + تحقّق وتعارض + Knowledge Observatory |
+| 12 — Model Governance | `model_scores_v`، `provider_rates`، `maaroof_settings.planner_model` | سجل نماذج + اختيار مُعلَّل لكل مهمة + مقترحات تحديث + AI Model Center |
+| 13 — Decision Intelligence | `decision_log`، Expert Council، Capability OS، `timing.server.ts` | خط قرار موحّد + بدائل مرفوضة وأسبابها + Decision Center |
+| 14 — Publishing | `publish_channels`، `publish_log`، `ApprovalQueue`، `brand_boost_jobs` | Publication Strategy + Platform Profiles + حملات + Publishing Center |
+| 15 — Trust Architecture | Trust Engine (الجزء 7) + `buildEvidenceGraph` | Trust Profile لكل كيان (خبير/نموذج/MCP/معرفة) يتطوّر مع الزمن + Trust Center |
+| 16 — State Anchor | `workspaces`، `maaroof_runs`، `maaroof_agents` | مرساة حالة متعددة المستويات + كشف الانحراف (Drift) + استرجاع بعد الفشل + State Center |
+| 17 — HERMES | لا يوجد | كيان مراقبة يقترح ولا ينفّذ + Founder Inbox + Founder DNA |
 
-### 2) الإلزام (Hard Laws)
-عند تفعيل `enforce_hard_laws`، وقبل بث `final`:
-- **قانون 13 (Trust before answer)**: إذا كانت ثقة المجلس/الأدلة تحت العتبة → تُعرض الإجابة موسومة «ثقة منخفضة» مع سؤال توضيحي بدل تقديمها كقرار نهائي.
-- **قانون 26 (No hallucination)**: إذا لم توجد أي أدلة (لا ذاكرة ولا نتائج أدوات) → إعلان صريح بنقص المعلومة.
-- **قانون 17 (Workspace isolation)**: تأكيد أن الاستدعاء تمّ ضمن نطاق المساحة قبل التلخيص إلى الذاكرة.
-لا شيء من هذا يعمل ما لم يُفعّل المفتاح.
+## الموجة 1 — المعرفة والخبراء (9 + 10 + 11)
 
-### 3) الإعدادات — توسيع لا إنشاء
-في `src/lib/maaroof/settings.server.ts` تُضاف مجموعة `laws` إلى `MaaroofSettings` بنفس نمط المجموعات السابقة:
-`{ enabled: false, enforce_hard_laws: false, prompt_injection: false, min_trust: 55, log_compliance: true }` — كلها OFF افتراضيًا، فالسلوك الحالي يبقى مطابقًا حرفيًا.
+- جداول: `expert_profiles` (الـDNA والفهم لكل أداة)، `expert_learning_sessions` (الحوار كاملاً: سؤال/جواب/تكلفة/نموذج)، `expert_snapshots` (نسخ معتمدة)، `knowledge_nodes` + `knowledge_edges` (الرسم المعرفي)، `learning_budget_ledger`.
+- `experts.server.ts`: تشغيل المقابلة المعرفية (مرحلتان: استجواب ثم حوار عكسي)، استخراج الـDNA، حساب Understanding Score، وإصدار Snapshot.
+- الحوكمة: كل استهلاك تعلّم يُقيَّد على ميزانية النظام لا على المستخدم؛ وأي تكلفة صفرية تُسجَّل مع سببها (كاش / Snapshot معاد / بلا نموذج).
+- المنسّق يقرأ Snapshot الخبير بدل الوصف الثابت، ولا يستخدم أداة قبل اكتمال تعلّمها.
+- واجهات إدارة: **Expert Academy** و**Knowledge Observatory** داخل مركز الذكاء القائم (لا صفحات منفصلة).
 
-### 4) قاعدة البيانات — عمود واحد
-Migration: `ALTER TABLE public.maaroof_runs ADD COLUMN IF NOT EXISTS compliance jsonb;`
-لا جداول جديدة، لا سياسات جديدة (سياسات `maaroof_runs` الحالية تغطيه). سيتم إضافة عرض `law_compliance_v` للتجميع الإداري فقط (قراءة للأدمن).
+## الموجة 2 — النماذج والقرار (12 + 13)
 
-### 5) المنسّق — 3 نقاط حقن فقط
-`src/lib/maaroof/orchestrator.server.ts`
-- عند بناء `effectivePrompt` (≈السطر 236): إضافة `lawsPromptBlock()` خلف المفتاح.
-- قبل بث `final` (≈السطر 564–592): تقييم القوانين على الإشارات المجمّعة، بثّ حدث SSE جديد `compliance`، وتطبيق الـHard Laws إن فُعّلت.
-- بعد الحفظ (≈السطر 622): `update({ compliance })` ضمن نفس عملية التحديث القائمة — لا استعلام إضافي.
+- `ai_models` سجل مركزي + `model_proposals` + `model_benchmarks`.
+- `models.server.ts`: اختيار النموذج لكل خطوة حسب المهمة والتكلفة والسرعة مع تسجيل سبب الاختيار؛ الاختيار خلف مفتاح، والافتراضي يبقى `planner_model` الحالي.
+- توسعة `decision_log` القائم إلى خط قرار كامل: البدائل المطروحة، سبب رفض كل بديل، الخبراء، النماذج، التكلفة، المخاطر.
+- واجهات: **AI Model Center** و**Decision Center** (خط زمني + شجرة قرار + تصدير).
 
-### 6) الواجهات
-- `src/components/maaroof/MaaroofStage.tsx`: بطاقة «الامتثال الدستوري» — نتيجة مئوية + شارات القوانين المخروقة (عربي)، تظهر فقط عند وصول حدث `compliance`.
-- `src/components/admin/MaaroofAdminTab.tsx`: مفاتيح مجموعة `laws` ضمن قسم المفاتيح التنفيذية القائم.
-- `src/components/admin/MaaroofIntelligenceCenter.tsx`: لوحة «أكثر القوانين خرقًا» من `law_compliance_v`.
+## الموجة 3 — النشر والثقة (14 + 15)
 
-### 7) التوثيق والتدقيق
-`docs/MAAROOF-AUDIT.md`: قسم الجزء 8 يوثّق خريطة كل قانون → المكوّن القائم الذي ينفّذه، وسبب اختيار التطوير بدل الإنشاء، وحالة التوافق الرجعي لكل ملف مُعدّل.
+- تطوير `publish_channels` القائم بدل استبداله: إضافة `platform_profiles` (سلوك كل منصة وأفضل وقت وقيود المحتوى) و`publishing_campaigns` و`publication_strategies`.
+- سير النشر يمرّ عبر مجلس الخبراء ثم بوابة الموافقة الحالية؛ نتائج ما بعد النشر تعود إلى الذاكرة.
+- `trust_profiles`: ملف ثقة متطوّر لكل خبير/نموذج/MCP/عقدة معرفة، يُحدَّث من نتائج التشغيل الفعلية، ويصبح مدخلاً في اختيار الخبير والنموذج.
+- واجهات: **Publishing Center** و**Executive Trust Center**.
 
-### التوافق الرجعي
-كل المفاتيح OFF افتراضيًا ⇒ المسار التنفيذي للجزء 7 يبقى كما هو بايت-بايت. لا حذف، لا إعادة تسمية، لا جداول أو خدمات مكرّرة.
+## الموجة 4 — مرساة الحالة وهيرمس (16 + 17)
 
-### الأجزاء اللاحقة
-9 حتى 17 تُنفَّذ جزءًا واحدًا في كل دورة بعد اعتماد هذا الجزء.
+- `state_anchors` بمستويات (platform / workspace / user / run / agent) مع وراثة وعدم جواز مخالفة الأعلى، و`state_events` لسجل التغيير والتراجع.
+- `anchor.server.ts`: تحقّق ما قبل التنفيذ + كشف الانحراف (هدف/سياسة/لغة/ميزانية) + استرجاع بعد الفشل من آخر حالة سليمة بدل إعادة التشغيل الأعمى.
+- HERMES: `hermes_proposals` + `founder_dna`. يراقب ويقترح فقط — لا ينفّذ أي تغيير. كل مقترح يحمل تبريراً اقتصادياً (القيمة المتوقعة > التكلفة) ويُرفض تلقائياً إن لم يحققه. صندوق قرارات المؤسس داخل الإدارة، وكل موافقة أو رفض تُغذّي Founder DNA.
+
+## قواعد ملزِمة عبر كل الموجات
+
+- كل طبقة جديدة خلف مفتاح في `maaroof_settings` **مُطفأ افتراضياً** — مسار الجزء 8 يبقى مطابقاً حتى تفعّلها.
+- لا صفحات إدارة منفصلة: كل الأقسام الجديدة تُضاف داخل `MaaroofIntelligenceCenter`.
+- كل جدول جديد يُنشأ مع GRANT + RLS من نفس النوع المستخدم حالياً؛ التعلّم الداخلي مقصور على الإدارة، وبيانات المستخدم معزولة بـ`auth.uid()`.
+- التصدير (PDF / Excel / CSV / JSON / Markdown) يعيد استخدام `exports.ts` القائم.
+- بعد كل موجة: تدقيق ذاتي وتحديث `docs/MAAROOF-AUDIT.md` بجدول «القائم / الجديد / سبب التطوير بدل الإنشاء».
+
+## تفاصيل تقنية
+
+جميع الجداول في `public` مع GRANT صريح ثم RLS ثم السياسات. المحرّكات الجديدة ملفات `*.server.ts` تُستدعى من `orchestrator.server.ts` عند نقاط حقن محددة فقط، وواجهات الإدارة تقرأ عبر Views مثل `expert_understanding_v` و`trust_ranking_v` و`state_health_v`. جلسات التعلّم تعمل عبر server function إدارية لا عبر مسار المستخدم، لضمان عدم خصم أي توكن من رصيده.
+
+## نطاق التنفيذ
+
+سأبدأ بالموجة 1 كاملة في الدورة القادمة، ثم أتابع الموجات تباعاً — كل موجة بتدقيق وتوثيق مستقل.

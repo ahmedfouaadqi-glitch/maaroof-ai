@@ -135,7 +135,33 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (memories.length) await ctx.emit("memory", { items: memories });
 
     const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
-    const systemPrompt = settings.system_prompt_extra ? `${baseSystemPrompt}\n\n[Admin guidance]\n${settings.system_prompt_extra}` : baseSystemPrompt;
+
+    // 2.4) Learned expert snapshots (Part 9) + living knowledge (Part 11).
+    //      Both are additive prompt blocks: disabled ⇒ byte-identical prompt.
+    let learnedBlock = "";
+    if (settings.experts?.enabled && settings.experts?.use_snapshots) {
+      try {
+        const { readExpertSnapshots, snapshotPromptBlock } = await import("./experts.server");
+        const snaps = await readExpertSnapshots(settings.enabled_tools || []);
+        learnedBlock += snapshotPromptBlock(snaps);
+      } catch {}
+    }
+    if (settings.knowledge?.enabled && settings.knowledge?.recall_enabled) {
+      try {
+        const { recallKnowledge, knowledgePromptBlock } = await import("./knowledge.server");
+        const nodes = await recallKnowledge({
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId || null,
+          minConfidence: settings.knowledge.min_confidence,
+          limit: 8,
+        });
+        if (nodes.length) await ctx.emit("knowledge", { items: nodes.map((n) => ({ layer: n.layer, title: n.title, quality: n.quality })) });
+        learnedBlock += knowledgePromptBlock(nodes);
+      } catch {}
+    }
+
+    const systemPrompt = `${baseSystemPrompt}${learnedBlock}` + (settings.system_prompt_extra ? `\n\n[Admin guidance]\n${settings.system_prompt_extra}` : "");
+
 
     // 2.5) ENVISION — Future-Driven step (Part 2). Derive a future_goal and
     //      backward_chain BEFORE planning. Kill-switchable; returns to Part 1
@@ -710,6 +736,31 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
     await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
     if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+
+    // 6.5) Capture the run into the living knowledge graph (Part 11).
+    if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {
+      try {
+        const { upsertKnowledgeNode } = await import("./knowledge.server");
+        const conf = Math.round(((qualityScore?.overall ?? 0.7) as number) * 100) || 70;
+        await upsertKnowledgeNode(
+          {
+            layer: ctx.workspaceId ? "workspace" : "user",
+            key: `run_insight_${ctx.goal.slice(0, 60).replace(/\s+/g, "_")}`,
+            title: ctx.goal.slice(0, 120),
+            summary: String(finalResp.text).slice(0, 400),
+            payload: { run_id: runId, tools: steps.map((s: any) => s?.tool).filter(Boolean), geo: geo.label },
+            scope: ctx.workspaceId ? "workspace" : "user",
+            userId: ctx.workspaceId ? null : ctx.userId,
+            workspaceId: ctx.workspaceId || null,
+            confidence: conf,
+            reliability: conf,
+            importance: 55,
+          },
+          settings.knowledge.freshness_days,
+        );
+      } catch {}
+    }
+
 
     // Finalize agent lifecycle + metrics.
     if (activeAgent) {

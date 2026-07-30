@@ -101,6 +101,35 @@ export type LawsSettings = {
   log_compliance: boolean;
 };
 
+/** Parts 9 & 10 — Expert Learning Engine + Learning Governance. */
+export type ExpertsSettings = {
+  /** Master switch for the cognitive-interview learning engine. */
+  enabled: boolean;
+  /** Inject learned expert snapshots into the planner prompt. */
+  use_snapshots: boolean;
+  /** Model used for learning sessions (charged to the system budget only). */
+  learning_model: string;
+  /** Re-learn automatically when a tool definition changes. */
+  auto_relearn_on_change: boolean;
+  /** Hard ceiling on monthly learning spend, in USD. */
+  monthly_budget_usd: number;
+  /** Skip planning an expert whose understanding score is below this. */
+  min_understanding: number;
+};
+
+/** Part 11 — Living Knowledge Ecosystem. */
+export type KnowledgeSettings = {
+  enabled: boolean;
+  /** Write knowledge nodes from finished runs. */
+  capture_enabled: boolean;
+  /** Read the graph back into the planner prompt. */
+  recall_enabled: boolean;
+  /** Days after which a node is treated as stale. */
+  freshness_days: number;
+  /** Minimum confidence for a node to be recalled. */
+  min_confidence: number;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -118,7 +147,10 @@ export type MaaroofSettings = {
   platform_evolution: PlatformEvolutionSettings;
   executive: ExecutiveSettings;
   laws: LawsSettings;
+  experts: ExpertsSettings;
+  knowledge: KnowledgeSettings;
 };
+
 
 
 const DEFAULTS: MaaroofSettings = {
@@ -163,6 +195,22 @@ const DEFAULTS: MaaroofSettings = {
     min_trust: 55,
     log_compliance: true,
   },
+  experts: {
+    enabled: false,
+    use_snapshots: false,
+    learning_model: "google/gemini-2.5-flash",
+    auto_relearn_on_change: false,
+    monthly_budget_usd: 5,
+    min_understanding: 0,
+  },
+  knowledge: {
+    enabled: false,
+    capture_enabled: false,
+    recall_enabled: false,
+    freshness_days: 30,
+    min_confidence: 40,
+  },
+
 
 };
 
