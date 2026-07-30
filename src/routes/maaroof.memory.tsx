@@ -69,7 +69,7 @@ function MemoryPage() {
     <div className="min-h-screen"><SiteHeader />
       <div className="max-w-xl mx-auto p-8 text-center">
         <p className="mb-4">يرجى تسجيل الدخول.</p>
-        <Link to="/auth" search={{}} className="px-4 py-2 bg-primary text-primary-foreground rounded-md">دخول</Link>
+        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">دخول</Link>
       </div>
     </div>
   );
