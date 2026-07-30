@@ -25,6 +25,33 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 const money = (n: any) => `$${Number(n || 0).toFixed(4)}`;
 
 /** Part 12 — AI Model Center: registry, real cost, health, benchmarks, proposals. */
+/** المحركات التسعة ← النموذج المُختار حالياً لكل محرك (شفافية كاملة للإدارة). */
+function NineEnginesMap() {
+  const load = useServerFn(getEngineEntitlement);
+  const [rows, setRows] = useState<any>(null);
+  useEffect(() => { load().then(setRows).catch(() => {}); }, []);
+  if (!rows) return null;
+  return (
+    <div className="rounded-xl border border-border/60 p-3">
+      <div className="mb-2 text-xs font-semibold">المحركات التسعة ← النماذج</div>
+      <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+        {ENGINES.map((e) => {
+          const m = rows.models?.[e.key];
+          return (
+            <div key={e.key} className="flex items-center gap-2 rounded-lg bg-muted/30 px-2 py-1.5 text-[11px]">
+              <e.Logo size={14} />
+              <span className="font-medium">{e.name}</span>
+              <span className="ms-auto truncate text-muted-foreground" dir="ltr">{m?.model || "—"}</span>
+              {e.proxy && <span className="rounded bg-amber-500/15 px-1 text-[10px] text-amber-600">proxy</span>}
+              {m?.governed && <span className="rounded bg-emerald-500/15 px-1 text-[10px] text-emerald-600">gov</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function AiModelCenterSection() {
   const load = useServerFn(getModelCenter);
   const review = useServerFn(reviewModelProposal);
