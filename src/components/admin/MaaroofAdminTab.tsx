@@ -448,6 +448,8 @@ function ControlsSection() {
 
       <LearningControls settings={settings} set={set} />
 
+      <GovernanceControls settings={settings} set={set} />
+
 
       <div className="rounded-lg border bg-card p-3">
         <label className="text-sm font-semibold block mb-1">توجيهات نظام إضافية (تُلحَق بالـ system prompt)</label>
@@ -549,6 +551,60 @@ function LawsControls({ settings, set }: { settings: Record<string, any>; set: (
           <span className="text-xs text-muted-foreground">حد الثقة الأدنى للقانون 13 (%)</span>
           <input type="number" value={laws.min_trust ?? 55} onChange={(e) => patch("min_trust", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
         </label>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Parts 12-13 — Model Governance & Decision Intelligence controls ---------- */
+function GovernanceControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const mg = (settings.model_governance || {}) as Record<string, any>;
+  const dec = (settings.decision || {}) as Record<string, any>;
+  const pmg = (k: string, v: any) => set("model_governance", { ...mg, [k]: v });
+  const pdec = (k: string, v: any) => set("decision", { ...dec, [k]: v });
+  const flag = (
+    obj: Record<string, any>,
+    patch: (k: string, v: any) => void,
+    k: string,
+    label: string,
+    hint: string,
+  ) => (
+    <label key={k} className="rounded border p-2 flex items-start gap-2">
+      <input type="checkbox" className="mt-1" checked={!!obj[k]} onChange={(e) => patch(k, e.target.checked)} />
+      <span>
+        <span className="text-sm font-medium block">{label}</span>
+        <span className="text-[11px] text-muted-foreground">{hint}</span>
+      </span>
+    </label>
+  );
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-4">
+      <div className="space-y-2">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!mg.enabled} onChange={(e) => pmg("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">حوكمة نماذج الذكاء (الجزء 12)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">سجلّ نماذج بأسعار حقيقية، واختيار النموذج الأنسب لكل مرحلة، وقياس صحة كل نموذج. عند الإطفاء يعود كل شيء إلى النموذج الافتراضي كما كان.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${mg.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(mg, pmg, "per_phase_selection", "اختيار نموذج لكل مرحلة", "تخطيط/تفكير/إجابة/تعلّم — كل مرحلة تأخذ الأنسب سعراً وقدرةً.")}
+          {flag(mg, pmg, "use_registry_pricing", "التسعير من السجل", "تُحتسب التكلفة الحقيقية من أسعار المزود بدل التقدير الثابت.")}
+          {flag(mg, pmg, "health_tracking", "تتبّع صحة النماذج", "نداءات، إخفاقات، زمن استجابة، وتكلفة تراكمية لكل نموذج.")}
+          {flag(mg, pmg, "benchmark_enabled", "الاختبارات المقارنة", "تشغيل نفس المهمة على عدة نماذج من مركز النماذج.")}
+          {flag(mg, pmg, "auto_proposals", "مقترحات الترقية التلقائية", "يقترح فقط ولا يبدّل النموذج دون موافقتك.")}
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!dec.trace_enabled} onChange={(e) => pdec("trace_enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">ذكاء القرار التنفيذي (الجزء 13)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">توثيق مراحل القرار من فهم الهدف حتى التعلّم، مع البدائل المرفوضة وسببها — بلا أي نداء نموذج إضافي.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${dec.trace_enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(dec, pdec, "alternatives_enabled", "تسجيل البدائل المرفوضة", "لكل قرار: ما الذي رُفض ولماذا.")}
+          {flag(dec, pdec, "score_enabled", "درجة جودة القرار", "درجة مركّبة من التغطية والثقة والتكلفة.")}
+          {flag(dec, pdec, "cost_aware", "قرارات واعية بالتكلفة", "المفاضلة بين الاستراتيجيات وفق التكلفة والزمن المتوقعين.")}
+        </div>
       </div>
     </div>
   );
