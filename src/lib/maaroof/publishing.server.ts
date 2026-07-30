@@ -5,7 +5,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 let _db: ReturnType<typeof createClient> | null = null;
-function db() {
+function db(): any {
   if (_db) return _db;
   _db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { persistSession: false },
