@@ -243,15 +243,38 @@ export function HermesOfficeSection() {
     const text = draft.trim();
     if (!text) return;
     setDraft("");
+    const files = attachments;
+    setAttachments([]);
     setMessages((m) => [...m, { id: `tmp-${Date.now()}`, role: "user", content: text }]);
     setBusy("ask");
     try {
-      const r: any = await ask({ data: { message: text, conversation_id: conversationId } });
+      const r: any = await ask({
+        data: {
+          message: text,
+          conversation_id: conversationId,
+          command: command || null,
+          language: chatLang,
+          attachments: files.length ? files : undefined,
+        },
+      });
       if (r.conversationId) setConversationId(r.conversationId);
       setMessages((m) => [...m, { id: `a-${Date.now()}`, role: "assistant", content: r.reply, usd: r.usd, tokens: r.tokens }]);
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setBusy(null); }
   };
+
+  const pickFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const picked = await Promise.all(Array.from(files).slice(0, 4).map((f) => new Promise<any>((res, rej) => {
+      if (f.size > 5_000_000) { rej(new Error(`${f.name}: الحجم أكبر من 5 ميغابايت`)); return; }
+      const reader = new FileReader();
+      reader.onload = () => res({ kind: f.type.startsWith("image/") ? "image" : "file", name: f.name, dataUrl: String(reader.result) });
+      reader.onerror = () => rej(new Error("تعذّر قراءة الملف"));
+      reader.readAsDataURL(f);
+    }))).catch((e) => { toast.error(String(e?.message || e)); return []; });
+    if (picked.length) setAttachments((a) => [...a, ...picked].slice(0, 4));
+  };
+
 
   const openConversation = async (id: string) => {
     setConversationId(id);
