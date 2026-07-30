@@ -231,18 +231,21 @@ function MaaroofPage() {
           <div className="rounded-lg border bg-card p-3 flex items-center gap-2 flex-wrap text-sm">
             <Globe className="w-4 h-4 text-primary" />
             <h2 className="font-medium text-sm m-0">النطاق الجغرافي:</h2>
-            <select value={geoMode} onChange={(e) => setGeoMode(e.target.value as any)} className="border rounded px-2 py-1 bg-background">
+            <label htmlFor="geo-mode" className="sr-only">النطاق الجغرافي / Geographic scope</label>
+            <select id="geo-mode" aria-label="النطاق الجغرافي / Geographic scope" value={geoMode} onChange={(e) => setGeoMode(e.target.value as any)} className="border rounded px-2 py-1 bg-background">
               <option value="auto">تلقائي (حسب IP)</option>
               <option value="country">دولة محددة</option>
               <option value="world">عالمي</option>
             </select>
             {geoMode === "country" && (
               <>
-                <select value={country} onChange={(e) => setCountry(e.target.value)} className="border rounded px-2 py-1 bg-background">
+                <label htmlFor="geo-country" className="sr-only">الدولة / Country</label>
+                <select id="geo-country" aria-label="الدولة / Country" value={country} onChange={(e) => setCountry(e.target.value)} className="border rounded px-2 py-1 bg-background">
                   <option value="">— اختر دولة —</option>
                   {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.ar} ({c.code})</option>)}
                 </select>
-                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="مدينة (اختياري)" className="border rounded px-2 py-1 bg-background w-40" />
+                <label htmlFor="geo-city" className="sr-only">المدينة / City</label>
+                <input id="geo-city" aria-label="المدينة / City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="مدينة (اختياري)" className="border rounded px-2 py-1 bg-background w-40" />
               </>
             )}
             {detected?.country && geoMode === "auto" && (
