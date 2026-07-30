@@ -357,8 +357,6 @@ const DEFAULTS: MaaroofSettings = {
     office_model: "google/gemini-2.5-flash",
     never_execute_without_approval: true,
   },
-
-  },
 };
 
 
