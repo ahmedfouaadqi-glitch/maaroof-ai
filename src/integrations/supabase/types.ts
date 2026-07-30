@@ -981,6 +981,7 @@ export type Database = {
         Row: {
           attempts: number
           auto_run: boolean
+          compliance: Json | null
           created_at: string
           decision_log: Json
           depends_on_run_id: string | null
@@ -1014,6 +1015,7 @@ export type Database = {
         Insert: {
           attempts?: number
           auto_run?: boolean
+          compliance?: Json | null
           created_at?: string
           decision_log?: Json
           depends_on_run_id?: string | null
@@ -1047,6 +1049,7 @@ export type Database = {
         Update: {
           attempts?: number
           auto_run?: boolean
+          compliance?: Json | null
           created_at?: string
           decision_log?: Json
           depends_on_run_id?: string | null
@@ -2250,6 +2253,17 @@ export type Database = {
           expert: string | null
           last_used_at: string | null
           runs: number | null
+        }
+        Relationships: []
+      }
+      law_compliance_v: {
+        Row: {
+          day: string | null
+          law_ar: string | null
+          law_id: number | null
+          law_key: string | null
+          severity: string | null
+          violations: number | null
         }
         Relationships: []
       }

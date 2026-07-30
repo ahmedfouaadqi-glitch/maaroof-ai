@@ -11,6 +11,8 @@ import { getMaaroofSettings } from "./settings.server";
 import { getOrCreateAgent, finalizeAgent, evolvePersonality, readPersonality, personalityPromptBlock, type MaaroofAgent } from "./agents.server";
 import { assessTiming, type TimingDecision } from "./timing.server";
 import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
+import { evaluateLaws, lawsPromptBlock, hardLawNotice, type LawEvaluation } from "./laws.server";
+
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -256,6 +258,20 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
 
+
+    // 3.3) PART 8 — Laws of Cognitive Intelligence. The laws block is injected
+    //      into the SAME system prompt (no extra request). Counters below feed
+    //      the compliance evaluation performed just before the final answer.
+    const laws = (settings as any).laws || {};
+    if (laws.enabled && laws.prompt_injection) {
+      effectivePrompt += lawsPromptBlock(ctx.language);
+    }
+    let capabilityChoices = 0;
+    let needsHumanFlag = false;
+
+
+
+
     // 3.5) EXPERT COUNCIL — deliberate before acting.
     //      Part 4: implementations are chosen via the Capability OS
     //      (live scores + DNA + workspace preferences), not just the static
@@ -285,11 +301,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           : null;
         const expert: ToolDef | undefined = choice?.expert || findExpertsByCapability(cap)[0];
         if (choice) {
+          capabilityChoices++;
           await ctx.emit("capability_choice", {
             capability: cap, expert: choice.expert.key, score: choice.score,
             reason: choice.reason, alternatives: choice.alternatives,
           });
         }
+
         if (!expert) continue;
         try {
           const cResp = await callGateway(apiKey, MODEL, [
@@ -324,8 +342,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           // Emit needs_human when confidence falls below threshold.
           const minConf = settings.agent_factory?.min_confidence ?? 40;
           if (entry.confidence != null && entry.confidence < minConf) {
+            needsHumanFlag = true;
             await ctx.emit("needs_human", {
               expert: expert.key,
+
               capability: cap,
               confidence: entry.confidence,
               objection: entry.objection,
@@ -589,8 +609,56 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("trust", trust);
       try { await db().from("maaroof_runs").update({ trust }).eq("id", runId); } catch {}
     }
+    // PART 8 — Constitutional compliance gate. Evaluates the 30 laws against
+    // signals the run already produced (zero extra LLM cost). When
+    // enforce_hard_laws is on, a hard-law breach downgrades the answer from a
+    // final recommendation to a flagged draft instead of hiding the breach.
+    let compliance: LawEvaluation | null = null;
+    if (laws.enabled) {
+      const councilConfsAll = decisionLog
+        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+        .map((d: any) => d.confidence as number);
+      compliance = evaluateLaws(
+        {
+          hasEnvision: !!envision,
+          planSteps: steps.length,
+          memoriesRecalled: memories.length,
+          councilOpinions: decisionLog.filter((d: any) => d.phase === "council" && !d.error).length,
+          councilAvgConfidence: councilConfsAll.length
+            ? Math.round(councilConfsAll.reduce((a, b) => a + b, 0) / councilConfsAll.length)
+            : null,
+          capabilityChoices,
+          hasAgent: !!activeAgent,
+          reflections: results.length >= 3 ? Math.floor(results.length / 3) : 0,
+          toolResults: results.map((r) => ({ ok: !!r.ok })),
+          trust,
+          timingVerdict: timing?.verdict ?? null,
+          qualityScore: null,
+          decisionLogEntries: decisionLog.length,
+          executionMode,
+          workspaceId: ctx.workspaceId || null,
+          memoryScoped: !!ctx.workspaceId,
+          consent: null,
+          totalUsd,
+          hasWorkspaceContext: !!workspaceProfile,
+          hasGenome: !!(exec.enabled && exec.genome_enabled && ctx.workspaceId),
+          needsHuman: needsHumanFlag,
+          finalTextLength: finalText.length,
+        },
+        { minTrust: Number(laws.min_trust ?? 55) },
+      );
+      if (laws.enforce_hard_laws && compliance.verdict === "violation") {
+        finalText = hardLawNotice(compliance, ctx.language) + finalText;
+      }
+      await ctx.emit("compliance", compliance);
+      if (laws.log_compliance !== false) {
+        try { await db().from("maaroof_runs").update({ compliance }).eq("id", runId); } catch {}
+      }
+    }
+
     await ctx.emit("final", { text: finalText });
-    await logMsg("assistant", { text: finalText, trust }, finalResp.tokens, finalResp.usd);
+    await logMsg("assistant", { text: finalText, trust, compliance }, finalResp.tokens, finalResp.usd);
+
 
     // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
     // observed signals to avoid additional LLM cost. Flag-gated.

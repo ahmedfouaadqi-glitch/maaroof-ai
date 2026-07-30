@@ -86,6 +86,21 @@ export type ExecutiveSettings = {
   conflict_threshold: number;
 };
 
+/** Part 8 — Laws of Cognitive Intelligence (compliance layer). All OFF by
+ *  default so the Part 7 execution path stays byte-identical. */
+export type LawsSettings = {
+  /** Master toggle: evaluate the 30 laws against each run's signals. */
+  enabled: boolean;
+  /** Inject the laws block into the system prompt. */
+  prompt_injection: boolean;
+  /** Block/flag the final answer when a hard law is broken. */
+  enforce_hard_laws: boolean;
+  /** Minimum council confidence (0-100) required by Law 13. */
+  min_trust: number;
+  /** Persist the compliance envelope into maaroof_runs.compliance. */
+  log_compliance: boolean;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -102,7 +117,9 @@ export type MaaroofSettings = {
   cognitive: CognitiveSettings;
   platform_evolution: PlatformEvolutionSettings;
   executive: ExecutiveSettings;
+  laws: LawsSettings;
 };
+
 
 const DEFAULTS: MaaroofSettings = {
   trial_daily_cap: 5,
@@ -139,6 +156,14 @@ const DEFAULTS: MaaroofSettings = {
     future_dna_enabled: false,
     conflict_threshold: 25,
   },
+  laws: {
+    enabled: false,
+    prompt_injection: false,
+    enforce_hard_laws: false,
+    min_trust: 55,
+    log_compliance: true,
+  },
+
 };
 
 let _cache: { at: number; value: MaaroofSettings } | null = null;

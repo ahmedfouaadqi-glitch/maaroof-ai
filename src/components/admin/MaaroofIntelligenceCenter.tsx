@@ -16,7 +16,7 @@ import { UserIntelligenceTab } from "./UserIntelligenceTab";
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
-  | "finance" | "health" | "user_intel" | "eqi" | "personality";
+  | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws";
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
@@ -30,6 +30,8 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "policy_scores",  label: "السياسات",              Icon: ShieldCheck, group: "scores" },
   { k: "eqi",            label: "مؤشر الجودة التنفيذية", Icon: Gauge,       group: "scores" },
   { k: "personality",    label: "شخصيات الوكلاء",        Icon: Fingerprint, group: "scores" },
+  { k: "laws",           label: "الامتثال الدستوري",     Icon: ShieldCheck, group: "scores" },
+
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
   { k: "user_intel",     label: "ذكاء المستخدمين",       Icon: ScrollText,  group: "ops" },
@@ -80,6 +82,8 @@ export function MaaroofIntelligenceCenter() {
         {section === "policy_scores"  && <ScoresTable view="policy_scores_v"  cols={["policy","workspaces","last_updated_at"]} />}
         {section === "eqi"            && <EqiSection />}
         {section === "personality"    && <PersonalitySection />}
+        {section === "laws"           && <LawsComplianceSection />}
+
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
         {section === "user_intel"     && <UserIntelligenceTab />}
@@ -352,6 +356,63 @@ function PersonalitySection() {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Part 8 — Constitutional compliance (30 laws) ---------- */
+function LawsComplianceSection() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("law_compliance_v" as any)
+        .select("*")
+        .order("day", { ascending: false })
+        .limit(200);
+      setRows((data as any[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
+  if (!rows.length)
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">
+        لا توجد بيانات امتثال بعد — فعّل «دستور الذكاء الإدراكي» من إعدادات معروف ثم شغّل جلسات.
+      </div>
+    );
+  const byLaw = new Map<string, { law: string; severity: string; total: number }>();
+  for (const r of rows) {
+    const key = `${r.law_id}`;
+    const prev = byLaw.get(key) || { law: `${r.law_id}. ${r.law_ar}`, severity: r.severity, total: 0 };
+    prev.total += Number(r.violations || 0);
+    byLaw.set(key, prev);
+  }
+  const top = [...byLaw.values()].sort((a, b) => b.total - a.total).slice(0, 12);
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold">الامتثال الدستوري</h3>
+        <p className="text-xs text-muted-foreground mt-1">أكثر القوانين خرقاً عبر الجلسات — مؤشر مباشر على أي طبقة تحتاج تفعيلاً أو ضبطاً.</p>
+      </div>
+      <div className="space-y-1.5">
+        {top.map((l, i) => (
+          <div key={i} className="rounded-xl border border-border/60 bg-background/40 p-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium">
+                {l.law}
+                {l.severity === "hard" && <span className="ms-2 text-[10px] rounded px-1 border border-destructive/50 text-destructive">إلزامي</span>}
+              </span>
+              <span className="font-mono">{l.total}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
+              <div className="h-full bg-destructive/70" style={{ width: `${Math.min(100, (l.total / (top[0]?.total || 1)) * 100)}%` }} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

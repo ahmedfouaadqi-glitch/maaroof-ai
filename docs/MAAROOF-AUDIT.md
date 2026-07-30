@@ -316,3 +316,44 @@ reflect() → كما هو
 - Knowledge Graph مع embeddings حقيقية (تمّ حجز عمود `links jsonb` استعداداً).
 - Platform Intelligence (تحليلات عبر المستخدمين).
 
+
+## الجزء 8 — Laws of Cognitive Intelligence (طبقة الامتثال الدستوري)
+
+### لماذا تطوير بدل الإنشاء
+26 من أصل 30 قانوناً منفّذة أصلاً داخل محرّكات قائمة. لذلك لم يُبنَ محرّك جديد، بل **طبقة قياس وإلزام** تقرأ الإشارات الموجودة وتحكم عليها.
+
+| القانون | المكوّن القائم الذي ينفّذه |
+|---|---|
+| 1، 18 | `genome.server.ts` + `workspaces` |
+| 2 | تحميل `workspaceProfile` + `geo.server.ts` |
+| 3، 30 | مرحلة `envision` في المنسّق |
+| 4 | مرحلة `plan` |
+| 5 | `capability.server.ts` (Capability OS) |
+| 6 | `agents.server.ts` (Agent Factory) |
+| 7، 13، 25، 26 | Trust Engine + `buildEvidenceGraph` + `needs_human` |
+| 8 | Executive Quality Score |
+| 9، 11 | `memory.server.ts` (recall/remember) + Learning DNA |
+| 12، 27 | Expert Council + Conflict Engine |
+| 14 | `timing.server.ts` + `token_ledger` |
+| 16، 17 | `profiles.cognitive_consent` + `maaroof_memory.scope/workspace_id` + RLS |
+| 19 | مرحلة `reflection` |
+| 20 | تطوّر الشخصية + `platform_dna` |
+| 21، 24 | أوضاع التنفيذ (محاكاة/توصية/تنفيذ) + `needs_human` |
+| 22، 23 | `decision_log` + `maaroof_messages` + `maaroof_runs` |
+| 28 | Kill switch + `maaroof_settings` |
+
+### الملفات
+| الملف | القائم | الجديد | التوافق |
+|---|---|---|---|
+| `src/lib/maaroof/laws.server.ts` | — | سجل 30 قانوناً + `evaluateLaws` + `lawsPromptBlock` + `hardLawNotice` | ملف جديد، غير مستدعى إلا خلف مفتاح |
+| `src/lib/maaroof/settings.server.ts` | مجموعات الإعدادات 1–7 | مجموعة `laws` (كلها OFF) | إضافي بحت |
+| `src/lib/maaroof/orchestrator.server.ts` | مسار الجزء 7 | حقن الدستور + عدّادات + بوابة الامتثال قبل الإجابة | 3 نقاط حقن، لا حذف |
+| `src/components/maaroof/MaaroofStage.tsx` | بطاقات التوقيت/التعارض/الثقة | `ComplianceCard` | تظهر فقط عند وصول حدث `compliance` |
+| `src/components/admin/MaaroofAdminTab.tsx` | `ExecutiveControls` | `LawsControls` | إضافي |
+| `src/components/admin/MaaroofIntelligenceCenter.tsx` | 14 قسماً | قسم «الامتثال الدستوري» | إضافي |
+| قاعدة البيانات | `maaroof_runs` | عمود `compliance` + عرض `law_compliance_v` | لا جداول ولا سياسات جديدة |
+
+### المخاطر والتوافق الرجعي
+- كل المفاتيح OFF افتراضياً ⇒ مسار الجزء 7 يبقى مطابقاً بايت-بايت.
+- التقييم محلي بالكامل: صفر طلبات نموذج، صفر تكلفة إضافية.
+- عند تفعيل `enforce_hard_laws` تُوسَم الإجابة كمسودة ولا تُحجب — احتراماً للقانون 21 (سلطة الإنسان).
