@@ -245,6 +245,9 @@ export type MaaroofSettings = {
   decision: DecisionSettings;
   publishing: PublishingSettings;
   trust_engine: TrustEngineSettings;
+  state_anchor: StateAnchorSettings;
+  hermes: HermesSettings;
+
 
 };
 
