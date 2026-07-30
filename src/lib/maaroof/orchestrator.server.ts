@@ -342,7 +342,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           // Emit needs_human when confidence falls below threshold.
           const minConf = settings.agent_factory?.min_confidence ?? 40;
           if (entry.confidence != null && entry.confidence < minConf) {
-            await ctx.emit("needs_human", {
+            needsHumanFlag = true;
+
               expert: expert.key,
               capability: cap,
               confidence: entry.confidence,
