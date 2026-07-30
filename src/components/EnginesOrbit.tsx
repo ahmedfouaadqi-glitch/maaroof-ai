@@ -1,21 +1,35 @@
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import { useI18n } from "@/lib/i18n";
 import { useVisibility } from "@/lib/visibility";
-import morphMp4 from "@/assets/engines-morph.mp4.asset.json";
-import morphWebm from "@/assets/engines-morph.webm.asset.json";
-import morphPoster from "@/assets/engines-morph-poster.jpg.asset.json";
+import { ENGINES } from "@/components/engine-logos";
+import { HexBadge } from "@/components/HexBadge";
+import OrbitImages from "@/components/orbit/OrbitImages";
 
+/** `true` when the visitor asked the OS to reduce motion. */
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setReduced(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  return reduced;
+}
 
 /**
  * Hero motion piece:
- * - The nine AI engine marks morph into one another on a continuous loop
- * - Replaces the previous SVG orbit while keeping the same slot, copy and CTAs
+ * - The nine AI engine marks orbit an elliptical path around the MAAROOF hexagon
+ * - Uses the React Bits `OrbitImages` motion component in the same hero slot
  */
 export function EnginesOrbit() {
   const { t } = useI18n();
   const vis = useVisibility();
+  const reduced = usePrefersReducedMotion();
 
   if (!vis.loading && !vis.isWidgetVisible("engines_orbit")) return null;
 
@@ -39,32 +53,35 @@ export function EnginesOrbit() {
           <p className="mt-3 text-muted-foreground">{t("orbit_sub")}</p>
         </div>
 
-        {/* Engines morph loop */}
-        <div className="relative mx-auto mt-12 grid place-items-center">
-          <div className="relative overflow-hidden rounded-[2rem] border border-primary/25 bg-card/40 shadow-[var(--shadow-elevated)] backdrop-blur">
-            <div aria-hidden className="pointer-events-none absolute -inset-6 -z-10 bg-gradient-to-br from-primary/25 to-accent/25 blur-2xl" />
-            <video
-              className="block h-[380px] w-auto max-w-full object-contain motion-reduce:hidden md:h-[420px]"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              poster={morphPoster.url}
-              aria-hidden
-            >
-              <source src={morphWebm.url} type="video/webm" />
-              <source src={morphMp4.url} type="video/mp4" />
-            </video>
-            <img
-              src={morphPoster.url}
-              alt=""
-              aria-hidden
-              className="hidden h-[380px] w-auto max-w-full object-contain motion-reduce:block md:h-[420px]"
-            />
-          </div>
+        {/* Nine engines orbiting the MAAROOF hexagon */}
+        <div className="relative mx-auto mt-12 grid w-full max-w-[420px] place-items-center">
+          <OrbitImages
+            responsive
+            baseWidth={1000}
+            shape="ellipse"
+            radiusX={410}
+            radiusY={330}
+            rotation={-8}
+            duration={38}
+            itemSize={120}
+            paused={reduced}
+            centerContent={
+              <HexBadge size={96}>
+                <span className="font-display text-sm font-bold text-gradient">MAAROOF</span>
+              </HexBadge>
+            }
+            items={ENGINES.map((e) => (
+              <div
+                key={e.key}
+                className="grid size-full place-items-center rounded-full border border-border bg-card/80 shadow-[var(--shadow-elevated)] backdrop-blur"
+              >
+                <e.Logo size={68} />
+              </div>
+            ))}
+          />
           <span className="sr-only">{t("orbit_sub")}</span>
         </div>
+
 
 
         {/* Tagline */}
