@@ -18,6 +18,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/pricing", changefreq: "weekly", priority: "0.9" },
           { path: "/guide", changefreq: "weekly", priority: "0.8" },
           { path: "/guide/geo-vs-aeo", changefreq: "monthly", priority: "0.7" },
+          { path: "/guide/what-is-geo", changefreq: "monthly", priority: "0.8" },
           { path: "/auth", changefreq: "monthly", priority: "0.5" },
           { path: "/dashboard", changefreq: "weekly", priority: "0.6" },
           { path: "/agent", changefreq: "weekly", priority: "0.6" },
@@ -27,6 +28,12 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/contact", changefreq: "monthly", priority: "0.6" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
+          // Per-tool landing pages (/tools/$slug)
+          ...["analyze", "suggest", "compare", "visibility", "brand_boost"].map((slug) => ({
+            path: `/tools/${slug}`,
+            changefreq: "monthly" as const,
+            priority: "0.7",
+          })),
         ];
 
         // Add per-user public profile URLs so AI crawlers (and Google) discover them.
