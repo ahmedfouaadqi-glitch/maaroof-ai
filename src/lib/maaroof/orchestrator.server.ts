@@ -254,7 +254,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           effectivePrompt += genomePromptBlock(g);
           if (g) await ctx.emit("genome", { scope: "workspace", id: g.id, runs: g.runs_count, memories: g.memory_count, risk: g.risk_level });
         } catch {}
+      }
     }
+
+
 
     // 3.3) PART 8 — Laws of Cognitive Intelligence. The laws block is injected
     //      into the SAME system prompt (no extra request). Counters below feed
