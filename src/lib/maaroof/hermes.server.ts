@@ -506,23 +506,11 @@ export async function listMessages(conversationId: string, userId: string) {
 /* Evolves the Part 17 office: commands, tasks, history, live monitor. */
 /* ================================================================== */
 
-/** The 30 executive commands the Founder may issue. */
-export const EXECUTIVE_COMMANDS = [
-  "review", "analyze", "monitor", "audit", "optimize", "compare", "predict",
-  "investigate", "research", "create_proposal", "update_roadmap",
-  "evaluate_experts", "evaluate_models", "evaluate_mcp", "evaluate_architecture",
-  "evaluate_costs", "evaluate_revenue", "evaluate_geo", "evaluate_seo", "evaluate_aso",
-  "evaluate_branding", "evaluate_social", "evaluate_security", "evaluate_memory",
-  "evaluate_trust", "evaluate_knowledge", "evaluate_state", "evaluate_workspaces",
-  "evaluate_users", "evaluate_business",
-] as const;
-export type ExecutiveCommand = (typeof EXECUTIVE_COMMANDS)[number];
+// The command / status vocabulary lives in the client-safe module so the UI and
+// the server share one definition. Re-exported here for existing importers.
+export { EXECUTIVE_COMMANDS, TASK_STATUSES } from "@/lib/hermes-commands";
+export type { ExecutiveCommand, TaskStatus } from "@/lib/hermes-commands";
 
-export const TASK_STATUSES = [
-  "waiting", "scheduled", "preparing", "learning", "running", "paused", "blocked",
-  "needs_approval", "completed", "cancelled", "archived", "failed", "recovered",
-] as const;
-export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 /** Gathers the real signals a given command needs, from existing tables only. */
 export async function buildCommandBrief(command: string, o: Observatory): Promise<Record<string, any>> {
