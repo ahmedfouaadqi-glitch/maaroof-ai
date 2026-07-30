@@ -158,6 +158,38 @@ export type DecisionSettings = {
 };
 
 
+/** Part 14 — Executive Publishing Ecosystem. */
+export type PublishingSettings = {
+  enabled: boolean;
+  /** Build a per-platform publication strategy instead of one shared post. */
+  strategy_enabled: boolean;
+  /** Group publications into campaigns with budgets. */
+  campaigns_enabled: boolean;
+  /** Default approval mode when the campaign/workspace does not set one. */
+  default_approval_mode: string;
+  /** Allow scheduled auto-publishing without a human in the loop. */
+  auto_publish_enabled: boolean;
+  /** Collect reach/engagement metrics after publishing. */
+  metrics_enabled: boolean;
+  /** Hard cap of publications per user per day. */
+  daily_publication_cap: number;
+};
+
+/** Part 15 — Executive Trust Architecture. */
+export type TrustEngineSettings = {
+  enabled: boolean;
+  /** Run the 13-stage trust pipeline on every answer. */
+  pipeline_enabled: boolean;
+  /** Persist per-entity trust profiles and events. */
+  profiles_enabled: boolean;
+  /** Compute the executive decision score (value/impact/ROI). */
+  executive_score_enabled: boolean;
+  /** Below this, the answer is labelled as needing human verification. */
+  min_trust: number;
+  /** Surface weak links (low-trust experts/models/tools) to the admin. */
+  weak_link_alerts: boolean;
+};
+
 
 export type MaaroofSettings = {
   trial_daily_cap: number;
@@ -180,6 +212,8 @@ export type MaaroofSettings = {
   knowledge: KnowledgeSettings;
   model_governance: ModelGovernanceSettings;
   decision: DecisionSettings;
+  publishing: PublishingSettings;
+  trust_engine: TrustEngineSettings;
 
 };
 
@@ -255,6 +289,23 @@ const DEFAULTS: MaaroofSettings = {
     trace_enabled: false,
     cost_aware_alternatives: false,
     score_enabled: false,
+  },
+  publishing: {
+    enabled: false,
+    strategy_enabled: true,
+    campaigns_enabled: true,
+    default_approval_mode: "always_ask",
+    auto_publish_enabled: false,
+    metrics_enabled: true,
+    daily_publication_cap: 20,
+  },
+  trust_engine: {
+    enabled: false,
+    pipeline_enabled: true,
+    profiles_enabled: true,
+    executive_score_enabled: true,
+    min_trust: 55,
+    weak_link_alerts: true,
   },
 };
 

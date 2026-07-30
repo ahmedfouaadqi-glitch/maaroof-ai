@@ -2118,6 +2118,160 @@ export type Database = {
         }
         Relationships: []
       }
+      publication_metrics: {
+        Row: {
+          ai_visibility: number | null
+          clicks: number
+          collected_at: string
+          comments: number
+          conversions: number
+          created_at: string
+          id: string
+          impressions: number
+          likes: number
+          publication_id: string
+          reach: number
+          search_visibility: number | null
+          shares: number
+          signals: Json
+          user_id: string
+        }
+        Insert: {
+          ai_visibility?: number | null
+          clicks?: number
+          collected_at?: string
+          comments?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          likes?: number
+          publication_id: string
+          reach?: number
+          search_visibility?: number | null
+          shares?: number
+          signals?: Json
+          user_id: string
+        }
+        Update: {
+          ai_visibility?: number | null
+          clicks?: number
+          collected_at?: string
+          comments?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          likes?: number
+          publication_id?: string
+          reach?: number
+          search_visibility?: number | null
+          shares?: number
+          signals?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_metrics_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publications: {
+        Row: {
+          approval_status: string
+          campaign_id: string | null
+          channel_id: string | null
+          compliance: Json
+          content: string
+          cost_usd: number
+          created_at: string
+          error: string | null
+          expert_review: Json
+          external_ref: string | null
+          id: string
+          language: string
+          media: Json
+          platform_key: string
+          published_at: string | null
+          risk: Json
+          scheduled_at: string | null
+          stage: string
+          status: string
+          strategy: Json
+          title: string | null
+          tokens: number
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_status?: string
+          campaign_id?: string | null
+          channel_id?: string | null
+          compliance?: Json
+          content?: string
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          expert_review?: Json
+          external_ref?: string | null
+          id?: string
+          language?: string
+          media?: Json
+          platform_key: string
+          published_at?: string | null
+          risk?: Json
+          scheduled_at?: string | null
+          stage?: string
+          status?: string
+          strategy?: Json
+          title?: string | null
+          tokens?: number
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_status?: string
+          campaign_id?: string | null
+          channel_id?: string | null
+          compliance?: Json
+          content?: string
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          expert_review?: Json
+          external_ref?: string | null
+          id?: string
+          language?: string
+          media?: Json
+          platform_key?: string
+          published_at?: string | null
+          risk?: Json
+          scheduled_at?: string | null
+          stage?: string
+          status?: string
+          strategy?: Json
+          title?: string | null
+          tokens?: number
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publications_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "publishing_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       publish_channels: {
         Row: {
           account_label: string | null
@@ -2199,6 +2353,117 @@ export type Database = {
           status?: string
           task_id?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      publishing_campaigns: {
+        Row: {
+          approval_mode: string
+          brand: string | null
+          budget_usd: number
+          created_at: string
+          ends_at: string | null
+          goal: string | null
+          id: string
+          language: string
+          name: string
+          platforms: string[]
+          spent_usd: number
+          starts_at: string | null
+          status: string
+          strategy: Json
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_mode?: string
+          brand?: string | null
+          budget_usd?: number
+          created_at?: string
+          ends_at?: string | null
+          goal?: string | null
+          id?: string
+          language?: string
+          name: string
+          platforms?: string[]
+          spent_usd?: number
+          starts_at?: string | null
+          status?: string
+          strategy?: Json
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_mode?: string
+          brand?: string | null
+          budget_usd?: number
+          created_at?: string
+          ends_at?: string | null
+          goal?: string | null
+          id?: string
+          language?: string
+          name?: string
+          platforms?: string[]
+          spent_usd?: number
+          starts_at?: string | null
+          status?: string
+          strategy?: Json
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      publishing_platforms: {
+        Row: {
+          category: string
+          created_at: string
+          enabled: boolean
+          id: string
+          label_ar: string
+          label_en: string
+          label_ku: string | null
+          limits: Json
+          platform_key: string
+          profile: Json
+          requires_connection: boolean
+          risk_rules: Json
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label_ar: string
+          label_en: string
+          label_ku?: string | null
+          limits?: Json
+          platform_key: string
+          profile?: Json
+          requires_connection?: boolean
+          risk_rules?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label_ar?: string
+          label_en?: string
+          label_ku?: string | null
+          limits?: Json
+          platform_key?: string
+          profile?: Json
+          requires_connection?: boolean
+          risk_rules?: Json
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2591,6 +2856,117 @@ export type Database = {
           notes?: string | null
           tool_key?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      trust_events: {
+        Row: {
+          created_at: string
+          delta: number
+          entity_key: string
+          entity_type: string
+          evidence: Json
+          id: string
+          reason: string
+          run_id: string | null
+          score_after: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delta?: number
+          entity_key: string
+          entity_type: string
+          evidence?: Json
+          id?: string
+          reason: string
+          run_id?: string | null
+          score_after?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          entity_key?: string
+          entity_type?: string
+          evidence?: Json
+          id?: string
+          reason?: string
+          run_id?: string | null
+          score_after?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      trust_profiles: {
+        Row: {
+          avg_confidence: number | null
+          avg_cost_usd: number | null
+          avg_latency_ms: number | null
+          contradictions: number
+          created_at: string
+          dimensions: Json
+          entity_key: string
+          entity_type: string
+          evidence: Json
+          failures: number
+          history: Json
+          id: string
+          last_evaluated_at: string | null
+          prediction_accuracy: number | null
+          samples: number
+          scope: string
+          successes: number
+          trust_score: number
+          updated_at: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          avg_confidence?: number | null
+          avg_cost_usd?: number | null
+          avg_latency_ms?: number | null
+          contradictions?: number
+          created_at?: string
+          dimensions?: Json
+          entity_key: string
+          entity_type: string
+          evidence?: Json
+          failures?: number
+          history?: Json
+          id?: string
+          last_evaluated_at?: string | null
+          prediction_accuracy?: number | null
+          samples?: number
+          scope?: string
+          successes?: number
+          trust_score?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          avg_confidence?: number | null
+          avg_cost_usd?: number | null
+          avg_latency_ms?: number | null
+          contradictions?: number
+          created_at?: string
+          dimensions?: Json
+          entity_key?: string
+          entity_type?: string
+          evidence?: Json
+          failures?: number
+          history?: Json
+          id?: string
+          last_evaluated_at?: string | null
+          prediction_accuracy?: number | null
+          samples?: number
+          scope?: string
+          successes?: number
+          trust_score?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
