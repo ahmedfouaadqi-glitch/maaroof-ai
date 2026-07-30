@@ -32,8 +32,9 @@ export default function SiteBackground() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 -z-10"
       style={{
-        background:
-          "radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--primary) 18%, transparent) 0%, transparent 60%), radial-gradient(90% 60% at 80% 100%, color-mix(in oklab, var(--accent) 14%, transparent) 0%, transparent 65%)",
+        backgroundColor: "var(--background)",
+        backgroundImage:
+          "radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--primary) 20%, transparent) 0%, transparent 62%), radial-gradient(90% 60% at 85% 100%, color-mix(in oklab, var(--accent) 16%, transparent) 0%, transparent 68%), radial-gradient(80% 55% at 10% 55%, color-mix(in oklab, var(--primary) 12%, transparent) 0%, transparent 70%)",
       }}
     />
   );
