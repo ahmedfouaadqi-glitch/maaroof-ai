@@ -1538,6 +1538,179 @@ export type Database = {
         }
         Relationships: []
       }
+      hermes_task_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          summary: string | null
+          task_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          summary?: string | null
+          task_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          summary?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hermes_task_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "hermes_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hermes_tasks: {
+        Row: {
+          approval_level: string
+          business_goal: string | null
+          category: string
+          cost_budget_usd: number | null
+          created_at: string
+          created_by: string
+          deadline: string | null
+          dependencies: string[]
+          description: string | null
+          execution_budget_ms: number | null
+          execution_mode: string
+          expected_output: string | null
+          expert_assignment: string[]
+          finish_at: string | null
+          id: string
+          knowledge_sources: Json
+          languages: string[]
+          meta: Json
+          priority: number
+          progress: number
+          recurring_schedule: string | null
+          required_mcp: string[]
+          required_models: string[]
+          required_tools: string[]
+          result: Json
+          risk_level: string
+          schedule_id: string | null
+          spent_tokens: number
+          spent_usd: number
+          start_at: string | null
+          status: string
+          sub_agent_assignment: string[]
+          timezone: string
+          title: string
+          token_budget: number | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_level?: string
+          business_goal?: string | null
+          category?: string
+          cost_budget_usd?: number | null
+          created_at?: string
+          created_by: string
+          deadline?: string | null
+          dependencies?: string[]
+          description?: string | null
+          execution_budget_ms?: number | null
+          execution_mode?: string
+          expected_output?: string | null
+          expert_assignment?: string[]
+          finish_at?: string | null
+          id?: string
+          knowledge_sources?: Json
+          languages?: string[]
+          meta?: Json
+          priority?: number
+          progress?: number
+          recurring_schedule?: string | null
+          required_mcp?: string[]
+          required_models?: string[]
+          required_tools?: string[]
+          result?: Json
+          risk_level?: string
+          schedule_id?: string | null
+          spent_tokens?: number
+          spent_usd?: number
+          start_at?: string | null
+          status?: string
+          sub_agent_assignment?: string[]
+          timezone?: string
+          title: string
+          token_budget?: number | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_level?: string
+          business_goal?: string | null
+          category?: string
+          cost_budget_usd?: number | null
+          created_at?: string
+          created_by?: string
+          deadline?: string | null
+          dependencies?: string[]
+          description?: string | null
+          execution_budget_ms?: number | null
+          execution_mode?: string
+          expected_output?: string | null
+          expert_assignment?: string[]
+          finish_at?: string | null
+          id?: string
+          knowledge_sources?: Json
+          languages?: string[]
+          meta?: Json
+          priority?: number
+          progress?: number
+          recurring_schedule?: string | null
+          required_mcp?: string[]
+          required_models?: string[]
+          required_tools?: string[]
+          result?: Json
+          risk_level?: string
+          schedule_id?: string | null
+          spent_tokens?: number
+          spent_usd?: number
+          start_at?: string | null
+          status?: string
+          sub_agent_assignment?: string[]
+          timezone?: string
+          title?: string
+          token_budget?: number | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hermes_tasks_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hermes_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_edges: {
         Row: {
           created_at: string
