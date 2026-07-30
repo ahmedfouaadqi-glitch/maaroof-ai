@@ -16,7 +16,7 @@ import { UserIntelligenceTab } from "./UserIntelligenceTab";
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
-  | "finance" | "health" | "user_intel" | "eqi" | "personality";
+  | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws";
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
