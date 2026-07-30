@@ -560,6 +560,10 @@ function LawsControls({ settings, set }: { settings: Record<string, any>; set: (
 function GovernanceControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
   const mg = (settings.model_governance || {}) as Record<string, any>;
   const dec = (settings.decision || {}) as Record<string, any>;
+  const pub = (settings.publishing || {}) as Record<string, any>;
+  const tr = (settings.trust_engine || {}) as Record<string, any>;
+  const ppub = (k: string, v: any) => set("publishing", { ...pub, [k]: v });
+  const ptr = (k: string, v: any) => set("trust_engine", { ...tr, [k]: v });
   const pmg = (k: string, v: any) => set("model_governance", { ...mg, [k]: v });
   const pdec = (k: string, v: any) => set("decision", { ...dec, [k]: v });
   const flag = (
@@ -596,14 +600,78 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
 
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
-          <input type="checkbox" checked={!!dec.trace_enabled} onChange={(e) => pdec("trace_enabled", e.target.checked)} />
+          <input type="checkbox" checked={!!dec.enabled} onChange={(e) => pdec("enabled", e.target.checked)} />
           <span className="font-semibold text-sm">ذكاء القرار التنفيذي (الجزء 13)</span>
         </label>
         <p className="text-xs text-muted-foreground -mt-1">توثيق مراحل القرار من فهم الهدف حتى التعلّم، مع البدائل المرفوضة وسببها — بلا أي نداء نموذج إضافي.</p>
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${dec.trace_enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(dec, pdec, "alternatives_enabled", "تسجيل البدائل المرفوضة", "لكل قرار: ما الذي رُفض ولماذا.")}
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${dec.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(dec, pdec, "trace_enabled", "توثيق مسار القرار", "حفظ مراحل القرار العشرين في سجل قابل للمراجعة.")}
+          {flag(dec, pdec, "cost_aware_alternatives", "بدائل واعية بالتكلفة", "المفاضلة بين الاستراتيجيات وفق التكلفة والزمن المتوقعين.")}
           {flag(dec, pdec, "score_enabled", "درجة جودة القرار", "درجة مركّبة من التغطية والثقة والتكلفة.")}
-          {flag(dec, pdec, "cost_aware", "قرارات واعية بالتكلفة", "المفاضلة بين الاستراتيجيات وفق التكلفة والزمن المتوقعين.")}
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!pub.enabled} onChange={(e) => ppub("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">منظومة النشر التنفيذي (الجزء 14)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">النشر يصبح قدرة كاملة: استراتيجية لكل منصة، حملات بميزانية، وموافقات مرنة. عند الإطفاء يبقى النشر اليدوي الحالي كما هو.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${pub.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(pub, ppub, "strategy_enabled", "استراتيجية لكل منصة", "محتوى مبني على سلوك جمهور كل منصة لا نسخة موحّدة.")}
+          {flag(pub, ppub, "campaigns_enabled", "الحملات والميزانيات", "تجميع المنشورات في حملة بهدف وسقف إنفاق.")}
+          {flag(pub, ppub, "auto_publish_enabled", "النشر التلقائي المجدول", "لا يعمل إلا مع وضع موافقة يسمح بذلك.")}
+          {flag(pub, ppub, "metrics_enabled", "قياس الأداء بعد النشر", "وصول وتفاعل لكل منشور لتغذية التعلّم.")}
+        </div>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${pub.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          <label className="rounded border p-2 text-xs space-y-1">
+            <span className="block font-medium">وضع الموافقة الافتراضي</span>
+            <select
+              className="w-full rounded border bg-background p-1"
+              value={pub.default_approval_mode || "always_ask"}
+              onChange={(e) => ppub("default_approval_mode", e.target.value)}
+            >
+              <option value="always_ask">اسأل دائماً</option>
+              <option value="approve_once">وافق مرة واحدة</option>
+              <option value="campaign_approval">موافقة على مستوى الحملة</option>
+              <option value="workspace_policy">حسب سياسة مساحة العمل</option>
+              <option value="fully_automatic">تلقائي بالكامل</option>
+              <option value="emergency_stop">إيقاف طارئ</option>
+            </select>
+          </label>
+          <label className="rounded border p-2 text-xs space-y-1">
+            <span className="block font-medium">حد المنشورات اليومي لكل مستخدم</span>
+            <input
+              type="number" min={1} max={200}
+              className="w-full rounded border bg-background p-1"
+              value={Number(pub.daily_publication_cap ?? 20)}
+              onChange={(e) => ppub("daily_publication_cap", Number(e.target.value) || 1)}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={!!tr.enabled} onChange={(e) => ptr("enabled", e.target.checked)} />
+          <span className="font-semibold text-sm">هندسة الثقة التنفيذية (الجزء 15)</span>
+        </label>
+        <p className="text-xs text-muted-foreground -mt-1">لكل خبير ونموذج وأداة سجلّ ثقة حيّ يتغيّر بعد كل تنفيذ، مع مسار تحقّق من 13 مرحلة قبل أي توصية. الحساب محلي بلا تكلفة إضافية.</p>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${tr.enabled ? "" : "opacity-50 pointer-events-none"}`}>
+          {flag(tr, ptr, "pipeline_enabled", "مسار التحقق (13 مرحلة)", "من المصدر إلى التوصية التنفيذية.")}
+          {flag(tr, ptr, "profiles_enabled", "ملفات الثقة الحيّة", "درجة ثقة متحركة لكل كيان بدل تقدير لحظي.")}
+          {flag(tr, ptr, "executive_score_enabled", "درجة القرار التنفيذي", "قيمة أعمال وأثر مالي ومستقبلي وإمكانية تراجع.")}
+          {flag(tr, ptr, "weak_link_alerts", "تنبيه الحلقات الضعيفة", "يكشف الخبير أو النموذج الأقل موثوقية.")}
+          <label className="rounded border p-2 text-xs space-y-1">
+            <span className="block font-medium">حد الثقة الأدنى</span>
+            <input
+              type="number" min={0} max={100}
+              className="w-full rounded border bg-background p-1"
+              value={Number(tr.min_trust ?? 55)}
+              onChange={(e) => ptr("min_trust", Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+            />
+            <span className="block text-[11px] text-muted-foreground">دون هذا الحد تُعرض الإجابة كمسودة تحتاج تحققاً بشرياً.</span>
+          </label>
         </div>
       </div>
     </div>
