@@ -218,6 +218,234 @@ export type Database = {
           },
         ]
       }
+      ai_model_benchmarks: {
+        Row: {
+          accuracy: number | null
+          batch_id: string
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          latency_ms: number | null
+          model_key: string
+          output_sample: string | null
+          reasoning_score: number | null
+          task: string
+          tokens: number
+          usd: number
+        }
+        Insert: {
+          accuracy?: number | null
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          model_key: string
+          output_sample?: string | null
+          reasoning_score?: number | null
+          task: string
+          tokens?: number
+          usd?: number
+        }
+        Update: {
+          accuracy?: number | null
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          model_key?: string
+          output_sample?: string | null
+          reasoning_score?: number | null
+          task?: string
+          tokens?: number
+          usd?: number
+        }
+        Relationships: []
+      }
+      ai_model_health: {
+        Row: {
+          calls: number
+          failures: number
+          last_call_at: string | null
+          last_error: string | null
+          last_status: string | null
+          model_key: string
+          total_latency_ms: number
+          total_tokens: number
+          total_usd: number
+          updated_at: string
+        }
+        Insert: {
+          calls?: number
+          failures?: number
+          last_call_at?: string | null
+          last_error?: string | null
+          last_status?: string | null
+          model_key: string
+          total_latency_ms?: number
+          total_tokens?: number
+          total_usd?: number
+          updated_at?: string
+        }
+        Update: {
+          calls?: number
+          failures?: number
+          last_call_at?: string | null
+          last_error?: string | null
+          last_status?: string | null
+          model_key?: string
+          total_latency_ms?: number
+          total_tokens?: number
+          total_usd?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_model_proposals: {
+        Row: {
+          cons: Json
+          created_at: string
+          current_cost_usd: number | null
+          expected_cost_usd: number | null
+          expected_gain_pct: number | null
+          id: string
+          impact: Json
+          kind: string
+          migration_plan: string | null
+          model_key: string
+          pros: Json
+          reason: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risks: Json
+          rollback_plan: string | null
+          status: string
+          test_plan: string | null
+        }
+        Insert: {
+          cons?: Json
+          created_at?: string
+          current_cost_usd?: number | null
+          expected_cost_usd?: number | null
+          expected_gain_pct?: number | null
+          id?: string
+          impact?: Json
+          kind?: string
+          migration_plan?: string | null
+          model_key: string
+          pros?: Json
+          reason: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risks?: Json
+          rollback_plan?: string | null
+          status?: string
+          test_plan?: string | null
+        }
+        Update: {
+          cons?: Json
+          created_at?: string
+          current_cost_usd?: number | null
+          expected_cost_usd?: number | null
+          expected_gain_pct?: number | null
+          id?: string
+          impact?: Json
+          kind?: string
+          migration_plan?: string | null
+          model_key?: string
+          pros?: Json
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risks?: Json
+          rollback_plan?: string | null
+          status?: string
+          test_plan?: string | null
+        }
+        Relationships: []
+      }
+      ai_models: {
+        Row: {
+          capabilities: Json
+          cost_in_usd_per_mtok: number
+          cost_out_usd_per_mtok: number
+          created_at: string
+          id: string
+          languages: Json
+          last_evaluated_at: string | null
+          latency_ms: number | null
+          limitations: Json
+          model_key: string
+          notes: string | null
+          provider: string
+          recommended_use_cases: Json
+          released_at: string | null
+          reliability: number
+          speed: number
+          status: string
+          strengths: Json
+          supported_mcp: Json
+          supported_tools: Json
+          updated_at: string
+          version: string | null
+          weaknesses: Json
+        }
+        Insert: {
+          capabilities?: Json
+          cost_in_usd_per_mtok?: number
+          cost_out_usd_per_mtok?: number
+          created_at?: string
+          id?: string
+          languages?: Json
+          last_evaluated_at?: string | null
+          latency_ms?: number | null
+          limitations?: Json
+          model_key: string
+          notes?: string | null
+          provider: string
+          recommended_use_cases?: Json
+          released_at?: string | null
+          reliability?: number
+          speed?: number
+          status?: string
+          strengths?: Json
+          supported_mcp?: Json
+          supported_tools?: Json
+          updated_at?: string
+          version?: string | null
+          weaknesses?: Json
+        }
+        Update: {
+          capabilities?: Json
+          cost_in_usd_per_mtok?: number
+          cost_out_usd_per_mtok?: number
+          created_at?: string
+          id?: string
+          languages?: Json
+          last_evaluated_at?: string | null
+          latency_ms?: number | null
+          limitations?: Json
+          model_key?: string
+          notes?: string | null
+          provider?: string
+          recommended_use_cases?: Json
+          released_at?: string | null
+          reliability?: number
+          speed?: number
+          status?: string
+          strengths?: Json
+          supported_mcp?: Json
+          supported_tools?: Json
+          updated_at?: string
+          version?: string | null
+          weaknesses?: Json
+        }
+        Relationships: []
+      }
       analyses: {
         Row: {
           authority: number | null
@@ -618,6 +846,75 @@ export type Database = {
           title_en?: string | null
           title_ku?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      decision_traces: {
+        Row: {
+          alternatives: Json
+          capabilities: Json
+          confidence: number | null
+          cost_usd: number
+          created_at: string
+          duration_ms: number | null
+          experts: Json
+          id: string
+          mcp: Json
+          models: Json
+          payload: Json
+          risk: number | null
+          run_id: string | null
+          score: number | null
+          seq: number
+          stage: string
+          summary: string | null
+          tools: Json
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          alternatives?: Json
+          capabilities?: Json
+          confidence?: number | null
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number | null
+          experts?: Json
+          id?: string
+          mcp?: Json
+          models?: Json
+          payload?: Json
+          risk?: number | null
+          run_id?: string | null
+          score?: number | null
+          seq?: number
+          stage: string
+          summary?: string | null
+          tools?: Json
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          alternatives?: Json
+          capabilities?: Json
+          confidence?: number | null
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number | null
+          experts?: Json
+          id?: string
+          mcp?: Json
+          models?: Json
+          payload?: Json
+          risk?: number | null
+          run_id?: string | null
+          score?: number | null
+          seq?: number
+          stage?: string
+          summary?: string | null
+          tools?: Json
+          user_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
