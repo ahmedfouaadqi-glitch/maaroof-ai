@@ -439,7 +439,6 @@ export async function hermesReply(input: {
     { conversation_id: conversationId, user_id: input.userId, role: "user", content: input.message },
     { conversation_id: conversationId, user_id: input.userId, role: "assistant", content: reply, tokens, usd, model: HERMES_MODEL, evidence: { observatory_window: observatory.window_days } },
   ]);
-  await db().rpc; // no-op guard for typed clients
   await db().from("hermes_conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
 
   // Founder-facing steward work is system cost, never a user balance.
