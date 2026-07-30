@@ -30,6 +30,8 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "policy_scores",  label: "السياسات",              Icon: ShieldCheck, group: "scores" },
   { k: "eqi",            label: "مؤشر الجودة التنفيذية", Icon: Gauge,       group: "scores" },
   { k: "personality",    label: "شخصيات الوكلاء",        Icon: Fingerprint, group: "scores" },
+  { k: "laws",           label: "الامتثال الدستوري",     Icon: ShieldCheck, group: "scores" },
+
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
   { k: "user_intel",     label: "ذكاء المستخدمين",       Icon: ScrollText,  group: "ops" },
