@@ -4,6 +4,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 type Body = {
   brand_name: string;
@@ -129,7 +130,9 @@ export const Route = createFileRoute("/api/applied-ranking")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "applied_ranking", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/applied-ranking" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
+          const _chg = await chargeTokens({ userId, toolKey: "applied_ranking", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/applied-ranking" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota: counts against monthly_analyses (premium tool, costs 2 by default but 1 per call here)
@@ -216,7 +219,7 @@ Return the JSON now. All text fields MUST be in language code "${lang}".`;
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: _MODEL,
               messages: [
                 { role: "system", content: `${SYSTEM}\n\n${LANG_INSTR[lang]}` },
                 { role: "user", content: userMsg },
@@ -235,7 +238,7 @@ Return the JSON now. All text fields MUST be in language code "${lang}".`;
           try {
             const _u: any = (j as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/applied-ranking", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/applied-ranking", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
 
           const content = String(j?.choices?.[0]?.message?.content || "{}");

@@ -4,6 +4,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { describeMarket } from "@/lib/geo-scope.server";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 
 const COST = 3;
@@ -25,7 +26,9 @@ export const Route = createFileRoute("/api/geo-strategist")({
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
         const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "geo_strategist", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/geo-strategist" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
+          const _chg = await chargeTokens({ userId, toolKey: "geo_strategist", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/geo-strategist" } });
         if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -76,7 +79,7 @@ ${pack.context_block}`;
           const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
             headers: lovableAiHeaders(lovableKey),
-            body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+            body: JSON.stringify({ model: _MODEL, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
           });
           if (r.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (r.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
@@ -84,7 +87,7 @@ ${pack.context_block}`;
           try {
             const _u: any = (j as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash", endpoint: "/api/geo-strategist", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/geo-strategist", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
           parsed = extractJsonObject(String(j?.choices?.[0]?.message?.content || "{}")) || {};
         } catch {}

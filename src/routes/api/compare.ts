@@ -8,6 +8,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
@@ -92,7 +93,9 @@ export const Route = createFileRoute("/api/compare")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-3-flash-preview", endpoint: "/api/compare" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-3-flash-preview");
+          const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           let chargeUsage: (() => Promise<void>) | null = null;
@@ -313,7 +316,7 @@ export const Route = createFileRoute("/api/compare")({
           });
 
           // Single cheap call (saves credits)
-          let resp = await callModel("google/gemini-3-flash-preview");
+          let resp = await callModel(_MODEL);
           if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
           if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
           if (!resp.ok) {
@@ -326,7 +329,7 @@ export const Route = createFileRoute("/api/compare")({
           try {
             const _u: any = (data as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-3-flash-preview", endpoint: "/api/compare", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
           let content = String(data?.choices?.[0]?.message?.content || "{}");
           let parsed: any = extractJsonObject(content) || {};
@@ -396,7 +399,7 @@ export const Route = createFileRoute("/api/compare")({
               lang: lang as any,
               market: market.region,
               apiKey,
-              model: "google/gemini-3-flash-preview",
+              model: _MODEL,
             });
           } catch (e) {
             console.warn("[api/compare] platform probe failed:", e instanceof Error ? e.message : e);

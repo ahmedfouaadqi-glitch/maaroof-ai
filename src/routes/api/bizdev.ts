@@ -4,6 +4,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
+import { resolveToolModel } from "@/lib/ai-engines.server";
 
 
 type Body = {
@@ -163,7 +164,9 @@ export const Route = createFileRoute("/api/bizdev")({
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "bizdev", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/bizdev" } });
+          // Governed model selection (Part 12 registry) with the legacy default as fallback.
+          const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          const _chg = await chargeTokens({ userId, toolKey: "bizdev", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/bizdev" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -217,7 +220,7 @@ Return the JSON business-development plan now. All string fields MUST be in lang
             method: "POST",
             headers: lovableAiHeaders(apiKey),
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
+              model: _MODEL,
               messages: [
                 { role: "system", content: `${qualityShell(SYSTEM)}\n\n${langGuide[lang] || langGuide.en}` },
                 { role: "user", content: `${userPrompt}\n\n${pack.context_block}` },
@@ -237,7 +240,7 @@ Return the JSON business-development plan now. All string fields MUST be in lang
           try {
             const _u: any = (data as any)?.usage || {};
             const { enrichLedger: _el } = await import("@/lib/spend.server");
-            await _el({ runId: _runId, provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/bizdev", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
+            await _el({ runId: _runId, provider: "lovable_ai", model: _MODEL, endpoint: "/api/bizdev", inputTokens: Number(_u.prompt_tokens)||0, outputTokens: Number(_u.completion_tokens)||0, latencyMs: Date.now() - _t0 });
           } catch {}
 
           const content = String(data?.choices?.[0]?.message?.content || "{}");
