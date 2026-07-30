@@ -5,18 +5,20 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Activity, Brain, Coins, ShieldCheck, Sparkles, Network, Bot,
-  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge,
+  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap,
 } from "lucide-react";
 import { MaaroofAdminTab } from "./MaaroofAdminTab";
 import { SystemHealthTab } from "./SystemHealthTab";
 import { AdminFinanceTab } from "./AdminFinanceTab";
 import { CognitiveInsightsTab } from "./CognitiveInsightsTab";
 import { UserIntelligenceTab } from "./UserIntelligenceTab";
+import { ExpertAcademySection, LearningBudgetSection, KnowledgeObservatorySection } from "./ExpertAcademyPanels";
 
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
   | "expert_scores" | "model_scores" | "mcp_scores" | "policy_scores"
-  | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws";
+  | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws"
+  | "academy" | "learning_budget" | "knowledge";
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
   { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
@@ -31,6 +33,10 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "eqi",            label: "مؤشر الجودة التنفيذية", Icon: Gauge,       group: "scores" },
   { k: "personality",    label: "شخصيات الوكلاء",        Icon: Fingerprint, group: "scores" },
   { k: "laws",           label: "الامتثال الدستوري",     Icon: ShieldCheck, group: "scores" },
+
+  { k: "academy",        label: "أكاديمية الخبراء",       Icon: GraduationCap, group: "learning" },
+  { k: "knowledge",      label: "مرصد المعرفة الحيّة",     Icon: Network,     group: "learning" },
+  { k: "learning_budget",label: "ميزانية التعلّم",         Icon: Coins,       group: "learning" },
 
   { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
@@ -83,6 +89,10 @@ export function MaaroofIntelligenceCenter() {
         {section === "eqi"            && <EqiSection />}
         {section === "personality"    && <PersonalitySection />}
         {section === "laws"           && <LawsComplianceSection />}
+
+        {section === "academy"        && <ExpertAcademySection />}
+        {section === "knowledge"      && <KnowledgeObservatorySection />}
+        {section === "learning_budget" && <LearningBudgetSection />}
 
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
