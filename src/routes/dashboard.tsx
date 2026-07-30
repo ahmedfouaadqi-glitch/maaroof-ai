@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
+import { BlurText } from "@/components/motion/BlurText";
 import { Sandbox } from "@/components/Sandbox";
 import { PostSuggester } from "@/components/PostSuggester";
 import { CompetitorCompare } from "@/components/CompetitorCompare";
@@ -91,9 +92,15 @@ function DashboardPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
-        <h1 className="break-words font-display text-2xl font-bold text-gradient sm:text-3xl">
-          {t("dash_welcome")}, {profile?.full_name || profile?.email}
-        </h1>
+        <BlurText
+          as="h1"
+          text={`${t("dash_welcome")}, ${profile?.full_name || profile?.email || ""}`}
+          delay={60}
+          stepDuration={0.26}
+          center={false}
+          segmentClassName="text-gradient"
+          className="break-words font-display text-2xl font-bold sm:text-3xl"
+        />
         <p className="mt-1 text-sm text-muted-foreground">{profile?.email}</p>
 
         <div className="mt-6"><TokensBar /></div>

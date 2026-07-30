@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BlurText } from "@/components/motion/BlurText";
 import { SiteHeader } from "@/components/SiteHeader";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
@@ -77,7 +78,7 @@ function Page() {
     <div className="min-h-screen text-foreground">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12 prose prose-invert">
-        <h1 className="text-3xl font-bold mb-4">GEO vs AEO — what's the difference?</h1>
+        <BlurText as="h1" text="GEO vs AEO — what's the difference?" delay={70} stepDuration={0.28} center={false} className="text-3xl font-bold mb-4" />
         <p className="text-muted-foreground mb-8">
           Generative Engine Optimization (GEO) and Answer Engine Optimization (AEO) sound alike,
           but they optimize for different surfaces. This guide breaks down what each one targets,
