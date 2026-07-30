@@ -1054,6 +1054,43 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try { await proposeModelUpgrade(MODEL); } catch {}
     }
 
+    // Part 16 — close the run anchor: measure drift against the anchored
+    // identity, compute the state health score, and stamp a rollback point.
+    if (anchorCfg.enabled && runAnchor?.id) {
+      try {
+        const { detectDrift, stateHealth, closeRunAnchor } = await import("@/lib/maaroof/state.server");
+        const okSteps = results.filter((r: any) => r.ok).length;
+        const drifts = anchorCfg.drift_detection === false ? [] : detectDrift({
+          anchor: runAnchor,
+          goal: ctx.goal,
+          planSummary: JSON.stringify(steps.map((s: any) => s.tool || s.title || "")).slice(0, 2000),
+          language: ctx.language,
+          workspaceId: ctx.workspaceId || null,
+          trustScore: typeof (trust as any)?.pipeline?.score === "number" ? (trust as any).pipeline.score : null,
+          failedSteps: results.length - okSteps,
+          totalSteps: results.length,
+        });
+        const health = stateHealth({
+          drifts,
+          validationOk: anchorValidation ? !!anchorValidation.ok : true,
+          trustScore: typeof (trust as any)?.pipeline?.score === "number" ? (trust as any).pipeline.score : null,
+          qualityScore: typeof qualityScore === "number" ? qualityScore : null,
+          complianceVerdict: (compliance as any)?.verdict ?? null,
+          successRatio: results.length ? okSteps / results.length : 1,
+          versions: runAnchor.version,
+        });
+        await closeRunAnchor({
+          anchorId: runAnchor.id, level: "run", scopeId: runId,
+          userId: ctx.userId, runId, drifts, health,
+          costUsd: totalUsd, tokens: totalTokens,
+        });
+        await ctx.emit("state_health", { health, drift: drifts });
+      } catch (e) {
+        await ctx.emit("state_anchor_error", { message: String((e as any)?.message || e) });
+      }
+    }
+
+
     // 6) Persist totals + summarize to memory + ledger LLM cost
     await db().from("maaroof_runs").update({
       status: "done",
