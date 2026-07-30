@@ -1,30 +1,24 @@
 ## Goal
-Adopt the React Bits **Lightfall** WebGL effect as the ambient background for the whole project (all pages), tuned to MAAROOF's brand and readability standards — not as a one-off hero widget.
+Make the Lightfall background actually visible on the home page and on every other page of the site — right now it is mounted globally, but opaque surfaces paint over it, so it only shows faintly at the top of the home hero.
 
-## What gets built
+## What's blocking it (verified)
+- `src/styles.css` sets an opaque `background: var(--background)` on `html, body`, which sits above the fixed `-z-10` effect layer on most scroll positions.
+- Four routes wrap their whole page in `min-h-screen bg-background`, fully hiding the layer: `maaroof.tsx`, `maaroof.memory.tsx`, `guide.geo-vs-aeo.tsx`, `guide.arabic-kurdish-geo.tsx`.
+- Home (`routes/index.tsx`) itself is transparent, but individual sections below the hero use solid section backgrounds.
 
-1. **Dependency**: install `ogl`.
+## Changes
 
-2. **Component** — `src/components/backgrounds/Lightfall.tsx` + `Lightfall.css`
-   - Full source from the spec, converted to TypeScript with a typed props interface (all documented props kept, same defaults).
-   - Client-only safety: WebGL init stays inside `useEffect`, and the effect array is stabilized so a new `colors` array literal doesn't rebuild the renderer every render (memoize the colors key).
-   - Graceful no-op if WebGL context creation fails (falls back to nothing rendered, page stays intact).
+1. **Global base layer** — `src/styles.css`
+   - Keep `html` painting the solid brand background (so there is never a white flash), and make `body` transparent so the fixed Lightfall canvas shows through the full scroll height.
 
-3. **Global wrapper** — `src/components/backgrounds/SiteBackground.tsx`
-   - Renders Lightfall in a `fixed inset-0 -z-10 pointer-events-none` layer so it sits behind every page without capturing clicks.
-   - Respects `prefers-reduced-motion` → renders a static brand gradient instead.
-   - Lowers cost on small screens / low-end devices: reduced `dpr`, fewer streaks; pauses when the tab is hidden.
-   - Colors pulled from the existing brand tokens rather than the demo blue/pink, with low `opacity` + `backgroundGlow` so text contrast and the existing surfaces stay readable in both light and dark themes.
+2. **Un-block full-page wrappers**
+   - In the four routes above, drop `bg-background` from the outermost `min-h-screen` wrapper (keep `min-h-screen`). Cards, headers, and panels inside keep their own surfaces, so contrast is unchanged.
 
-4. **Wire-up** — `src/routes/__root.tsx`
-   - Mount `<SiteBackground />` once inside `RootComponent`, above `<Outlet />` in DOM order but behind it visually. Every route inherits it automatically; no per-page edits.
+3. **Home page visibility** — `src/routes/index.tsx`
+   - Replace solid section backgrounds with translucent equivalents (`bg-background/70` style surfaces + backdrop blur) so the streaks read continuously down the page instead of only behind the hero.
 
-5. **Existing hero**: the `OrbitImages` engine orbit stays exactly as is — Lightfall renders behind it, tuned so it doesn't compete with the orbiting logos.
+4. **Tune the effect for full-page use** — `src/components/backgrounds/SiteBackground.tsx`
+   - Slightly raise opacity/glow and extend the ambient gradient so the effect stays present below the fold, while keeping text contrast comfortable in light and dark themes.
 
 ## Verification
-- Visual capture of the home page plus one tool page and one admin page, light and dark, confirming readability and that the background doesn't block interaction.
-- Confirm reduced-motion fallback and that no console/WebGL errors appear.
-
-## Technical notes
-- Only presentation code changes: two new component files, one dependency, one root-route mount.
-- `mouseInteraction` will be enabled on desktop only (disabled under a touch/small-screen check) to avoid pointer cost on mobile.
+- Screenshots at top and mid-scroll of: home, `/maaroof`, one guide page, and one admin page — desktop and mobile widths, light and dark — confirming the background is visible everywhere and all text stays readable.
