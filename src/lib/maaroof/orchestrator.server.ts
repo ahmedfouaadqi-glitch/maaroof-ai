@@ -609,8 +609,56 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("trust", trust);
       try { await db().from("maaroof_runs").update({ trust }).eq("id", runId); } catch {}
     }
+    // PART 8 — Constitutional compliance gate. Evaluates the 30 laws against
+    // signals the run already produced (zero extra LLM cost). When
+    // enforce_hard_laws is on, a hard-law breach downgrades the answer from a
+    // final recommendation to a flagged draft instead of hiding the breach.
+    let compliance: LawEvaluation | null = null;
+    if (laws.enabled) {
+      const councilConfsAll = decisionLog
+        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+        .map((d: any) => d.confidence as number);
+      compliance = evaluateLaws(
+        {
+          hasEnvision: !!envision,
+          planSteps: steps.length,
+          memoriesRecalled: memories.length,
+          councilOpinions: decisionLog.filter((d: any) => d.phase === "council" && !d.error).length,
+          councilAvgConfidence: councilConfsAll.length
+            ? Math.round(councilConfsAll.reduce((a, b) => a + b, 0) / councilConfsAll.length)
+            : null,
+          capabilityChoices,
+          hasAgent: !!activeAgent,
+          reflections: results.length >= 3 ? Math.floor(results.length / 3) : 0,
+          toolResults: results.map((r) => ({ ok: !!r.ok })),
+          trust,
+          timingVerdict: timing?.verdict ?? null,
+          qualityScore: null,
+          decisionLogEntries: decisionLog.length,
+          executionMode,
+          workspaceId: ctx.workspaceId || null,
+          memoryScoped: !!ctx.workspaceId,
+          consent: null,
+          totalUsd,
+          hasWorkspaceContext: !!workspaceProfile,
+          hasGenome: !!(exec.enabled && exec.genome_enabled && ctx.workspaceId),
+          needsHuman: needsHumanFlag,
+          finalTextLength: finalText.length,
+        },
+        { minTrust: Number(laws.min_trust ?? 55) },
+      );
+      if (laws.enforce_hard_laws && compliance.verdict === "violation") {
+        finalText = hardLawNotice(compliance, ctx.language) + finalText;
+      }
+      await ctx.emit("compliance", compliance);
+      if (laws.log_compliance !== false) {
+        try { await db().from("maaroof_runs").update({ compliance }).eq("id", runId); } catch {}
+      }
+    }
+
     await ctx.emit("final", { text: finalText });
-    await logMsg("assistant", { text: finalText, trust }, finalResp.tokens, finalResp.usd);
+    await logMsg("assistant", { text: finalText, trust, compliance }, finalResp.tokens, finalResp.usd);
+
 
     // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
     // observed signals to avoid additional LLM cost. Flag-gated.
