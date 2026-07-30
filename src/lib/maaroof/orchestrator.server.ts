@@ -820,6 +820,82 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("trust", trust);
       try { await db().from("maaroof_runs").update({ trust }).eq("id", runId); } catch {}
     }
+
+    // PART 15 — Executive Trust Architecture. Evolves the Part 7 envelope into a
+    // measured 13-stage pipeline plus living per-entity trust profiles. Pure
+    // arithmetic over signals the run already produced: zero extra model cost.
+    const trustCfg = (settings as any).trust_engine || {};
+    if (trustCfg.enabled) {
+      try {
+        const { evaluateTrustPipeline, executiveDecisionScore, recordTrustEvent } =
+          await import("@/lib/maaroof/trust.server");
+        const councilConfs2 = decisionLog
+          .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+          .map((d: any) => d.confidence as number);
+        const okResults = results.filter((r) => r.ok).length;
+        const pipeline = trustCfg.pipeline_enabled === false ? null : evaluateTrustPipeline({
+          sources: results.filter((r) => r.ok).length,
+          evidence: Array.isArray(trust?.evidence) ? trust.evidence.length : (trust?.evidence_graph?.length || 0),
+          reasoningSteps: steps.length,
+          knowledgeNodes: memories.length,
+          expertConfidence: councilConfs2.length
+            ? Math.round(councilConfs2.reduce((a, b) => a + b, 0) / councilConfs2.length)
+            : null,
+          modelReliability: typeof trust?.confidence === "number" ? trust.confidence : null,
+          pastSuccessRate: results.length ? Math.round((okResults / results.length) * 100) : null,
+          historicalSamples: memories.length,
+          hasBusinessContext: !!workspaceProfile,
+          hasFutureSimulation: !!envision,
+          risks: Array.isArray(trust?.risks) ? trust.risks.length : 0,
+          contradictions: results.filter((r) => !r.ok).length,
+        });
+
+        const execScore = trustCfg.executive_score_enabled === false || !pipeline ? null : executiveDecisionScore({
+          trustScore: pipeline.score,
+          qualityScore: typeof trust?.confidence === "number" ? trust.confidence : null,
+          costUsd: totalUsd,
+          expectedValueUsd: null,
+          risks: Array.isArray(trust?.risks) ? trust.risks.length : 0,
+          alternatives: Array.isArray(trust?.alternatives) ? trust.alternatives.length : 0,
+          rollbackPossible: executionMode !== "execution",
+          futureImpact: null,
+        });
+
+        trust = { ...(trust || {}), pipeline, executive: execScore };
+        await ctx.emit("trust", trust);
+        try { await db().from("maaroof_runs").update({ trust }).eq("id", runId); } catch {}
+
+        if (trustCfg.profiles_enabled !== false) {
+          const ok = pipeline ? pipeline.score >= Number(trustCfg.min_trust ?? 55) : okResults > 0;
+          const jobs: Promise<any>[] = [];
+          for (const m of new Set(modelChoices.map((c: any) => c.model).filter(Boolean))) {
+            jobs.push(recordTrustEvent({
+              entityType: "model", entityKey: String(m), ok,
+              reason: "run_completed", runId, confidence: pipeline?.score ?? null,
+              costUsd: totalUsd, contradiction: (trust?.contradictions?.length || 0) > 0,
+            }));
+          }
+          for (const r of results) {
+            jobs.push(recordTrustEvent({
+              entityType: "tool", entityKey: String(r.tool), ok: !!r.ok,
+              reason: r.ok ? "tool_succeeded" : "tool_failed", runId,
+              confidence: pipeline?.score ?? null,
+            }));
+          }
+          if (activeAgent?.id) {
+            jobs.push(recordTrustEvent({
+              entityType: "agent", entityKey: String(activeAgent.id), ok,
+              reason: "run_completed", runId, userId: ctx.userId,
+              confidence: pipeline?.score ?? null, costUsd: totalUsd,
+            }));
+          }
+          await Promise.allSettled(jobs);
+        }
+      } catch (e) {
+        // Trust measurement must never break a run.
+        await ctx.emit("trust_error", { message: String((e as any)?.message || e) });
+      }
+    }
     // PART 8 — Constitutional compliance gate. Evaluates the 30 laws against
     // signals the run already produced (zero extra LLM cost). When
     // enforce_hard_laws is on, a hard-law breach downgrades the answer from a
