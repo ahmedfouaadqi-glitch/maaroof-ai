@@ -32,9 +32,14 @@
 
 .orbit-item {
   position: absolute;
+  /* Pin the offset-path origin to the box origin (RTL pages would otherwise
+     resolve the static position at the right edge and shift the whole orbit). */
+  left: 0;
+  top: 0;
   will-change: transform;
   user-select: none;
 }
+
 
 .orbit-center-content {
   position: absolute;
