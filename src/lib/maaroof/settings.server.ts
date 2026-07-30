@@ -341,6 +341,24 @@ const DEFAULTS: MaaroofSettings = {
     min_trust: 55,
     weak_link_alerts: true,
   },
+  state_anchor: {
+    enabled: false,
+    validate_before_execution: true,
+    drift_detection: true,
+    timeline_enabled: true,
+    recovery_enabled: false,
+    drift_threshold: 60,
+  },
+  hermes: {
+    enabled: false,
+    proposals_enabled: true,
+    founder_dna_enabled: true,
+    office_enabled: true,
+    office_model: "google/gemini-2.5-flash",
+    never_execute_without_approval: true,
+  },
+
+  },
 };
 
 
