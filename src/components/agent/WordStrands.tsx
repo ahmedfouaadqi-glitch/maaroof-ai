@@ -57,7 +57,7 @@ export function WordStrands({
       off.height = Math.max(1, Math.floor(h));
       const octx = off.getContext("2d");
       if (!octx) return;
-      const size = Math.min(h * 0.7, w * 0.3);
+      const size = Math.min(h * 0.62, w * 0.32);
       octx.fillStyle = "#fff";
       octx.textAlign = "center";
       octx.textBaseline = "middle";
@@ -66,7 +66,7 @@ export function WordStrands({
       octx.fillText(st.word, off.width / 2, off.height / 2);
 
       const img = octx.getImageData(0, 0, off.width, off.height).data;
-      const step = Math.max(2, Math.round(size / 40));
+      const step = Math.max(2, Math.round(size / 45));
       const pts: Array<{ x: number; y: number }> = [];
       for (let y = 0; y < off.height; y += step) {
         for (let x = 0; x < off.width; x += step) {
