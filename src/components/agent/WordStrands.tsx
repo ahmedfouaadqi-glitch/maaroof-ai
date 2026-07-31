@@ -95,13 +95,12 @@ export function WordStrands({
                 tx: t.x,
                 ty: t.y,
                 c: st.colors[i % st.colors.length] || "#7C3AED",
-                r: 0.8 + Math.random() * 0.9,
+                r: 1 + Math.random() * 1.1,
                 ph: Math.random() * Math.PI * 2,
               },
         );
       }
       particles = next;
-      (window as any).__ws = { n: particles.length, w, h, t: targets.slice(0, 4000) };
     }
 
     function resize() {
@@ -126,8 +125,8 @@ export function WordStrands({
 
 
       ctx!.clearRect(0, 0, w, h);
-      const pull = 0.2;
-      const drift = 0;
+      const pull = 0.02 + st.progress * 0.08;
+      const drift = (1 - st.progress) * 26 + 1.2;
 
       ctx!.globalCompositeOperation = "lighter";
       ctx!.shadowBlur = st.glow * 1.2;

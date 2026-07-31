@@ -110,7 +110,7 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
   if (variant === "word") {
     const done = settled || hasFinal;
     const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.85 : mode === "typing" ? 0.8 : 0.7;
-    const opacity = done ? 0 : mode === "idle" ? 0.5 : Math.max(0.75, conf.opacity);
+    const opacity = done ? 0 : mode === "idle" ? 0.72 : Math.max(0.9, conf.opacity);
     return (
       <div
         aria-hidden
