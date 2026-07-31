@@ -52,7 +52,7 @@ const MODE_CONF: Record<Mode, { speed: number; intensity: number; glow: number; 
   executing: { speed: 1.15, intensity: 0.85, glow: 3.0, amplitude: 1.25, opacity: 1 },
 };
 
-export function AgentPulse({ events = [], running = false, typing = false, settled = false, className = "", height = 64, variant = "ribbon", word = "معروف" }: Props) {
+export function AgentPulse({ events = [], running = false, typing = false, settled = false, className = "", height = 64, variant = "ribbon", word = "معروف", square = false }: Props) {
   const [reduced, setReduced] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [palette, setPalette] = useState<string[]>(["#7C3AED", "#06B6D4", "#F97316"]);
