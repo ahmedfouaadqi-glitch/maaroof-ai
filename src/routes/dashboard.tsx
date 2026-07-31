@@ -246,53 +246,55 @@ function DashboardPage() {
                   </button>
                   <div className="h-6 w-px shrink-0 bg-border" />
 
-                  {/* Scroll back */}
-                  <button
-                    type="button"
-                    onClick={() => scrollRail("start")}
-                    disabled={!canScrollStart}
-                    aria-label={lang === "ar" ? "تمرير للخلف" : lang === "ku" ? "هاتینە پاشەوە" : "Scroll back"}
-                    className={`inline-grid size-7 shrink-0 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground transition hover:border-primary/40 hover:text-foreground ${
-                      canScrollStart ? "opacity-100" : "pointer-events-none opacity-0"
-                    }`}
-                  >
-                    {lang !== "en" ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
-                  </button>
+                  <div className="relative flex min-w-0 flex-1 items-center">
+                    {/* Scroll back */}
+                    <button
+                      type="button"
+                      onClick={() => scrollRail("start")}
+                      disabled={!canScrollStart}
+                      aria-label={lang === "ar" ? "تمرير للخلف" : lang === "ku" ? "هاتینە پاشەوە" : "Scroll back"}
+                      className={`absolute left-0 z-10 inline-grid size-7 place-items-center rounded-full border border-border bg-background/80 text-muted-foreground shadow-sm transition hover:border-primary/40 hover:text-foreground ${
+                        canScrollStart ? "opacity-100" : "pointer-events-none opacity-40"
+                      }`}
+                    >
+                      {lang !== "en" ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
+                    </button>
 
-                  <div ref={railRef} className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {tools.map((tool) => {
-                      const on = tool.key === active.key;
-                      return (
-                        <button
-                          key={tool.key}
-                          type="button"
-                          onClick={() => setOpenTool(tool.key)}
-                          aria-current={on ? "true" : undefined}
-                          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                            on
-                              ? "border-primary/50 bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
-                              : "border-border bg-background/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                          }`}
-                        >
-                          <span className="[&>svg]:size-3.5">{tool.icon}</span>
-                          <span className="max-w-[10rem] truncate">{t(tool.titleKey).replace(/^\d+\)\s*/, "")}</span>
-                        </button>
-                      );
-                    })}
+                    <div ref={railRef} className="flex min-w-0 flex-1 gap-2 overflow-x-auto px-9 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {tools.map((tool) => {
+                        const on = tool.key === active.key;
+                        return (
+                          <button
+                            key={tool.key}
+                            type="button"
+                            onClick={() => setOpenTool(tool.key)}
+                            aria-current={on ? "true" : undefined}
+                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                              on
+                                ? "border-primary/50 bg-primary/15 text-primary shadow-[var(--shadow-glow)]"
+                                : "border-border bg-background/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                            }`}
+                          >
+                            <span className="[&>svg]:size-3.5">{tool.icon}</span>
+                            <span className="max-w-[10rem] truncate">{t(tool.titleKey).replace(/^\d+\)\s*/, "")}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Scroll forward */}
+                    <button
+                      type="button"
+                      onClick={() => scrollRail("end")}
+                      disabled={!canScrollEnd}
+                      aria-label={lang === "ar" ? "تمرير للأمام" : lang === "ku" ? "هاتینە پێشەوە" : "Scroll forward"}
+                      className={`absolute right-0 z-10 inline-grid size-7 place-items-center rounded-full border border-border bg-background/80 text-muted-foreground shadow-sm transition hover:border-primary/40 hover:text-foreground ${
+                        canScrollEnd ? "opacity-100" : "pointer-events-none opacity-40"
+                      }`}
+                    >
+                      {lang !== "en" ? <ChevronLeft className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                    </button>
                   </div>
-
-                  {/* Scroll forward */}
-                  <button
-                    type="button"
-                    onClick={() => scrollRail("end")}
-                    disabled={!canScrollEnd}
-                    aria-label={lang === "ar" ? "تمرير للأمام" : lang === "ku" ? "هاتینە پێشەوە" : "Scroll forward"}
-                    className={`inline-grid size-7 shrink-0 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground transition hover:border-primary/40 hover:text-foreground ${
-                      canScrollEnd ? "opacity-100" : "pointer-events-none opacity-0"
-                    }`}
-                  >
-                    {lang !== "en" ? <ChevronLeft className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-                  </button>
                 </div>
               </div>
 
