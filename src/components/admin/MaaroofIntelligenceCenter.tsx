@@ -17,6 +17,7 @@ import { ExpertAcademySection, LearningBudgetSection, KnowledgeObservatorySectio
 import { AiModelCenterSection, DecisionCenterSection } from "./ModelDecisionPanels";
 import { PublishingCenterSection, TrustCenterSection } from "./PublishingTrustPanels";
 import { StateCenterSection, HermesOfficeSection } from "./StateHermesPanels";
+import { RealityCenterSection } from "./RealityCenter";
 
 type SectionKey =
   | "overview" | "maaroof" | "cognitive" | "dna" | "evolution"
@@ -24,7 +25,7 @@ type SectionKey =
   | "finance" | "health" | "user_intel" | "eqi" | "personality" | "laws"
   | "academy" | "learning_budget" | "knowledge"
   | "model_center" | "decision_center" | "publishing_center" | "trust_center"
-  | "state_center" | "hermes";
+  | "state_center" | "hermes" | "reality_center";
 
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
@@ -51,6 +52,7 @@ const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }
   { k: "trust_center",   label: "auto.trust_engineering",            Icon: ShieldCheck, group: "governance" },
   { k: "state_center",   label: "auto.status_anchor",            Icon: Anchor,      group: "governance" },
   { k: "hermes",         label: "auto.hermes_founder_s_office",      Icon: Crown,       group: "governance" },
+  { k: "reality_center", label: "auto.reality_center",       Icon: Microscope,  group: "governance" },
 
   { k: "finance",        label: "auto.unified_financial",       Icon: Coins,       group: "ops" },
   { k: "health",         label: "auto.system_health",            Icon: Radar,       group: "ops" },
@@ -114,6 +116,7 @@ export function MaaroofIntelligenceCenter() {
         {section === "trust_center"   && <TrustCenterSection />}
         {section === "state_center"   && <StateCenterSection />}
         {section === "hermes"         && <HermesOfficeSection />}
+        {section === "reality_center" && <RealityCenterSection />}
 
         {section === "finance"        && <AdminFinanceTab />}
         {section === "health"         && <SystemHealthTab />}
