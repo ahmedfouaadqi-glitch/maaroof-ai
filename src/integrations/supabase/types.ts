@@ -3032,6 +3032,48 @@ export type Database = {
         }
         Relationships: []
       }
+      specialty_change_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          current_specialty: string | null
+          id: string
+          reason: string | null
+          requested_specialty: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          current_specialty?: string | null
+          id?: string
+          reason?: string | null
+          requested_specialty: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          current_specialty?: string | null
+          id?: string
+          reason?: string | null
+          requested_specialty?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       state_anchors: {
         Row: {
           approval_status: string
