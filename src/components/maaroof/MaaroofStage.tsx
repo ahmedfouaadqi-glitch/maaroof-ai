@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { MaaroofGlobe } from "./MaaroofGlobe";
 import { MatrixRain } from "./MatrixRain";
+import { AgentPulse } from "@/components/agent/AgentPulse";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
@@ -16,6 +17,8 @@ type Props = {
   finalText?: string;
   onExport?: () => void;
   onPickCountry?: (code: string) => void;
+  /** User is typing the goal — pulses the agent ribbon before execution starts. */
+  typing?: boolean;
 };
 
 const TOOL_ICON: Record<string, string> = {
@@ -25,7 +28,7 @@ const TOOL_ICON: Record<string, string> = {
   social_analysis: "📱", what_if: "🧪", brand_authority: "👑", geo_rewrite: "✍️",
 };
 
-export function MaaroofStage({ events, running, geoMode, country, detected, finalText, onExport, onPickCountry }: Props) {
+export function MaaroofStage({ events, running, geoMode, country, detected, finalText, onExport, onPickCountry, typing }: Props) {
   const { t } = useI18n();
   const [showRaw, setShowRaw] = useState(false);
 
@@ -61,6 +64,13 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
     <div className="relative overflow-hidden rounded-lg border bg-gradient-to-b from-background to-card min-h-[420px]">
       {/* Matrix backdrop */}
       <MatrixRain active={running} intensity={running ? intensity : 0.15} className="absolute inset-0 w-full h-full opacity-40 pointer-events-none" />
+
+      {/* Agent activity ribbon — moves while Maaroof and its sub-agents work */}
+      <div className="relative border-b border-border/50 bg-background/20">
+        <AgentPulse events={events} running={running} typing={typing} settled={!!finalText} height={64} />
+      </div>
+
+
 
       <div className="relative grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 p-4">
         {/* Globe + status */}

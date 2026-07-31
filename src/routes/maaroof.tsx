@@ -44,10 +44,20 @@ function MaaroofPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [activeWs, setActiveWs] = useState<Workspace | null>(null);
   const [executionMode, setExecutionMode] = useState<"simulation" | "recommendation" | "execution">("execution");
+  const [typing, setTyping] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [events]);
+
+  function onGoalChange(v: string) {
+    setGoal(v);
+    setTyping(true);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setTyping(false), 1200);
+  }
+
 
   useEffect(() => {
     if (!user) return;
@@ -257,7 +267,8 @@ function MaaroofPage() {
           <div className="rounded-lg border bg-card p-3">
             <h2 className="sr-only">{t("auto.enter_task")}</h2>
             <textarea
-              value={goal} onChange={(e) => setGoal(e.target.value)}
+              value={goal} onChange={(e) => onGoalChange(e.target.value)}
+
               placeholder={t("auto.hello_i_am_maaroof_what_is")}
               className="w-full min-h-[80px] p-2 bg-background border rounded outline-none resize-y" disabled={running}
             />
@@ -300,6 +311,7 @@ function MaaroofPage() {
             finalText={finalText}
             onExport={exportFinal}
             onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
+            typing={typing}
           />
           <div ref={scrollRef} className="hidden" />
 

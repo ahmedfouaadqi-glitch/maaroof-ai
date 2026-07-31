@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { I18nProvider, useI18n, type Lang } from "@/lib/i18n";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
+import { AgentPulse } from "@/components/agent/AgentPulse";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -289,6 +290,7 @@ function AgentPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <div className="mx-auto max-w-5xl px-4 py-10 md:px-6">
+        <AgentPulse running={runningId !== null || cmdBusy || visBusy} typing={cmd.trim().length > 0} height={56} className="mb-2" />
         <MaaroofBanner />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
