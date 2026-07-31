@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Activity, Brain, Coins, ShieldCheck, Sparkles, Network, Bot,
-  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap, Send, Anchor, Crown,
+  BarChart3, ScrollText, Layers, Fingerprint, Radar, Gauge, GraduationCap, Send, Anchor, Crown, Microscope,
 } from "lucide-react";
 import { MaaroofAdminTab } from "./MaaroofAdminTab";
 import { SystemHealthTab } from "./SystemHealthTab";
