@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { MaaroofGlobe } from "./MaaroofGlobe";
 import { MatrixRain } from "./MatrixRain";
+import { AgentPulse } from "@/components/agent/AgentPulse";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
@@ -16,6 +17,8 @@ type Props = {
   finalText?: string;
   onExport?: () => void;
   onPickCountry?: (code: string) => void;
+  /** User is typing the goal — pulses the agent ribbon before execution starts. */
+  typing?: boolean;
 };
 
 const TOOL_ICON: Record<string, string> = {
