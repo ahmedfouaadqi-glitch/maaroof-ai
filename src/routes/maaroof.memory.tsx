@@ -9,7 +9,7 @@ import { Brain, Trash2, Plus, Loader2, ArrowLeft, Star } from "lucide-react";
 export const Route = createFileRoute("/maaroof/memory")({
   head: () => ({
     meta: [
-      { title: t("auto.maaroof_memory_maaroof_ai") },
+      { title: "ذاكرة معروف · MAAROOF Ai" },
       { name: "description", content: "Manage Maaroof's long-term memory: review, edit and prioritize the facts and preferences the AI agent uses to personalize your GEO workflows." },
       { property: "og:title", content: "Maaroof Memory · MAAROOF Ai" },
       { property: "og:description", content: "Review and curate the long-term memory of the Maaroof AI agent." },

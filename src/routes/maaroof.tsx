@@ -15,7 +15,7 @@ import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
 export const Route = createFileRoute("/maaroof")({
   head: () => ({
     meta: [
-      { title: t("auto.maaroof_smart_agent_maaroof_ai") },
+      { title: "معروف — الوكيل الذكي · MAAROOF Ai" },
       { name: "description", content: "Maaroof is the MAAROOF Ai autonomous agent: plans, researches and executes global GEO marketing tasks across 9 AI engines in Arabic, Kurdish and English." },
       { property: "og:title", content: "Maaroof — Autonomous GEO Agent · MAAROOF Ai" },
       { property: "og:description", content: "Plans, researches and executes global GEO marketing tasks across 9 AI engines in AR, KU and EN." },
