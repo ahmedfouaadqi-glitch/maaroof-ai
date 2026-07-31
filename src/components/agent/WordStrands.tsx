@@ -101,7 +101,7 @@ export function WordStrands({
         );
       }
       particles = next;
-      (window as any).__ws = { n: particles.length, w, h };
+      (window as any).__ws = { n: particles.length, w, h, t: targets.slice(0, 4000) };
     }
 
     function resize() {
