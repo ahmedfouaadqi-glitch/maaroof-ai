@@ -12,6 +12,14 @@ import { getOrCreateAgent, finalizeAgent, evolvePersonality, readPersonality, pe
 import { assessTiming, type TimingDecision } from "./timing.server";
 import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
 import { evaluateLaws, lawsPromptBlock, hardLawNotice, type LawEvaluation } from "./laws.server";
+import {
+  classifyReality,
+  persistReality,
+  realityNotice,
+  realityPromptBlock,
+  closeRealityLoop,
+  type RealityAssessment,
+} from "./reality.server";
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
 
@@ -987,8 +995,71 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
     }
 
+    // PART 19 — Reality classification + evidence. Runs after trust and the
+    // constitutional gate so it can read their verdicts. Pure local arithmetic
+    // over signals the run already produced: zero extra model cost. Verified
+    // outcomes are fed back into knowledge + trust to close the Reality Loop.
+    let reality: RealityAssessment | null = null;
+    if (realityCfg.enabled) {
+      try {
+        const councilConfsR = decisionLog
+          .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
+          .map((d: any) => d.confidence as number);
+        reality = classifyReality({
+          toolResults: results.map((r) => ({ tool: String(r.tool), ok: !!r.ok })),
+          memoriesRecalled: memories.length,
+          knowledgeNodes: Array.isArray((trust as any)?.evidence_graph) ? (trust as any).evidence_graph.length : 0,
+          councilOpinions: decisionLog.filter((d: any) => d.phase === "council" && !d.error).length,
+          councilAvgConfidence: councilConfsR.length
+            ? Math.round(councilConfsR.reduce((a, b) => a + b, 0) / councilConfsR.length)
+            : null,
+          trustScore: typeof (trust as any)?.pipeline?.score === "number"
+            ? (trust as any).pipeline.score
+            : typeof (trust as any)?.confidence === "number"
+              ? (trust as any).confidence
+              : null,
+          trustRisks: Array.isArray((trust as any)?.risks) ? (trust as any).risks.length : 0,
+          trustAlternatives: Array.isArray((trust as any)?.alternatives) ? (trust as any).alternatives : [],
+          hasEnvision: !!envision,
+          timingVerdict: timing?.verdict ?? null,
+          executionMode,
+          complianceVerdict: (compliance as any)?.verdict ?? null,
+          externalSources: results.filter((r) => r.ok).length,
+          historicalSamples: memories.length,
+          finalTextLength: finalText.length,
+        });
+
+        if (realityCfg.transparency_notice !== false) {
+          finalText = realityNotice(reality, ctx.language) + finalText;
+        }
+        await ctx.emit("reality", reality);
+        try { await db().from("maaroof_runs").update({ reality }).eq("id", runId); } catch {}
+
+        if (realityCfg.persist_enabled !== false) {
+          await persistReality({
+            assessment: reality,
+            runId,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId || null,
+            subject: "answer",
+            signals: { execution_mode: executionMode, steps: steps.length, cost_usd: totalUsd },
+          });
+        }
+        if (realityCfg.close_loop !== false) {
+          await closeRealityLoop({
+            assessment: reality,
+            runId,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId || null,
+          });
+        }
+      } catch (e) {
+        await ctx.emit("reality_error", { message: String((e as any)?.message || e) });
+      }
+    }
+
     await ctx.emit("final", { text: finalText });
-    await logMsg("assistant", { text: finalText, trust, compliance }, finalResp.tokens, finalResp.usd);
+    await logMsg("assistant", { text: finalText, trust, compliance, reality }, finalResp.tokens, finalResp.usd);
 
 
     // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
