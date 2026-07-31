@@ -48,6 +48,7 @@ export function WordStrands({
     let w = 0;
     let h = 0;
     let dpr = 1;
+    let fontSize = 140;
 
     /** Rasterize the word offscreen and sample its pixels into target points. */
     function sample() {
@@ -58,6 +59,7 @@ export function WordStrands({
       const octx = off.getContext("2d");
       if (!octx) return;
       const size = Math.min(h * 0.62, w * 0.32);
+      fontSize = size;
       octx.fillStyle = "#fff";
       octx.textAlign = "center";
       octx.textBaseline = "middle";
@@ -88,8 +90,8 @@ export function WordStrands({
           prev
             ? { ...prev, tx: t.x, ty: t.y }
             : {
-                x: t.x + (Math.random() - 0.5) * 45,
-                y: t.y + (Math.random() - 0.5) * 45,
+                x: t.x + (Math.random() - 0.5) * 45 * (fontSize / 140),
+                y: t.y + (Math.random() - 0.5) * 45 * (fontSize / 140),
                 vx: 0,
                 vy: 0,
                 tx: t.x,
@@ -125,8 +127,8 @@ export function WordStrands({
 
 
       ctx!.clearRect(0, 0, w, h);
-      const pull = 0.02 + st.progress * 0.08;
-      const drift = (1 - st.progress) * 26 + 1.2;
+      const pull = 0.03 + st.progress * 0.09;
+      const drift = ((1 - st.progress) * 26 + 1.2) * (fontSize / 140);
 
       ctx!.globalCompositeOperation = "lighter";
       ctx!.shadowBlur = st.glow * 1.2;
