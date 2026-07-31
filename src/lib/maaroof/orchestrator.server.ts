@@ -513,6 +513,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (laws.enabled && laws.prompt_injection) {
       effectivePrompt += lawsPromptBlock(ctx.language);
     }
+
+    // 3.4) PART 19 — Reality Constitution. Same prompt, no extra request: the
+    //      model is told to classify every conclusion and never hide uncertainty.
+    const realityCfg = (settings as any).reality_engine || {};
+    if (realityCfg.enabled && realityCfg.inject_prompt !== false) {
+      effectivePrompt += realityPromptBlock(ctx.language);
+    }
+
     let capabilityChoices = 0;
     let needsHumanFlag = false;
 
