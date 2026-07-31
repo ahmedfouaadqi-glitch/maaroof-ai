@@ -1949,4 +1949,6 @@ export const ku: Dict = {
   "auto.engines": "بزوێنەرەکان",
   "auto.reproduced": "دووبارەکراوە",
   "auto.independent_sources": "سەرچاوەی سەربەخۆ",
+  "auto.run": "جێبەجێکردن",
+  "auto.approve": "پەسەندکردن",
 };

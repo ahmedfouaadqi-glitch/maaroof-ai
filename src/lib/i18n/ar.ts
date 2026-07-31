@@ -1877,4 +1877,6 @@ export const ar: Dict = {
   "auto.engines": "المحركات",
   "auto.reproduced": "متكرّرة",
   "auto.independent_sources": "مصادر مستقلة",
+  "auto.run": "تشغيل",
+  "auto.approve": "اعتماد",
 };

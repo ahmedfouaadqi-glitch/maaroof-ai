@@ -1883,4 +1883,6 @@ export const en: Dict = {
   "auto.engines": "Engines",
   "auto.reproduced": "Reproduced",
   "auto.independent_sources": "Independent sources",
+  "auto.run": "Run",
+  "auto.approve": "Approve",
 };
