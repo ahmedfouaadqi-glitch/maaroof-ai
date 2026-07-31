@@ -85,17 +85,17 @@ export function SmartResearch() {
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-border bg-background/40 p-1">
         <button onClick={() => { setMode("web"); setOut(null); }}
           className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition ${mode === "web" ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
-          <Globe className="size-3.5" /> {t("research_mode_web") || "بحث عام في الويب"}
+          <Globe className="size-3.5" /> {t("research_mode_web") || t("auto.general_web_search")}
         </button>
         <button onClick={() => { setMode("company"); setOut(null); setIncludeChannels(true); }}
           className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition ${mode === "company" ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
-          <Building2 className="size-3.5" /> {t("research_mode_company") || "بحث عن شركة"}
+          <Building2 className="size-3.5" /> {t("research_mode_company") || t("auto.search_for_a_company")}
         </button>
       </div>
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder={mode === "company" ? (t("research_company_ph") || "اسم الشركة أو العلامة") : t("research_ph")}
+          placeholder={mode === "company" ? (t("research_company_ph") || t("auto.company_or_brand_name")) : t("research_ph")}
           className="flex-1 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <button disabled={loading} onClick={run}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">

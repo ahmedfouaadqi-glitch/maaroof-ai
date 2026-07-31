@@ -69,7 +69,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
       setOut(j.result);
-      toast.success(outLang === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+      toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
     } catch (e: any) { setErr(e?.message || "failed"); }
@@ -84,7 +84,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
     " (optional)";
 
   const helperHint =
-    outLang === "ar" ? "اسم العلامة إلزامي — الكلمات المفتاحية اختيارية وتُحسّن دقة الفحص."
+    outLang === "ar" ? t("auto.brand_name_is_required_keywords_are")
     : outLang === "ku" ? "ناوی براند پێویستە — وشە کلیلیەکان ئارەزوومەندانەن و دەقیقتر دەکەن."
     : "Brand is required — keywords are optional and improve probe accuracy.";
 
@@ -115,7 +115,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       <p className="mt-1.5 text-[11px] text-muted-foreground">{helperHint}</p>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || "تم استنفاد رصيد التحليلات الشهري" : err}</span>}
+        {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || t("auto.monthly_analytics_balance_exhausted") : err}</span>}
         <button onClick={run} disabled={busy || !brand.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}

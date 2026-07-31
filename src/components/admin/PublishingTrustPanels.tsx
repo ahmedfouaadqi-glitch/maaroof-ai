@@ -1,6 +1,7 @@
 // Parts 14-15 admin panels — Publishing Ecosystem + Executive Trust Architecture.
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { Send, ShieldCheck, RefreshCw, Loader2, Check, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ const money = (n: any) => `$${Number(n || 0).toFixed(4)}`;
 
 /** Part 14 — Publishing Ecosystem: platforms, campaigns, strategy, approvals. */
 export function PublishingCenterSection() {
+  const { t } = useI18n();
   const load = useServerFn(getPublishingCenter);
   const mkCampaign = useServerFn(createCampaign);
   const mkStrategy = useServerFn(buildPublicationStrategy);
@@ -53,7 +55,7 @@ export function PublishingCenterSection() {
     return kinds;
   }, [data]);
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
 
   const platforms: any[] = data?.platforms || [];
   const campaigns: any[] = data?.campaigns || [];
@@ -64,8 +66,8 @@ export function PublishingCenterSection() {
     setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
 
   const doStrategy = async () => {
-    if (!goal.trim()) return toast.error("اكتب هدف النشر أولاً.");
-    if (!picked.length) return toast.error("اختر منصة واحدة على الأقل.");
+    if (!goal.trim()) return toast.error(t("auto.write_the_publishing_goal_first"));
+    if (!picked.length) return toast.error(t("auto.choose_at_least_one_platform"));
     setBusy("strategy");
     try {
       const r: any = await mkStrategy({ data: { goal, platforms: picked } });
@@ -73,18 +75,18 @@ export function PublishingCenterSection() {
       const seeded: Record<string, string> = {};
       for (const p of r.strategy.per_platform) seeded[p.platform] = "";
       setDrafts(seeded);
-      toast.success("جاهزة: استراتيجية لكل منصة على حدة.");
+      toast.success(t("auto.ready_strategy_for_each_platform_separately"));
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setBusy(null); }
   };
 
   const doCampaign = async () => {
-    if (!name.trim() || !picked.length) return toast.error("اسم الحملة والمنصات مطلوبة.");
+    if (!name.trim() || !picked.length) return toast.error(t("auto.campaign_name_and_platforms_are_required"));
     setBusy("campaign");
     try {
       await mkCampaign({ data: { name, goal: goal || null, platforms: picked } });
       setName("");
-      toast.success("أُنشئت الحملة.");
+      toast.success(t("auto.campaign_created"));
       await refresh();
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setBusy(null); }
@@ -94,16 +96,16 @@ export function PublishingCenterSection() {
     const items = Object.entries(drafts)
       .filter(([, v]) => v.trim().length > 2)
       .map(([platform_key, content]) => ({ platform_key, content }));
-    if (!items.length) return toast.error("اكتب نص منشور واحد على الأقل.");
+    if (!items.length) return toast.error(t("auto.write_at_least_one_post_content"));
     setBusy("drafts");
     try {
       await mkDrafts({ data: { items } });
-      toast.success("حُفظت المسودات — لن يُنشر شيء قبل موافقتك.");
+      toast.success(t("auto.drafts_saved_nothing_will_be_published"));
       setDrafts({});
       await refresh();
     } catch (e: any) {
       const m = String(e?.message || e);
-      toast.error(m.includes("publishing_disabled") ? "منظومة النشر مُطفأة من الإعدادات." : m);
+      toast.error(m.includes("publishing_disabled") ? t("auto.publishing_system_is_off_from_settings") : m);
     }
     finally { setBusy(null); }
   };
@@ -112,8 +114,8 @@ export function PublishingCenterSection() {
     setBusy(id + decision);
     try {
       const r: any = await decide({ data: { publication_id: id, decision } });
-      if (r?.ok === false) toast.error(r?.error || "فشل النشر");
-      else toast.success(decision === "publish" ? "تم النشر." : decision === "approve" ? "اعتُمد." : "رُفض.");
+      if (r?.ok === false) toast.error(r?.error || t("auto.publish_failed"));
+      else toast.success(decision === "publish" ? t("auto.published") : decision === "approve" ? t("auto.approved_2") : t("auto.rejected_2"));
       await refresh();
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setBusy(null); }
@@ -124,7 +126,7 @@ export function PublishingCenterSection() {
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-semibold"><Send className="size-4" /> منظومة النشر التنفيذي</h3>
         <button onClick={() => void refresh()} className="rounded-lg border px-2 py-1 text-xs flex items-center gap-1">
-          <RefreshCw className="size-3" /> تحديث
+          <RefreshCw className="size-3" /> {t("auto.update")}
         </button>
       </div>
       {!settings.enabled && (
@@ -134,17 +136,17 @@ export function PublishingCenterSection() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Stat label="المنصات المتاحة" value={platforms.length} />
-        <Stat label="القنوات الموصولة" value={connected.size} />
-        <Stat label="الحملات" value={campaigns.length} />
-        <Stat label="منشورات محفوظة" value={publications.length} />
+        <Stat label={t("auto.available_platforms")} value={platforms.length} />
+        <Stat label={t("auto.connected_channels")} value={connected.size} />
+        <Stat label={t("auto.campaigns")} value={campaigns.length} />
+        <Stat label={t("auto.saved_posts")} value={publications.length} />
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card/60 p-3 space-y-3">
-        <div className="text-sm font-medium">١) الهدف والمنصات</div>
+        <div className="text-sm font-medium">{t("auto.1_goal_and_platforms")}</div>
         <textarea
           value={goal} onChange={(e) => setGoal(e.target.value)}
-          placeholder="مثال: التعريف بخدمة جديدة لمطاعم بغداد خلال أسبوعين."
+          placeholder={t("auto.example_introducing_a_new_service_to")}
           className="w-full rounded border bg-background p-2 text-sm" rows={2}
         />
         <div className="flex flex-wrap gap-1.5">
@@ -158,7 +160,7 @@ export function PublishingCenterSection() {
                 className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
                   on ? "bg-primary/15 border-primary/40 text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
-                title={linked ? "قناة موصولة" : "غير موصولة — يمكن التخطيط فقط"}
+                title={linked ? t("auto.connected_channel") : t("auto.not_connected_can_only_plan")}
               >
                 {p.label}{linked ? " ✓" : ""}
               </button>
@@ -170,16 +172,16 @@ export function PublishingCenterSection() {
             className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground flex items-center gap-1">
             {busy === "strategy" ? <Loader2 className="size-3 animate-spin" /> : null} بناء الاستراتيجية
           </button>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحملة (اختياري)"
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auto.campaign_name_optional")}
             className="rounded border bg-background px-2 py-1 text-xs" />
           <button onClick={() => void doCampaign()} disabled={busy === "campaign"}
-            className="rounded-lg border px-3 py-1.5 text-xs">إنشاء حملة</button>
+            className="rounded-lg border px-3 py-1.5 text-xs">{t("auto.create_campaign")}</button>
         </div>
       </div>
 
       {strategy && (
         <div className="rounded-xl border border-border/60 bg-card/60 p-3 space-y-3">
-          <div className="text-sm font-medium">٢) استراتيجية لكل منصة — واكتب المسودة</div>
+          <div className="text-sm font-medium">{t("auto.2_strategy_per_platform_write_the")}</div>
           {strategy.per_platform.map((p: any) => (
             <div key={p.platform} className="rounded-lg border p-2 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -205,8 +207,8 @@ export function PublishingCenterSection() {
       )}
 
       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-        <div className="text-sm font-medium mb-2">٣) المنشورات والموافقات</div>
-        {!publications.length && <div className="text-xs text-muted-foreground">لا توجد منشورات بعد.</div>}
+        <div className="text-sm font-medium mb-2">{t("auto.3_posts_and_approvals")}</div>
+        {!publications.length && <div className="text-xs text-muted-foreground">{t("auto.no_posts_yet")}</div>}
         <div className="space-y-2">
           {publications.map((p) => (
             <div key={p.id} className="rounded-lg border p-2 text-xs space-y-1">
@@ -224,9 +226,9 @@ export function PublishingCenterSection() {
                   <button onClick={() => void act(p.id, "publish")} disabled={!!busy}
                     className="rounded border px-2 py-0.5 flex items-center gap-1"><Check className="size-3" /> اعتماد ونشر</button>
                   <button onClick={() => void act(p.id, "approve")} disabled={!!busy}
-                    className="rounded border px-2 py-0.5">اعتماد فقط</button>
+                    className="rounded border px-2 py-0.5">{t("auto.approved_only")}</button>
                   <button onClick={() => void act(p.id, "reject")} disabled={!!busy}
-                    className="rounded border px-2 py-0.5 flex items-center gap-1"><X className="size-3" /> رفض</button>
+                    className="rounded border px-2 py-0.5 flex items-center gap-1"><X className="size-3" /> {t("auto.reject")}</button>
                 </div>
               )}
             </div>
@@ -239,6 +241,7 @@ export function PublishingCenterSection() {
 
 /** Part 15 — Trust Architecture: living trust profiles, weak links, movements. */
 export function TrustCenterSection() {
+  const { t } = useI18n();
   const load = useServerFn(getTrustCenter);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -251,7 +254,7 @@ export function TrustCenterSection() {
   };
   useEffect(() => { void refresh(); }, []);
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
 
   const profiles: any[] = data?.profiles || [];
   const weak: any[] = data?.weak_links || [];
@@ -268,7 +271,7 @@ export function TrustCenterSection() {
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-4" /> هندسة الثقة التنفيذية</h3>
         <button onClick={() => void refresh()} className="rounded-lg border px-2 py-1 text-xs flex items-center gap-1">
-          <RefreshCw className="size-3" /> تحديث
+          <RefreshCw className="size-3" /> {t("auto.update")}
         </button>
       </div>
       {!settings.enabled && (
@@ -278,10 +281,10 @@ export function TrustCenterSection() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Stat label="كيانات مُقيَّمة" value={profiles.length} />
-        <Stat label="متوسط الثقة" value={`${avg}%`} />
-        <Stat label="حلقات ضعيفة" value={weak.length} />
-        <Stat label="حد الثقة الأدنى" value={`${settings.min_trust ?? 55}%`} />
+        <Stat label={t("auto.rated_entities")} value={profiles.length} />
+        <Stat label={t("auto.trust_average")} value={`${avg}%`} />
+        <Stat label={t("auto.weak_loops")} value={weak.length} />
+        <Stat label={t("auto.minimum_confidence_threshold")} value={`${settings.min_trust ?? 55}%`} />
       </div>
 
       {weak.length > 0 && (
@@ -299,7 +302,7 @@ export function TrustCenterSection() {
         {["all", ...types].map((t) => (
           <button key={t} onClick={() => setType(t)}
             className={`rounded-full border px-2.5 py-1 text-[11px] ${type === t ? "bg-primary/15 border-primary/40 text-primary" : "text-muted-foreground"}`}>
-            {t === "all" ? "الكل" : t}
+            {t === "all" ? t("auto.all") : t}
           </button>
         ))}
       </div>
@@ -308,13 +311,13 @@ export function TrustCenterSection() {
         <table className="w-full text-xs">
           <thead className="text-muted-foreground">
             <tr className="border-b">
-              {["الكيان", "النوع", "الثقة", "تجارب", "نجاح", "إخفاق", "دقة التنبؤ", "متوسط الكلفة"].map((h) => (
+              {[t("auto.entity"), t("auto.type"), t("auto.trust_2"), t("auto.experiments"), t("auto.success_3"), t("auto.failure_2"), t("auto.prediction_accuracy"), t("auto.cost_average")].map((h) => (
                 <th key={h} className="p-2 text-start font-medium">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {!shown.length && <tr><td colSpan={8} className="p-3 text-muted-foreground">لا توجد بيانات ثقة بعد.</td></tr>}
+            {!shown.length && <tr><td colSpan={8} className="p-3 text-muted-foreground">{t("auto.no_confidence_data_yet")}</td></tr>}
             {shown.map((p) => (
               <tr key={p.id} className="border-b last:border-0">
                 <td className="p-2 font-medium">{p.entity_key}</td>
@@ -332,8 +335,8 @@ export function TrustCenterSection() {
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-        <div className="text-sm font-medium mb-2">حركة الثقة الأخيرة</div>
-        {!events.length && <div className="text-xs text-muted-foreground">لا توجد أحداث بعد.</div>}
+        <div className="text-sm font-medium mb-2">{t("auto.last_confidence_movement")}</div>
+        {!events.length && <div className="text-xs text-muted-foreground">{t("auto.no_events_yet_2")}</div>}
         <div className="space-y-1">
           {events.map((e) => (
             <div key={e.id} className="text-xs flex flex-wrap items-center gap-2">

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/maaroof/memory")({
 type Mem = { id: string; kind: string; content: string; importance: number; created_at: string; last_accessed_at: string };
 
 function MemoryPage() {
+  const { t } = useI18n();
   const { user, loading } = useAuth();
   const [items, setItems] = useState<Mem[]>([]);
   const [busy, setBusy] = useState(false);
@@ -41,7 +42,7 @@ function MemoryPage() {
   useEffect(() => { if (user) load(); }, [user]);
 
   async function del(id: string) {
-    if (!confirm("حذف هذه الذاكرة؟")) return;
+    if (!confirm(t("auto.delete_this_memory"))) return;
     await supabase.from("maaroof_memory").delete().eq("id", id);
     setItems((p) => p.filter((x) => x.id !== id));
   }
@@ -58,7 +59,7 @@ function MemoryPage() {
     setNewContent("");
   }
   async function clearAll() {
-    if (!confirm("حذف كل الذاكرة؟ لا يمكن التراجع.")) return;
+    if (!confirm(t("auto.delete_all_memory_cannot_be_undone"))) return;
     if (!user) return;
     await supabase.from("maaroof_memory").delete().eq("user_id", user.id);
     setItems([]);
@@ -68,8 +69,8 @@ function MemoryPage() {
   if (!user) return (
     <div className="min-h-screen"><SiteHeader />
       <div className="max-w-xl mx-auto p-8 text-center">
-        <p className="mb-4">يرجى تسجيل الدخول.</p>
-        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">دخول</Link>
+        <p className="mb-4">{t("auto.please_login")}</p>
+        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">{t("auto.login")}</Link>
       </div>
     </div>
   );
@@ -81,22 +82,22 @@ function MemoryPage() {
         <div className="flex items-center gap-3">
           <Link to="/maaroof" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> رجوع</Link>
           <h1 className="text-xl font-bold flex items-center gap-2"><Brain className="w-5 h-5 text-primary" /> ذاكرة معروف</h1>
-          <button onClick={clearAll} className="ms-auto text-xs text-destructive hover:underline">حذف الكل</button>
+          <button onClick={clearAll} className="ms-auto text-xs text-destructive hover:underline">{t("auto.delete_all")}</button>
         </div>
 
         <div className="rounded-lg border bg-card p-3 flex gap-2 flex-wrap">
           <select value={newKind} onChange={(e) => setNewKind(e.target.value as any)} className="border rounded px-2 py-1 bg-background text-sm">
-            <option value="preference">تفضيل</option>
-            <option value="fact">حقيقة</option>
+            <option value="preference">{t("auto.preference")}</option>
+            <option value="fact">{t("auto.fact")}</option>
           </select>
-          <input value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="مثال: علامتي التجارية هي 'متجر س' في الرياض"
+          <input value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder={t("auto.example_my_brand_is_store_x")}
             className="flex-1 border rounded px-2 py-1 bg-background text-sm min-w-[200px]" />
-          <button onClick={add} disabled={!newContent.trim()} className="rounded bg-primary text-primary-foreground px-3 py-1 text-sm flex items-center gap-1 disabled:opacity-50"><Plus className="w-4 h-4" /> إضافة</button>
+          <button onClick={add} disabled={!newContent.trim()} className="rounded bg-primary text-primary-foreground px-3 py-1 text-sm flex items-center gap-1 disabled:opacity-50"><Plus className="w-4 h-4" /> {t("auto.add")}</button>
         </div>
 
         <div className="rounded-lg border bg-card divide-y">
           {busy && <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin inline" /></div>}
-          {!busy && items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">لا توجد ذكريات بعد. ستُبنى تلقائياً من جلسات معروف.</div>}
+          {!busy && items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">{t("auto.no_memories_yet_they_will_be")}</div>}
           {items.map((m) => (
             <div key={m.id} className="p-3 flex gap-3 items-start">
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted shrink-0">{m.kind}</span>

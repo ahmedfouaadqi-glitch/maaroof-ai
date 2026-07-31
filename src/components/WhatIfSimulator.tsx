@@ -8,15 +8,16 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 const CHANGES = [
-  { id: "add_content_type", label: "إضافة نوع محتوى جديد" },
-  { id: "new_audience", label: "استهداف جمهور جديد" },
-  { id: "new_platform", label: "إضافة منصّة جديدة" },
-  { id: "increase_frequency", label: "زيادة وتيرة النشر" },
-  { id: "wikipedia", label: "إنشاء صفحة ويكيبيديا" },
-  { id: "press", label: "حملة علاقات عامة" },
+  { id: "add_content_type", label: "auto.add_new_content_type" },
+  { id: "new_audience", label: "auto.targeting_new_audience" },
+  { id: "new_platform", label: "auto.add_new_platform" },
+  { id: "increase_frequency", label: "auto.increase_publishing_frequency" },
+  { id: "wikipedia", label: "auto.create_wikipedia_page" },
+  { id: "press", label: "auto.public_relations_campaign" },
 ];
 
 export function WhatIfSimulator() {
+  const { t } = useI18n();
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -49,19 +50,19 @@ export function WhatIfSimulator() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card/40 p-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FlaskConical className="size-4 text-primary"/> محاكاة "ماذا لو"</div>
-        <p className="mb-3 text-xs text-muted-foreground">حاكِ تأثير التغييرات على ظهورك في محركات الذكاء قبل التنفيذ (2 وحدة).</p>
-        <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="اسم العلامة" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FlaskConical className="size-4 text-primary"/> محاكاة t("auto.what_if")</div>
+        <p className="mb-3 text-xs text-muted-foreground">{t("auto.simulate_the_impact_of_changes_on")}</p>
+        <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("auto.brand_name_3")} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
         <div className="mt-2 flex flex-wrap gap-2">
           {CHANGES.map((c) => (
-            <button key={c.id} onClick={() => toggle(c.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(c.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{c.label}</button>
+            <button key={c.id} onClick={() => toggle(c.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(c.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{t(c.label)}</button>
           ))}
         </div>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("auto.additional_details_optional")} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
         <button onClick={run} disabled={busy || !brand.trim() || selected.length === 0} className="mt-2 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin"/> : <FlaskConical className="size-4"/>} محاكاة
         </button>
-        {err && <p className="mt-2 text-xs text-destructive">{err === "subscription_required" ? "اشتراك مطلوب أو رصيد غير كافٍ" : err}</p>}
+        {err && <p className="mt-2 text-xs text-destructive">{err === "subscription_required" ? t("auto.subscription_required_or_insufficient_balance") : err}</p>}
       </div>
 
       {res && (
@@ -70,7 +71,7 @@ export function WhatIfSimulator() {
           {res.engine_projections?.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead><tr className="border-b"><th className="p-2 text-start">المحرك</th><th className="p-2 text-start">قبل</th><th className="p-2 text-start">بعد (متوقع)</th><th className="p-2 text-start">Δ</th><th className="p-2 text-start">ثقة</th><th className="p-2 text-start">سبب التغيّر</th></tr></thead>
+                <thead><tr className="border-b"><th className="p-2 text-start">{t("auto.engine")}</th><th className="p-2 text-start">{t("auto.before")}</th><th className="p-2 text-start">{t("auto.after_expected")}</th><th className="p-2 text-start">Δ</th><th className="p-2 text-start">{t("auto.trust")}</th><th className="p-2 text-start">{t("auto.reason_for_change")}</th></tr></thead>
                 <tbody>
                   {res.engine_projections.map((p: any, i: number) => {
                     const before = typeof p.baseline_score === "number" ? p.baseline_score : null;
@@ -98,7 +99,7 @@ export function WhatIfSimulator() {
             {res.time_to_impact_weeks && <span className="rounded-full border border-border px-3 py-1">الوقت: {res.time_to_impact_weeks} أسبوع</span>}
             {res.final_recommendation && <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-semibold">{res.final_recommendation}</span>}
           </div>
-          {res.risks?.length > 0 && <div className="text-destructive text-xs"><b>مخاطر:</b> {res.risks.join("، ")}</div>}
+          {res.risks?.length > 0 && <div className="text-destructive text-xs"><b>{t("auto.risks")}</b> {res.risks.join("، ")}</div>}
           <ProactiveNextStep
             toolKey="what_if"
             inputSummary={summarizeInput({ brand, selected, note })}

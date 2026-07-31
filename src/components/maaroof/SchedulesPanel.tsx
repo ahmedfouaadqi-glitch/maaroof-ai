@@ -1,5 +1,6 @@
 // SchedulesPanel — list + create scheduled auto-runs for Maaroof.
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarClock, Plus, Pause, Play, Trash2, Loader2 } from "lucide-react";
 import {
@@ -25,20 +26,21 @@ type Schedule = {
 };
 
 const CADENCE_LABEL: Record<Schedule["cadence"], string> = {
-  once: "مرة واحدة",
-  hourly: "كل ساعة",
-  daily: "يومياً",
-  weekly: "أسبوعياً",
-  custom_cron: "مخصص",
+  once: "auto.once",
+  hourly: "auto.hourly",
+  daily: "auto.daily_2",
+  weekly: "auto.weekly",
+  custom_cron: "auto.custom",
 };
 
 const APPROVAL_LABEL: Record<Schedule["approval_mode"], string> = {
-  per_run: "موافقة قبل كل مرة",
-  auto_within_quota: "تلقائي ضمن الحصة",
-  first_time_then_auto: "موافقة أول مرة ثم تلقائي",
+  per_run: "auto.approval_before_each_time",
+  auto_within_quota: "auto.automatic_within_quota",
+  first_time_then_auto: "auto.first_approval_then_automatic",
 };
 
 export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: string | null; defaultPrompt?: string }) {
+  const { t } = useI18n();
   const list = useServerFn(listSchedules);
   const create = useServerFn(createSchedule);
   const setStatus = useServerFn(updateScheduleStatus);
@@ -90,7 +92,7 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
   }
 
   async function remove(id: string) {
-    if (!confirm("حذف الجدولة؟")) return;
+    if (!confirm(t("auto.delete_schedule"))) return;
     await del({ data: { id } });
     await refresh();
   }
@@ -106,28 +108,28 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
 
       {showForm && (
         <div className="space-y-2 p-2 rounded border bg-background/50">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم مختصر (مثال: مراقبة منافس يومية)" className="w-full border rounded px-2 py-1 bg-background text-sm" />
-          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="البرومب الذي سيُنفَّذ في كل مرة" className="w-full min-h-[70px] border rounded px-2 py-1 bg-background text-sm resize-y" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auto.short_name_example_daily_competitor_monitoring")} className="w-full border rounded px-2 py-1 bg-background text-sm" />
+          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={t("auto.prompt_to_be_executed_every_time")} className="w-full min-h-[70px] border rounded px-2 py-1 bg-background text-sm resize-y" />
           <div className="grid grid-cols-2 gap-2 text-xs">
             <label className="space-y-1">
-              <span>التكرار</span>
+              <span>{t("auto.iteration")}</span>
               <select value={cadence} onChange={(e) => setCadence(e.target.value as Schedule["cadence"])} className="w-full border rounded px-2 py-1 bg-background">
-                {(Object.keys(CADENCE_LABEL) as Schedule["cadence"][]).map((k) => <option key={k} value={k}>{CADENCE_LABEL[k]}</option>)}
+                {(Object.keys(CADENCE_LABEL) as Schedule["cadence"][]).map((k) => <option key={k} value={k}>{t(CADENCE_LABEL[k])}</option>)}
               </select>
             </label>
             <label className="space-y-1">
-              <span>الموافقة</span>
+              <span>{t("auto.approval")}</span>
               <select value={approval} onChange={(e) => setApproval(e.target.value as Schedule["approval_mode"])} className="w-full border rounded px-2 py-1 bg-background">
-                {(Object.keys(APPROVAL_LABEL) as Schedule["approval_mode"][]).map((k) => <option key={k} value={k}>{APPROVAL_LABEL[k]}</option>)}
+                {(Object.keys(APPROVAL_LABEL) as Schedule["approval_mode"][]).map((k) => <option key={k} value={k}>{t(APPROVAL_LABEL[k])}</option>)}
               </select>
             </label>
             <label className="space-y-1 col-span-2">
-              <span>حد أقصى للتشغيل (0 = بدون حد)</span>
+              <span>{t("auto.max_runs_0_no_limit")}</span>
               <input type="number" min={0} max={10000} value={maxRuns} onChange={(e) => setMaxRuns(Number(e.target.value) || 0)} className="w-full border rounded px-2 py-1 bg-background" />
             </label>
           </div>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setShowForm(false)} className="text-xs px-2 py-1 rounded hover:bg-muted">إلغاء</button>
+            <button onClick={() => setShowForm(false)} className="text-xs px-2 py-1 rounded hover:bg-muted">{t("auto.cancel")}</button>
             <button onClick={submit} disabled={!name.trim() || !prompt.trim() || saving} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-1">
               {saving && <Loader2 className="w-3 h-3 animate-spin" />} إنشاء
             </button>
@@ -136,9 +138,9 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
       )}
 
       {loading ? (
-        <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> جارٍ التحميل…</div>
+        <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> {t("auto.loading")}</div>
       ) : filtered.length === 0 ? (
-        <p className="text-xs text-muted-foreground">لا جدولات بعد. استخدم زر «جديدة» لحفظ برومب يُنفَّذ تلقائياً على تردد ثابت (يعمل حسب حصتك حتى وأنت غير متصل).</p>
+        <p className="text-xs text-muted-foreground">{t("auto.no_schedules_yet_use_the_new")}</p>
       ) : (
         <ul className="space-y-1.5 text-sm">
           {filtered.map((s) => (
@@ -146,14 +148,14 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
               <div className="flex items-center gap-2">
                 <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : s.status === "paused" ? "bg-amber-500" : "bg-muted-foreground"}`} />
                 <span className="flex-1 truncate font-medium">{s.name}</span>
-                <button onClick={() => toggle(s)} className="p-1 rounded hover:bg-muted" title={s.status === "active" ? "إيقاف مؤقت" : "استئناف"}>
+                <button onClick={() => toggle(s)} className="p-1 rounded hover:bg-muted" title={s.status === "active" ? t("auto.pause") : t("auto.resume")}>
                   {s.status === "active" ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                 </button>
-                <button onClick={() => remove(s.id)} className="p-1 rounded hover:bg-destructive/10 text-destructive" title="حذف"><Trash2 className="w-3 h-3" /></button>
+                <button onClick={() => remove(s.id)} className="p-1 rounded hover:bg-destructive/10 text-destructive" title={t("auto.delete")}><Trash2 className="w-3 h-3" /></button>
               </div>
               <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{s.prompt}</div>
               <div className="text-[10px] text-muted-foreground mt-0.5 flex justify-between">
-                <span>{CADENCE_LABEL[s.cadence]} · {APPROVAL_LABEL[s.approval_mode]}</span>
+                <span>{t(CADENCE_LABEL[s.cadence])} · {t(APPROVAL_LABEL[s.approval_mode])}</span>
                 <span>تشغيلات: {s.runs_done}{s.max_runs ? `/${s.max_runs}` : ""}</span>
               </div>
             </li>

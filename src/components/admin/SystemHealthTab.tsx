@@ -1,11 +1,11 @@
 // System Health admin tab — surfaces diagnostics, cost-tracking gaps,
+import { useI18n } from "@/lib/i18n";
 // negative-margin tools, unpriced calls, Firecrawl spikes, and the
 // Manus/Kimi cost report.
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity, Bot } from "lucide-react";
 import { getSystemHealth, type HealthSnapshot } from "@/lib/system-health.functions";
-import { useI18n } from "@/lib/i18n";
 
 const fmt$ = (n: number, d = 4) => `$${(Number(n) || 0).toFixed(d)}`;
 
@@ -227,7 +227,7 @@ export function SystemHealthTab() {
         {data.maaroof.recent.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="text-muted-foreground"><tr><th className="text-start p-1">الوقت</th><th className="text-start p-1">الهدف</th><th className="p-1">الحالة</th><th className="p-1">خطوات</th><th className="p-1">USD</th></tr></thead>
+              <thead className="text-muted-foreground"><tr><th className="text-start p-1">{"الوقت"}</th><th className="text-start p-1">{"الهدف"}</th><th className="p-1">{"الحالة"}</th><th className="p-1">{"خطوات"}</th><th className="p-1">USD</th></tr></thead>
               <tbody>
                 {data.maaroof.recent.slice(0, 10).map((r) => (
                   <tr key={r.id} className="border-t border-border/40">
@@ -273,30 +273,30 @@ function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: stri
 function CostReport({ lang }: { lang: "ar" | "en" | "ku" }) {
   if (lang === "ar") return (
     <div className="prose prose-invert max-w-none text-sm leading-relaxed">
-      <h4>أ) بناء وكيل «Manus-lite» داخل مشروعك الحالي</h4>
+      <h4>{"أ) بناء وكيل «Manus-lite» داخل مشروعك الحالي"}</h4>
       <table>
-        <thead><tr><th>البند</th><th>التفصيل</th><th>التقدير</th></tr></thead>
+        <thead><tr><th>{"البند"}</th><th>{"التفصيل"}</th><th>{"التقدير"}</th></tr></thead>
         <tbody>
-          <tr><td>تطوير</td><td>ربط الأدوات الـ16 + UI + memory</td><td>~150–300 ائتمان Lovable</td></tr>
-          <tr><td>نموذج (شغل)</td><td>Gemini 2.5 Flash عبر AI Gateway: $0.075/M in + $0.30/M out</td><td>~$0.04–0.10 لكل مهمة</td></tr>
-          <tr><td>Firecrawl</td><td>~50 crawl/مهمة</td><td>~$0.05/مهمة</td></tr>
-          <tr><td>Supabase</td><td>حتى 10K طلب/شهر</td><td>ضمن المجاني</td></tr>
-          <tr><td><b>الإجمالي/مستخدم نشط</b></td><td>30 مهمة/شهر</td><td><b>~$3–5/شهر</b> → بيع $9.99–$19.99</td></tr>
+          <tr><td>{"تطوير"}</td><td>{"ربط الأدوات الـ16 + UI + memory"}</td><td>{"~150–300 ائتمان Lovable"}</td></tr>
+          <tr><td>{"نموذج (شغل)"}</td><td>{"Gemini 2.5 Flash عبر AI Gateway: $0.075/M in + $0.30/M out"}</td><td>{"~$0.04–0.10 لكل مهمة"}</td></tr>
+          <tr><td>Firecrawl</td><td>{"~50 crawl/مهمة"}</td><td>{"~$0.05/مهمة"}</td></tr>
+          <tr><td>Supabase</td><td>{"حتى 10K طلب/شهر"}</td><td>{"ضمن المجاني"}</td></tr>
+          <tr><td><b>{"الإجمالي/مستخدم نشط"}</b></td><td>{"30 مهمة/شهر"}</td><td><b>{"~$3–5/شهر"}</b> → بيع $9.99–$19.99</td></tr>
         </tbody>
       </table>
-      <h4>ب) بناء منتج مستقل بمستوى Manus التجاري</h4>
+      <h4>{"ب) بناء منتج مستقل بمستوى Manus التجاري"}</h4>
       <ul>
         <li>فريق MVP (3–6 شهور): 2 ML + 2 full-stack + designer + PM → <b>$300K–$700K</b></li>
-        <li>GPU + observability + DB: <b>$30K–$100K/شهر</b></li>
-        <li>استئجار النماذج (Anthropic/OpenAI/Google) عند 100K مستخدم: <b>$50K+/شهر</b></li>
+        <li>GPU + observability + DB: <b>{"$30K–$100K/شهر"}</b></li>
+        <li>استئجار النماذج (Anthropic/OpenAI/Google) عند 100K مستخدم: <b>{"$50K+/شهر"}</b></li>
         <li>تدريب open-source بديل: <b>$1M+ one-time</b></li>
         <li>بحث + alignment + RLHF: <b>$200K–$500K</b></li>
-        <li><b>MVP بمستوى Manus: $1M – $3M/سنة</b></li>
+        <li><b>{"MVP بمستوى Manus: $1M – $3M/سنة"}</b></li>
       </ul>
-      <h4>ج) بمستوى Kimi (long-context LLM مع agent)</h4>
+      <h4>{"ج) بمستوى Kimi (long-context LLM مع agent)"}</h4>
       <p>يتطلب pretraining كامل لنموذج اللغة → <b>$10M – $50M+</b> في السنة الأولى. الفرق ليس في الكود، بل في امتلاك النموذج وبنية GPU.</p>
-      <h4>د) الخلاصة العملية لك الآن</h4>
-      <p>بناء «Manus-lite» داخل Lovable ممكن خلال يومين بأقل من <b>$100</b> تطوير + <b>$3–5/مستخدم/شهر</b> تشغيل، مع هامش ربح صحي لو بعت $14.99–$19.99/شهر.</p>
+      <h4>{"د) الخلاصة العملية لك الآن"}</h4>
+      <p>بناء «Manus-lite» داخل Lovable ممكن خلال يومين بأقل من <b>$100</b> تطوير + <b>{"$3–5/مستخدم/شهر"}</b> تشغيل، مع هامش ربح صحي لو بعت $14.99–$19.99/شهر.</p>
     </div>
   );
   if (lang === "ku") return (

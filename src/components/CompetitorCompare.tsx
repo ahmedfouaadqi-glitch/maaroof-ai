@@ -119,7 +119,7 @@ export function CompetitorCompare() {
       setResult(data.result);
       {
         const L = (outLang === "en" || outLang === "ku" ? outLang : "ar");
-        toast.success(L === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+        toast.success(L === "ar" ? t("auto.tokens_deducted_check_balance_above")
           : L === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
           : "Tokens charged ✓ — see updated balance above");
       }

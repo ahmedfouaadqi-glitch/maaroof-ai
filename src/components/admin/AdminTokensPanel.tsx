@@ -482,11 +482,12 @@ function VisibilitySection({
   value: NonNullable<Profile["ui_visibility"]>;
   onChange: (v: NonNullable<Profile["ui_visibility"]>) => void;
 }) {
+  const { t } = useI18n();
   const isAr = lang === "ar";
   const isKu = lang === "ku";
   const heading = isAr ? "ما يراه المستخدم في الموقع" : isKu ? "ئەوەی بەکارهێنەر دەیبینێت" : "What the user sees site-wide";
   const hint = isAr
-    ? "ضع علامة على ما تريد إظهاره. عدم التحديد = إخفاء كامل من واجهة هذا المستخدم."
+    ? t("auto.tick_what_you_want_to_show")
     : isKu
     ? "هەرچی بسەلمێنرێت پیشان دەدرێت."
     : "Check what to show. Unchecked items are hidden entirely from this user.";

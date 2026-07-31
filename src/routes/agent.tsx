@@ -481,20 +481,20 @@ function AgentPage() {
                 onClick={() => setTaskTab("current")}
                 className={`rounded-md px-3 py-1 font-semibold transition ${taskTab === "current" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {t("ag_tab_current") || "تشغيل حالي"} {currentTasks.length > 0 && `(${currentTasks.length})`}
+                {t("ag_tab_current") || t("auto.current_run")} {currentTasks.length > 0 && `(${currentTasks.length})`}
               </button>
               <button
                 onClick={() => setTaskTab("history")}
                 className={`rounded-md px-3 py-1 font-semibold transition ${taskTab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {t("ag_tab_history") || "السجل"} {historyTasks.length > 0 && `(${historyTasks.length})`}
+                {t("ag_tab_history") || t("auto.record")} {historyTasks.length > 0 && `(${historyTasks.length})`}
               </button>
             </div>
           </div>
           <div className="space-y-2">
             {visible.length === 0 && (
               <div className="rounded-2xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground">
-                {taskTab === "current" ? (t("ag_no_current_tasks") || "لا توجد مهام لتشغيل حالي. اضغط «تشغيل الآن».") : t("ag_no_tasks")}
+                {taskTab === "current" ? (t("ag_no_current_tasks") || t("auto.no_tasks_to_run_currently_click")) : t("ag_no_tasks")}
               </div>
             )}
             {visible.map((tk) => (
@@ -609,6 +609,7 @@ function AgentPage() {
 }
 
 function MaaroofBanner() {
+  const { t } = useI18n();
   const [hidden, setHidden] = useState(false);
   useEffect(() => { setHidden(typeof window !== "undefined" && localStorage.getItem("maaroof_banner_hidden") === "1"); }, []);
   if (hidden) return null;
@@ -616,11 +617,11 @@ function MaaroofBanner() {
     <div className="mb-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 p-4 flex items-start gap-3">
       <Sparkles className="size-6 text-primary shrink-0 mt-0.5" />
       <div className="flex-1">
-        <div className="font-bold mb-1">جرّب وكيلنا الجديد «معروف» ✨</div>
-        <div className="text-xs text-muted-foreground mb-2">تخطيط متعدد الخطوات، ذاكرة طويلة بنمط Kimi، يستخدم كل أدوات GEO الـ16، ويتكيّف مع موقعك الجغرافي تلقائياً.</div>
+        <div className="font-bold mb-1">{t("auto.try_our_new_agent_maaroof")}</div>
+        <div className="text-xs text-muted-foreground mb-2">{t("auto.multi_step_planning_long_term_memory")}</div>
         <div className="flex gap-2">
-          <Link to="/maaroof" className="inline-block rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">افتح معروف</Link>
-          <button onClick={() => { localStorage.setItem("maaroof_banner_hidden", "1"); setHidden(true); }} className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">إخفاء</button>
+          <Link to="/maaroof" className="inline-block rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">{t("auto.open_maaroof")}</Link>
+          <button onClick={() => { localStorage.setItem("maaroof_banner_hidden", "1"); setHidden(true); }} className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">{t("auto.hide")}</button>
         </div>
       </div>
     </div>

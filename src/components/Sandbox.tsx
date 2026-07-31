@@ -196,9 +196,9 @@ export function Sandbox() {
         const checks = auditText(text, effectiveScope);
         const passed = checks.filter((c) => c.passed).length;
         const tone = passed >= 5 ? "border-success/40 bg-success/10" : passed >= 3 ? "border-accent/40 bg-accent/10" : "border-destructive/40 bg-destructive/10";
-        const titleTxt = L === "ar" ? "تدقيق قبل التحليل" : L === "ku" ? "پشکنین پێش شیکاری" : "Pre-analysis audit";
+        const titleTxt = L === "ar" ? t("auto.pre_analysis_audit") : L === "ku" ? "پشکنین پێش شیکاری" : "Pre-analysis audit";
         const subTxt = L === "ar" ? `${passed} من ${checks.length} عناصر موجودة. أضف الناقص لرفع الدرجة قبل التحليل.` : L === "ku" ? `${passed}/${checks.length} ئامادەیە. ئەوانی نوێ زیاد بکە.` : `${passed} of ${checks.length} elements present. Add missing items to lift your score before analyzing.`;
-        const skipTxt = L === "ar" ? "تخطّى التدقيق" : L === "ku" ? "بازی پێ بدە" : "Skip audit";
+        const skipTxt = L === "ar" ? t("auto.skip_audit") : L === "ku" ? "بازی پێ بدە" : "Skip audit";
         return (
           <div className={`mt-4 rounded-xl border p-3 ${tone}`}>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -361,9 +361,9 @@ export function Sandbox() {
               authority: result.authority, local: result.local, citation: result.citation,
               weaknesses: result.weaknesses, recommendations: result.recommendations, lang: L,
             });
-            const titleTxt = L === "ar" ? "لماذا تم تخفيض الدرجة؟" : L === "ku" ? "بۆچی خاڵەکە کەم کرایەوە؟" : "Why was the score reduced?";
-            const subTxt = L === "ar" ? "تفصيل الفقد في كل بند مع اقتراحات مبنية على نصك الحالي." : L === "ku" ? "وردەکاری لە هەر بەشێک." : "Per-metric breakdown with suggestions based on your current text.";
-            const metricLbl = (m: string) => m === "authority" ? (L === "ar" ? "السلطة" : L === "ku" ? "دەسەڵات" : "Authority") : m === "citation" ? (L === "ar" ? "الاستشهاد" : L === "ku" ? "وەرگرتنەوە" : "Citation") : (L === "ar" ? "الصلة المحلية" : L === "ku" ? "ناوخۆیی" : "Local");
+            const titleTxt = L === "ar" ? t("auto.why_was_the_score_reduced") : L === "ku" ? "بۆچی خاڵەکە کەم کرایەوە؟" : "Why was the score reduced?";
+            const subTxt = L === "ar" ? t("auto.breakdown_of_loss_per_item_with") : L === "ku" ? "وردەکاری لە هەر بەشێک." : "Per-metric breakdown with suggestions based on your current text.";
+            const metricLbl = (m: string) => m === "authority" ? (L === "ar" ? t("auto.authority") : L === "ku" ? "دەسەڵات" : "Authority") : m === "citation" ? (L === "ar" ? t("auto.citation") : L === "ku" ? "وەرگرتنەوە" : "Citation") : (L === "ar" ? t("auto.local_relevance") : L === "ku" ? "ناوخۆیی" : "Local");
             return (
               <div className="mt-5 rounded-xl border border-border bg-background/40 p-4">
                 <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
@@ -387,14 +387,14 @@ export function Sandbox() {
           })()}
 
           {(() => {
-            const titleTxt = L === "ar" ? "تحويل إلى GEO قابل للاستشهاد" : L === "ku" ? "گۆڕین بۆ GEO" : "Convert to citable GEO";
-            const descTxt = L === "ar" ? "يحوّل النص إلى نسخة أطول منظمة فقط بالحقائق التي زودتها، ويقترح أماكن واضحة لإضافة الأرقام والمصادر الناقصة، ثم يُعيد حساب الدرجة." : L === "ku" ? "دەقەکە بە تەنها ڕاستییە دراوەکان ڕێک دەخات و شوێنی ژمارە/سەرچاوەی کەمبوو نیشان دەدات." : "Rewrites your text using only provided facts, marks missing numbers/sources as fields to fill, then re-scores it.";
-            const ctaTxt = L === "ar" ? "تحويل وإعادة التقييم" : L === "ku" ? "گۆڕین و دووبارە هەژماردن" : "Rewrite & rescore";
-            const newScoreTxt = L === "ar" ? "الدرجة الجديدة" : L === "ku" ? "خاڵی نوێ" : "New score";
-            const addedTxt = L === "ar" ? "ما تمّت إضافته" : L === "ku" ? "ئەوەی زیاد کرا" : "What was added";
-            const verifyTxt = L === "ar" ? "تحقّق قبل النشر" : L === "ku" ? "پشکنین پێش بڵاوکردنەوە" : "Verify before publishing";
-            const copyTxt = L === "ar" ? "نسخ النص الجديد" : L === "ku" ? "لەبەرگرتنەوە" : "Copy rewritten text";
-            const useAnalyzeTxt = L === "ar" ? "استبدال النص بالنسخة الجديدة" : L === "ku" ? "گۆڕینی دەق" : "Replace text with rewrite";
+            const titleTxt = L === "ar" ? t("auto.convert_to_citable_geo") : L === "ku" ? "گۆڕین بۆ GEO" : "Convert to citable GEO";
+            const descTxt = L === "ar" ? t("auto.converts_text_into_a_longer_structured") : L === "ku" ? "دەقەکە بە تەنها ڕاستییە دراوەکان ڕێک دەخات و شوێنی ژمارە/سەرچاوەی کەمبوو نیشان دەدات." : "Rewrites your text using only provided facts, marks missing numbers/sources as fields to fill, then re-scores it.";
+            const ctaTxt = L === "ar" ? t("auto.convert_and_re_evaluate") : L === "ku" ? "گۆڕین و دووبارە هەژماردن" : "Rewrite & rescore";
+            const newScoreTxt = L === "ar" ? t("auto.new_score") : L === "ku" ? "خاڵی نوێ" : "New score";
+            const addedTxt = L === "ar" ? t("auto.what_was_added") : L === "ku" ? "ئەوەی زیاد کرا" : "What was added";
+            const verifyTxt = L === "ar" ? t("auto.verify_before_publishing") : L === "ku" ? "پشکنین پێش بڵاوکردنەوە" : "Verify before publishing";
+            const copyTxt = L === "ar" ? t("auto.copy_new_text") : L === "ku" ? "لەبەرگرتنەوە" : "Copy rewritten text";
+            const useAnalyzeTxt = L === "ar" ? t("auto.replace_text_with_new_version") : L === "ku" ? "گۆڕینی دەق" : "Replace text with rewrite";
 
             const doRewrite = async () => {
               setRewriteErr(null); setRewriteData(null); setRewriteBusy(true);

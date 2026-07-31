@@ -24,6 +24,7 @@ function barColor(pct: number) {
 }
 
 export function TokensBar({ compact }: { compact?: boolean }) {
+  const { t } = useI18n();
   const { user } = useAuth();
   const { lang } = useI18n();
   const { isWidgetVisible, loading: visLoading } = useVisibility();
@@ -59,9 +60,9 @@ export function TokensBar({ compact }: { compact?: boolean }) {
   const monthlyPct = monthlyMax ? Math.min(100, (p.tokens_used_month / monthlyMax) * 100) : 0;
 
   const L = isAr
-    ? { balance: "رصيدك", today: "اليوم", month: "الشهر", upgrade: "ترقية الباقة", low: "رصيد منخفض" }
+    ? { balance: t("auto.your_balance"), today: t("auto.today"), month: t("auto.month"), upgrade: t("auto.upgrade_package"), low: t("auto.low_balance") }
     : isKu
-    ? { balance: "بەڵانس", today: "ئەمڕۆ", month: "مانگ", upgrade: "بەرزکردنەوەی پلان", low: "بەڵانسی کەم" }
+    ? { balance: "بەڵانس", today: "ئەمڕۆ", month: t("auto.month_2"), upgrade: "بەرزکردنەوەی پلان", low: "بەڵانسی کەم" }
     : { balance: "Balance", today: "Today", month: "Month", upgrade: "Upgrade plan", low: "Low balance" };
 
   const showUpgrade = balancePct >= 80 || dailyPct >= 80 || monthlyPct >= 80;

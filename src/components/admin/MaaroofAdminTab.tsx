@@ -1,5 +1,6 @@
 // Admin tab for Maaroof: Overview / Runs / Agents / Capabilities / Memory / Controls
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive, Network } from "lucide-react";
 
@@ -10,12 +11,12 @@ type AgentRow = { id: string; role: string | null; mission: string | null; dna: 
 type CapRow = { capability: string; runs: number | null; success_rate: number | null; avg_usd: number | null; avg_tokens: number | null; last_used_at: string | null; top_tool: string | null };
 
 const SUB_TABS = [
-  { k: "overview", label: "نظرة عامة", Icon: Activity },
-  { k: "runs", label: "الجلسات", Icon: ListChecks },
-  { k: "agents", label: "الوكلاء", Icon: Bot },
-  { k: "capabilities", label: "القدرات", Icon: Network },
-  { k: "memory", label: "الذاكرة", Icon: Brain },
-  { k: "controls", label: "التحكم", Icon: Settings2 },
+  { k: "overview", label: "auto.overview", Icon: Activity },
+  { k: "runs", label: "auto.sessions", Icon: ListChecks },
+  { k: "agents", label: "auto.agents", Icon: Bot },
+  { k: "capabilities", label: "auto.capabilities", Icon: Network },
+  { k: "memory", label: "auto.memory", Icon: Brain },
+  { k: "controls", label: "auto.control", Icon: Settings2 },
 ] as const;
 
 export function MaaroofAdminTab() {
@@ -42,6 +43,7 @@ export function MaaroofAdminTab() {
 
 /* ---------- Capabilities (Part 4) ---------- */
 function CapabilitiesSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<CapRow[]>([]);
   const [loading, setLoading] = useState(true);
   async function load() {
@@ -56,22 +58,22 @@ function CapabilitiesSection() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">مصفوفة القدرات الحية — تُبنى تلقائياً من سجلات الجلسات.</span>
-        <button onClick={load} className="text-xs px-2 py-1 rounded border hover:bg-muted ms-auto flex items-center gap-1"><RefreshCw className="w-3 h-3" /> تحديث</button>
+        <span className="text-xs text-muted-foreground">{t("auto.live_capabilities_matrix_built_automatically_from")}</span>
+        <button onClick={load} className="text-xs px-2 py-1 rounded border hover:bg-muted ms-auto flex items-center gap-1"><RefreshCw className="w-3 h-3" /> {t("auto.update")}</button>
       </div>
       {sorted.length === 0 ? (
-        <div className="text-sm text-muted-foreground p-6 text-center">لا توجد بيانات بعد — شغّل بعض الجلسات أولاً.</div>
+        <div className="text-sm text-muted-foreground p-6 text-center">{t("auto.no_data_yet_run_some_sessions")}</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="border-b text-muted-foreground">
-              <th className="p-2 text-start">القدرة</th>
-              <th className="p-2">الخبير الأعلى</th>
-              <th className="p-2">جلسات</th>
-              <th className="p-2">النجاح</th>
-              <th className="p-2">م. التكلفة $</th>
-              <th className="p-2">م. التوكن</th>
-              <th className="p-2">آخر استخدام</th>
+              <th className="p-2 text-start">{t("auto.ability")}</th>
+              <th className="p-2">{t("auto.top_expert")}</th>
+              <th className="p-2">{t("auto.sessions_2")}</th>
+              <th className="p-2">{t("auto.success")}</th>
+              <th className="p-2">{t("auto.avg_cost")}</th>
+              <th className="p-2">{t("auto.avg_token")}</th>
+              <th className="p-2">{t("auto.last_used")}</th>
             </tr></thead>
             <tbody>
               {sorted.map((r) => (
@@ -95,6 +97,7 @@ function CapabilitiesSection() {
 
 /* ---------- Agents Registry ---------- */
 function AgentsSection() {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AgentRow[]>([]);
   const [filter, setFilter] = useState<"all" | "active" | "standby" | "archived">("all");
@@ -114,7 +117,7 @@ function AgentsSection() {
     load();
   }
   async function remove(id: string) {
-    if (!confirm("حذف الوكيل نهائياً؟")) return;
+    if (!confirm(t("auto.delete_proxy_permanently"))) return;
     await supabase.from("maaroof_agents").delete().eq("id", id);
     load();
   }
@@ -124,7 +127,7 @@ function AgentsSection() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-muted-foreground">التصفية:</span>
+        <span className="text-xs text-muted-foreground">{t("auto.filter")}</span>
         {(["all", "active", "standby", "archived"] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
             className={`text-xs px-2 py-1 rounded-full border ${filter === f ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>
@@ -132,11 +135,11 @@ function AgentsSection() {
           </button>
         ))}
         <button onClick={load} className="text-xs px-2 py-1 rounded-full border hover:bg-muted ms-auto flex items-center gap-1">
-          <RefreshCw className="w-3 h-3" /> تحديث
+          <RefreshCw className="w-3 h-3" /> {t("auto.update")}
         </button>
       </div>
 
-      {rows.length === 0 && <div className="text-sm text-muted-foreground p-6 text-center">لا يوجد وكلاء بعد.</div>}
+      {rows.length === 0 && <div className="text-sm text-muted-foreground p-6 text-center">{t("auto.no_agents_yet")}</div>}
 
       <div className="grid gap-2">
         {rows.map((a) => (
@@ -171,7 +174,7 @@ function AgentsSection() {
                   <Archive className="w-3 h-3" /> Archive
                 </button>
               )}
-              <button onClick={() => remove(a.id)} title="حذف"
+              <button onClick={() => remove(a.id)} title={t("auto.delete")}
                 className="text-xs px-2 py-1 rounded border border-destructive/40 text-destructive hover:bg-destructive/10">
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -186,6 +189,7 @@ function AgentsSection() {
 
 /* ---------- Overview ---------- */
 function OverviewSection() {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [runs, setRuns] = useState<RunRow[]>([]);
   useEffect(() => {
@@ -214,18 +218,18 @@ function OverviewSection() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="جلسات 7 أيام" value={k7.count} />
-        <Kpi label="نجاح 7 أيام" value={`${k7.successPct}%`} />
-        <Kpi label="تكلفة 7 أيام" value={`$${k7.usd.toFixed(4)}`} />
-        <Kpi label="متوسط/جلسة" value={`$${k7.avgUsd.toFixed(4)}`} />
-        <Kpi label="جلسات 30 يوم" value={k30.count} />
-        <Kpi label="نجاح 30 يوم" value={`${k30.successPct}%`} />
-        <Kpi label="تكلفة 30 يوم" value={`$${k30.usd.toFixed(4)}`} />
-        <Kpi label="متوسط خطوات" value={k30.avgSteps.toFixed(1)} />
+        <Kpi label={t("auto.7_day_sessions")} value={k7.count} />
+        <Kpi label={t("auto.7_day_success")} value={`${k7.successPct}%`} />
+        <Kpi label={t("auto.cost_7_days")} value={`$${k7.usd.toFixed(4)}`} />
+        <Kpi label={t("auto.average_session")} value={`$${k7.avgUsd.toFixed(4)}`} />
+        <Kpi label={t("auto.30_day_sessions")} value={k30.count} />
+        <Kpi label={t("auto.30_day_success")} value={`${k30.successPct}%`} />
+        <Kpi label={t("auto.cost_30_days")} value={`$${k30.usd.toFixed(4)}`} />
+        <Kpi label={t("auto.steps_average")} value={k30.avgSteps.toFixed(1)} />
       </div>
 
       <div className="rounded-lg border bg-card p-3">
-        <div className="font-semibold mb-2 text-sm">أعلى 10 دول</div>
+        <div className="font-semibold mb-2 text-sm">{t("auto.top_10_countries")}</div>
         <div className="space-y-1">
           {byCountry.map(([c, n]) => (
             <div key={c} className="flex items-center gap-2 text-xs">
@@ -234,7 +238,7 @@ function OverviewSection() {
               <span className="w-10 text-end">{n}</span>
             </div>
           ))}
-          {byCountry.length === 0 && <div className="text-xs text-muted-foreground">لا توجد بيانات بعد.</div>}
+          {byCountry.length === 0 && <div className="text-xs text-muted-foreground">{t("auto.no_data_yet")}</div>}
         </div>
       </div>
     </div>
@@ -267,6 +271,7 @@ function Kpi({ label, value }: { label: string; value: any }) {
 
 /* ---------- Runs ---------- */
 function RunsSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<RunRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("");
@@ -287,7 +292,7 @@ function RunsSection() {
     load();
   };
   const del = async (id: string) => {
-    if (!confirm("حذف الجلسة وكل رسائلها؟")) return;
+    if (!confirm(t("auto.delete_session_and_all_its_messages"))) return;
     await supabase.from("maaroof_messages").delete().eq("run_id", id);
     await supabase.from("maaroof_runs").delete().eq("id", id);
     load();
@@ -296,19 +301,19 @@ function RunsSection() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="بحث في الهدف…" className="border rounded px-2 py-1 bg-background text-sm flex-1 min-w-[200px]" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder={t("auto.search_goal")} className="border rounded px-2 py-1 bg-background text-sm flex-1 min-w-[200px]" />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="border rounded px-2 py-1 bg-background text-sm">
-          <option value="">كل الحالات</option>
-          <option value="running">قيد التشغيل</option>
-          <option value="done">منجز</option>
-          <option value="error">خطأ</option>
+          <option value="">{t("auto.all_cases")}</option>
+          <option value="running">{t("auto.running")}</option>
+          <option value="done">{t("auto.completed")}</option>
+          <option value="error">{t("auto.error")}</option>
         </select>
-        <button onClick={load} className="px-3 py-1 border rounded text-sm flex items-center gap-1"><RefreshCw className="w-3 h-3" /> تحديث</button>
+        <button onClick={load} className="px-3 py-1 border rounded text-sm flex items-center gap-1"><RefreshCw className="w-3 h-3" /> {t("auto.update")}</button>
       </div>
       {loading ? <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin inline" /></div> : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead><tr className="border-b text-muted-foreground"><th className="p-2 text-start">التاريخ</th><th className="p-2 text-start">الهدف</th><th className="p-2">الحالة</th><th className="p-2">الخطوات</th><th className="p-2">التكلفة $</th><th className="p-2">دولة</th><th className="p-2">إجراءات</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="p-2 text-start">{t("auto.date")}</th><th className="p-2 text-start">{t("auto.target")}</th><th className="p-2">{t("auto.status")}</th><th className="p-2">{t("auto.steps")}</th><th className="p-2">{t("auto.cost_2")}</th><th className="p-2">{t("auto.country")}</th><th className="p-2">{t("auto.actions")}</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-b hover:bg-muted/30">
@@ -320,13 +325,13 @@ function RunsSection() {
                   <td className="p-2 text-center font-mono">{(r.detected_geo as any)?.country || (r.geo_scope as any)?.country || "—"}</td>
                   <td className="p-2 text-center">
                     <div className="flex items-center gap-1 justify-center">
-                      {r.status === "running" && <button onClick={() => forceStop(r.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded" title="إيقاف قسري"><Power className="w-3 h-3" /></button>}
-                      <button onClick={() => del(r.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded" title="حذف"><Trash2 className="w-3 h-3" /></button>
+                      {r.status === "running" && <button onClick={() => forceStop(r.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded" title={t("auto.forced_stop")}><Power className="w-3 h-3" /></button>}
+                      <button onClick={() => del(r.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded" title={t("auto.delete")}><Trash2 className="w-3 h-3" /></button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">لا توجد جلسات.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">{t("auto.no_sessions")}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -337,6 +342,7 @@ function RunsSection() {
 
 /* ---------- Memory ---------- */
 function MemorySection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<MemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -352,13 +358,13 @@ function MemorySection() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="بحث…" className="border rounded px-2 py-1 bg-background text-sm flex-1" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder={t("auto.search_2")} className="border rounded px-2 py-1 bg-background text-sm flex-1" />
         <button onClick={load} className="px-3 py-1 border rounded text-sm"><RefreshCw className="w-3 h-3 inline" /></button>
       </div>
       {loading ? <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin inline" /></div> : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead><tr className="border-b text-muted-foreground"><th className="p-2 text-start">المستخدم</th><th className="p-2">النوع</th><th className="p-2 text-start">المحتوى</th><th className="p-2">أهمية</th><th className="p-2">آخر استخدام</th><th className="p-2">×</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="p-2 text-start">{t("auto.user")}</th><th className="p-2">{t("auto.type")}</th><th className="p-2 text-start">{t("auto.content")}</th><th className="p-2">{t("auto.importance")}</th><th className="p-2">{t("auto.last_used")}</th><th className="p-2">×</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-b hover:bg-muted/30">
@@ -370,7 +376,7 @@ function MemorySection() {
                   <td className="p-2 text-center"><button onClick={() => del(r.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded"><Trash2 className="w-3 h-3" /></button></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">لا توجد ذاكرة.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">{t("auto.no_memory")}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -383,6 +389,7 @@ function MemorySection() {
 const ALL_TOOLS = ["analyze","suggest","compare","feasibility","bizdev","research","visibility","brand_boost","company_email","applied_ranking","geo_strategist","competitor_monitor","social_analysis","what_if","brand_authority","geo_rewrite"];
 
 function ControlsSection() {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -405,7 +412,7 @@ function ControlsSection() {
     const rows = Object.entries(settings).map(([key, value]) => ({ key, value, updated_by, updated_at: new Date().toISOString() }));
     const { error } = await supabase.from("maaroof_settings").upsert(rows, { onConflict: "key" });
     setSaving(false);
-    setMsg(error ? `خطأ: ${error.message}` : "تم الحفظ ✓");
+    setMsg(error ? `خطأ: ${error.message}` : t("auto.saved_2"));
     setTimeout(() => setMsg(""), 3000);
   };
 
@@ -419,22 +426,22 @@ function ControlsSection() {
       <div className="rounded-lg border bg-destructive/5 border-destructive/30 p-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!settings.kill_switch} onChange={(e) => set("kill_switch", e.target.checked)} />
-          <span className="font-semibold text-destructive">إيقاف كامل لمعروف (Kill switch)</span>
+          <span className="font-semibold text-destructive">{t("auto.maaroof_kill_switch")}</span>
         </label>
-        <p className="text-xs text-muted-foreground mt-1">عند التفعيل، أي طلب جديد يُرفض برسالة للمستخدم.</p>
+        <p className="text-xs text-muted-foreground mt-1">{t("auto.when_activated_any_new_request_is")}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <NumField label="السقف اليومي للتجربة" k="trial_daily_cap" v={settings.trial_daily_cap} set={set} />
-        <NumField label="مهلة الأداة (ms)" k="tool_timeout_ms" v={settings.tool_timeout_ms} set={set} />
-        <NumField label="أقصى عدد خطوات" k="max_steps" v={settings.max_steps} set={set} />
-        <NumField label="أقصى طول للهدف (حرف)" k="max_goal_chars" v={settings.max_goal_chars} set={set} />
-        <TxtField label="نموذج التخطيط" k="planner_model" v={settings.planner_model} set={set} />
-        <TxtField label="النموذج الاحتياطي" k="fallback_model" v={settings.fallback_model} set={set} />
+        <NumField label={t("auto.daily_trial_limit")} k="trial_daily_cap" v={settings.trial_daily_cap} set={set} />
+        <NumField label={t("auto.tool_timeout_ms")} k="tool_timeout_ms" v={settings.tool_timeout_ms} set={set} />
+        <NumField label={t("auto.max_steps")} k="max_steps" v={settings.max_steps} set={set} />
+        <NumField label={t("auto.max_target_length_chars")} k="max_goal_chars" v={settings.max_goal_chars} set={set} />
+        <TxtField label={t("auto.planning_model")} k="planner_model" v={settings.planner_model} set={set} />
+        <TxtField label={t("auto.fallback_model")} k="fallback_model" v={settings.fallback_model} set={set} />
       </div>
 
       <div className="rounded-lg border bg-card p-3">
-        <div className="font-semibold mb-2 text-sm">الأدوات المُفعّلة</div>
+        <div className="font-semibold mb-2 text-sm">{t("auto.enabled_tools")}</div>
         <div className="flex flex-wrap gap-2">
           {ALL_TOOLS.map((t) => (
             <button key={t} onClick={() => toggleTool(t)} className={`px-2 py-1 text-xs rounded border ${enabled.includes(t) ? "bg-primary text-primary-foreground border-primary" : "bg-muted/30 text-muted-foreground"}`}>{t}</button>
@@ -452,12 +459,12 @@ function ControlsSection() {
 
 
       <div className="rounded-lg border bg-card p-3">
-        <label className="text-sm font-semibold block mb-1">توجيهات نظام إضافية (تُلحَق بالـ system prompt)</label>
-        <textarea value={settings.system_prompt_extra || ""} onChange={(e) => set("system_prompt_extra", e.target.value)} rows={4} className="w-full border rounded p-2 bg-background text-sm" placeholder="مثال: ركّز على السوق العراقي وأعط أمثلة محلية." />
+        <label className="text-sm font-semibold block mb-1">{t("auto.additional_system_instructions_appended_to_the")}</label>
+        <textarea value={settings.system_prompt_extra || ""} onChange={(e) => set("system_prompt_extra", e.target.value)} rows={4} className="w-full border rounded p-2 bg-background text-sm" placeholder={t("auto.example_focus_on_the_iraqi_market")} />
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50">{saving ? "..." : "حفظ"}</button>
+        <button onClick={save} disabled={saving} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50">{saving ? "..." : t("auto.save")}</button>
         {msg && <span className="text-sm text-muted-foreground">{msg}</span>}
       </div>
     </div>
@@ -483,36 +490,37 @@ function TxtField({ label, k, v, set }: { label: string; k: string; v: any; set:
 
 /* ---------- Part 7 — Executive Intelligence controls ---------- */
 const EXEC_FLAGS: Array<{ k: string; label: string; hint: string }> = [
-  { k: "personality_enabled", label: "شخصية الوكيل التنفيذية", hint: "تتطور سمات الوكيل بعد كل جلسة (جرأة، حذر، تحليل…)." },
-  { k: "conflict_enabled", label: "محرك التعارض المعرفي", hint: "نقاش إضافي فقط عند اختلاف المجلس — تكلفة إضافية نادرة." },
-  { k: "timing_enabled", label: "محرك التوقيت الاستراتيجي", hint: "يقرر: نفّذ الآن / أجّل / جدول / راقب / ألغِ (بدون تكلفة نموذج)." },
-  { k: "trust_enabled", label: "محرك الثقة والأدلة", hint: "يرفق الأدلة والافتراضات والحدود مع الإجابة النهائية." },
-  { k: "genome_enabled", label: "الجينوم الرقمي", hint: "هوية دائمة للمساحة والوكيل تُحقن في التوجيه." },
-  { k: "future_dna_enabled", label: "حمض المستقبل (Future DNA)", hint: "يسجّل أنماطاً مجهولة الهوية من النجاح والفشل معاً." },
+  { k: "personality_enabled", label: "auto.executive_agent_persona", hint: "auto.agent_attributes_evolve_after_each_session" },
+  { k: "conflict_enabled", label: "auto.cognitive_conflict_engine", hint: "auto.additional_discussion_only_if_the_board" },
+  { k: "timing_enabled", label: "auto.strategic_timing_engine", hint: "auto.decide_execute_now_postpone_schedule_monitor" },
+  { k: "trust_enabled", label: "auto.trust_and_evidence_engine", hint: "auto.attach_evidence_assumptions_and_limitations_with" },
+  { k: "genome_enabled", label: "auto.digital_genome", hint: "auto.permanent_identity_for_space_and_agent" },
+  { k: "future_dna_enabled", label: "auto.future_dna", hint: "auto.registers_anonymous_patterns_of_success_and" },
 ];
 
 function ExecutiveControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const exec = (settings.executive || {}) as Record<string, any>;
   const patch = (k: string, v: any) => set("executive", { ...exec, [k]: v });
   return (
     <div className="rounded-lg border bg-card p-3 space-y-3">
       <label className="flex items-center gap-3">
         <input type="checkbox" checked={!!exec.enabled} onChange={(e) => patch("enabled", e.target.checked)} />
-        <span className="font-semibold text-sm">الذكاء التنفيذي (الجزء السابع)</span>
+        <span className="font-semibold text-sm">{t("auto.executive_intelligence_part_vii")}</span>
       </label>
-      <p className="text-xs text-muted-foreground -mt-1">طبقة إضافية فوق مسار التنفيذ الحالي — عند الإيقاف يبقى السلوك كما هو تماماً.</p>
+      <p className="text-xs text-muted-foreground -mt-1">{t("auto.an_additional_layer_above_the_current")}</p>
       <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${exec.enabled ? "" : "opacity-50 pointer-events-none"}`}>
         {EXEC_FLAGS.map((f) => (
           <label key={f.k} className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!exec[f.k]} onChange={(e) => patch(f.k, e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">{f.label}</span>
-              <span className="text-[11px] text-muted-foreground">{f.hint}</span>
+              <span className="text-sm font-medium block">{t(f.label)}</span>
+              <span className="text-[11px] text-muted-foreground">{t(f.hint)}</span>
             </span>
           </label>
         ))}
         <label className="rounded border p-2 block">
-          <span className="text-xs text-muted-foreground">عتبة التعارض (فارق الثقة %)</span>
+          <span className="text-xs text-muted-foreground">{t("auto.conflict_threshold_confidence_difference")}</span>
           <input type="number" value={exec.conflict_threshold ?? 25} onChange={(e) => patch("conflict_threshold", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
         </label>
       </div>
@@ -522,33 +530,34 @@ function ExecutiveControls({ settings, set }: { settings: Record<string, any>; s
 
 /* ---------- Part 8 — Laws of Cognitive Intelligence controls ---------- */
 const LAW_FLAGS: Array<{ k: string; label: string; hint: string }> = [
-  { k: "prompt_injection", label: "حقن الدستور في التوجيه", hint: "يُلحق نص القوانين الثلاثين بالـ system prompt الحالي — بلا طلب إضافي." },
-  { k: "enforce_hard_laws", label: "إلزام القوانين الحرجة", hint: "عند خرق قانون إلزامي تُقدَّم الإجابة موسومة كمسودة لا كتوصية نهائية." },
-  { k: "log_compliance", label: "حفظ سجل الامتثال", hint: "يخزّن نتيجة التقييم في سجل الجلسة للتدقيق والتقارير." },
+  { k: "prompt_injection", label: "auto.injecting_constitution_into_guidance", hint: "auto.append_the_text_of_the_30" },
+  { k: "enforce_hard_laws", label: "auto.critical_laws_enforcement", hint: "auto.upon_violation_of_a_mandatory_law" },
+  { k: "log_compliance", label: "auto.save_compliance_log", hint: "auto.stores_the_evaluation_result_in_the" },
 ];
 
 function LawsControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const laws = (settings.laws || {}) as Record<string, any>;
   const patch = (k: string, v: any) => set("laws", { ...laws, [k]: v });
   return (
     <div className="rounded-lg border bg-card p-3 space-y-3">
       <label className="flex items-center gap-3">
         <input type="checkbox" checked={!!laws.enabled} onChange={(e) => patch("enabled", e.target.checked)} />
-        <span className="font-semibold text-sm">دستور الذكاء الإدراكي — 30 قانوناً (الجزء الثامن)</span>
+        <span className="font-semibold text-sm">{t("auto.cognitive_ai_constitution_30_laws_part")}</span>
       </label>
-      <p className="text-xs text-muted-foreground -mt-1">طبقة قياس وإلزام فوق المحرّكات القائمة — تقييم محلي بلا أي تكلفة نموذج.</p>
+      <p className="text-xs text-muted-foreground -mt-1">{t("auto.a_measurement_and_enforcement_layer_over")}</p>
       <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${laws.enabled ? "" : "opacity-50 pointer-events-none"}`}>
         {LAW_FLAGS.map((f) => (
           <label key={f.k} className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!laws[f.k]} onChange={(e) => patch(f.k, e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">{f.label}</span>
-              <span className="text-[11px] text-muted-foreground">{f.hint}</span>
+              <span className="text-sm font-medium block">{t(f.label)}</span>
+              <span className="text-[11px] text-muted-foreground">{t(f.hint)}</span>
             </span>
           </label>
         ))}
         <label className="rounded border p-2 block">
-          <span className="text-xs text-muted-foreground">حد الثقة الأدنى للقانون 13 (%)</span>
+          <span className="text-xs text-muted-foreground">{t("auto.minimum_confidence_threshold_for_law_13")}</span>
           <input type="number" value={laws.min_trust ?? 55} onChange={(e) => patch("min_trust", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
         </label>
       </div>
@@ -558,6 +567,7 @@ function LawsControls({ settings, set }: { settings: Record<string, any>; set: (
 
 /* ---------- Parts 12-13 — Model Governance & Decision Intelligence controls ---------- */
 function GovernanceControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const mg = (settings.model_governance || {}) as Record<string, any>;
   const dec = (settings.decision || {}) as Record<string, any>;
   const pub = (settings.publishing || {}) as Record<string, any>;
@@ -591,61 +601,61 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
       <div className="space-y-2">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!mg.enabled} onChange={(e) => pmg("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">حوكمة نماذج الذكاء (الجزء 12)</span>
+          <span className="font-semibold text-sm">{t("auto.ai_model_governance_part_12")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">سجلّ نماذج بأسعار حقيقية، واختيار النموذج الأنسب لكل مرحلة، وقياس صحة كل نموذج. عند الإطفاء يعود كل شيء إلى النموذج الافتراضي كما كان.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.record_real_priced_models_select_the")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${mg.enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(mg, pmg, "per_phase_selection", "اختيار نموذج لكل مرحلة", "تخطيط/تفكير/إجابة/تعلّم — كل مرحلة تأخذ الأنسب سعراً وقدرةً.")}
-          {flag(mg, pmg, "use_registry_pricing", "التسعير من السجل", "تُحتسب التكلفة الحقيقية من أسعار المزود بدل التقدير الثابت.")}
-          {flag(mg, pmg, "health_tracking", "تتبّع صحة النماذج", "نداءات، إخفاقات، زمن استجابة، وتكلفة تراكمية لكل نموذج.")}
-          {flag(mg, pmg, "benchmark_enabled", "الاختبارات المقارنة", "تشغيل نفس المهمة على عدة نماذج من مركز النماذج.")}
-          {flag(mg, pmg, "auto_proposals", "مقترحات الترقية التلقائية", "يقترح فقط ولا يبدّل النموذج دون موافقتك.")}
+          {flag(mg, pmg, "per_phase_selection", t("auto.model_selection_for_each_stage"), t("auto.planning_thinking_answering_learning_each_stage"))}
+          {flag(mg, pmg, "use_registry_pricing", t("auto.pricing_from_register"), t("auto.the_actual_cost_is_calculated_from"))}
+          {flag(mg, pmg, "health_tracking", t("auto.track_model_health"), t("auto.calls_failures_response_time_and_cumulative"))}
+          {flag(mg, pmg, "benchmark_enabled", t("auto.comparative_tests"), t("auto.run_the_same_task_on_multiple"))}
+          {flag(mg, pmg, "auto_proposals", t("auto.automatic_upgrade_suggestions"), t("auto.only_suggests_and_does_not_alter"))}
         </div>
       </div>
 
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!dec.enabled} onChange={(e) => pdec("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">ذكاء القرار التنفيذي (الجزء 13)</span>
+          <span className="font-semibold text-sm">{t("auto.executive_decision_intelligence_part_13")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">توثيق مراحل القرار من فهم الهدف حتى التعلّم، مع البدائل المرفوضة وسببها — بلا أي نداء نموذج إضافي.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.documenting_decision_stages_from_understanding_the")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${dec.enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(dec, pdec, "trace_enabled", "توثيق مسار القرار", "حفظ مراحل القرار العشرين في سجل قابل للمراجعة.")}
-          {flag(dec, pdec, "cost_aware_alternatives", "بدائل واعية بالتكلفة", "المفاضلة بين الاستراتيجيات وفق التكلفة والزمن المتوقعين.")}
-          {flag(dec, pdec, "score_enabled", "درجة جودة القرار", "درجة مركّبة من التغطية والثقة والتكلفة.")}
+          {flag(dec, pdec, "trace_enabled", t("auto.document_decision_path"), t("auto.save_the_20_decision_stages_in"))}
+          {flag(dec, pdec, "cost_aware_alternatives", t("auto.cost_aware_alternatives"), t("auto.trade_off_between_strategies_based_on"))}
+          {flag(dec, pdec, "score_enabled", t("auto.decision_quality_score"), t("auto.a_composite_score_of_coverage_confidence"))}
         </div>
       </div>
 
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!pub.enabled} onChange={(e) => ppub("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">منظومة النشر التنفيذي (الجزء 14)</span>
+          <span className="font-semibold text-sm">{t("auto.executive_publishing_system_part_14")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">النشر يصبح قدرة كاملة: استراتيجية لكل منصة، حملات بميزانية، وموافقات مرنة. عند الإطفاء يبقى النشر اليدوي الحالي كما هو.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.publishing_becomes_a_full_capability_a")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${pub.enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(pub, ppub, "strategy_enabled", "استراتيجية لكل منصة", "محتوى مبني على سلوك جمهور كل منصة لا نسخة موحّدة.")}
-          {flag(pub, ppub, "campaigns_enabled", "الحملات والميزانيات", "تجميع المنشورات في حملة بهدف وسقف إنفاق.")}
-          {flag(pub, ppub, "auto_publish_enabled", "النشر التلقائي المجدول", "لا يعمل إلا مع وضع موافقة يسمح بذلك.")}
-          {flag(pub, ppub, "metrics_enabled", "قياس الأداء بعد النشر", "وصول وتفاعل لكل منشور لتغذية التعلّم.")}
+          {flag(pub, ppub, "strategy_enabled", t("auto.strategy_per_platform"), t("auto.content_based_on_the_audience_behavior"))}
+          {flag(pub, ppub, "campaigns_enabled", t("auto.campaigns_budgets"), t("auto.gather_posts_in_a_campaign_with"))}
+          {flag(pub, ppub, "auto_publish_enabled", t("auto.scheduled_auto_publishing"), t("auto.only_works_with_a_consent_mode"))}
+          {flag(pub, ppub, "metrics_enabled", t("auto.performance_measurement_after_publishing"), t("auto.access_and_interaction_for_each_post"))}
         </div>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${pub.enabled ? "" : "opacity-50 pointer-events-none"}`}>
           <label className="rounded border p-2 text-xs space-y-1">
-            <span className="block font-medium">وضع الموافقة الافتراضي</span>
+            <span className="block font-medium">{t("auto.default_approval_status")}</span>
             <select
               className="w-full rounded border bg-background p-1"
               value={pub.default_approval_mode || "always_ask"}
               onChange={(e) => ppub("default_approval_mode", e.target.value)}
             >
-              <option value="always_ask">اسأل دائماً</option>
-              <option value="approve_once">وافق مرة واحدة</option>
-              <option value="campaign_approval">موافقة على مستوى الحملة</option>
-              <option value="workspace_policy">حسب سياسة مساحة العمل</option>
-              <option value="fully_automatic">تلقائي بالكامل</option>
-              <option value="emergency_stop">إيقاف طارئ</option>
+              <option value="always_ask">{t("auto.always_ask")}</option>
+              <option value="approve_once">{t("auto.approve_once")}</option>
+              <option value="campaign_approval">{t("auto.campaign_level_approval")}</option>
+              <option value="workspace_policy">{t("auto.according_to_workspace_policy")}</option>
+              <option value="fully_automatic">{t("auto.fully_automatic")}</option>
+              <option value="emergency_stop">{t("auto.emergency_stop")}</option>
             </select>
           </label>
           <label className="rounded border p-2 text-xs space-y-1">
-            <span className="block font-medium">حد المنشورات اليومي لكل مستخدم</span>
+            <span className="block font-medium">{t("auto.daily_post_limit_per_user")}</span>
             <input
               type="number" min={1} max={200}
               className="w-full rounded border bg-background p-1"
@@ -659,23 +669,23 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!tr.enabled} onChange={(e) => ptr("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">هندسة الثقة التنفيذية (الجزء 15)</span>
+          <span className="font-semibold text-sm">{t("auto.executive_trust_engineering_part_15")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">لكل خبير ونموذج وأداة سجلّ ثقة حيّ يتغيّر بعد كل تنفيذ، مع مسار تحقّق من 13 مرحلة قبل أي توصية. الحساب محلي بلا تكلفة إضافية.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.for_each_expert_model_and_tool")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${tr.enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(tr, ptr, "pipeline_enabled", "مسار التحقق (13 مرحلة)", "من المصدر إلى التوصية التنفيذية.")}
-          {flag(tr, ptr, "profiles_enabled", "ملفات الثقة الحيّة", "درجة ثقة متحركة لكل كيان بدل تقدير لحظي.")}
-          {flag(tr, ptr, "executive_score_enabled", "درجة القرار التنفيذي", "قيمة أعمال وأثر مالي ومستقبلي وإمكانية تراجع.")}
-          {flag(tr, ptr, "weak_link_alerts", "تنبيه الحلقات الضعيفة", "يكشف الخبير أو النموذج الأقل موثوقية.")}
+          {flag(tr, ptr, "pipeline_enabled", t("auto.verification_path_13_stages"), t("auto.from_source_to_executive_recommendation"))}
+          {flag(tr, ptr, "profiles_enabled", t("auto.live_trust_files"), t("auto.a_dynamic_confidence_score_for_each"))}
+          {flag(tr, ptr, "executive_score_enabled", t("auto.executive_decision_score"), t("auto.business_value_financial_and_future_impact"))}
+          {flag(tr, ptr, "weak_link_alerts", t("auto.weak_link_alert"), t("auto.reveals_the_least_reliable_expert_or"))}
           <label className="rounded border p-2 text-xs space-y-1">
-            <span className="block font-medium">حد الثقة الأدنى</span>
+            <span className="block font-medium">{t("auto.minimum_confidence_threshold")}</span>
             <input
               type="number" min={0} max={100}
               className="w-full rounded border bg-background p-1"
               value={Number(tr.min_trust ?? 55)}
               onChange={(e) => ptr("min_trust", Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
             />
-            <span className="block text-[11px] text-muted-foreground">دون هذا الحد تُعرض الإجابة كمسودة تحتاج تحققاً بشرياً.</span>
+            <span className="block text-[11px] text-muted-foreground">{t("auto.below_this_threshold_the_answer_is")}</span>
           </label>
         </div>
       </div>
@@ -683,16 +693,16 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!st.enabled} onChange={(e) => pst("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">مرساة الحالة الحيّة (الجزء 16)</span>
+          <span className="font-semibold text-sm">{t("auto.live_status_anchor_part_16")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">تحفظ الهوية والرسالة والهدف والميزانية عبر كل المستويات، وترصد الانحراف قبل أن يتحوّل إلى خطأ. حساب محلي بلا تكلفة نموذج.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.the_identity_message_goal_and_budget")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${st.enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(st, pst, "validate_before_execution", "تحقق قبل التنفيذ", "هوية ورسالة وهدف وميزانية تُفحص قبل بدء أي تشغيل.")}
-          {flag(st, pst, "drift_detection", "كشف الانحراف", "هدف، لغة، مساحة عمل، ثقة، ذاكرة، تنفيذ — مع تصحيح مقترح.")}
-          {flag(st, pst, "timeline_enabled", "الخط الزمني للحالة", "كل تغيير موثّق بسببه ومن بدأه وأثره.")}
-          {flag(st, pst, "recovery_enabled", "الاستئناف من آخر حالة سليمة", "بدل إعادة التشغيل الكامل بعد الفشل.")}
+          {flag(st, pst, "validate_before_execution", t("auto.verify_before_execution"), t("auto.identity_message_goal_and_budget_are"))}
+          {flag(st, pst, "drift_detection", t("auto.deviation_detection"), t("auto.goal_language_workspace_trust_memory_execution"))}
+          {flag(st, pst, "timeline_enabled", t("auto.status_timeline"), t("auto.every_change_is_documented_with_its"))}
+          {flag(st, pst, "recovery_enabled", t("auto.resume_from_last_known_good"), t("auto.instead_full_restart_after_failure"))}
           <label className="rounded border p-2 text-xs space-y-1">
-            <span className="block font-medium">عتبة الانحراف الحرجة</span>
+            <span className="block font-medium">{t("auto.critical_deviation_threshold")}</span>
             <input
               type="number" min={0} max={100}
               className="w-full rounded border bg-background p-1"
@@ -706,18 +716,18 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!hm.enabled} onChange={(e) => phm("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">هرمس — الوكيل التنفيذي للمؤسس (الجزء 17)</span>
+          <span className="font-semibold text-sm">{t("auto.hermes_the_founder_s_executive_agent")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">هرمس يراقب المنصة ويقترح بالدليل والكلفة والعائد وخطة التراجع، ولا ينفّذ شيئاً في الإنتاج بلا موافقتك. كلفته على ميزانية النظام لا على رصيد أي مستخدم.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.hermes_monitors_the_platform_and_proposes")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${hm.enabled ? "" : "opacity-50 pointer-events-none"}`}>
-          {flag(hm, phm, "proposals_enabled", "توليد الاقتراحات", "من مؤشرات حقيقية مقاسة فقط، بلا نداء نموذج.")}
-          {flag(hm, phm, "founder_dna_enabled", "تعلّم حمض المؤسس", "يتطوّر من قراراتك بالموافقة والرفض.")}
-          {flag(hm, phm, "office_enabled", "مكتب هرمس", "حوار تنفيذي خاص بك مبني على بيانات المرصد.")}
+          {flag(hm, phm, "proposals_enabled", t("auto.generate_suggestions"), t("auto.based_on_real_measured_indicators_only"))}
+          {flag(hm, phm, "founder_dna_enabled", t("auto.learn_founder_s_acid"), t("auto.evolves_from_your_approval_and_rejection"))}
+          {flag(hm, phm, "office_enabled", t("auto.hermes_office"), t("auto.your_executive_dialogue_based_on_observatory"))}
           <label className="rounded border p-2 flex items-start gap-2 opacity-70">
             <input type="checkbox" className="mt-1" checked readOnly />
             <span>
-              <span className="text-sm font-medium block">لا تنفيذ بلا موافقة</span>
-              <span className="text-[11px] text-muted-foreground">قيد دستوري ثابت لا يمكن إطفاؤه.</span>
+              <span className="text-sm font-medium block">{t("auto.no_execution_without_consent")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("auto.a_constant_constitutional_value_that_cannot")}</span>
             </span>
           </label>
         </div>
@@ -729,6 +739,7 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
 
 /* ---------- Parts 9-11 — Expert Learning & Living Knowledge controls ---------- */
 function LearningControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const ex = (settings.experts || {}) as Record<string, any>;
   const kn = (settings.knowledge || {}) as Record<string, any>;
   const pex = (k: string, v: any) => set("experts", { ...ex, [k]: v });
@@ -738,30 +749,30 @@ function LearningControls({ settings, set }: { settings: Record<string, any>; se
       <div className="space-y-2">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!ex.enabled} onChange={(e) => pex("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">محرّك تعلّم الخبراء (الأجزاء 9-10)</span>
+          <span className="font-semibold text-sm">{t("auto.expert_learning_engine_parts_9_10")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">مقابلة إدراكية مع كل أداة، ولقطة فهم معتمدة يقرأها الوكيل بدل تعريف الأداة الخام. تكلفة التعلّم على ميزانية النظام فقط ولا تمس رصيد المستخدمين.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.cognitive_interview_with_each_tool_and")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${ex.enabled ? "" : "opacity-50 pointer-events-none"}`}>
           <label className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!ex.use_snapshots} onChange={(e) => pex("use_snapshots", e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">استخدام لقطات الخبراء في التخطيط</span>
-              <span className="text-[11px] text-muted-foreground">تُحقن خلاصة الفهم في نفس الـ system prompt — بلا طلب إضافي.</span>
+              <span className="text-sm font-medium block">{t("auto.using_expert_snapshots_in_planning")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("auto.the_essence_of_understanding_is_injected")}</span>
             </span>
           </label>
           <label className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!ex.auto_relearn_on_change} onChange={(e) => pex("auto_relearn_on_change", e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">إعادة التعلّم عند تغيّر تعريف الأداة</span>
-              <span className="text-[11px] text-muted-foreground">بدونها يُعاد استخدام اللقطة مجاناً ما دام التعريف ثابتاً.</span>
+              <span className="text-sm font-medium block">{t("auto.relearn_when_tool_definition_changes")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("auto.without_it_the_snapshot_is_reused")}</span>
             </span>
           </label>
           <label className="rounded border p-2 block">
-            <span className="text-xs text-muted-foreground">نموذج التعلّم</span>
+            <span className="text-xs text-muted-foreground">{t("auto.learning_model")}</span>
             <input type="text" value={ex.learning_model ?? "google/gemini-2.5-flash"} onChange={(e) => pex("learning_model", e.target.value)} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1 font-mono" />
           </label>
           <label className="rounded border p-2 block">
-            <span className="text-xs text-muted-foreground">سقف ميزانية التعلّم الشهري ($)</span>
+            <span className="text-xs text-muted-foreground">{t("auto.monthly_learning_budget_ceiling")}</span>
             <input type="number" step="0.5" value={ex.monthly_budget_usd ?? 5} onChange={(e) => pex("monthly_budget_usd", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
           </label>
         </div>
@@ -770,30 +781,30 @@ function LearningControls({ settings, set }: { settings: Record<string, any>; se
       <div className="space-y-2 border-t pt-3">
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={!!kn.enabled} onChange={(e) => pkn("enabled", e.target.checked)} />
-          <span className="font-semibold text-sm">المعرفة الحيّة — تسع طبقات (الجزء 11)</span>
+          <span className="font-semibold text-sm">{t("auto.living_knowledge_nine_strata_part_11")}</span>
         </label>
-        <p className="text-xs text-muted-foreground -mt-1">رسم معرفي بثقة وحداثة وموثوقية لكل عقدة، فوق الذاكرة الحالية لا بديلاً عنها.</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("auto.cognitive_drawing_with_confidence_novelty_and")}</p>
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 ${kn.enabled ? "" : "opacity-50 pointer-events-none"}`}>
           <label className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!kn.capture_enabled} onChange={(e) => pkn("capture_enabled", e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">التقاط المعرفة بعد كل جلسة</span>
-              <span className="text-[11px] text-muted-foreground">بلا تكلفة نموذج — يكتب خلاصة الجلسة كعقدة معرفية.</span>
+              <span className="text-sm font-medium block">{t("auto.knowledge_capture_after_each_session")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("auto.no_model_cost_writes_session_summary")}</span>
             </span>
           </label>
           <label className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!kn.recall_enabled} onChange={(e) => pkn("recall_enabled", e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">استدعاء المعرفة أثناء التخطيط</span>
-              <span className="text-[11px] text-muted-foreground">أقوى العقد فقط، ضمن نفس التوجيه.</span>
+              <span className="text-sm font-medium block">{t("auto.recall_knowledge_during_planning")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("auto.strongest_nodes_only_within_the_same")}</span>
             </span>
           </label>
           <label className="rounded border p-2 block">
-            <span className="text-xs text-muted-foreground">مدة الحداثة (أيام)</span>
+            <span className="text-xs text-muted-foreground">{t("auto.recency_days")}</span>
             <input type="number" value={kn.freshness_days ?? 30} onChange={(e) => pkn("freshness_days", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
           </label>
           <label className="rounded border p-2 block">
-            <span className="text-xs text-muted-foreground">أدنى ثقة للاستدعاء (%)</span>
+            <span className="text-xs text-muted-foreground">{t("auto.minimum_recall_confidence")}</span>
             <input type="number" value={kn.min_confidence ?? 40} onChange={(e) => pkn("min_confidence", Number(e.target.value))} className="w-full border rounded px-2 py-1 bg-background text-sm mt-1" />
           </label>
         </div>

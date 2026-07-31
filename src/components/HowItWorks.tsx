@@ -89,13 +89,14 @@ const GUIDES: Partial<Record<ToolKey, StepSpec>> = {
 };
 
 export function HowItWorks({ toolKey }: { toolKey: ToolKey }) {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const [open, setOpen] = useState(false);
   const L = (lang === "en" || lang === "ku") ? lang : "ar";
   const g = GUIDES[toolKey];
   if (!g) return null;
   const labels = {
-    ar: { howTitle: "كيف تعمل هذه الأداة", step1: "ما تُدخله", step2: "ما يحدث داخلياً", step3: "ما تحصل عليه", example: "مثال واقعي" },
+    ar: { howTitle: t("auto.how_this_tool_works"), step1: t("auto.what_you_enter"), step2: t("auto.what_happens_internally"), step3: t("auto.what_you_get"), example: t("auto.real_world_example") },
     en: { howTitle: "How this tool works", step1: "What you input", step2: "What happens", step3: "What you get", example: "Real example" },
     ku: { howTitle: "چۆن کار دەکات", step1: "ئەوەی تۆ دەنووسیت", step2: "ئەوەی ڕوودەدات", step3: "ئەوەی وەردەگریت", example: "نموونەی ڕاستەقینە" },
   }[L];

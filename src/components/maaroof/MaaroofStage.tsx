@@ -1,5 +1,6 @@
 // MaaroofStage — interactive visual replacement for the raw JSON stream.
 import { useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { MaaroofGlobe } from "./MaaroofGlobe";
 import { MatrixRain } from "./MatrixRain";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
@@ -25,6 +26,7 @@ const TOOL_ICON: Record<string, string> = {
 };
 
 export function MaaroofStage({ events, running, geoMode, country, detected, finalText, onExport, onPickCountry }: Props) {
+  const { t } = useI18n();
   const [showRaw, setShowRaw] = useState(false);
 
   const plan = useMemo(() => {
@@ -65,7 +67,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
         <div className="flex flex-col items-center">
           <MaaroofGlobe highlightCountry={highlight} worldMode={worldMode} size={280} onPickCountry={onPickCountry} />
           <div className="text-center mt-2 text-xs text-muted-foreground">
-            {worldMode ? "نطاق عالمي" : highlight ? `الإضاءة: ${highlight}${detected?.city && geoMode === "auto" ? ` · ${detected.city}` : ""}` : "لم يُكتشف بعد"}
+            {worldMode ? t("auto.global_scope") : highlight ? `الإضاءة: ${highlight}${detected?.city && geoMode === "auto" ? ` · ${detected.city}` : ""}` : t("auto.not_discovered_yet")}
           </div>
           <PhasePill phase={phase} running={running} />
         </div>
@@ -75,14 +77,14 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
           {!plan && !running && events.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
               <Bot className="w-10 h-10 mx-auto mb-2 opacity-50" />
-              <p>مرحباً، أنا <strong className="text-foreground">معروف</strong>. حدّد هدفك وسأخطّط وأنفّذ بصرياً أمامك.</p>
+              <p>مرحباً، أنا <strong className="text-foreground">{t("auto.maaroof_2")}</strong>{t("auto.define_your_goal_and_i_will")}</p>
             </div>
           )}
 
           {!plan && running && (
             <div className="text-center py-10 animate-pulse">
               <Sparkles className="w-8 h-8 mx-auto mb-2 text-primary" />
-              <p className="text-sm">أُحلّل هدفك وأبني الخطة…</p>
+              <p className="text-sm">{t("auto.i_analyze_your_goal_and_build")}</p>
             </div>
           )}
 
@@ -128,7 +130,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
           {finalText && (
             <div className="rounded-lg border border-primary/40 bg-primary/5 p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 font-semibold text-primary"><Lightbulb className="w-4 h-4" /> الإجابة النهائية</div>
+                <div className="flex items-center gap-2 font-semibold text-primary"><Lightbulb className="w-4 h-4" /> {t("auto.final_answer")}</div>
                 {onExport && (
                   <button onClick={onExport} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><FileDown className="w-3 h-3" /> تصدير PDF</button>
                 )}
@@ -139,7 +141,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
           )}
 
           <div className="flex justify-end pt-2">
-            <button onClick={() => setShowRaw((s) => !s)} className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"><Code2 className="w-3 h-3" /> {showRaw ? "إخفاء السجل الخام" : "عرض السجل الخام (JSON)"}</button>
+            <button onClick={() => setShowRaw((s) => !s)} className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"><Code2 className="w-3 h-3" /> {showRaw ? t("auto.hide_raw_log") : t("auto.view_raw_history_json")}</button>
           </div>
 
           {showRaw && (
@@ -154,8 +156,9 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
 }
 
 function PhasePill({ phase, running }: { phase?: string; running: boolean }) {
+  const { t } = useI18n();
   if (!running && !phase) return null;
-  const label = phase === "planning" ? "أخطّط…" : phase === "summarizing" ? "أصيغ الإجابة…" : phase === "loading_history" ? "أحمّل الجلسة…" : running ? "أعمل…" : phase || "";
+  const label = phase === "planning" ? t("auto.planning_2") : phase === "summarizing" ? t("auto.formulating_answer") : phase === "loading_history" ? t("auto.loading_session") : running ? t("auto.working") : phase || "";
   return <div className="mt-3 text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">{label}</div>;
 }
 
@@ -164,7 +167,7 @@ function TimingChip({ events }: { events: StageEvent[] }) {
   const t = [...events].reverse().find((e) => e.type === "timing")?.data as any;
   if (!t?.verdict) return null;
   const LABEL: Record<string, string> = {
-    execute_now: "تنفيذ الآن", delay: "تأجيل", schedule: "جدولة", observe: "مراقبة", cancel: "إلغاء",
+    execute_now: t("auto.execute_now"), delay: t("auto.postpone"), schedule: t("auto.scheduling"), observe: t("auto.monitoring"), cancel: t("auto.cancel"),
   };
   const tone = t.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
     : t.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
@@ -179,13 +182,14 @@ function TimingChip({ events }: { events: StageEvent[] }) {
 
 /** Part 8 — Constitutional compliance (30 Laws of Cognitive Intelligence). */
 function ComplianceCard({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const c = [...events].reverse().find((e) => e.type === "compliance")?.data as any;
   if (!c) return null;
   const tone = c.verdict === "violation" ? "border-destructive/40 bg-destructive/5 text-destructive"
     : c.verdict === "warning" ? "border-amber-500/40 bg-amber-500/5 text-amber-500"
     : "border-green-500/40 bg-green-500/5 text-green-500";
-  const label = c.verdict === "violation" ? "خرق قانون إلزامي" : c.verdict === "warning" ? "ملاحظات دستورية" : "ملتزم بالدستور";
+  const label = c.verdict === "violation" ? t("auto.mandatory_law_violation") : c.verdict === "warning" ? t("auto.constitutional_notes") : t("auto.committed_to_the_constitution");
   const violations: any[] = Array.isArray(c.violations) ? c.violations : [];
   return (
     <div className={`rounded-lg border p-3 text-xs ${tone}`}>
@@ -197,7 +201,7 @@ function ComplianceCard({ events }: { events: StageEvent[] }) {
           {violations.map((v, i) => (
             <li key={i}>
               <span className="font-medium">{v.ar}</span>
-              {v.severity === "hard" && <span className="ms-1 text-[10px] rounded px-1 border border-destructive/50">إلزامي</span>}
+              {v.severity === "hard" && <span className="ms-1 text-[10px] rounded px-1 border border-destructive/50">{t("auto.mandatory")}</span>}
               <span className="block">{v.detail}</span>
             </li>
           ))}
@@ -210,11 +214,12 @@ function ComplianceCard({ events }: { events: StageEvent[] }) {
 /** Part 7 — Cognitive Conflict Engine resolution card. */
 
 function ConflictCard({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
   const c = [...events].reverse().find((e) => e.type === "conflict")?.data as any;
   if (!c) return null;
   return (
     <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 text-xs">
-      <div className="font-semibold mb-1 text-orange-400">حسم تعارض معرفي</div>
+      <div className="font-semibold mb-1 text-orange-400">{t("auto.resolve_cognitive_conflict")}</div>
       {c.why && <div className="text-muted-foreground mb-1">{c.why}</div>}
       {c.chosen && <div className="text-muted-foreground">الموقف المعتمد: <span className="font-mono">{c.chosen}</span></div>}
       {c.residual_risk && <div className="text-muted-foreground">مخاطرة متبقية: {c.residual_risk}</div>}
@@ -239,21 +244,21 @@ function TrustPanel({ events }: { events: StageEvent[] }) {
   return (
     <div className="mt-3 border-t border-border/50 pt-2 text-xs">
       <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground">
-        {open ? "إخفاء" : "لماذا هذه التوصية؟"}{typeof t.confidence === "number" ? ` — ثقة ${t.confidence}%` : ""}
+        {open ? t("auto.hide") : t("auto.why_this_recommendation")}{typeof t.confidence === "number" ? ` — ثقة ${t.confidence}%` : ""}
       </button>
       {open && (
         <div className="mt-2 space-y-1">
-          <List label="الأدلة" items={t.evidence} />
-          <List label="الافتراضات" items={t.assumptions} />
-          <List label="الحدود" items={t.limitations} />
-          <List label="البدائل" items={t.alternatives} />
-          <List label="المخاطر" items={t.risks} />
+          <List label={t("auto.evidence")} items={t.evidence} />
+          <List label={t("auto.assumptions")} items={t.assumptions} />
+          <List label={t("auto.limits")} items={t.limitations} />
+          <List label={t("auto.alternatives")} items={t.alternatives} />
+          <List label={t("auto.risks_2")} items={t.risks} />
           {t.expected_outcome && (
             <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{t.expected_outcome}</span></div>
           )}
           {Array.isArray(t.evidence_graph) && t.evidence_graph.length > 0 && (
             <div className="pt-1">
-              <div className="font-semibold text-foreground/80">شبكة الأدلة</div>
+              <div className="font-semibold text-foreground/80">{t("auto.guides_grid")}</div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {t.evidence_graph.slice(0, 16).map((n: any, i: number) => (
                   <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n.detail || ""}>

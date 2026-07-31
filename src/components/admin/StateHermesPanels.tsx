@@ -1,6 +1,7 @@
 // Parts 16-17 admin panels — State Center + HERMES Executive Office.
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { Anchor, Crown, RefreshCw, Loader2, Check, X, Clock, Send, AlertTriangle, History, Paperclip, ListChecks } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ const money = (n: any) => `$${Number(n || 0).toFixed(4)}`;
 /* ------------------------------------------------------------------ */
 
 export function StateCenterSection() {
+  const { t } = useI18n();
   const load = useServerFn(getStateCenter);
   const recover = useServerFn(getRecoveryPoint);
   const [data, setData] = useState<any>(null);
@@ -57,7 +59,7 @@ export function StateCenterSection() {
   };
   useEffect(() => { void refresh(); }, []);
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
 
   const anchors: any[] = data?.anchors || [];
   const timeline: any[] = data?.timeline || [];
@@ -77,19 +79,19 @@ export function StateCenterSection() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Anchor className="size-4 text-primary" />
-          <h3 className="font-semibold">مرساة الحالة الحيّة</h3>
+          <h3 className="font-semibold">{t("auto.live_status_anchor")}</h3>
           <span className={`rounded-full px-2 py-0.5 text-[10px] ${enabled ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-            {enabled ? "مفعّلة" : "معطّلة"}
+            {enabled ? t("auto.enabled") : t("auto.disabled_2")}
           </span>
         </div>
         <button onClick={() => void refresh()} className="flex items-center gap-1.5 rounded-lg border border-border/60 px-2.5 py-1.5 text-xs hover:bg-muted/40">
-          <RefreshCw className="size-3.5" /> تحديث
+          <RefreshCw className="size-3.5" /> {t("auto.update")}
         </button>
       </div>
 
       {platform ? (
         <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4 space-y-2">
-          <div className="text-xs text-muted-foreground">هوية المنصة (لا تتغير)</div>
+          <div className="text-xs text-muted-foreground">{t("auto.platform_identity_does_not_change")}</div>
           <div className="font-semibold">{platform.dna?.identity || platform.label}</div>
           <p className="text-sm text-muted-foreground">{platform.mission}</p>
           <div className="grid gap-2 sm:grid-cols-2 text-xs">
@@ -105,14 +107,14 @@ export function StateCenterSection() {
           ) : null}
         </div>
       ) : (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs">مرساة المنصة غير موجودة.</div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs">{t("auto.platform_anchor_not_found")}</div>
       )}
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="عدد المراسي" value={anchors.length} />
-        <Stat label="مراسٍ بانحراف" value={anchors.filter((a) => (a.drift || []).length > 0).length} />
-        <Stat label="متوسط صحة الحالة" value={`${Math.round(anchors.reduce((s, a) => s + Number(a.health_score || 0), 0) / (anchors.length || 1))}%`} />
-        <Stat label="أحداث الخط الزمني" value={timeline.length} />
+        <Stat label={t("auto.number_of_anchors")} value={anchors.length} />
+        <Stat label={t("auto.anchors_with_deviation")} value={anchors.filter((a) => (a.drift || []).length > 0).length} />
+        <Stat label={t("auto.average_case_health")} value={`${Math.round(anchors.reduce((s, a) => s + Number(a.health_score || 0), 0) / (anchors.length || 1))}%`} />
+        <Stat label={t("auto.timeline_events")} value={timeline.length} />
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -120,18 +122,18 @@ export function StateCenterSection() {
           <div key={level} className="rounded-xl border border-border/60 bg-card/60 p-3">
             <div className="text-xs font-medium">{level}</div>
             <div className="text-[11px] text-muted-foreground">{v.count} مرساة · انحراف {v.drifted}</div>
-            <div className="mt-2"><Bar label="الصحة" value={v.avgHealth} /></div>
+            <div className="mt-2"><Bar label={t("auto.health")} value={v.avgHealth} /></div>
           </div>
         ))}
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card/40">
         <div className="border-b border-border/60 px-3 py-2 text-xs font-semibold flex items-center gap-1.5">
-          <History className="size-3.5" /> الخط الزمني للحالة
+          <History className="size-3.5" /> {t("auto.status_timeline")}
         </div>
         <div className="max-h-[380px] overflow-auto divide-y divide-border/40">
           {timeline.length === 0 ? (
-            <div className="p-4 text-xs text-muted-foreground">لا أحداث بعد.</div>
+            <div className="p-4 text-xs text-muted-foreground">{t("auto.no_events_yet")}</div>
           ) : timeline.map((t) => (
             <div key={t.id} className="p-3 text-xs space-y-1">
               <div className="flex items-center justify-between gap-2">
@@ -153,7 +155,7 @@ export function StateCenterSection() {
                 </div>
               ) : null}
               <div className="flex items-center gap-2 pt-1">
-                {t.rollback_point ? <span className="rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px]">نقطة تراجع</span> : null}
+                {t.rollback_point ? <span className="rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px]">{t("auto.rollback_point")}</span> : null}
                 <button
                   disabled={busy}
                   onClick={() => void doRecover(t.level, t.scope_id)}
@@ -169,10 +171,10 @@ export function StateCenterSection() {
 
       {point ? (
         <div className="rounded-xl border border-border/60 bg-card/60 p-3 text-xs">
-          <div className="font-medium mb-1">نقطة الاستعادة</div>
+          <div className="font-medium mb-1">{t("auto.restore_point")}</div>
           {point.ok ? (
             <pre className="max-h-40 overflow-auto text-[10px] text-muted-foreground">{JSON.stringify(point.state, null, 2)}</pre>
-          ) : <div className="text-muted-foreground">لا توجد نقطة تراجع محفوظة لهذا النطاق.</div>}
+          ) : <div className="text-muted-foreground">{t("auto.no_saved_rollback_point_for_this")}</div>}
         </div>
       ) : null}
     </div>
@@ -184,6 +186,7 @@ export function StateCenterSection() {
 /* ------------------------------------------------------------------ */
 
 export function HermesOfficeSection() {
+  const { t } = useI18n();
   const load = useServerFn(getHermesCenter);
   const sync = useServerFn(refreshHermesProposals);
   const decide = useServerFn(decideHermesProposal);
@@ -212,7 +215,7 @@ export function HermesOfficeSection() {
   useEffect(() => { void refresh(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
 
   const o = data?.observatory || {};
   const proposals: any[] = data?.proposals || [];
@@ -233,7 +236,7 @@ export function HermesOfficeSection() {
     setBusy(id);
     try {
       await decide({ data: { proposal_id: id, decision, note: note[id] || null } });
-      toast.success("سُجِّل قرارك، وتعلّم منه هرمس.");
+      toast.success(t("auto.your_decision_has_been_recorded_and"));
       await refresh();
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setBusy(null); }
@@ -269,7 +272,7 @@ export function HermesOfficeSection() {
       if (f.size > 5_000_000) { rej(new Error(`${f.name}: الحجم أكبر من 5 ميغابايت`)); return; }
       const reader = new FileReader();
       reader.onload = () => res({ kind: f.type.startsWith("image/") ? "image" : "file", name: f.name, dataUrl: String(reader.result) });
-      reader.onerror = () => rej(new Error("تعذّر قراءة الملف"));
+      reader.onerror = () => rej(new Error(t("auto.failed_to_read_file")));
       reader.readAsDataURL(f);
     }))).catch((e) => { toast.error(String(e?.message || e)); return []; });
     if (picked.length) setAttachments((a) => [...a, ...picked].slice(0, 4));
@@ -287,16 +290,16 @@ export function HermesOfficeSection() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Crown className="size-4 text-primary" />
-          <h3 className="font-semibold">هرمس — الوكيل التنفيذي للمؤسس</h3>
+          <h3 className="font-semibold">{t("auto.hermes_the_founder_s_executive_agent_2")}</h3>
           <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
             يقترح ولا ينفّذ بلا موافقة
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          {(["observatory", "inbox", "office", "tasks"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`rounded-lg px-2.5 py-1.5 text-xs ${tab === t ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted/40"}`}>
-              {t === "observatory" ? "المرصد التنفيذي" : t === "inbox" ? `صندوق المؤسس (${pending.length})` : t === "office" ? "مكتب هرمس" : "مركز المهام"}
+          {(["observatory", "inbox", "office", "tasks"] as const).map((k) => (
+            <button key={k} onClick={() => setTab(k)}
+              className={`rounded-lg px-2.5 py-1.5 text-xs ${tab === k ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted/40"}`}>
+              {k === "observatory" ? t("auto.executive_observatory") : k === "inbox" ? `${t("auto.founder_inbox")} (${pending.length})` : k === "office" ? t("auto.hermes_office") : t("auto.task_center")}
             </button>
           ))}
         </div>
@@ -315,21 +318,21 @@ export function HermesOfficeSection() {
       {tab === "observatory" && (
         <div className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="تشغيلات (30 يوماً)" value={o.runs?.total ?? 0} hint={`نجاح ${Math.round((o.runs?.successRatio ?? 0) * 100)}%`} />
-            <Stat label="الكلفة الحقيقية" value={money(o.economics?.realUsd)} hint={`${o.economics?.meteredCalls ?? 0} نداء مقاس`} />
-            <Stat label="المحصّل من المستخدمين" value={money(o.economics?.chargedUsd)} />
-            <Stat label="الهامش" value={o.economics?.marginPct == null ? "غير مقاس" : `${o.economics.marginPct}%`} hint={money(o.economics?.marginUsd)} />
-            <Stat label="ميزانية التعلّم" value={money(o.economics?.learningUsd)} hint={`${o.economics?.cacheHits ?? 0} نتيجة مخزّنة`} />
-            <Stat label="نداءات بلا قياس" value={o.economics?.unmeteredCalls ?? 0} />
-            <Stat label="مستخدمون" value={o.users?.total ?? 0} hint={`${o.users?.paying ?? 0} مشترك`} />
-            <Stat label="نماذج فعّالة" value={`${o.models?.active ?? 0}/${o.models?.total ?? 0}`} />
+            <Stat label={t("auto.runs_30_days")} value={o.runs?.total ?? 0} hint={`نجاح ${Math.round((o.runs?.successRatio ?? 0) * 100)}%`} />
+            <Stat label={t("auto.real_cost")} value={money(o.economics?.realUsd)} hint={`${o.economics?.meteredCalls ?? 0} نداء مقاس`} />
+            <Stat label={t("auto.amount_collected_from_users")} value={money(o.economics?.chargedUsd)} />
+            <Stat label={t("auto.margin")} value={o.economics?.marginPct == null ? t("auto.unmeasured") : `${o.economics.marginPct}%`} hint={money(o.economics?.marginUsd)} />
+            <Stat label={t("auto.learning_budget")} value={money(o.economics?.learningUsd)} hint={`${o.economics?.cacheHits ?? 0} نتيجة مخزّنة`} />
+            <Stat label={t("auto.calls_ungraded")} value={o.economics?.unmeteredCalls ?? 0} />
+            <Stat label={t("auto.users")} value={o.users?.total ?? 0} hint={`${o.users?.paying ?? 0} مشترك`} />
+            <Stat label={t("auto.effective_models")} value={`${o.models?.active ?? 0}/${o.models?.total ?? 0}`} />
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-card/40">
-            <div className="border-b border-border/60 px-3 py-2 text-xs font-semibold">الأدوات الأعلى كلفة حقيقية</div>
+            <div className="border-b border-border/60 px-3 py-2 text-xs font-semibold">{t("auto.top_cost_tools")}</div>
             <div className="divide-y divide-border/40">
               {(o.topCostTools || []).length === 0 ? (
-                <div className="p-4 text-xs text-muted-foreground">لا بيانات كلفة مقاسة بعد.</div>
+                <div className="p-4 text-xs text-muted-foreground">{t("auto.no_measured_cost_data_yet")}</div>
               ) : (o.topCostTools || []).map((t: any) => (
                 <div key={t.tool} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
                   <span className="font-medium">{t.tool}</span>
@@ -352,12 +355,12 @@ export function HermesOfficeSection() {
           ) : null}
 
           <div className="rounded-2xl border border-border/60 bg-card/40 p-3 text-xs space-y-1">
-            <div className="font-semibold">حمض المؤسس</div>
+            <div className="font-semibold">{t("auto.founder_acid")}</div>
             <div className="text-muted-foreground">
               تحمّل المخاطر {Math.round(Number(dna.risk_tolerance || 0))}/100 · ثقة الاستنتاج {Math.round(Number(dna.confidence || 0))}% ·
               موافقات {dna.approved_count || 0} · رفض {dna.rejected_count || 0}
             </div>
-            <div className="text-[10px] text-muted-foreground">يتطوّر من قراراتك الفعلية فقط، لا من الافتراضات.</div>
+            <div className="text-[10px] text-muted-foreground">{t("auto.evolves_only_from_your_actual_decisions")}</div>
           </div>
         </div>
       )}
@@ -391,17 +394,17 @@ export function HermesOfficeSection() {
 
               <div className="grid gap-2 md:grid-cols-2 text-[11px]">
                 <div className="rounded-lg border border-border/60 p-2">
-                  <div className="font-medium mb-0.5">المشكلة والدليل</div>
+                  <div className="font-medium mb-0.5">{t("auto.problem_proof")}</div>
                   <div className="text-muted-foreground">{p.problem}</div>
                   <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-muted-foreground">{JSON.stringify(p.evidence, null, 2)}</pre>
                 </div>
                 <div className="rounded-lg border border-border/60 p-2">
-                  <div className="font-medium mb-0.5">القيمة والكلفة</div>
+                  <div className="font-medium mb-0.5">{t("auto.value_and_cost")}</div>
                   <div className="text-muted-foreground">{p.business_value}</div>
                   <div className="mt-1">قيمة متوقعة {money(p.expected_value_usd)} · كلفة {money(p.expected_cost_usd)} · ثقة {Math.round(Number(p.confidence || 0) * 100)}%</div>
                 </div>
                 <div className="rounded-lg border border-border/60 p-2">
-                  <div className="font-medium mb-0.5">المخاطر والبدائل</div>
+                  <div className="font-medium mb-0.5">{t("auto.risks_and_alternatives")}</div>
                   {(p.risk_analysis || []).map((r: any, i: number) => (
                     <div key={i} className="text-muted-foreground">• {r.risk} ({r.severity}) — {r.mitigation}</div>
                   ))}
@@ -410,7 +413,7 @@ export function HermesOfficeSection() {
                   ))}
                 </div>
                 <div className="rounded-lg border border-border/60 p-2">
-                  <div className="font-medium mb-0.5">التنفيذ والتراجع</div>
+                  <div className="font-medium mb-0.5">{t("auto.execute_and_undo")}</div>
                   <div className="text-muted-foreground">{p.technical_analysis}</div>
                   <div className="mt-1 text-muted-foreground">تراجع: {p.rollback_plan}</div>
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -426,7 +429,7 @@ export function HermesOfficeSection() {
                   <input
                     value={note[p.id] || ""}
                     onChange={(e) => setNote((n) => ({ ...n, [p.id]: e.target.value }))}
-                    placeholder="ملاحظتك (يتعلم منها هرمس)"
+                    placeholder={t("auto.your_note_hermes_learns_from_it")}
                     className="flex-1 min-w-[180px] rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs"
                   />
                   <button disabled={busy === p.id} onClick={() => void doDecide(p.id, "approved")}
@@ -435,11 +438,11 @@ export function HermesOfficeSection() {
                   </button>
                   <button disabled={busy === p.id} onClick={() => void doDecide(p.id, "deferred")}
                     className="flex items-center gap-1 rounded-lg border border-border/60 px-2.5 py-1.5 text-xs">
-                    <Clock className="size-3.5" /> تأجيل
+                    <Clock className="size-3.5" /> {t("auto.postpone")}
                   </button>
                   <button disabled={busy === p.id} onClick={() => void doDecide(p.id, "rejected")}
                     className="flex items-center gap-1 rounded-lg bg-destructive/15 text-destructive px-2.5 py-1.5 text-xs">
-                    <X className="size-3.5" /> رفض
+                    <X className="size-3.5" /> {t("auto.reject")}
                   </button>
                 </div>
               ) : p.founder_note ? (
@@ -485,16 +488,16 @@ export function HermesOfficeSection() {
               <div className="flex flex-wrap items-center gap-1.5">
                 <select value={command} onChange={(e) => setCommand(e.target.value)}
                   className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px]">
-                  <option value="">بلا أمر تنفيذي</option>
+                  <option value="">{t("auto.no_executive_order")}</option>
                   {EXECUTIVE_COMMANDS.map((c) => (
                     <option key={c} value={c}>{COMMAND_LABELS_AR[c] || c}</option>
                   ))}
                 </select>
                 <select value={chatLang} onChange={(e) => setChatLang(e.target.value as any)}
                   className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px]">
-                  <option value="ar">العربية</option>
+                  <option value="ar">{t("auto.arabic")}</option>
                   <option value="en">English</option>
-                  <option value="ku">کوردی</option>
+                  <option value="ku">{t("auto.kurdish")}</option>
                 </select>
                 <button onClick={() => fileRef.current?.click()}
                   className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-[11px] hover:bg-muted/40">
@@ -514,7 +517,7 @@ export function HermesOfficeSection() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-                  placeholder="اكتب إلى هرمس…"
+                  placeholder={t("auto.write_to_hermes")}
                   className="flex-1 rounded-lg border border-border/60 bg-background px-2.5 py-2 text-xs"
                 />
                 <button onClick={() => void send()} disabled={busy === "ask"}

@@ -35,11 +35,11 @@ export function NotifyOnboardModal() {
   };
 
   const opts = [
-    { v: "inapp", label: t("notify_inapp") || "صندوق التطبيق", icon: Inbox, desc: t("notify_inapp_desc") || "جرس الإشعارات في الموقع" },
-    { v: "telegram", label: "Telegram", icon: Send, desc: t("notify_tg_desc") || "اربط Telegram لتصلك النتائج كرسائل" },
-    { v: "linkedin", label: "LinkedIn", icon: Linkedin, desc: t("notify_li_desc") || "نشر مباشر بعد موافقتك" },
-    { v: "email", label: t("notify_email") || "البريد", icon: Mail, desc: t("notify_email_desc") || "ملخصات على بريدك" },
-    { v: "none", label: t("notify_none") || "لا شيء", icon: BellOff, desc: t("notify_none_desc") || "اعمل بصمت" },
+    { v: "inapp", label: t("notify_inapp") || t("auto.application_box"), icon: Inbox, desc: t("notify_inapp_desc") || t("auto.in_site_notification_bell") },
+    { v: "telegram", label: "Telegram", icon: Send, desc: t("notify_tg_desc") || t("auto.link_telegram_to_receive_results_as") },
+    { v: "linkedin", label: "LinkedIn", icon: Linkedin, desc: t("notify_li_desc") || t("auto.direct_publish_after_your_approval") },
+    { v: "email", label: t("notify_email") || t("auto.mail"), icon: Mail, desc: t("notify_email_desc") || t("auto.summaries_to_your_email") },
+    { v: "none", label: t("notify_none") || t("auto.nothing"), icon: BellOff, desc: t("notify_none_desc") || t("auto.work_silently") },
   ];
 
   return (
@@ -47,8 +47,8 @@ export function NotifyOnboardModal() {
       <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="font-display text-xl font-bold">{t("notify_onb_title") || "كيف تريد استلام نتائج الوكيل؟"}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t("notify_onb_desc") || "اختر طريقة واحدة الآن — يمكنك تغييرها لاحقاً من صفحة الوكيل."}</p>
+            <h2 className="font-display text-xl font-bold">{t("notify_onb_title") || t("auto.how_do_you_want_to_receive")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("notify_onb_desc") || t("auto.choose_one_method_now_you_can")}</p>
           </div>
           <button onClick={skip} aria-label="close" className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
         </div>

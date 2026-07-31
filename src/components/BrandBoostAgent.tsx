@@ -104,7 +104,7 @@ export function BrandBoostAgent() {
       try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0, 200) || `http_${res.status}` }; }
       if (!res.ok) throw new Error(data.error || `http_${res.status}`);
       setReport(data);
-      toast.success(outLang === "ar" ? "تم خصم التوكنز ✓ — تحقق من الرصيد في الأعلى"
+      toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
       await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, status: "done", report: data });
@@ -160,7 +160,7 @@ export function BrandBoostAgent() {
         <TabsContent value="research" className="mt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
             {lang === "ar"
-              ? "ابحث عن شركات/علامات/أسواق وحوّل النتائج إلى تغذية للظهور والتعزيز."
+              ? t("auto.search_for_companies_brands_markets_and")
               : lang === "ku"
               ? "گەڕانی کۆمپانیا/براند/بازاڕ و گۆڕینیان بۆ خواردنی AI."
               : "Research companies/brands/markets and feed insights back into your boost plan."}
@@ -171,7 +171,7 @@ export function BrandBoostAgent() {
         <TabsContent value="outreach" className="mt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
             {lang === "ar"
-              ? "ولّد رسائل تواصل وبروفايلات شركات لاستهداف الشركاء والعملاء بصوت علامتك."
+              ? t("auto.generate_communication_messages_and_company_profiles")
               : lang === "ku"
               ? "نامەی پەیوەندی و پرۆفایلی کۆمپانیا دروست بکە."
               : "Generate outreach emails and company briefs in your brand voice."}
@@ -266,7 +266,7 @@ export function BrandBoostAgent() {
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs text-[11px]">
                             {lang === "ar"
-                              ? "لا يوجد API عام مباشر لهذه المنصة، فاستخدمنا نموذجاً مكافئاً من نفس العائلة لمحاكاة جوابها."
+                              ? t("auto.there_is_no_direct_public_api")
                               : lang === "ku"
                               ? "API ڕاستەوخۆی گشتی بۆ ئەم پلاتفۆڕمە نییە، مۆدێلی هاوشێوەمان بەکارهێنا."
                               : "No direct public API for this platform — we used an equivalent model from the same family to simulate its answer."}
@@ -378,7 +378,7 @@ export function BrandBoostAgent() {
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {lang === "ar"
-                ? "افتح تبويب «بثّ للذكاء» لإنشاء صفحة عامة مفهرسة + ping IndexNow (Bing/Copilot/Perplexity/ChatGPT) + روابط مشاركة جاهزة لكل المنصات."
+                ? t("auto.open_the_broadcast_to_ai_tab")
                 : lang === "ku"
                 ? "تابی «بڵاوکردنەوە بۆ AI» بکەرەوە: لاپەڕەی گشتی + IndexNow ping + بەستەری هاوبەشی."
                 : "Open the Broadcast tab to publish an indexable public page, ping IndexNow (Bing/Copilot/Perplexity/ChatGPT), and get share-ready links for every platform."}
@@ -544,8 +544,9 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 }
 
 function StepGuide({ lang }: { lang: Lang }) {
+  const { t } = useI18n();
   const steps = lang === "ar"
-    ? ["افتح الرابط للتأكد من ظهور بطاقتك", "انسخه", "شاركه على منصاتك ومواقع موثوقة", "راقب الزيارات في تبويب «متتبع الانتشار»"]
+    ? [t("auto.open_the_link_to_ensure_your"), t("auto.copy_it"), t("auto.share_it_on_your_platforms_and"), t("auto.monitor_visits_in_the_spread_tracker")]
     : lang === "ku"
     ? ["لینکەکە بکەرەوە بۆ پشتڕاستکردنەوە", "کۆپی بکە", "بڵاوی بکەرەوە لە پلاتفۆڕمەکانت", "سەردانەکان ببینە لە تابی «شوێنپێ»"]
     : ["Open the URL to verify your card renders", "Copy it", "Share it on your sites and trusted platforms", "Watch hits in the Propagation Tracker tab"];

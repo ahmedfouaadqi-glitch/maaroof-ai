@@ -134,11 +134,11 @@ function MaaroofPage() {
     const text = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
     if (!text) return;
     exportToPDF({
-      title: "تقرير معروف",
+      title: t("auto.maaroof_report"),
       lang: "ar",
       sections: [
-        { heading: "الهدف", kind: "text", text: goal },
-        { heading: "الإجابة النهائية", kind: "text", text },
+        { heading: t("auto.target"), kind: "text", text: goal },
+        { heading: t("auto.final_answer"), kind: "text", text },
       ],
     });
   }
@@ -149,9 +149,9 @@ function MaaroofPage() {
       <SiteHeader />
       <div className="max-w-xl mx-auto p-8 text-center">
         <Bot className="w-12 h-12 mx-auto mb-4 text-primary" />
-        <h1 className="text-2xl font-bold mb-2">معروف — الوكيل الذكي</h1>
-        <p className="mb-4 text-muted-foreground">يرجى تسجيل الدخول لاستخدام معروف.</p>
-        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">تسجيل الدخول</Link>
+        <h1 className="text-2xl font-bold mb-2">{t("auto.maaroof_smart_agent")}</h1>
+        <p className="mb-4 text-muted-foreground">{t("auto.please_login_to_use_maaroof")}</p>
+        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">{t("auto.login_2")}</Link>
       </div>
     </div>
   );
@@ -171,10 +171,10 @@ function MaaroofPage() {
           <div className="rounded-lg border bg-card p-3">
             <h2 className="flex items-center justify-between gap-2 font-semibold mb-2 text-base">
               <span className="flex items-center gap-2"><History className="w-4 h-4" /> الجلسات السابقة</span>
-              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"><Brain className="w-3 h-3" /> الذاكرة</Link>
+              <Link to="/maaroof/memory" className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"><Brain className="w-3 h-3" /> {t("auto.memory")}</Link>
             </h2>
             <ul className="space-y-1 max-h-[40vh] overflow-y-auto text-sm">
-              {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات {activeWs ? "في هذه المساحة" : ""} بعد.</li>}
+              {runs.length === 0 && <li className="text-muted-foreground text-xs">لا توجد جلسات {activeWs ? t("auto.in_this_space") : ""} بعد.</li>}
               {runs.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => loadRun(r.id)} className="w-full text-start p-2 rounded hover:bg-muted">
@@ -195,8 +195,8 @@ function MaaroofPage() {
         <main className="space-y-3">
           {/* Header */}
           <div className="rounded-lg border bg-card p-4 flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 font-bold text-lg"><Sparkles className="w-5 h-5 text-primary" /> معروف</div>
-            <span className="text-xs text-muted-foreground">وكيلك الذكي للتسويق الرقمي وGEO حول العالم</span>
+            <div className="flex items-center gap-2 font-bold text-lg"><Sparkles className="w-5 h-5 text-primary" /> {t("auto.maaroof_2")}</div>
+            <span className="text-xs text-muted-foreground">{t("auto.your_smart_agent_for_digital_marketing")}</span>
             {activeWs && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary">
                 {activeWs.name}
@@ -230,22 +230,22 @@ function MaaroofPage() {
           {/* Geo bar */}
           <div className="rounded-lg border bg-card p-3 flex items-center gap-2 flex-wrap text-sm">
             <Globe className="w-4 h-4 text-primary" />
-            <h2 className="font-medium text-sm m-0">النطاق الجغرافي:</h2>
-            <label htmlFor="geo-mode" className="sr-only">النطاق الجغرافي / Geographic scope</label>
-            <select id="geo-mode" aria-label="النطاق الجغرافي / Geographic scope" value={geoMode} onChange={(e) => setGeoMode(e.target.value as any)} className="border rounded px-2 py-1 bg-background">
-              <option value="auto">تلقائي (حسب IP)</option>
-              <option value="country">دولة محددة</option>
-              <option value="world">عالمي</option>
+            <h2 className="font-medium text-sm m-0">{t("auto.geographic_scope_2")}</h2>
+            <label htmlFor="geo-mode" className="sr-only">{t("auto.geographic_scope_geographic_scope")}</label>
+            <select id="geo-mode" aria-label={t("auto.geographic_scope_geographic_scope")} value={geoMode} onChange={(e) => setGeoMode(e.target.value as any)} className="border rounded px-2 py-1 bg-background">
+              <option value="auto">{t("auto.automatic_by_ip")}</option>
+              <option value="country">{t("auto.specific_country")}</option>
+              <option value="world">{t("auto.global")}</option>
             </select>
             {geoMode === "country" && (
               <>
-                <label htmlFor="geo-country" className="sr-only">الدولة / Country</label>
-                <select id="geo-country" aria-label="الدولة / Country" value={country} onChange={(e) => setCountry(e.target.value)} className="border rounded px-2 py-1 bg-background">
-                  <option value="">— اختر دولة —</option>
+                <label htmlFor="geo-country" className="sr-only">{t("auto.state_country")}</label>
+                <select id="geo-country" aria-label={t("auto.state_country")} value={country} onChange={(e) => setCountry(e.target.value)} className="border rounded px-2 py-1 bg-background">
+                  <option value="">{t("auto.select_a_country")}</option>
                   {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.ar} ({c.code})</option>)}
                 </select>
-                <label htmlFor="geo-city" className="sr-only">المدينة / City</label>
-                <input id="geo-city" aria-label="المدينة / City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="مدينة (اختياري)" className="border rounded px-2 py-1 bg-background w-40" />
+                <label htmlFor="geo-city" className="sr-only">{t("auto.city")}</label>
+                <input id="geo-city" aria-label={t("auto.city")} value={city} onChange={(e) => setCity(e.target.value)} placeholder={t("auto.city_optional")} className="border rounded px-2 py-1 bg-background w-40" />
               </>
             )}
             {detected?.country && geoMode === "auto" && (
@@ -255,18 +255,18 @@ function MaaroofPage() {
 
           {/* Input */}
           <div className="rounded-lg border bg-card p-3">
-            <h2 className="sr-only">إدخال المهمة</h2>
+            <h2 className="sr-only">{t("auto.enter_task")}</h2>
             <textarea
               value={goal} onChange={(e) => setGoal(e.target.value)}
-              placeholder="مرحباً، أنا معروف. ما الهدف؟ (مثال: حلّل ظهور علامتي في السوق السعودي واقترح خطة محتوى لشهر)"
+              placeholder={t("auto.hello_i_am_maaroof_what_is")}
               className="w-full min-h-[80px] p-2 bg-background border rounded outline-none resize-y" disabled={running}
             />
             <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
-              <div className="inline-flex rounded-lg border overflow-hidden text-xs" role="group" aria-label="نمط التنفيذ">
+              <div className="inline-flex rounded-lg border overflow-hidden text-xs" role="group" aria-label={t("auto.execution_style")}>
                 {([
-                  { key: "simulation", label: "محاكاة" },
-                  { key: "recommendation", label: "توصية" },
-                  { key: "execution", label: "تنفيذ" },
+                  { key: "simulation", label: t("auto.simulation_2") },
+                  { key: "recommendation", label: t("auto.recommendation") },
+                  { key: "execution", label: t("auto.execute") },
                 ] as const).map((m) => (
                   <button
                     key={m.key}

@@ -2,6 +2,7 @@
 // Groups existing admin panels + Cognitive Intelligence Engine sections
 // into one coherent surface. Reuses existing components (Evolution over Replacement).
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Activity, Brain, Coins, ShieldCheck, Sparkles, Network, Bot,
@@ -27,33 +28,33 @@ type SectionKey =
 
 
 const SECTIONS: Array<{ k: SectionKey; label: string; Icon: any; group: string }> = [
-  { k: "overview",       label: "نظرة عامة",             Icon: Activity,    group: "core" },
-  { k: "maaroof",        label: "معروف — الوكيل",        Icon: Bot,         group: "core" },
-  { k: "cognitive",      label: "الرؤى الإدراكية",       Icon: Brain,       group: "cognitive" },
-  { k: "dna",            label: "الحمض المعرفي (DNA)",   Icon: Fingerprint, group: "cognitive" },
-  { k: "evolution",      label: "تقارير التطور",         Icon: Sparkles,    group: "cognitive" },
-  { k: "expert_scores",  label: "أداء الخبراء",           Icon: BarChart3,   group: "scores" },
-  { k: "model_scores",   label: "أداء النماذج",           Icon: Layers,      group: "scores" },
-  { k: "mcp_scores",     label: "MCP المتصلة",           Icon: Network,     group: "scores" },
-  { k: "policy_scores",  label: "السياسات",              Icon: ShieldCheck, group: "scores" },
-  { k: "eqi",            label: "مؤشر الجودة التنفيذية", Icon: Gauge,       group: "scores" },
-  { k: "personality",    label: "شخصيات الوكلاء",        Icon: Fingerprint, group: "scores" },
-  { k: "laws",           label: "الامتثال الدستوري",     Icon: ShieldCheck, group: "scores" },
+  { k: "overview",       label: "auto.overview",             Icon: Activity,    group: "core" },
+  { k: "maaroof",        label: "auto.maaroof_agent",        Icon: Bot,         group: "core" },
+  { k: "cognitive",      label: "auto.cognitive_insights",       Icon: Brain,       group: "cognitive" },
+  { k: "dna",            label: "auto.cognitive_dna",   Icon: Fingerprint, group: "cognitive" },
+  { k: "evolution",      label: "auto.development_reports",         Icon: Sparkles,    group: "cognitive" },
+  { k: "expert_scores",  label: "auto.expert_performance",           Icon: BarChart3,   group: "scores" },
+  { k: "model_scores",   label: "auto.model_performance",           Icon: Layers,      group: "scores" },
+  { k: "mcp_scores",     label: "auto.connected_mcp",           Icon: Network,     group: "scores" },
+  { k: "policy_scores",  label: "auto.policies",              Icon: ShieldCheck, group: "scores" },
+  { k: "eqi",            label: "auto.executive_quality_index", Icon: Gauge,       group: "scores" },
+  { k: "personality",    label: "auto.agent_personas",        Icon: Fingerprint, group: "scores" },
+  { k: "laws",           label: "auto.constitutional_compliance",     Icon: ShieldCheck, group: "scores" },
 
-  { k: "academy",        label: "أكاديمية الخبراء",       Icon: GraduationCap, group: "learning" },
-  { k: "knowledge",      label: "مرصد المعرفة الحيّة",     Icon: Network,     group: "learning" },
-  { k: "learning_budget",label: "ميزانية التعلّم",         Icon: Coins,       group: "learning" },
+  { k: "academy",        label: "auto.expert_academy",       Icon: GraduationCap, group: "learning" },
+  { k: "knowledge",      label: "auto.live_knowledge_observatory",     Icon: Network,     group: "learning" },
+  { k: "learning_budget",label: "auto.learning_budget",         Icon: Coins,       group: "learning" },
 
-  { k: "model_center",   label: "مركز نماذج الذكاء",     Icon: Layers,      group: "governance" },
-  { k: "decision_center",label: "مركز القرار التنفيذي",   Icon: ScrollText,  group: "governance" },
-  { k: "publishing_center", label: "منظومة النشر",        Icon: Send,        group: "governance" },
-  { k: "trust_center",   label: "هندسة الثقة",            Icon: ShieldCheck, group: "governance" },
-  { k: "state_center",   label: "مرساة الحالة",            Icon: Anchor,      group: "governance" },
-  { k: "hermes",         label: "هرمس — مكتب المؤسس",      Icon: Crown,       group: "governance" },
+  { k: "model_center",   label: "auto.ai_models_center",     Icon: Layers,      group: "governance" },
+  { k: "decision_center",label: "auto.executive_decision_center",   Icon: ScrollText,  group: "governance" },
+  { k: "publishing_center", label: "auto.publishing_system",        Icon: Send,        group: "governance" },
+  { k: "trust_center",   label: "auto.trust_engineering",            Icon: ShieldCheck, group: "governance" },
+  { k: "state_center",   label: "auto.status_anchor",            Icon: Anchor,      group: "governance" },
+  { k: "hermes",         label: "auto.hermes_founder_s_office",      Icon: Crown,       group: "governance" },
 
-  { k: "finance",        label: "المالية الموحّدة",       Icon: Coins,       group: "ops" },
-  { k: "health",         label: "صحة النظام",            Icon: Radar,       group: "ops" },
-  { k: "user_intel",     label: "ذكاء المستخدمين",       Icon: ScrollText,  group: "ops" },
+  { k: "finance",        label: "auto.unified_financial",       Icon: Coins,       group: "ops" },
+  { k: "health",         label: "auto.system_health",            Icon: Radar,       group: "ops" },
+  { k: "user_intel",     label: "auto.user_intelligence",       Icon: ScrollText,  group: "ops" },
 ];
 
 export function MaaroofIntelligenceCenter() {
@@ -123,6 +124,7 @@ export function MaaroofIntelligenceCenter() {
 }
 
 function OverviewSection() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<{ runs: number; dna: number; reports: number }>({ runs: 0, dna: 0, reports: 0 });
   useEffect(() => {
     (async () => {
@@ -137,15 +139,15 @@ function OverviewSection() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">مركز ذكاء معروف</h2>
+        <h2 className="text-lg font-semibold">{t("auto.maaroof_intelligence_center")}</h2>
         <p className="text-xs text-muted-foreground mt-1">
           كل ما يخص الوكيل الذكي في مكان واحد: الجلسات، الذاكرة، الحمض المعرفي، تقارير التطور، أداء الخبراء والنماذج و MCP، والصحة المالية والتشغيلية.
         </p>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="جلسات" value={stats.runs} />
-        <Stat label="أنماط DNA" value={stats.dna} />
-        <Stat label="تقارير تطور" value={stats.reports} />
+        <Stat label={t("auto.sessions_2")} value={stats.runs} />
+        <Stat label={t("auto.dna_patterns")} value={stats.dna} />
+        <Stat label={t("auto.evolution_reports")} value={stats.reports} />
       </div>
     </div>
   );
@@ -161,6 +163,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 function DnaSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<Array<{ kind: string; count: number; last_at: string }>>([]);
   useEffect(() => {
     (async () => {
@@ -178,7 +181,7 @@ function DnaSection() {
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-base font-semibold">الحمض المعرفي للمنصة (Platform DNA)</h3>
+        <h3 className="text-base font-semibold">{t("auto.platform_dna")}</h3>
         <p className="text-xs text-muted-foreground mt-1">
           أنماط مجهولة الهوية تُستخرج من الجلسات الناجحة — بدون أي بيانات شخصية — لتحسين قرارات معروف مستقبلاً.
         </p>
@@ -190,9 +193,9 @@ function DnaSection() {
       ) : (
         <table className="w-full text-xs">
           <thead><tr className="border-b text-muted-foreground">
-            <th className="p-2 text-start">النوع</th>
-            <th className="p-2">العدد</th>
-            <th className="p-2">آخر التقاط</th>
+            <th className="p-2 text-start">{t("auto.type")}</th>
+            <th className="p-2">{t("auto.number")}</th>
+            <th className="p-2">{t("auto.last_capture")}</th>
           </tr></thead>
           <tbody>
             {rows.sort((a,b)=>b.count-a.count).map((r) => (
@@ -210,6 +213,7 @@ function DnaSection() {
 }
 
 function EvolutionSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
   const load = async () => {
     const { data } = await supabase.from("maaroof_evolution_reports" as any).select("*").order("created_at", { ascending: false }).limit(30);
@@ -219,11 +223,11 @@ function EvolutionSection() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold">تقارير تطور معروف</h3>
-        <span className="text-[11px] text-muted-foreground">تُولَّد تلقائياً — عرض القراءة فقط.</span>
+        <h3 className="text-base font-semibold">{t("auto.maaroof_evolution_reports")}</h3>
+        <span className="text-[11px] text-muted-foreground">{t("auto.automatically_generated_read_only_view")}</span>
       </div>
       {rows.length === 0 ? (
-        <div className="text-sm text-muted-foreground p-6 text-center border border-dashed rounded-xl">لا توجد تقارير بعد.</div>
+        <div className="text-sm text-muted-foreground p-6 text-center border border-dashed rounded-xl">{t("auto.no_reports_yet")}</div>
       ) : (
         <div className="space-y-2">
           {rows.map((r) => (
@@ -242,6 +246,7 @@ function EvolutionSection() {
 }
 
 function ScoresTable({ view, cols }: { view: string; cols: string[] }) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -252,8 +257,8 @@ function ScoresTable({ view, cols }: { view: string; cols: string[] }) {
       setLoading(false);
     })();
   }, [view]);
-  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
-  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">لا توجد بيانات بعد.</div>;
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">{t("auto.loading_3")}</div>;
+  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">{t("auto.no_data_yet")}</div>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
@@ -282,6 +287,7 @@ const EQI_DIMS: Array<[string, string]> = [
 ];
 
 function EqiSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -292,14 +298,14 @@ function EqiSection() {
       setLoading(false);
     })();
   }, []);
-  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
-  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">لا توجد قياسات بعد — فعّل «مؤشر الجودة» ثم شغّل جلسات.</div>;
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">{t("auto.loading_3")}</div>;
+  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">{t("auto.no_measurements_yet_activate_quality_indicator")}</div>;
   const latest = rows[0];
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-base font-semibold">مؤشر الجودة التنفيذية (EQI)</h3>
-        <p className="text-xs text-muted-foreground mt-1">11 بُعداً تُحتسب من كل جلسة — يوضّح أين يقوى معروف وأين يحتاج تحسيناً.</p>
+        <h3 className="text-base font-semibold">{t("auto.executive_quality_index_eqi")}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t("auto.11_dimensions_are_calculated_from_each")}</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {EQI_DIMS.map(([k, label]) => {
@@ -318,9 +324,9 @@ function EqiSection() {
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead><tr className="border-b text-muted-foreground">
-            <th className="p-2 text-start">اليوم</th><th className="p-2">جلسات</th>
+            <th className="p-2 text-start">{t("auto.today")}</th><th className="p-2">{t("auto.sessions_2")}</th>
             {EQI_DIMS.map(([k, l]) => <th key={k} className="p-2">{l}</th>)}
-            <th className="p-2">م. التكلفة $</th>
+            <th className="p-2">{t("auto.avg_cost")}</th>
           </tr></thead>
           <tbody>
             {rows.map((r, i) => (
@@ -340,6 +346,7 @@ function EqiSection() {
 
 /* ---------- Part 7 — Agent personality traits ---------- */
 function PersonalitySection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -354,13 +361,13 @@ function PersonalitySection() {
       setLoading(false);
     })();
   }, []);
-  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
-  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">لا توجد شخصيات بعد — فعّل «شخصية الوكيل التنفيذية» في تحكم معروف.</div>;
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">{t("auto.loading_3")}</div>;
+  if (!rows.length) return <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">{t("auto.no_personas_yet_activate_executive_agent")}</div>;
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-base font-semibold">شخصيات الوكلاء التنفيذية</h3>
-        <p className="text-xs text-muted-foreground mt-1">تتطور السمات تلقائياً بعد كل جلسة حسب النجاح والثقة والتكلفة.</p>
+        <h3 className="text-base font-semibold">{t("auto.executive_agent_personas")}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t("auto.attributes_develop_automatically_after_each_session")}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {rows.map((r) => {
@@ -368,7 +375,7 @@ function PersonalitySection() {
           return (
             <div key={r.id} className="rounded-xl border border-border/60 bg-background/40 p-3">
               <div className="flex items-center gap-2 text-xs mb-2">
-                <span className="font-semibold">{r.role || "وكيل"}</span>
+                <span className="font-semibold">{r.role || t("auto.agent")}</span>
                 <span className="font-mono text-[10px] text-muted-foreground">v{r.personality_version ?? 1}</span>
                 <span className="ms-auto text-[10px] text-muted-foreground">{r.runs_count ?? 0} جلسة · {r.success_rate == null ? "—" : `${(Number(r.success_rate) * 100).toFixed(0)}%`}</span>
               </div>
@@ -393,6 +400,7 @@ function PersonalitySection() {
 
 /* ---------- Part 8 — Constitutional compliance (30 laws) ---------- */
 function LawsComplianceSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -407,7 +415,7 @@ function LawsComplianceSection() {
       setLoading(false);
     })();
   }, []);
-  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">تحميل…</div>;
+  if (loading) return <div className="p-6 text-center text-xs text-muted-foreground">{t("auto.loading_3")}</div>;
   if (!rows.length)
     return (
       <div className="p-6 text-center text-sm text-muted-foreground border border-dashed rounded-xl">
@@ -425,8 +433,8 @@ function LawsComplianceSection() {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-base font-semibold">الامتثال الدستوري</h3>
-        <p className="text-xs text-muted-foreground mt-1">أكثر القوانين خرقاً عبر الجلسات — مؤشر مباشر على أي طبقة تحتاج تفعيلاً أو ضبطاً.</p>
+        <h3 className="text-base font-semibold">{t("auto.constitutional_compliance")}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t("auto.most_violated_laws_across_sessions_a")}</p>
       </div>
       <div className="space-y-1.5">
         {top.map((l, i) => (
@@ -434,7 +442,7 @@ function LawsComplianceSection() {
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium">
                 {l.law}
-                {l.severity === "hard" && <span className="ms-2 text-[10px] rounded px-1 border border-destructive/50 text-destructive">إلزامي</span>}
+                {l.severity === "hard" && <span className="ms-2 text-[10px] rounded px-1 border border-destructive/50 text-destructive">{t("auto.mandatory")}</span>}
               </span>
               <span className="font-mono">{l.total}</span>
             </div>
