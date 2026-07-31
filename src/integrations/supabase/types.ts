@@ -918,6 +918,62 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_items: {
+        Row: {
+          claim: string | null
+          contradicts: Json
+          created_at: string
+          id: string
+          reality_record_id: string
+          reproducible: boolean
+          source_kind: string
+          source_ref: string | null
+          success_count: number
+          user_id: string | null
+          verified_at: string | null
+          verified_by: string | null
+          weight: number
+        }
+        Insert: {
+          claim?: string | null
+          contradicts?: Json
+          created_at?: string
+          id?: string
+          reality_record_id: string
+          reproducible?: boolean
+          source_kind?: string
+          source_ref?: string | null
+          success_count?: number
+          user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          weight?: number
+        }
+        Update: {
+          claim?: string | null
+          contradicts?: Json
+          created_at?: string
+          id?: string
+          reality_record_id?: string
+          reproducible?: boolean
+          source_kind?: string
+          source_ref?: string | null
+          success_count?: number
+          user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_items_reality_record_id_fkey"
+            columns: ["reality_record_id"]
+            isOneToOne: false
+            referencedRelation: "reality_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expert_learning_sessions: {
         Row: {
           budget_source: string
@@ -2936,6 +2992,72 @@ export type Database = {
           risk_rules?: Json
           sort_order?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      reality_records: {
+        Row: {
+          alternatives: Json
+          confidence: number
+          contradictions: Json
+          created_at: string
+          evidence_score: number
+          id: string
+          loop_stage: string
+          missing_evidence: Json
+          reality_score: number
+          reality_state: string
+          reproducible: boolean
+          run_id: string | null
+          signals: Json
+          subject: string
+          subject_ref: string | null
+          updated_at: string
+          user_id: string | null
+          verification_score: number
+          workspace_id: string | null
+        }
+        Insert: {
+          alternatives?: Json
+          confidence?: number
+          contradictions?: Json
+          created_at?: string
+          evidence_score?: number
+          id?: string
+          loop_stage?: string
+          missing_evidence?: Json
+          reality_score?: number
+          reality_state?: string
+          reproducible?: boolean
+          run_id?: string | null
+          signals?: Json
+          subject?: string
+          subject_ref?: string | null
+          updated_at?: string
+          user_id?: string | null
+          verification_score?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          alternatives?: Json
+          confidence?: number
+          contradictions?: Json
+          created_at?: string
+          evidence_score?: number
+          id?: string
+          loop_stage?: string
+          missing_evidence?: Json
+          reality_score?: number
+          reality_state?: string
+          reproducible?: boolean
+          run_id?: string | null
+          signals?: Json
+          subject?: string
+          subject_ref?: string | null
+          updated_at?: string
+          user_id?: string | null
+          verification_score?: number
+          workspace_id?: string | null
         }
         Relationships: []
       }
