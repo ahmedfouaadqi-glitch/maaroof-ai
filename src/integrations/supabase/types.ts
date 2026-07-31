@@ -2188,6 +2188,7 @@ export type Database = {
           priority: number
           quality_score: Json | null
           queue_state: string
+          reality: Json | null
           schedule_id: string | null
           started_at: string
           status: string
@@ -2222,6 +2223,7 @@ export type Database = {
           priority?: number
           quality_score?: Json | null
           queue_state?: string
+          reality?: Json | null
           schedule_id?: string | null
           started_at?: string
           status?: string
@@ -2256,6 +2258,7 @@ export type Database = {
           priority?: number
           quality_score?: Json | null
           queue_state?: string
+          reality?: Json | null
           schedule_id?: string | null
           started_at?: string
           status?: string
