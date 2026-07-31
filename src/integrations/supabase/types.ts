@@ -533,6 +533,107 @@ export type Database = {
         }
         Relationships: []
       }
+      benchmark_results: {
+        Row: {
+          benchmark_id: string
+          created_at: string
+          delta_vs_baseline: number | null
+          execution_id: string | null
+          id: string
+          meta: Json
+          passed: boolean | null
+          run_id: string | null
+          sample_size: number
+          source: string | null
+          user_id: string | null
+          value: number
+        }
+        Insert: {
+          benchmark_id: string
+          created_at?: string
+          delta_vs_baseline?: number | null
+          execution_id?: string | null
+          id?: string
+          meta?: Json
+          passed?: boolean | null
+          run_id?: string | null
+          sample_size?: number
+          source?: string | null
+          user_id?: string | null
+          value: number
+        }
+        Update: {
+          benchmark_id?: string
+          created_at?: string
+          delta_vs_baseline?: number | null
+          execution_id?: string | null
+          id?: string
+          meta?: Json
+          passed?: boolean | null
+          run_id?: string | null
+          sample_size?: number
+          source?: string | null
+          user_id?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benchmark_results_benchmark_id_fkey"
+            columns: ["benchmark_id"]
+            isOneToOne: false
+            referencedRelation: "benchmarks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      benchmarks: {
+        Row: {
+          baseline: number | null
+          created_at: string
+          higher_is_better: boolean
+          id: string
+          metric: string
+          notes: string | null
+          subject: string
+          subject_kind: string
+          target: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          baseline?: number | null
+          created_at?: string
+          higher_is_better?: boolean
+          id?: string
+          metric: string
+          notes?: string | null
+          subject: string
+          subject_kind?: string
+          target?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          baseline?: number | null
+          created_at?: string
+          higher_is_better?: boolean
+          id?: string
+          metric?: string
+          notes?: string | null
+          subject?: string
+          subject_kind?: string
+          target?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       brand_authority_packs: {
         Row: {
           brand_keywords: string | null
@@ -920,49 +1021,88 @@ export type Database = {
       }
       evidence_items: {
         Row: {
+          business_value: number
+          category: string | null
           claim: string | null
+          collection_method: string | null
           contradicts: Json
           created_at: string
+          evidence_type: string | null
+          execution_id: string | null
+          expert_key: string | null
+          expires_at: string | null
+          freshness: number
           id: string
+          language: string
           reality_record_id: string
           reproducible: boolean
           source_kind: string
           source_ref: string | null
+          source_reliability: number
           success_count: number
+          title: string | null
           user_id: string | null
+          verification_history: Json
           verified_at: string | null
           verified_by: string | null
           weight: number
+          workspace_id: string | null
         }
         Insert: {
+          business_value?: number
+          category?: string | null
           claim?: string | null
+          collection_method?: string | null
           contradicts?: Json
           created_at?: string
+          evidence_type?: string | null
+          execution_id?: string | null
+          expert_key?: string | null
+          expires_at?: string | null
+          freshness?: number
           id?: string
+          language?: string
           reality_record_id: string
           reproducible?: boolean
           source_kind?: string
           source_ref?: string | null
+          source_reliability?: number
           success_count?: number
+          title?: string | null
           user_id?: string | null
+          verification_history?: Json
           verified_at?: string | null
           verified_by?: string | null
           weight?: number
+          workspace_id?: string | null
         }
         Update: {
+          business_value?: number
+          category?: string | null
           claim?: string | null
+          collection_method?: string | null
           contradicts?: Json
           created_at?: string
+          evidence_type?: string | null
+          execution_id?: string | null
+          expert_key?: string | null
+          expires_at?: string | null
+          freshness?: number
           id?: string
+          language?: string
           reality_record_id?: string
           reproducible?: boolean
           source_kind?: string
           source_ref?: string | null
+          source_reliability?: number
           success_count?: number
+          title?: string | null
           user_id?: string | null
+          verification_history?: Json
           verified_at?: string | null
           verified_by?: string | null
           weight?: number
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -973,6 +1113,226 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      execution_events: {
+        Row: {
+          created_at: string
+          execution_id: string
+          id: string
+          kind: string
+          payload: Json
+          stage: string
+          summary: string | null
+          task_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          execution_id: string
+          id?: string
+          kind?: string
+          payload?: Json
+          stage: string
+          summary?: string | null
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          execution_id?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          stage?: string
+          summary?: string | null
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_events_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_tasks: {
+        Row: {
+          agent_key: string | null
+          attempts: number
+          capability_key: string | null
+          cost_usd: number
+          created_at: string
+          description: string | null
+          error: string | null
+          execution_id: string
+          expert_key: string | null
+          finished_at: string | null
+          id: string
+          input: Json
+          max_attempts: number
+          mcp_provider: string | null
+          measured: Json
+          model_key: string | null
+          output: Json
+          seq: number
+          started_at: string | null
+          status: string
+          title: string
+          tokens: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          agent_key?: string | null
+          attempts?: number
+          capability_key?: string | null
+          cost_usd?: number
+          created_at?: string
+          description?: string | null
+          error?: string | null
+          execution_id: string
+          expert_key?: string | null
+          finished_at?: string | null
+          id?: string
+          input?: Json
+          max_attempts?: number
+          mcp_provider?: string | null
+          measured?: Json
+          model_key?: string | null
+          output?: Json
+          seq?: number
+          started_at?: string | null
+          status?: string
+          title: string
+          tokens?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          agent_key?: string | null
+          attempts?: number
+          capability_key?: string | null
+          cost_usd?: number
+          created_at?: string
+          description?: string | null
+          error?: string | null
+          execution_id?: string
+          expert_key?: string | null
+          finished_at?: string | null
+          id?: string
+          input?: Json
+          max_attempts?: number
+          mcp_provider?: string | null
+          measured?: Json
+          model_key?: string | null
+          output?: Json
+          seq?: number
+          started_at?: string | null
+          status?: string
+          title?: string
+          tokens?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_tasks_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      executions: {
+        Row: {
+          approval_required: boolean
+          approved_at: string | null
+          approved_by: string | null
+          cost_usd: number
+          created_at: string
+          error: string | null
+          expected_outcome: string | null
+          finished_at: string | null
+          goal: string
+          id: string
+          language: string
+          measured_outcome: string | null
+          meta: Json
+          mode: string
+          outcome_score: number | null
+          plan: Json
+          priority: number
+          reality_state: string | null
+          run_id: string | null
+          started_at: string | null
+          status: string
+          strategy: string | null
+          tokens: number
+          updated_at: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          expected_outcome?: string | null
+          finished_at?: string | null
+          goal: string
+          id?: string
+          language?: string
+          measured_outcome?: string | null
+          meta?: Json
+          mode?: string
+          outcome_score?: number | null
+          plan?: Json
+          priority?: number
+          reality_state?: string | null
+          run_id?: string | null
+          started_at?: string | null
+          status?: string
+          strategy?: string | null
+          tokens?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          expected_outcome?: string | null
+          finished_at?: string | null
+          goal?: string
+          id?: string
+          language?: string
+          measured_outcome?: string | null
+          meta?: Json
+          mode?: string
+          outcome_score?: number | null
+          plan?: Json
+          priority?: number
+          reality_state?: string | null
+          run_id?: string | null
+          started_at?: string | null
+          status?: string
+          strategy?: string | null
+          tokens?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
       }
       expert_learning_sessions: {
         Row: {
@@ -1880,6 +2240,131 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: []
+      }
+      lab_experiments: {
+        Row: {
+          conclusion: string | null
+          confidence: number
+          created_at: string
+          hypothesis: string | null
+          id: string
+          knowledge_impact: number
+          method: string | null
+          objective: string | null
+          reality_state: string | null
+          reproduced: boolean
+          sample_target: number
+          scope: string
+          status: string
+          subject: string | null
+          title: string
+          trust_impact: number
+          updated_at: string
+          user_id: string | null
+          variables: Json
+          workspace_id: string | null
+        }
+        Insert: {
+          conclusion?: string | null
+          confidence?: number
+          created_at?: string
+          hypothesis?: string | null
+          id?: string
+          knowledge_impact?: number
+          method?: string | null
+          objective?: string | null
+          reality_state?: string | null
+          reproduced?: boolean
+          sample_target?: number
+          scope?: string
+          status?: string
+          subject?: string | null
+          title: string
+          trust_impact?: number
+          updated_at?: string
+          user_id?: string | null
+          variables?: Json
+          workspace_id?: string | null
+        }
+        Update: {
+          conclusion?: string | null
+          confidence?: number
+          created_at?: string
+          hypothesis?: string | null
+          id?: string
+          knowledge_impact?: number
+          method?: string | null
+          objective?: string | null
+          reality_state?: string | null
+          reproduced?: boolean
+          sample_target?: number
+          scope?: string
+          status?: string
+          subject?: string | null
+          title?: string
+          trust_impact?: number
+          updated_at?: string
+          user_id?: string | null
+          variables?: Json
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      lab_runs: {
+        Row: {
+          created_at: string
+          deviation: number | null
+          evidence_count: number
+          execution_id: string | null
+          expected: Json
+          experiment_id: string
+          id: string
+          iteration: number
+          matched: boolean | null
+          notes: string | null
+          observed: Json
+          reality_state: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deviation?: number | null
+          evidence_count?: number
+          execution_id?: string | null
+          expected?: Json
+          experiment_id: string
+          id?: string
+          iteration?: number
+          matched?: boolean | null
+          notes?: string | null
+          observed?: Json
+          reality_state?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deviation?: number | null
+          evidence_count?: number
+          execution_id?: string | null
+          expected?: Json
+          experiment_id?: string
+          id?: string
+          iteration?: number
+          matched?: boolean | null
+          notes?: string | null
+          observed?: Json
+          reality_state?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_runs_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "lab_experiments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       learning_budget_ledger: {
         Row: {

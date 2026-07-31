@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Microscope, RefreshCw, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { getRealityCenter, getRealityEvidence } from "@/lib/maaroof-reality.functions";
+import { RealityLabSection } from "./RealityLab";
 
 const STATE_LABELS: Record<string, string> = {
   verified: "مُتحقَّق",
@@ -164,6 +165,10 @@ export function RealityCenterSection() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card/50 p-3">
+        <RealityLabSection />
       </div>
     </div>
   );
