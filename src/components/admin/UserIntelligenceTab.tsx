@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getUserIntelligence, refreshUserIntent } from "@/lib/cognition.functions";
 import { adminSetAppSetting } from "@/lib/admin.functions";
 import { useAdminL } from "./admin-i18n";
+import { SpecialtyRequestsPanel } from "./SpecialtyRequestsPanel";
 
 export function UserIntelligenceTab() {
   const L = useAdminL({
