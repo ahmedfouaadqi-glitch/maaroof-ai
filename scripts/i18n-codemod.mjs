@@ -11,6 +11,8 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
 const AR = /[\u0600-\u06FF]/;
+const KU = /[\u0695\u06B5\u06BE\u06CE\u06C6\u06D5\u0763]/; // Kurdish-only letters
+const LANG_TERNARY = /lang\s*===?\s*["']|isKu|isAr\b|=== *"ku"/;
 const cache = JSON.parse(readFileSync("/tmp/i18n-translations.json", "utf8"));
 const files = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const DRY = process.argv.includes("--dry");
@@ -99,6 +101,8 @@ for (const file of files) {
     const before = src.slice(Math.max(0, start - 40), start);
     if (/(?:^|[{,\s])(?:ar|en|ku|ckb|name_ar|name_en|name_ku)\s*:\s*$/.test(before)) continue;
     if (/\bimport\b|\bfrom\s*$|require\(\s*$/.test(before)) continue;
+    if (KU.test(raw)) { report.skipped.push([file, raw, "kurdish-literal"]); continue; }
+    if (LANG_TERNARY.test(src.slice(Math.max(0, start - 240), start))) { report.skipped.push([file, raw, "lang-ternary"]); continue; }
     const key = keyFor(raw.trim());
     if (!key) { report.skipped.push([file, raw, "no-translation"]); continue; }
     const decl = declAt(decls, start);
@@ -114,6 +118,8 @@ for (const file of files) {
     const raw = m[1];
     const value = raw.trim();
     if (!value || !AR.test(value)) continue;
+    if (KU.test(value)) { report.skipped.push([file, value, "kurdish-literal"]); continue; }
+    if (LANG_TERNARY.test(src.slice(Math.max(0, m.index - 240), m.index))) { report.skipped.push([file, value, "lang-ternary"]); continue; }
     const key = keyFor(value);
     if (!key) { report.skipped.push([file, value, "no-translation"]); continue; }
     const decl = declAt(decls, m.index);
