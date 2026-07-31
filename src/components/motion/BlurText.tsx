@@ -37,6 +37,8 @@ export type BlurTextProps = {
   repeat?: boolean;
   /** Idle time (ms) between loops. */
   repeatDelay?: number;
+  /** Paint the text on the very first frame (use for above-the-fold LCP text). */
+  eager?: boolean;
 };
 
 /**
