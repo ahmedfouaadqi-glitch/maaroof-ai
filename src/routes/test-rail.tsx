@@ -29,10 +29,9 @@ function TestRailPage() {
   const updateScrollState = () => {
     const el = railRef.current;
     if (!el) return;
-    const isRtl = getComputedStyle(el).direction === "rtl";
     const maxScroll = el.scrollWidth - el.clientWidth;
-    const start = isRtl ? maxScroll - el.scrollLeft : el.scrollLeft;
-    const end = isRtl ? el.scrollLeft : maxScroll - el.scrollLeft;
+    const start = el.scrollLeft;
+    const end = maxScroll - el.scrollLeft;
     setCanScrollStart(start > 1);
     setCanScrollEnd(end > 1);
   };
@@ -40,11 +39,8 @@ function TestRailPage() {
   const scrollRail = (dir: "start" | "end") => {
     const el = railRef.current;
     if (!el) return;
-    const isRtl = getComputedStyle(el).direction === "rtl";
     const distance = Math.max(120, el.clientWidth * 0.55);
-    const delta = dir === "end"
-      ? (isRtl ? -distance : distance)
-      : (isRtl ? distance : -distance);
+    const delta = dir === "end" ? distance : -distance;
     el.scrollBy({ left: delta, behavior: "smooth" });
   };
 
