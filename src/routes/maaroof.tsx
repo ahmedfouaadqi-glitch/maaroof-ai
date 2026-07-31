@@ -311,6 +311,7 @@ function MaaroofPage() {
             finalText={finalText}
             onExport={exportFinal}
             onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
+            typing={typing}
           />
           <div ref={scrollRef} className="hidden" />
 
