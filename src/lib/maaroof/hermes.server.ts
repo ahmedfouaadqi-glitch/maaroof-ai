@@ -740,3 +740,76 @@ export async function executiveMonitor() {
   };
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Part 19.6 — HERMES Executive Operating System (EOS)                 */
+/*                                                                     */
+/* Evolution, not creation: HERMES already observes, proposes, chats,  */
+/* runs tasks and reports. EOS adds the missing seam — supervising the */
+/* Reality Execution Engine (Part 19.2) and folding verification state */
+/* (Part 19.3) into the founder's executive picture.                   */
+/* ------------------------------------------------------------------ */
+
+/** Live view of every execution HERMES is stewarding. */
+export async function eosExecutionWatch() {
+  try {
+    const { executionOverview } = await import("@/lib/maaroof/execution.server");
+    const overview = await executionOverview(100);
+    const blocked = overview.recent.filter((r: any) => r.approval_required && !r.approved_at);
+    const failing = overview.recent.filter((r: any) => r.status === "failed" || r.status === "partial");
+    return { ...overview, blocked, failing };
+  } catch {
+    return { total: 0, by_status: {}, by_mode: {}, avg_outcome: 0, total_cost_usd: 0, awaiting_approval: 0, recent: [], blocked: [], failing: [] };
+  }
+}
+
+/** Founder decision on an execution — recorded as constitutional memory. */
+export async function eosDecideExecution(input: {
+  executionId: string;
+  founderId: string;
+  decision: "approve" | "reject" | "pause" | "resume" | "archive";
+  note?: string | null;
+}): Promise<boolean> {
+  const map: Record<string, string> = { approve: "approved", reject: "rejected", pause: "paused", resume: "approved", archive: "archived" };
+  try {
+    const patch: Record<string, any> = { status: map[input.decision] || "draft" };
+    if (input.decision === "approve" || input.decision === "resume") {
+      patch.approved_by = input.founderId;
+      patch.approved_at = new Date().toISOString();
+    }
+    await db().from("executions").update(patch).eq("id", input.executionId);
+    const { logExecutionEvent } = await import("@/lib/maaroof/execution.server");
+    await logExecutionEvent({
+      executionId: input.executionId,
+      stage: "approval",
+      kind: input.decision === "reject" ? "warn" : "success",
+      summary: `قرار المؤسس: ${input.decision}`,
+      userId: input.founderId,
+      payload: { note: input.note || null },
+    });
+    await learnFromDecision({
+      proposalId: input.executionId,
+      decision: input.decision === "approve" || input.decision === "resume" ? "approved" : input.decision === "reject" ? "rejected" : "deferred",
+      note: input.note || null,
+      founderId: input.founderId,
+    } as any);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** One executive brief combining monitor + execution watch + architectural audit. */
+export async function eosExecutiveBrief() {
+  const [monitor, executions, audit] = await Promise.all([
+    executiveMonitor().catch(() => null),
+    eosExecutionWatch(),
+    import("@/lib/maaroof/audit.server").then((m) => m.architecturalAudit()).catch(() => null),
+  ]);
+  const headline = [
+    audit ? audit.summary : null,
+    executions.total ? `التنفيذ: ${executions.total} عملية بمتوسط نتيجة ${executions.avg_outcome}%، ${executions.awaiting_approval} بانتظار الاعتماد.` : "لا عمليات تنفيذ مسجّلة بعد.",
+    monitor ? `آخر 24 ساعة: ${monitor.runs24h} تشغيل و${monitor.knowledgeUpdates24h} تحديث معرفي.` : null,
+  ].filter(Boolean).join(" ");
+  return { headline, monitor, executions, audit, generated_at: new Date().toISOString() };
+}
