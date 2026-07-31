@@ -1,4 +1,5 @@
 // System Health admin tab — surfaces diagnostics, cost-tracking gaps,
+import { useI18n } from "@/lib/i18n";
 // negative-margin tools, unpriced calls, Firecrawl spikes, and the
 // Manus/Kimi cost report.
 import { useEffect, useState } from "react";
