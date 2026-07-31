@@ -30,9 +30,9 @@ export const getRealityEvidence = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: items } = await supabaseAdmin
       .from("evidence_items")
-      .select("id, claim, source_kind, source_ref, verified, strength, note, created_at")
-      .eq("record_id", data.recordId)
-      .order("strength", { ascending: false })
+      .select("id, claim, source_kind, source_ref, weight, reproducible, contradicts, verified_at, success_count, created_at")
+      .eq("reality_record_id", data.recordId)
+      .order("weight", { ascending: false })
       .limit(200);
     return { items: (items as any[]) || [] };
   });
