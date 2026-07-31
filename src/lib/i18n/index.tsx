@@ -52,17 +52,21 @@ const I18nCtx = createContext<Ctx | null>(null);
 type Overrides = Partial<Record<Lang, Record<string, string>>>;
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window !== "undefined") {
+  // SSR and the first client render MUST agree, so always start from the
+  // default language and adopt the stored preference after hydration.
+  const [lang, setLangState] = useState<Lang>("ar");
+  const [overrides, setOverrides] = useState<Overrides>({});
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem("geo-lang") as Lang | null;
-      if (saved === "en" || saved === "ar" || saved === "ku") return saved;
-    }
-    return "ar";
-  });
-  const [overrides, setOverrides] = useState<Overrides>(() => {
-    if (typeof window === "undefined") return {};
-    try { return JSON.parse(localStorage.getItem("geo-site-text") || "{}"); } catch { return {}; }
-  });
+      if (saved === "en" || saved === "ar" || saved === "ku") setLangState(saved);
+    } catch { /* storage unavailable */ }
+    try {
+      setOverrides(JSON.parse(localStorage.getItem("geo-site-text") || "{}"));
+    } catch { /* ignore */ }
+  }, []);
+
   const setLang = (l: Lang) => {
     setLangState(l);
     if (typeof window !== "undefined") localStorage.setItem("geo-lang", l);

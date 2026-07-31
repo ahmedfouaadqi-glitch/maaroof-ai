@@ -6,7 +6,7 @@ import { AuthProvider } from "@/lib/auth";
 
 const TITLE = "What is GEO? Generative Engine Optimization Explained";
 const DESC =
-  "GEO (Generative Engine Optimization) is how brands get cited inside AI answers from ChatGPT, Gemini, Perplexity and Copilot. Here is how it works and how it differs from SEO.";
+  "GEO (Generative Engine Optimization) is how brands get cited inside AI answers from ChatGPT, Gemini and Perplexity — and how it differs from SEO.";
 const URL = "https://geoiraq.com/guide/what-is-geo";
 
 export const Route = createFileRoute("/guide/what-is-geo")({
