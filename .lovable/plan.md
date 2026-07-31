@@ -1,46 +1,55 @@
-## What already exists (evaluated first, per the constitution)
 
-Verified by reading the code before planning:
+# Prompt 19 — Parts 2 to 7: تطوير لا إنشاء
 
-- `src/lib/maaroof/trust.server.ts` — 13-stage trust pipeline, `trust_profiles`, `trust_events`, `executiveDecisionScore`, `findWeakLinks`.
-- `src/lib/maaroof/knowledge.server.ts` — 9-layer knowledge graph with `confidence`, `reliability`, `freshness_at`, `quality`, `sources`, plus decay.
-- `src/lib/maaroof/decisions.server.ts` — 20-stage `DecisionTracer` writing `decision_traces`.
-- `src/lib/maaroof/laws.server.ts` — 30 laws, `evaluateLaws`, hard-law blocking already wired into the orchestrator.
-- `src/lib/maaroof/orchestrator.server.ts` (1296 lines) — envision → plan → capability → council → execution → trust → evidence graph → laws, with `maaroof_runs.trust` and `decision_log` persisted.
-- `state.server.ts` (anchors/drift), `experts.server.ts`, `hermes.server.ts` (proposals + reporting).
+## تقييم الموجود أولاً (مؤكَّد بالقراءة)
 
-**Why evolve, not create:** evidence, confidence and verification signals are already produced by four separate engines but are never *classified*, *scored as one reality state*, or *fed back* into knowledge/trust as verified fact. Part 19 needs exactly that missing seam — so this adds one thin layer that reads the existing signals rather than a parallel stack. Nothing is removed or rewritten.
+| المطلوب في الأجزاء 2–7 | الموجود فعلاً اليوم | القرار |
+|---|---|---|
+| Reality Execution Engine (REE) | `workflow.server.ts` (رسم بياني + عقد + انتقالات)، `maaroof_schedules`، `agent_tasks`، `hermes_tasks` + `hermes_task_events`، `capability.server.ts` لاختيار الأدوات، `models.server.ts` لاختيار النماذج | **تطوير**: طبقة تنفيذ موحّدة فوق الموجود، لا محرك جديد |
+| Reality Verification Engine (RVE) | `trust.server.ts` (13 مرحلة)، `reality.server.ts` (تصنيف + أدلة)، `laws.server.ts` (30 قانون)، `decisions.server.ts` | **دمج**: RVE = واجهة تحقق واحدة تستدعي هذه الطبقات بترتيب دستوري |
+| Evidence Engine | جدول `evidence_items` موجود بحقول مختصرة | **توسعة الجدول** لا استبداله |
+| Cross Validation + Benchmark | `ai_model_benchmarks`، `expert_snapshots`، `capability_scores_v` | **توسعة** لتشمل مقارنة عبر المصادر والزمن |
+| Reality Lab | لا يوجد جدول تجارب | **جديد فعلاً** (`lab_experiments` + `lab_runs`) لكنه يقرأ من المحركات الموجودة |
+| HERMES EOS | `hermes.server.ts` (742 سطر: مرصد، اقتراحات، محادثة، مهام، تقارير، DNA للمؤسس) | **توسعة**: مهام تنفيذية مرتبطة بـ REE + غرفة قرار + تقارير دورية |
+| Part 7 التدقيق النهائي | `laws.server.ts`، `system-health.functions.ts`، `MaaroofIntelligenceCenter` | **تطوير**: مُدقِّق معماري + Atlas + تقرير جاهزية داخل نفس اللوحة |
 
-## What Part 19.1 adds
+**سبب اختيار التطوير**: كل مفاهيم الأجزاء 2–7 لها نظائر عاملة الآن؛ إنشاء محركات موازية سيُكرّر البيانات ويكسر التوافق الخلفي الذي يفرضه الدستور. لذلك كل جزء يُنفَّذ كـ«طبقة تنسيق» تقرأ وتكتب في الجداول القائمة.
 
-### 1. Reality classification module — `src/lib/maaroof/reality.server.ts` (new, thin)
-- `REALITY_STATES`: verified, measured, observed, predicted, experimental, opinion, hypothesis, simulation, historical, external, internal, unknown.
-- `classifyReality(signals)` — derives the state from signals the run already emits (tool results ok/fail, memories recalled, knowledge nodes used, trust pipeline output, execution mode, council confidence). Zero extra model calls.
-- `realityScore(...)` returning `{ reality_score, evidence_score, verification_score, confidence, missing_evidence[], contradictions[], reproducible }`.
-- `REALITY_LOOP` stage list (Observation → … → Continuous Improvement) exported so every engine can stamp its loop stage.
-- `realityPromptBlock()` — appends the transparency rules to the existing system prompt (flag-gated like `lawsPromptBlock`).
+## الموجة 1 — REE + Evidence/Benchmark
 
-### 2. Evidence + reality persistence (one migration)
-- `reality_records`: run_id, user_id, workspace_id, subject (tool/answer/publication/proposal), reality_state, reality/evidence/verification scores, confidence, loop_stage, missing_evidence jsonb, contradictions jsonb, created_at.
-- `evidence_items`: reality_record_id, source_kind (tool_result | memory | knowledge_node | measurement | external | execution), source_ref, claim, verified_at, verified_by, success_count, contradicts jsonb, reproducible bool.
-- Both with GRANTs (`authenticated` select of own rows, `service_role` all), RLS enabled, owner-scoped policies, and indexes on (user_id, created_at) and (run_id).
+**قاعدة البيانات** (هجرة واحدة، مع GRANT + RLS لكل جدول جديد):
+- `executions` — هدف، استراتيجية، خطة، حالة، مالك، مساحة عمل، تكلفة، توكنز، نتيجة مقاسة، ربط بـ `maaroof_runs`
+- `execution_tasks` — مهمة، قدرة مطلوبة، خبير، وكيل، نموذج، MCP، حالة، محاولات، مخرجات
+- `execution_events` — سجل مراقبة زمني (append-only)
+- توسعة `evidence_items` بأعمدة: `title, category, evidence_type, source_reliability, collection_method, workspace_id, expert_key, execution_id, language, expires_at, freshness, business_value, verification_history jsonb`
+- `benchmarks` + `benchmark_results` — مقارنة نتيجة مقابل خط أساس/منافس/تاريخ
 
-### 3. Orchestrator integration (edit, not rewrite)
-- After the existing trust/evidence-graph block and before the laws gate: build reality signals from the already-collected `results`, `memories`, `decisionLog`, `trust`, `timing`, persist a `reality_records` row + `evidence_items`, emit a `reality` event, and store it on `maaroof_runs`.
-- Feed the result back: verified/measured outcomes bump `confidence`/`reliability` on the knowledge nodes used (via existing `upsertKnowledgeNode`) and record a `trust_event` — closing the Reality Loop with the engines that already exist.
-- Transparency: when reality_state is weaker than `measured`, prepend the existing-style notice (same pattern as `hardLawNotice`) declaring confidence, missing evidence and alternatives.
-- Settings flag `reality_engine.enabled` added to `settings.server.ts` defaults so the layer is opt-in and backward compatible.
+**الكود**:
+- `src/lib/maaroof/execution.server.ts` — خط الأنابيب: goal → plan → tasks → capability/expert/model mapping (يستدعي `capability.server.ts` و `models.server.ts` و `experts.server.ts` الموجودة) → run → measure → evidence → reality validate (`classifyReality`) → knowledge/trust update (`closeRealityLoop`) → تقرير
+- `src/lib/maaroof/evidence.server.ts` — إنشاء/تصنيف/ترجيح/انتهاء صلاحية الأدلة + `crossValidate()` عبر مصادر متعددة
+- `src/lib/maaroof/benchmark.server.ts` — تسجيل قياسات ومقارنة زمنية
+- ربط `workflow.server.ts` الحالي كمنفّذ للرسوم البيانية بدل كتابة منفّذ ثانٍ
 
-### 4. Hermes oversight (extend existing)
-- Add reality checks to `hermes.server.ts` signal gathering: verification gaps, low reality scores, contradictions, stale evidence — surfaced as existing-format proposals/report lines. No new Hermes stack.
+## الموجة 2 — RVE + Reality Lab
 
-### 5. Admin UI (extend existing)
-- New `RealityCenter` panel registered inside `MaaroofIntelligenceCenter.tsx` alongside the current centers: distribution of reality states, verification-gap list, weakest evidence, loop-stage funnel. Strings go through `src/lib/i18n/{ar,en,ku}.ts` (no hardcoded text).
+- `src/lib/maaroof/verification.server.ts` — واجهة `verify(result, context)` تمر بالمراحل: اكتشاف الأدلة ← تصنيف ← ترجيح ← تحقق متقاطع ← تحقق تاريخي ← تصنيف الواقع ← الامتثال الدستوري ← درجة ثقة + شرح. تعيد ما تعيده الطبقات الحالية دون تغيير سلوكها (لا استبدال لـ `trust.server.ts`).
+- تفعيلها داخل `orchestrator.server.ts` في نفس النقطة التي يُصنَّف فيها الواقع اليوم — بدون مسار ثانٍ.
+- جداول `lab_experiments` و `lab_runs`: فرضية، متغيرات، عينة، نتيجة، هل تكررت، أثرها على المعرفة/الثقة.
+- `src/lib/maaroof/lab.server.ts` — تشغيل تجربة، إعادة الإنتاج، وإغلاق الحلقة على `knowledge_nodes` و `trust_profiles`.
+- إعدادات: `execution_engine`, `verification_engine`, `reality_lab` في `settings.server.ts` — كلها **معطّلة افتراضياً** حتى يفعّلها المؤسس (نفس نمط `reality_engine`).
 
-### 6. Documentation
-- `docs/PART19-REALITY.md`: what existed, what was evaluated, why evolution was chosen over creation, and the mapping of each constitutional principle to the pre-existing component that already satisfies it.
+## الموجة 3 — HERMES EOS + التدقيق النهائي (Part 7)
 
-## Technical notes
-- No table, function, route or component is deleted or renamed; all Parts 1–18 behaviour is preserved and every new path is flag-gated off by default until enabled in settings.
-- Reality classification is fully local/heuristic — no additional token cost.
-- Server-only code stays in `*.server.ts`; UI reaches it through existing `createServerFn` wrappers in `src/lib/cognition.functions.ts` style.
+- توسعة `hermes.server.ts`: ربط المهام التنفيذية بـ `executions`، مراقبة حيّة للتنفيذ، تقرير تنفيذي دوري، وقرارات المؤسس (موافقة/رفض/تعليق/استئناف/أرشفة) تُخزَّن كذاكرة دستورية في `hermes_founder_dna`.
+- `src/lib/maaroof/audit.server.ts` — تدقيق معماري محلي (بدون نداءات نموذج): تغطية التنفيذ، درجات معمارية، مؤشر الجاهزية، تحليل الفجوات، خارطة طريق، وملخص تنفيذي.
+- `Architecture Atlas` — بيان علاقات المكوّنات يُولَّد من سجل المحركات ويُعرض داخل `MaaroofIntelligenceCenter` (تبويب جديد داخل نفس اللوحة، لا صفحة جديدة).
+- تصدير التقرير: JSON / Markdown / Word / PowerPoint عبر مسار التصدير الموجود في HERMES.
+- توثيق: `docs/PART19-PARTS-2-7.md` يشرح لكل متطلّب حالته (منفَّذ / موجود مسبقاً / مدموج / محسّن / معلّق / يحتاج موافقة المؤسس) وسبب التطوير بدل الإنشاء.
+
+## تفاصيل تقنية
+
+- كل جدول جديد: `CREATE TABLE` ثم `GRANT` ثم `ENABLE RLS` ثم سياسات (المالك + `has_role(auth.uid(),'admin')` + `service_role`).
+- كل منطق الحساب محلي/حسابي — صفر نداءات نموذج إضافية عدا محادثة HERMES القائمة.
+- كل الملفات `*.functions.ts` تبقى أغلفة رفيعة (تصريحات server-fn فقط) والمنطق في `*.server.ts` استيراداً داخل الـ handler.
+- كل النصوص الجديدة في الواجهة عبر قواميس `src/lib/i18n/{ar,en,ku}.ts` — لا نص مكتوب مباشرة.
+- التوافق الخلفي: لا حذف ولا إعادة كتابة لأي دالة قائمة؛ الإضافات خلف مفاتيح إعدادات معطّلة افتراضياً.
