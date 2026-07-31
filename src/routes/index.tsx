@@ -107,6 +107,7 @@ function Page() {
               <BlurText
                 as="h1"
                 text={t("hero_title")}
+                eager
                 delay={70}
                 stepDuration={0.28}
                 segmentClassName="text-gradient"

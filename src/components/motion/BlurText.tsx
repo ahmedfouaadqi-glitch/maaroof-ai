@@ -37,6 +37,8 @@ export type BlurTextProps = {
   repeat?: boolean;
   /** Idle time (ms) between loops. */
   repeatDelay?: number;
+  /** Paint the text on the very first frame (use for above-the-fold LCP text). */
+  eager?: boolean;
 };
 
 /**
@@ -62,11 +64,12 @@ export function BlurText({
   segmentClassName = "",
   repeat = true,
   repeatDelay = 4000,
+  eager = false,
 }: BlurTextProps) {
   const Tag = (as ?? "p") as ElementType;
   const MotionSpan = motion.span;
   const elements = animateBy === "words" ? text.split(" ") : text.split("");
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(eager);
   const [reduced, setReduced] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
 
@@ -140,6 +143,29 @@ export function BlurText({
       ]
     : Array.from({ length: stepCount }, (_, i) => (stepCount === 1 ? 0 : i / (stepCount - 1)));
 
+  // Eager mode: the loop starts on the *visible* frame, so the very first paint
+  // already shows the text (critical when this is the LCP element), and the
+  // blur cycle only runs afterwards.
+  const visibleSnapshot = toSnapshots[toSnapshots.length - 1];
+  const eagerFrames = [visibleSnapshot, visibleSnapshot, fromSnapshot, ...toSnapshots];
+  const eagerTimes = [
+    0,
+    holdDuration / totalDuration,
+    (holdDuration + outDuration) / totalDuration,
+    ...toSnapshots.map((_, i) => (holdDuration + outDuration + (i + 1) * stepDuration) / totalDuration),
+  ];
+
+  const initialSnapshot = eager ? visibleSnapshot : fromSnapshot;
+
+  if (eager && !repeat) {
+    return (
+      <Tag ref={ref as never} className={className}>
+        {text}
+      </Tag>
+    );
+  }
+
+
   if (reduced) {
     return (
       <Tag ref={ref as never} className={className}>
@@ -155,10 +181,12 @@ export function BlurText({
       style={{ display: "flex", flexWrap: "wrap", justifyContent: center ? "center" : undefined }}
     >
       {elements.map((segment, index) => {
-        const animateKeyframes = buildKeyframes(fromSnapshot, loopSnapshots);
+        const animateKeyframes = eager
+          ? buildKeyframes(visibleSnapshot, eagerFrames.slice(1))
+          : buildKeyframes(fromSnapshot, loopSnapshots);
         const spanTransition: Transition = {
           duration: totalDuration,
-          times,
+          times: eager ? eagerTimes : times,
           delay: (startDelay + index * delay) / 1000,
           ease: "easeOut",
           ...(repeat ? { repeat: Infinity, repeatType: "loop" as const } : {}),
@@ -167,8 +195,8 @@ export function BlurText({
           <MotionSpan
             className={`inline-block will-change-[transform,filter,opacity] ${segmentClassName}`}
             key={`${text}-${index}`}
-            initial={fromSnapshot}
-            animate={inView ? animateKeyframes : fromSnapshot}
+            initial={initialSnapshot}
+            animate={inView ? animateKeyframes : initialSnapshot}
             transition={spanTransition}
             onAnimationComplete={index === elements.length - 1 ? onAnimationComplete : undefined}
           >
