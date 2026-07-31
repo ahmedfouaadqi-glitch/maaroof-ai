@@ -49,6 +49,13 @@ export async function observePlatform() {
     db().from("hermes_proposals").select("status").limit(500),
   ]);
 
+  // Part 19 — reality verification signals (read-only, no extra model cost).
+  const realityRows = ((await db()
+    .from("reality_records")
+    .select("reality_state, reality_score, evidence_score, verification_score, contradictions")
+    .gte("created_at", since)
+    .limit(1000)).data as any[]) || [];
+
   const runRows = (runs.data as any[]) || [];
   const ledgerRows = (ledger.data as any[]) || [];
   const learnRows = (learning.data as any[]) || [];
@@ -110,6 +117,18 @@ export async function observePlatform() {
       total: userRows.length,
       paying: userRows.filter((u) => u.subscription_tier && u.subscription_tier !== "free").length,
       lowBalance: userRows.filter((u) => num(u.tokens_balance) < 1000).length,
+    },
+    reality: {
+      records: realityRows.length,
+      verified: realityRows.filter((r) => r.reality_state === "verified" || r.reality_state === "measured").length,
+      unverified: realityRows.filter((r) => r.reality_state === "assumed" || r.reality_state === "predicted" || r.reality_state === "unknown").length,
+      contradictions: realityRows.filter((r) => (r.contradictions || []).length > 0).length,
+      avgReality: realityRows.length
+        ? Math.round(realityRows.reduce((a, r) => a + num(r.reality_score), 0) / realityRows.length)
+        : 0,
+      avgVerification: realityRows.length
+        ? Math.round(realityRows.reduce((a, r) => a + num(r.verification_score), 0) / realityRows.length)
+        : 0,
     },
     proposals: {
       pending: proposalRows.filter((p) => p.status === "pending").length,
@@ -209,6 +228,39 @@ export type ProposalDraft = {
 /** Derives proposals from measured platform signals — no model call, no guessing. */
 export function deriveProposals(o: Observatory): ProposalDraft[] {
   const out: ProposalDraft[] = [];
+
+  // Part 19 — verification gap: too many answers standing on assumption.
+  const rl = (o as any).reality;
+  if (rl && rl.records >= 10 && rl.unverified / Math.max(1, rl.records) > 0.4) {
+    const share = Math.round((rl.unverified / Math.max(1, rl.records)) * 100);
+    out.push({
+      kind: "quality", title: "سد فجوة التحقق من الواقع",
+      executive_summary: `${share}% من المخرجات مصنّفة كافتراض أو توقّع بلا تحقق فعلي، ما يرفع مخاطر القرار التنفيذي.`,
+      problem: `${rl.unverified} سجل غير متحقق من أصل ${rl.records} خلال ${o.window_days} يوماً، بمتوسط تحقق ${rl.avgVerification}%.`,
+      evidence: [
+        { metric: "unverified_records", value: rl.unverified },
+        { metric: "total_records", value: rl.records },
+        { metric: "avg_verification", value: rl.avgVerification },
+        { metric: "contradictions", value: rl.contradictions },
+      ],
+      business_value: "قرارات مبنية على وقائع مقاسة بدل تقديرات، وثقة أعلى لدى العملاء التنفيذيين.",
+      technical_analysis: "تفعيل حلقة الواقع الكاملة: ربط كل استنتاج بأدلة أدوات قابلة لإعادة الإنتاج وإغلاق الحلقة على المعرفة والثقة.",
+      risk_analysis: [{ risk: "زيادة زمن الاستجابة", severity: "منخفض", mitigation: "التحقق محلي بلا نداءات نموذج إضافية" }],
+      cost_analysis: { extra_usd: 0, note: "التصنيف والتحقق حسابي محلي بالكامل" },
+      revenue_potential: { note: "ثقة أعلى ⇒ تحويل أفضل للباقات التنفيذية" },
+      alternatives: [
+        { option: "إبقاء الوضع الحالي", why_not: "تبقى القرارات على افتراضات غير مقاسة" },
+        { option: "تحقق بشري يدوي", why_not: "لا يتوسّع مع حجم التشغيل" },
+      ],
+      rollback_plan: "إيقاف مفتاح reality_engine.enabled يعيد السلوك السابق فوراً.",
+      affected_components: ["orchestrator", "reality.server", "knowledge", "trust"],
+      expected_value_usd: 0,
+      expected_cost_usd: 0,
+      estimated_roi: 0,
+      priority: 2,
+      confidence: 78,
+    });
+  }
 
   if (o.economics.unmeteredCalls > 0) {
     const share = Math.round((o.economics.unmeteredCalls / Math.max(1, o.economics.meteredCalls + o.economics.unmeteredCalls)) * 100);

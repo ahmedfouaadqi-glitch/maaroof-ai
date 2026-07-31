@@ -1,0 +1,1 @@
+ALTER TABLE public.maaroof_runs ADD COLUMN IF NOT EXISTS reality JSONB;

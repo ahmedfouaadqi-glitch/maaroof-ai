@@ -205,6 +205,22 @@ export type StateAnchorSettings = {
   drift_threshold: number;
 };
 
+/** Part 19 — Reality Execution & Verification. */
+export type RealityEngineSettings = {
+  /** Master toggle: classify every answer into an explicit reality state. */
+  enabled: boolean;
+  /** Persist reality records + evidence items. */
+  persist_enabled: boolean;
+  /** Inject the reality/transparency rules into the system prompt. */
+  inject_prompt: boolean;
+  /** Prepend a transparency notice when the state is weaker than `measured`. */
+  transparency_notice: boolean;
+  /** Feed verified outcomes back into knowledge + trust (the Reality Loop). */
+  close_loop: boolean;
+  /** Reality score below which HERMES flags a verification gap. */
+  min_reality: number;
+};
+
 /** Part 17 — HERMES executive steward. */
 export type HermesSettings = {
   enabled: boolean;
@@ -247,6 +263,7 @@ export type MaaroofSettings = {
   trust_engine: TrustEngineSettings;
   state_anchor: StateAnchorSettings;
   hermes: HermesSettings;
+  reality_engine: RealityEngineSettings;
 
 
 };
@@ -356,6 +373,14 @@ const DEFAULTS: MaaroofSettings = {
     office_enabled: true,
     office_model: "google/gemini-2.5-flash",
     never_execute_without_approval: true,
+  },
+  reality_engine: {
+    enabled: false,
+    persist_enabled: true,
+    inject_prompt: true,
+    transparency_notice: true,
+    close_loop: true,
+    min_reality: 60,
   },
 };
 
