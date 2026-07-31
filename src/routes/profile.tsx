@@ -60,7 +60,7 @@ function ProfilePage() {
     }
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
-      full_name: fullName, brand_name: brandName, brand_keywords: brandKw, specialty,
+      full_name: fullName, brand_name: brandName, brand_keywords: brandKw,
       ...(u ? { username: u } : {}),
     }).eq("id", user.id);
     if (error) setUsernameErr(error.message);
