@@ -48,6 +48,7 @@ export function WordStrands({
     let w = 0;
     let h = 0;
     let dpr = 1;
+    let fontSize = 140;
 
     /** Rasterize the word offscreen and sample its pixels into target points. */
     function sample() {
@@ -57,7 +58,8 @@ export function WordStrands({
       off.height = Math.max(1, Math.floor(h));
       const octx = off.getContext("2d");
       if (!octx) return;
-      const size = Math.min(h * 0.7, w * 0.3);
+      const size = Math.min(h * 0.62, w * 0.32);
+      fontSize = size;
       octx.fillStyle = "#fff";
       octx.textAlign = "center";
       octx.textBaseline = "middle";
@@ -66,7 +68,7 @@ export function WordStrands({
       octx.fillText(st.word, off.width / 2, off.height / 2);
 
       const img = octx.getImageData(0, 0, off.width, off.height).data;
-      const step = Math.max(2, Math.round(size / 40));
+      const step = Math.max(3, Math.round(size / 26));
       const pts: Array<{ x: number; y: number }> = [];
       for (let y = 0; y < off.height; y += step) {
         for (let x = 0; x < off.width; x += step) {
@@ -88,14 +90,14 @@ export function WordStrands({
           prev
             ? { ...prev, tx: t.x, ty: t.y }
             : {
-                x: t.x + (Math.random() - 0.5) * 45,
-                y: t.y + (Math.random() - 0.5) * 45,
+                x: t.x + (Math.random() - 0.5) * 45 * (fontSize / 140),
+                y: t.y + (Math.random() - 0.5) * 45 * (fontSize / 140),
                 vx: 0,
                 vy: 0,
                 tx: t.x,
                 ty: t.y,
                 c: st.colors[i % st.colors.length] || "#7C3AED",
-                r: 1 + Math.random() * 1.1,
+                r: Math.max(0.7, fontSize / 130) * (0.9 + Math.random() * 0.6),
                 ph: Math.random() * Math.PI * 2,
               },
         );
@@ -125,8 +127,8 @@ export function WordStrands({
 
 
       ctx!.clearRect(0, 0, w, h);
-      const pull = 0.02 + st.progress * 0.08;
-      const drift = (1 - st.progress) * 26 + 1.2;
+      const pull = 0.03 + st.progress * 0.09;
+      const drift = ((1 - st.progress) * 26 + 0.6) * (fontSize / 140);
 
       ctx!.globalCompositeOperation = "lighter";
       ctx!.shadowBlur = st.glow * 1.2;

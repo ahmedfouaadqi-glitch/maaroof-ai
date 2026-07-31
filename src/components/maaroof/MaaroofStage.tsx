@@ -1,7 +1,6 @@
 // MaaroofStage — interactive visual replacement for the raw JSON stream.
 import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { MaaroofGlobe } from "./MaaroofGlobe";
 import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
@@ -63,17 +62,31 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
   return (
     <div className="relative overflow-hidden rounded-lg border bg-gradient-to-b from-background to-card min-h-[420px]">
       {/* Matrix backdrop */}
-      <MatrixRain active={running} intensity={running ? intensity : 0.15} className="absolute inset-0 w-full h-full opacity-40 pointer-events-none" />
-
-
-
-
-
+      <MatrixRain active={running} intensity={running ? intensity : 0.15} className="absolute inset-0 w-full h-full opacity-25 pointer-events-none" />
 
       <div className="relative grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 p-4">
-        {/* Globe + status */}
+        {/* Agent activity — strands trace the word معروف while Maaroof works */}
         <div className="flex flex-col items-center">
-          <MaaroofGlobe highlightCountry={highlight} worldMode={worldMode} size={280} onPickCountry={onPickCountry} />
+          <div className="w-full max-w-[280px]">
+            <AgentPulse
+              variant="word"
+              square
+              events={events}
+              running={running}
+              typing={typing}
+              settled={!!finalText}
+              className="hidden md:block"
+            />
+            <AgentPulse
+              variant="word"
+              events={events}
+              running={running}
+              typing={typing}
+              settled={!!finalText}
+              height={110}
+              className="md:hidden"
+            />
+          </div>
           <div className="text-center mt-2 text-xs text-muted-foreground">
             {worldMode ? t("auto.global_scope") : highlight ? `الإضاءة: ${highlight}${detected?.city && geoMode === "auto" ? ` · ${detected.city}` : ""}` : t("auto.not_discovered_yet")}
           </div>
@@ -82,18 +95,8 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
 
         {/* Steps orbit / cards */}
         <div className="relative space-y-3">
-          {/* Agent activity — strands trace the word معروف while Maaroof works */}
-          <div className={`absolute inset-x-0 top-0 z-0 transition-opacity duration-500 ${plan || finalText ? "opacity-25" : "opacity-100"}`}>
-            <AgentPulse
-              variant="word"
-              events={events}
-              running={running}
-              typing={typing}
-              settled={!!finalText}
-              height={plan || finalText ? 120 : 200}
-            />
-          </div>
           <div className="relative z-10 space-y-3">
+
           {!plan && !running && events.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
               <Bot className="w-10 h-10 mx-auto mb-2 opacity-50" />

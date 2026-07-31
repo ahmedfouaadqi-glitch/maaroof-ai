@@ -21,6 +21,9 @@ type Props = {
   variant?: "ribbon" | "word";
   /** Word traced by the "word" variant. */
   word?: string;
+  /** Render the word variant as a square canvas (fills its column) instead of a fixed-height band. */
+  square?: boolean;
+
 };
 
 type Mode = "idle" | "typing" | "thinking" | "executing";
@@ -49,7 +52,7 @@ const MODE_CONF: Record<Mode, { speed: number; intensity: number; glow: number; 
   executing: { speed: 1.15, intensity: 0.85, glow: 3.0, amplitude: 1.25, opacity: 1 },
 };
 
-export function AgentPulse({ events = [], running = false, typing = false, settled = false, className = "", height = 64, variant = "ribbon", word = "معروف" }: Props) {
+export function AgentPulse({ events = [], running = false, typing = false, settled = false, className = "", height = 64, variant = "ribbon", word = "معروف", square = false }: Props) {
   const [reduced, setReduced] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [palette, setPalette] = useState<string[]>(["#7C3AED", "#06B6D4", "#F97316"]);
@@ -109,13 +112,13 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
 
   if (variant === "word") {
     const done = settled || hasFinal;
-    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.85 : mode === "typing" ? 0.8 : 0.7;
-    const opacity = done ? 0 : mode === "idle" ? 0.72 : Math.max(0.9, conf.opacity);
+    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.95 : mode === "typing" ? 0.93 : 0.9;
+    const opacity = done ? 0 : mode === "idle" ? 0.85 : 1;
     return (
       <div
         aria-hidden
         className={`pointer-events-none w-full transition-opacity duration-700 ${className}`}
-        style={{ height, opacity }}
+        style={square ? { aspectRatio: "1 / 1", opacity } : { height, opacity }}
       >
         <WordStrands
           word={word}
@@ -129,6 +132,7 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
       </div>
     );
   }
+
 
   return (
     <div
