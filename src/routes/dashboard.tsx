@@ -83,6 +83,9 @@ function DashboardPage() {
   const { tool: openTool } = Route.useSearch();
   const [agentSub, setAgentSub] = useState<any | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollStart, setCanScrollStart] = useState(false);
+  const [canScrollEnd, setCanScrollEnd] = useState(false);
 
   const setOpenTool = (k: ToolKey | null) => {
     navigate({ to: "/dashboard", search: { tool: k ?? undefined }, replace: false });
