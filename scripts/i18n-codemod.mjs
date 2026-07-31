@@ -12,7 +12,13 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
 const AR = /[\u0600-\u06FF]/;
 const KU = /[\u0695\u06B5\u06BE\u06CE\u06C6\u06D5\u0763]/; // Kurdish-only letters
-const LANG_TERNARY = /lang\s*===?\s*["']|isKu|isAr\b|=== *"ku"/;
+const LANG_TERNARY = /lang\s*===?\s*["']|isKu|isAr\b/;
+function stmtBefore(src, pos) {
+  const a = src.lastIndexOf(";", pos);
+  const b = src.lastIndexOf("\n", pos - 1);
+  const from = Math.max(a, b, pos - 240, 0);
+  return src.slice(from, pos);
+}
 const cache = JSON.parse(readFileSync("/tmp/i18n-translations.json", "utf8"));
 const files = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const DRY = process.argv.includes("--dry");
@@ -102,7 +108,7 @@ for (const file of files) {
     if (/(?:^|[{,\s])(?:ar|en|ku|ckb|name_ar|name_en|name_ku)\s*:\s*$/.test(before)) continue;
     if (/\bimport\b|\bfrom\s*$|require\(\s*$/.test(before)) continue;
     if (KU.test(raw)) { report.skipped.push([file, raw, "kurdish-literal"]); continue; }
-    if (LANG_TERNARY.test(src.slice(Math.max(0, start - 240), start))) { report.skipped.push([file, raw, "lang-ternary"]); continue; }
+    if (LANG_TERNARY.test(stmtBefore(src, start))) { report.skipped.push([file, raw, "lang-ternary"]); continue; }
     const key = keyFor(raw.trim());
     if (!key) { report.skipped.push([file, raw, "no-translation"]); continue; }
     const decl = declAt(decls, start);
@@ -119,7 +125,7 @@ for (const file of files) {
     const value = raw.trim();
     if (!value || !AR.test(value)) continue;
     if (KU.test(value)) { report.skipped.push([file, value, "kurdish-literal"]); continue; }
-    if (LANG_TERNARY.test(src.slice(Math.max(0, m.index - 240), m.index))) { report.skipped.push([file, value, "lang-ternary"]); continue; }
+    if (LANG_TERNARY.test(stmtBefore(src, m.index))) { report.skipped.push([file, value, "lang-ternary"]); continue; }
     const key = keyFor(value);
     if (!key) { report.skipped.push([file, value, "no-translation"]); continue; }
     const decl = declAt(decls, m.index);
