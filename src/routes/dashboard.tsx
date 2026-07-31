@@ -246,19 +246,6 @@ function DashboardPage() {
                   </button>
                   <div className="h-6 w-px shrink-0 bg-border" />
 
-                  {/* Scroll back */}
-                  <button
-                    type="button"
-                    onClick={() => scrollRail("start")}
-                    disabled={!canScrollStart}
-                    aria-label={lang === "ar" ? "تمرير للخلف" : lang === "ku" ? "هاتینە پاشەوە" : "Scroll back"}
-                    className={`inline-grid size-7 shrink-0 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground transition hover:border-primary/40 hover:text-foreground ${
-                      canScrollStart ? "opacity-100" : "pointer-events-none opacity-0"
-                    }`}
-                  >
-                    {lang !== "en" ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
-                  </button>
-
                   <div ref={railRef} className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {tools.map((tool) => {
                       const on = tool.key === active.key;
