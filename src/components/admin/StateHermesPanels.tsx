@@ -296,10 +296,10 @@ export function HermesOfficeSection() {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          {(["observatory", "inbox", "office", "tasks"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`rounded-lg px-2.5 py-1.5 text-xs ${tab === t ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted/40"}`}>
-              {t === "observatory" ? t("auto.executive_observatory") : t === "inbox" ? `صندوق المؤسس (${pending.length})` : t === "office" ? t("auto.hermes_office") : t("auto.task_center")}
+          {(["observatory", "inbox", "office", "tasks"] as const).map((k) => (
+            <button key={k} onClick={() => setTab(k)}
+              className={`rounded-lg px-2.5 py-1.5 text-xs ${tab === k ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted/40"}`}>
+              {k === "observatory" ? t("auto.executive_observatory") : k === "inbox" ? `${t("auto.founder_inbox")} (${pending.length})` : k === "office" ? t("auto.hermes_office") : t("auto.task_center")}
             </button>
           ))}
         </div>
