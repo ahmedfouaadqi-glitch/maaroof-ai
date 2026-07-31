@@ -109,13 +109,13 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
 
   if (variant === "word") {
     const done = settled || hasFinal;
-    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.85 : mode === "typing" ? 0.8 : 0.7;
-    const opacity = done ? 0 : mode === "idle" ? 0.72 : Math.max(0.9, conf.opacity);
+    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.88 : mode === "typing" ? 0.82 : 0.72;
+    const opacity = done ? 0 : mode === "idle" ? 0.85 : 1;
     return (
       <div
         aria-hidden
         className={`pointer-events-none w-full transition-opacity duration-700 ${className}`}
-        style={{ height, opacity }}
+        style={square ? { aspectRatio: "1 / 1", opacity } : { height, opacity }}
       >
         <WordStrands
           word={word}
@@ -129,6 +129,7 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
       </div>
     );
   }
+
 
   return (
     <div
