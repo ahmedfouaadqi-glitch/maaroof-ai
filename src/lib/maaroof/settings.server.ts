@@ -221,6 +221,42 @@ export type RealityEngineSettings = {
   min_reality: number;
 };
 
+/** Part 19.2 — Reality Execution Engine. */
+export type ExecutionEngineSettings = {
+  /** Master toggle: allow goals to become tracked executions. */
+  enabled: boolean;
+  /** Default mode for new executions. */
+  default_mode: "simulation" | "recommendation" | "execution";
+  /** Never run a real execution without founder approval. */
+  require_approval: boolean;
+  /** Maximum tasks planned per execution. */
+  max_tasks: number;
+  /** Hard spend ceiling per execution, in USD. */
+  max_cost_usd: number;
+};
+
+/** Part 19.3 — Reality Verification Engine. */
+export type VerificationEngineSettings = {
+  enabled: boolean;
+  /** Minimum independent sources before a claim can be called verified. */
+  min_independent_sources: number;
+  /** Verification score below which a transparency notice is attached. */
+  min_score: number;
+  /** Decay stale evidence on a schedule. */
+  decay_evidence: boolean;
+};
+
+/** Part 19.5 — Reality Lab. */
+export type RealityLabSettings = {
+  enabled: boolean;
+  /** Iterations required before a hypothesis counts as reproduced. */
+  default_sample_target: number;
+  /** Relative deviation still counted as a match. */
+  match_tolerance: number;
+  /** Feed settled experiments back into knowledge + trust. */
+  close_loop: boolean;
+};
+
 /** Part 17 — HERMES executive steward. */
 export type HermesSettings = {
   enabled: boolean;
