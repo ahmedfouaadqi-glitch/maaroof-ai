@@ -48,7 +48,7 @@ function loadDicts() {
     }
   }
   for (const [lang, body] of sources) {
-    const keys = [...body.matchAll(/^\s{2}([A-Za-z0-9_]+)\s*:/gm)].map((m) => m[1]);
+    const keys = [...body.matchAll(/(?:^|[{,])\s*([A-Za-z0-9_]+)\s*:\s*(?=["'`])/gm)].map((m) => m[1]);
     dicts[lang] = keys;
   }
   return dicts;
