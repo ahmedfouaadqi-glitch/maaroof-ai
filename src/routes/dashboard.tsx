@@ -84,6 +84,7 @@ function DashboardPage() {
   const [agentSub, setAgentSub] = useState<any | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
+  const railSignRef = useRef<number | null>(null);
   const [canScrollStart, setCanScrollStart] = useState(false);
   const [canScrollEnd, setCanScrollEnd] = useState(false);
 
