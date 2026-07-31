@@ -128,7 +128,7 @@ export function WordStrands({
 
       ctx!.clearRect(0, 0, w, h);
       const pull = 0.03 + st.progress * 0.09;
-      const drift = ((1 - st.progress) * 26 + 1.2) * (fontSize / 140);
+      const drift = ((1 - st.progress) * 26 + 0.6) * (fontSize / 140);
 
       ctx!.globalCompositeOperation = "lighter";
       ctx!.shadowBlur = st.glow * 1.2;

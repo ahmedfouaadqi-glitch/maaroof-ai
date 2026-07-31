@@ -112,7 +112,7 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
 
   if (variant === "word") {
     const done = settled || hasFinal;
-    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.88 : mode === "typing" ? 0.82 : 0.72;
+    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.95 : mode === "typing" ? 0.93 : 0.9;
     const opacity = done ? 0 : mode === "idle" ? 0.85 : 1;
     return (
       <div
