@@ -2,6 +2,7 @@
 // Moves while the agent thinks / executes / the user types; stills when results land.
 import { useEffect, useMemo, useRef, useState } from "react";
 import Strands from "./Strands";
+import WordStrands from "./WordStrands";
 
 export type PulseEvent = { type: string; data: any; t: number };
 
@@ -16,6 +17,10 @@ type Props = {
   settled?: boolean;
   className?: string;
   height?: number;
+  /** "ribbon" = flowing strands band · "word" = strands that trace the word معروف. */
+  variant?: "ribbon" | "word";
+  /** Word traced by the "word" variant. */
+  word?: string;
 };
 
 type Mode = "idle" | "typing" | "thinking" | "executing";
@@ -44,7 +49,7 @@ const MODE_CONF: Record<Mode, { speed: number; intensity: number; glow: number; 
   executing: { speed: 1.15, intensity: 0.85, glow: 3.0, amplitude: 1.25, opacity: 1 },
 };
 
-export function AgentPulse({ events = [], running = false, typing = false, settled = false, className = "", height = 64 }: Props) {
+export function AgentPulse({ events = [], running = false, typing = false, settled = false, className = "", height = 64, variant = "ribbon", word = "معروف" }: Props) {
   const [reduced, setReduced] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [palette, setPalette] = useState<string[]>(["#7C3AED", "#06B6D4", "#F97316"]);
@@ -101,6 +106,29 @@ export function AgentPulse({ events = [], running = false, typing = false, settl
   if (!mounted || reduced) return null;
 
   const strandCount = mode === "executing" ? Math.min(6, Math.max(2, activeSubAgents + 1)) : mode === "thinking" ? 3 : 2;
+
+  if (variant === "word") {
+    const done = settled || hasFinal;
+    const progress = mode === "executing" ? 1 : mode === "thinking" ? 0.85 : mode === "typing" ? 0.8 : 0.7;
+    const opacity = done ? 0 : mode === "idle" ? 0.72 : Math.max(0.9, conf.opacity);
+    return (
+      <div
+        aria-hidden
+        className={`pointer-events-none w-full transition-opacity duration-700 ${className}`}
+        style={{ height, opacity }}
+      >
+        <WordStrands
+          word={word}
+          colors={palette}
+          progress={progress}
+          speed={conf.speed}
+          glow={conf.glow}
+          strandCount={mode === "idle" ? 0 : strandCount}
+          animate={!done && (!stopped || mode === "idle")}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
