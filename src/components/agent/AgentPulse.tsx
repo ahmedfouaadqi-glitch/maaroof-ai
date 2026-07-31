@@ -21,6 +21,9 @@ type Props = {
   variant?: "ribbon" | "word";
   /** Word traced by the "word" variant. */
   word?: string;
+  /** Render the word variant as a square canvas (fills its column) instead of a fixed-height band. */
+  square?: boolean;
+
 };
 
 type Mode = "idle" | "typing" | "thinking" | "executing";
