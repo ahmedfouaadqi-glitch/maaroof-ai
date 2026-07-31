@@ -376,15 +376,15 @@ export async function closeRealityLoop(input: {
   try {
     const { recordTrustEvent } = await import("@/lib/maaroof/trust.server");
     await recordTrustEvent({
-      entityType: "answer" as any,
-      entityKey: input.runId ? `run:${input.runId}` : "run",
+      entityType: "architecture",
+      entityKey: input.runId ? `reality:run:${input.runId}` : "reality:run",
       ok: REALITY_STRENGTH[a.reality_state] >= REALITY_STRENGTH.measured,
       reason: `reality:${a.reality_state}`,
       runId: input.runId || undefined,
       userId: input.userId || undefined,
       confidence: a.confidence,
       contradiction: a.contradictions.length > 0,
-    } as any);
+    });
   } catch {
     /* trust update must never break a run */
   }
@@ -394,7 +394,7 @@ export async function closeRealityLoop(input: {
     const { upsertKnowledgeNode } = await import("@/lib/maaroof/knowledge.server");
     await upsertKnowledgeNode({
       layer: "platform",
-      node_key: `reality:${a.reality_state}:${input.runId || "run"}`,
+      key: `reality:${a.reality_state}:${input.runId || "run"}`,
       title: `نتيجة ${REALITY_STATE_LABELS[a.reality_state].ar}`,
       summary: `درجة واقع ${a.reality_score}% بأدلة ${a.evidence_score}% وتحقق ${a.verification_score}%.`,
       payload: { assessment: a },
@@ -403,9 +403,9 @@ export async function closeRealityLoop(input: {
       reliability: a.verification_score,
       importance: a.reality_score,
       scope: input.workspaceId ? "workspace" : "platform",
-      user_id: input.userId || null,
-      workspace_id: input.workspaceId || null,
-    } as any);
+      userId: input.userId || null,
+      workspaceId: input.workspaceId || null,
+    });
   } catch {
     /* knowledge update must never break a run */
   }
