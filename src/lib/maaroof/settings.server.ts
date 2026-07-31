@@ -421,6 +421,25 @@ const DEFAULTS: MaaroofSettings = {
     close_loop: true,
     min_reality: 60,
   },
+  execution_engine: {
+    enabled: false,
+    default_mode: "simulation",
+    require_approval: true,
+    max_tasks: 8,
+    max_cost_usd: 5,
+  },
+  verification_engine: {
+    enabled: false,
+    min_independent_sources: 2,
+    min_score: 60,
+    decay_evidence: true,
+  },
+  reality_lab: {
+    enabled: false,
+    default_sample_target: 3,
+    match_tolerance: 0.15,
+    close_loop: true,
+  },
 };
 
 
