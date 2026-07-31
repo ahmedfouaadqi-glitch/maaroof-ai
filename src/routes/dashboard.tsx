@@ -84,6 +84,7 @@ function DashboardPage() {
   const [agentSub, setAgentSub] = useState<any | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
+  const railSignRef = useRef<number | null>(null);
   const [canScrollStart, setCanScrollStart] = useState(false);
   const [canScrollEnd, setCanScrollEnd] = useState(false);
 
@@ -139,25 +140,35 @@ function DashboardPage() {
   }, [active?.key, tools, lang]);
 
   // Scroll-state for the sticky tool rail.
+  // Detects RTL scroll-left sign once (Blink legacy = +1, spec-compliant = -1).
+  const rtlScrollSign = (el: HTMLElement): number => {
+    const isRtl = getComputedStyle(el).direction === "rtl";
+    if (!isRtl) return 1;
+    const original = el.scrollLeft;
+    el.scrollLeft = -1;
+    const negative = el.scrollLeft < 0;
+    el.scrollLeft = original;
+    return negative ? -1 : 1;
+  };
+
   const updateScrollState = () => {
     const el = railRef.current;
     if (!el) return;
-    const isRtl = getComputedStyle(el).direction === "rtl";
+    if (railSignRef.current === null) railSignRef.current = rtlScrollSign(el);
+    const sign = railSignRef.current;
     const maxScroll = el.scrollWidth - el.clientWidth;
-    const start = isRtl ? maxScroll - el.scrollLeft : el.scrollLeft;
-    const end = isRtl ? el.scrollLeft : maxScroll - el.scrollLeft;
-    setCanScrollStart(start > 1);
-    setCanScrollEnd(end > 1);
+    const normalized = sign === 1 ? el.scrollLeft : -el.scrollLeft;
+    setCanScrollStart(normalized > 1);
+    setCanScrollEnd(maxScroll - normalized > 1);
   };
 
   const scrollRail = (dir: "start" | "end") => {
     const el = railRef.current;
     if (!el) return;
-    const isRtl = getComputedStyle(el).direction === "rtl";
+    if (railSignRef.current === null) railSignRef.current = rtlScrollSign(el);
+    const sign = railSignRef.current;
     const distance = Math.max(120, el.clientWidth * 0.55);
-    const delta = dir === "end"
-      ? (isRtl ? -distance : distance)
-      : (isRtl ? distance : -distance);
+    const delta = dir === "end" ? distance * sign : -distance * sign;
     el.scrollBy({ left: delta, behavior: "smooth" });
   };
 
