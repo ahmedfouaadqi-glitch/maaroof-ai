@@ -247,7 +247,11 @@ export function deriveProposals(o: Observatory): ProposalDraft[] {
       technical_analysis: "تفعيل حلقة الواقع الكاملة: ربط كل استنتاج بأدلة أدوات قابلة لإعادة الإنتاج وإغلاق الحلقة على المعرفة والثقة.",
       risk_analysis: [{ risk: "زيادة زمن الاستجابة", severity: "منخفض", mitigation: "التحقق محلي بلا نداءات نموذج إضافية" }],
       cost_analysis: { extra_usd: 0, note: "التصنيف والتحقق حسابي محلي بالكامل" },
-      implementation_plan: ["تفعيل reality_engine", "توسيع أدلة الأدوات", "مراجعة الفجوات أسبوعياً من مركز الواقع"],
+      revenue_potential: { note: "ثقة أعلى ⇒ تحويل أفضل للباقات التنفيذية" },
+      alternatives: [
+        { option: "إبقاء الوضع الحالي", why_not: "تبقى القرارات على افتراضات غير مقاسة" },
+        { option: "تحقق بشري يدوي", why_not: "لا يتوسّع مع حجم التشغيل" },
+      ],
       rollback_plan: "إيقاف مفتاح reality_engine.enabled يعيد السلوك السابق فوراً.",
       affected_components: ["orchestrator", "reality.server", "knowledge", "trust"],
       expected_value_usd: 0,
