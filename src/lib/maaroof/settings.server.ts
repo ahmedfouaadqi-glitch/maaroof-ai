@@ -300,6 +300,9 @@ export type MaaroofSettings = {
   state_anchor: StateAnchorSettings;
   hermes: HermesSettings;
   reality_engine: RealityEngineSettings;
+  execution_engine: ExecutionEngineSettings;
+  verification_engine: VerificationEngineSettings;
+  reality_lab: RealityLabSettings;
 
 
 };
