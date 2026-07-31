@@ -21,26 +21,40 @@ const tools = [
   { key: "report", icon: <FileText className="size-5" />, title: "منشئ التقارير" },
 ];
 
+function rtlScrollSign(el: HTMLElement): number {
+  const isRtl = getComputedStyle(el).direction === "rtl";
+  if (!isRtl) return 1;
+  const original = el.scrollLeft;
+  el.scrollLeft = -1;
+  const negative = el.scrollLeft < 0;
+  el.scrollLeft = original;
+  return negative ? -1 : 1;
+}
+
 function TestRailPage() {
   const railRef = useRef<HTMLDivElement | null>(null);
+  const signRef = useRef<number | null>(null);
   const [canScrollStart, setCanScrollStart] = useState(false);
   const [canScrollEnd, setCanScrollEnd] = useState(false);
 
   const updateScrollState = () => {
     const el = railRef.current;
     if (!el) return;
+    if (signRef.current === null) signRef.current = rtlScrollSign(el);
+    const sign = signRef.current;
     const maxScroll = el.scrollWidth - el.clientWidth;
-    const start = el.scrollLeft;
-    const end = maxScroll - el.scrollLeft;
-    setCanScrollStart(start > 1);
-    setCanScrollEnd(end > 1);
+    const normalized = sign === 1 ? el.scrollLeft : -el.scrollLeft;
+    setCanScrollStart(normalized > 1);
+    setCanScrollEnd(maxScroll - normalized > 1);
   };
 
   const scrollRail = (dir: "start" | "end") => {
     const el = railRef.current;
     if (!el) return;
+    if (signRef.current === null) signRef.current = rtlScrollSign(el);
+    const sign = signRef.current;
     const distance = Math.max(120, el.clientWidth * 0.55);
-    const delta = dir === "end" ? distance : -distance;
+    const delta = dir === "end" ? distance * sign : -distance * sign;
     el.scrollBy({ left: delta, behavior: "smooth" });
   };
 
