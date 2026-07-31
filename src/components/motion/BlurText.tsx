@@ -181,10 +181,12 @@ export function BlurText({
       style={{ display: "flex", flexWrap: "wrap", justifyContent: center ? "center" : undefined }}
     >
       {elements.map((segment, index) => {
-        const animateKeyframes = buildKeyframes(fromSnapshot, loopSnapshots);
+        const animateKeyframes = eager
+          ? buildKeyframes(visibleSnapshot, eagerFrames.slice(1))
+          : buildKeyframes(fromSnapshot, loopSnapshots);
         const spanTransition: Transition = {
           duration: totalDuration,
-          times,
+          times: eager ? eagerTimes : times,
           delay: (startDelay + index * delay) / 1000,
           ease: "easeOut",
           ...(repeat ? { repeat: Infinity, repeatType: "loop" as const } : {}),
@@ -193,8 +195,8 @@ export function BlurText({
           <MotionSpan
             className={`inline-block will-change-[transform,filter,opacity] ${segmentClassName}`}
             key={`${text}-${index}`}
-            initial={fromSnapshot}
-            animate={inView ? animateKeyframes : fromSnapshot}
+            initial={initialSnapshot}
+            animate={inView ? animateKeyframes : initialSnapshot}
             transition={spanTransition}
             onAnimationComplete={index === elements.length - 1 ? onAnimationComplete : undefined}
           >
