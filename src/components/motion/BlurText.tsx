@@ -64,11 +64,12 @@ export function BlurText({
   segmentClassName = "",
   repeat = true,
   repeatDelay = 4000,
+  eager = false,
 }: BlurTextProps) {
   const Tag = (as ?? "p") as ElementType;
   const MotionSpan = motion.span;
   const elements = animateBy === "words" ? text.split(" ") : text.split("");
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(eager);
   const [reduced, setReduced] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
 
