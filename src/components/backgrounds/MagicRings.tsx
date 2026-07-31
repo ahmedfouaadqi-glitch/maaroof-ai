@@ -209,14 +209,22 @@ export function MagicRings({
       return;
     }
 
+    let hasSize = false;
     const resize = () => {
       const rect = mount.getBoundingClientRect();
       renderer.setSize(Math.max(rect.width, 1), Math.max(rect.height, 1));
       uniforms.uResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight];
+      // The container can mount at zero height (opening panels); paint once
+      // as soon as real dimensions arrive so the first frame isn't blank.
+      if (!hasSize && rect.width > 1 && rect.height > 1) {
+        hasSize = true;
+        try { renderer.render({ scene: mesh }); } catch { /* ignore */ }
+      }
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(mount);
+
 
     // Only animate while the card is on screen.
     let onScreen = true;
