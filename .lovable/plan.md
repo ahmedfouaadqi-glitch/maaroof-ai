@@ -1,25 +1,49 @@
-## Plan
+## الهدف
+جعل الموقع بالكامل (واجهة المستخدم + لوحة الإدارة + الأدوات الـ16 + مخرجات الوكيل + التصدير) يعمل بثلاث لغات: العربية، English، کوردی — بلا أي نص صلب أو خلط لغوي.
 
-Goal: confirm the two small circular arrows on the dashboard sticky tool rail actually scroll the rail left/right (or right/left in RTL) and that their enabled/disabled states update correctly.
+## الوضع الحالي (تم التحقق منه)
+- نظام الترجمة موجود في `src/lib/i18n.tsx`: 796 مفتاحاً، مكتمل في اللغات الثلاث (0 مفاتيح ناقصة، 0 مكررة).
+- 623 مفتاحاً فقط مستخدم فعلياً عبر `t("...")` → ~173 مفتاحاً غير مستخدم يحتاج مراجعة.
+- 65 ملفاً يستخدم نظام الترجمة، بينما **34 ملفاً على الأقل** فيه نصوص عربية صلبة خارج النظام، أبرزها:
+  - لوحات الإدارة: `MaaroofAdminTab` (137 سطراً)، `StateHermesPanels`، `admin.tsx`، `SystemHealthTab`، `MaaroofIntelligenceCenter`، `HermesTaskCenter`، `ExpertAcademyPanels`، `ModelDecisionPanels`، `PublishingTrustPanels`، `AdminTokensPanel`، `AdminFinanceTab`، `FirecrawlMonitorTab`، `ProviderCostTab`، `UserIntelligenceTab`، `ContentStudioTab`، `CognitiveInsightsTab`، `HeaderConfigTab`، `ExportConfigTab`، `PricesEditor`.
+  - مكوّنات المستخدم: `BrandBoostAgent`، `AppliedRanking`، `HowItWorks`، `Sandbox`، `ChannelsPanel`، `GeoStrategist`، `WhatIfSimulator`، `MaaroofStage`، `SchedulesPanel`، `WorkspaceSwitcher`، `AlertsBell`، `ThemeToggle`.
+  - مسارات API ترجع رسائل/برومبتات عربية صلبة: `analyze`، `compare`، `suggest`، `brand-boost`، `bizdev`، `feasibility`، `geo-rewrite`، `competitor-monitor`، `applied-ranking`، `maaroof`، `visibility`، `telegram/webhook`.
+  - صفحات محتوى طويلة عربية صلبة: `terms.tsx`، `privacy.tsx`.
+- مخرجات الذكاء الاصطناعي: `callAI` في `agent.server.ts` يقبل `lang` مع `LANG_INSTRUCTION`، لكن الافتراضي `"ar"` — يجب التأكد أن كل مسار أداة يمرّر لغة المستخدم فعلياً بدل الاعتماد على الافتراضي.
 
-### Verification steps
+## خطة التنفيذ (5 موجات)
 
-1. **Code review**: re-read `src/routes/dashboard.tsx` around the rail/arrows to confirm `scrollRail`, `updateScrollState`, and the button `disabled`/`opacity` logic are wired correctly.
-2. **Runtime check via Playwright**:
-   - If a managed Supabase session is injected (`LOVABLE_BROWSER_AUTH_STATUS`), navigate to `/dashboard?tool=analyze`, open a tool, and:
-     - Screenshot the rail.
-     - Click the right/forward arrow and verify `scrollLeft` changes.
-     - Click the left/back arrow and verify `scrollLeft` returns toward the original value.
-     - Resize the viewport to force overflow and confirm both arrows appear/enable as expected.
-   - If no session is available, note that authenticated routes cannot be verified automatically and ask the user to sign in via the preview so the next turn can complete the check.
-3. **Fix any issue found** if the arrows do not scroll or state does not update.
+### الموجة 0 — أدوات التدقيق
+- سكربت تدقيق `scripts/i18n-audit.mjs` يفحص كل `src/**`: يكتشف النصوص الصلبة (عربية/إنجليزية داخل JSX وسمات `placeholder/title/aria-label/toast`)، المفاتيح الناقصة/المكررة/غير المستخدمة، ومفاتيح الاستدعاء غير الموجودة في القاموس.
+- يُنتج نتائجه بصيغة JSON + Markdown لاستخدامه في التقرير النهائي وإعادة تشغيله لاحقاً.
 
-### Files touched (if a fix is needed)
+### الموجة 1 — البنية التحتية للترجمة
+- تقسيم `i18n.tsx` (2530 سطراً) إلى قواميس في `src/lib/i18n/` (`en.ts`, `ar.ts`, `ku.ts`, `index.tsx`) مع الحفاظ على نفس واجهة `useI18n()` و`t()` — لا كسر لأي استدعاء قائم.
+- إضافة نمط اكتشاف مفتاح مفقود في وضع التطوير (تحذير في الكونسول بدل عرض المفتاح صامتاً).
+- إضافة `serverT(lang, key)` لاستخدامه في مسارات API والتصدير والإشعارات.
 
-- `src/routes/dashboard.tsx` only.
+### الموجة 2 — واجهة المستخدم والأدوات الـ16
+- تحويل كل نص صلب في مكوّنات المستخدم والصفحات إلى مفاتيح، مع إضافة الترجمات الثلاث.
+- شمول: العناوين، الأزرار، الـ placeholders، الـ tooltips، رسائل التحقق، الأخطاء، النجاح، حالات التحميل والفراغ، عناوين الجداول والرسوم البيانية.
+- كل أداة من الأدوات الـ16 في `dashboard.tsx` و`tools.$slug.tsx`: العنوان، الوصف، نتائج التقرير، رسائل الخطأ.
 
-### Success criteria
+### الموجة 3 — لوحة الإدارة (3 لغات كاملة)
+- تحويل كل لوحات `src/components/admin/*` و`src/components/maaroof/*` و`admin.tsx` إلى مفاتيح مترجمة بالكامل (يُقدَّر بعدة مئات من المفاتيح الجديدة ضمن مساحة أسماء `adm_*`).
 
-- Both arrows are clickable.
-- Clicking an arrow scrolls the rail smoothly in the expected direction.
-- Arrow opacity/disabled state updates after each scroll.
+### الموجة 4 — الخادم ومخرجات الذكاء الاصطناعي
+- تمرير لغة المستخدم من الواجهة إلى كل مسار API وكل استدعاء `callAI` (لا اعتماد على الافتراضي "ar").
+- تعريب/توحيد رسائل الأخطاء المعادة من API عبر رموز أخطاء (`error_code`) تُترجَم في الواجهة بدل نصوص جاهزة.
+- تطبيق اللغة على: الإشعارات، البريد، التصدير (PDF/Word/PPT/Excel/CSV)، الجدولة والمهام الخلفية المرئية للمستخدم.
+- تشديد `LANG_INSTRUCTION` لمنع خلط اللغات في ردود الوكيل والوكلاء الفرعيين.
+
+### الموجة 5 — RTL/LTR والاختبار الحيّ
+- التحقق من `dir` والمحاذاة والمسافات واتجاه الأيقونات والجداول والمدخلات والرسوم والتصميم المتجاوب في اللغات الثلاث.
+- اختبار Playwright يتنقّل بين اللغات (ar → en → ku → ar) على الصفحات الرئيسية ولوحة التحكم، ويلتقط لقطات ويكتشف بقايا نص من لغة أخرى في نفس الشاشة.
+
+### المخرج النهائي
+`docs/LOCALIZATION-AUDIT.md` يتضمن: عدد النصوص المفحوصة، الصفحات، المكوّنات، المفاتيح، المشاكل، النصوص غير المترجمة، المختلطة، الصلبة، المُصلَحة، المتبقية، ونسبة جاهزية كل لغة — مع جدول تفصيلي لكل ملف.
+
+## ملاحظات تقنية
+- صفحات `terms` و`privacy` طويلة: تُنقل نصوصها إلى مفاتيح فقرات مرقّمة بدل مفتاح واحد ضخم.
+- المفاتيح غير المستخدمة (~173) لن تُحذف عشوائياً؛ تُوثَّق أولاً في التقرير ثم يُحذف المؤكَّد منها فقط.
+- سيتم تشغيل فحص TypeScript والبناء بعد كل موجة.
