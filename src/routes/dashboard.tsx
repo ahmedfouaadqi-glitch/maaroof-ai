@@ -87,6 +87,17 @@ function DashboardPage() {
   const railSignRef = useRef<number | null>(null);
   const [canScrollStart, setCanScrollStart] = useState(false);
   const [canScrollEnd, setCanScrollEnd] = useState(false);
+  // Lighter ring settings on small screens / touch / reduced motion.
+  const [compactMotion, setCompactMotion] = useState(true);
+
+  useEffect(() => {
+    const q = window.matchMedia("(max-width: 768px), (pointer: coarse), (prefers-reduced-motion: reduce)");
+    const sync = () => setCompactMotion(q.matches);
+    sync();
+    q.addEventListener("change", sync);
+    return () => q.removeEventListener("change", sync);
+  }, []);
+
 
   const setOpenTool = (k: ToolKey | null) => {
     navigate({ to: "/dashboard", search: { tool: k ?? undefined }, replace: false });
@@ -309,25 +320,45 @@ function DashboardPage() {
                 </div>
               </div>
 
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-25">
+              {/* Hero band — MagicRings as the opened tool's identity face */}
+              <div className="relative overflow-hidden border-b border-border/60">
+                <div className="pointer-events-none absolute inset-0">
                   <MagicRings
-                    color="#6E3AF7"
-                    colorTwo="#4FC3E8"
-                    ringCount={5}
-                    speed={0.6}
-                    opacity={0.7}
-                    lineThickness={1.4}
-                    noiseAmount={0.04}
+                    key={active.key}
+                    color="#7A46F8"
+                    colorTwo="#55B6F0"
+                    ringCount={compactMotion ? 4 : 6}
+                    speed={0.55}
+                    attenuation={11}
+                    lineThickness={1.5}
+                    baseRadius={0.3}
+                    radiusStep={0.1}
+                    noiseAmount={0.03}
+                    opacity={compactMotion ? 0.45 : 0.75}
+                    followMouse={!compactMotion}
+                    mouseInfluence={0.12}
+                    parallax={0.03}
+                    hoverScale={1.06}
                   />
                 </div>
-                <div className="relative p-4 sm:p-6">
-                  <h2 className="font-display text-xl font-bold sm:text-2xl">
-                    {t(active.titleKey).replace(/^\d+\)\s*/, "")}
-                  </h2>
-                  <div className="mt-4">{active.render()}</div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-card/30 via-card/55 to-card/90" />
+                <div className="relative flex items-start gap-3 p-5 sm:p-7">
+                  <div className="inline-grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/30 to-accent/25 text-primary ring-1 ring-inset ring-primary/25 backdrop-blur">
+                    {active.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="font-display text-xl font-bold sm:text-2xl">
+                      {t(active.titleKey).replace(/^\d+\)\s*/, "")}
+                    </h2>
+                    {active.descKey && (
+                      <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{t(active.descKey)}</p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              <div className="p-4 sm:p-6">{active.render()}</div>
+
             </section>
           )}
         </div>

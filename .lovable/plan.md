@@ -1,49 +1,25 @@
-## الهدف
-جعل الموقع بالكامل (واجهة المستخدم + لوحة الإدارة + الأدوات الـ16 + مخرجات الوكيل + التصدير) يعمل بثلاث لغات: العربية، English، کوردی — بلا أي نص صلب أو خلط لغوي.
+## Goal
 
-## الوضع الحالي (تم التحقق منه)
-- نظام الترجمة موجود في `src/lib/i18n.tsx`: 796 مفتاحاً، مكتمل في اللغات الثلاث (0 مفاتيح ناقصة، 0 مكررة).
-- 623 مفتاحاً فقط مستخدم فعلياً عبر `t("...")` → ~173 مفتاحاً غير مستخدم يحتاج مراجعة.
-- 65 ملفاً يستخدم نظام الترجمة، بينما **34 ملفاً على الأقل** فيه نصوص عربية صلبة خارج النظام، أبرزها:
-  - لوحات الإدارة: `MaaroofAdminTab` (137 سطراً)، `StateHermesPanels`، `admin.tsx`، `SystemHealthTab`، `MaaroofIntelligenceCenter`، `HermesTaskCenter`، `ExpertAcademyPanels`، `ModelDecisionPanels`، `PublishingTrustPanels`، `AdminTokensPanel`، `AdminFinanceTab`، `FirecrawlMonitorTab`، `ProviderCostTab`، `UserIntelligenceTab`، `ContentStudioTab`، `CognitiveInsightsTab`، `HeaderConfigTab`، `ExportConfigTab`، `PricesEditor`.
-  - مكوّنات المستخدم: `BrandBoostAgent`، `AppliedRanking`، `HowItWorks`، `Sandbox`، `ChannelsPanel`، `GeoStrategist`، `WhatIfSimulator`، `MaaroofStage`، `SchedulesPanel`، `WorkspaceSwitcher`، `AlertsBell`، `ThemeToggle`.
-  - مسارات API ترجع رسائل/برومبتات عربية صلبة: `analyze`، `compare`، `suggest`، `brand-boost`، `bizdev`، `feasibility`، `geo-rewrite`، `competitor-monitor`، `applied-ranking`، `maaroof`، `visibility`، `telegram/webhook`.
-  - صفحات محتوى طويلة عربية صلبة: `terms.tsx`، `privacy.tsx`.
-- مخرجات الذكاء الاصطناعي: `callAI` في `agent.server.ts` يقبل `lang` مع `LANG_INSTRUCTION`، لكن الافتراضي `"ar"` — يجب التأكد أن كل مسار أداة يمرّر لغة المستخدم فعلياً بدل الاعتماد على الافتراضي.
+MagicRings currently shows behind each tool card's identity face on the grid, but when a card is opened the effect is only a faint 40px strip at 25% opacity behind the workspace header — it reads as an artifact, not a designed element. Make it a deliberate, professional part of the opened tool view.
 
-## خطة التنفيذ (5 موجات)
+## What changes (frontend only, `src/routes/dashboard.tsx` + `src/components/backgrounds/MagicRings.tsx`)
 
-### الموجة 0 — أدوات التدقيق
-- سكربت تدقيق `scripts/i18n-audit.mjs` يفحص كل `src/**`: يكتشف النصوص الصلبة (عربية/إنجليزية داخل JSX وسمات `placeholder/title/aria-label/toast`)، المفاتيح الناقصة/المكررة/غير المستخدمة، ومفاتيح الاستدعاء غير الموجودة في القاموس.
-- يُنتج نتائجه بصيغة JSON + Markdown لاستخدامه في التقرير النهائي وإعادة تشغيله لاحقاً.
+1. **Opened-card hero band**
+   - Replace the thin `h-40 opacity-25` overlay with a proper header band inside the opened section: the tool icon, title and short description sit on top of a MagicRings canvas, with a gradient scrim from transparent to card so the body text stays fully readable.
+   - Tune props for the larger surface: `ringCount={6}`, `speed={0.55}`, `attenuation={11}`, `lineThickness={1.5}`, `baseRadius={0.3}`, `radiusStep={0.1}`, `noiseAmount={0.03}`, `followMouse` with light `mouseInfluence` and `parallax` so it feels alive on hover but never distracting.
 
-### الموجة 1 — البنية التحتية للترجمة
-- تقسيم `i18n.tsx` (2530 سطراً) إلى قواميس في `src/lib/i18n/` (`en.ts`, `ar.ts`, `ku.ts`, `index.tsx`) مع الحفاظ على نفس واجهة `useI18n()` و`t()` — لا كسر لأي استدعاء قائم.
-- إضافة نمط اكتشاف مفتاح مفقود في وضع التطوير (تحذير في الكونسول بدل عرض المفتاح صامتاً).
-- إضافة `serverT(lang, key)` لاستخدامه في مسارات API والتصدير والإشعارات.
+2. **Re-key on tool switch**
+   - Give the rings a `key={active.key}` so switching tools from the sticky rail replays the ring cycle — a subtle transition cue instead of a static glow.
 
-### الموجة 2 — واجهة المستخدم والأدوات الـ16
-- تحويل كل نص صلب في مكوّنات المستخدم والصفحات إلى مفاتيح، مع إضافة الترجمات الثلاث.
-- شمول: العناوين، الأزرار، الـ placeholders، الـ tooltips، رسائل التحقق، الأخطاء، النجاح، حالات التحميل والفراغ، عناوين الجداول والرسوم البيانية.
-- كل أداة من الأدوات الـ16 في `dashboard.tsx` و`tools.$slug.tsx`: العنوان، الوصف، نتائج التقرير، رسائل الخطأ.
+3. **Performance discipline**
+   - When a tool is open, the grid is unmounted, so only one ring canvas runs. Keep the existing `paused` prop and pass `paused` for off-screen/reduced-motion cases; confirm the IntersectionObserver + `visibilitychange` gating still stops the RAF loop when the band scrolls out under the sticky rail.
+   - Keep the mobile/coarse-pointer path lighter (fewer rings, lower opacity, `followMouse` off) using the existing media-query approach used by `SiteBackground`.
 
-### الموجة 3 — لوحة الإدارة (3 لغات كاملة)
-- تحويل كل لوحات `src/components/admin/*` و`src/components/maaroof/*` و`admin.tsx` إلى مفاتيح مترجمة بالكامل (يُقدَّر بعدة مئات من المفاتيح الجديدة ضمن مساحة أسماء `adm_*`).
+4. **Robustness check**
+   - Verify the `ogl` port mounts correctly when the container starts at zero height (opened section animating in) — the resize handler already clamps to 1px; confirm a `ResizeObserver` tick repaints once real dimensions arrive, otherwise force one render after first non-zero size.
 
-### الموجة 4 — الخادم ومخرجات الذكاء الاصطناعي
-- تمرير لغة المستخدم من الواجهة إلى كل مسار API وكل استدعاء `callAI` (لا اعتماد على الافتراضي "ar").
-- تعريب/توحيد رسائل الأخطاء المعادة من API عبر رموز أخطاء (`error_code`) تُترجَم في الواجهة بدل نصوص جاهزة.
-- تطبيق اللغة على: الإشعارات، البريد، التصدير (PDF/Word/PPT/Excel/CSV)، الجدولة والمهام الخلفية المرئية للمستخدم.
-- تشديد `LANG_INSTRUCTION` لمنع خلط اللغات في ردود الوكيل والوكلاء الفرعيين.
+## Notes
 
-### الموجة 5 — RTL/LTR والاختبار الحيّ
-- التحقق من `dir` والمحاذاة والمسافات واتجاه الأيقونات والجداول والمدخلات والرسوم والتصميم المتجاوب في اللغات الثلاث.
-- اختبار Playwright يتنقّل بين اللغات (ar → en → ku → ar) على الصفحات الرئيسية ولوحة التحكم، ويلتقط لقطات ويكتشف بقايا نص من لغة أخرى في نفس الشاشة.
-
-### المخرج النهائي
-`docs/LOCALIZATION-AUDIT.md` يتضمن: عدد النصوص المفحوصة، الصفحات، المكوّنات، المفاتيح، المشاكل، النصوص غير المترجمة، المختلطة، الصلبة، المُصلَحة، المتبقية، ونسبة جاهزية كل لغة — مع جدول تفصيلي لكل ملف.
-
-## ملاحظات تقنية
-- صفحات `terms` و`privacy` طويلة: تُنقل نصوصها إلى مفاتيح فقرات مرقّمة بدل مفتاح واحد ضخم.
-- المفاتيح غير المستخدمة (~173) لن تُحذف عشوائياً؛ تُوثَّق أولاً في التقرير ثم يُحذف المؤكَّد منها فقط.
-- سيتم تشغيل فحص TypeScript والبناء بعد كل موجة.
+- No new dependency: the project's MagicRings is already ported to `ogl` (used by Lightfall); we do not add `three`. Shader math stays identical to the React Bits source.
+- Colors stay on brand tokens (`#7A46F8` / `#55B6F0`) rather than the demo pink/cyan.
+- Verification: open a tool from the dashboard, screenshot the opened card at desktop and mobile widths, and confirm the rings render, animate, and don't reduce text contrast.
