@@ -68,7 +68,7 @@ export function WordStrands({
       octx.fillText(st.word, off.width / 2, off.height / 2);
 
       const img = octx.getImageData(0, 0, off.width, off.height).data;
-      const step = Math.max(2, Math.round(size / 45));
+      const step = Math.max(3, Math.round(size / 26));
       const pts: Array<{ x: number; y: number }> = [];
       for (let y = 0; y < off.height; y += step) {
         for (let x = 0; x < off.width; x += step) {
@@ -97,7 +97,7 @@ export function WordStrands({
                 tx: t.x,
                 ty: t.y,
                 c: st.colors[i % st.colors.length] || "#7C3AED",
-                r: 1 + Math.random() * 1.1,
+                r: Math.max(0.7, fontSize / 130) * (0.9 + Math.random() * 0.6),
                 ph: Math.random() * Math.PI * 2,
               },
         );
