@@ -45,7 +45,7 @@ async function batch(items) {
   return arr;
 }
 
-const SIZE = 30;
+const SIZE = Number(process.env.I18N_BATCH || 30);
 const chunks = [];
 for (let i = 0; i < todo.length; i += SIZE) chunks.push(todo.slice(i, i + SIZE));
 
