@@ -19,7 +19,7 @@ import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { ReportBuilder } from "@/components/ReportBuilder";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid } from "lucide-react";
+import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
 import { useVisibility, useToolPrice } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
 import { CostBadge } from "@/components/CostBadge";
