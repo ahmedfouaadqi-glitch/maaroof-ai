@@ -65,10 +65,8 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
       {/* Matrix backdrop */}
       <MatrixRain active={running} intensity={running ? intensity : 0.15} className="absolute inset-0 w-full h-full opacity-40 pointer-events-none" />
 
-      {/* Agent activity ribbon — moves while Maaroof and its sub-agents work */}
-      <div className="relative border-b border-border/50 bg-background/20">
-        <AgentPulse events={events} running={running} typing={typing} settled={!!finalText} height={64} />
-      </div>
+
+
 
 
 
@@ -83,7 +81,19 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
         </div>
 
         {/* Steps orbit / cards */}
-        <div className="space-y-3">
+        <div className="relative space-y-3">
+          {/* Agent activity — strands trace the word معروف while Maaroof works */}
+          <div className={`absolute inset-x-0 top-0 z-0 transition-opacity duration-500 ${plan || finalText ? "opacity-25" : "opacity-100"}`}>
+            <AgentPulse
+              variant="word"
+              events={events}
+              running={running}
+              typing={typing}
+              settled={!!finalText}
+              height={plan || finalText ? 120 : 200}
+            />
+          </div>
+          <div className="relative z-10 space-y-3">
           {!plan && !running && events.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
               <Bot className="w-10 h-10 mx-auto mb-2 opacity-50" />
@@ -159,6 +169,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
               {events.map((e) => `[${e.type}] ${JSON.stringify(e.data).slice(0, 400)}`).join("\n")}
             </pre>
           )}
+          </div>
         </div>
       </div>
     </div>
