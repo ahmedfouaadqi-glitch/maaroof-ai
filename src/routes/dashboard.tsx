@@ -138,6 +138,42 @@ function DashboardPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [active?.key, tools, lang]);
 
+  // Scroll-state for the sticky tool rail.
+  const updateScrollState = () => {
+    const el = railRef.current;
+    if (!el) return;
+    const isRtl = getComputedStyle(el).direction === "rtl";
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const start = isRtl ? maxScroll - el.scrollLeft : el.scrollLeft;
+    const end = isRtl ? el.scrollLeft : maxScroll - el.scrollLeft;
+    setCanScrollStart(start > 1);
+    setCanScrollEnd(end > 1);
+  };
+
+  const scrollRail = (dir: "start" | "end") => {
+    const el = railRef.current;
+    if (!el) return;
+    const isRtl = getComputedStyle(el).direction === "rtl";
+    const distance = Math.max(120, el.clientWidth * 0.55);
+    const delta = dir === "end"
+      ? (isRtl ? -distance : distance)
+      : (isRtl ? distance : -distance);
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const el = railRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
+    };
+  }, [tools.length, active?.key]);
+
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
