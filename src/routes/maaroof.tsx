@@ -267,7 +267,8 @@ function MaaroofPage() {
           <div className="rounded-lg border bg-card p-3">
             <h2 className="sr-only">{t("auto.enter_task")}</h2>
             <textarea
-              value={goal} onChange={(e) => setGoal(e.target.value)}
+              value={goal} onChange={(e) => onGoalChange(e.target.value)}
+
               placeholder={t("auto.hello_i_am_maaroof_what_is")}
               className="w-full min-h-[80px] p-2 bg-background border rounded outline-none resize-y" disabled={running}
             />
