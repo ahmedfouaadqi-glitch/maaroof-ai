@@ -44,10 +44,20 @@ function MaaroofPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [activeWs, setActiveWs] = useState<Workspace | null>(null);
   const [executionMode, setExecutionMode] = useState<"simulation" | "recommendation" | "execution">("execution");
+  const [typing, setTyping] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [events]);
+
+  function onGoalChange(v: string) {
+    setGoal(v);
+    setTyping(true);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setTyping(false), 1200);
+  }
+
 
   useEffect(() => {
     if (!user) return;
