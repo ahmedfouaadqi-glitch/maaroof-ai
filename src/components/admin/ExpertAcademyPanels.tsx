@@ -1,6 +1,7 @@
 // Parts 9-11 admin panels — Expert Academy, Learning Budget, Knowledge Observatory.
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { GraduationCap, RefreshCw, Coins, Network, Play, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 /** Part 9 — Expert Academy: what Maaroof understands about each engine. */
 export function ExpertAcademySection() {
+  const { t } = useI18n();
   const load = useServerFn(listExpertAcademy);
   const learn = useServerFn(runExpertLearning);
   const [data, setData] = useState<any>(null);
@@ -66,17 +68,17 @@ export function ExpertAcademySection() {
     }
   };
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
   const s = data?.summary || {};
 
   return (
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <GraduationCap className="size-4 text-primary" /> أكاديمية الخبراء
+          <GraduationCap className="size-4 text-primary" /> {t("auto.expert_academy")}
         </h3>
         <button onClick={() => void refresh()} className="rounded-lg border border-border/60 px-2.5 py-1 text-xs hover:bg-muted/40">
-          <RefreshCw className="me-1 inline size-3" /> تحديث
+          <RefreshCw className="me-1 inline size-3" /> {t("auto.update")}
         </button>
       </header>
 
@@ -86,22 +88,22 @@ export function ExpertAcademySection() {
       </p>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Stat label="إجمالي الخبراء" value={s.total ?? 0} />
-        <Stat label="تم تعلّمهم" value={s.learned ?? 0} />
-        <Stat label="متوسط الفهم" value={`${s.avg_understanding ?? 0}%`} />
-        <Stat label="تكلفة التعلّم" value={`$${Number(s.total_usd || 0).toFixed(4)}`} />
+        <Stat label={t("auto.total_experts")} value={s.total ?? 0} />
+        <Stat label={t("auto.they_have_been_learned")} value={s.learned ?? 0} />
+        <Stat label={t("auto.understanding_average")} value={`${s.avg_understanding ?? 0}%`} />
+        <Stat label={t("auto.learning_cost")} value={`$${Number(s.total_usd || 0).toFixed(4)}`} />
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border/60">
         <table className="w-full text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="p-2 text-start">الخبير</th>
-              <th className="p-2 text-start">الحالة</th>
-              <th className="p-2 text-start">الفهم</th>
-              <th className="p-2 text-start">التغطية</th>
-              <th className="p-2 text-start">الجلسات</th>
-              <th className="p-2 text-start">التكلفة</th>
+              <th className="p-2 text-start">{t("auto.expert")}</th>
+              <th className="p-2 text-start">{t("auto.status")}</th>
+              <th className="p-2 text-start">{t("auto.understanding")}</th>
+              <th className="p-2 text-start">{t("auto.coverage")}</th>
+              <th className="p-2 text-start">{t("auto.sessions")}</th>
+              <th className="p-2 text-start">{t("auto.cost")}</th>
               <th className="p-2" />
             </tr>
           </thead>
@@ -114,7 +116,7 @@ export function ExpertAcademySection() {
                 </td>
                 <td className="p-2">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] ${e.learned ? "bg-primary/15 text-primary" : "bg-muted/60 text-muted-foreground"}`}>
-                    {e.learned ? `v${e.version}` : "لم يُتعلَّم"}
+                    {e.learned ? `v${e.version}` : t("auto.not_learned")}
                   </span>
                 </td>
                 <td className="p-2 w-28">
@@ -132,7 +134,7 @@ export function ExpertAcademySection() {
                     onClick={() => void runOne(e.key, e.learned)}
                     className="rounded-lg border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] text-primary hover:bg-primary/20 disabled:opacity-50"
                   >
-                    {busy === e.key ? <Loader2 className="size-3 animate-spin" /> : <><Play className="me-1 inline size-3" />{e.learned ? "إعادة تعلّم" : "تعلّم"}</>}
+                    {busy === e.key ? <Loader2 className="size-3 animate-spin" /> : <><Play className="me-1 inline size-3" />{e.learned ? t("auto.relearn") : t("auto.learn")}</>}
                   </button>
                 </td>
               </tr>
@@ -142,7 +144,7 @@ export function ExpertAcademySection() {
       </div>
 
       <div>
-        <h4 className="mb-2 text-xs font-semibold">آخر جلسات التعلّم</h4>
+        <h4 className="mb-2 text-xs font-semibold">{t("auto.last_learning_sessions")}</h4>
         <div className="space-y-1">
           {(data?.sessions || []).slice(0, 10).map((x: any) => (
             <div key={x.id} className="flex items-center justify-between rounded-lg border border-border/40 px-2 py-1 text-[11px]">
@@ -152,7 +154,7 @@ export function ExpertAcademySection() {
               </span>
             </div>
           ))}
-          {!(data?.sessions || []).length && <div className="text-[11px] text-muted-foreground">لا جلسات بعد.</div>}
+          {!(data?.sessions || []).length && <div className="text-[11px] text-muted-foreground">{t("auto.no_sessions_yet")}</div>}
         </div>
       </div>
     </div>
@@ -161,10 +163,11 @@ export function ExpertAcademySection() {
 
 /** Part 10 — the learning budget, kept strictly apart from user spend. */
 export function LearningBudgetSection() {
+  const { t } = useI18n();
   const load = useServerFn(getLearningBudget);
   const [data, setData] = useState<any>(null);
   useEffect(() => { void load().then(setData).catch(() => {}); }, []);
-  if (!data) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (!data) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
   return (
     <div className="space-y-4">
       <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -174,22 +177,22 @@ export function LearningBudgetSection() {
         كل عملية تعلّم مسجّلة هنا — حتى المجانية منها مع سبب مجانيتها. هذه الميزانية منفصلة تماماً عن سجل توكنات المستخدمين.
       </p>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Stat label="إجمالي التكلفة" value={`$${Number(data.total_usd || 0).toFixed(4)}`} />
-        <Stat label="إجمالي التوكنات" value={Number(data.total_tokens || 0).toLocaleString()} />
-        <Stat label="عمليات مجانية" value={data.free_ops ?? 0} />
-        <Stat label="أيام مسجّلة" value={(data.daily || []).length} />
+        <Stat label={t("auto.total_cost")} value={`$${Number(data.total_usd || 0).toFixed(4)}`} />
+        <Stat label={t("auto.total_tokens")} value={Number(data.total_tokens || 0).toLocaleString()} />
+        <Stat label={t("auto.free_operations")} value={data.free_ops ?? 0} />
+        <Stat label={t("auto.recorded_days")} value={(data.daily || []).length} />
       </div>
       <div className="overflow-x-auto rounded-xl border border-border/60">
         <table className="w-full text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="p-2 text-start">الوقت</th>
-              <th className="p-2 text-start">الغرض</th>
-              <th className="p-2 text-start">الخبير</th>
-              <th className="p-2 text-start">النموذج</th>
-              <th className="p-2 text-start">توكنات</th>
-              <th className="p-2 text-start">التكلفة</th>
-              <th className="p-2 text-start">ملاحظة</th>
+              <th className="p-2 text-start">{t("auto.time")}</th>
+              <th className="p-2 text-start">{t("auto.purpose")}</th>
+              <th className="p-2 text-start">{t("auto.expert")}</th>
+              <th className="p-2 text-start">{t("auto.model")}</th>
+              <th className="p-2 text-start">{t("auto.tokens")}</th>
+              <th className="p-2 text-start">{t("auto.cost")}</th>
+              <th className="p-2 text-start">{t("auto.note")}</th>
             </tr>
           </thead>
           <tbody>
@@ -213,6 +216,7 @@ export function LearningBudgetSection() {
 
 /** Part 11 — Knowledge Observatory: health of the living knowledge graph. */
 export function KnowledgeObservatorySection() {
+  const { t } = useI18n();
   const load = useServerFn(getKnowledgeObservatory);
   const sync = useServerFn(syncKnowledgeLayers);
   const [data, setData] = useState<any>(null);
@@ -233,12 +237,12 @@ export function KnowledgeObservatorySection() {
     }
   };
 
-  if (!data) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (!data) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
   return (
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Network className="size-4 text-primary" /> مرصد المعرفة الحيّة
+          <Network className="size-4 text-primary" /> {t("auto.live_knowledge_observatory")}
         </h3>
         <button onClick={() => void doSync()} disabled={busy} className="rounded-lg border border-border/60 px-2.5 py-1 text-xs hover:bg-muted/40 disabled:opacity-50">
           {busy ? <Loader2 className="size-3 animate-spin" /> : <><RefreshCw className="me-1 inline size-3" /> مزامنة طبقة الخبراء</>}
@@ -252,13 +256,13 @@ export function KnowledgeObservatorySection() {
         <table className="w-full text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="p-2 text-start">الطبقة</th>
-              <th className="p-2 text-start">العقد</th>
-              <th className="p-2 text-start">الثقة</th>
-              <th className="p-2 text-start">الموثوقية</th>
-              <th className="p-2 text-start">الجودة</th>
-              <th className="p-2 text-start">تعارضات</th>
-              <th className="p-2 text-start">متقادمة</th>
+              <th className="p-2 text-start">{t("auto.layer")}</th>
+              <th className="p-2 text-start">{t("auto.contract")}</th>
+              <th className="p-2 text-start">{t("auto.trust_2")}</th>
+              <th className="p-2 text-start">{t("auto.reliability")}</th>
+              <th className="p-2 text-start">{t("auto.quality")}</th>
+              <th className="p-2 text-start">{t("auto.conflicts")}</th>
+              <th className="p-2 text-start">{t("auto.outdated")}</th>
             </tr>
           </thead>
           <tbody>
@@ -274,14 +278,14 @@ export function KnowledgeObservatorySection() {
               </tr>
             ))}
             {!(data.health || []).length && (
-              <tr><td colSpan={7} className="p-3 text-center text-muted-foreground">لا معرفة مسجّلة بعد.</td></tr>
+              <tr><td colSpan={7} className="p-3 text-center text-muted-foreground">{t("auto.no_registered_knowledge_yet")}</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       <div>
-        <h4 className="mb-2 text-xs font-semibold">أقوى العقد المعرفية</h4>
+        <h4 className="mb-2 text-xs font-semibold">{t("auto.strongest_knowledge_nodes")}</h4>
         <div className="space-y-1">
           {(data.top || []).slice(0, 12).map((n: any) => (
             <div key={n.id} className="rounded-lg border border-border/40 px-2 py-1.5">
@@ -292,7 +296,7 @@ export function KnowledgeObservatorySection() {
               {n.summary && <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{n.summary}</p>}
             </div>
           ))}
-          {!(data.top || []).length && <div className="text-[11px] text-muted-foreground">لا عقد بعد.</div>}
+          {!(data.top || []).length && <div className="text-[11px] text-muted-foreground">{t("auto.no_nodes_yet")}</div>}
         </div>
       </div>
     </div>

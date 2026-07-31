@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BlurText } from "@/components/motion/BlurText";
 import { SiteHeader } from "@/components/SiteHeader";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 
 export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
@@ -81,6 +81,7 @@ export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
 });
 
 function Page() {
+  const { t } = useI18n();
   return (
     <div className="min-h-screen text-foreground">
       <SiteHeader />
@@ -111,7 +112,7 @@ function Page() {
           <li>Set <code>&lt;html lang=&quot;ar&quot;&gt;</code> or <code>lang=&quot;ckb&quot;</code> on the right pages and provide a bilingual abstract.</li>
           <li>Add Organization, LocalBusiness and FAQPage schema, with names in Arabic and Latin script.</li>
           <li>Publish original numbers, prices and dates in the local language — generative engines prefer fresh, verifiable facts.</li>
-          <li>Use Q&amp;A headings that mirror how users actually ask (e.g. <em>"شنو هي تحسين محركات الذكاء الاصطناعي؟"</em>).</li>
+          <li>Use Q&amp;A headings that mirror how users actually ask (e.g. <em>t("auto.what_is_ai_search_engine_optimization")</em>).</li>
           <li>Track citation share per engine and per language with the MAAROOF Ai visibility tools.</li>
         </ol>
 

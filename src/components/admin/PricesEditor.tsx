@@ -1,6 +1,7 @@
 // Dynamic multi-currency price editor used in admin panels.
 // Edits a { CODE: amount } map + a default display currency.
 import { useMemo } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Plus, Trash2 } from "lucide-react";
 import { CURRENCIES, type CurrencyCode } from "@/lib/currencies";
 
@@ -23,6 +24,7 @@ export function PricesEditor({
   const available = CURRENCIES.filter((c) => !used.has(c.code));
 
   function setPrice(code: string, amount: number) {
+  const { t } = useI18n();
     const next = { ...value.prices, [code]: amount };
     onChange({ ...value, prices: next });
   }
@@ -58,7 +60,7 @@ export function PricesEditor({
   return (
     <div className="space-y-1.5">
       {entries.length === 0 && (
-        <div className="text-[11px] text-muted-foreground">— لا توجد أسعار بعد —</div>
+        <div className="text-[11px] text-muted-foreground">{t("auto.no_prices_yet")}</div>
       )}
       {entries.map(([code, amount]) => {
         const def = CURRENCIES.find((c) => c.code === code);
@@ -86,7 +88,7 @@ export function PricesEditor({
               className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs"
               placeholder="0"
             />
-            <label className="flex items-center gap-1 text-[10px] text-muted-foreground" title="عملة العرض الافتراضية">
+            <label className="flex items-center gap-1 text-[10px] text-muted-foreground" title={t("auto.default_display_currency")}>
               <input
                 type="radio"
                 name={`default-${entries.length}-${code}`}
@@ -99,7 +101,7 @@ export function PricesEditor({
               type="button"
               onClick={() => remove(code)}
               className="rounded p-1 text-destructive hover:bg-destructive/10"
-              title="حذف"
+              title={t("auto.delete")}
             >
               <Trash2 className="size-3" />
             </button>

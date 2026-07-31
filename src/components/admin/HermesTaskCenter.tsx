@@ -2,6 +2,7 @@
 // Presentation only: every number comes from the Part 18 server functions,
 // and the vocabulary comes from the shared @/lib/hermes-commands source of truth.
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Plus, RefreshCw, FileText, Activity, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -62,6 +63,7 @@ function reportPayload(task: any, report: any): ExportPayload {
 }
 
 export function HermesTaskCenter() {
+  const { t } = useI18n();
   const loadAll = useServerFn(getHermesTasks);
   const loadOne = useServerFn(getHermesTask);
   const create = useServerFn(createHermesTask);
@@ -103,7 +105,7 @@ export function HermesTaskCenter() {
   };
 
   const submit = async () => {
-    if (form.title.trim().length < 2) { toast.error("العنوان مطلوب"); return; }
+    if (form.title.trim().length < 2) { toast.error(t("auto.address_is_required")); return; }
     setBusy("create");
     try {
       await create({
@@ -127,7 +129,7 @@ export function HermesTaskCenter() {
           languages: list(form.languages).filter((l) => ["ar", "en", "ku"].includes(l)) as any,
         },
       });
-      toast.success("أُنشئت المهمة التنفيذية.");
+      toast.success(t("auto.executive_task_created"));
       setShowForm(false);
       setForm({ ...form, title: "", description: "" });
       await refresh();
@@ -161,7 +163,7 @@ export function HermesTaskCenter() {
     try {
       const r: any = await report({ data: { task_id: task.id } });
       setDetail(await loadOne({ data: { task_id: task.id } }));
-      toast.success("جاهز التقرير التنفيذي.");
+      toast.success(t("auto.executive_report_ready"));
       return r;
     } catch (e: any) { toast.error(String(e?.message || e)); return null; }
     finally { setBusy(null); }
@@ -178,7 +180,7 @@ export function HermesTaskCenter() {
     else await exportToPowerPoint(payload);
   };
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">{t("auto.loading")}</div>;
 
   const upcoming = tasks
     .filter((t) => t.deadline)
@@ -190,10 +192,10 @@ export function HermesTaskCenter() {
       {/* Live monitor */}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          ["مهام نشطة", monitor?.tasks?.length ?? 0, `${monitor?.runningRuns ?? 0} تشغيل جارٍ`],
-          ["تشغيلات 24 ساعة", monitor?.runs24h ?? 0, `${monitor?.tokens24h ?? 0} توكن`],
-          ["الكلفة الحقيقية 24س", money(monitor?.realUsd24h), `محصّل ${money(monitor?.chargedUsd24h)}`],
-          ["ميزانية التعلّم 24س", money(monitor?.learningUsd24h), `${monitor?.knowledgeUpdates24h ?? 0} تحديث معرفي`],
+          [t("auto.active_tasks"), monitor?.tasks?.length ?? 0, `${monitor?.runningRuns ?? 0} تشغيل جارٍ`],
+          [t("auto.runs_24_hours"), monitor?.runs24h ?? 0, `${monitor?.tokens24h ?? 0} توكن`],
+          [t("auto.real_cost_24h"), money(monitor?.realUsd24h), `محصّل ${money(monitor?.chargedUsd24h)}`],
+          [t("auto.learning_budget_24h"), money(monitor?.learningUsd24h), `${monitor?.knowledgeUpdates24h ?? 0} تحديث معرفي`],
         ].map(([l, v, h]: any) => (
           <div key={l} className="rounded-xl border border-border/60 bg-card/60 p-3">
             <div className="text-[11px] text-muted-foreground">{l}</div>
@@ -215,11 +217,11 @@ export function HermesTaskCenter() {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <select value={filter} onChange={(e) => setFilter(e.target.value)} className={`${inputCls} w-auto`}>
-          <option value="">كل الحالات</option>
+          <option value="">{t("auto.all_cases")}</option>
           {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS_AR[s]}</option>)}
         </select>
         <button onClick={() => void refresh()} className="flex items-center gap-1.5 rounded-lg border border-border/60 px-2.5 py-1.5 text-xs hover:bg-muted/40">
-          <RefreshCw className="size-3.5" /> تحديث
+          <RefreshCw className="size-3.5" /> {t("auto.update")}
         </button>
         <button onClick={() => setShowForm((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-primary/15 text-primary px-2.5 py-1.5 text-xs">
           <Plus className="size-3.5" /> مهمة تنفيذية جديدة
@@ -228,40 +230,40 @@ export function HermesTaskCenter() {
 
       {showForm && (
         <div className="rounded-2xl border border-border/60 bg-card/50 p-3 grid gap-2 md:grid-cols-2">
-          <Field label="العنوان"><input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
-          <Field label="الهدف التجاري"><input className={inputCls} value={form.business_goal} onChange={(e) => setForm({ ...form, business_goal: e.target.value })} /></Field>
-          <Field label="الوصف">
+          <Field label={t("auto.title")}><input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
+          <Field label={t("auto.commercial_goal")}><input className={inputCls} value={form.business_goal} onChange={(e) => setForm({ ...form, business_goal: e.target.value })} /></Field>
+          <Field label={t("auto.description")}>
             <textarea rows={3} className={inputCls} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
-          <Field label="المخرج المتوقّع">
+          <Field label={t("auto.expected_output")}>
             <textarea rows={3} className={inputCls} value={form.expected_output} onChange={(e) => setForm({ ...form, expected_output: e.target.value })} />
           </Field>
-          <Field label="التصنيف">
+          <Field label={t("auto.classification")}>
             <select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
               {TASK_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </Field>
-          <Field label="الأولوية (1 أعلى)">
+          <Field label={t("auto.priority_1_highest")}>
             <input type="number" min={1} max={5} className={inputCls} value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
           </Field>
-          <Field label="مستوى المخاطرة">
+          <Field label={t("auto.risk_level")}>
             <select className={inputCls} value={form.risk_level} onChange={(e) => setForm({ ...form, risk_level: e.target.value })}>
               {RISK_LEVELS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </Field>
-          <Field label="نمط التنفيذ">
+          <Field label={t("auto.execution_style")}>
             <select className={inputCls} value={form.execution_mode} onChange={(e) => setForm({ ...form, execution_mode: e.target.value })}>
               {EXECUTION_MODES.map((m) => <option key={m} value={m}>{EXECUTION_MODE_LABELS_AR[m]}</option>)}
             </select>
           </Field>
-          <Field label="ميزانية الكلفة ($)"><input className={inputCls} value={form.cost_budget_usd} onChange={(e) => setForm({ ...form, cost_budget_usd: e.target.value })} /></Field>
-          <Field label="ميزانية التوكن"><input className={inputCls} value={form.token_budget} onChange={(e) => setForm({ ...form, token_budget: e.target.value })} /></Field>
-          <Field label="الموعد النهائي"><input type="datetime-local" className={inputCls} value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
-          <Field label="اللغات (ar,en,ku)"><input className={inputCls} value={form.languages} onChange={(e) => setForm({ ...form, languages: e.target.value })} /></Field>
-          <Field label="الخبراء (مفصولة بفاصلة)"><input className={inputCls} value={form.expert_assignment} onChange={(e) => setForm({ ...form, expert_assignment: e.target.value })} /></Field>
-          <Field label="النماذج المطلوبة"><input className={inputCls} value={form.required_models} onChange={(e) => setForm({ ...form, required_models: e.target.value })} /></Field>
-          <Field label="MCP المطلوبة"><input className={inputCls} value={form.required_mcp} onChange={(e) => setForm({ ...form, required_mcp: e.target.value })} /></Field>
-          <Field label="الأدوات المطلوبة"><input className={inputCls} value={form.required_tools} onChange={(e) => setForm({ ...form, required_tools: e.target.value })} /></Field>
+          <Field label={t("auto.cost_budget")}><input className={inputCls} value={form.cost_budget_usd} onChange={(e) => setForm({ ...form, cost_budget_usd: e.target.value })} /></Field>
+          <Field label={t("auto.token_budget")}><input className={inputCls} value={form.token_budget} onChange={(e) => setForm({ ...form, token_budget: e.target.value })} /></Field>
+          <Field label={t("auto.deadline")}><input type="datetime-local" className={inputCls} value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></Field>
+          <Field label={t("auto.languages_ar_en_ku")}><input className={inputCls} value={form.languages} onChange={(e) => setForm({ ...form, languages: e.target.value })} /></Field>
+          <Field label={t("auto.experts_comma_separated")}><input className={inputCls} value={form.expert_assignment} onChange={(e) => setForm({ ...form, expert_assignment: e.target.value })} /></Field>
+          <Field label={t("auto.required_models")}><input className={inputCls} value={form.required_models} onChange={(e) => setForm({ ...form, required_models: e.target.value })} /></Field>
+          <Field label={t("auto.required_mcp")}><input className={inputCls} value={form.required_mcp} onChange={(e) => setForm({ ...form, required_mcp: e.target.value })} /></Field>
+          <Field label={t("auto.required_tools")}><input className={inputCls} value={form.required_tools} onChange={(e) => setForm({ ...form, required_tools: e.target.value })} /></Field>
           <div className="md:col-span-2 flex justify-end">
             <button onClick={() => void submit()} disabled={busy === "create"} className="flex items-center gap-1.5 rounded-lg bg-primary/15 text-primary px-3 py-1.5 text-xs">
               {busy === "create" ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />} إنشاء
@@ -273,7 +275,7 @@ export function HermesTaskCenter() {
       {/* Executive calendar */}
       {upcoming.length ? (
         <div className="rounded-2xl border border-border/60 bg-card/40">
-          <div className="border-b border-border/60 px-3 py-2 text-xs font-semibold">التقويم التنفيذي</div>
+          <div className="border-b border-border/60 px-3 py-2 text-xs font-semibold">{t("auto.executive_calendar")}</div>
           <div className="divide-y divide-border/40">
             {upcoming.map((t) => (
               <div key={t.id} className="flex items-center justify-between gap-2 px-3 py-2 text-[11px]">
@@ -335,7 +337,7 @@ export function HermesTaskCenter() {
 
               {t.result && Object.keys(t.result).length ? (
                 <div className="rounded-xl border border-border/60 p-2 text-[11px] space-y-1">
-                  <div className="font-semibold">الملخص التنفيذي</div>
+                  <div className="font-semibold">{t("auto.executive_summary")}</div>
                   <div className="text-muted-foreground">{t.result.executive_summary}</div>
                   {(t.result.recommendations || []).map((r: string, i: number) => (
                     <div key={i} className="text-muted-foreground">• {r}</div>
@@ -344,19 +346,19 @@ export function HermesTaskCenter() {
               ) : null}
 
               <div className="flex items-center gap-2">
-                <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="ملاحظة أو نقاش يُحفظ في سجل المهمة"
+                <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("auto.note_or_discussion_saved_in_task")}
                   className="flex-1 rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs" />
                 <button disabled={busy === t.id} onClick={() => void addNote(t.id)}
-                  className="rounded-lg bg-primary/15 text-primary px-2.5 py-1.5 text-xs">إضافة</button>
+                  className="rounded-lg bg-primary/15 text-primary px-2.5 py-1.5 text-xs">{t("auto.add")}</button>
               </div>
 
               <div className="rounded-xl border border-border/60">
-                <div className="border-b border-border/60 px-2 py-1.5 text-[11px] font-semibold">سجل المهمة</div>
+                <div className="border-b border-border/60 px-2 py-1.5 text-[11px] font-semibold">{t("auto.task_log")}</div>
                 <div className="divide-y divide-border/40 max-h-56 overflow-auto">
                   {!detail ? (
-                    <div className="p-3 text-[11px] text-muted-foreground">جارٍ التحميل…</div>
+                    <div className="p-3 text-[11px] text-muted-foreground">{t("auto.loading")}</div>
                   ) : (detail.events || []).length === 0 ? (
-                    <div className="p-3 text-[11px] text-muted-foreground">لا أحداث بعد.</div>
+                    <div className="p-3 text-[11px] text-muted-foreground">{t("auto.no_events_yet")}</div>
                   ) : detail.events.map((e: any) => (
                     <div key={e.id} className="flex items-center justify-between gap-2 px-2 py-1.5 text-[10px]">
                       <span className="rounded-full bg-muted px-1.5 py-0.5">{e.kind}</span>

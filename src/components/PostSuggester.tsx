@@ -177,7 +177,7 @@ export function PostSuggester({
         const userNote = desc.trim();
         const base = dur
           ? `محتوى مأخوذ من فيديو مدّته ${dur} ثانية. اعتمد على الإطار المرفق وصف ما يظهر فيه بصرياً ثم استخدم ذلك لصياغة المنشور. لا تخترع أحداثاً أو حواراً غير ظاهر.`
-          : "محتوى من فيديو قصير - اعتمد على الإطار المرفق فقط.";
+          : t("auto.content_from_a_short_video_rely");
         body.description = userNote ? `${base}\n\nملاحظات المستخدم: ${userNote}` : base;
       }
       else if (imageData) {

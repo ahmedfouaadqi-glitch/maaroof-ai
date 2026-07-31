@@ -128,11 +128,11 @@ function ProfilePage() {
             <Globe className="size-5 text-primary" /> صفحتك العامة على الإنترنت / Your Public Page
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            هذه صفحتك العامة على MAAROOF Ai. تقرأها زواحف الذكاء الاصطناعي (GPTBot, ClaudeBot, PerplexityBot, Gemini) وتُضاف تلقائياً إلى <code>sitemap.xml</code>. كل زيارة من زاحف ستظهر في "متتبع الانتشار".
+            هذه صفحتك العامة على MAAROOF Ai. تقرأها زواحف الذكاء الاصطناعي (GPTBot, ClaudeBot, PerplexityBot, Gemini) وتُضاف تلقائياً إلى <code>sitemap.xml</code>. كل زيارة من زاحف ستظهر في t("auto.spread_tracker").
           </p>
 
           <div className="mt-4">
-            <Field label="اسم المستخدم / Username (3–32, a–z 0–9 _ -)">
+            <Field label={t("auto.username_3_32_a_z_0")}>
               <input
                 value={username}
                 onChange={(e) => { setUsername(e.target.value.toLowerCase()); setUsernameErr(""); }}
@@ -145,7 +145,7 @@ function ProfilePage() {
 
           {publicUrl && (
             <div className="mt-3 rounded-lg border border-border bg-background/60 p-3">
-              <div className="text-xs text-muted-foreground mb-1">رابطك العام / Your public URL:</div>
+              <div className="text-xs text-muted-foreground mb-1">{t("auto.your_public_url")}</div>
               <code className="block text-sm text-primary break-all">{publicUrl}</code>
             </div>
           )}
@@ -155,7 +155,7 @@ function ProfilePage() {
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} حفظ / Save
             </button>
             <button onClick={copyUrl} disabled={!publicUrl} className="inline-flex items-center gap-2 rounded-lg border border-border bg-background/60 px-4 py-2 text-sm font-semibold disabled:opacity-50">
-              <Copy className="size-4" /> {copied ? "تم النسخ ✓" : "نسخ الرابط / Copy"}
+              <Copy className="size-4" /> {copied ? t("auto.copied") : t("auto.copy_link_copy")}
             </button>
             <a
               href={publicUrl || "#"}

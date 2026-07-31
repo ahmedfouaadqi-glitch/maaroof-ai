@@ -583,6 +583,7 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
     discount_badge_text: plan.discount_badge_text || "",
   });
   const submit = () => {
+  const { t } = useI18n();
     onSave({
       name: f.name, description: f.description,
       prices: normalizePrices(pv.prices),
@@ -649,7 +650,7 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
               type="text"
               value={f.discount_badge_text}
               onChange={(e) => setF({ ...f, discount_badge_text: e.target.value })}
-              placeholder="e.g. Save 20% · وفّر 20%"
+              placeholder={t("auto.e_g_save_20_20")}
               disabled={!f.discount_badge_enabled}
               className={inp}
             />
@@ -1109,6 +1110,7 @@ function AccessTab() {
 const ALL_PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
 
 function BoostTab() {
+  const { t } = useI18n();
   const [enabled, setEnabled] = useState<string[]>([...ALL_PLATFORMS]);
   const [probePrompt, setProbePrompt] = useState<string>("");
   const [probeSystem, setProbeSystem] = useState<string>("");
@@ -1140,7 +1142,7 @@ function BoostTab() {
       await supabase.from("app_settings").insert({ key: "brand_boost", value });
     }
     setBusy(false);
-    setMsg("✓ تم الحفظ");
+    setMsg(t("auto.saved_3"));
     setTimeout(() => setMsg(""), 1500);
   };
 
@@ -1149,7 +1151,7 @@ function BoostTab() {
       <div className="rounded-2xl border border-border bg-card/70 p-5">
         <div className="flex items-center gap-3">
           <Bot className="size-5 text-primary" />
-          <h2 className="font-display text-lg font-semibold">إعدادات أداة تعزيز العلامة</h2>
+          <h2 className="font-display text-lg font-semibold">{t("auto.brand_booster_tool_settings")}</h2>
           {msg && <span className="ms-auto text-xs text-success">{msg}</span>}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -1157,7 +1159,7 @@ function BoostTab() {
         </p>
 
         <div className="mt-4">
-          <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">المنصات المُفعّلة</h3>
+          <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">{t("auto.activated_platforms")}</h3>
           <div className="flex flex-wrap gap-2">
             {ALL_PLATFORMS.map((p) => {
               const on = enabled.includes(p);
@@ -1183,18 +1185,18 @@ function BoostTab() {
               className="mt-1 w-full rounded-lg border border-border bg-background/60 p-2 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">رسالة النظام للـ probe (اختياري)</label>
+            <label className="text-xs font-semibold text-muted-foreground">{t("auto.probe_system_message_optional")}</label>
             <textarea
               value={probeSystem} onChange={(e) => setProbeSystem(e.target.value)}
               rows={3}
-              placeholder="(يُترك فارغاً لاستخدام الافتراضي)"
+              placeholder={t("auto.leave_blank_for_default")}
               className="mt-1 w-full rounded-lg border border-border bg-background/60 p-2 text-sm" />
           </div>
         </div>
 
         <button onClick={save} disabled={busy}
           className="mt-4 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">
-          {busy ? "..." : "حفظ"}
+          {busy ? "..." : t("auto.save")}
         </button>
       </div>
     </div>
@@ -1203,6 +1205,7 @@ function BoostTab() {
 
 // ============= Site Content Editor =============
 function ContentTab() {
+  const { t } = useI18n();
   const [editLang, setEditLang] = useState<"ar" | "en" | "ku">("ar");
   const [overrides, setOverrides] = useState<Record<string, Record<string, string>>>({});
   const [filter, setFilter] = useState("");
@@ -1273,7 +1276,7 @@ function ContentTab() {
     }, { onConflict: "key" });
     if (error) setMsg("✗ " + error.message);
     else {
-      setMsg("✓ تم الحفظ — حدّث الصفحة لرؤية التغييرات");
+      setMsg(t("auto.saved_refresh_page_to_see_changes"));
       try { localStorage.setItem("geo-site-text", JSON.stringify(overrides)); } catch {}
     }
     setSaving(false);
@@ -1292,7 +1295,7 @@ function ContentTab() {
       results.forEach((r, idx) => setVal(k, r.text, others[idx]));
       setMsg(`✓ تُرجم "${k}" إلى ${others.join(" و ")}`);
     } catch (e: any) {
-      setMsg("✗ " + (e?.message || "ترجمة فشلت"));
+      setMsg("✗ " + (e?.message || t("auto.translation_failed")));
     } finally {
       setTranslatingKey(null);
     }
@@ -1301,16 +1304,16 @@ function ContentTab() {
   const overrideCount = Object.values(overrides).reduce((a, b) => a + Object.keys(b || {}).length, 0);
 
   const groups: { id: string; label: string }[] = [
-    { id: "all", label: "الكل" },
-    { id: "homepage", label: "الرئيسية" },
-    { id: "dashboard", label: "لوحتي" },
-    { id: "tools", label: "الأدوات" },
-    { id: "agent", label: "الوكيل" },
-    { id: "reports", label: "التقارير" },
-    { id: "admin", label: "الإدارة" },
-    { id: "nav", label: "التنقل" },
-    { id: "auth", label: "الحساب" },
-    { id: "other", label: "أخرى" },
+    { id: "all", label: t("auto.all") },
+    { id: "homepage", label: t("auto.home") },
+    { id: "dashboard", label: t("auto.my_board") },
+    { id: "tools", label: t("auto.tools") },
+    { id: "agent", label: t("auto.agent_2") },
+    { id: "reports", label: t("auto.reports") },
+    { id: "admin", label: t("auto.management_2") },
+    { id: "nav", label: t("auto.navigation") },
+    { id: "auth", label: t("auto.account") },
+    { id: "other", label: t("auto.other") },
   ];
 
   return (
@@ -1319,8 +1322,8 @@ function ContentTab() {
       <div className="sticky top-0 z-10 rounded-2xl border-2 border-border bg-card/95 p-4 backdrop-blur shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div>
-            <h2 className="font-display text-xl font-bold">محرّر محتوى الموقع</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">عدّل النصوص باللغة المختارة وستُرجَم تلقائياً للغتين الأخريين عند الضغط على زر الترجمة.</p>
+            <h2 className="font-display text-xl font-bold">{t("auto.website_content_editor")}</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("auto.edit_texts_in_the_selected_language")}</p>
           </div>
           <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{overrideCount} نص مخصّص</span>
 
@@ -1329,20 +1332,20 @@ function ContentTab() {
               {(["ar", "en", "ku"] as const).map((l) => (
                 <button key={l} onClick={() => setEditLang(l)}
                   className={`rounded-full px-3 py-1 text-xs font-bold transition ${editLang === l ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
-                  {l === "ar" ? "العربية" : l === "en" ? "English" : "کوردی"}
+                  {l === "ar" ? t("auto.arabic") : l === "en" ? "English" : t("auto.kurdish")}
                 </button>
               ))}
             </div>
             <button onClick={save} disabled={saving}
               className="rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50">
-              {saving ? "جاري الحفظ…" : "حفظ الكل"}
+              {saving ? t("auto.saving") : t("auto.save_all")}
             </button>
           </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input type="search" value={filter} onChange={(e) => setFilter(e.target.value)}
-            placeholder="ابحث بالنص أو المفتاح…"
+            placeholder={t("auto.search_by_text_or_key")}
             className="min-w-[200px] flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm" />
           <div className="flex flex-wrap gap-1.5">
             {groups.map((g) => (
@@ -1375,7 +1378,7 @@ function ContentTab() {
                   <span className="rounded bg-muted/40 px-1.5 py-0.5 font-mono">{groupOf(k)}</span>
                   <code className="font-mono opacity-60">{k}</code>
                 </span>
-                {isCustom && <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">معدّل</span>}
+                {isCustom && <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">{t("auto.modified_2")}</span>}
               </div>
               {isMultiline ? (
                 <textarea value={val} onChange={(e) => setVal(k, e.target.value)}
@@ -1393,7 +1396,7 @@ function ContentTab() {
                   {isTranslating ? <Loader2 className="size-3 animate-spin" /> : "🌐"} ترجمة تلقائية للغتين الأخريين
                 </button>
                 {isCustom && (
-                  <button onClick={() => setVal(k, "")} className="text-[11px] text-destructive hover:underline">استعادة الافتراضي</button>
+                  <button onClick={() => setVal(k, "")} className="text-[11px] text-destructive hover:underline">{t("auto.restore_to_default")}</button>
                 )}
               </div>
             </div>
@@ -1407,6 +1410,7 @@ function ContentTab() {
 
 // ============= Contact Info Editor =============
 function ContactInfoTab() {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const [info, setInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1459,39 +1463,39 @@ function ContactInfoTab() {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border-2 border-border bg-card/95 p-4">
-        <h2 className="font-display text-xl font-bold">{L("معلومات الاتصال", "Contact Information", "زانیاری پەیوەندی")}</h2>
+        <h2 className="font-display text-xl font-bold">{L(t("auto.contact_info"), "Contact Information", "زانیاری پەیوەندی")}</h2>
         <p className="mt-1 text-xs text-muted-foreground">{L("تظهر هذه المعلومات في صفحة \"اتصل بنا\"، نافذة الاشتراك، وصفحة الأسعار.", "Shown on the Contact page, Subscribe modal, and Pricing page.", "لە پەڕەی پەیوەندی و پەنجەرەی بەشداربوون و پەڕەی نرخەکان دەردەکەوێت.")}</p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
-        <h3 className="font-semibold text-sm">{L("الاتصال المباشر", "Direct contact", "پەیوەندی ڕاستەوخۆ")}</h3>
+        <h3 className="font-semibold text-sm">{L(t("auto.direct_contact"), "Direct contact", "پەیوەندی ڕاستەوخۆ")}</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          {renderField("whatsapp_number", L("رقم واتساب (أرقام فقط، يشمل كود الدولة)", "WhatsApp number (digits only, with country code)", "ژمارەی واتساپ"), "9647733570130")}
-          {renderField("phone_display", L("الرقم المعروض", "Display phone", "ژمارەی پیشاندان"), "+964 773 357 0130")}
-          {renderField("email", L("البريد الإلكتروني", "Email", "ئیمەیڵ"), "support@example.com")}
+          {renderField("whatsapp_number", L(t("auto.whatsapp_number_numbers_only_including_country"), "WhatsApp number (digits only, with country code)", "ژمارەی واتساپ"), "9647733570130")}
+          {renderField("phone_display", L(t("auto.displayed_number"), "Display phone", "ژمارەی پیشاندان"), "+964 773 357 0130")}
+          {renderField("email", L(t("auto.email"), "Email", "ئیمەیڵ"), "support@example.com")}
         </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
-        <h3 className="font-semibold text-sm">{L("العنوان", "Address", "ناونیشان")}</h3>
+        <h3 className="font-semibold text-sm">{L(t("auto.title"), "Address", t("auto.address"))}</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          {renderField("address_ar", "العربية", "", "rtl")}
+          {renderField("address_ar", t("auto.arabic"), "", "rtl")}
           {renderField("address_en", "English")}
-          {renderField("address_ku", "کوردی", "", "rtl")}
+          {renderField("address_ku", t("auto.kurdish"), "", "rtl")}
         </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
-        <h3 className="font-semibold text-sm">{L("ساعات العمل", "Working hours", "کاتژمێری کار")}</h3>
+        <h3 className="font-semibold text-sm">{L(t("auto.working_hours"), "Working hours", "کاتژمێری کار")}</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          {renderField("hours_ar", "العربية", "", "rtl")}
+          {renderField("hours_ar", t("auto.arabic"), "", "rtl")}
           {renderField("hours_en", "English")}
-          {renderField("hours_ku", "کوردی", "", "rtl")}
+          {renderField("hours_ku", t("auto.kurdish"), "", "rtl")}
         </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card/60 p-5 space-y-4">
-        <h3 className="font-semibold text-sm">{L("شبكات التواصل الاجتماعي (اختياري)", "Social networks (optional)", "تۆڕە کۆمەڵایەتییەکان (هەڵبژاردە)")}</h3>
+        <h3 className="font-semibold text-sm">{L(t("auto.social_networks_optional"), "Social networks (optional)", "تۆڕە کۆمەڵایەتییەکان (هەڵبژاردە)")}</h3>
         <div className="grid gap-3 md:grid-cols-2">
           {renderField("facebook", "Facebook URL", "https://facebook.com/...")}
           {renderField("instagram", "Instagram URL", "https://instagram.com/...")}
@@ -1507,7 +1511,7 @@ function ContactInfoTab() {
           disabled={saving}
           className="rounded-full bg-gradient-to-r from-primary to-accent px-6 py-2.5 text-sm font-bold text-primary-foreground shadow disabled:opacity-50"
         >
-          {saving ? "..." : L("حفظ", "Save", "پاشەکەوت")}
+          {saving ? "..." : L(t("auto.save"), "Save", "پاشەکەوت")}
         </button>
         {statusMsg && <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs">{statusMsg}</div>}
       </div>

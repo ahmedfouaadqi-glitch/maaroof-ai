@@ -49,7 +49,7 @@ export function NotifyInbox() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={t("notify_inbox") || "الإشعارات"}
+        aria-label={t("notify_inbox") || t("auto.notifications")}
         className="relative grid size-9 place-items-center rounded-lg border border-border bg-background/60 hover:bg-background"
       >
         <Bell className="size-4" />
@@ -63,16 +63,16 @@ export function NotifyInbox() {
       {open && (
         <div className="absolute end-0 z-50 mt-2 w-80 max-w-[90vw] rounded-xl border border-border bg-card shadow-xl">
           <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-            <span className="text-sm font-bold">{t("notify_inbox") || "الإشعارات"}</span>
+            <span className="text-sm font-bold">{t("notify_inbox") || t("auto.notifications")}</span>
             {unread > 0 && (
               <button onClick={markAll} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                <CheckCheck className="size-3" /> {t("notify_mark_all") || "اعتبر الكل مقروءاً"}
+                <CheckCheck className="size-3" /> {t("notify_mark_all") || t("auto.mark_all_as_read_2")}
               </button>
             )}
           </div>
           <div className="max-h-96 divide-y divide-border/40 overflow-y-auto">
             {items.length === 0 && (
-              <p className="p-4 text-center text-xs text-muted-foreground">{t("notify_empty") || "لا توجد إشعارات"}</p>
+              <p className="p-4 text-center text-xs text-muted-foreground">{t("notify_empty") || t("auto.no_notifications")}</p>
             )}
             {items.map((n) => (
               <div key={n.id} className={`p-3 ${n.read_at ? "opacity-60" : "bg-primary/5"}`}>
@@ -84,7 +84,7 @@ export function NotifyInbox() {
                       <span>{new Date(n.created_at).toLocaleString()}</span>
                       {n.link && (
                         <Link to={n.link} onClick={() => { markOne(n.id); setOpen(false); }} className="text-primary hover:underline">
-                          {t("notify_open") || "فتح"}
+                          {t("notify_open") || t("auto.open")}
                         </Link>
                       )}
                     </div>

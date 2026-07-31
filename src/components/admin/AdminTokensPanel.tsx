@@ -486,13 +486,14 @@ function VisibilitySection({
   const isKu = lang === "ku";
   const heading = isAr ? "ما يراه المستخدم في الموقع" : isKu ? "ئەوەی بەکارهێنەر دەیبینێت" : "What the user sees site-wide";
   const hint = isAr
-    ? "ضع علامة على ما تريد إظهاره. عدم التحديد = إخفاء كامل من واجهة هذا المستخدم."
+    ? t("auto.tick_what_you_want_to_show")
     : isKu
     ? "هەرچی بسەلمێنرێت پیشان دەدرێت."
     : "Check what to show. Unchecked items are hidden entirely from this user.";
 
   const lbl = (k: string) => VIS_LABELS[k]?.[lang] || k;
   const setGroup = (g: "tools" | "agent" | "widgets" | "pages", k: string, on: boolean) => {
+  const { t } = useI18n();
     const next = { ...(value || {}) };
     const grp: Record<string, boolean> = { ...(next[g] || {}) };
     if (on) delete grp[k]; else grp[k] = false;

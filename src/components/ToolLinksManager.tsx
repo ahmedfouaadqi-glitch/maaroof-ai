@@ -9,6 +9,7 @@ import { Loader2, Plus, Trash2, Link2 } from "lucide-react";
 type Row = { id: string; source_tool: string; target_tool: string };
 
 export function ToolLinksManager() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const { lang } = useI18n();
   const vis = useVisibility();
@@ -51,7 +52,7 @@ export function ToolLinksManager() {
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">
         {isAr
-          ? "حدد روابط ثابتة بين الأدوات: عند انتهاء أداة المصدر سيظهر زر سريع لتمرير النتيجة إلى الأداة الهدف."
+          ? t("auto.define_fixed_links_between_tools_when")
           : "Set fixed links between tools — when the source finishes, a quick button passes its result to the target."}
       </p>
 

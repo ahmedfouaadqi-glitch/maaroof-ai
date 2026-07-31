@@ -3,6 +3,7 @@ import { useCountry } from "@/lib/use-country";
 import { useI18n } from "@/lib/i18n";
 
 export function CountryBadge({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n();
   const { info, loading, source, requestPreciseLocation } = useCountry();
   const { lang } = useI18n();
 
@@ -21,11 +22,11 @@ export function CountryBadge({ compact = false }: { compact?: boolean }) {
   const sourceTitle =
     source === "gps"
       ? lang === "ar"
-        ? "مُحدَّد بدقة (GPS)"
+        ? t("auto.precisely_defined_gps")
         : "Precise (GPS)"
       : source === "ip"
         ? lang === "ar"
-          ? "مُكتشف تلقائياً عبر IP"
+          ? t("auto.auto_detected_by_ip")
           : "Auto-detected via IP"
         : "";
 

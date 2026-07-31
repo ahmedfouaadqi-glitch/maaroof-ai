@@ -92,6 +92,7 @@ export const Route = createFileRoute("/tools/$slug")({
 });
 
 function Page() {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const def = Route.useLoaderData();
   const vis = useVisibility();
@@ -103,13 +104,13 @@ function Page() {
 
   const blocked = !vis.loading && (!vis.isToolVisible(def.key) || !price.enabled);
   const BL = {
-    ar: { title: "هذه الأداة غير متاحة لحسابك", desc: "تم إخفاء أو تعطيل هذه الأداة من قِبل الإدارة. للوصول، يرجى التواصل أو ترقية الباقة.", back: "← العودة" },
+    ar: { title: t("auto.this_tool_is_not_available_for"), desc: t("auto.this_tool_has_been_hidden_or"), back: t("auto.back") },
     en: { title: "This tool isn't available for your account", desc: "This tool has been hidden or disabled by the admin. Contact us or upgrade your plan to gain access.", back: "← Back" },
     ku: { title: "ئەم ئامرازە بەردەست نییە", desc: "ئەم ئامرازە لە لایەن بەڕێوەبەرەوە شاراوەتەوە یان لە کار خراوە.", back: "← گەڕانەوە" },
   }[L];
 
   const Lc = {
-    ar: { what: "ما الذي تفعله الأداة", when: "متى تستخدمها", get: "ما الذي ستحصل عليه", start: "ابدأ الآن", backHome: "← الرئيسية" },
+    ar: { what: t("auto.what_the_tool_does"), when: t("auto.when_to_use_it"), get: t("auto.what_you_will_get"), start: t("auto.start_now"), backHome: t("auto.home_2") },
     en: { what: "What this tool does", when: "When to use it", get: "What you'll get", start: "Start now", backHome: "← Home" },
     ku: { what: "ئەرکی ئامراز", when: "کەی بەکاری بهێنیت", get: "چی وەردەگریت", start: "دەستپێبکە", backHome: "← ماڵەوە" },
   }[L];
@@ -144,9 +145,9 @@ function Page() {
   }, [tab, storageKey]);
 
   const tabLabels = {
-    ar: { overview: "نظرة عامة", how: "كيف تعمل", start: "ابدأ التشغيل" },
+    ar: { overview: t("auto.overview"), how: t("auto.how_it_works"), start: t("auto.start_playing") },
     en: { overview: "Overview", how: "How it works", start: "Start" },
-    ku: { overview: "گشتی", how: "چۆن کار دەکات", start: "دەستپێبکە" },
+    ku: { overview: t("auto.general"), how: "چۆن کار دەکات", start: "دەستپێبکە" },
   }[L];
 
   return (

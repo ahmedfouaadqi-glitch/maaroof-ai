@@ -42,9 +42,9 @@ export function ApprovalQueue() {
     <div className="mt-8 rounded-2xl border border-warning/40 bg-warning/5 p-5">
       <h2 className="flex items-center gap-2 font-display text-lg font-bold">
         <Inbox className="size-5 text-warning" />
-        {t("appr_title") || "بانتظار موافقتك"} <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs">{tasks.length}</span>
+        {t("appr_title") || t("auto.awaiting_your_approval")} <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs">{tasks.length}</span>
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t("appr_desc") || "راجع المنشور، عدّله إن أردت، ثم وافق أو ارفض."}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t("appr_desc") || t("auto.review_the_post_edit_if_desired")}</p>
 
       <div className="mt-3 space-y-3">
         {tasks.map((tk) => {
@@ -60,7 +60,7 @@ export function ApprovalQueue() {
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {channels.length === 0 && (
-                  <span className="text-xs text-muted-foreground">{t("appr_no_channels") || "اربط قناة أولاً لتتمكن من النشر."}</span>
+                  <span className="text-xs text-muted-foreground">{t("appr_no_channels") || t("auto.connect_a_channel_first_to_be")}</span>
                 )}
                 {channels.map((c: any) => (
                   <button
@@ -70,7 +70,7 @@ export function ApprovalQueue() {
                     className="inline-flex items-center gap-1 rounded-md bg-success/20 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/30 disabled:opacity-50"
                   >
                     {busy === tk.id ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-                    {t("appr_publish_to") || "انشر على"} {c.label || c.kind}
+                    {t("appr_publish_to") || t("auto.post_to")} {c.label || c.kind}
                   </button>
                 ))}
                 <button
@@ -78,11 +78,11 @@ export function ApprovalQueue() {
                   disabled={busy === tk.id}
                   className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
                 >
-                  <X className="size-3" /> {t("appr_reject") || "رفض"}
+                  <X className="size-3" /> {t("appr_reject") || t("auto.reject")}
                 </button>
                 {editing[tk.id] && editing[tk.id] !== original && (
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Edit3 className="size-3" /> {t("appr_edited") || "تم التعديل"}
+                    <Edit3 className="size-3" /> {t("appr_edited") || t("auto.modified")}
                   </span>
                 )}
               </div>

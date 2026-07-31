@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Save, Plus, Trash2, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import {
 import { useAdminL } from "./admin-i18n";
 
 export function HeaderConfigTab() {
+  const { t } = useI18n();
   const L = useAdminL({
     visibility: { ar: "إظهار عناصر الهيدر", en: "Header visibility", ku: "نیشاندانی هێدەر" },
     extraLinks: { ar: "روابط إضافية في القائمة", en: "Extra navigation links", ku: "بەستەری زیاتر" },
@@ -77,7 +79,7 @@ export function HeaderConfigTab() {
   const Toggles: { key: keyof HeaderConfig; label: string }[] = [
     { key: "show_pricing", label: L.show_pricing },
     { key: "show_agent", label: L.show_agent },
-    { key: "show_maaroof", label: "إظهار معروف ✨" },
+    { key: "show_maaroof", label: t("auto.show_maaroof") },
     { key: "show_dashboard", label: L.show_dashboard },
     { key: "show_profile", label: L.show_profile },
     { key: "show_guide", label: L.show_guide },
