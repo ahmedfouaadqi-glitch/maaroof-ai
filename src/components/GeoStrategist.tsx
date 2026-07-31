@@ -10,10 +10,10 @@ import { SourcesList } from "@/components/SourcesList";
 
 
 const GOALS = [
-  { id: "awareness", label: "الوعي" },
-  { id: "authority", label: "السلطة" },
-  { id: "conversion", label: "التحويل" },
-  { id: "local", label: "تركيز محلي" },
+  { id: "awareness", label: "auto.awareness" },
+  { id: "authority", label: "auto.authority" },
+  { id: "conversion", label: "auto.conversion" },
+  { id: "local", label: "auto.local_focus" },
 ];
 
 export function GeoStrategist() {
@@ -61,7 +61,7 @@ export function GeoStrategist() {
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {GOALS.map((g) => (
-            <button key={g.id} onClick={() => toggle(g.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(g.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{g.label}</button>
+            <button key={g.id} onClick={() => toggle(g.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(g.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{t(g.label)}</button>
           ))}
         </div>
         <div className="mt-2 flex items-center gap-2 text-xs">

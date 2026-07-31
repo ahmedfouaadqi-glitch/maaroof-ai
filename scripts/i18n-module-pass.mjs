@@ -32,7 +32,7 @@ const JOBS = [
   ["src/components/WhatIfSimulator.tsx", ["label"], []],
   ["src/components/admin/MaaroofAdminTab.tsx", ["label", "hint"], []],
   ["src/components/admin/MaaroofIntelligenceCenter.tsx", ["label"], []],
-  ["src/components/maaroof/SchedulesPanel.tsx", [], ["FREQ_LABEL", "APPROVAL_LABEL"]],
+  ["src/components/maaroof/SchedulesPanel.tsx", [], ["CADENCE_LABEL", "APPROVAL_LABEL"]],
 ];
 
 for (const [file, props, maps] of JOBS) {

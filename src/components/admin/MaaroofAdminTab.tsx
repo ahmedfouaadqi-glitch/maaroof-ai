@@ -11,12 +11,12 @@ type AgentRow = { id: string; role: string | null; mission: string | null; dna: 
 type CapRow = { capability: string; runs: number | null; success_rate: number | null; avg_usd: number | null; avg_tokens: number | null; last_used_at: string | null; top_tool: string | null };
 
 const SUB_TABS = [
-  { k: "overview", label: "نظرة عامة", Icon: Activity },
-  { k: "runs", label: "الجلسات", Icon: ListChecks },
-  { k: "agents", label: "الوكلاء", Icon: Bot },
-  { k: "capabilities", label: "القدرات", Icon: Network },
-  { k: "memory", label: "الذاكرة", Icon: Brain },
-  { k: "controls", label: "التحكم", Icon: Settings2 },
+  { k: "overview", label: "auto.overview", Icon: Activity },
+  { k: "runs", label: "auto.sessions", Icon: ListChecks },
+  { k: "agents", label: "auto.agents", Icon: Bot },
+  { k: "capabilities", label: "auto.capabilities", Icon: Network },
+  { k: "memory", label: "auto.memory", Icon: Brain },
+  { k: "controls", label: "auto.control", Icon: Settings2 },
 ] as const;
 
 export function MaaroofAdminTab() {
@@ -490,12 +490,12 @@ function TxtField({ label, k, v, set }: { label: string; k: string; v: any; set:
 
 /* ---------- Part 7 — Executive Intelligence controls ---------- */
 const EXEC_FLAGS: Array<{ k: string; label: string; hint: string }> = [
-  { k: "personality_enabled", label: "شخصية الوكيل التنفيذية", hint: "تتطور سمات الوكيل بعد كل جلسة (جرأة، حذر، تحليل…)." },
-  { k: "conflict_enabled", label: "محرك التعارض المعرفي", hint: "نقاش إضافي فقط عند اختلاف المجلس — تكلفة إضافية نادرة." },
-  { k: "timing_enabled", label: "محرك التوقيت الاستراتيجي", hint: "يقرر: نفّذ الآن / أجّل / جدول / راقب / ألغِ (بدون تكلفة نموذج)." },
-  { k: "trust_enabled", label: "محرك الثقة والأدلة", hint: "يرفق الأدلة والافتراضات والحدود مع الإجابة النهائية." },
-  { k: "genome_enabled", label: "الجينوم الرقمي", hint: "هوية دائمة للمساحة والوكيل تُحقن في التوجيه." },
-  { k: "future_dna_enabled", label: "حمض المستقبل (Future DNA)", hint: "يسجّل أنماطاً مجهولة الهوية من النجاح والفشل معاً." },
+  { k: "personality_enabled", label: "auto.executive_agent_persona", hint: "auto.agent_attributes_evolve_after_each_session" },
+  { k: "conflict_enabled", label: "auto.cognitive_conflict_engine", hint: "auto.additional_discussion_only_if_the_board" },
+  { k: "timing_enabled", label: "auto.strategic_timing_engine", hint: "auto.decide_execute_now_postpone_schedule_monitor" },
+  { k: "trust_enabled", label: "auto.trust_and_evidence_engine", hint: "auto.attach_evidence_assumptions_and_limitations_with" },
+  { k: "genome_enabled", label: "auto.digital_genome", hint: "auto.permanent_identity_for_space_and_agent" },
+  { k: "future_dna_enabled", label: "auto.future_dna", hint: "auto.registers_anonymous_patterns_of_success_and" },
 ];
 
 function ExecutiveControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
@@ -514,8 +514,8 @@ function ExecutiveControls({ settings, set }: { settings: Record<string, any>; s
           <label key={f.k} className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!exec[f.k]} onChange={(e) => patch(f.k, e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">{f.label}</span>
-              <span className="text-[11px] text-muted-foreground">{f.hint}</span>
+              <span className="text-sm font-medium block">{t(f.label)}</span>
+              <span className="text-[11px] text-muted-foreground">{t(f.hint)}</span>
             </span>
           </label>
         ))}
@@ -530,9 +530,9 @@ function ExecutiveControls({ settings, set }: { settings: Record<string, any>; s
 
 /* ---------- Part 8 — Laws of Cognitive Intelligence controls ---------- */
 const LAW_FLAGS: Array<{ k: string; label: string; hint: string }> = [
-  { k: "prompt_injection", label: "حقن الدستور في التوجيه", hint: "يُلحق نص القوانين الثلاثين بالـ system prompt الحالي — بلا طلب إضافي." },
-  { k: "enforce_hard_laws", label: "إلزام القوانين الحرجة", hint: "عند خرق قانون إلزامي تُقدَّم الإجابة موسومة كمسودة لا كتوصية نهائية." },
-  { k: "log_compliance", label: "حفظ سجل الامتثال", hint: "يخزّن نتيجة التقييم في سجل الجلسة للتدقيق والتقارير." },
+  { k: "prompt_injection", label: "auto.injecting_constitution_into_guidance", hint: "auto.append_the_text_of_the_30" },
+  { k: "enforce_hard_laws", label: "auto.critical_laws_enforcement", hint: "auto.upon_violation_of_a_mandatory_law" },
+  { k: "log_compliance", label: "auto.save_compliance_log", hint: "auto.stores_the_evaluation_result_in_the" },
 ];
 
 function LawsControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
@@ -551,8 +551,8 @@ function LawsControls({ settings, set }: { settings: Record<string, any>; set: (
           <label key={f.k} className="rounded border p-2 flex items-start gap-2">
             <input type="checkbox" className="mt-1" checked={!!laws[f.k]} onChange={(e) => patch(f.k, e.target.checked)} />
             <span>
-              <span className="text-sm font-medium block">{f.label}</span>
-              <span className="text-[11px] text-muted-foreground">{f.hint}</span>
+              <span className="text-sm font-medium block">{t(f.label)}</span>
+              <span className="text-[11px] text-muted-foreground">{t(f.hint)}</span>
             </span>
           </label>
         ))}

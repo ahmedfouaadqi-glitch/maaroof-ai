@@ -26,17 +26,17 @@ type Schedule = {
 };
 
 const CADENCE_LABEL: Record<Schedule["cadence"], string> = {
-  once: "مرة واحدة",
-  hourly: "كل ساعة",
-  daily: "يومياً",
-  weekly: "أسبوعياً",
-  custom_cron: "مخصص",
+  once: "auto.once",
+  hourly: "auto.hourly",
+  daily: "auto.daily_2",
+  weekly: "auto.weekly",
+  custom_cron: "auto.custom",
 };
 
 const APPROVAL_LABEL: Record<Schedule["approval_mode"], string> = {
-  per_run: "موافقة قبل كل مرة",
-  auto_within_quota: "تلقائي ضمن الحصة",
-  first_time_then_auto: "موافقة أول مرة ثم تلقائي",
+  per_run: "auto.approval_before_each_time",
+  auto_within_quota: "auto.automatic_within_quota",
+  first_time_then_auto: "auto.first_approval_then_automatic",
 };
 
 export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: string | null; defaultPrompt?: string }) {
@@ -114,13 +114,13 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
             <label className="space-y-1">
               <span>{t("auto.iteration")}</span>
               <select value={cadence} onChange={(e) => setCadence(e.target.value as Schedule["cadence"])} className="w-full border rounded px-2 py-1 bg-background">
-                {(Object.keys(CADENCE_LABEL) as Schedule["cadence"][]).map((k) => <option key={k} value={k}>{CADENCE_LABEL[k]}</option>)}
+                {(Object.keys(CADENCE_LABEL) as Schedule["cadence"][]).map((k) => <option key={k} value={k}>{t(CADENCE_LABEL[k])}</option>)}
               </select>
             </label>
             <label className="space-y-1">
               <span>{t("auto.approval")}</span>
               <select value={approval} onChange={(e) => setApproval(e.target.value as Schedule["approval_mode"])} className="w-full border rounded px-2 py-1 bg-background">
-                {(Object.keys(APPROVAL_LABEL) as Schedule["approval_mode"][]).map((k) => <option key={k} value={k}>{APPROVAL_LABEL[k]}</option>)}
+                {(Object.keys(APPROVAL_LABEL) as Schedule["approval_mode"][]).map((k) => <option key={k} value={k}>{t(APPROVAL_LABEL[k])}</option>)}
               </select>
             </label>
             <label className="space-y-1 col-span-2">
@@ -155,7 +155,7 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
               </div>
               <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{s.prompt}</div>
               <div className="text-[10px] text-muted-foreground mt-0.5 flex justify-between">
-                <span>{CADENCE_LABEL[s.cadence]} · {APPROVAL_LABEL[s.approval_mode]}</span>
+                <span>{t(CADENCE_LABEL[s.cadence])} · {t(APPROVAL_LABEL[s.approval_mode])}</span>
                 <span>تشغيلات: {s.runs_done}{s.max_runs ? `/${s.max_runs}` : ""}</span>
               </div>
             </li>

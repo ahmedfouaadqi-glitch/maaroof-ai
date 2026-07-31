@@ -8,12 +8,12 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 const CHANGES = [
-  { id: "add_content_type", label: "إضافة نوع محتوى جديد" },
-  { id: "new_audience", label: "استهداف جمهور جديد" },
-  { id: "new_platform", label: "إضافة منصّة جديدة" },
-  { id: "increase_frequency", label: "زيادة وتيرة النشر" },
-  { id: "wikipedia", label: "إنشاء صفحة ويكيبيديا" },
-  { id: "press", label: "حملة علاقات عامة" },
+  { id: "add_content_type", label: "auto.add_new_content_type" },
+  { id: "new_audience", label: "auto.targeting_new_audience" },
+  { id: "new_platform", label: "auto.add_new_platform" },
+  { id: "increase_frequency", label: "auto.increase_publishing_frequency" },
+  { id: "wikipedia", label: "auto.create_wikipedia_page" },
+  { id: "press", label: "auto.public_relations_campaign" },
 ];
 
 export function WhatIfSimulator() {
@@ -55,7 +55,7 @@ export function WhatIfSimulator() {
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("auto.brand_name_3")} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
         <div className="mt-2 flex flex-wrap gap-2">
           {CHANGES.map((c) => (
-            <button key={c.id} onClick={() => toggle(c.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(c.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{c.label}</button>
+            <button key={c.id} onClick={() => toggle(c.id)} className={`rounded-full px-3 py-1 text-xs border ${selected.includes(c.id) ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>{t(c.label)}</button>
           ))}
         </div>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("auto.additional_details_optional")} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
