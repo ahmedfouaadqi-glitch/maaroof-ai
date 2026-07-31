@@ -1,13 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
-import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe } from "lucide-react";
+import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe, Send } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
+import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
