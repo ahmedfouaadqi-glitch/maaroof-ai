@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getUserIntelligence, refreshUserIntent } from "@/lib/cognition.functions";
 import { adminSetAppSetting } from "@/lib/admin.functions";
 import { useAdminL } from "./admin-i18n";
+import { SpecialtyRequestsPanel } from "./SpecialtyRequestsPanel";
 
 export function UserIntelligenceTab() {
   const L = useAdminL({
@@ -69,6 +70,7 @@ export function UserIntelligenceTab() {
 
   return (
     <div className="space-y-4">
+      <SpecialtyRequestsPanel />
       <section className="rounded-xl border border-border bg-card/60 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">

@@ -1,13 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
-import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe } from "lucide-react";
+import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe, Send } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
+import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -60,7 +62,7 @@ function ProfilePage() {
     }
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
-      full_name: fullName, brand_name: brandName, brand_keywords: brandKw, specialty,
+      full_name: fullName, brand_name: brandName, brand_keywords: brandKw,
       ...(u ? { username: u } : {}),
     }).eq("id", user.id);
     if (error) setUsernameErr(error.message);
@@ -109,8 +111,10 @@ function ProfilePage() {
             <input value={brandKw} onChange={(e) => setBrandKw(e.target.value)} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
           </Field>
           <Field label={t("profile_specialty")}>
-            <input value={specialty} onChange={(e) => setSpecialty(e.target.value)} placeholder={t("profile_specialty_ph")} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+            <input value={specialty} disabled placeholder={t("profile_specialty_ph")} className="w-full rounded-lg border border-border bg-background/30 px-3 py-2 text-sm opacity-70" />
+            <small className="text-xs text-muted-foreground">{t("specialty_locked_note")}</small>
           </Field>
+          <SpecialtyRequestCard currentSpecialty={specialty} />
           <Field label="Subscription">
             <div className="text-sm">{profile?.is_subscribed ? (profile as any).subscription_tier || "Pro" : "Free"}</div>
             <small className="text-xs text-muted-foreground">{t("profile_subscription_locked")}</small>
@@ -191,6 +195,88 @@ function ProfilePage() {
   );
 }
 
+function SpecialtyRequestCard({ currentSpecialty }: { currentSpecialty: string }) {
+  const { t } = useI18n();
+  const submit = useServerFn(submitSpecialtyRequest);
+  const listMine = useServerFn(listMySpecialtyRequests);
+  const [value, setValue] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [rows, setRows] = useState<any[]>([]);
+
+  const load = async () => {
+    try { const r = await listMine(); setRows((r as any).rows || []); } catch {}
+  };
+  useEffect(() => { load(); }, []);
+
+  const hasPending = rows.some((r) => r.status === "pending");
+
+  const send = async () => {
+    if (!value.trim()) return;
+    setBusy(true); setMsg("");
+    try {
+      const r: any = await submit({ data: { specialty: value.trim(), reason: reason.trim() || undefined } });
+      setMsg(r?.ok ? t("specialty_request_sent") : t("specialty_request_pending"));
+      if (r?.ok) { setValue(""); setReason(""); }
+      await load();
+    } catch (e: any) {
+      setMsg(String(e?.message || e));
+    } finally { setBusy(false); }
+  };
+
+  const statusLabel = (s: string) =>
+    s === "approved" ? t("specialty_status_approved") : s === "rejected" ? t("specialty_status_rejected") : t("specialty_status_pending");
+
+  return (
+    <div className="rounded-xl border border-border bg-background/40 p-4">
+      <h3 className="text-sm font-semibold">{t("specialty_request_title")}</h3>
+      <div className="mt-3 space-y-2">
+        <Field label={t("specialty_request_new")}>
+          <input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            disabled={hasPending}
+            placeholder={currentSpecialty || t("profile_specialty_ph")}
+            className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm disabled:opacity-60"
+          />
+        </Field>
+        <Field label={t("specialty_request_reason")}>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            disabled={hasPending}
+            rows={2}
+            className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm disabled:opacity-60"
+          />
+        </Field>
+        <button onClick={send} disabled={busy || hasPending || !value.trim()}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} {t("specialty_request_send")}
+        </button>
+        {hasPending && <p className="text-xs text-amber-600">{t("specialty_request_pending")}</p>}
+        {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
+      </div>
+
+      {rows.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-1 text-xs font-semibold text-muted-foreground">{t("specialty_requests_history")}</div>
+          <ul className="space-y-1 text-xs">
+            {rows.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 px-2 py-1.5">
+                <span className="font-semibold">{r.requested_specialty}</span>
+                <span className="text-muted-foreground">{statusLabel(r.status)}</span>
+                {r.admin_note && <span className="text-muted-foreground">— {r.admin_note}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label className="mb-1 block text-xs font-semibold text-muted-foreground">{label}</label>{children}</div>;
 }
+
