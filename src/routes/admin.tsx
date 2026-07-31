@@ -560,6 +560,7 @@ function PlansTab() {
 }
 
 function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: () => void; onSave: (patch: any) => void; onDelete: () => void }) {
+  const { t } = useI18n();
   const { lang } = useI18n();
   const { info: country } = useCountry();
   const userCountry = country?.code || null;
@@ -583,7 +584,6 @@ function PlanRow({ plan, onToggle, onSave, onDelete }: { plan: any; onToggle: ()
     discount_badge_text: plan.discount_badge_text || "",
   });
   const submit = () => {
-  const { t } = useI18n();
     onSave({
       name: f.name, description: f.description,
       prices: normalizePrices(pv.prices),

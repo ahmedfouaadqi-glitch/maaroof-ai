@@ -482,6 +482,7 @@ function VisibilitySection({
   value: NonNullable<Profile["ui_visibility"]>;
   onChange: (v: NonNullable<Profile["ui_visibility"]>) => void;
 }) {
+  const { t } = useI18n();
   const isAr = lang === "ar";
   const isKu = lang === "ku";
   const heading = isAr ? "ما يراه المستخدم في الموقع" : isKu ? "ئەوەی بەکارهێنەر دەیبینێت" : "What the user sees site-wide";
@@ -493,7 +494,6 @@ function VisibilitySection({
 
   const lbl = (k: string) => VIS_LABELS[k]?.[lang] || k;
   const setGroup = (g: "tools" | "agent" | "widgets" | "pages", k: string, on: boolean) => {
-  const { t } = useI18n();
     const next = { ...(value || {}) };
     const grp: Record<string, boolean> = { ...(next[g] || {}) };
     if (on) delete grp[k]; else grp[k] = false;

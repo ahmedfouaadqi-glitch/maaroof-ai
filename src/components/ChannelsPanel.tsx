@@ -298,6 +298,7 @@ function ManualTokenDialog({
   onSaved: () => void;
   saveFn: (a: any) => Promise<any>;
 }) {
+  const { t } = useI18n();
   const [token, setToken] = useState("");
   const [pageId, setPageId] = useState("");
   const [igUserId, setIgUserId] = useState("");

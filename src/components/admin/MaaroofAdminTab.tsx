@@ -499,6 +499,7 @@ const EXEC_FLAGS: Array<{ k: string; label: string; hint: string }> = [
 ];
 
 function ExecutiveControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const exec = (settings.executive || {}) as Record<string, any>;
   const patch = (k: string, v: any) => set("executive", { ...exec, [k]: v });
   return (
@@ -535,6 +536,7 @@ const LAW_FLAGS: Array<{ k: string; label: string; hint: string }> = [
 ];
 
 function LawsControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const laws = (settings.laws || {}) as Record<string, any>;
   const patch = (k: string, v: any) => set("laws", { ...laws, [k]: v });
   return (
@@ -565,6 +567,7 @@ function LawsControls({ settings, set }: { settings: Record<string, any>; set: (
 
 /* ---------- Parts 12-13 — Model Governance & Decision Intelligence controls ---------- */
 function GovernanceControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const mg = (settings.model_governance || {}) as Record<string, any>;
   const dec = (settings.decision || {}) as Record<string, any>;
   const pub = (settings.publishing || {}) as Record<string, any>;
@@ -736,6 +739,7 @@ function GovernanceControls({ settings, set }: { settings: Record<string, any>; 
 
 /* ---------- Parts 9-11 — Expert Learning & Living Knowledge controls ---------- */
 function LearningControls({ settings, set }: { settings: Record<string, any>; set: (k: string, v: any) => void }) {
+  const { t } = useI18n();
   const ex = (settings.experts || {}) as Record<string, any>;
   const kn = (settings.knowledge || {}) as Record<string, any>;
   const pex = (k: string, v: any) => set("experts", { ...ex, [k]: v });

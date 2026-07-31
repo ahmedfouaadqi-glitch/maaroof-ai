@@ -19,12 +19,12 @@ export function PricesEditor({
   onChange: (v: PricesValue) => void;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   const entries = useMemo(() => Object.entries(value.prices || {}), [value.prices]);
   const used = new Set(entries.map(([k]) => k));
   const available = CURRENCIES.filter((c) => !used.has(c.code));
 
   function setPrice(code: string, amount: number) {
-  const { t } = useI18n();
     const next = { ...value.prices, [code]: amount };
     onChange({ ...value, prices: next });
   }

@@ -17,6 +17,7 @@ export type Workspace = {
 const STORAGE_KEY = "maaroof.active_workspace_id";
 
 export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | null) => void }) {
+  const { t } = useI18n();
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
   const del = useServerFn(deleteWorkspace);
@@ -47,7 +48,6 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
   }, []);
 
   function pick(w: Workspace | null) {
-  const { t } = useI18n();
     setActiveId(w?.id ?? null);
     if (typeof window !== "undefined") {
       if (w) localStorage.setItem(STORAGE_KEY, w.id);
