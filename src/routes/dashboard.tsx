@@ -19,7 +19,7 @@ import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { ReportBuilder } from "@/components/ReportBuilder";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid } from "lucide-react";
+import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
 import { useVisibility, useToolPrice } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
 import { CostBadge } from "@/components/CostBadge";
@@ -83,6 +83,9 @@ function DashboardPage() {
   const { tool: openTool } = Route.useSearch();
   const [agentSub, setAgentSub] = useState<any | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollStart, setCanScrollStart] = useState(false);
+  const [canScrollEnd, setCanScrollEnd] = useState(false);
 
   const setOpenTool = (k: ToolKey | null) => {
     navigate({ to: "/dashboard", search: { tool: k ?? undefined }, replace: false });
@@ -134,6 +137,42 @@ function DashboardPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [active?.key, tools, lang]);
+
+  // Scroll-state for the sticky tool rail.
+  const updateScrollState = () => {
+    const el = railRef.current;
+    if (!el) return;
+    const isRtl = getComputedStyle(el).direction === "rtl";
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const start = isRtl ? maxScroll - el.scrollLeft : el.scrollLeft;
+    const end = isRtl ? el.scrollLeft : maxScroll - el.scrollLeft;
+    setCanScrollStart(start > 1);
+    setCanScrollEnd(end > 1);
+  };
+
+  const scrollRail = (dir: "start" | "end") => {
+    const el = railRef.current;
+    if (!el) return;
+    const isRtl = getComputedStyle(el).direction === "rtl";
+    const distance = Math.max(120, el.clientWidth * 0.55);
+    const delta = dir === "end"
+      ? (isRtl ? -distance : distance)
+      : (isRtl ? distance : -distance);
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const el = railRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
+    };
+  }, [tools.length, active?.key]);
 
   if (loading || !user) {
     return (
@@ -206,7 +245,21 @@ function DashboardPage() {
                     <LayoutGrid className="size-3.5" /> {allToolsLabel}
                   </button>
                   <div className="h-6 w-px shrink-0 bg-border" />
-                  <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+                  {/* Scroll back */}
+                  <button
+                    type="button"
+                    onClick={() => scrollRail("start")}
+                    disabled={!canScrollStart}
+                    aria-label={lang === "ar" ? "تمرير للخلف" : lang === "ku" ? "هاتینە پاشەوە" : "Scroll back"}
+                    className={`inline-grid size-7 shrink-0 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground transition hover:border-primary/40 hover:text-foreground ${
+                      canScrollStart ? "opacity-100" : "pointer-events-none opacity-0"
+                    }`}
+                  >
+                    {lang !== "en" ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
+                  </button>
+
+                  <div ref={railRef} className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {tools.map((tool) => {
                       const on = tool.key === active.key;
                       return (
@@ -227,6 +280,19 @@ function DashboardPage() {
                       );
                     })}
                   </div>
+
+                  {/* Scroll forward */}
+                  <button
+                    type="button"
+                    onClick={() => scrollRail("end")}
+                    disabled={!canScrollEnd}
+                    aria-label={lang === "ar" ? "تمرير للأمام" : lang === "ku" ? "هاتینە پێشەوە" : "Scroll forward"}
+                    className={`inline-grid size-7 shrink-0 place-items-center rounded-full border border-border bg-background/60 text-muted-foreground transition hover:border-primary/40 hover:text-foreground ${
+                      canScrollEnd ? "opacity-100" : "pointer-events-none opacity-0"
+                    }`}
+                  >
+                    {lang !== "en" ? <ChevronLeft className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                  </button>
                 </div>
               </div>
 
