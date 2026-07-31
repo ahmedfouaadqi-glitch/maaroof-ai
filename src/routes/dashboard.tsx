@@ -87,6 +87,17 @@ function DashboardPage() {
   const railSignRef = useRef<number | null>(null);
   const [canScrollStart, setCanScrollStart] = useState(false);
   const [canScrollEnd, setCanScrollEnd] = useState(false);
+  // Lighter ring settings on small screens / touch / reduced motion.
+  const [compactMotion, setCompactMotion] = useState(true);
+
+  useEffect(() => {
+    const q = window.matchMedia("(max-width: 768px), (pointer: coarse), (prefers-reduced-motion: reduce)");
+    const sync = () => setCompactMotion(q.matches);
+    sync();
+    q.addEventListener("change", sync);
+    return () => q.removeEventListener("change", sync);
+  }, []);
+
 
   const setOpenTool = (k: ToolKey | null) => {
     navigate({ to: "/dashboard", search: { tool: k ?? undefined }, replace: false });
