@@ -30,34 +30,34 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputCls = "w-full rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs";
 
-function reportPayload(task: any, report: any): ExportPayload {
+function reportPayload(task: any, report: any, t: (k: string) => string): ExportPayload {
   return {
-    title: `تقرير تنفيذي — ${task.title}`,
-    subtitle: `هرمس · ${STATUS_LABELS_AR[task.status] || task.status}`,
+    title: `${t("auto.executive_report")} — ${task.title}`,
+    subtitle: `${t("auto.hermes")} · ${t(STATUS_LABELS_AR[task.status]) || task.status}`,
     lang: "ar",
     sections: [
-      { heading: "الملخص التنفيذي", kind: "text", text: report.executive_summary },
-      { heading: "التقرير التفصيلي", kind: "text", text: report.detailed_report },
+      { heading: t("auto.executive_summary"), kind: "text", text: report.executive_summary },
+      { heading: t("auto.detailed_report"), kind: "text", text: report.detailed_report },
       {
-        heading: "الأثر", kind: "kv", rows: [
-          ["الأثر المعماري", report.architecture_impact],
-          ["الأثر التجاري", report.business_impact],
-          ["أثر المعرفة", report.knowledge_impact],
-          ["أثر الثقة", report.trust_impact],
-          ["الأداء", report.performance_impact],
-          ["الإيراد", report.revenue_impact],
+        heading: t("auto.impact"), kind: "kv", rows: [
+          [t("auto.architectural_impact"), report.architecture_impact],
+          [t("auto.business_impact"), report.business_impact],
+          [t("auto.knowledge_impact"), report.knowledge_impact],
+          [t("auto.trust_impact"), report.trust_impact],
+          [t("auto.performance"), report.performance_impact],
+          [t("auto.revenue"), report.revenue_impact],
         ],
       },
       {
-        heading: "تحليل الكلفة", kind: "kv", rows: [
-          ["المصروف", money(report.cost_analysis.spent_usd)],
-          ["الميزانية", report.cost_analysis.budget_usd ? money(report.cost_analysis.budget_usd) : "غير محددة"],
-          ["المتبقي", report.cost_analysis.remaining_usd == null ? "—" : money(report.cost_analysis.remaining_usd)],
-          ["التوكن المصروف", report.cost_analysis.spent_tokens],
+        heading: t("auto.cost_analysis"), kind: "kv", rows: [
+          [t("auto.expenses"), money(report.cost_analysis.spent_usd)],
+          [t("auto.budget_2"), report.cost_analysis.budget_usd ? money(report.cost_analysis.budget_usd) : t("auto.undefined")],
+          [t("auto.remaining"), report.cost_analysis.remaining_usd == null ? "—" : money(report.cost_analysis.remaining_usd)],
+          [t("auto.tokens_spent"), report.cost_analysis.spent_tokens],
         ],
       },
-      { heading: "التوصيات", kind: "list", list: report.recommendations || [] },
-      { heading: "الخطوات التالية", kind: "list", list: report.next_actions || [] },
+      { heading: t("auto.recommendations"), kind: "list", list: report.recommendations || [] },
+      { heading: t("auto.next_steps"), kind: "list", list: report.next_actions || [] },
     ],
   };
 }
@@ -172,7 +172,7 @@ export function HermesTaskCenter() {
   const exportReport = async (task: any, fmt: "pdf" | "json" | "md" | "doc" | "pptx") => {
     const r = task.result && Object.keys(task.result).length ? task.result : await makeReport(task);
     if (!r) return;
-    const payload = reportPayload(task, r);
+    const payload = reportPayload(task, r, t);
     if (fmt === "pdf") exportToPDF(payload);
     else if (fmt === "json") exportToJSON(payload);
     else if (fmt === "md") exportToMarkdown(payload);
@@ -218,7 +218,7 @@ export function HermesTaskCenter() {
       <div className="flex flex-wrap items-center gap-2">
         <select value={filter} onChange={(e) => setFilter(e.target.value)} className={`${inputCls} w-auto`}>
           <option value="">{t("auto.all_cases")}</option>
-          {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS_AR[s]}</option>)}
+          {TASK_STATUSES.map((s) => <option key={s} value={s}>{t(STATUS_LABELS_AR[s])}</option>)}
         </select>
         <button onClick={() => void refresh()} className="flex items-center gap-1.5 rounded-lg border border-border/60 px-2.5 py-1.5 text-xs hover:bg-muted/40">
           <RefreshCw className="size-3.5" /> {t("auto.update")}
@@ -281,7 +281,7 @@ export function HermesTaskCenter() {
               <div key={t.id} className="flex items-center justify-between gap-2 px-3 py-2 text-[11px]">
                 <span className="font-medium truncate">{t.title}</span>
                 <span className="text-muted-foreground">{new Date(t.deadline).toLocaleString()}</span>
-                <span className="rounded-full bg-muted px-2 py-0.5">{STATUS_LABELS_AR[t.status] || t.status}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5">{t(STATUS_LABELS_AR[t.status]) || t.status}</span>
               </div>
             ))}
           </div>
@@ -303,7 +303,7 @@ export function HermesTaskCenter() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-[10px]">
-              <span className="rounded-full bg-muted px-2 py-0.5">{STATUS_LABELS_AR[t.status] || t.status}</span>
+              <span className="rounded-full bg-muted px-2 py-0.5">{t(STATUS_LABELS_AR[t.status]) || t.status}</span>
               <span className="text-muted-foreground">{t.progress || 0}% · {money(t.spent_usd)}</span>
               {openId === t.id ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
             </div>
@@ -317,7 +317,7 @@ export function HermesTaskCenter() {
                 {TASK_STATUSES.map((s) => (
                   <button key={s} disabled={busy === t.id || s === t.status} onClick={() => void setStatus(t.id, s)}
                     className={`rounded-lg px-2 py-1 text-[10px] ${s === t.status ? "bg-primary/15 text-primary" : "border border-border/60 hover:bg-muted/40"}`}>
-                    {STATUS_LABELS_AR[s]}
+                    {t(STATUS_LABELS_AR[s])}
                   </button>
                 ))}
               </div>

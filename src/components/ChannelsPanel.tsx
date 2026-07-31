@@ -62,9 +62,9 @@ const PROVIDER_META: Record<ProviderKey, {
     gradient: "from-blue-500/20 to-indigo-700/10",
     tokenHelpUrl: "https://developers.facebook.com/tools/explorer/",
     tokenHelpSteps: [
-      "افتح Graph API Explorer واختر تطبيقك",
-      "اطلب صلاحيتي: pages_manage_posts و pages_read_engagement",
-      "انسخ Page Access Token وألصقه أدناه + ضع Page ID",
+      "auto.open_graph_api_explorer_and_select",
+      "auto.request_my_permissions_pages_manage_posts",
+      "auto.copy_the_page_access_token_and",
     ],
   },
   instagram: {
@@ -72,9 +72,9 @@ const PROVIDER_META: Record<ProviderKey, {
     gradient: "from-pink-500/20 to-fuchsia-700/10",
     tokenHelpUrl: "https://developers.facebook.com/docs/instagram-api/getting-started",
     tokenHelpSteps: [
-      "يجب أن يكون حسابك Instagram Business مرتبط بصفحة Facebook",
-      "احصل على Long-Lived Page Access Token من Graph API Explorer",
-      "انسخ IG User ID (من /me/accounts) وألصق الاثنين أدناه",
+      "auto.your_instagram_business_account_must_be",
+      "auto.get_long_lived_page_access_token",
+      "auto.copy_the_ig_user_id_from",
     ],
   },
   x: {
@@ -82,9 +82,9 @@ const PROVIDER_META: Record<ProviderKey, {
     gradient: "from-zinc-500/20 to-zinc-800/10",
     tokenHelpUrl: "https://developer.twitter.com/en/portal/dashboard",
     tokenHelpSteps: [
-      "افتح Developer Portal وأنشئ تطبيقاً (إن لم يكن لديك)",
-      "فعّل OAuth 2.0 مع scopes: tweet.read tweet.write users.read",
-      "ولّد User Access Token (Bearer) وألصقه أدناه",
+      "auto.open_developer_portal_and_create_an",
+      "auto.enable_oauth_2_0_with_scopes",
+      "auto.generate_user_access_token_bearer_and",
     ],
   },
 };
@@ -334,7 +334,7 @@ function ManualTokenDialog({
         </DialogHeader>
 
         <ol className="list-decimal space-y-1 rounded-lg border border-border/60 bg-muted/40 p-3 ps-6 text-xs text-muted-foreground">
-          {meta.tokenHelpSteps?.map((s, i) => <li key={i}>{s}</li>)}
+          {meta.tokenHelpSteps?.map((s, i) => <li key={i}>{t(s)}</li>)}
         </ol>
 
         {meta.tokenHelpUrl && (

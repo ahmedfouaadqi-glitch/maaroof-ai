@@ -14,17 +14,17 @@ export const EXECUTIVE_COMMANDS = [
 export type ExecutiveCommand = (typeof EXECUTIVE_COMMANDS)[number];
 
 export const COMMAND_LABELS_AR: Record<string, string> = {
-  review: "مراجعة", analyze: "تحليل", monitor: "مراقبة", audit: "تدقيق",
-  optimize: "تحسين", compare: "مقارنة", predict: "تنبؤ", investigate: "تحقيق",
-  research: "بحث", create_proposal: "إنشاء اقتراح", update_roadmap: "تحديث خارطة الطريق",
-  evaluate_experts: "تقييم الخبراء", evaluate_models: "تقييم النماذج", evaluate_mcp: "تقييم MCP",
-  evaluate_architecture: "تقييم المعمارية", evaluate_costs: "تقييم الكلفة", evaluate_revenue: "تقييم الإيراد",
-  evaluate_geo: "تقييم GEO", evaluate_seo: "تقييم SEO", evaluate_aso: "تقييم ASO",
-  evaluate_branding: "تقييم العلامة", evaluate_social: "تقييم الحضور الاجتماعي",
-  evaluate_security: "تقييم الأمان", evaluate_memory: "تقييم الذاكرة", evaluate_trust: "تقييم الثقة",
-  evaluate_knowledge: "تقييم المعرفة", evaluate_state: "تقييم الحالة",
-  evaluate_workspaces: "تقييم مساحات العمل", evaluate_users: "تقييم المستخدمين",
-  evaluate_business: "تقييم الفرص التجارية",
+  review: "auto.review", analyze: "auto.analysis", monitor: "auto.monitoring", audit: "auto.audit",
+  optimize: "auto.optimization", compare: "auto.compare", predict: "auto.prediction", investigate: "auto.achievement",
+  research: "auto.search", create_proposal: "auto.create_suggestion", update_roadmap: "auto.roadmap_update",
+  evaluate_experts: "auto.expert_evaluation", evaluate_models: "auto.models_evaluation", evaluate_mcp: "auto.mcp_evaluation",
+  evaluate_architecture: "auto.architecture_evaluation", evaluate_costs: "auto.cost_evaluation", evaluate_revenue: "auto.revenue_evaluation",
+  evaluate_geo: "auto.geo_evaluation", evaluate_seo: "auto.seo_evaluation", evaluate_aso: "auto.aso_evaluation",
+  evaluate_branding: "auto.brand_evaluation", evaluate_social: "auto.social_presence_evaluation",
+  evaluate_security: "auto.security_assessment", evaluate_memory: "auto.memory_evaluation", evaluate_trust: "auto.trust_evaluation",
+  evaluate_knowledge: "auto.knowledge_evaluation", evaluate_state: "auto.status_evaluation",
+  evaluate_workspaces: "auto.workspaces_evaluation", evaluate_users: "auto.user_evaluation",
+  evaluate_business: "auto.business_opportunity_evaluation",
 };
 
 export const TASK_STATUSES = [
@@ -34,14 +34,14 @@ export const TASK_STATUSES = [
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const STATUS_LABELS_AR: Record<string, string> = {
-  waiting: "بالانتظار", scheduled: "مجدولة", preparing: "قيد التحضير", learning: "تعلّم",
-  running: "قيد التنفيذ", paused: "موقوفة مؤقتاً", blocked: "محجوبة", needs_approval: "بانتظار الموافقة",
-  completed: "مكتملة", cancelled: "ملغاة", archived: "مؤرشفة", failed: "فاشلة", recovered: "مستعادة",
+  waiting: "auto.pending", scheduled: "auto.scheduled", preparing: "auto.in_preparation", learning: "auto.learn",
+  running: "auto.in_progress", paused: "auto.paused", blocked: "auto.blocked", needs_approval: "auto.awaiting_approval",
+  completed: "auto.completed_2", cancelled: "auto.canceled", archived: "auto.archived", failed: "auto.failed", recovered: "auto.restored",
 };
 
 export const EXECUTION_MODES = ["manual", "semi_auto", "auto"] as const;
 export const EXECUTION_MODE_LABELS_AR: Record<string, string> = {
-  manual: "يدوي", semi_auto: "نصف آلي", auto: "آلي",
+  manual: "auto.manual", semi_auto: "auto.semi_automatic", auto: "auto.automatic",
 };
 
 export const RISK_LEVELS = ["low", "medium", "high", "critical"] as const;
