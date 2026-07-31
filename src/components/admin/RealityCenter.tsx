@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Microscope, RefreshCw, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { getRealityCenter, getRealityEvidence } from "@/lib/maaroof-reality.functions";
+import { RealityLabSection } from "./RealityLab";
 
 const STATE_LABELS: Record<string, string> = {
   verified: "مُتحقَّق",
