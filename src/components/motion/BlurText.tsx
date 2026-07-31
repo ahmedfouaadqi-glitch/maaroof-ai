@@ -143,6 +143,29 @@ export function BlurText({
       ]
     : Array.from({ length: stepCount }, (_, i) => (stepCount === 1 ? 0 : i / (stepCount - 1)));
 
+  // Eager mode: the loop starts on the *visible* frame, so the very first paint
+  // already shows the text (critical when this is the LCP element), and the
+  // blur cycle only runs afterwards.
+  const visibleSnapshot = toSnapshots[toSnapshots.length - 1];
+  const eagerFrames = [visibleSnapshot, visibleSnapshot, fromSnapshot, ...toSnapshots];
+  const eagerTimes = [
+    0,
+    holdDuration / totalDuration,
+    (holdDuration + outDuration) / totalDuration,
+    ...toSnapshots.map((_, i) => (holdDuration + outDuration + (i + 1) * stepDuration) / totalDuration),
+  ];
+
+  const initialSnapshot = eager ? visibleSnapshot : fromSnapshot;
+
+  if (eager && !repeat) {
+    return (
+      <Tag ref={ref as never} className={className}>
+        {text}
+      </Tag>
+    );
+  }
+
+
   if (reduced) {
     return (
       <Tag ref={ref as never} className={className}>
