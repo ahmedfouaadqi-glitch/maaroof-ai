@@ -365,8 +365,9 @@ function DashboardPage() {
         <div className="mt-10 text-center">
           <Link to="/" className="text-sm text-primary hover:underline">← {t("back_home")}</Link>
         </div>
-      </div>
       </main>
+    </div>
+
   );
 }
 
