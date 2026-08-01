@@ -117,7 +117,7 @@ export const getChannelsState = createServerFn({ method: "GET" })
       .eq("id", context.userId).maybeSingle();
     const { data: chans } = await supabaseAdmin
       .from("publish_channels")
-      .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes")
+      .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes, owner_type, owner_name, is_default, connected_via, last_verified_at, last_error, external_account_id")
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
     return {
@@ -127,6 +127,11 @@ export const getChannelsState = createServerFn({ method: "GET" })
       linkedinAvailable: !!process.env.LINKEDIN_API_KEY,
       telegramAvailable: !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_USERNAME),
       tiktokAvailable: !!process.env.TIKTOK_API_KEY,
+      oauthProviders: {
+        linkedin: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET),
+        meta: !!(process.env.META_APP_ID && process.env.META_APP_SECRET),
+        x: !!(process.env.X_CLIENT_ID && process.env.X_CLIENT_SECRET),
+      },
     };
   });
 
@@ -227,27 +232,8 @@ export const approveAndPublish = createServerFn({ method: "POST" })
     if (text.length < 3) return { ok: false, error: "text_too_short" };
 
     try {
-      const cfg = (ch.config as any) || {};
-      if (ch.kind === "telegram") {
-        const botToken = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
-        if (!botToken || !cfg.chat_id) throw new Error("telegram_config_missing");
-        await publishToTelegram(botToken, cfg.chat_id, text);
-      } else if (ch.kind === "linkedin") {
-        await publishToLinkedIn(text);
-      } else if (ch.kind === "facebook") {
-        if (!cfg.access_token || !cfg.page_id) throw new Error("facebook_config_missing");
-        await publishToFacebookPage(cfg.access_token, cfg.page_id, text);
-      } else if (ch.kind === "instagram") {
-        if (!cfg.access_token || !cfg.ig_user_id) throw new Error("instagram_config_missing");
-        const mediaUrl = cfg.default_media_url;
-        if (!mediaUrl) throw new Error("instagram_needs_image");
-        await publishToInstagram(cfg.access_token, cfg.ig_user_id, text, mediaUrl);
-      } else if (ch.kind === "x") {
-        if (!cfg.bearer) throw new Error("x_config_missing");
-        await publishToX(cfg.bearer, text);
-      } else {
-        throw new Error("channel_not_supported");
-      }
+      const { publishToSavedChannel } = await import("@/lib/channels/dispatch.server");
+      await publishToSavedChannel(ch as any, text);
       await supabaseAdmin.from("agent_tasks").update({
         approval_status: "approved",
         approved_at: new Date().toISOString(),
