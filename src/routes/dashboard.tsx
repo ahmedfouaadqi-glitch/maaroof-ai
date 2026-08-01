@@ -247,7 +247,7 @@ function DashboardPage() {
                     title={t("dash_tool_agent_t")}
                     desc={t("dash_tool_agent_d")}
                     cta={t("dash_open_agent")}
-                    to="/agent"
+                    to="/maaroof"
                     badge={agentSub ? t("dash_agent_active") : t("dash_agent_inactive")}
                     badgeOk={!!agentSub}
                   />

@@ -60,7 +60,7 @@ export function SiteHeader() {
           <Link to="/" hash="how" className="hover:text-foreground">{t("nav_how")}</Link>
           {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
           {auth?.user && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
-          {auth?.user && hdr.show_agent && <Link to="/agent" className="hover:text-foreground">{t("nav_agent")}</Link>}
+          {auth?.user && hdr.show_agent && <Link to="/maaroof" search={{ tab: "tasks" as const }} className="hover:text-foreground">{t("nav_agent")}</Link>}
           {auth?.user && hdr.show_maaroof && <Link to="/maaroof" className="font-semibold text-primary hover:text-foreground">{t("auto.maaroof")}</Link>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
@@ -123,7 +123,7 @@ export function SiteHeader() {
             <Link to="/" hash="how" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_how")}</Link>
             {hdr.show_pricing && <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>}
             {auth?.user && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
-            {auth?.user && hdr.show_agent && <Link to="/agent" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_agent")}</Link>}
+            {auth?.user && hdr.show_agent && <Link to="/maaroof" search={{ tab: "tasks" as const }} onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_agent")}</Link>}
             {auth?.user && hdr.show_maaroof && <Link to="/maaroof" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{t("auto.maaroof")}</Link>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
