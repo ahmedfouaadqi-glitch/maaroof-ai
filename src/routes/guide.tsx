@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
-import { BookOpen, Wrench, Bot, Globe2, User } from "lucide-react";
+import { BookOpen, Wrench, Bot, Globe2, User, Share2 } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
 import { usePageGuard } from "@/lib/visibility";
@@ -133,7 +133,25 @@ function GuidePage() {
           </div>
         </Section>
 
+        <Section icon={<Share2 className="size-5" />} title={t("guide_channels_title")}>
+          <div className="rounded-2xl border border-accent/30 bg-card/70 p-5">
+            <p className="text-sm leading-relaxed text-foreground/85">{t("guide_channels_intro")}</p>
+            <ol className="mt-4 space-y-1.5 text-sm text-foreground/85">
+              {(["guide_channels_s1", "guide_channels_s2", "guide_channels_s3", "guide_channels_s4", "guide_channels_s5"] as const).map((k) => (
+                <li key={k}>{t(k)}</li>
+              ))}
+            </ol>
+            <p className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/85">
+              {t("guide_channels_security")}
+            </p>
+            <Link to="/maaroof" search={{ tab: "channels" as const }} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
+              <Share2 className="size-4" /> {t("mrf_tab_channels")}
+            </Link>
+          </div>
+        </Section>
+
         <Section icon={<Wrench className="size-5" />} title={t("guide_tools_section")}>
+
           {tools.map((td) => (
             <ToolRow key={td.key} toolKey={td.key} name={td.labels[L]} cost={td.costPerRun} body={t(HOWTO_KEY[td.key] as any)} />
           ))}
