@@ -97,6 +97,42 @@ function GuidePage() {
 
 
 
+        <Section icon={<Bot className="size-5" />} title={t("guide_maaroof_title")}>
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
+            <p className="text-sm leading-relaxed text-foreground/85">{t("guide_maaroof_intro")}</p>
+            <ol className="mt-4 space-y-1.5 text-sm text-foreground/85">
+              {(["guide_maaroof_step1", "guide_maaroof_step2", "guide_maaroof_step3", "guide_maaroof_step4", "guide_maaroof_step5"] as const).map((k) => (
+                <li key={k}>{t(k)}</li>
+              ))}
+            </ol>
+            <Link to="/maaroof" search={{ tab: "chat" as const }} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
+              <Bot className="size-4" /> {t("guide_maaroof_title")}
+            </Link>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {([
+              { tab: "tasks", t: "guide_mrf_tasks_t", d: "guide_mrf_tasks_d" },
+              { tab: "channels", t: "guide_mrf_channels_t", d: "guide_mrf_channels_d" },
+              { tab: "approvals", t: "guide_mrf_approvals_t", d: "guide_mrf_approvals_d" },
+              { tab: "knowledge", t: "guide_mrf_knowledge_t", d: "guide_mrf_knowledge_d" },
+            ] as const).map((f) => (
+              <div key={f.tab} className="rounded-2xl border border-border bg-card/70 p-4">
+                <h3 className="font-display text-base font-bold">{t(f.t)}</h3>
+                <p className="mt-1 text-sm text-foreground/85 leading-relaxed">{t(f.d)}</p>
+                <Link to="/maaroof" search={{ tab: f.tab }} className="mt-2 inline-block text-xs font-semibold text-primary hover:underline">
+                  {t("mrf_tab_" + f.tab as any)} →
+                </Link>
+              </div>
+            ))}
+            <div className="rounded-2xl border border-border bg-card/70 p-4">
+              <h3 className="font-display text-base font-bold">{t("guide_mrf_memory_t")}</h3>
+              <p className="mt-1 text-sm text-foreground/85 leading-relaxed">{t("guide_mrf_memory_d")}</p>
+              <Link to="/maaroof/memory" className="mt-2 inline-block text-xs font-semibold text-primary hover:underline">{t("auto.memory")} →</Link>
+            </div>
+          </div>
+        </Section>
+
         <Section icon={<Wrench className="size-5" />} title={t("guide_tools_section")}>
           {tools.map((td) => (
             <ToolRow key={td.key} toolKey={td.key} name={td.labels[L]} cost={td.costPerRun} body={t(HOWTO_KEY[td.key] as any)} />
