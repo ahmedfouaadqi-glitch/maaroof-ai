@@ -3318,6 +3318,45 @@ export type Database = {
           },
         ]
       }
+      oauth_link_states: {
+        Row: {
+          code_verifier: string | null
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          payload: Json
+          provider: string
+          redirect_uri: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          payload?: Json
+          provider: string
+          redirect_uri: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          payload?: Json
+          provider?: string
+          redirect_uri?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_dna: {
         Row: {
           created_at: string
@@ -3657,9 +3696,16 @@ export type Database = {
           created_at: string
           external_account_id: string | null
           id: string
+          is_default: boolean
           kind: string
           label: string | null
+          last_error: string | null
+          last_verified_at: string | null
+          owner_name: string | null
+          owner_type: string
           scopes: Json
+          token_ciphertext: string | null
+          token_expires_at: string | null
           user_id: string
           verified_at: string | null
         }
@@ -3673,9 +3719,16 @@ export type Database = {
           created_at?: string
           external_account_id?: string | null
           id?: string
+          is_default?: boolean
           kind: string
           label?: string | null
+          last_error?: string | null
+          last_verified_at?: string | null
+          owner_name?: string | null
+          owner_type?: string
           scopes?: Json
+          token_ciphertext?: string | null
+          token_expires_at?: string | null
           user_id: string
           verified_at?: string | null
         }
@@ -3689,9 +3742,16 @@ export type Database = {
           created_at?: string
           external_account_id?: string | null
           id?: string
+          is_default?: boolean
           kind?: string
           label?: string | null
+          last_error?: string | null
+          last_verified_at?: string | null
+          owner_name?: string | null
+          owner_type?: string
           scopes?: Json
+          token_ciphertext?: string | null
+          token_expires_at?: string | null
           user_id?: string
           verified_at?: string | null
         }
