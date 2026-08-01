@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { FlaskConical, Loader2, RefreshCw, Play, Check, Network, AlertTriangle } from "lucide-react";
+import { FlaskConical, Loader2, RefreshCw, Play, Check, Network, AlertTriangle, ShieldCheck } from "lucide-react";
+import { QUALITY_REGISTER, qualityCounts, type L3 } from "@/lib/quality-register";
+
 import { toast } from "sonner";
 import {
   getRealityLab,
