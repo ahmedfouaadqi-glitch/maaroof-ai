@@ -18,6 +18,8 @@ import { GeoStrategist } from "@/components/GeoStrategist";
 import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { ReportBuilder } from "@/components/ReportBuilder";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
+import { AuthGate } from "@/components/AuthGate";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
 import { useVisibility, useToolPrice } from "@/lib/visibility";
@@ -197,12 +199,9 @@ function DashboardPage() {
   }, [tools.length, active?.key]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AuthGate state={loading ? "loading" : "signed-out"} title={t("gate_dashboard")} redirect="/dashboard" />;
   }
+
 
   const allToolsLabel = lang === "ar" ? "كل الأدوات" : lang === "ku" ? "هەموو ئامرازەکان" : "All tools";
 

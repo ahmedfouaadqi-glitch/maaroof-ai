@@ -72,7 +72,7 @@ function AdminPage() {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/admin" } });
   }, [loading, user, navigate]);
 
-  if (loading || !user) return <Center><Loader2 className="size-8 animate-spin text-primary" /></Center>;
+  if (loading || !user) return <AuthGate state={loading ? "loading" : "signed-out"} title={t("gate_admin")} redirect="/admin" />;
   if (!isAdmin) return (
     <div className="min-h-screen">
       <SiteHeader />

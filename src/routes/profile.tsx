@@ -86,7 +86,7 @@ function ProfilePage() {
     setLocking(false);
   };
 
-  if (loading || !user) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
+  if (loading || !user) return <AuthGate state={loading ? "loading" : "signed-out"} title={t("gate_profile")} redirect="/profile" />;
 
   const locked = !!(profile as any)?.device_fingerprint;
 
