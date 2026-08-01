@@ -177,7 +177,6 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
   };
 
   // Kept for future inline visibility runs; Brand Boost is the primary entry point now.
-  void (async function noop() {})();
   const runVisibility = async () => {
     if (!brand.trim() || visBusy) return;
     setVisBusy(true); setVisMsg(null);
