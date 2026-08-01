@@ -208,7 +208,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-6xl px-4 py-10 md:px-6">
         <BlurText
           as="h1"
           text={`${t("dash_welcome")}, ${profile?.full_name || profile?.email || ""}`}
@@ -366,7 +366,7 @@ function DashboardPage() {
           <Link to="/" className="text-sm text-primary hover:underline">← {t("back_home")}</Link>
         </div>
       </div>
-    </div>
+      </main>
   );
 }
 
