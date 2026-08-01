@@ -117,7 +117,7 @@ export function SiteHeader() {
       {open && (
         <div className="border-t border-border/60 bg-background/95 backdrop-blur-xl lg:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3 text-sm">
-            <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_how")}</Link>
+            
             {hdr.show_pricing && <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>}
             {auth?.user && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
             {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/maaroof" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{t("auto.maaroof")}</Link>}
