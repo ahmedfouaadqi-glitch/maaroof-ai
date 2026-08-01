@@ -20,6 +20,10 @@ import { AdminFinanceTab } from "@/components/admin/AdminFinanceTab";
 import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
 import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
 import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenceCenter";
+import { AdminGuideTab } from "@/components/admin/AdminGuideTab";
+import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
+import { ADMIN_GROUPS, type L3 } from "@/components/admin/admin-guide-content";
+
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
