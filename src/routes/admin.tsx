@@ -94,7 +94,7 @@ function AdminPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-bold text-gradient">{t("admin_title")}</h1>
         </div>
@@ -154,7 +154,7 @@ function AdminPage() {
         {activeSub === "health" && <SystemHealthTab />}
         {activeSub === "maaroof" && <MaaroofAdminTab />}
         {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
-      </div>
+      </main>
     </div>
   );
 }
