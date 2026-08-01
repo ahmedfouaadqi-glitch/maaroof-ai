@@ -160,7 +160,7 @@ function Page() {
         <div className="absolute -top-32 -right-24 size-[420px] rounded-full bg-primary/20 blur-3xl" aria-hidden />
         <div className="absolute -bottom-40 -left-24 size-[420px] rounded-full bg-accent/15 blur-3xl" aria-hidden />
 
-        <main className="relative mx-auto max-w-5xl px-4 pb-10 pt-12 sm:pt-16">
+        <header className="relative mx-auto max-w-5xl px-4 pb-10 pt-12 sm:pt-16">
           <div className="reveal-up flex flex-wrap items-center gap-2">
             <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">{Lc.backHome}</Link>
             <span className="text-xs text-muted-foreground/60">/</span>
@@ -182,7 +182,8 @@ function Page() {
               <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">{m.desc}</p>
             </div>
           </div>
-        </main>
+        </header>
+
       </div>
 
       {/* Sticky tab bar */}
