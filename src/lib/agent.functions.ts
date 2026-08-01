@@ -61,17 +61,9 @@ export const runAgentNow = createServerFn({ method: "POST" })
             let published = false;
             for (const ch of autoChans || []) {
               try {
-                if (ch.kind === "telegram") {
-                  const cfg = (ch.config as any) || {};
-                  const tk = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
-                  if (tk && cfg.chat_id) {
-                    await publishToTelegram(tk, cfg.chat_id, content);
-                    published = true;
-                  }
-                } else if (ch.kind === "linkedin") {
-                  await publishToLinkedIn(content);
-                  published = true;
-                }
+                const { publishToSavedChannel } = await import("@/lib/channels/dispatch.server");
+                await publishToSavedChannel(ch as any, content);
+                published = true;
                 if (published) {
                   await supabaseAdmin.from("publish_log").insert({
                     user_id: userId, task_id: tid, channel_id: ch.id, kind: ch.kind, status: "sent",
@@ -165,15 +157,8 @@ export const publishToChannel = createServerFn({ method: "POST" })
     if (!ch.active) return { ok: false, error: "channel_inactive" };
 
     try {
-      if (ch.kind === "telegram") {
-        const cfg = (ch.config || {}) as { bot_token?: string; chat_id?: string };
-        if (!cfg.bot_token || !cfg.chat_id) throw new Error("telegram_config_missing");
-        await publishToTelegram(cfg.bot_token, cfg.chat_id, data.text);
-      } else if (ch.kind === "linkedin") {
-        await publishToLinkedIn(data.text);
-      } else {
-        throw new Error("channel_kind_not_supported_yet");
-      }
+      const { publishToSavedChannel } = await import("@/lib/channels/dispatch.server");
+      await publishToSavedChannel(ch as any, data.text);
       await supabaseAdmin.from("publish_log").insert({
         user_id: userId, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind, status: "sent",
       });
