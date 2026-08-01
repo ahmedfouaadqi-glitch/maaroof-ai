@@ -1930,4 +1930,10 @@ export const en: Dict = {
   guide_mrf_memory_t: "Memory",
   guide_mrf_memory_d: "Maaroof remembers your past sessions and decisions and builds on them instead of starting over.",
   guide_admin_tab: "Guide",
+  gate_loading: "Checking your session…",
+  gate_desc: "This page is for signed-in members. Sign in to continue.",
+  gate_cta: "Sign in",
+  gate_dashboard: "Dashboard",
+  gate_profile: "Profile",
+  gate_admin: "Admin console",
 };
