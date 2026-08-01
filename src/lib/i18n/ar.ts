@@ -1924,4 +1924,12 @@ export const ar: Dict = {
   guide_mrf_memory_t: "الذاكرة",
   guide_mrf_memory_d: "معروف يتذكّر جلساتك وقراراتك السابقة ليبني عليها بدل أن يبدأ من الصفر.",
   guide_admin_tab: "الدليل",
+  gate_loading: "جارٍ التحقق من جلستك…",
+  gate_desc: "هذه الصفحة للأعضاء المسجّلين. سجّل الدخول للمتابعة.",
+  gate_cta: "تسجيل الدخول",
+  gate_dashboard: "لوحتي",
+  gate_profile: "الملف الشخصي",
+  gate_admin: "لوحة الإدارة",
+  "auto.workspaces": "مساحات العمل",
+  "auto.new": "جديد",
 };

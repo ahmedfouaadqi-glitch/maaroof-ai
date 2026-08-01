@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { FlaskConical, Loader2, RefreshCw, Play, Check, Network, AlertTriangle } from "lucide-react";
+import { FlaskConical, Loader2, RefreshCw, Play, Check, Network, AlertTriangle, ShieldCheck } from "lucide-react";
+import { QUALITY_REGISTER, qualityCounts, type L3 } from "@/lib/quality-register";
+
 import { toast } from "sonner";
 import {
   getRealityLab,
@@ -275,6 +277,7 @@ export function RealityLabSection() {
 
       {tab === "audit" && (
         <div className="space-y-3">
+          <QualityRegisterPanel />
           {!audit && (
             <div className="p-6 text-center">
               <Loader2 className="size-4 animate-spin inline" />
@@ -283,6 +286,7 @@ export function RealityLabSection() {
           {audit && (
             <>
               <div className="rounded-2xl border border-border/60 bg-card/50 p-3 text-[11px] leading-relaxed">{audit.summary}</div>
+
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <Stat label={t("auto.readiness")} value={`${audit.readiness.score}%`} />
                 <Stat label={t("auto.coverage")} value={`${audit.coverage}%`} />
@@ -339,6 +343,61 @@ export function RealityLabSection() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Continuous quality register — audit findings tracked to verification. */
+function QualityRegisterPanel() {
+  const { lang } = useI18n();
+  const L = (x: L3) => x[(lang === "en" || lang === "ku" ? lang : "ar") as keyof L3];
+  const counts = qualityCounts();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const labels =
+    lang === "en"
+      ? { title: "Quality register", resolved: "Resolved", open: "Open", accepted: "Accepted", cause: "Root cause", impact: "Impact", fix: "Fix", verify: "Verification" }
+      : lang === "ku"
+        ? { title: "تۆمارى جۆرى", resolved: "چارەسەرکراو", open: "کراوە", accepted: "پەسەندکراو", cause: "هۆکار", impact: "کاریگەری", fix: "چارەسەر", verify: "پشکنین" }
+        : { title: "سجل الجودة", resolved: "مُعالَجة", open: "مفتوحة", accepted: "مقبولة", cause: "السبب الجذري", impact: "الأثر", fix: "الإصلاح", verify: "التحقق" };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/50 p-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+        <ShieldCheck className="size-3 text-primary" /> {labels.title}
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${TONE.done}`}>{labels.resolved}: {counts.resolved}</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${TONE.medium}`}>{labels.open}: {counts.open}</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${TONE.low}`}>{labels.accepted}: {counts.accepted}</span>
+      </div>
+
+      <ul className="space-y-1.5">
+        {QUALITY_REGISTER.map((f) => {
+          const on = openId === f.id;
+          return (
+            <li key={f.id} className="rounded-xl border border-border/50 bg-background/40">
+              <button
+                type="button"
+                onClick={() => setOpenId(on ? null : f.id)}
+                aria-expanded={on}
+                className="flex w-full flex-wrap items-center gap-2 p-2 text-start text-[11px]"
+              >
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] ${TONE[f.severity]}`}>{f.severity}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] ${f.status === "resolved" ? TONE.done : f.status === "open" ? TONE.medium : TONE.low}`}>
+                  {f.status === "resolved" ? labels.resolved : f.status === "open" ? labels.open : labels.accepted}
+                </span>
+                <span className="flex-1 font-medium">{L(f.title)}</span>
+              </button>
+              {on && (
+                <dl className="space-y-1 border-t border-border/50 p-2 text-[11px] leading-relaxed">
+                  <div><dt className="inline font-semibold text-muted-foreground">{labels.cause}: </dt><dd className="inline">{L(f.cause)}</dd></div>
+                  <div><dt className="inline font-semibold text-muted-foreground">{labels.impact}: </dt><dd className="inline">{L(f.impact)}</dd></div>
+                  <div><dt className="inline font-semibold text-muted-foreground">{labels.fix}: </dt><dd className="inline">{L(f.fix)}</dd></div>
+                  <div><dt className="inline font-semibold text-muted-foreground">{labels.verify}: </dt><dd className="inline">{L(f.verification)}</dd></div>
+                </dl>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

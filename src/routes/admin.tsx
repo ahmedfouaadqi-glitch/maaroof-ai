@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
+import { AuthGate } from "@/components/AuthGate";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Users, Activity, Bell, Crown, Check, X, ShieldPlus, ShieldMinus, Bot, KeyRound as Lock, Smartphone, Pencil, KeySquare } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
@@ -72,7 +74,7 @@ function AdminPage() {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/admin" } });
   }, [loading, user, navigate]);
 
-  if (loading || !user) return <Center><Loader2 className="size-8 animate-spin text-primary" /></Center>;
+  if (loading || !user) return <AuthGate state={loading ? "loading" : "signed-out"} title={t("gate_admin")} redirect="/admin" />;
   if (!isAdmin) return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -92,7 +94,7 @@ function AdminPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-bold text-gradient">{t("admin_title")}</h1>
         </div>
@@ -152,7 +154,7 @@ function AdminPage() {
         {activeSub === "health" && <SystemHealthTab />}
         {activeSub === "maaroof" && <MaaroofAdminTab />}
         {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
-      </div>
+      </main>
     </div>
   );
 }

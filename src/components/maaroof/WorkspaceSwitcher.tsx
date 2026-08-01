@@ -81,9 +81,10 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
   return (
     <div className="rounded-lg border bg-card p-3 space-y-2">
       <h2 className="flex items-center justify-between gap-2 font-semibold text-base m-0">
-        <span className="flex items-center gap-2"><Building2 className="w-4 h-4" /> مساحات العمل</span>
-        <button onClick={() => setShowForm((v) => !v)} className="text-xs text-primary hover:underline flex items-center gap-1"><Plus className="w-3 h-3" /> جديد</button>
+        <span className="flex items-center gap-2"><Building2 className="w-4 h-4" /> {t("auto.workspaces")}</span>
+        <button onClick={() => setShowForm((v) => !v)} className="text-xs text-primary hover:underline flex items-center gap-1"><Plus className="w-3 h-3" /> {t("auto.new")}</button>
       </h2>
+
 
       {showForm && (
         <div className="space-y-2 p-2 rounded border bg-background/50">
@@ -97,7 +98,7 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowForm(false)} className="text-xs px-2 py-1 rounded hover:bg-muted">{t("auto.cancel")}</button>
             <button onClick={submit} disabled={!name.trim() || creating} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-1">
-              {creating && <Loader2 className="w-3 h-3 animate-spin" />} حفظ
+              {creating && <Loader2 className="w-3 h-3 animate-spin" />} {t("auto.save")}
             </button>
           </div>
         </div>

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
+import { AuthGate } from "@/components/AuthGate";
+
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
 const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: n.ar, en: n.en }));
@@ -163,18 +165,14 @@ function MaaroofPage() {
     });
   }
 
-  if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
-  if (!user) return (
-    <div className="min-h-screen">
-      <SiteHeader />
-      <div className="max-w-xl mx-auto p-8 text-center">
-        <Bot className="w-12 h-12 mx-auto mb-4 text-primary" />
-        <h1 className="text-2xl font-bold mb-2">{t("auto.maaroof_smart_agent")}</h1>
-        <p className="mb-4 text-muted-foreground">{t("auto.please_login_to_use_maaroof")}</p>
-        <Link to="/auth" className="px-4 py-2 bg-primary text-primary-foreground rounded-md">{t("auto.login_2")}</Link>
-      </div>
-    </div>
+  if (loading || !user) return (
+    <AuthGate
+      state={loading ? "loading" : "signed-out"}
+      title={t("auto.maaroof_smart_agent")}
+      redirect="/maaroof"
+    />
   );
+
 
   const totalUsd = events.reduce((s, e) => e.type === "done" ? s + (e.data?.totalUsd || 0) : s, 0);
   const stepsCount = events.filter((e) => e.type === "tool_call").length;
