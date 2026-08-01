@@ -50,6 +50,7 @@ import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
+import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth/$provider/callback'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -258,6 +259,12 @@ const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
   path: '/api/public/brand/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOauthProviderCallbackRoute =
+  ApiPublicOauthProviderCallbackRouteImport.update({
+    id: '/api/public/oauth/$provider/callback',
+    path: '/api/public/oauth/$provider/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -344,6 +352,7 @@ export interface FileRoutesByTo {
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -388,6 +397,7 @@ export interface FileRoutesById {
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -433,6 +443,7 @@ export interface FileRouteTypes {
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
     | '/api/public/telegram/webhook'
+    | '/api/public/oauth/$provider/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -476,6 +487,7 @@ export interface FileRouteTypes {
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
     | '/api/public/telegram/webhook'
+    | '/api/public/oauth/$provider/callback'
   id:
     | '__root__'
     | '/'
@@ -519,6 +531,7 @@ export interface FileRouteTypes {
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
     | '/api/public/telegram/webhook'
+    | '/api/public/oauth/$provider/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -559,6 +572,7 @@ export interface RootRouteChildren {
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
+  ApiPublicOauthProviderCallbackRoute: typeof ApiPublicOauthProviderCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -850,6 +864,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBrandSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/oauth/$provider/callback': {
+      id: '/api/public/oauth/$provider/callback'
+      path: '/api/public/oauth/$provider/callback'
+      fullPath: '/api/public/oauth/$provider/callback'
+      preLoaderRoute: typeof ApiPublicOauthProviderCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -916,6 +937,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
+  ApiPublicOauthProviderCallbackRoute: ApiPublicOauthProviderCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

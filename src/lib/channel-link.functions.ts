@@ -237,13 +237,13 @@ export const updateChannelOwner = createServerFn({ method: "POST" })
     return { id: x.id, ownerType: x.ownerType, ownerName: (x.ownerName || "").slice(0, 120) };
   })
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: Record<string, any> = {};
     if (data.ownerType) patch.owner_type = data.ownerType;
     if (data.ownerName) patch.owner_name = data.ownerName;
     if (!Object.keys(patch).length) return { ok: true };
     await supabaseAdmin
       .from("publish_channels")
-      .update(patch)
+      .update(patch as any)
       .eq("id", data.id)
       .eq("user_id", context.userId);
     return { ok: true };

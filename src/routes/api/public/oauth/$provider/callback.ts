@@ -81,7 +81,7 @@ export const Route = createFileRoute("/api/public/oauth/$provider/callback")({
                   extra: a.extra || {},
                   sealedToken: a.token ? sealConfig({ access_token: a.token }) : null,
                 })),
-              },
+              } as any,
             })
             .eq("id", row.id);
 
