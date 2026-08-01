@@ -62,6 +62,7 @@ const HOWTO_KEY: Record<ToolKey, string> = {
   "agent.command": "guide_how_agent_command",
   "agent.run_targets": "guide_how_agent_targets",
   "agent.visibility": "guide_how_agent_visibility",
+  teach_space: "guide_how_teach_space",
 };
 
 function GuidePage() {

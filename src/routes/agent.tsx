@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.functions";
 import { ChannelsPanel } from "@/components/ChannelsPanel";
 import { ApprovalQueue } from "@/components/ApprovalQueue";
+import { KnowledgeSpaces } from "@/components/agent/KnowledgeSpaces";
 import { NotifyOnboardModal } from "@/components/NotifyOnboardModal";
 
 import type { ExportPayload } from "@/lib/exports";
@@ -417,6 +418,7 @@ function AgentPage() {
 
         <ChannelsPanel onChanged={load} />
         <ApprovalQueue />
+        <KnowledgeSpaces userId={user?.id ?? null} />
 
 
 

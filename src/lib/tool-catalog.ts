@@ -29,7 +29,8 @@ export type ToolKey =
   | "maaroof"
   | "agent.command"
   | "agent.run_targets"
-  | "agent.visibility";
+  | "agent.visibility"
+  | "teach_space";
 
 /**
  * Capability taxonomy — how Maaroof searches for experts.
@@ -263,6 +264,18 @@ export const TOOL_CATALOG: ToolDef[] = [
   { key: "agent.command",      group: "agent", costPerRun: 1, labels: { ar: "أمر مباشر للوكيل",        en: "Agent Command",       ku: "فەرمانی ئاراستە" } },
   { key: "agent.run_targets",  group: "agent", costPerRun: 2, labels: { ar: "تشغيل الأهداف تلقائياً",   en: "Run Targets",         ku: "جێبەجێکردنی ئامانجەکان" } },
   { key: "agent.visibility",   group: "agent", costPerRun: 1, labels: { ar: "فحص الظهور في AI",       en: "AI Visibility",       ku: "پشکنینی دەرکەوتن" } },
+  {
+    // Prompt 22 — Teach Once, Work Forever™ (subscriber add-on inside the agent).
+    key: "teach_space", group: "agent", costPerRun: 3,
+    labels: { ar: "علّمني مرة… أعمل للأبد", en: "Teach Once, Work Forever", ku: "جارێک فێرم بکە" },
+    capabilities: ["knowledge_extraction", "knowledge_graph", "memory_learning", "document_analysis", "image_analysis", "reasoning"],
+    strengths: ["multi-format ingestion", "prompt DNA analysis", "institutional knowledge", "sub-agent inheritance"],
+    weaknesses: ["needs owner approval for policies", "quality bound by supplied assets"],
+    preferredModels: ["google/gemini-2.5-pro", "google/gemini-2.5-flash"],
+    costProfile: "heavy",
+    riskLevel: "medium",
+    dna: "Institutional learner: understands the owner's documents, prompts, brand and methodology once, then works from them forever.",
+  },
 ];
 
 export const toolLabel = (key: ToolKey | string, lang: "ar" | "en" | "ku" = "ar") =>

@@ -2171,6 +2171,7 @@ export type Database = {
       }
       knowledge_nodes: {
         Row: {
+          approved: boolean
           confidence: number
           created_at: string
           evidence_score: number
@@ -2184,6 +2185,7 @@ export type Database = {
           reliability: number
           scope: string
           sources: Json
+          space_id: string | null
           status: string
           summary: string | null
           title: string
@@ -2194,6 +2196,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          approved?: boolean
           confidence?: number
           created_at?: string
           evidence_score?: number
@@ -2207,6 +2210,7 @@ export type Database = {
           reliability?: number
           scope?: string
           sources?: Json
+          space_id?: string | null
           status?: string
           summary?: string | null
           title: string
@@ -2217,6 +2221,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          approved?: boolean
           confidence?: number
           created_at?: string
           evidence_score?: number
@@ -2230,6 +2235,7 @@ export type Database = {
           reliability?: number
           scope?: string
           sources?: Json
+          space_id?: string | null
           status?: string
           summary?: string | null
           title?: string
@@ -2239,7 +2245,359 @@ export type Database = {
           version?: number
           workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_nodes_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_space_agents: {
+        Row: {
+          access_level: string
+          agent_id: string | null
+          agent_role: string | null
+          created_at: string
+          id: string
+          inherit: boolean
+          space_id: string
+        }
+        Insert: {
+          access_level?: string
+          agent_id?: string | null
+          agent_role?: string | null
+          created_at?: string
+          id?: string
+          inherit?: boolean
+          space_id: string
+        }
+        Update: {
+          access_level?: string
+          agent_id?: string | null
+          agent_role?: string | null
+          created_at?: string
+          id?: string
+          inherit?: boolean
+          space_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_space_agents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_space_agents_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_space_assets: {
+        Row: {
+          approved: boolean
+          approved_at: string | null
+          classification: Json
+          confidence: number
+          conflicts: Json
+          created_at: string
+          duplicate_of: string | null
+          error: string | null
+          evidence_score: number
+          extracted: Json
+          file_path: string | null
+          id: string
+          kind: string
+          lang: string | null
+          mime_type: string | null
+          needs_approval: boolean
+          nodes_created: number
+          raw_text: string | null
+          reality_score: number
+          size_bytes: number | null
+          source_type: string
+          source_url: string | null
+          space_id: string
+          stage: string
+          stages: Json
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          verification_score: number
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          classification?: Json
+          confidence?: number
+          conflicts?: Json
+          created_at?: string
+          duplicate_of?: string | null
+          error?: string | null
+          evidence_score?: number
+          extracted?: Json
+          file_path?: string | null
+          id?: string
+          kind?: string
+          lang?: string | null
+          mime_type?: string | null
+          needs_approval?: boolean
+          nodes_created?: number
+          raw_text?: string | null
+          reality_score?: number
+          size_bytes?: number | null
+          source_type?: string
+          source_url?: string | null
+          space_id: string
+          stage?: string
+          stages?: Json
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          verification_score?: number
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string | null
+          classification?: Json
+          confidence?: number
+          conflicts?: Json
+          created_at?: string
+          duplicate_of?: string | null
+          error?: string | null
+          evidence_score?: number
+          extracted?: Json
+          file_path?: string | null
+          id?: string
+          kind?: string
+          lang?: string | null
+          mime_type?: string | null
+          needs_approval?: boolean
+          nodes_created?: number
+          raw_text?: string | null
+          reality_score?: number
+          size_bytes?: number | null
+          source_type?: string
+          source_url?: string | null
+          space_id?: string
+          stage?: string
+          stages?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          verification_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_space_assets_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "knowledge_space_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_space_assets_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_space_interviews: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          created_at: string
+          id: string
+          node_id: string | null
+          question: string
+          space_id: string
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          node_id?: string | null
+          question: string
+          space_id: string
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          node_id?: string | null
+          question?: string
+          space_id?: string
+          topic?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_space_interviews_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_space_interviews_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_space_prompts: {
+        Row: {
+          approved: boolean
+          asset_id: string | null
+          body: string
+          created_at: string
+          id: string
+          intent: string | null
+          prompt_dna: Json
+          quality: number
+          space_id: string
+          structure: Json
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          asset_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          intent?: string | null
+          prompt_dna?: Json
+          quality?: number
+          space_id: string
+          structure?: Json
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          asset_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          intent?: string | null
+          prompt_dna?: Json
+          quality?: number
+          space_id?: string
+          structure?: Json
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_space_prompts_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_space_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_space_prompts_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_spaces: {
+        Row: {
+          assets_count: number
+          brand_identity: Json
+          confidence: number
+          created_at: string
+          description: string | null
+          id: string
+          inheritance: Json
+          lang: string
+          metrics: Json
+          name: string
+          nodes_count: number
+          policies: Json
+          space_dna: Json
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          assets_count?: number
+          brand_identity?: Json
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          inheritance?: Json
+          lang?: string
+          metrics?: Json
+          name: string
+          nodes_count?: number
+          policies?: Json
+          space_dna?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          assets_count?: number
+          brand_identity?: Json
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          inheritance?: Json
+          lang?: string
+          metrics?: Json
+          name?: string
+          nodes_count?: number
+          policies?: Json
+          space_dna?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_spaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lab_experiments: {
         Row: {
@@ -4786,6 +5144,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_space: {
+        Args: { _space_id: string; _user_id: string }
+        Returns: boolean
+      }
       charge_tokens: {
         Args: {
           _meta?: Json

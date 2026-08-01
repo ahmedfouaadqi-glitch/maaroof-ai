@@ -311,6 +311,23 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       } catch {}
     }
 
+    // Prompt 22 — inherited institutional knowledge from approved Knowledge Spaces.
+    if (ctx.userId) {
+      try {
+        const { inheritedKnowledgeBlock } = await import("./teaching.server");
+        const inherited = await inheritedKnowledgeBlock({
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId || null,
+        });
+        if (inherited) {
+          learnedBlock += inherited;
+          await ctx.emit("knowledge", { inherited: true });
+        }
+      } catch {}
+    }
+
+
+
     const systemPrompt = `${baseSystemPrompt}${learnedBlock}` + (settings.system_prompt_extra ? `\n\n[Admin guidance]\n${settings.system_prompt_extra}` : "");
 
 
