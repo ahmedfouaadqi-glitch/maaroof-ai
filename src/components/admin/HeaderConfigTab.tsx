@@ -78,7 +78,6 @@ export function HeaderConfigTab() {
 
   const Toggles: { key: keyof HeaderConfig; label: string }[] = [
     { key: "show_pricing", label: L.show_pricing },
-    { key: "show_agent", label: L.show_agent },
     { key: "show_maaroof", label: t("auto.show_maaroof") },
     { key: "show_dashboard", label: L.show_dashboard },
     { key: "show_profile", label: L.show_profile },
