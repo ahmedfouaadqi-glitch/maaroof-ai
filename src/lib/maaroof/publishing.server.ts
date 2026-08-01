@@ -155,29 +155,11 @@ export async function deliverPublication(pub: {
   }
   if (!channel) return { ok: false, error: "channel_not_connected" };
 
-  const cfg = (channel.config as any) || {};
-  const {
-    publishToTelegram, publishToLinkedIn, publishToFacebookPage, publishToInstagram, publishToX,
-  } = await import("@/lib/agent.server");
+  const { channelConfig, publishToSavedChannel } = await import("@/lib/channels/dispatch.server");
+  const cfg = channelConfig(channel);
 
   try {
-    if (channel.kind === "telegram") {
-      const token = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
-      if (!token || !cfg.chat_id) throw new Error("telegram_config_missing");
-      await publishToTelegram(token, cfg.chat_id, text);
-    } else if (channel.kind === "linkedin") {
-      await publishToLinkedIn(text);
-    } else if (channel.kind === "facebook") {
-      if (!cfg.access_token || !cfg.page_id) throw new Error("facebook_config_missing");
-      await publishToFacebookPage(cfg.access_token, cfg.page_id, text);
-    } else if (channel.kind === "instagram") {
-      if (!cfg.access_token || !cfg.ig_user_id) throw new Error("instagram_config_missing");
-      if (!cfg.default_media_url) throw new Error("instagram_needs_image");
-      await publishToInstagram(cfg.access_token, cfg.ig_user_id, text, cfg.default_media_url);
-    } else if (channel.kind === "x") {
-      if (!cfg.bearer) throw new Error("x_config_missing");
-      await publishToX(cfg.bearer, text);
-    } else if (channel.kind === "webhook") {
+    if (channel.kind === "webhook") {
       if (!cfg.url) throw new Error("webhook_config_missing");
       const r = await fetch(cfg.url, {
         method: "POST",
@@ -186,8 +168,9 @@ export async function deliverPublication(pub: {
       });
       if (!r.ok) throw new Error(`webhook_${r.status}`);
     } else {
-      throw new Error("platform_delivery_unsupported");
+      await publishToSavedChannel(channel, text);
     }
+
 
     await db().from("publish_log").insert({
       user_id: pub.user_id, channel_id: channel.id, kind: channel.kind, status: "sent",
