@@ -29,7 +29,8 @@ export type ToolKey =
   | "maaroof"
   | "agent.command"
   | "agent.run_targets"
-  | "agent.visibility";
+  | "agent.visibility"
+  | "teach_space";
 
 /**
  * Capability taxonomy — how Maaroof searches for experts.
