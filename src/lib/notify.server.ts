@@ -66,11 +66,12 @@ export async function notifyUser(
 
     if (channel === "telegram") {
       const { data: ch } = await supabaseAdmin
-        .from("publish_channels").select("config")
+        .from("publish_channels").select("config, token_ciphertext")
         .eq("user_id", userId).eq("kind", "telegram")
         .not("verified_at", "is", null)
         .order("verified_at", { ascending: false }).limit(1).maybeSingle();
-      const cfg = ((ch as any)?.config || {}) as { bot_token?: string; chat_id?: string };
+      const { channelConfig } = await import("@/lib/channels/dispatch.server");
+      const cfg = (ch ? channelConfig(ch as any) : {}) as { bot_token?: string; chat_id?: string };
       const botToken = cfg.bot_token || process.env.TELEGRAM_BOT_TOKEN;
       if (botToken && cfg.chat_id) {
         const body = `<b>${title}</b>\n\n${message}${opts.link ? `\n\n🔗 ${opts.link}` : ""}`;
