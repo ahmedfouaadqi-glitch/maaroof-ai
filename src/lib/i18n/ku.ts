@@ -2002,4 +2002,6 @@ export const ku: Dict = {
   gate_dashboard: "داشبۆردی من",
   gate_profile: "پرۆفایل",
   gate_admin: "پانێڵی بەڕێوەبردن",
+  "auto.workspaces": "شوێنەکانی کار",
+  "auto.new": "نوێ",
 };

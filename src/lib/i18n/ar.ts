@@ -1930,4 +1930,6 @@ export const ar: Dict = {
   gate_dashboard: "لوحتي",
   gate_profile: "الملف الشخصي",
   gate_admin: "لوحة الإدارة",
+  "auto.workspaces": "مساحات العمل",
+  "auto.new": "جديد",
 };

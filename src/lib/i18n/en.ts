@@ -1936,4 +1936,6 @@ export const en: Dict = {
   gate_dashboard: "Dashboard",
   gate_profile: "Profile",
   gate_admin: "Admin console",
+  "auto.workspaces": "Workspaces",
+  "auto.new": "New",
 };
