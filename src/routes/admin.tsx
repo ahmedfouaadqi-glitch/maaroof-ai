@@ -20,6 +20,10 @@ import { AdminFinanceTab } from "@/components/admin/AdminFinanceTab";
 import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
 import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
 import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenceCenter";
+import { AdminGuideTab } from "@/components/admin/AdminGuideTab";
+import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
+import { ADMIN_GROUPS, type L3 } from "@/components/admin/admin-guide-content";
+
 import {
   adminGrantRole, adminRevokeRole, adminPatchProfile,
   adminCreatePlan, adminUpdatePlan, adminDeletePlan,
@@ -52,15 +56,17 @@ export const Route = createFileRoute("/admin")({
   ),
 });
 
-type Tab = "overview" | "users_pricing" | "requests" | "boost" | "content" | "studio" | "header" | "exports" | "contact" | "intelligence" | "insights" | "firecrawl" | "finance" | "health" | "maaroof" | "maaroof_center";
-type UPSub = "users" | "tokens" | "pricing" | "plans" | "agent" | "access";
+type GroupKey = "people" | "content" | "maaroof" | "ops" | "guide";
 
 function AdminPage() {
   const { t, lang } = useI18n();
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>("overview");
-  const [upSub, setUpSub] = useState<UPSub>("users");
+  const [group, setGroup] = useState<GroupKey>("ops");
+  const [sub, setSub] = useState<string>("overview");
+  const L = (x: L3) => x[(lang === "en" || lang === "ku" ? lang : "ar") as keyof L3];
+
+  const openSection = (g: string, s: string) => { setGroup(g as GroupKey); setSub(s); };
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/admin" } });
@@ -80,35 +86,8 @@ function AdminPage() {
     </div>
   );
 
-  const tabLabel = (k: Tab) => {
-    if (k === "overview") return t("admin_overview" as any) || "Overview";
-    if (k === "users_pricing") return lang === "ar" ? "المستخدمون والصلاحيات والأسعار" : lang === "ku" ? "بەکارهێنەران، دەسەڵات و نرخەکان" : "Users, Permissions & Pricing";
-    if (k === "requests") return t("admin_requests" as any) || "Requests";
-    if (k === "boost") return "Brand Boost";
-    if (k === "content") return "Content";
-    if (k === "studio") return lang === "ar" ? "محرر المحتوى" : lang === "ku" ? "ستۆدیۆی ناوەڕۆک" : "Content Studio";
-    if (k === "header") return lang === "ar" ? "الهيدر والروابط" : lang === "ku" ? "هێدەر و بەستەرەکان" : "Header & Nav";
-    if (k === "exports") return lang === "ar" ? "التصدير" : lang === "ku" ? "هەناردەکردن" : "Exports";
-    if (k === "contact") return lang === "ar" ? "معلومات الاتصال" : lang === "ku" ? "زانیاری پەیوەندی" : "Contact Info";
-    if (k === "intelligence") return lang === "ar" ? "ذكاء المستخدمين" : lang === "ku" ? "زیرەکی بەکارهێنەران" : "User Intelligence";
-    if (k === "insights") return lang === "ar" ? "رؤى الإدراك" : lang === "ku" ? "تێگەیشتنەکان" : "Cognitive Insights";
-    if (k === "firecrawl") return lang === "ar" ? "مراقبة Firecrawl" : lang === "ku" ? "چاودێری Firecrawl" : "Firecrawl";
-    if (k === "finance") return lang === "ar" ? "المالية الموحّدة" : lang === "ku" ? "دارایی یەکگرتوو" : "Finance";
-    if (k === "health") return lang === "ar" ? "صحة النظام" : lang === "ku" ? "تەندروستی" : "System Health";
-    if (k === "maaroof") return lang === "ar" ? "معروف ✨" : lang === "ku" ? "ماعروف ✨" : "Maaroof ✨";
-    if (k === "maaroof_center") return lang === "ar" ? "مركز ذكاء معروف 🧠" : lang === "ku" ? "ناوەندی زیرەکی ماعروف 🧠" : "Intelligence Center 🧠";
-    return k;
-  };
-
-  const subLabel = (k: UPSub) => {
-    if (k === "users") return lang === "ar" ? "المستخدمون والتوكنات" : lang === "ku" ? "بەکارهێنەران و تۆکن" : "Users & Tokens";
-    if (k === "tokens") return t("admin_tokens") || "Tokens";
-    if (k === "pricing") return lang === "ar" ? "شبكة الخطط × الأدوات" : lang === "ku" ? "تۆڕی پلان × ئامراز" : "Plans × Tools Matrix";
-    if (k === "plans") return t("admin_plans" as any) || "Plans";
-    if (k === "agent") return t("nav_agent") || "Agent";
-    if (k === "access") return t("admin_access") || "Access";
-    return k;
-  };
+  const activeGroup = ADMIN_GROUPS.find((g) => g.key === group) || null;
+  const activeSub = activeGroup?.subs.some((s) => s.key === sub) ? sub : activeGroup?.subs[0]?.key || "";
 
   return (
     <div className="min-h-screen">
@@ -118,55 +97,66 @@ function AdminPage() {
           <h1 className="font-display text-3xl font-bold text-gradient">{t("admin_title")}</h1>
         </div>
 
-
+        {/* Groups */}
         <div className="mb-4 flex flex-wrap gap-2 rounded-full border border-border bg-card/60 p-1">
-          {(["overview","users_pricing","requests","boost","content","studio","header","exports","contact","intelligence","insights","firecrawl","finance","health","maaroof","maaroof_center"] as Tab[]).map((k) => (
-            <button key={k} onClick={() => setTab(k)}
+          {ADMIN_GROUPS.map((g) => (
+            <button key={g.key} onClick={() => openSection(g.key, g.subs[0].key)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                tab === k ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                group === g.key ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {tabLabel(k)}
+              {L(g.label)}
             </button>
           ))}
+          <button onClick={() => setGroup("guide")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              group === "guide" ? "bg-gradient-to-r from-primary to-accent text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}>
+            {t("guide_admin_tab")}
+          </button>
         </div>
 
-        {tab === "users_pricing" && (
+        {/* Sub-sections of the active group */}
+        {activeGroup && (
           <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-border/60 bg-background/40 p-1">
-            {(["users","pricing","plans","agent","access"] as UPSub[]).map((k) => (
-              <button key={k} onClick={() => setUpSub(k)}
+            {activeGroup.subs.map((s) => (
+              <button key={s.key} onClick={() => setSub(s.key)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                  upSub === k ? "bg-primary/15 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
+                  activeSub === s.key ? "border border-primary/30 bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}>
-                {subLabel(k)}
+                {L(s.label)}
               </button>
             ))}
           </div>
         )}
 
-        {tab === "overview" && <Overview />}
-        {tab === "users_pricing" && (upSub === "users" || upSub === "tokens") && <AdminTokensPanel />}
-        {tab === "users_pricing" && upSub === "pricing" && <AdminPlansMatrixPanel />}
-        {tab === "users_pricing" && upSub === "plans" && <PlansTab />}
-        {tab === "users_pricing" && upSub === "agent" && <AgentTab />}
-        {tab === "users_pricing" && upSub === "access" && <AccessTab />}
-        {tab === "requests" && <RequestsTab />}
-        {tab === "boost" && <BoostTab />}
-        {tab === "content" && <ContentTab />}
-        {tab === "studio" && <ContentStudioTab />}
-        {tab === "header" && <HeaderConfigTab />}
-        {tab === "exports" && <ExportConfigTab />}
-        {tab === "contact" && <ContactInfoTab />}
-        {tab === "intelligence" && <UserIntelligenceTab />}
-        {tab === "insights" && <CognitiveInsightsTab />}
-        {tab === "firecrawl" && <FirecrawlMonitorTab />}
-        {tab === "finance" && <AdminFinanceTab />}
-        {tab === "health" && <SystemHealthTab />}
-        {tab === "maaroof" && <MaaroofAdminTab />}
-        {tab === "maaroof_center" && <MaaroofIntelligenceCenter />}
+        {activeGroup && <AdminSectionHelp subKey={activeSub} onOpenGuide={() => setGroup("guide")} />}
+
+        {group === "guide" && <AdminGuideTab onJump={openSection} />}
+        {activeSub === "overview" && <Overview />}
+        {activeSub === "users" && <AdminTokensPanel />}
+        {activeSub === "pricing" && <AdminPlansMatrixPanel />}
+        {activeSub === "plans" && <PlansTab />}
+        {activeSub === "agent" && <AgentTab />}
+        {activeSub === "access" && <AccessTab />}
+        {activeSub === "finance" && <AdminFinanceTab />}
+        {activeSub === "requests" && <RequestsTab />}
+        {activeSub === "boost" && <BoostTab />}
+        {activeSub === "content" && <ContentTab />}
+        {activeSub === "studio" && <ContentStudioTab />}
+        {activeSub === "header" && <HeaderConfigTab />}
+        {activeSub === "exports" && <ExportConfigTab />}
+        {activeSub === "contact" && <ContactInfoTab />}
+        {activeSub === "intelligence" && <UserIntelligenceTab />}
+        {activeSub === "insights" && <CognitiveInsightsTab />}
+        {activeSub === "firecrawl" && <FirecrawlMonitorTab />}
+        {activeSub === "health" && <SystemHealthTab />}
+        {activeSub === "maaroof" && <MaaroofAdminTab />}
+        {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
       </div>
     </div>
   );
 }
+
 
 
 function Center({ children }: { children: React.ReactNode }) {
