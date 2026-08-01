@@ -56,7 +56,7 @@ export function SiteHeader() {
           </div>
         </Link>
         <nav className="hidden items-center gap-5 text-sm text-muted-foreground lg:flex xl:gap-6">
-          <Link to="/guide" className="hover:text-foreground">{t("nav_how")}</Link>
+          {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_how")}</Link>}
           {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
           {auth?.user && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
           {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/maaroof" className="font-semibold text-primary hover:text-foreground">{t("auto.maaroof")}</Link>}
