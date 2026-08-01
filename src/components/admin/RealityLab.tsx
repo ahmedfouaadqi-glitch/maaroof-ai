@@ -275,6 +275,7 @@ export function RealityLabSection() {
 
       {tab === "audit" && (
         <div className="space-y-3">
+          <QualityRegisterPanel />
           {!audit && (
             <div className="p-6 text-center">
               <Loader2 className="size-4 animate-spin inline" />
@@ -283,6 +284,7 @@ export function RealityLabSection() {
           {audit && (
             <>
               <div className="rounded-2xl border border-border/60 bg-card/50 p-3 text-[11px] leading-relaxed">{audit.summary}</div>
+
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <Stat label={t("auto.readiness")} value={`${audit.readiness.score}%`} />
                 <Stat label={t("auto.coverage")} value={`${audit.coverage}%`} />
