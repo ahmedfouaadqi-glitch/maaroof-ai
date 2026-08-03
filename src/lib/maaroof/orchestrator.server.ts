@@ -57,6 +57,47 @@ function toolPath(toolKey: string): string | null {
   return map[toolKey] || null;
 }
 
+// Fields every tool endpoint expects as a plain string. The planner is an LLM
+// and often emits arrays/objects here, which used to crash the endpoint (500).
+const TEXT_FIELDS = new Set([
+  "brand", "brand_name", "business_name", "project_name", "app_name", "app_url",
+  "keywords", "brand_keywords", "sector", "city", "country", "text", "url",
+  "source_url", "description", "sourceText", "topic", "goal", "kind", "action",
+]);
+// Fields that must stay arrays of strings.
+const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls"]);
+
+function flatten(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) return v.map(flatten).filter(Boolean).join(", ");
+  try { return JSON.stringify(v); } catch { return String(v); }
+}
+
+/** Coerce planner-produced step input into the shapes tool endpoints expect. */
+export function normalizeToolInput(input: any): Record<string, any> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (v == null) continue;
+    if (TEXT_FIELDS.has(k)) {
+      const s = flatten(v);
+      if (s) out[k] = s;
+      continue;
+    }
+    if (LIST_FIELDS.has(k)) {
+      const list = (Array.isArray(v) ? v.map(flatten) : flatten(v).split(/[\n,؛;|]+/))
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (list.length) out[k] = list;
+      continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
 function toolsDescription(): string {
   return TOOL_CATALOG.filter((t) => t.group === "tools")
     .map((t) => `- ${t.key}: ${t.labels.en}`)
