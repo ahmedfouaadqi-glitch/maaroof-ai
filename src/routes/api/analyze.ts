@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asText } from "@/lib/input-coerce";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -69,7 +70,7 @@ export const Route = createFileRoute("/api/analyze")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
-          const text = (body.text || "").trim();
+          const text = asText(body.text, 200000);
           const lang = body.lang || "en";
           const scope = body.scope;
           const scopeKey = scope ? `${scope.scope}:${scope.country || ""}:${scope.city || ""}` : "iq";

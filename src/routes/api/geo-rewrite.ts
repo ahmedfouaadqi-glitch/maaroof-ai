@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asText } from "@/lib/input-coerce";
 
 type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -53,7 +54,7 @@ export const Route = createFileRoute("/api/geo-rewrite")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
-          const text = (body.text || "").trim();
+          const text = asText(body.text, 200000);
           const lang = body.lang || "ar";
           const scope = body.scope;
           if (text.length < 10) return Response.json({ error: "text_too_short" }, { status: 400 });

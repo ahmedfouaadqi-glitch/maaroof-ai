@@ -5,6 +5,7 @@ import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asText } from "@/lib/input-coerce";
 
 type Body = {
   brand_name: string;
@@ -111,7 +112,7 @@ export const Route = createFileRoute("/api/applied-ranking")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
-          const brand = (body.brand_name || "").trim();
+          const brand = asText(body.brand_name, 200);
           if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });
 
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
