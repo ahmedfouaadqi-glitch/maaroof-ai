@@ -5,6 +5,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asText } from "@/lib/input-coerce";
 
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
@@ -148,8 +149,8 @@ export const Route = createFileRoute("/api/visibility")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
-          const brand = (body.brand || "").trim();
-          const keywords = (body.keywords || "").trim();
+          const brand = asText(body.brand, 200);
+          const keywords = asText(body.keywords, 400);
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
 
           if (brand.length < 2) {

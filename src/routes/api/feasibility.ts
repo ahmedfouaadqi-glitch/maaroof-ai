@@ -5,6 +5,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asText } from "@/lib/input-coerce";
 
 
 type Body = {
@@ -137,7 +138,7 @@ export const Route = createFileRoute("/api/feasibility")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
-          const project = (body.project_name || "").trim();
+          const project = asText(body.project_name, 200);
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
 
           if (project.length < 2) return Response.json({ error: "project_required" }, { status: 400 });

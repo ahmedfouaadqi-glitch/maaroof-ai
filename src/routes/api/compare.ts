@@ -9,6 +9,7 @@ import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asList, asText } from "@/lib/input-coerce";
 
 
 type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
@@ -70,9 +71,9 @@ export const Route = createFileRoute("/api/compare")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
-          const brand = (body.brand || "").trim();
-          const competitors = (body.competitors || []).map((c) => String(c || "").trim()).filter(Boolean).slice(0, 4);
-          const keywords = (body.keywords || "").trim();
+          const brand = asText(body.brand, 200);
+          const competitors = asList(body.competitors, 4);
+          const keywords = asText(body.keywords, 400);
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
 
           if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });

@@ -6,6 +6,7 @@ import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { slugify } from "@/lib/crawler-bots";
 import { pingIndexNow } from "@/lib/indexnow.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { asText } from "@/lib/input-coerce";
 
 const AUTHORITY_COST = 3;
 
@@ -74,9 +75,9 @@ export const Route = createFileRoute("/api/brand-authority")({
 
           const body = await request.json();
 
-          const brand_name = String(body?.brand_name || "").trim();
-          const brand_keywords = String(body?.brand_keywords || "").trim();
-          const source_url = String(body?.source_url || "").trim();
+          const brand_name = asText(body?.brand_name, 200);
+          const brand_keywords = asText(body?.brand_keywords, 400);
+          const source_url = asText(body?.source_url, 500);
           const shouldPing = Boolean(body?.ping);
           const lang = String(body?.lang || "en");
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
