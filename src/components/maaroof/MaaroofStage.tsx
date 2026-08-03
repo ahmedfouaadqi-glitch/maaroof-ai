@@ -194,21 +194,23 @@ function PhasePill({ phase, running }: { phase?: string; running: boolean }) {
 
 /** Part 7 — Strategic Time Engine verdict chip. */
 function TimingChip({ events }: { events: StageEvent[] }) {
-  const t = [...events].reverse().find((e) => e.type === "timing")?.data as any;
-  if (!t?.verdict) return null;
+  const { t } = useI18n();
+  const timing = [...events].reverse().find((e) => e.type === "timing")?.data as any;
+  if (!timing?.verdict) return null;
   const LABEL: Record<string, string> = {
     execute_now: t("auto.execute_now"), delay: t("auto.postpone"), schedule: t("auto.scheduling"), observe: t("auto.monitoring"), cancel: t("auto.cancel"),
   };
-  const tone = t.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
-    : t.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
+  const tone = timing.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
+    : timing.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
     : "border-amber-500/40 bg-amber-500/5 text-amber-500";
   return (
     <div className={`rounded-lg border p-3 text-xs ${tone}`}>
-      <div className="font-semibold mb-1">قرار التوقيت: {LABEL[t.verdict] || t.verdict}</div>
-      {t.reason && <div className="text-muted-foreground">{t.reason}</div>}
+      <div className="font-semibold mb-1">قرار التوقيت: {LABEL[timing.verdict] || timing.verdict}</div>
+      {timing.reason && <div className="text-muted-foreground">{timing.reason}</div>}
     </div>
   );
 }
+
 
 /** Part 8 — Constitutional compliance (30 Laws of Cognitive Intelligence). */
 function ComplianceCard({ events }: { events: StageEvent[] }) {
