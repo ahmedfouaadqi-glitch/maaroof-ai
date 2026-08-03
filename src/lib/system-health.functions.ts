@@ -38,6 +38,10 @@ export type HealthSnapshot = {
   unmeteredTools: { tool_key: string; rows: number; last_seen: string | null }[];
   toolsMissingInstrumentation: string[];
   unpriced402: { tool_key: string; count: number }[];
+  pricingGaps: {
+    missingFromCatalog: string[];
+    planGaps: { plan: string; missing: string[]; zeroPriced: string[] }[];
+  };
   firecrawlSpike: { day: string; units: number; avg7d: number; ratio: number } | null;
   profilesNoMetering: number;
   recentErrors: { action: string; count: number }[];
@@ -160,6 +164,36 @@ export const getSystemHealth = createServerFn({ method: "POST" })
       .is("tokens_monthly_limit", null)
       .eq("tokens_balance", 0);
 
+    // 4b) Pricing gaps: every catalog tool must be priced in every active plan,
+    // otherwise its users hit the "unpriced" 402 wall at runtime.
+    const { TOOL_CATALOG } = await import("@/lib/tool-catalog");
+    const catalogKeys = TOOL_CATALOG.map((t) => t.key as string);
+    const { data: catRows } = await supabaseAdmin
+      .from("tool_pricing_catalog").select("tool_key");
+    const catalogPriced = new Set(((catRows || []) as any[]).map((r) => r.tool_key));
+    const { data: activePlans } = await supabaseAdmin
+      .from("subscription_plans").select("id, name").eq("active", true);
+    const { data: accessRows } = await supabaseAdmin
+      .from("tool_plan_access").select("plan_id, tool_key, enabled, tokens_per_use, usd_per_use");
+    const accessMap = new Map<string, any>();
+    for (const r of ((accessRows || []) as any[])) accessMap.set(`${r.plan_id}::${r.tool_key}`, r);
+
+    const missingFromCatalog = catalogKeys.filter((k) => !catalogPriced.has(k));
+    const planGaps: { plan: string; missing: string[]; zeroPriced: string[] }[] = [];
+    for (const p of ((activePlans || []) as any[])) {
+      const missing: string[] = [];
+      const zeroPriced: string[] = [];
+      for (const k of catalogKeys) {
+        const row = accessMap.get(`${p.id}::${k}`);
+        if (!row) missing.push(k);
+        else if (row.enabled && !Number(row.tokens_per_use) && !Number(row.usd_per_use)) zeroPriced.push(k);
+      }
+      if (missing.length || zeroPriced.length) planGaps.push({ plan: p.name, missing, zeroPriced });
+    }
+    const pricingGaps = { missingFromCatalog, planGaps };
+
+
+
     const total = metered + unmetered;
 
     // 5) Maaroof orchestrator stats (last 7d)
@@ -201,6 +235,7 @@ export const getSystemHealth = createServerFn({ method: "POST" })
       unmeteredTools,
       toolsMissingInstrumentation,
       unpriced402,
+      pricingGaps,
       firecrawlSpike,
       profilesNoMetering: Number(profilesNoMetering) || 0,
       recentErrors,

@@ -35,6 +35,8 @@ export function SystemHealthTab() {
     data.unmeteredTools.length +
     data.toolsMissingInstrumentation.length +
     data.unpriced402.length +
+    data.pricingGaps.missingFromCatalog.length +
+    data.pricingGaps.planGaps.length +
     (data.firecrawlSpike ? 1 : 0);
 
   return (
@@ -157,6 +159,49 @@ export function SystemHealthTab() {
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
           {t("الإصلاح: حدّد سعر الأداة في «الخطط × الأدوات» أو عبر تجاوز يدوي للمستخدم.", "Fix: set a price in Plans × Tools matrix or per-user override.", "ڕاستکردنەوە")}
+        </p>
+      </Section>
+
+      {/* Pricing gaps — tools not priced for a plan will 402 at runtime */}
+      <Section
+        title={t("أدوات غير مُسعّرة في الخطط", "Tools not priced in plans", "ئامرازی بێ نرخ")}
+        icon={<AlertTriangle className="size-4 text-warning" />}
+        empty={data.pricingGaps.missingFromCatalog.length === 0 && data.pricingGaps.planGaps.length === 0}
+        emptyText={t("كل الأدوات مُسعّرة في كل الخطط.", "Every tool is priced in every active plan.", "هەموو ئامرازەکان نرخیان هەیە.")}
+      >
+        {data.pricingGaps.missingFromCatalog.length > 0 && (
+          <div className="mb-3">
+            <p className="mb-1 text-xs text-muted-foreground">
+              {t("غير موجودة في كتالوج التسعير", "Missing from pricing catalog", "لە کاتالۆگ نییە")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {data.pricingGaps.missingFromCatalog.map((k) => (
+                <span key={k} className="rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 font-mono text-xs">{k}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="space-y-2">
+          {data.pricingGaps.planGaps.map((g) => (
+            <div key={g.plan} className="rounded-xl border border-border bg-card/40 p-3">
+              <p className="mb-1 text-xs font-semibold">{g.plan}</p>
+              <div className="flex flex-wrap gap-2">
+                {g.missing.map((k) => (
+                  <span key={"m" + k} className="rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-0.5 font-mono text-[11px]">
+                    {k} · {t("مفقودة", "missing", "نەماوە")}
+                  </span>
+                ))}
+                {g.zeroPriced.map((k) => (
+                  <span key={"z" + k} className="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 font-mono text-[11px]">
+                    {k} · {t("سعر صفر", "zero price", "نرخی سفر")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {t("الإصلاح: افتح «الخطط × الأدوات» وحدّد التوكن/السعر لكل أداة مفقودة.", "Fix: open Plans × Tools and set tokens/price for each gap.", "ڕاستکردنەوە: پلان × ئامراز.")}
         </p>
       </Section>
 

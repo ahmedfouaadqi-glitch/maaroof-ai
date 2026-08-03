@@ -27,6 +27,7 @@ export type ToolKey =
   | "brand_authority"
   | "geo_rewrite"
   | "maaroof"
+  | "translate"
   | "agent.command"
   | "agent.run_targets"
   | "agent.visibility"
@@ -101,6 +102,29 @@ export type ToolDef = {
 };
 
 export const TOOL_CATALOG: ToolDef[] = [
+  {
+    // The Maaroof orchestrator itself (POST /api/maaroof). It MUST stay priced
+    // in every plan — it is the product's main entry point, not a side tool.
+    key: "maaroof", group: "tools", costPerRun: 3,
+    labels: { ar: "معروف — المنسّق التنفيذي", en: "Maaroof Orchestrator", ku: "ڕێکخەری معروف" },
+    capabilities: ["decision_making", "planning", "reasoning", "automation"],
+    strengths: ["multi-expert orchestration", "goal decomposition"],
+    weaknesses: ["heavier per run"],
+    preferredModels: ["openai/gpt-5.6-sol"],
+    costProfile: "heavy",
+    riskLevel: "medium",
+    dna: "Executive orchestrator: turns a goal into a supervised multi-expert run.",
+  },
+  {
+    key: "translate", group: "tools", costPerRun: 1,
+    labels: { ar: "الترجمة الذكية", en: "Smart Translate", ku: "وەرگێڕانی زیرەک" },
+    capabilities: ["translation", "localization"],
+    strengths: ["AR/EN/KU localization"],
+    weaknesses: ["short text only"],
+    preferredModels: ["google/gemini-2.5-flash"],
+    costProfile: "light",
+    dna: "Localizer: renders content across Arabic, English and Kurdish.",
+  },
   {
     key: "analyze", group: "tools", costPerRun: 1,
     labels: { ar: "تحليل GEO", en: "GEO Analysis", ku: "شیکاری GEO" },
