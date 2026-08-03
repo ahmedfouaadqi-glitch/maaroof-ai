@@ -34,11 +34,12 @@ type PlanAccess = {
   default_currency: string | null;
 };
 
-const AGENT_ROWS = [
-  { key: "agent.command", group: "agent" as const },
-  { key: "agent.run_targets", group: "agent" as const },
-  { key: "agent.visibility", group: "agent" as const },
-];
+// Agent rows are derived from TOOL_CATALOG so a newly added agent feature
+// (e.g. teach_space) can never end up unpriceable in the admin UI.
+const AGENT_ROWS = TOOL_CATALOG.filter((x) => x.group === "agent").map((x) => ({
+  key: x.key as string,
+  group: "agent" as const,
+}));
 
 const L = {
   ar: { title: "شبكة الخطط × الأدوات", subtitle: "تحكّم بكل ما تقدمه كل خطة من أدوات وميزات الوكيل، والأسعار لكل استخدام بأي عملة.", newPlan: "خطة جديدة", saveAll: "حفظ الكل", copyFrom: "نسخ من", deletePlan: "حذف الخطة", tools: "الأدوات", agentFeatures: "ميزات الوكيل", enabled: "مفعّلة", tokens: "توكن/مرة", price: "السعر/مرة", name: "اسم الخطة", planPrices: "أسعار الخطة (متعدد العملات)", monthlyTokens: "توكن شهري", create: "إنشاء", cancel: "إلغاء", saved: "تم الحفظ", saveFailed: "فشل الحفظ" },

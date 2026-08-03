@@ -102,8 +102,14 @@ function MaaroofPage() {
         signal: ctl.signal,
       });
       if (!resp.ok || !resp.body) {
-        const j = await resp.json().catch(() => ({}));
-        setEvents((e) => [...e, { type: "error", data: j, t: Date.now() }]);
+        const j: any = await resp.json().catch(() => ({}));
+        // Server returns a trilingual message object — show plain readable text,
+        // never the raw JSON envelope.
+        const readable =
+          (j?.message && (j.message[lang] || j.message.ar || j.message.en)) ||
+          j?.error ||
+          (lang === "en" ? "The request could not be completed." : lang === "ku" ? "داواکاری تەواو نەبوو." : "تعذّر تنفيذ الطلب.");
+        setEvents((e) => [...e, { type: "error", data: { message: readable, reason: j?.reason }, t: Date.now() }]);
         setRunning(false); return;
       }
       const reader = resp.body.getReader();
@@ -176,7 +182,10 @@ function MaaroofPage() {
 
   const totalUsd = events.reduce((s, e) => e.type === "done" ? s + (e.data?.totalUsd || 0) : s, 0);
   const stepsCount = events.filter((e) => e.type === "tool_call").length;
-  const finalText = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
+  const finalEventText = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
+  const lastErrorText = [...events].reverse().find((e) => e.type === "error")?.data?.message as string | undefined;
+  // Show a readable sentence when a run fails instead of leaving the stage blank.
+  const finalText = finalEventText || (lastErrorText ? `⚠️ ${lastErrorText}` : undefined);
 
   const TAB_META: Record<TabKey, { icon: typeof Sparkles; label: string }> = {
     chat: { icon: Sparkles, label: t("mrf_tab_chat") },

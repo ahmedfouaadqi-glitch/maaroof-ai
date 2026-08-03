@@ -662,6 +662,7 @@ export const en: Dict = {
   guide_how_what_if: "Pick a proposed change (Q&A pages, schema, citations, campaign). We simulate before/after on the same scoring model and estimate success probability.",
   guide_how_brand_authority: "We build an authority pack: Wikipedia-style profile, FAQ corpus, Q&A pages, citation seeds. Output is ready to publish.",
   guide_how_geo_rewrite: "Paste a page. We rewrite it for GEO: scannable structure, entity disambiguation, citations and a quote-worthy lede.",
+  guide_how_translate: "Smart translation across Arabic, English and Kurdish while preserving brand tone and terminology.",
   home_tools_title: "Everything you need to win in AI search",
   home_tools_sub: "All tools and the smart agent — usage cost shown per run.",
   print_title: "GEO Visibility Report", print_only_btn: "Print analysis",
