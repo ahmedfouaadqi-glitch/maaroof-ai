@@ -1,11 +1,34 @@
 // MaaroofStage — interactive visual replacement for the raw JSON stream.
-import { useMemo, useState } from "react";
+import { Component, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
+
+/**
+ * Keeps one malformed streamed card from taking down the whole page:
+ * a render error inside the boundary hides that card only, instead of
+ * bubbling to the root error boundary.
+ */
+class CardBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("[MaaroofStage] card render failed", error);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
 
 type Props = {
   events: StageEvent[];
@@ -151,9 +174,10 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
             </div>
           )}
 
-          <ConflictCard events={events} />
-          <TimingChip events={events} />
-          <ComplianceCard events={events} />
+          <CardBoundary><ConflictCard events={events} /></CardBoundary>
+          <CardBoundary><TimingChip events={events} /></CardBoundary>
+          <CardBoundary><ComplianceCard events={events} /></CardBoundary>
+
 
 
           {finalText && (
@@ -165,7 +189,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                 )}
               </div>
               <div className="whitespace-pre-wrap text-sm leading-relaxed">{finalText}</div>
-              <TrustPanel events={events} />
+              <CardBoundary><TrustPanel events={events} /></CardBoundary>
             </div>
           )}
 
@@ -194,21 +218,23 @@ function PhasePill({ phase, running }: { phase?: string; running: boolean }) {
 
 /** Part 7 — Strategic Time Engine verdict chip. */
 function TimingChip({ events }: { events: StageEvent[] }) {
-  const t = [...events].reverse().find((e) => e.type === "timing")?.data as any;
-  if (!t?.verdict) return null;
+  const { t } = useI18n();
+  const timing = [...events].reverse().find((e) => e.type === "timing")?.data as any;
+  if (!timing?.verdict) return null;
   const LABEL: Record<string, string> = {
     execute_now: t("auto.execute_now"), delay: t("auto.postpone"), schedule: t("auto.scheduling"), observe: t("auto.monitoring"), cancel: t("auto.cancel"),
   };
-  const tone = t.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
-    : t.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
+  const tone = timing.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
+    : timing.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
     : "border-amber-500/40 bg-amber-500/5 text-amber-500";
   return (
     <div className={`rounded-lg border p-3 text-xs ${tone}`}>
-      <div className="font-semibold mb-1">قرار التوقيت: {LABEL[t.verdict] || t.verdict}</div>
-      {t.reason && <div className="text-muted-foreground">{t.reason}</div>}
+      <div className="font-semibold mb-1">قرار التوقيت: {LABEL[timing.verdict] || timing.verdict}</div>
+      {timing.reason && <div className="text-muted-foreground">{timing.reason}</div>}
     </div>
   );
 }
+
 
 /** Part 8 — Constitutional compliance (30 Laws of Cognitive Intelligence). */
 function ComplianceCard({ events }: { events: StageEvent[] }) {
@@ -259,9 +285,10 @@ function ConflictCard({ events }: { events: StageEvent[] }) {
 
 /** Part 7 — Trust Engine: why this recommendation. */
 function TrustPanel({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const t = [...events].reverse().find((e) => e.type === "trust")?.data as any;
-  if (!t) return null;
+  const trust = [...events].reverse().find((e) => e.type === "trust")?.data as any;
+  if (!trust) return null;
   const List = ({ label, items }: { label: string; items?: any[] }) =>
     Array.isArray(items) && items.length ? (
       <div className="mb-2">
@@ -274,25 +301,25 @@ function TrustPanel({ events }: { events: StageEvent[] }) {
   return (
     <div className="mt-3 border-t border-border/50 pt-2 text-xs">
       <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground">
-        {open ? t("auto.hide") : t("auto.why_this_recommendation")}{typeof t.confidence === "number" ? ` — ثقة ${t.confidence}%` : ""}
+        {open ? t("auto.hide") : t("auto.why_this_recommendation")}{typeof trust.confidence === "number" ? ` — ثقة ${trust.confidence}%` : ""}
       </button>
       {open && (
         <div className="mt-2 space-y-1">
-          <List label={t("auto.evidence")} items={t.evidence} />
-          <List label={t("auto.assumptions")} items={t.assumptions} />
-          <List label={t("auto.limits")} items={t.limitations} />
-          <List label={t("auto.alternatives")} items={t.alternatives} />
-          <List label={t("auto.risks_2")} items={t.risks} />
-          {t.expected_outcome && (
-            <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{t.expected_outcome}</span></div>
+          <List label={t("auto.evidence")} items={trust.evidence} />
+          <List label={t("auto.assumptions")} items={trust.assumptions} />
+          <List label={t("auto.limits")} items={trust.limitations} />
+          <List label={t("auto.alternatives")} items={trust.alternatives} />
+          <List label={t("auto.risks_2")} items={trust.risks} />
+          {trust.expected_outcome && (
+            <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{trust.expected_outcome}</span></div>
           )}
-          {Array.isArray(t.evidence_graph) && t.evidence_graph.length > 0 && (
+          {Array.isArray(trust.evidence_graph) && trust.evidence_graph.length > 0 && (
             <div className="pt-1">
               <div className="font-semibold text-foreground/80">{t("auto.guides_grid")}</div>
               <div className="flex flex-wrap gap-1 mt-1">
-                {t.evidence_graph.slice(0, 16).map((n: any, i: number) => (
-                  <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n.detail || ""}>
-                    {n.kind}:{n.ref}
+                {trust.evidence_graph.slice(0, 16).map((n: any, i: number) => (
+                  <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n?.detail || ""}>
+                    {n?.kind}:{n?.ref}
                   </span>
                 ))}
               </div>
@@ -303,3 +330,4 @@ function TrustPanel({ events }: { events: StageEvent[] }) {
     </div>
   );
 }
+
