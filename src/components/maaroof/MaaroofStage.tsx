@@ -1,11 +1,34 @@
 // MaaroofStage — interactive visual replacement for the raw JSON stream.
-import { useMemo, useState } from "react";
+import { Component, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
+
+/**
+ * Keeps one malformed streamed card from taking down the whole page:
+ * a render error inside the boundary hides that card only, instead of
+ * bubbling to the root error boundary.
+ */
+class CardBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("[MaaroofStage] card render failed", error);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
 
 type Props = {
   events: StageEvent[];
