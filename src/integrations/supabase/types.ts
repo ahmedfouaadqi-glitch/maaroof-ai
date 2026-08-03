@@ -5235,6 +5235,29 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      profile_privileged_fields_unchanged: {
+        Args: {
+          _daily_analyses_used: number
+          _daily_suggestions_used: number
+          _extra_device_fee_iqd: number
+          _id: string
+          _is_subscribed: boolean
+          _max_devices: number
+          _monthly_analyses_used: number
+          _monthly_suggestions_used: number
+          _per_user_tool_overrides: Json
+          _quota_overrides: Json
+          _subscription_expires_at: string
+          _subscription_tier: string
+          _tokens_balance: number
+          _tokens_daily_limit: number
+          _tokens_monthly_limit: number
+          _tokens_used_month: number
+          _tokens_used_today: number
+          _tool_geo_scopes: Json
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user"
