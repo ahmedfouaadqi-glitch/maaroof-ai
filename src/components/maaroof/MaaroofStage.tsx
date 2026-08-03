@@ -131,7 +131,13 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                       {running_ && <Wrench className="w-4 h-4 text-amber-500 animate-spin" />}
                     </div>
                     {step.reason && <div className="text-muted-foreground line-clamp-2 mb-1">{step.reason}</div>}
-                    {fail && st?.output?.error && <div className="text-destructive line-clamp-2">⚠ {String(st.output.error)}</div>}
+                    {fail && (
+                      <div className="text-destructive line-clamp-3">
+                        ⚠ {String(st?.output?.error || "") === "internal_error"
+                          ? t("maaroof_tool_failed_internal")
+                          : t("maaroof_tool_failed")}
+                      </div>
+                    )}
                   </div>
                 );
               })}
