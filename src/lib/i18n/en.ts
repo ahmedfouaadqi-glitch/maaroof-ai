@@ -1985,4 +1985,6 @@ export const en: Dict = {
   guide_channels_s4: "4) Choose the publishing mode: approval first or auto-publish, and star a default account.",
   guide_channels_s5: "5) Use Test connection anytime, or the trash icon to disconnect an account.",
   guide_channels_security: "Security: we never ask for passwords. Authorization goes through the platform itself and tokens are stored encrypted (AES-256) server-side, never exposed to the browser.",
+  maaroof_tool_failed: "Tool could not run — Maaroof continued with the remaining steps.",
+  maaroof_tool_failed_internal: "Temporary tool error. Maaroof continued with the remaining steps.",
 };
