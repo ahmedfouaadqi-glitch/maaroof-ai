@@ -166,7 +166,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                 )}
               </div>
               <div className="whitespace-pre-wrap text-sm leading-relaxed">{finalText}</div>
-              <TrustPanel events={events} />
+              <CardBoundary><TrustPanel events={events} /></CardBoundary>
             </div>
           )}
 
