@@ -261,9 +261,10 @@ function ConflictCard({ events }: { events: StageEvent[] }) {
 
 /** Part 7 — Trust Engine: why this recommendation. */
 function TrustPanel({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const t = [...events].reverse().find((e) => e.type === "trust")?.data as any;
-  if (!t) return null;
+  const trust = [...events].reverse().find((e) => e.type === "trust")?.data as any;
+  if (!trust) return null;
   const List = ({ label, items }: { label: string; items?: any[] }) =>
     Array.isArray(items) && items.length ? (
       <div className="mb-2">
@@ -276,25 +277,25 @@ function TrustPanel({ events }: { events: StageEvent[] }) {
   return (
     <div className="mt-3 border-t border-border/50 pt-2 text-xs">
       <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground">
-        {open ? t("auto.hide") : t("auto.why_this_recommendation")}{typeof t.confidence === "number" ? ` — ثقة ${t.confidence}%` : ""}
+        {open ? t("auto.hide") : t("auto.why_this_recommendation")}{typeof trust.confidence === "number" ? ` — ثقة ${trust.confidence}%` : ""}
       </button>
       {open && (
         <div className="mt-2 space-y-1">
-          <List label={t("auto.evidence")} items={t.evidence} />
-          <List label={t("auto.assumptions")} items={t.assumptions} />
-          <List label={t("auto.limits")} items={t.limitations} />
-          <List label={t("auto.alternatives")} items={t.alternatives} />
-          <List label={t("auto.risks_2")} items={t.risks} />
-          {t.expected_outcome && (
-            <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{t.expected_outcome}</span></div>
+          <List label={t("auto.evidence")} items={trust.evidence} />
+          <List label={t("auto.assumptions")} items={trust.assumptions} />
+          <List label={t("auto.limits")} items={trust.limitations} />
+          <List label={t("auto.alternatives")} items={trust.alternatives} />
+          <List label={t("auto.risks_2")} items={trust.risks} />
+          {trust.expected_outcome && (
+            <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{trust.expected_outcome}</span></div>
           )}
-          {Array.isArray(t.evidence_graph) && t.evidence_graph.length > 0 && (
+          {Array.isArray(trust.evidence_graph) && trust.evidence_graph.length > 0 && (
             <div className="pt-1">
               <div className="font-semibold text-foreground/80">{t("auto.guides_grid")}</div>
               <div className="flex flex-wrap gap-1 mt-1">
-                {t.evidence_graph.slice(0, 16).map((n: any, i: number) => (
-                  <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n.detail || ""}>
-                    {n.kind}:{n.ref}
+                {trust.evidence_graph.slice(0, 16).map((n: any, i: number) => (
+                  <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n?.detail || ""}>
+                    {n?.kind}:{n?.ref}
                   </span>
                 ))}
               </div>
@@ -305,3 +306,4 @@ function TrustPanel({ events }: { events: StageEvent[] }) {
     </div>
   );
 }
+
