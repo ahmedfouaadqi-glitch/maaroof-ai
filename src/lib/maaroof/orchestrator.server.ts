@@ -850,7 +850,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         continue;
       }
       try {
-        const body = { ...(step.input || {}), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        const body = { ...normalizeToolInput(step.input), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
         const toolTimer = setTimeout(() => toolCtl.abort(), settings.tool_timeout_ms);
         const onAbort = () => toolCtl.abort();
