@@ -17,7 +17,7 @@ export const Route = createFileRoute("/auth")({
       { property: "og:description", content: "Sign in or create your MAAROOF Ai account to access the AI visibility tools, dashboard, and the autonomous brand agent." },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => {
+  validateSearch: (s: Record<string, unknown>): { mode?: "signin" | "signup"; redirect?: string } => {
     const raw = typeof s.redirect === "string" ? s.redirect : "";
     // Only allow internal absolute paths; reject protocol-relative (//evil)
     // and absolute URLs (https://evil) to prevent open-redirect phishing.

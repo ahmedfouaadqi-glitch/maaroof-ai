@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.maaroofai.app",
+      "sha256_cert_fingerprints": [
+        "2B:A0:CD:D5:7F:7C:D9:1D:1C:7B:56:C5:48:6A:99:00:02:2E:C6:26:C8:D9:BA:4B:28:C7:F8:9B:48:B3:F5:BC"
+      ]
+    }
+  }
+]

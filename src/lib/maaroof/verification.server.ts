@@ -11,6 +11,7 @@
 // verdict, so every caller verifies the same way.
 
 import type { RealityAssessment } from "@/lib/maaroof/reality.server";
+import { fromVerdict, verificationGate, type VerificationState } from "@/lib/maaroof/truth";
 
 export const VERIFICATION_STAGES = [
   "collect_evidence",
@@ -30,6 +31,10 @@ export type VerificationVerdict = "verified" | "supported" | "unverified" | "con
 
 export type VerificationResult = {
   verdict: VerificationVerdict;
+  /** Unified production label (VERIFIED / MEASURED / … ) — see truth.ts. */
+  verification_state: VerificationState;
+  /** Whether this result may be presented as fact, and why not when it may not. */
+  gate: { pass: boolean; reasons: string[] };
   score: number;
   reality_state: string | null;
   evidence_count: number;
@@ -148,8 +153,22 @@ export async function verifyReality(input: {
       : `Verification: ${verdict} at ${score}% — ${validation.total} evidence items from ${validation.independent_sources} independent sources, ${validation.agreement}% agreement${validation.contradicting ? `, ${validation.contradicting} contradictions` : ""}${trend ? `, benchmark trend ${trend}` : ""}.`;
   stages.push({ stage: "explain", ok: true, note: explanation });
 
+  const state = fromVerdict(verdict, {
+    independentSources: validation.independent_sources,
+    contradictions: validation.contradicting,
+  });
+  const gate = verificationGate({
+    state,
+    evidenceCount: validation.total,
+    independentSources: validation.independent_sources,
+    contradictions: validation.contradicting,
+    require: "MEASURED",
+  });
+
   return {
     verdict,
+    verification_state: state,
+    gate: { pass: gate.pass, reasons: gate.reasons },
     score,
     reality_state: realityState,
     evidence_count: validation.total,

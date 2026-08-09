@@ -1981,4 +1981,6 @@ export const ar: Dict = {
   guide_channels_security: "الأمان: لا نطلب كلمات المرور. التفويض يمرّ عبر المنصة نفسها، والرموز تُخزَّن مُشفّرة (AES-256) على السيرفر ولا تُعرض في المتصفح أبداً.",
   maaroof_tool_failed: "تعذّر تنفيذ هذه الأداة — تابع معروف بقية الخطوات.",
   maaroof_tool_failed_internal: "خطأ مؤقت في الأداة. تابع معروف بقية الخطوات.",
+  "auto.execution_inspector": "مفتِّش التنفيذ",
+  "auto.all_states": "كل الحالات",
 };

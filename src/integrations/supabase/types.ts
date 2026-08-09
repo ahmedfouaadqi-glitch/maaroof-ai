@@ -1025,6 +1025,7 @@ export type Database = {
           category: string | null
           claim: string | null
           collection_method: string | null
+          confidence: number | null
           contradicts: Json
           created_at: string
           evidence_type: string | null
@@ -1043,6 +1044,7 @@ export type Database = {
           title: string | null
           user_id: string | null
           verification_history: Json
+          verification_state: string | null
           verified_at: string | null
           verified_by: string | null
           weight: number
@@ -1053,6 +1055,7 @@ export type Database = {
           category?: string | null
           claim?: string | null
           collection_method?: string | null
+          confidence?: number | null
           contradicts?: Json
           created_at?: string
           evidence_type?: string | null
@@ -1071,6 +1074,7 @@ export type Database = {
           title?: string | null
           user_id?: string | null
           verification_history?: Json
+          verification_state?: string | null
           verified_at?: string | null
           verified_by?: string | null
           weight?: number
@@ -1081,6 +1085,7 @@ export type Database = {
           category?: string | null
           claim?: string | null
           collection_method?: string | null
+          confidence?: number | null
           contradicts?: Json
           created_at?: string
           evidence_type?: string | null
@@ -1099,6 +1104,7 @@ export type Database = {
           title?: string | null
           user_id?: string | null
           verification_history?: Json
+          verification_state?: string | null
           verified_at?: string | null
           verified_by?: string | null
           weight?: number
@@ -1166,8 +1172,10 @@ export type Database = {
           cost_usd: number
           created_at: string
           description: string | null
+          duration_ms: number | null
           error: string | null
           execution_id: string
+          execution_kind: string | null
           expert_key: string | null
           finished_at: string | null
           id: string
@@ -1177,6 +1185,8 @@ export type Database = {
           measured: Json
           model_key: string | null
           output: Json
+          provider: string | null
+          result_kind: string | null
           seq: number
           started_at: string | null
           status: string
@@ -1184,6 +1194,7 @@ export type Database = {
           tokens: number
           updated_at: string
           user_id: string | null
+          verification_state: string | null
         }
         Insert: {
           agent_key?: string | null
@@ -1192,8 +1203,10 @@ export type Database = {
           cost_usd?: number
           created_at?: string
           description?: string | null
+          duration_ms?: number | null
           error?: string | null
           execution_id: string
+          execution_kind?: string | null
           expert_key?: string | null
           finished_at?: string | null
           id?: string
@@ -1203,6 +1216,8 @@ export type Database = {
           measured?: Json
           model_key?: string | null
           output?: Json
+          provider?: string | null
+          result_kind?: string | null
           seq?: number
           started_at?: string | null
           status?: string
@@ -1210,6 +1225,7 @@ export type Database = {
           tokens?: number
           updated_at?: string
           user_id?: string | null
+          verification_state?: string | null
         }
         Update: {
           agent_key?: string | null
@@ -1218,8 +1234,10 @@ export type Database = {
           cost_usd?: number
           created_at?: string
           description?: string | null
+          duration_ms?: number | null
           error?: string | null
           execution_id?: string
+          execution_kind?: string | null
           expert_key?: string | null
           finished_at?: string | null
           id?: string
@@ -1229,6 +1247,8 @@ export type Database = {
           measured?: Json
           model_key?: string | null
           output?: Json
+          provider?: string | null
+          result_kind?: string | null
           seq?: number
           started_at?: string | null
           status?: string
@@ -1236,6 +1256,7 @@ export type Database = {
           tokens?: number
           updated_at?: string
           user_id?: string | null
+          verification_state?: string | null
         }
         Relationships: [
           {

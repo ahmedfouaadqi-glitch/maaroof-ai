@@ -21,7 +21,7 @@ const TABS = ["chat", "tasks", "channels", "approvals", "knowledge"] as const;
 type TabKey = (typeof TABS)[number];
 
 export const Route = createFileRoute("/maaroof")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: TabKey } => ({
     tab: (TABS as readonly string[]).includes(String(s.tab)) ? (String(s.tab) as TabKey) : ("chat" as TabKey),
   }),
   head: () => ({

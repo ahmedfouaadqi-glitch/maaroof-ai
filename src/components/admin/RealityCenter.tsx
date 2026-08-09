@@ -1,12 +1,13 @@
-// Part 19 — Reality Center admin panel.
+// Part 19 — Reality Center admin panel (Truth Center).
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { Microscope, RefreshCw, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
+import { Microscope, RefreshCw, Loader2, AlertTriangle, ChevronDown, Search } from "lucide-react";
 import { toast } from "sonner";
-import { getRealityCenter, getRealityEvidence } from "@/lib/maaroof-reality.functions";
+import { getRealityCenter, getRealityEvidence, getExecutionInspector } from "@/lib/maaroof-reality.functions";
 import { RealityLabSection } from "./RealityLab";
+import { VERIFICATION_STATES, stateLabel } from "@/lib/maaroof/truth";
 
 const STATE_LABELS: Record<string, string> = {
   verified: "مُتحقَّق",
@@ -52,6 +53,72 @@ function Bar({ label, value }: { label: string; value: number }) {
   );
 }
 
+function ExecutionInspector() {
+  const { t, lang } = useI18n();
+  const load = useServerFn(getExecutionInspector);
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [state, setState] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+
+  const fetchRows = async (s: string) => {
+    setBusy(true);
+    try {
+      const r: any = await load({ data: s ? { state: s, limit: 25 } : { limit: 25 } });
+      setRows(r.executions || []);
+    } catch (e: any) { toast.error(String(e?.message || e)); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { void fetchRows(state); }, [state]);
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/50 p-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="text-[11px] font-semibold text-muted-foreground">{t("auto.execution_inspector")}</div>
+        <select
+          value={state}
+          onChange={(e) => setState(e.target.value)}
+          className="rounded-lg border border-border/60 bg-background px-2 py-1 text-[11px]"
+        >
+          <option value="">{t("auto.all_states")}</option>
+          {VERIFICATION_STATES.map((s) => (
+            <option key={s} value={s}>{stateLabel(s, lang)}</option>
+          ))}
+        </select>
+        {busy ? <Loader2 className="size-3 animate-spin" /> : null}
+      </div>
+      {!rows?.length && !busy && <div className="text-[11px] text-muted-foreground">{t("auto.no_data_yet")}</div>}
+      {(rows || []).map((e: any) => (
+        <div key={e.id} className="rounded-xl border border-border/50 bg-background/40">
+          <button onClick={() => setOpen(open === e.id ? null : e.id)} className="flex w-full items-center gap-2 p-2 text-start">
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{e.mode}</span>
+            <span className="flex-1 truncate text-[11px]">{e.goal}</span>
+            <span className="text-[10px] text-muted-foreground">{e.rollup?.verdict} {e.rollup?.done}/{e.rollup?.total}</span>
+            <ChevronDown className={`size-3 transition ${open === e.id ? "rotate-180" : ""}`} />
+          </button>
+          {open === e.id && (
+            <div className="border-t border-border/50 p-2 space-y-1">
+              {(e.tasks || []).map((tk: any) => (
+                <div key={tk.id} className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] ${STATE_TONE[String(tk.verification_state || "").toLowerCase()] || STATE_TONE.unknown}`}>
+                    {stateLabel(tk.verification_state, lang)}
+                  </span>
+                  <span className="flex-1 truncate">{tk.seq}. {tk.title}</span>
+                  <span className="text-muted-foreground">{tk.execution_kind || "—"}</span>
+                  <span className="text-muted-foreground">{tk.provider || "—"}</span>
+                  <span className="text-muted-foreground">{tk.duration_ms != null ? `${tk.duration_ms}ms` : "—"}</span>
+                  {tk.error ? <span className="text-destructive truncate max-w-[40%]">{tk.error}</span> : null}
+                </div>
+              ))}
+              {!(e.tasks || []).length && <div className="text-[11px] text-muted-foreground">{t("auto.no_data_yet")}</div>}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function RealityCenterSection() {
   const { t } = useI18n();
   const load = useServerFn(getRealityCenter);
@@ -60,6 +127,8 @@ export function RealityCenterSection() {
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<Record<string, any[]>>({});
+  const [stateFilter, setStateFilter] = useState("");
+  const [query, setQuery] = useState("");
 
   const refresh = async () => {
     try { setData(await load()); }
@@ -67,6 +136,17 @@ export function RealityCenterSection() {
     finally { setLoading(false); }
   };
   useEffect(() => { void refresh(); }, []);
+
+  const gaps = useMemo(() => {
+    const all: any[] = data?.gaps || [];
+    const q = query.trim().toLowerCase();
+    return all.filter(
+      (g) =>
+        (!stateFilter || g.reality_state === stateFilter) &&
+        (!q || String(g.subject || "").toLowerCase().includes(q)),
+    );
+  }, [data, stateFilter, query]);
+
 
   const toggle = async (id: string) => {
     if (openId === id) { setOpenId(null); return; }
@@ -123,11 +203,31 @@ export function RealityCenterSection() {
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card/50 p-3 space-y-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-muted-foreground">
           <AlertTriangle className="size-3 text-amber-500" /> {t("auto.verification_gaps")}
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="ms-auto rounded-lg border border-border/60 bg-background px-2 py-1 font-normal"
+          >
+            <option value="">{t("auto.all_states")}</option>
+            {Object.keys(STATE_LABELS).map((s) => (
+              <option key={s} value={s}>{STATE_LABELS[s]}</option>
+            ))}
+          </select>
+          <span className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
+            <Search className="size-3" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("auto.search")}
+              aria-label={t("auto.search")}
+              className="w-28 bg-transparent font-normal outline-none"
+            />
+          </span>
         </div>
-        {!data.gaps?.length && <div className="text-[11px] text-muted-foreground">{t("auto.no_gaps_recorded")}</div>}
-        {(data.gaps || []).map((g: any) => (
+        {!gaps.length && <div className="text-[11px] text-muted-foreground">{t("auto.no_gaps_recorded")}</div>}
+        {gaps.map((g: any) => (
           <div key={g.id} className="rounded-xl border border-border/50 bg-background/40">
             <button onClick={() => toggle(g.id)} className="flex w-full items-center gap-2 p-2 text-start">
               <span className={`rounded-full border px-2 py-0.5 text-[10px] ${STATE_TONE[g.reality_state] || STATE_TONE.unknown}`}>
@@ -166,6 +266,9 @@ export function RealityCenterSection() {
           </div>
         ))}
       </div>
+
+      <ExecutionInspector />
+
 
       <div className="rounded-2xl border border-border/60 bg-card/50 p-3">
         <RealityLabSection />

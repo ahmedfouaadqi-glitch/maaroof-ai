@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as MaaroofRouteImport } from './routes/maaroof'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -80,6 +81,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MaaroofRoute = MaaroofRouteImport.update({
@@ -275,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
+  '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -319,6 +326,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
+  '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -364,6 +372,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
+  '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/maaroof'
+    | '/methodology'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/maaroof'
+    | '/methodology'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -498,6 +509,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/maaroof'
+    | '/methodology'
     | '/pricing'
     | '/privacy'
     | '/profile'
@@ -543,6 +555,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   GuideRoute: typeof GuideRouteWithChildren
   MaaroofRoute: typeof MaaroofRouteWithChildren
+  MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -617,6 +630,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/maaroof': {
@@ -908,6 +928,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   GuideRoute: GuideRouteWithChildren,
   MaaroofRoute: MaaroofRouteWithChildren,
+  MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
@@ -942,13 +963,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
