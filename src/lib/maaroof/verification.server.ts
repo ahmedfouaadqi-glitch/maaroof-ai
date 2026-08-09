@@ -153,8 +153,22 @@ export async function verifyReality(input: {
       : `Verification: ${verdict} at ${score}% — ${validation.total} evidence items from ${validation.independent_sources} independent sources, ${validation.agreement}% agreement${validation.contradicting ? `, ${validation.contradicting} contradictions` : ""}${trend ? `, benchmark trend ${trend}` : ""}.`;
   stages.push({ stage: "explain", ok: true, note: explanation });
 
+  const state = fromVerdict(verdict, {
+    independentSources: validation.independent_sources,
+    contradictions: validation.contradicting,
+  });
+  const gate = verificationGate({
+    state,
+    evidenceCount: validation.total,
+    independentSources: validation.independent_sources,
+    contradictions: validation.contradicting,
+    require: "MEASURED",
+  });
+
   return {
     verdict,
+    verification_state: state,
+    gate: { pass: gate.pass, reasons: gate.reasons },
     score,
     reality_state: realityState,
     evidence_count: validation.total,
