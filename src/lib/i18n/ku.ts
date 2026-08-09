@@ -2053,4 +2053,6 @@ export const ku: Dict = {
   guide_channels_security: "ئاسایش: داوای وشەی نهێنی ناکەین. کۆدەکان بە AES-256 شیفرەکراون لە سێرڤەر و هەرگیز لە وێبگەڕ دەرناکەون.",
   maaroof_tool_failed: "ئەم ئامرازە نەتوانی کار بکات — ماعروف بە هەنگاوەکانی تر بەردەوام بوو.",
   maaroof_tool_failed_internal: "هەڵەیەکی کاتی لە ئامراز. ماعروف بەردەوام بوو.",
+  "auto.execution_inspector": "پشکنەری جێبەجێکردن",
+  "auto.all_states": "هەموو دۆخەکان",
 };

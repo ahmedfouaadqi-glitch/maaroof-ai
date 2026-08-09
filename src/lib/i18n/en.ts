@@ -1987,4 +1987,6 @@ export const en: Dict = {
   guide_channels_security: "Security: we never ask for passwords. Authorization goes through the platform itself and tokens are stored encrypted (AES-256) server-side, never exposed to the browser.",
   maaroof_tool_failed: "Tool could not run — Maaroof continued with the remaining steps.",
   maaroof_tool_failed_internal: "Temporary tool error. Maaroof continued with the remaining steps.",
+  "auto.execution_inspector": "Execution Inspector",
+  "auto.all_states": "All states",
 };
