@@ -1,12 +1,13 @@
-// Part 19 — Reality Center admin panel.
+// Part 19 — Reality Center admin panel (Truth Center).
 // Rendered inside the existing Intelligence Center shell (no new dashboard page).
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { Microscope, RefreshCw, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
+import { Microscope, RefreshCw, Loader2, AlertTriangle, ChevronDown, Search } from "lucide-react";
 import { toast } from "sonner";
-import { getRealityCenter, getRealityEvidence } from "@/lib/maaroof-reality.functions";
+import { getRealityCenter, getRealityEvidence, getExecutionInspector } from "@/lib/maaroof-reality.functions";
 import { RealityLabSection } from "./RealityLab";
+import { VERIFICATION_STATES, stateLabel } from "@/lib/maaroof/truth";
 
 const STATE_LABELS: Record<string, string> = {
   verified: "مُتحقَّق",
