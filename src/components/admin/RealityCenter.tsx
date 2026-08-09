@@ -267,6 +267,9 @@ export function RealityCenterSection() {
         ))}
       </div>
 
+      <ExecutionInspector />
+
+
       <div className="rounded-2xl border border-border/60 bg-card/50 p-3">
         <RealityLabSection />
       </div>
