@@ -203,11 +203,31 @@ export function RealityCenterSection() {
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card/50 p-3 space-y-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-muted-foreground">
           <AlertTriangle className="size-3 text-amber-500" /> {t("auto.verification_gaps")}
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="ms-auto rounded-lg border border-border/60 bg-background px-2 py-1 font-normal"
+          >
+            <option value="">{t("auto.all_states")}</option>
+            {Object.keys(STATE_LABELS).map((s) => (
+              <option key={s} value={s}>{STATE_LABELS[s]}</option>
+            ))}
+          </select>
+          <span className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
+            <Search className="size-3" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("auto.search")}
+              aria-label={t("auto.search")}
+              className="w-28 bg-transparent font-normal outline-none"
+            />
+          </span>
         </div>
-        {!data.gaps?.length && <div className="text-[11px] text-muted-foreground">{t("auto.no_gaps_recorded")}</div>}
-        {(data.gaps || []).map((g: any) => (
+        {!gaps.length && <div className="text-[11px] text-muted-foreground">{t("auto.no_gaps_recorded")}</div>}
+        {gaps.map((g: any) => (
           <div key={g.id} className="rounded-xl border border-border/50 bg-background/40">
             <button onClick={() => toggle(g.id)} className="flex w-full items-center gap-2 p-2 text-start">
               <span className={`rounded-full border px-2 py-0.5 text-[10px] ${STATE_TONE[g.reality_state] || STATE_TONE.unknown}`}>
