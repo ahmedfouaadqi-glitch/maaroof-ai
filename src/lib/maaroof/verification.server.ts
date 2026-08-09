@@ -11,6 +11,7 @@
 // verdict, so every caller verifies the same way.
 
 import type { RealityAssessment } from "@/lib/maaroof/reality.server";
+import { fromVerdict, verificationGate, type VerificationState } from "@/lib/maaroof/truth";
 
 export const VERIFICATION_STAGES = [
   "collect_evidence",
