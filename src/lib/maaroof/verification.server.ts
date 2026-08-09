@@ -31,6 +31,10 @@ export type VerificationVerdict = "verified" | "supported" | "unverified" | "con
 
 export type VerificationResult = {
   verdict: VerificationVerdict;
+  /** Unified production label (VERIFIED / MEASURED / … ) — see truth.ts. */
+  verification_state: VerificationState;
+  /** Whether this result may be presented as fact, and why not when it may not. */
+  gate: { pass: boolean; reasons: string[] };
   score: number;
   reality_state: string | null;
   evidence_count: number;
