@@ -56,7 +56,7 @@ const TOOLS: ToolDef[] = [
 const isToolKey = (v: unknown): v is ToolKey => TOOLS.some((x) => x.key === v);
 
 export const Route = createFileRoute("/dashboard")({
-  validateSearch: (s: Record<string, unknown>): { tool?: ReturnType<typeof toolKeyOf> } => ({
+  validateSearch: (s: Record<string, unknown>): { tool?: ToolKey } => ({
     tool: isToolKey(s.tool) ? s.tool : undefined,
   }),
   head: () => ({
