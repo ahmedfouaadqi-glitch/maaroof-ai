@@ -225,17 +225,35 @@ export async function runExecution(input: {
     let tokens = 0;
     const results: Array<{ tool: string; ok: boolean }> = [];
 
+    const { fromTaskStatus, rollupTasks } = await import("@/lib/maaroof/truth");
+    const taskStates: Array<{ status: string }> = [];
+
     for (const t of tasks) {
       const planned: PlannedTask = {
         seq: t.seq, title: t.title, description: t.description, capability: t.capability_key,
         expert_key: t.expert_key, model_key: t.model_key, mcp_provider: t.mcp_provider, input: t.input,
       };
+      const kind = t.mcp_provider ? "mcp" : t.capability_key ? "tool" : t.expert_key ? "expert" : "internal";
+      const provider = t.mcp_provider || t.model_key || t.expert_key || null;
       if (!input.runner || e.mode !== "execution") {
-        await db().from("execution_tasks").update({ status: "simulated", finished_at: new Date().toISOString() }).eq("id", t.id);
+        await db().from("execution_tasks").update({
+          status: "simulated",
+          verification_state: "SIMULATED",
+          execution_kind: kind,
+          result_kind: "simulation",
+          provider,
+          duration_ms: 0,
+          finished_at: new Date().toISOString(),
+        }).eq("id", t.id);
+        taskStates.push({ status: "simulated" });
         await logExecutionEvent({ executionId: e.id, taskId: t.id, stage: "run", kind: "info", summary: `محاكاة: ${t.title}`, userId: input.userId });
         continue;
       }
-      await db().from("execution_tasks").update({ status: "running", started_at: new Date().toISOString(), attempts: (t.attempts || 0) + 1 }).eq("id", t.id);
+      const startedAt = Date.now();
+      await db().from("execution_tasks").update({
+        status: "running", verification_state: "PENDING", execution_kind: kind, provider,
+        started_at: new Date().toISOString(), attempts: (t.attempts || 0) + 1,
+      }).eq("id", t.id);
       let r: Awaited<ReturnType<TaskRunner>>;
       try {
         r = await input.runner(planned);
@@ -246,8 +264,15 @@ export async function runExecution(input: {
       tokens += r.tokens || 0;
       results.push({ tool: t.expert_key || t.capability_key || t.title, ok: !!r.ok });
       if (r.ok) okCount++;
+      const status = r.ok ? "done" : "failed";
+      taskStates.push({ status });
       await db().from("execution_tasks").update({
-        status: r.ok ? "done" : "failed",
+        status,
+        verification_state: fromTaskStatus(status, r.measured),
+        execution_kind: kind,
+        result_kind: r.ok ? (r.measured && Object.keys(r.measured).length ? "measurement" : "output") : "error",
+        provider,
+        duration_ms: Date.now() - startedAt,
         output: r.output || {},
         measured: r.measured || {},
         cost_usd: r.costUsd || 0,
@@ -260,6 +285,13 @@ export async function runExecution(input: {
         summary: `${r.ok ? "نجاح" : "فشل"}: ${t.title}`, userId: input.userId, payload: { error: r.error },
       });
     }
+
+    const rollup = rollupTasks(taskStates);
+    await logExecutionEvent({
+      executionId: e.id, stage: "run", kind: rollup.verdict === "FAILED" ? "error" : "info",
+      summary: `حصيلة المهام: ${rollup.verdict} (${rollup.done}/${rollup.total})`, userId: input.userId,
+      payload: { rollup },
+    });
 
     // ---- measure ----
     const executedCount = results.length;
