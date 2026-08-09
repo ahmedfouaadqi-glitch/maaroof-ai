@@ -25,6 +25,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/maaroof", changefreq: "weekly", priority: "0.7" },
           { path: "/maaroof/memory", changefreq: "monthly", priority: "0.4" },
           { path: "/guide/arabic-kurdish-geo", changefreq: "monthly", priority: "0.7" },
+          { path: "/methodology", changefreq: "monthly", priority: "0.7" },
           { path: "/contact", changefreq: "monthly", priority: "0.6" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
