@@ -4,15 +4,15 @@
 
 لا توجد migration لقاعدة البيانات في هذا الفرع. الدمج يعتمد على `maaroof_messages` الموجود لتسجيل manifest النواة، لذلك لا يحتاج إلى جدول جديد أو تعديل schema.
 
-النشر المقترح هو رفع الفرع إلى GitHub ثم مزامنته داخل Lovable، مراجعة Preview، وتشغيل اختبار جلسة مصادق عليها. لا يُسمح بترقية Production قبل موافقة المستخدم الصريحة.
+الفرع مرفوع إلى GitHub للمراجعة اللاحقة فقط. بناءً على توجيه المستخدم الحالي، لا يتم الدخول إلى Lovable أو إرسال طلبات إليه أو تنفيذ أي مزامنة/Preview هناك ضمن هذه المرحلة. لا يُسمح بترقية Production قبل مراجعة مستقلة وموافقة المستخدم الصريحة.
 
 ## Feature flag
 
-التغيير التشغيلي الوحيد هو جعل `platform_evolution.execution_modes_enabled` يساوي `true` في القيم الافتراضية. هذا لا يفعّل simulation engine أو workflow graph أو quality score أو capability marketplace أو الطبقات التنفيذية المتقدمة. إذا كان إعداد `maaroof_settings` يحتوي قيمة صريحة، فتبقى قيمة قاعدة البيانات هي الحاكمة.
+التغيير التشغيلي النهائي يبقي `platform_evolution.execution_modes_enabled` يساوي `false` في القيم الافتراضية. لا يفتح simulation أو recommendation أو execution عالمياً، ولا يفعّل simulation engine أو workflow graph أو quality score أو capability marketplace أو الطبقات التنفيذية المتقدمة. إذا كان إعداد `maaroof_settings` يحتوي قيمة صريحة، فتبقى قيمة قاعدة البيانات هي الحاكمة.
 
 ## Rollback
 
-للتراجع البرمجي، أعد `execution_modes_enabled` إلى `false` وأزل kernel manifest changes من الفرع، أو أعد نشر commit `406cb31` من خلال Preview/Publish بعد مراجعة Lovable. لا تُحذف سجلات `maaroof_runs` أو `maaroof_messages`.
+التصحيح البرمجي الحالي يعيد `execution_modes_enabled` إلى `false` في Commit `7aea692`. وللتراجع الكامل، أزل تغييرات kernel manifest من فرع المراجعة أو أعد الفرع إلى نقطة الأساس بعد مراجعة مستقلة. لا تُحذف سجلات `maaroof_runs` أو `maaroof_messages` ولا يُلمس `main`.
 
 للتراجع التشغيلي السريع، يمكن تفعيل `kill_switch` من إعدادات MAAROOF الحالية، ثم مراجعة السجلات قبل إعادة فتح التشغيل. لا يُنصح بتعديل DNS أو Cloudflare أثناء هذا التراجع.
 
