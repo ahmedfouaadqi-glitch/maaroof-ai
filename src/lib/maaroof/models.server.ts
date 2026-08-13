@@ -75,6 +75,30 @@ export function invalidateModelRegistry() {
   _cache = null;
 }
 
+export type ModelCatalogHealth = {
+  activeModels: number;
+  providers: string[];
+  realRegistry: boolean;
+  hasGovernedOptions: boolean;
+  reason: string;
+};
+
+/** Pure summary for UI/audit surfaces; it never invents catalog entries. */
+export function summarizeModelRegistry(rows: ModelRow[]): ModelCatalogHealth {
+  const active = rows.filter((row) => row.status === "active");
+  const providers = [...new Set(active.map((row) => row.provider).filter(Boolean))].sort();
+  return {
+    activeModels: active.length,
+    providers,
+    realRegistry: active.length > 0,
+    hasGovernedOptions: active.length > 1,
+    reason:
+      active.length > 0
+        ? `سجل النماذج يحتوي ${active.length} نموذجاً نشطاً عبر ${providers.length} مزود.`
+        : "سجل النماذج فارغ؛ سيُستخدم planner_model وfallback_model من الإعدادات.",
+  };
+}
+
 /** Real USD cost of a call, from registry prices (falls back to Gemini Pro rates). */
 export function costOf(model: string, inTok: number, outTok: number, registry: ModelRow[]): number {
   const row = registry.find((r) => r.model_key === model);

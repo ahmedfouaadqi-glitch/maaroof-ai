@@ -23,6 +23,7 @@ import {
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { createKernelManifest, kernelPromptBlock } from "./kernel.server";
+import type { BrowserPath } from "./browser.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -120,6 +121,8 @@ export type RunContext = {
   signal: AbortSignal;
   /** Part 6 — three-way execution mode. Defaults to "execution" for backward compat. */
   executionMode?: ExecutionMode;
+  /** Optional browser path; capability remains unavailable unless configured. */
+  browserPath?: BrowserPath;
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
@@ -179,6 +182,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     userId: ctx.userId,
     workspaceId: ctx.workspaceId || null,
     executionMode,
+    browserPath: ctx.browserPath,
     settings,
   });
 
@@ -202,6 +206,9 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const runId = (runIns as any).id as string;
   await ctx.emit("run", { runId, geo, executionMode });
   await ctx.emit("kernel", kernelManifest);
+  if (ctx.browserPath && ctx.browserPath !== "none") {
+    await ctx.emit("browser", kernelManifest.browser);
+  }
 
   // The existing messages table is the durable run log; no parallel kernel table.
   await db().from("maaroof_messages").insert({ run_id: runId, role: "kernel", parts: kernelManifest });

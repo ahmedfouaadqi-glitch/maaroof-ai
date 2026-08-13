@@ -274,6 +274,22 @@ export type HermesSettings = {
 
 
 
+export type BrowserSettings = {
+  /** Master switch for browser capability; disabled until a real adapter is configured. */
+  enabled: boolean;
+  /** Allow the user-connector path only after an explicit connection flow. */
+  allow_user_connector: boolean;
+  /** Require explicit confirmation before browser navigation or submission. */
+  require_user_confirmation: boolean;
+};
+
+export type KnowledgeStorageSettings = {
+  /** Current production source of truth; Google Drive remains opt-in. */
+  provider: "supabase" | "google_drive";
+  /** Master switch for the optional Drive adapter. */
+  google_drive_enabled: boolean;
+};
+
 export type MaaroofSettings = {
   trial_daily_cap: number;
   tool_timeout_ms: number;
@@ -289,6 +305,8 @@ export type MaaroofSettings = {
   capability_os: CapabilityOsSettings;
   cognitive: CognitiveSettings;
   platform_evolution: PlatformEvolutionSettings;
+  browser: BrowserSettings;
+  knowledge_storage: KnowledgeStorageSettings;
   executive: ExecutiveSettings;
   laws: LawsSettings;
   experts: ExpertsSettings;
@@ -327,6 +345,15 @@ const DEFAULTS: MaaroofSettings = {
   agent_factory: { enabled: true, warm_reuse_enabled: true, min_confidence: 40 },
   capability_os: { enabled: true, scoring_enabled: true, graph_enabled: true, mcp_registry_enabled: false },
   cognitive: { enabled: true, dna_enabled: true, peer_review_enabled: false, evolution_reports_enabled: true },
+  browser: {
+    enabled: false,
+    allow_user_connector: false,
+    require_user_confirmation: true,
+  },
+  knowledge_storage: {
+    provider: "supabase",
+    google_drive_enabled: false,
+  },
   platform_evolution: {
     simulation_engine_enabled: false,
     // The UI already exposes the three modes and the orchestrator has explicit
