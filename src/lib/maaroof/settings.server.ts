@@ -332,7 +332,7 @@ const DEFAULTS: MaaroofSettings = {
     // The UI already exposes the three modes and the orchestrator has explicit
     // non-executing branches for simulation/recommendation. Keep all advanced
     // engines off while honoring an explicit mode selected by the user.
-    execution_modes_enabled: true,
+    execution_modes_enabled: false,
     workflow_graph_enabled: false,
     quality_score_enabled: false,
     capability_marketplace_enabled: false,
