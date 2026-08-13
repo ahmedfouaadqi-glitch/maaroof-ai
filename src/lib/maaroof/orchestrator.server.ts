@@ -22,6 +22,7 @@ import {
 } from "./reality.server";
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
+import { createKernelManifest, kernelPromptBlock } from "./kernel.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -174,6 +175,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     settings.platform_evolution?.execution_modes_enabled && ctx.executionMode
       ? ctx.executionMode
       : "execution";
+  const kernelManifest = createKernelManifest({
+    userId: ctx.userId,
+    workspaceId: ctx.workspaceId || null,
+    executionMode,
+    settings,
+  });
 
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()
@@ -194,6 +201,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   if (runErr || !runIns) throw new Error(runErr?.message || "run_create_failed");
   const runId = (runIns as any).id as string;
   await ctx.emit("run", { runId, geo, executionMode });
+  await ctx.emit("kernel", kernelManifest);
+
+  // The existing messages table is the durable run log; no parallel kernel table.
+  await db().from("maaroof_messages").insert({ run_id: runId, role: "kernel", parts: kernelManifest });
 
   // Part 16 — Living State Anchor. The run gets an identity anchor inherited
   // from the platform (and its workspace) BEFORE anything executes. Disabled by
@@ -286,7 +297,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
+    const baseSystemPrompt = `${buildSystemPrompt(ctx, geo, memories, workspaceProfile)}${kernelPromptBlock(kernelManifest)}`;
 
     // Part 13 — pipeline stages 1..6 (understanding & context).
     if (tracer.enabled) {

@@ -329,7 +329,10 @@ const DEFAULTS: MaaroofSettings = {
   cognitive: { enabled: true, dna_enabled: true, peer_review_enabled: false, evolution_reports_enabled: true },
   platform_evolution: {
     simulation_engine_enabled: false,
-    execution_modes_enabled: false,
+    // The UI already exposes the three modes and the orchestrator has explicit
+    // non-executing branches for simulation/recommendation. Keep all advanced
+    // engines off while honoring an explicit mode selected by the user.
+    execution_modes_enabled: true,
     workflow_graph_enabled: false,
     quality_score_enabled: false,
     capability_marketplace_enabled: false,
