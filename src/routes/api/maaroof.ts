@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
+import type { BrowserPath } from "@/lib/maaroof/browser.server";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -32,6 +33,9 @@ export const Route = createFileRoute("/api/maaroof")({
         const geoScope = (body?.geo_scope as GeoScope) || undefined;
         const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
         const executionMode = (["simulation","recommendation","execution"] as const).includes(body?.execution_mode) ? body.execution_mode as "simulation"|"recommendation"|"execution" : undefined;
+        const browserPath = (["none", "embedded", "user_connector"] as const).includes(body?.browser_path)
+          ? body.browser_path as BrowserPath
+          : "none";
 
         // Verify workspace ownership if provided.
         let verifiedWorkspaceId: string | null = null;
@@ -81,7 +85,7 @@ export const Route = createFileRoute("/api/maaroof")({
             try {
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode,
+                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, browserPath,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
