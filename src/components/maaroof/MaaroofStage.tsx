@@ -3,7 +3,7 @@ import { Component, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
-import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
+import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles, Globe } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
 
@@ -177,6 +177,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
           <CardBoundary><ConflictCard events={events} /></CardBoundary>
           <CardBoundary><TimingChip events={events} /></CardBoundary>
           <CardBoundary><ComplianceCard events={events} /></CardBoundary>
+          <CardBoundary><BrowserCard events={events} /></CardBoundary>
 
 
 
@@ -214,6 +215,21 @@ function PhasePill({ phase, running }: { phase?: string; running: boolean }) {
   if (!running && !phase) return null;
   const label = phase === "planning" ? t("auto.planning_2") : phase === "summarizing" ? t("auto.formulating_answer") : phase === "loading_history" ? t("auto.loading_session") : running ? t("auto.working") : phase || "";
   return <div className="mt-3 text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">{label}</div>;
+}
+
+function BrowserCard({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
+  const browser = [...events].reverse().find((e) => e.type === "browser")?.data as any;
+  if (!browser) return null;
+  const ready = browser.status === "ready" && browser.canNavigate;
+  const optIn = browser.status === "opt_in";
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${ready ? "border-green-500/40 bg-green-500/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+      <div className="flex items-center gap-2 font-semibold mb-1"><Globe className="w-4 h-4" /> {t("auto.maaroof_2")} · {browser.selectedPath}</div>
+      <div className="text-muted-foreground">{String(browser.reason || "")}</div>
+      {!ready && <div className="mt-1 text-amber-500">{optIn ? "بانتظار اتصال وموافقة المستخدم." : "لم يُنفذ أي تنقل عبر المتصفح."}</div>}
+    </div>
+  );
 }
 
 /** Part 7 — Strategic Time Engine verdict chip. */
