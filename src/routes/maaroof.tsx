@@ -56,6 +56,7 @@ function MaaroofPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [activeWs, setActiveWs] = useState<Workspace | null>(null);
   const [executionMode, setExecutionMode] = useState<"simulation" | "recommendation" | "execution">("execution");
+  const [browserPath, setBrowserPath] = useState<"none" | "embedded" | "user_connector">("none");
   const [typing, setTyping] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -97,6 +98,7 @@ function MaaroofPage() {
           lang,
           workspace_id: activeWs?.id,
           execution_mode: executionMode,
+          browser_path: browserPath,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
         signal: ctl.signal,
@@ -336,6 +338,15 @@ function MaaroofPage() {
                       </button>
                     ))}
                   </div>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground" title={lang === "en" ? "Browser access is opt-in and only works when a real adapter is configured." : lang === "ku" ? "دەستگەیشتن بە وێبگەڕ هەڵبژاردەییە و تەنها بە پەیوەندی ڕاستەقینە کاردەکات." : "الوصول إلى المتصفح اختياري ولا يعمل إلا عند تهيئة موصل حقيقي."}>
+                    <Globe className="w-3.5 h-3.5" />
+                    <span className="sr-only">{lang === "en" ? "Browser path" : lang === "ku" ? "ڕێڕەوی وێبگەڕ" : "مسار المتصفح"}</span>
+                    <select value={browserPath} onChange={(e) => setBrowserPath(e.target.value as typeof browserPath)} disabled={running} className="border rounded px-2 py-1 bg-background">
+                      <option value="none">{lang === "en" ? "No browser" : lang === "ku" ? "بێ وێبگەڕ" : "بدون متصفح"}</option>
+                      <option value="embedded">{lang === "en" ? "Embedded browser" : lang === "ku" ? "وێبگەڕی ناوخۆ" : "متصفح مدمج"}</option>
+                      <option value="user_connector">{lang === "en" ? "My browser" : lang === "ku" ? "وێبگەڕی من" : "متصفحي"}</option>
+                    </select>
+                  </label>
                   <div className="flex gap-2">
                     {running ? (
                       <button onClick={stop} className="px-4 py-2 rounded bg-destructive text-destructive-foreground flex items-center gap-2"><StopCircle className="w-4 h-4" /> {t("mrf_stop")}</button>
