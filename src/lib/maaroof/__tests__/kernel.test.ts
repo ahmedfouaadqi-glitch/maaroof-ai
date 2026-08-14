@@ -31,6 +31,10 @@ describe("Maaroof kernel contract", () => {
     expect(manifest.allowedTools).toEqual(["analyze", "research"]);
     expect(manifest.approvalState).toBe("legacy_execution_path");
     expect(manifest.featureFlags.knowledge_recall).toBe(true);
+    expect(manifest.executionPolicy.toolExecutionAllowed).toBe(true);
+    expect(manifest.executionPolicy.requiresApproval).toBe(false);
+    expect(manifest.memoryPolicy.workspaceIsolated).toBe(true);
+    expect(manifest.knowledgePolicy.sourceOfTruth).toBe("knowledge_nodes_and_teaching_spaces");
   });
 
   it("marks non-executing modes and states the contract in the prompt", () => {
@@ -42,6 +46,9 @@ describe("Maaroof kernel contract", () => {
 
     expect(manifest.memoryScope).toBe("user:user-1");
     expect(manifest.approvalState).toBe("no_tool_execution");
+    expect(manifest.executionPolicy.toolExecutionAllowed).toBe(false);
+    expect(manifest.executionPolicy.nonExecutingModesProtected).toBe(true);
+    expect(manifest.knowledgePolicy.recallEnabled).toBe(true);
     expect(kernelPromptBlock(manifest)).toContain(
       "Simulation and recommendation are non-executing modes",
     );
