@@ -17,9 +17,9 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Score, optimize and publish content so 9 AI engines cite your brand in English, Arabic and Kurdish." },
       { property: "og:title", content: "MAAROOF Ai — Get cited by ChatGPT, Gemini & Perplexity" },
       { property: "og:description", content: "Analyze, score and publish GEO-ready content so AI answer engines cite your brand across MENA." },
-      { property: "og:url", content: "https://geoiraq.com/" },
+      { property: "og:url", content: "https://maaroofai.com/" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/" }],
     scripts: [{
       type: "application/ld+json",
       children: JSON.stringify({
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")({
         name: "MAAROOF Ai",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
-        url: "https://geoiraq.com/",
+        url: "https://maaroofai.com/",
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content optimized for 9 AI search engines.",
       }),

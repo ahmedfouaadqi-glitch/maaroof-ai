@@ -13,7 +13,7 @@ export const Route = createFileRoute("/reset-password")({
       { name: "robots", content: "noindex,follow" },
       { property: "og:title", content: "Reset Password · MAAROOF Ai" },
       { property: "og:description", content: "Securely reset your MAAROOF Ai account password." },
-      { property: "og:url", content: "https://geoiraq.com/reset-password" },
+      { property: "og:url", content: "https://maaroofai.com/reset-password" },
     ],
   }),
   component: () => (

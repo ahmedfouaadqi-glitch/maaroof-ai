@@ -64,7 +64,7 @@ export const Route = createFileRoute("/tools/$slug")({
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [] };
     const m = loaderData.metaEn;
-    const url = `https://geoiraq.com/tools/${loaderData.key}`;
+    const url = `https://maaroofai.com/tools/${loaderData.key}`;
     return {
       meta: [
         { title: `${m.title} · MAAROOF Ai` },

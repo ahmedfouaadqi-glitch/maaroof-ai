@@ -10,9 +10,9 @@ export const Route = createFileRoute("/privacy")({
       { name: "description", content: "How MAAROOF Ai collects, uses and protects your data across the platform and AI Agent." },
       { property: "og:title", content: "Privacy Policy · MAAROOF Ai" },
       { property: "og:description", content: "How MAAROOF Ai handles your data." },
-      { property: "og:url", content: "https://geoiraq.com/privacy" },
+      { property: "og:url", content: "https://maaroofai.com/privacy" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/privacy" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/privacy" }],
   }),
   component: () => (
     <I18nProvider>

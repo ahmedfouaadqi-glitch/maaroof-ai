@@ -13,9 +13,9 @@ export const Route = createFileRoute("/contact")({
       { name: "description", content: "Reach the MAAROOF Ai team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
       { property: "og:title", content: "Contact MAAROOF Ai · Talk to the AI Visibility Team" },
       { property: "og:description", content: "Reach the MAAROOF Ai team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
-      { property: "og:url", content: "https://geoiraq.com/contact" },
+      { property: "og:url", content: "https://maaroofai.com/contact" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/contact" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/contact" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/contact")({
           "@context": "https://schema.org",
           "@type": "LocalBusiness",
           name: "MAAROOF Ai",
-          url: "https://geoiraq.com/contact",
+          url: "https://maaroofai.com/contact",
           email: "ahmedfouaad.qi@gmail.com",
           telephone: "+964 773 357 0130",
           address: {

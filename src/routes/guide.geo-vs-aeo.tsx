@@ -20,9 +20,9 @@ export const Route = createFileRoute("/guide/geo-vs-aeo")({
           "Side-by-side comparison of GEO and AEO: what each optimizes and how to win citations across AI engines.",
       },
       { property: "og:type", content: "article" },
-      { property: "og:url", content: "https://geoiraq.com/guide/geo-vs-aeo" },
+      { property: "og:url", content: "https://maaroofai.com/guide/geo-vs-aeo" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/guide/geo-vs-aeo" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/guide/geo-vs-aeo" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/guide/geo-vs-aeo")({
           headline: "GEO vs AEO — Generative vs Answer Engine Optimization Explained",
           author: { "@type": "Organization", name: "MAAROOF Ai" },
           publisher: { "@type": "Organization", name: "MAAROOF Ai" },
-          mainEntityOfPage: "https://geoiraq.com/guide/geo-vs-aeo",
+          mainEntityOfPage: "https://maaroofai.com/guide/geo-vs-aeo",
         }),
       },
       {

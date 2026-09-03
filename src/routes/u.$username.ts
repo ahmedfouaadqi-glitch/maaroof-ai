@@ -4,7 +4,7 @@ import { detectBot } from "@/lib/crawler-bots";
 
 /**
  * Public per-user page — readable by AI crawlers (GPTBot, PerplexityBot, etc.)
- * URL: https://geoiraq.com/u/{username}
+ * URL: https://maaroofai.com/u/{username}
  * - Returns crawler-friendly HTML + JSON-LD (Person/Organization).
  * - Lists all brand authority packs the user has published, linking to /api/public/brand/{slug}.
  * - Logs every crawler hit to `crawler_hits` so Propagation Tracker can show it.

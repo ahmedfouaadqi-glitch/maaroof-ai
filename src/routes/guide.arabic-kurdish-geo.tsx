@@ -20,9 +20,9 @@ export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
           "A practical Generative Engine Optimization guide for the MENA market: schema, language signals, and citation patterns for AR and KU queries.",
       },
       { property: "og:type", content: "article" },
-      { property: "og:url", content: "https://geoiraq.com/guide/arabic-kurdish-geo" },
+      { property: "og:url", content: "https://maaroofai.com/guide/arabic-kurdish-geo" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/guide/arabic-kurdish-geo" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/guide/arabic-kurdish-geo" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
           author: { "@type": "Organization", name: "MAAROOF Ai" },
           publisher: { "@type": "Organization", name: "MAAROOF Ai" },
           inLanguage: ["en", "ar", "ckb"],
-          mainEntityOfPage: "https://geoiraq.com/guide/arabic-kurdish-geo",
+          mainEntityOfPage: "https://maaroofai.com/guide/arabic-kurdish-geo",
         }),
       },
       {

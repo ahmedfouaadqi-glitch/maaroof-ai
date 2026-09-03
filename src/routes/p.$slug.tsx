@@ -27,7 +27,7 @@ export const Route = createFileRoute("/p/$slug")({
     const p = loaderData as Page | undefined;
     const title = p ? (p.title_en || p.title_ar || p.title_ku || p.slug) : params.slug;
     const desc = p ? (p.meta_description_en || p.meta_description_ar || p.meta_description_ku || "") : "";
-    const url = `https://geoiraq.com/p/${params.slug}`;
+    const url = `https://maaroofai.com/p/${params.slug}`;
     const meta: Array<{ title?: string; name?: string; property?: string; content?: string }> = [
       { title: `${title} · MAAROOF Ai` },
       { property: "og:title", content: `${title} · MAAROOF Ai` },
@@ -56,7 +56,7 @@ export const Route = createFileRoute("/p/$slug")({
             publisher: {
               "@type": "Organization",
               name: "MAAROOF Ai",
-              logo: { "@type": "ImageObject", url: "https://geoiraq.com/icon-512.png" },
+              logo: { "@type": "ImageObject", url: "https://maaroofai.com/icon-512.png" },
             },
           }),
         },
