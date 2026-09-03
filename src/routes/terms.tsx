@@ -10,9 +10,9 @@ export const Route = createFileRoute("/terms")({
       { name: "description", content: "Terms governing use of MAAROOF Ai tools, AI Agent and subscriptions." },
       { property: "og:title", content: "Terms of Use · MAAROOF Ai" },
       { property: "og:description", content: "Terms of use for MAAROOF Ai." },
-      { property: "og:url", content: "https://geoiraq.com/terms" },
+      { property: "og:url", content: "https://maaroofai.com/terms" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/terms" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/terms" }],
   }),
   component: () => (
     <I18nProvider>

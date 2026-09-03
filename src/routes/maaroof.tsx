@@ -30,9 +30,9 @@ export const Route = createFileRoute("/maaroof")({
       { name: "description", content: "Maaroof is the MAAROOF Ai autonomous agent: plans, researches and executes global GEO marketing tasks across 9 AI engines in Arabic, Kurdish and English." },
       { property: "og:title", content: "Maaroof — Autonomous GEO Agent · MAAROOF Ai" },
       { property: "og:description", content: "Plans, researches and executes global GEO marketing tasks across 9 AI engines in AR, KU and EN." },
-      { property: "og:url", content: "https://geoiraq.com/maaroof" },
+      { property: "og:url", content: "https://maaroofai.com/maaroof" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/maaroof" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/maaroof" }],
   }),
   component: () => (
     <I18nProvider><AuthProvider><MaaroofPage /></AuthProvider></I18nProvider>

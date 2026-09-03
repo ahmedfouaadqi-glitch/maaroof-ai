@@ -13,9 +13,9 @@ export const Route = createFileRoute("/guide")({
       { name: "description", content: "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more." },
       { property: "og:title", content: "Guide · MAAROOF Ai" },
       { property: "og:description", content: "How to use every MAAROOF Ai tool and the AI Agent." },
-      { property: "og:url", content: "https://geoiraq.com/guide" },
+      { property: "og:url", content: "https://maaroofai.com/guide" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/guide" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/guide" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -25,14 +25,14 @@ export const Route = createFileRoute("/guide")({
           name: "MAAROOF Ai Guide",
           description:
             "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more.",
-          url: "https://geoiraq.com/guide",
-          isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://geoiraq.com" },
+          url: "https://maaroofai.com/guide",
+          isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://maaroofai.com" },
           hasPart: TOOL_CATALOG.filter((td) =>
             ["analyze", "suggest", "compare", "visibility", "brand_boost"].includes(td.key),
           ).map((td) => ({
             "@type": "WebPage",
             name: td.labels.en,
-            url: `https://geoiraq.com/tools/${td.key}`,
+            url: `https://maaroofai.com/tools/${td.key}`,
           })),
         }),
       },

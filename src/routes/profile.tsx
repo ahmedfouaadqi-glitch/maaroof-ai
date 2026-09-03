@@ -72,7 +72,7 @@ function ProfilePage() {
     setSaving(false); setDone(true); setTimeout(() => setDone(false), 1500);
   };
 
-  const publicUrl = username ? `https://geoiraq.com/u/${username}` : "";
+  const publicUrl = username ? `https://maaroofai.com/u/${username}` : "";
   const copyUrl = async () => {
     if (!publicUrl) return;
     await navigator.clipboard.writeText(publicUrl).catch(() => {});

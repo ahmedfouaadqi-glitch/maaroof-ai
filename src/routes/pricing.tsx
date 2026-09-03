@@ -19,9 +19,9 @@ export const Route = createFileRoute("/pricing")({
       { name: "description", content: "Plans and add-ons for MAAROOF Ai — analyze, generate and publish AI-cited content. Starter, Pro, Business and Agent tiers." },
       { property: "og:title", content: "Pricing · MAAROOF Ai" },
       { property: "og:description", content: "Plans and add-ons for MAAROOF Ai — analyze, generate and publish AI-cited content." },
-      { property: "og:url", content: "https://geoiraq.com/pricing" },
+      { property: "og:url", content: "https://maaroofai.com/pricing" },
     ],
-    links: [{ rel: "canonical", href: "https://geoiraq.com/pricing" }],
+    links: [{ rel: "canonical", href: "https://maaroofai.com/pricing" }],
   }),
   component: () => (
     <I18nProvider>

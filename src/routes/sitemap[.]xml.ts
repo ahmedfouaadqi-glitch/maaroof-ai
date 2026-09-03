@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
-const BASE_URL = "https://geoiraq.com";
+const BASE_URL = "https://maaroofai.com";
 
 interface SitemapEntry {
   path: string;

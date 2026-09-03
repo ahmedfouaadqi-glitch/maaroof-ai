@@ -8,7 +8,7 @@ import { STATE_LABELS, VERIFICATION_STATES } from "@/lib/maaroof/truth";
 const TITLE = "Verification Methodology — How MAAROOF Ai Proves Every Claim";
 const DESC =
   "How MAAROOF Ai labels every result: verified, measured, executed, simulated, predicted or assumed — with the evidence chain and gates behind each label.";
-const URL = "https://geoiraq.com/methodology";
+const URL = "https://maaroofai.com/methodology";
 
 export const Route = createFileRoute("/methodology")({
   head: () => ({
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/methodology")({
           publisher: {
             "@type": "Organization",
             name: "MAAROOF Ai",
-            logo: { "@type": "ImageObject", url: "https://geoiraq.com/icon-512.png" },
+            logo: { "@type": "ImageObject", url: "https://maaroofai.com/icon-512.png" },
           },
         }),
       },

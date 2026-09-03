@@ -7,7 +7,7 @@ import { AuthProvider } from "@/lib/auth";
 const TITLE = "What is GEO? Generative Engine Optimization Explained";
 const DESC =
   "GEO (Generative Engine Optimization) is how brands get cited inside AI answers from ChatGPT, Gemini and Perplexity — and how it differs from SEO.";
-const URL = "https://geoiraq.com/guide/what-is-geo";
+const URL = "https://maaroofai.com/guide/what-is-geo";
 
 export const Route = createFileRoute("/guide/what-is-geo")({
   head: () => ({
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/guide/what-is-geo")({
           publisher: {
             "@type": "Organization",
             name: "MAAROOF Ai",
-            logo: { "@type": "ImageObject", url: "https://geoiraq.com/icon-512.png" },
+            logo: { "@type": "ImageObject", url: "https://maaroofai.com/icon-512.png" },
           },
         }),
       },
