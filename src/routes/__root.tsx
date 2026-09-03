@@ -91,6 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-title", content: "MAAROOF Ai" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "google-site-verification", content: "KG0z4EF5ZvR3yjDn91E9qOb1v0vLnocoSB4pIeGoEEg" },
+      { name: "google-site-verification", content: "0A7hkbHbxHmZ6MWsUhMex6Rp16cBgtvE4vEYRi9giBk" },
     ],
     links: [
       { rel: "icon", href: "/icon-512.png", type: "image/png" },
