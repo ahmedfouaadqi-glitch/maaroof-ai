@@ -104,6 +104,100 @@ export async function resolveEngineModels(
   return out;
 }
 
+export type EngineHealth = {
+  engine: EngineKey;
+  model: string;
+  status: "ok" | "slow" | "error" | "unknown";
+  avg_latency_ms: number;
+  failure_rate: number;
+  calls: number;
+  last_call_at: string | null;
+  /** Short human reason, used when a run excludes the engine. */
+  reason: string;
+};
+
+const SLOW_MS = 25000;
+const BAD_FAILURE_RATE = 0.4;
+
+/**
+ * Health per engine, derived from the governed model behind it
+ * (`ai_model_health` telemetry written after every gateway call).
+ * Never throws: unknown health always behaves as usable.
+ */
+export async function engineHealthMap(
+  engines: EngineKey[] = [...ENGINE_KEYS],
+): Promise<Record<string, EngineHealth>> {
+  const resolved = await resolveEngineModels(engines, "final");
+  const out: Record<string, EngineHealth> = {};
+  let rows: any[] = [];
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const models = Array.from(new Set(Object.values(resolved).map((r) => r.model)));
+    const { data } = await supabaseAdmin
+      .from("ai_model_health")
+      .select("model_key, calls, failures, total_latency_ms, last_status, last_call_at")
+      .in("model_key", models);
+    rows = (data as any[]) || [];
+  } catch {
+    rows = [];
+  }
+  for (const e of engines) {
+    const model = resolved[e]?.model || ENGINE_CATALOG[e].defaultModel;
+    const r = rows.find((x) => x.model_key === model);
+    const calls = Number(r?.calls || 0);
+    const failures = Number(r?.failures || 0);
+    const avg = calls > 0 ? Math.round(Number(r?.total_latency_ms || 0) / calls) : 0;
+    const rate = calls > 0 ? failures / calls : 0;
+    let status: EngineHealth["status"] = "unknown";
+    let reason = "لا توجد بيانات كافية بعد.";
+    if (calls > 0) {
+      if (rate >= BAD_FAILURE_RATE || r?.last_status === "error") {
+        status = "error";
+        reason = `نسبة الأخطاء ${(rate * 100).toFixed(0)}% — تم استثناء المحرك من هذه الجلسة.`;
+      } else if (avg >= SLOW_MS) {
+        status = "slow";
+        reason = `زمن استجابة مرتفع (${Math.round(avg / 1000)}s).`;
+      } else {
+        status = "ok";
+        reason = `يعمل — متوسط ${Math.round(avg / 1000)}s.`;
+      }
+    }
+    out[e] = {
+      engine: e,
+      model,
+      status,
+      avg_latency_ms: avg,
+      failure_rate: Number(rate.toFixed(3)),
+      calls,
+      last_call_at: r?.last_call_at ?? null,
+      reason,
+    };
+  }
+  return out;
+}
+
+/**
+ * Drop engines whose model is currently failing, so one broken provider cannot
+ * fail a whole run. Slow/unknown engines are kept. If everything looks broken
+ * the original list is returned unchanged (fail-open, never an empty run).
+ */
+export async function excludeUnhealthyEngines(
+  engines: EngineKey[],
+): Promise<{ engines: EngineKey[]; excluded: Array<{ engine: EngineKey; reason: string }> }> {
+  if (!engines.length) return { engines, excluded: [] };
+  try {
+    const health = await engineHealthMap(engines);
+    const excluded = engines
+      .filter((e) => health[e]?.status === "error")
+      .map((e) => ({ engine: e, reason: health[e]!.reason }));
+    const kept = engines.filter((e) => !excluded.some((x) => x.engine === e));
+    if (!kept.length) return { engines, excluded: [] };
+    return { engines: kept, excluded };
+  } catch {
+    return { engines, excluded: [] };
+  }
+}
+
 export type EngineEntitlement = {
   plan: string | null;
   isAdmin: boolean;
