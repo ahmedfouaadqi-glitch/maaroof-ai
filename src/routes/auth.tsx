@@ -68,18 +68,18 @@ function AuthPage() {
     setTimeout(() => navigate({ to: target as any }), 0);
   }
 
-  const googleSignIn = async () => {
+  const oauthSignIn = async (provider: "google" | "microsoft") => {
     setError(null);
     setInfo(null);
     try { sessionStorage.setItem("auth_redirect", redirect); } catch { /* ignore */ }
-    const result = await lovable.auth.signInWithOAuth("google", {
+    const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: `${window.location.origin}/auth`,
     });
     if (result.error) {
-      setError(result.error.message || "Google sign-in failed");
+      setError(result.error.message || "Sign-in failed");
       return;
     }
-    if (result.redirected) return; // browser is navigating to Google
+    if (result.redirected) return; // browser is navigating to the provider
   };
 
   const submit = async (e: React.FormEvent) => {
