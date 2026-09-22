@@ -5,7 +5,7 @@ import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
 
-type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
+type GeoScope = { scope: "world" | "country" | "region" | "city" | "province"; country?: string; city?: string; region?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
 async function sha256Hex(s: string): Promise<string> {
@@ -13,26 +13,32 @@ async function sha256Hex(s: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+const GLOBAL_LOCAL_GUIDE = `local (0-100): Global relevance — universally understandable terms, internationally known entities, multi-region applicability, neutral phrasing, lack of region-locked jargon. Region-locked content = 0-30. Mixed = 40-60. Genuinely globally relevant with broad references = 70-100.`;
+
 function buildSys(scope?: GeoScope) {
-  let target = "the Iraqi market";
-  let localGuide = `local (0-100): Iraqi context — Iraqi cities/neighborhoods, dinar prices, local brands/laws/holidays, Arabic/Kurdish phrasing, regional relevance. No Iraq signal = 0-15. Vague Arabic only = 20-40. Mentions one Iraqi entity = 50-65. Deeply localized = 80-100.`;
+  // Default is a GLOBAL audience. Local specificity only when the user picks it.
+  let target = "a global / worldwide audience";
+  let localGuide = GLOBAL_LOCAL_GUIDE;
+  const placeOf = (s: GeoScope) => [s.city, s.region, s.country].filter(Boolean).join(", ");
   if (scope) {
-    if (scope.scope === "world") {
-      target = "a global / worldwide audience";
-      localGuide = `local (0-100): Global relevance — universally understandable terms, internationally known entities, multi-region applicability, neutral phrasing, lack of region-locked jargon. Region-locked content = 0-30. Mixed = 40-60. Genuinely globally relevant with broad references = 70-100.`;
-    } else if (scope.scope === "country" && scope.country) {
+    if (scope.scope === "country" && scope.country) {
       target = `the ${scope.country} market`;
       localGuide = `local (0-100): ${scope.country} context — cities/regions of ${scope.country}, local currency/prices, local brands/laws/holidays/culture, regional language phrasing, country-specific relevance. No ${scope.country} signal = 0-15. Vague language only = 20-40. Mentions one ${scope.country} entity = 50-65. Deeply localized to ${scope.country} = 80-100.`;
-    } else if (scope.scope === "province" && (scope.country || scope.city)) {
-      const region = [scope.city, scope.country].filter(Boolean).join(", ");
+    } else if (scope.scope === "region" && placeOf(scope)) {
+      const region = placeOf(scope);
       target = `the ${region} regional market`;
-      localGuide = `local (0-100): ${region} regional context — province/governorate names, regional cities/towns, regional brands/dialect/customs, hyper-local relevance to ${region}. No regional signal = 0-15. Generic country-level only = 20-45. Mentions regional entities = 55-75. Deeply localized to ${region} = 85-100.`;
-    } else if (scope.scope === "city" && (scope.city || scope.country)) {
-      const place = [scope.city, scope.country].filter(Boolean).join(", ");
+      localGuide = `local (0-100): ${region} regional context — countries/markets inside ${region}, shared language and currency cues, regional platforms and customs. No regional signal = 0-15. Generic global only = 20-45. Mentions regional entities = 55-75. Deeply relevant to ${region} = 85-100.`;
+    } else if (scope.scope === "province" && placeOf(scope)) {
+      const region = placeOf(scope);
+      target = `the ${region} provincial market`;
+      localGuide = `local (0-100): ${region} provincial context — province/governorate names, regional cities/towns, regional brands/dialect/customs, hyper-local relevance to ${region}. No regional signal = 0-15. Generic country-level only = 20-45. Mentions regional entities = 55-75. Deeply localized to ${region} = 85-100.`;
+    } else if (scope.scope === "city" && placeOf(scope)) {
+      const place = placeOf(scope);
       target = `the ${place} local market`;
       localGuide = `local (0-100): ${place} hyper-local context — neighborhoods/districts of ${place}, local landmarks, local businesses, street/area names, dialect, city-specific events. No city signal = 0-15. Country-level only = 20-40. Mentions ${place} entities = 55-75. Deeply hyper-local to ${place} = 85-100.`;
     }
   }
+
   return `${FACTUAL_SAFETY_PROMPT}
 
 You are a STRICT, evidence-based GEO (Generative Engine Optimization) analysis engine for ${target}.

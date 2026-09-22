@@ -5,16 +5,16 @@ import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
 
-type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
+type GeoScope = { scope: "world" | "country" | "region" | "city" | "province"; country?: string; city?: string; region?: string };
 type Body = { text: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
 
 function buildSys(lang: string, scope?: GeoScope) {
+  const local = [scope?.city, scope?.region, scope?.country].filter(Boolean).join(", ");
   const place =
-    scope?.scope === "city"     ? [scope.city, scope.country].filter(Boolean).join(", ") || "Iraq" :
-    scope?.scope === "province" ? [scope.city, scope.country].filter(Boolean).join(", ") || "Iraq" :
-    scope?.scope === "country"  ? scope.country || "Iraq" :
-    scope?.scope === "world"    ? "a global audience" :
-    "Iraq";
+    scope && scope.scope !== "world" && local ? local :
+    scope?.scope === "country" && scope.country ? scope.country :
+    "a global audience";
+
 
   return `You are a STRICT, evidence-safe GEO (Generative Engine Optimization) content rewriter for ${place}.
 
