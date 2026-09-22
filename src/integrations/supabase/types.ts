@@ -4752,6 +4752,51 @@ export type Database = {
           },
         ]
       }
+      user_export_overrides: {
+        Row: {
+          allowed_formats: Json
+          allowed_tools: Json
+          created_at: string
+          email: string | null
+          email_privacy: string | null
+          exports_enabled: boolean
+          id: string
+          note: string | null
+          show_logo: boolean | null
+          show_user_name: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed_formats?: Json
+          allowed_tools?: Json
+          created_at?: string
+          email?: string | null
+          email_privacy?: string | null
+          exports_enabled?: boolean
+          id?: string
+          note?: string | null
+          show_logo?: boolean | null
+          show_user_name?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed_formats?: Json
+          allowed_tools?: Json
+          created_at?: string
+          email?: string | null
+          email_privacy?: string | null
+          exports_enabled?: boolean
+          id?: string
+          note?: string | null
+          show_logo?: boolean | null
+          show_user_name?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_intent_profile: {
         Row: {
           context_summary: string | null
