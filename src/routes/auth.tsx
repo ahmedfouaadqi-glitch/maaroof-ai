@@ -124,7 +124,7 @@ function AuthPage() {
         <form onSubmit={submit} className="space-y-4 rounded-2xl border border-border bg-card/70 p-6 backdrop-blur">
           <button
             type="button"
-            onClick={googleSignIn}
+            onClick={() => oauthSignIn("google")}
             disabled={loading}
             className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-border bg-background/70 px-6 py-3 text-sm font-semibold transition-colors hover:bg-background disabled:opacity-50"
           >
@@ -135,6 +135,20 @@ function AuthPage() {
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/>
             </svg>
             {t("auth_google")}
+          </button>
+          <button
+            type="button"
+            onClick={() => oauthSignIn("microsoft")}
+            disabled={loading}
+            className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-border bg-background/70 px-6 py-3 text-sm font-semibold transition-colors hover:bg-background disabled:opacity-50"
+          >
+            <svg className="size-5" viewBox="0 0 21 21" aria-hidden="true">
+              <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+              <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+              <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+              <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+            </svg>
+            {t("auth_microsoft")}
           </button>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
