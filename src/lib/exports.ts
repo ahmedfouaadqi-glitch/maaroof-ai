@@ -141,6 +141,14 @@ export function exportToPDF(payload: ExportPayload) {
   table.data td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align: top; }
   table.data tr:nth-child(even) td { background:#f8fafc; }
   footer.disclaimer { margin-top: 28px; padding-top: 12px; border-top: 1px dashed #94a3b8; font-size: 10.5px; color:#475569; line-height: 1.5; }
+  footer.disclaimer .who { font-weight:600; color:#334155; margin-bottom:4px; }
+  /* Nothing may be lost across page breaks */
+  h1, h2 { break-after: avoid; page-break-after: avoid; }
+  tr, li, p.prose { break-inside: avoid; page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  table { break-inside: auto; }
+  td, th { word-break: break-word; overflow-wrap: anywhere; }
   @media print { .noprint { display:none; } body { padding: 0; } }
   .noprint { position: fixed; top: 12px; ${dir === "rtl" ? "left" : "right"}: 12px; }
   .noprint button { background:#4338ca; color:#fff; border:0; padding:8px 14px; border-radius: 999px; font-size: 12px; cursor:pointer; box-shadow: 0 4px 12px rgba(67,56,202,.3); }
@@ -148,12 +156,17 @@ export function exportToPDF(payload: ExportPayload) {
 </head>
 <body>
   <div class="noprint"><button onclick="window.print()">🖨️ ${dir === "rtl" ? "طباعة / حفظ PDF" : "Print / Save PDF"}</button></div>
-  ${brandHeaderHtml(lang)}
+  ${brandHeaderHtml(lang, payload)}
   <h1>${escapeHtml(payload.title)}</h1>
   ${payload.subtitle ? `<div class="subtitle">${escapeHtml(payload.subtitle)}</div>` : ""}
   ${payload.sections.map(sectionHtml).join("")}
-  <footer class="disclaimer">${escapeHtml(DISCLAIMER[lang])}</footer>
+  <footer class="disclaimer">
+    ${identityLine(payload, lang) ? `<div class="who">${escapeHtml(identityLine(payload, lang))}</div>` : ""}
+    <div>${BRAND} · ${SITE}</div>
+    <div>${escapeHtml(DISCLAIMER[lang])}</div>
+  </footer>
   <script>setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 350);</script>
+
 </body>
 </html>`;
 
