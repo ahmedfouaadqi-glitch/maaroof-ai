@@ -38,20 +38,22 @@ function normalize(s?: string) {
 }
 
 function scopeLabel(scope?: GeoScope) {
-  if (!scope || !scope.scope) return { ar: "النطاق الجغرافي", en: "geographic scope", ku: "سنوری جوگرافی" };
-  const place = [scope.city, scope.country].filter(Boolean).join("، ") || scope.country || scope.city || "";
-  if (scope.scope === "world") return { ar: "الجمهور العالمي", en: "global audience", ku: "بینەری جیهانی" };
+  if (!scope || !scope.scope) return { ar: "الجمهور العالمي", en: "global audience", ku: "بینەری جیهانی" };
+  const place = [scope.city, scope.region, scope.country].filter(Boolean).join("، ") || "";
+  if (scope.scope === "world" || (scope.scope === "auto" && !place)) return { ar: "الجمهور العالمي", en: "global audience", ku: "بینەری جیهانی" };
   if (scope.scope === "country") return { ar: place || "الدولة المختارة", en: place || "selected country", ku: place || "وڵاتی هەڵبژێردراو" };
+  if (scope.scope === "region") return { ar: place || "الإقليم المختار", en: place || "selected region", ku: place || "هەرێمی هەڵبژێردراو" };
   if (scope.scope === "province") return { ar: place || "المحافظة/الإقليم المختار", en: place || "selected province/region", ku: place || "پارێزگا/هەرێمی هەڵبژێردراو" };
   return { ar: place || "المدينة المختارة", en: place || "selected city", ku: place || "شاری هەڵبژێردراو" };
 }
 
 function hasScopeSignal(text: string, scope?: GeoScope) {
   const hay = normalize(text);
-  if (!scope || !scope.scope) return IRAQ_MARKERS.some((m) => hay.includes(normalize(m)));
+  if (!scope || !scope.scope || (scope.scope === "auto" && !scope.country && !scope.city))
+    return GLOBAL_MARKERS.some((m) => hay.includes(normalize(m))) || /(north america|europe|middle east|gcc|mena|global|worldwide)/i.test(text);
   if (scope.scope === "world") return GLOBAL_MARKERS.some((m) => hay.includes(normalize(m))) || /(north america|europe|middle east|gcc|mena|global|worldwide)/i.test(text);
 
-  const wanted = [scope.country, scope.city].filter(Boolean).map(normalize);
+  const wanted = [scope.country, scope.region, scope.city].filter(Boolean).map(normalize);
   if (wanted.length && wanted.some((w) => hay.includes(w))) return true;
 
   if (scope.country && normalize(scope.country).includes("iraq")) {
