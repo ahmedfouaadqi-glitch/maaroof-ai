@@ -75,7 +75,11 @@
     "vite-tsconfig-paths": "^6.0.2",
     "world-atlas": "^2.0.2",
     "xlsx": "^0.18.5",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "@lovable.dev/email-js": "0.1.0",
+    "@lovable.dev/webhooks-js": "^0.0.1",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.10"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -100,5 +104,10 @@
   "overrides": {
     "seroval": "^1.6.0",
     "seroval-plugins": "^1.6.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "entities": "4.5.0"
+    }
   }
 }
