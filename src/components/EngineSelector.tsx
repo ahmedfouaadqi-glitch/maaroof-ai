@@ -67,13 +67,14 @@ export default function EngineSelector({ value, onChange, maxOverride, className
               type="button"
               onClick={() => toggle(e.key)}
               disabled={locked || full}
-              title={locked ? "Available on a higher plan" : model ? `${e.name} · ${model}${e.proxy ? " (proxy)" : ""}` : e.name}
+              title={locked ? "Available on a higher plan" : `${e.name}${model ? ` · ${model}${e.proxy ? " (proxy)" : ""}` : ""}${hint}`}
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
                 on ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"
               }`}
             >
               <e.Logo size={13} />
               {e.name}
+              <span aria-hidden className={`size-1.5 rounded-full ${dot}`} />
               {locked && <Lock className="size-3" />}
             </button>
           );
