@@ -42,7 +42,7 @@ export function ExportButtons({
   formats,
   toolKey,
 }: {
-  build: () => ExportPayload;
+  build: () => ExportPayload | Promise<ExportPayload>;
   size?: "sm" | "xs";
   className?: string;
   /** Optional restriction on top of admin policy. */
@@ -81,7 +81,7 @@ export function ExportButtons({
   };
 
   const run = async (f: ExportFormat) => {
-    const p = build();
+    const p = await build();
     p.lang = (lang as any) || "ar";
     p.identity = identity;
     setOpen(false);
