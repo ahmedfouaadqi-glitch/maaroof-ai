@@ -50,6 +50,21 @@ export function ReportBuilder() {
   const [data, setData] = useState<Record<string, any[]>>({});
   const [templates, setTemplates] = useState<any[]>([]);
   const [tplName, setTplName] = useState("");
+  // Live results captured from the tools during this session.
+  const captured = useCapturedResults();
+  const [pickedTools, setPickedTools] = useState<string[]>([]);
+  useEffect(() => {
+    setPickedTools((prev) => {
+      const keys = captured.map((c) => c.toolKey);
+      const kept = prev.filter((k) => keys.includes(k));
+      const added = keys.filter((k) => !prev.includes(k));
+      return [...kept, ...added];
+    });
+  }, [captured.length]);
+  function toggleTool(k: string) {
+    setPickedTools((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  }
+
 
   function toggle(id: MetricId) { setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
 
