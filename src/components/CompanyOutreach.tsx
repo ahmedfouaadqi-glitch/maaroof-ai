@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
+import { ToolHistory } from "@/components/ToolHistory";
 import { Building2, Loader2, Mail, Copy, Check, Search, Sparkles, ExternalLink } from "lucide-react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -130,6 +131,7 @@ export function CompanyOutreach() {
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
 
       {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="company_email" result={out} /></div>}
+      <ToolHistory toolKey="company_email" />
       {out && (
         <div className="mt-4 space-y-3">
           {out.company_brief && (

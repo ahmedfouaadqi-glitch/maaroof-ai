@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
+import { ToolHistory } from "@/components/ToolHistory";
 import { Loader2, Share2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -52,6 +53,7 @@ export function SocialAnalysis() {
       </div>
 
       {res && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="social_analysis" result={res} /></div>}
+      <ToolHistory toolKey="social_analysis" />
       {res && (
         <div className="space-y-3">
           <div className="rounded-xl border border-primary/30 bg-card/60 p-4">

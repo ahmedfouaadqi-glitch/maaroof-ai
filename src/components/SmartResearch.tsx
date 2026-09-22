@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
+import { ToolHistory } from "@/components/ToolHistory";
 import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -130,6 +131,7 @@ export function SmartResearch() {
 
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="research" result={out} /></div>}
+      <ToolHistory toolKey="research" />
       {out && (
         <div className="mt-4 space-y-3" id="research-result">
           {out.sge_summary && (

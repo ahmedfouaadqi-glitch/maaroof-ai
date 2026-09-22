@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
+import { ToolHistory } from "@/components/ToolHistory";
 import { Loader2, Target } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -78,6 +79,7 @@ export function GeoStrategist() {
       </div>
 
       {res && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="geo_strategist" result={res} /></div>}
+      <ToolHistory toolKey="geo_strategist" />
       {res && (
         <div className="space-y-3 text-sm">
           {res.summary && <div className="rounded-xl border border-primary/30 bg-card/60 p-4">{res.summary}</div>}
