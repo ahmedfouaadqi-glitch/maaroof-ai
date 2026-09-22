@@ -435,3 +435,31 @@ export const adminUpsertSingleToolPlanAccess = createServerFn({ method: "POST" }
     if (error) throw new Response(error.message, { status: 400 });
     return { ok: true };
   });
+
+// ============ free plan policy: correct one account's grant ============
+export const adminResetTrialGrant = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((d: any) => z.object({ email: z.string().email() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = context as any;
+    const { data: prof, error: pErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("email", data.email)
+      .maybeSingle();
+    if (pErr) throw new Response(pErr.message, { status: 400 });
+    if (!prof) return { ok: false, error: "user_not_found" };
+
+    await supabaseAdmin
+      .from("user_agent_subscriptions")
+      .update({ status: "cancelled" })
+      .eq("user_id", prof.id)
+      .eq("status", "active");
+
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ tokens_balance: 0, tokens_used_today: 0, tokens_used_month: 0 })
+      .eq("id", prof.id);
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
