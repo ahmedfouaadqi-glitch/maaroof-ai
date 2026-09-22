@@ -142,7 +142,6 @@ export const en: Dict = {
   hist_empty: "No saved results yet",
   hist_refresh: "Refresh",
   hist_clear: "Clear all",
-  hist_delete: "Delete",
   report_src_saved: "Saved results",
   export_word: "Word",
   export_ppt: "PowerPoint",

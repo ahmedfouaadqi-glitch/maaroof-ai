@@ -180,7 +180,6 @@ export const ku: Dict = {
   hist_empty: "هێشتا هیچ ئەنجامێک پاشەکەوت نەکراوە",
   hist_refresh: "نوێکردنەوە",
   hist_clear: "سڕینەوەی هەموو",
-  hist_delete: "سڕینەوە",
   report_src_saved: "ئەنجامەکانی پاشەکەوتکراو",
   export_word: "وۆرد",
   export_ppt: "پاوەرپۆینت",

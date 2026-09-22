@@ -142,7 +142,6 @@ export const ar: Dict = {
   hist_empty: "لا توجد نتائج محفوظة بعد",
   hist_refresh: "تحديث",
   hist_clear: "حذف الكل",
-  hist_delete: "حذف",
   report_src_saved: "نتائج محفوظة",
   export_word: "وورد",
   export_ppt: "بوربوينت",
