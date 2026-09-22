@@ -51,6 +51,16 @@ export default function EngineSelector({ value, onChange, maxOverride, className
           const locked = !!ent && !allowed.has(e.key);
           const full = !on && value.length >= limit;
           const model = ent?.models?.[e.key]?.model;
+          const h = ent?.health?.[e.key];
+          const dot =
+            h?.status === "ok" ? "bg-emerald-500"
+            : h?.status === "slow" ? "bg-amber-500"
+            : h?.status === "error" ? "bg-rose-500"
+            : "bg-muted-foreground/40";
+          const hint =
+            h && h.calls > 0
+              ? ` · ${h.status === "ok" ? "يعمل" : h.status === "slow" ? "بطيء" : h.status === "error" ? "متعطّل" : ""} ~${Math.round(h.avg_latency_ms / 1000)}s`
+              : "";
           return (
             <button
               key={e.key}

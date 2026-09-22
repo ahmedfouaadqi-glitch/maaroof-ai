@@ -336,6 +336,7 @@ ${evidenceBlock}`;
               allowed: entitlement.allowed,
               locked: entitlement.locked,
               used: targets,
+              excluded_unhealthy: healthFilter.excluded,
             },
           });
 
