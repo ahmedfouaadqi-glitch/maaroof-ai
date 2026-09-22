@@ -36,11 +36,19 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         warning: { ar: "منح صلاحية الإدارة يفتح كل اللوحة — استخدمه بحذر.", en: "Granting admin opens the whole console — use carefully.", ku: "دانی دەسەڵاتی ئەدمین هەموو کۆنسۆڵ دەکاتەوە — وریابە." },
       },
       {
+        key: "freeplan",
+        label: { ar: "الخطة المجانية والحسابات الجديدة", en: "Free Plan & New Accounts", ku: "پلانی خۆڕایی و هەژمارە نوێیەکان" },
+        purpose: { ar: "تحديد ما يحصل عليه كل حساب جديد: تجربة تلقائية، رصيد ابتدائي، حدود يومية وشهرية، وجلسات معروف المجانية.", en: "Decide what every new account receives: automatic trial, starting balance, daily/monthly caps and free Maaroof sessions.", ku: "دیاریکردنی ئەوەی هەر هەژمارێکی نوێ چی وەردەگرێت." },
+        usage: { ar: "اضبط السياسة مرة واحدة واحفظها — تُطبّق تلقائياً على كل تسجيل قادم. يمكنك أيضاً تصفير منح حساب معيّن ببريده.", en: "Set the policy once and save — it applies to all future signups. You can also reset one account's grant by email.", ku: "سیاسەت یەک جار دابنێ و پاشەکەوتی بکە." },
+        warning: { ar: "إيقاف التجربة التلقائية يمنع أي منح مجاني للحسابات الجديدة.", en: "Disabling the automatic trial stops all free grants for new accounts.", ku: "ناکارا کردنی تاقیکردنەوە هەموو بەخشینێکی خۆڕایی ڕادەوەستێنێت." },
+      },
+      {
         key: "pricing",
         label: { ar: "شبكة الخطط × الأدوات", en: "Plans × Tools Matrix", ku: "تۆڕی پلان × ئامراز" },
         purpose: { ar: "تحديد أي أداة متاحة لأي خطة.", en: "Decide which tool is available to which plan.", ku: "دیاریکردنی ئەوەی کام ئامراز بۆ کام پلان بەردەستە." },
         usage: { ar: "فعّل أو عطّل الأداة داخل الخطة، ثم احفظ.", en: "Toggle a tool inside a plan, then save.", ku: "ئامراز لەناو پلان کارا/ناکارا بکە و پاشەکەوتی بکە." },
       },
+
       {
         key: "plans",
         label: { ar: "الخطط والأسعار", en: "Plans & Pricing", ku: "پلان و نرخەکان" },

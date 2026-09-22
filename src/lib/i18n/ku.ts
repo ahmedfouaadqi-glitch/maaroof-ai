@@ -775,6 +775,9 @@ export const ku: Dict = {
   geo_country_ph: "وڵات (نموونە: عێراق)",
   geo_scope_per_tool: "بۆ هەر ئامرازێک",
   geo_scope_title: "بەشی جوگرافی",
+  geo_scope_auto: "خۆکار", geo_scope_region: "هەرێم", geo_scope_now: "ئێستا کار دەکەیت لەسەر:",
+  geo_region_ph: "هەرێم / ناوچە (نموونە: کوردستان)",
+  geo_scope_auto_hint: "وڵاتت لە پەیوەندییەکەت دەناسینەوە، و بە GPS وردتر دەکەین ئەگەر ڕێگە بدەیت.",
   geo_scope_world: "جیهان",
 
   nav_profile: "پرۆفایل",

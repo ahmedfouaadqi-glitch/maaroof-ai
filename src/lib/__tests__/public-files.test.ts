@@ -17,7 +17,7 @@ describe("public discovery + app-link files", () => {
     const robots = readFileSync("public/robots.txt", "utf8");
     expect(robots).toMatch(/User-agent: \*/);
     expect(robots).not.toMatch(/^Disallow: \/$/m);
-    expect(robots).toMatch(/Sitemap: https:\/\/geoiraq\.com\/sitemap\.xml/);
+    expect(robots).toMatch(/Sitemap: https:\/\/maaroofai\.com\/sitemap\.xml/);
   });
 
   it("includes the methodology page in the sitemap", () => {

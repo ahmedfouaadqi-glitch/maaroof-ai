@@ -461,11 +461,22 @@ export async function getMaaroofSettings(force = false): Promise<MaaroofSettings
     for (const row of (data as any[]) || []) {
       if (row.key in DEFAULTS) out[row.key] = row.value;
     }
+    // The admin "free plan policy" owns the free daily session cap.
+    try {
+      const { data: policy } = await db()
+        .from("app_settings")
+        .select("value")
+        .eq("key", "free_plan_policy")
+        .maybeSingle();
+      const cap = Number((policy as any)?.value?.maaroof_daily_sessions);
+      if (Number.isFinite(cap) && cap >= 0) out.trial_daily_cap = cap;
+    } catch {}
     _cache = { at: Date.now(), value: out as MaaroofSettings };
     return out as MaaroofSettings;
   } catch {
     return DEFAULTS;
   }
 }
+
 
 export function invalidateMaaroofSettings() { _cache = null; }

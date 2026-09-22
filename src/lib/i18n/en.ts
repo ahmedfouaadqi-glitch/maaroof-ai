@@ -613,6 +613,9 @@ export const en: Dict = {
   // v2 additions
   nav_profile: "Profile", nav_guide: "User Guide",
   geo_scope_title: "Geographic scope",
+  geo_scope_auto: "Automatic", geo_scope_region: "Region", geo_scope_now: "Working on:",
+  geo_region_ph: "Region / province (e.g. Kurdistan, Bavaria)",
+  geo_scope_auto_hint: "We detect your country from your connection, and refine it with GPS if you allow it.",
   geo_scope_world: "World", geo_scope_country: "Country", geo_scope_province: "Province", geo_scope_city: "City",
   geo_country_ph: "Country (e.g. Iraq)", geo_city_ph: "City / Province (e.g. Baghdad)",
   geo_scope_per_tool: "Per-tool", geo_scope_global_inherit: "Inherits global", geo_scope_use_global: "Use global",
