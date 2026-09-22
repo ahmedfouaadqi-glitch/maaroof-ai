@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { useCapturedResults } from "@/lib/export-bus";
+import { listToolHistory, getToolResult } from "@/lib/tool-history.functions";
 
 import {
   LineChart, Line, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis,
@@ -65,6 +66,30 @@ export function ReportBuilder() {
   }, [captured.length]);
   function toggleTool(k: string) {
     setPickedTools((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  }
+
+  // Saved results from the per-tool history.
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [pickedSaved, setPickedSaved] = useState<string[]>([]);
+  const [savedPayloads, setSavedPayloads] = useState<Record<string, any>>({});
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const r: any = await listToolHistory({ data: { limit: 50 } });
+        setSavedItems(r?.items || []);
+      } catch {}
+    })();
+  }, [user]);
+  async function toggleSaved(id: string) {
+    if (pickedSaved.includes(id)) { setPickedSaved((s) => s.filter((x) => x !== id)); return; }
+    if (!savedPayloads[id]) {
+      try {
+        const row: any = await getToolResult({ data: { id } });
+        setSavedPayloads((m) => ({ ...m, [id]: row?.payload }));
+      } catch { return; }
+    }
+    setPickedSaved((s) => [...s, id]);
   }
 
 
