@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import { ExportButtons } from "@/components/ExportButtons";
 import { payloadFromResult, useCaptureToolResult } from "@/lib/export-bus";
+import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import type { ExportPayload } from "@/lib/exports";
 
 /**
@@ -19,7 +20,7 @@ export function ToolResultExport({
   size = "sm",
 }: {
   toolKey: string;
-  title: string;
+  title?: string;
   result?: any;
   subtitle?: string;
   build?: () => ExportPayload;
@@ -27,19 +28,22 @@ export function ToolResultExport({
   size?: "sm" | "xs";
 }) {
   const { lang } = useI18n();
+  const tool = TOOL_CATALOG.find((x) => x.key === toolKey);
+  const label = title || (tool?.labels as any)?.[lang] || tool?.labels?.en || toolKey;
 
   const payload = useMemo<ExportPayload | null>(() => {
     try {
       if (build) return build();
       if (result == null) return null;
-      const p = payloadFromResult(title, result, subtitle);
+      const p = payloadFromResult(label, result, subtitle);
       return p.sections.length ? p : null;
     } catch {
       return null;
     }
-  }, [build, result, title, subtitle]);
+  }, [build, result, label, subtitle]);
 
-  useCaptureToolResult(toolKey, title, payload ? { ...payload, lang: lang as any } : null);
+  useCaptureToolResult(toolKey, label, payload ? { ...payload, lang: lang as any } : null);
+
 
   if (!payload) return null;
   return (
