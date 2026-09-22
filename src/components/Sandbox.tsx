@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
+import { ToolHistory } from "@/components/ToolHistory";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
@@ -282,6 +283,7 @@ export function Sandbox() {
       )}
 
       {result && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="analyze" result={result} /></div>}
+      <ToolHistory toolKey="analyze" />
       {result && (
         <>
           <div className="mt-3 grid gap-5 md:grid-cols-[200px_1fr]">

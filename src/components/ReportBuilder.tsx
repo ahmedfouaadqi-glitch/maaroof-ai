@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { useCapturedResults } from "@/lib/export-bus";
+import { listToolHistory, getToolResult } from "@/lib/tool-history.functions";
 
 import {
   LineChart, Line, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis,
@@ -65,6 +66,30 @@ export function ReportBuilder() {
   }, [captured.length]);
   function toggleTool(k: string) {
     setPickedTools((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  }
+
+  // Saved results from the per-tool history.
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [pickedSaved, setPickedSaved] = useState<string[]>([]);
+  const [savedPayloads, setSavedPayloads] = useState<Record<string, any>>({});
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const r: any = await listToolHistory({ data: { limit: 50 } });
+        setSavedItems(r?.items || []);
+      } catch {}
+    })();
+  }, [user]);
+  async function toggleSaved(id: string) {
+    if (pickedSaved.includes(id)) { setPickedSaved((s) => s.filter((x) => x !== id)); return; }
+    if (!savedPayloads[id]) {
+      try {
+        const row: any = await getToolResult({ data: { id } });
+        setSavedPayloads((m) => ({ ...m, [id]: row?.payload }));
+      } catch { return; }
+    }
+    setPickedSaved((s) => [...s, id]);
   }
 
 
@@ -142,6 +167,14 @@ export function ReportBuilder() {
       sections.push({ kind: "text", heading: c.title, text: new Date(c.at).toLocaleString() });
       sections.push(...c.payload.sections);
     }
+    // 1b) Saved results from the per-tool history.
+    for (const id of pickedSaved) {
+      const p = savedPayloads[id];
+      const it = savedItems.find((x) => x.id === id);
+      if (!p?.sections) continue;
+      sections.push({ kind: "text", heading: p.title || it?.title || "", text: new Date(it?.created_at || Date.now()).toLocaleString() });
+      sections.push(...p.sections);
+    }
     // 2) Database metrics — complete, nothing truncated.
     for (const k of selected) {
       const rows = data[k] || [];
@@ -167,7 +200,7 @@ export function ReportBuilder() {
     }
     sections.push({ kind: "kv", heading: t("report_preview_title"), rows: selected.map((k) => [METRICS.find((m) => m.id === k)?.label || k, (data[k] || []).length]) });
     return { title, sections };
-  }, [selected, data, title, t, captured, pickedTools]);
+  }, [selected, data, title, t, captured, pickedTools, pickedSaved, savedPayloads, savedItems]);
 
 
   const chartButtons: { id: ChartType; label: string; Icon: any }[] = [
@@ -215,6 +248,23 @@ export function ReportBuilder() {
           </div>
         )}
 
+        {/* Saved results from tool history */}
+        {savedItems.length > 0 && (
+          <div className="mt-3 rounded-xl border border-border bg-background/40 p-3">
+            <div className="text-xs font-semibold">{t("report_src_saved")}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {savedItems.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => toggleSaved(it.id)}
+                  className={`rounded-full px-3 py-1 text-[11px] border transition ${pickedSaved.includes(it.id) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"}`}
+                >
+                  {it.title} · {new Date(it.created_at).toLocaleDateString()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Chart-type segmented */}
         <div className="mt-3 inline-flex rounded-full border border-border bg-background p-1">
