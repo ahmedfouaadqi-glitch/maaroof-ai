@@ -11,6 +11,7 @@ import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
 import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
 import { AdminPlansMatrixPanel } from "@/components/admin/AdminPlansMatrixPanel";
+import { AdminFreePlanPolicyPanel } from "@/components/admin/AdminFreePlanPolicyPanel";
 
 import { ContentStudioTab } from "@/components/admin/ContentStudioTab";
 import { HeaderConfigTab } from "@/components/admin/HeaderConfigTab";
@@ -136,6 +137,7 @@ function AdminPage() {
         {group === "guide" && <AdminGuideTab onJump={openSection} />}
         {activeSub === "overview" && <Overview />}
         {activeSub === "users" && <AdminTokensPanel />}
+        {activeSub === "freeplan" && <AdminFreePlanPolicyPanel />}
         {activeSub === "pricing" && <AdminPlansMatrixPanel />}
         {activeSub === "plans" && <PlansTab />}
         {activeSub === "agent" && <AgentTab />}
