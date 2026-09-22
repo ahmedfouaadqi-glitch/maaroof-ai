@@ -68,7 +68,7 @@ function AuthPage() {
     setTimeout(() => navigate({ to: target as any }), 0);
   }
 
-  const oauthSignIn = async (provider: "google" | "microsoft") => {
+  const oauthSignIn = async (provider: "google" | "microsoft" | "apple") => {
     setError(null);
     setInfo(null);
     try { sessionStorage.setItem("auth_redirect", redirect || "/dashboard"); } catch { /* ignore */ }
@@ -149,6 +149,17 @@ function AuthPage() {
               <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
             </svg>
             {t("auth_microsoft")}
+          </button>
+          <button
+            type="button"
+            onClick={() => oauthSignIn("apple")}
+            disabled={loading}
+            className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-border bg-background/70 px-6 py-3 text-sm font-semibold transition-colors hover:bg-background disabled:opacity-50"
+          >
+            <svg className="size-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8.98-.2 1.92-.87 3.42-.9 1.28.11 2.24.72 2.86 1.8-2.62 1.57-2.19 5.02.46 6.03-.52 1.37-1.19 2.73-2.82 5.24zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+            </svg>
+            {t("auth_apple")}
           </button>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />

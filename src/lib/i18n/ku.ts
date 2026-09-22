@@ -144,6 +144,7 @@ export const ku: Dict = {
   auth_signin_cta: "چوونەژوورەوە",
   auth_google: "بەردەوامبوون بە Google",
   auth_microsoft: "بەردەوامبوون بە Microsoft",
+  auth_apple: "بەردەوامبوون بە Apple",
   auth_or: "یان",
   auth_signup_cta: "هەژمار دروست بکە",
   auth_no_account: "هەژمارت نییە؟",
