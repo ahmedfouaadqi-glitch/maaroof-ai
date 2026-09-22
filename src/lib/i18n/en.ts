@@ -106,6 +106,7 @@ export const en: Dict = {
   auth_signin_cta: "Sign in",
   auth_google: "Continue with Google",
   auth_microsoft: "Continue with Microsoft",
+  auth_apple: "Continue with Apple",
   auth_or: "or",
   auth_signup_cta: "Create account",
   auth_no_account: "No account?",

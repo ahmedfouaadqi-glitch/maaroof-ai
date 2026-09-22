@@ -106,6 +106,7 @@ export const ar: Dict = {
   auth_signin_cta: "دخول",
   auth_google: "المتابعة بحساب Google",
   auth_microsoft: "المتابعة بحساب Microsoft",
+  auth_apple: "المتابعة بحساب Apple",
   auth_or: "أو",
   auth_signup_cta: "إنشاء الحساب",
   auth_no_account: "ليس لديك حساب؟",
