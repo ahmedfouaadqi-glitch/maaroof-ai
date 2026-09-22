@@ -104,6 +104,8 @@ export const ar: Dict = {
   auth_signin_title: "تسجيل الدخول",
   auth_signup_title: "إنشاء حساب جديد",
   auth_signin_cta: "دخول",
+  auth_google: "المتابعة بحساب Google",
+  auth_or: "أو",
   auth_signup_cta: "إنشاء الحساب",
   auth_no_account: "ليس لديك حساب؟",
   auth_have_account: "لديك حساب بالفعل؟",
