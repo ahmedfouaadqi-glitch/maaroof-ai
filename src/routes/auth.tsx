@@ -71,7 +71,7 @@ function AuthPage() {
   const oauthSignIn = async (provider: "google" | "microsoft") => {
     setError(null);
     setInfo(null);
-    try { sessionStorage.setItem("auth_redirect", redirect); } catch { /* ignore */ }
+    try { sessionStorage.setItem("auth_redirect", redirect || "/dashboard"); } catch { /* ignore */ }
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: `${window.location.origin}/auth`,
     });
