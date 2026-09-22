@@ -374,26 +374,49 @@ export async function exportToPowerPoint(payload: ExportPayload) {
 
   const cover = pptx.addSlide();
   cover.addText(payload.title, { x: 0.5, y: 2, w: 9, h: 1, fontSize: 30, bold: true, align: "center" });
-  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}`, { x: 0.5, y: 3.1, w: 9, h: 1, fontSize: 14, align: "center", color: "666666" });
+  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}\n${identityLine(payload, lang)}`, { x: 0.5, y: 3.1, w: 9, h: 1.2, fontSize: 14, align: "center", color: "666666" });
+
+  const ROWS_PER_SLIDE = 14;
+  const CHARS_PER_SLIDE = 1200;
 
   for (const s of payload.sections) {
-    const slide = pptx.addSlide();
-    slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.7, fontSize: 22, bold: true });
     if (s.kind === "table" && s.table) {
-      slide.addTable(
-        [s.table.columns.map((c) => ({ text: String(c), options: { bold: true } })), ...s.table.data.map((r) => r.map((c) => String(c)))] as any,
-        { x: 0.4, y: 1.1, w: 9.2, fontSize: 10, border: { pt: 1, color: "CCCCCC" } },
-      );
-    } else {
-      const body = s.kind === "kv" && s.rows ? s.rows.map(([k, v]) => `• ${k}: ${v}`).join("\n")
-        : s.kind === "list" && s.list ? s.list.map((x) => `• ${x}`).join("\n")
-        : s.text || "";
-      slide.addText(body, { x: 0.4, y: 1.1, w: 9.2, h: 4, fontSize: 13, valign: "top" });
+      // Split long tables across slides so no row is lost.
+      const chunks: (string | number)[][][] = [];
+      for (let i = 0; i < s.table.data.length; i += ROWS_PER_SLIDE) chunks.push(s.table.data.slice(i, i + ROWS_PER_SLIDE));
+      if (chunks.length === 0) chunks.push([]);
+      chunks.forEach((chunk, ci) => {
+        const slide = pptx.addSlide();
+        slide.addText(chunks.length > 1 ? `${s.heading} (${ci + 1}/${chunks.length})` : s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.7, fontSize: 22, bold: true });
+        slide.addTable(
+          [s.table!.columns.map((c) => ({ text: String(c), options: { bold: true } })), ...chunk.map((r) => r.map((c) => String(c)))] as any,
+          { x: 0.4, y: 1.1, w: 9.2, fontSize: 10, border: { pt: 1, color: "CCCCCC" } },
+        );
+      });
+      continue;
     }
+    const body = s.kind === "kv" && s.rows ? s.rows.map(([k, v]) => `• ${k}: ${v}`).join("\n")
+      : s.kind === "list" && s.list ? s.list.map((x) => `• ${x}`).join("\n")
+      : s.text || "";
+    // Split long text across slides so nothing is cut off.
+    const lines = body.split("\n");
+    const pages: string[] = [];
+    let buf = "";
+    for (const line of lines) {
+      if (buf && buf.length + line.length > CHARS_PER_SLIDE) { pages.push(buf); buf = ""; }
+      buf += (buf ? "\n" : "") + line;
+    }
+    if (buf || pages.length === 0) pages.push(buf);
+    pages.forEach((page, pi) => {
+      const slide = pptx.addSlide();
+      slide.addText(pages.length > 1 ? `${s.heading} (${pi + 1}/${pages.length})` : s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.7, fontSize: 22, bold: true });
+      slide.addText(page, { x: 0.4, y: 1.1, w: 9.2, h: 4, fontSize: 13, valign: "top" });
+    });
   }
 
   const last = pptx.addSlide();
-  last.addText(DISCLAIMER[lang], { x: 0.5, y: 2, w: 9, h: 2, fontSize: 10, color: "666666", align: "center" });
+  last.addText(`${identityLine(payload, lang)}\n${BRAND} · ${SITE}\n\n${DISCLAIMER[lang]}`, { x: 0.5, y: 2, w: 9, h: 2.4, fontSize: 10, color: "666666", align: "center" });
+
 
   await pptx.writeFile({ fileName: `${payload.title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.pptx` });
 }
