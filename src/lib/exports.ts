@@ -66,21 +66,24 @@ const escapeHtml = (s: any) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
-function brandHeaderHtml(lang: ExportLang) {
+function brandHeaderHtml(lang: ExportLang, payload: ExportPayload) {
+  const showLogo = payload.identity?.showLogo !== false;
+  const who = identityLine(payload, lang);
   return `
     <header class="brand">
-      <div class="logo" aria-hidden="true">
+      ${showLogo ? `<div class="logo" aria-hidden="true">
         <img src="${maaroofLogo}" alt="MAAROOF Ai" width="56" height="56" style="display:block;object-fit:contain;border-radius:10px;background:#fff;padding:2px"/>
-      </div>
+      </div>` : ""}
       <div class="brand-text">
         <div class="brand-name">${BRAND}</div>
         <div class="brand-prev">${PREVIOUS_BRAND}</div>
         <div class="brand-sub">${SITE} · ${ECOSYSTEM}</div>
       </div>
-      <div class="meta">${UI[lang].generated} ${escapeHtml(new Date().toLocaleString())}</div>
+      <div class="meta">${UI[lang].generated} ${escapeHtml(new Date().toLocaleString())}${who ? `<br/>${escapeHtml(who)}` : ""}</div>
     </header>
   `;
 }
+
 
 function sectionHtml(s: ExportSection): string {
   const h = `<h2>${escapeHtml(s.heading)}</h2>`;
