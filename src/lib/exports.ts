@@ -318,7 +318,10 @@ export function payloadToMarkdown(payload: ExportPayload): string {
   const lang = payload.lang || "ar";
   const out: string[] = [`# ${payload.title}`];
   if (payload.subtitle) out.push(`_${payload.subtitle}_`);
-  out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`, "");
+  out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`);
+  if (identityLine(payload, lang)) out.push(`> ${identityLine(payload, lang)}`);
+  out.push("");
+
   for (const s of payload.sections) {
     out.push(`## ${s.heading}`);
     if (s.kind === "text" && s.text) out.push(s.text, "");
@@ -354,8 +357,10 @@ table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:6p
 <h1>${escapeHtml(payload.title)}</h1>
 ${payload.subtitle ? `<p class="small">${escapeHtml(payload.subtitle)}</p>` : ""}
 <p class="small">${BRAND} · ${SITE} — ${UI[lang].generated} ${escapeHtml(new Date().toLocaleString())}</p>
+${identityLine(payload, lang) ? `<p class="small">${escapeHtml(identityLine(payload, lang))}</p>` : ""}
 ${payload.sections.map(sectionHtml).join("")}
-<hr/><p class="small">${escapeHtml(DISCLAIMER[lang])}</p>
+<hr/>${identityLine(payload, lang) ? `<p class="small">${escapeHtml(identityLine(payload, lang))}</p>` : ""}<p class="small">${BRAND} · ${SITE}</p><p class="small">${escapeHtml(DISCLAIMER[lang])}</p>
+
 </body></html>`;
   download(html, "application/msword;charset=utf-8", "doc", payload.title);
 }
