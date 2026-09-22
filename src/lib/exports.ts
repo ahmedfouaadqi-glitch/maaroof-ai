@@ -197,10 +197,12 @@ export function exportToExcel(payload: ExportPayload) {
     [PREVIOUS_BRAND, "", "", ""],
     [`${SITE} · ${ECOSYSTEM}`, "", "", ""],
     [`${UI[lang].generated}: ${new Date().toLocaleString()}`, "", "", ""],
+    identityLine(payload, lang) ? [identityLine(payload, lang), "", "", ""] : ["", "", "", ""],
     [payload.title, "", "", ""],
     payload.subtitle ? [payload.subtitle, "", "", ""] : ["", "", "", ""],
     [],
   ];
+
 
   // First sheet = summary with all KV/text/list, plus per-table sheets.
   const summary: any[][] = [...headerRows];
@@ -255,7 +257,10 @@ export function exportToCSV(payload: ExportPayload) {
   lines.push(esc(payload.title));
   if (payload.subtitle) lines.push(esc(payload.subtitle));
   lines.push(esc(`${UI[lang].generated}: ${new Date().toLocaleString()}`));
+  if (identityLine(payload, lang)) lines.push(esc(identityLine(payload, lang)));
+  lines.push(esc(`${BRAND} · ${SITE}`));
   lines.push("");
+
 
   payload.sections.forEach((s) => {
     lines.push(esc(`# ${s.heading}`));
