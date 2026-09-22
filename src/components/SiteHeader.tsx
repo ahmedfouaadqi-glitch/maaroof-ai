@@ -62,6 +62,7 @@ export function SiteHeader() {
           {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/maaroof" className="font-semibold text-primary hover:text-foreground">{t("auto.maaroof")}</Link>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
+          <Link to="/markets" className="hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
           {hdr.show_contact && <Link to="/contact" className="hover:text-foreground">{t("nav_contact")}</Link>}
           {hdr.extra_links.map((l, i) => (
             l.href.startsWith("http")
@@ -123,6 +124,7 @@ export function SiteHeader() {
             {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/maaroof" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{t("auto.maaroof")}</Link>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
+            <Link to="/markets" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
             {hdr.show_contact && <Link to="/contact" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_contact")}</Link>}
             {hdr.extra_links.map((l, i) => (
               <a key={i} href={l.href} onClick={close} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"

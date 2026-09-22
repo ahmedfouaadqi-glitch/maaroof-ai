@@ -170,10 +170,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
 
   // Part 6 — three-way execution mode. Backward compatible: defaults to "execution".
+  // The safe modes (simulation / recommendation) NEVER execute tools, so they are
+  // always honoured when the caller asks for them — regardless of the evolution
+  // flag, which only gates opening extra modes globally.
+  const requestedMode = ctx.executionMode;
   const executionMode: ExecutionMode =
-    settings.platform_evolution?.execution_modes_enabled && ctx.executionMode
-      ? ctx.executionMode
-      : "execution";
+    requestedMode === "simulation" || requestedMode === "recommendation"
+      ? requestedMode
+      : settings.platform_evolution?.execution_modes_enabled && requestedMode
+        ? requestedMode
+        : "execution";
+
 
   // 1) Create run row
   const { data: runIns, error: runErr } = await db()

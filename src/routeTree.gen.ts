@@ -16,6 +16,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as MarketsRouteImport } from './routes/markets'
 import { Route as MaaroofRouteImport } from './routes/maaroof'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -88,6 +89,11 @@ const PricingRoute = PricingRouteImport.update({
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketsRoute = MarketsRouteImport.update({
+  id: '/markets',
+  path: '/markets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MaaroofRoute = MaaroofRouteImport.update({
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
+  '/markets': typeof MarketsRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
+  '/markets': typeof MarketsRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -388,6 +396,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
+  '/markets': typeof MarketsRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/maaroof'
+    | '/markets'
     | '/methodology'
     | '/pricing'
     | '/privacy'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/maaroof'
+    | '/markets'
     | '/methodology'
     | '/pricing'
     | '/privacy'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/maaroof'
+    | '/markets'
     | '/methodology'
     | '/pricing'
     | '/privacy'
@@ -579,6 +591,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   GuideRoute: typeof GuideRouteWithChildren
   MaaroofRoute: typeof MaaroofRouteWithChildren
+  MarketsRoute: typeof MarketsRoute
   MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -663,6 +676,13 @@ declare module '@tanstack/react-router' {
       path: '/methodology'
       fullPath: '/methodology'
       preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets': {
+      id: '/markets'
+      path: '/markets'
+      fullPath: '/markets'
+      preLoaderRoute: typeof MarketsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/maaroof': {
@@ -968,6 +988,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   GuideRoute: GuideRouteWithChildren,
   MaaroofRoute: MaaroofRouteWithChildren,
+  MarketsRoute: MarketsRoute,
   MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
