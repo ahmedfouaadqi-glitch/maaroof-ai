@@ -303,6 +303,7 @@ export function exportToCSV(payload: ExportPayload) {
   lines.push(esc(`${UI[lang].generated}: ${new Date().toLocaleString()}`));
   if (identityLine(payload, lang)) lines.push(esc(identityLine(payload, lang)));
   lines.push(esc(`${BRAND} · ${SITE}`));
+  if (payload.identity?.showLogo !== false) lines.push(esc(`Logo: ${LOGO_URL}`));
   lines.push("");
 
 
@@ -352,7 +353,16 @@ function download(content: BlobPart, mime: string, ext: string, title: string) {
 export function exportToJSON(payload: ExportPayload) {
   const lang = payload.lang || "ar";
   const body = JSON.stringify(
-    { brand: BRAND, site: SITE, generated_at: new Date().toISOString(), language: lang, ...payload, disclaimer: DISCLAIMER[lang] },
+    {
+      brand: BRAND,
+      site: SITE,
+      site_url: SITE_URL,
+      ...(payload.identity?.showLogo !== false ? { logo_url: LOGO_URL } : {}),
+      generated_at: new Date().toISOString(),
+      language: lang,
+      ...payload,
+      disclaimer: DISCLAIMER[lang],
+    },
     null, 2,
   );
   download(body, "application/json;charset=utf-8", "json", payload.title);
@@ -363,6 +373,7 @@ export function payloadToMarkdown(payload: ExportPayload): string {
   const out: string[] = [`# ${payload.title}`];
   if (payload.subtitle) out.push(`_${payload.subtitle}_`);
   out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`);
+  if (payload.identity?.showLogo !== false) out.push(`> Logo: ${LOGO_URL}`);
   if (identityLine(payload, lang)) out.push(`> ${identityLine(payload, lang)}`);
   out.push("");
 
@@ -389,24 +400,76 @@ export function exportToMarkdown(payload: ExportPayload) {
   download(payloadToMarkdown(payload), "text/markdown;charset=utf-8", "md", payload.title);
 }
 
-/** Word-compatible HTML document (.doc) — opens natively in Word. */
-export function exportToWord(payload: ExportPayload) {
+/** Native Word document with an embedded logo and complete report content. */
+export async function exportToWord(payload: ExportPayload) {
   const lang = payload.lang || "ar";
-  const dir = lang === "en" ? "ltr" : "rtl";
-  const html = `<!doctype html><html lang="${lang}" dir="${dir}"><head><meta charset="utf-8"/>
-<title>${escapeHtml(payload.title)}</title>
-<style>body{font-family:Arial,sans-serif;direction:${dir}}h1{font-size:20pt}h2{font-size:14pt;margin-top:18pt}
-table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:6px;font-size:10pt;text-align:${dir === "rtl" ? "right" : "left"}}
-.small{color:#666;font-size:9pt}</style></head><body>
-<h1>${escapeHtml(payload.title)}</h1>
-${payload.subtitle ? `<p class="small">${escapeHtml(payload.subtitle)}</p>` : ""}
-<p class="small">${BRAND} · ${SITE} — ${UI[lang].generated} ${escapeHtml(new Date().toLocaleString())}</p>
-${identityLine(payload, lang) ? `<p class="small">${escapeHtml(identityLine(payload, lang))}</p>` : ""}
-${payload.sections.map(sectionHtml).join("")}
-<hr/>${identityLine(payload, lang) ? `<p class="small">${escapeHtml(identityLine(payload, lang))}</p>` : ""}<p class="small">${BRAND} · ${SITE}</p><p class="small">${escapeHtml(DISCLAIMER[lang])}</p>
-
-</body></html>`;
-  download(html, "application/msword;charset=utf-8", "doc", payload.title);
+  const rtl = lang !== "en";
+  const {
+    AlignmentType, BorderStyle, Document, Footer, Header, HeadingLevel, ImageRun,
+    Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType,
+  } = await import("docx");
+  const logoData = await optionalLogo(payload);
+  const paragraph = (text: string, opts: { bold?: boolean; size?: number; color?: string; heading?: typeof HeadingLevel.HEADING_1 } = {}) =>
+    new Paragraph({
+      ...(opts.heading ? { heading: opts.heading } : {}),
+      bidirectional: rtl,
+      alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+      spacing: { after: 120 },
+      children: [new TextRun({ text, font: "Arial", bold: opts.bold, size: opts.size, color: opts.color })],
+    });
+  const cellBorders = Object.fromEntries(["top", "bottom", "left", "right"].map((side) => [side, { style: BorderStyle.SINGLE, size: 1, color: "D9DEE8" }]));
+  const makeTable = (columns: string[], rows: (string | number)[][]) => {
+    const count = Math.max(columns.length, 1);
+    const base = Math.floor(9360 / count);
+    const widths = columns.map((_, index) => index === count - 1 ? 9360 - base * (count - 1) : base);
+    const makeRow = (values: (string | number)[], header = false) => new TableRow({
+      children: values.map((value, index) => new TableCell({
+        width: { size: widths[index] || base, type: WidthType.DXA },
+        borders: cellBorders,
+        shading: header ? { fill: "4338CA", type: ShadingType.CLEAR } : undefined,
+        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        children: [new Paragraph({
+          bidirectional: rtl,
+          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+          children: [new TextRun({ text: String(value ?? ""), font: "Arial", size: 19, bold: header, color: header ? "FFFFFF" : "0F172A" })],
+        })],
+      })),
+    });
+    return new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: widths, rows: [makeRow(columns, true), ...rows.map((row) => makeRow(row))] });
+  };
+  const content: Array<InstanceType<typeof Paragraph> | InstanceType<typeof Table>> = [
+    paragraph(payload.title, { heading: HeadingLevel.HEADING_1, bold: true, size: 36, color: "0F172A" }),
+  ];
+  if (payload.subtitle) content.push(paragraph(payload.subtitle, { size: 22, color: "475569" }));
+  content.push(paragraph(`${UI[lang].generated}: ${new Date().toLocaleString()}`, { size: 18, color: "64748B" }));
+  if (identityLine(payload, lang)) content.push(paragraph(identityLine(payload, lang), { size: 18, color: "64748B" }));
+  payload.sections.forEach((section) => {
+    content.push(paragraph(section.heading, { heading: HeadingLevel.HEADING_2, bold: true, size: 27, color: "4338CA" }));
+    if (section.kind === "text" && section.text) section.text.split("\n").forEach((line) => content.push(paragraph(line)));
+    else if (section.kind === "list" && section.list) section.list.forEach((item) => content.push(new Paragraph({ bidirectional: rtl, alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT, bullet: { level: 0 }, children: [new TextRun({ text: item, font: "Arial", size: 22 })] })));
+    else if (section.kind === "kv" && section.rows) content.push(makeTable(["", ""], section.rows.map(([key, value]) => [key, value])));
+    else if (section.kind === "table" && section.table) content.push(makeTable(section.table.columns, section.table.data));
+  });
+  const headerChildren = [new Paragraph({
+    bidirectional: rtl,
+    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: "1E40AF", space: 8 } },
+    children: [
+      ...(logoData ? [new ImageRun({ type: "png", data: dataUrlBytes(logoData), transformation: { width: 52, height: 52 }, altText: { title: BRAND, description: `${BRAND} logo`, name: BRAND } }), new TextRun("  ")] : []),
+      new TextRun({ text: `${BRAND}\n${SITE}`, font: "Arial", bold: true, size: 24, color: "0F2454", break: 1 }),
+    ],
+  })];
+  const document = new Document({
+    styles: { default: { document: { run: { font: "Arial", size: 22 } } } },
+    sections: [{
+      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+      headers: { default: new Header({ children: headerChildren }) },
+      footers: { default: new Footer({ children: [paragraph(`${identityLine(payload, lang)}${identityLine(payload, lang) ? " · " : ""}${BRAND} · ${SITE}\n${DISCLAIMER[lang]}`, { size: 16, color: "64748B" })] }) },
+      children: content,
+    }],
+  });
+  const blob = await Packer.toBlob(document);
+  download(blob, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx", payload.title);
 }
 
 /** Slide deck — one slide per section. Loaded lazily to keep the bundle light. */
@@ -415,8 +478,17 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
+  pptx.author = BRAND;
+  pptx.subject = payload.title;
+  const logoData = await optionalLogo(payload);
+  const decorate = (slide: ReturnType<typeof pptx.addSlide>) => {
+    if (logoData) slide.addImage({ data: logoData, x: 0.28, y: 0.18, w: 0.45, h: 0.45 });
+    slide.addText(`${BRAND} · ${SITE}`, { x: 0.8, y: 0.2, w: 3.2, h: 0.28, fontSize: 9, bold: true, color: "0F2454" });
+    slide.addText(identityLine(payload, lang), { x: 5.8, y: 5.3, w: 3.8, h: 0.22, fontSize: 7, align: "right", color: "64748B" });
+  };
 
   const cover = pptx.addSlide();
+  decorate(cover);
   cover.addText(payload.title, { x: 0.5, y: 2, w: 9, h: 1, fontSize: 30, bold: true, align: "center" });
   cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}\n${identityLine(payload, lang)}`, { x: 0.5, y: 3.1, w: 9, h: 1.2, fontSize: 14, align: "center", color: "666666" });
 
@@ -431,6 +503,7 @@ export async function exportToPowerPoint(payload: ExportPayload) {
       if (chunks.length === 0) chunks.push([]);
       chunks.forEach((chunk, ci) => {
         const slide = pptx.addSlide();
+        decorate(slide);
         slide.addText(chunks.length > 1 ? `${s.heading} (${ci + 1}/${chunks.length})` : s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.7, fontSize: 22, bold: true });
         slide.addTable(
           [s.table!.columns.map((c) => ({ text: String(c), options: { bold: true } })), ...chunk.map((r) => r.map((c) => String(c)))] as any,
@@ -453,12 +526,14 @@ export async function exportToPowerPoint(payload: ExportPayload) {
     if (buf || pages.length === 0) pages.push(buf);
     pages.forEach((page, pi) => {
       const slide = pptx.addSlide();
+      decorate(slide);
       slide.addText(pages.length > 1 ? `${s.heading} (${pi + 1}/${pages.length})` : s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.7, fontSize: 22, bold: true });
       slide.addText(page, { x: 0.4, y: 1.1, w: 9.2, h: 4, fontSize: 13, valign: "top" });
     });
   }
 
   const last = pptx.addSlide();
+  decorate(last);
   last.addText(`${identityLine(payload, lang)}\n${BRAND} · ${SITE}\n\n${DISCLAIMER[lang]}`, { x: 0.5, y: 2, w: 9, h: 2.4, fontSize: 10, color: "666666", align: "center" });
 
 
