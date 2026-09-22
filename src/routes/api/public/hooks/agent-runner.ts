@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
-const SYSTEM_ANALYZE = `You are a GEO (Generative Engine Optimization) auditor for the Iraqi market.
+const SYSTEM_ANALYZE = `You are a GEO (Generative Engine Optimization) auditor for a global audience. Respect the market scope supplied by the user; assume no specific country when none is given.
 Given a URL or topic, give a CONCISE summary (2-3 sentences in Arabic) of how to improve its visibility in AI search engines.
 Then assign a GEO score 0-100 based on citation-worthiness. Be honest and specific. Never invent facts.`;
 
-const SYSTEM_SUGGEST = `You are a GEO copywriter for the Iraqi market.
+const SYSTEM_SUGGEST = `You are a GEO copywriter for a global audience. Respect the market scope supplied by the user; assume no specific country when none is given.
 Given a topic or URL, write ONE short engaging social post (60-100 words) in Arabic optimized for citation by AI search engines.
 Add 2-3 relevant hashtags. Never invent statistics, dates, or historical events.`;
 
