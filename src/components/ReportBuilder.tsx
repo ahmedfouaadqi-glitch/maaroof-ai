@@ -119,6 +119,13 @@ export function ReportBuilder() {
 
   const payload = useMemo<() => ExportPayload>(() => () => {
     const sections: any[] = [];
+    // 1) Live tool results captured from the tools themselves.
+    for (const c of captured) {
+      if (!pickedTools.includes(c.toolKey)) continue;
+      sections.push({ kind: "text", heading: c.title, text: new Date(c.at).toLocaleString() });
+      sections.push(...c.payload.sections);
+    }
+    // 2) Database metrics — complete, nothing truncated.
     for (const k of selected) {
       const rows = data[k] || [];
       const label = METRICS.find((m) => m.id === k)?.label || k;
@@ -126,24 +133,25 @@ export function ReportBuilder() {
         sections.push({ kind: "text", heading: label, text: t("report_no_data") });
         continue;
       }
-      const cols = Object.keys(rows[0]).filter((c) => !["user_id", "id"].includes(c)).slice(0, 6);
+      const cols = Array.from(new Set(rows.flatMap((r) => Object.keys(r)))).filter((c) => !["user_id", "id"].includes(c));
       sections.push({
         kind: "table",
         heading: label,
         table: {
           columns: cols,
-          data: rows.slice(0, 50).map((r) => cols.map((c) => {
+          data: rows.map((r) => cols.map((c) => {
             const v = (r as any)[c];
             if (v == null) return "";
-            if (typeof v === "object") return JSON.stringify(v).slice(0, 120);
-            return String(v).slice(0, 200);
+            if (typeof v === "object") return JSON.stringify(v);
+            return String(v);
           })),
         },
       });
     }
     sections.push({ kind: "kv", heading: t("report_preview_title"), rows: selected.map((k) => [METRICS.find((m) => m.id === k)?.label || k, (data[k] || []).length]) });
     return { title, sections };
-  }, [selected, data, title, t]);
+  }, [selected, data, title, t, captured, pickedTools]);
+
 
   const chartButtons: { id: ChartType; label: string; Icon: any }[] = [
     { id: "bar", label: t("report_chart_bar"), Icon: BarChart3 },
