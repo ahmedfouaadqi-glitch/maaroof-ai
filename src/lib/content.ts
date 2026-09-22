@@ -137,22 +137,47 @@ export function useHeaderConfig(): HeaderConfig {
 
 // ---------- export_config ----------
 export type ExportMode = "per_tool" | "report_only" | "both";
+export type ExportFormat = "pdf" | "xlsx" | "csv" | "docx" | "pptx" | "md" | "json";
+export const ALL_EXPORT_FORMATS: ExportFormat[] = ["pdf", "xlsx", "csv", "docx", "pptx", "md", "json"];
+export type EmailPrivacyMode = "mask" | "code" | "hide";
+
 export type ExportConfig = {
   mode: ExportMode;
   per_tool_enabled: Record<string, boolean>;
+  /** Which formats users may download. Empty/missing = all formats. */
+  formats_enabled: Record<string, boolean>;
+  footer: {
+    show_user_name: boolean;
+    email_privacy: EmailPrivacyMode;
+    show_logo: boolean;
+  };
 };
+
 export const DEFAULT_EXPORT_CONFIG: ExportConfig = {
   mode: "both",
   per_tool_enabled: {},
+  formats_enabled: {},
+  footer: { show_user_name: true, email_privacy: "mask", show_logo: true },
 };
 
-const EXPORT_KEY = "geo-export-config-v1";
+const EXPORT_KEY = "geo-export-config-v2";
 let EXPORT_CACHE: ExportConfig | null = null;
 
 function mergeExport(raw: any): ExportConfig {
   if (!raw || typeof raw !== "object") return DEFAULT_EXPORT_CONFIG;
   const mode: ExportMode = raw.mode === "per_tool" || raw.mode === "report_only" ? raw.mode : "both";
-  return { mode, per_tool_enabled: (raw.per_tool_enabled && typeof raw.per_tool_enabled === "object") ? raw.per_tool_enabled : {} };
+  const f = raw.footer && typeof raw.footer === "object" ? raw.footer : {};
+  const privacy: EmailPrivacyMode = f.email_privacy === "code" || f.email_privacy === "hide" ? f.email_privacy : "mask";
+  return {
+    mode,
+    per_tool_enabled: (raw.per_tool_enabled && typeof raw.per_tool_enabled === "object") ? raw.per_tool_enabled : {},
+    formats_enabled: (raw.formats_enabled && typeof raw.formats_enabled === "object") ? raw.formats_enabled : {},
+    footer: {
+      show_user_name: f.show_user_name !== false,
+      email_privacy: privacy,
+      show_logo: f.show_logo !== false,
+    },
+  };
 }
 
 export function useExportConfig(): ExportConfig {
@@ -179,9 +204,60 @@ export function useExportConfig(): ExportConfig {
   return cfg;
 }
 
-export function isToolExportEnabled(cfg: ExportConfig, toolKey: string): boolean {
+// ---------- per-user export override ----------
+export type ExportOverride = {
+  exports_enabled: boolean;
+  allowed_formats: string[];
+  allowed_tools: string[];
+  show_user_name: boolean | null;
+  email_privacy: EmailPrivacyMode | null;
+  show_logo: boolean | null;
+};
+
+/** Reads the signed-in user's export override row (admins manage these). */
+export function useExportOverride(): ExportOverride | null {
+  const [row, setRow] = useState<ExportOverride | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getSession();
+      const uid = auth.session?.user?.id;
+      if (!uid) return;
+      const { data } = await supabase
+        .from("user_export_overrides")
+        .select("exports_enabled, allowed_formats, allowed_tools, show_user_name, email_privacy, show_logo")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setRow({
+        exports_enabled: data.exports_enabled !== false,
+        allowed_formats: Array.isArray(data.allowed_formats) ? (data.allowed_formats as any[]).map(String) : [],
+        allowed_tools: Array.isArray(data.allowed_tools) ? (data.allowed_tools as any[]).map(String) : [],
+        show_user_name: typeof data.show_user_name === "boolean" ? data.show_user_name : null,
+        email_privacy: (data.email_privacy === "mask" || data.email_privacy === "code" || data.email_privacy === "hide") ? data.email_privacy : null,
+        show_logo: typeof data.show_logo === "boolean" ? data.show_logo : null,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return row;
+}
+
+export function isToolExportEnabled(cfg: ExportConfig, toolKey: string, override?: ExportOverride | null): boolean {
+  if (override) {
+    if (!override.exports_enabled) return false;
+    if (override.allowed_tools.length) return override.allowed_tools.includes(toolKey);
+  }
   if (cfg.mode === "report_only") return false;
   // mode === "per_tool" or "both": default to enabled unless explicitly false
   const v = cfg.per_tool_enabled[toolKey];
   return v !== false;
 }
+
+/** Formats the user may actually download, after global policy + per-user override. */
+export function allowedExportFormats(cfg: ExportConfig, override?: ExportOverride | null): ExportFormat[] {
+  let list = ALL_EXPORT_FORMATS.filter((f) => cfg.formats_enabled[f] !== false);
+  if (override?.allowed_formats.length) list = list.filter((f) => override.allowed_formats.includes(f));
+  return list;
+}
+
