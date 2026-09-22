@@ -409,7 +409,7 @@ export async function exportToWord(payload: ExportPayload) {
     Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType,
   } = await import("docx");
   const logoData = await optionalLogo(payload);
-  const paragraph = (text: string, opts: { bold?: boolean; size?: number; color?: string; heading?: typeof HeadingLevel.HEADING_1 } = {}) =>
+  const paragraph = (text: string, opts: { bold?: boolean; size?: number; color?: string; heading?: "Heading1" | "Heading2" } = {}) =>
     new Paragraph({
       ...(opts.heading ? { heading: opts.heading } : {}),
       bidirectional: rtl,
