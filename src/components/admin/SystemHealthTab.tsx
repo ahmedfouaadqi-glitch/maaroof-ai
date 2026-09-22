@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, RefreshCw, Loader2, TrendingDown, Gauge, Bug, FileText, Activity, Bot } from "lucide-react";
-import { getSystemHealth, type HealthSnapshot } from "@/lib/system-health.functions";
+import { getSystemHealth, adminFillPricingGaps, type HealthSnapshot } from "@/lib/system-health.functions";
 
 const fmt$ = (n: number, d = 4) => `$${(Number(n) || 0).toFixed(d)}`;
 
@@ -17,6 +17,9 @@ export function SystemHealthTab() {
   const [data, setData] = useState<HealthSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const fillGaps = useServerFn(adminFillPricingGaps);
+  const [filling, setFilling] = useState(false);
+  const [fillMsg, setFillMsg] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true); setErr(null);
@@ -25,6 +28,20 @@ export function SystemHealthTab() {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  const runFill = async () => {
+    setFilling(true); setFillMsg(null);
+    try {
+      const r: any = await fillGaps({} as any);
+      setFillMsg(t(
+        `تمت التعبئة: ${r.planRowsFixed} صف خطة/أداة و${r.catalogAdded} إضافة للكتالوج.`,
+        `Filled ${r.planRowsFixed} plan/tool rows and added ${r.catalogAdded} catalog entries.`,
+        `${r.planRowsFixed} ڕیز و ${r.catalogAdded} تۆمار پڕکرا.`,
+      ));
+      await load();
+    } catch (e: any) { setFillMsg(e?.message || "error"); }
+    finally { setFilling(false); }
+  };
 
   if (loading && !data) return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
   if (err) return <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{err}</div>;
@@ -200,8 +217,22 @@ export function SystemHealthTab() {
             </div>
           ))}
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={runFill}
+            disabled={filling}
+            className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-60"
+          >
+            {filling ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+            {t("تعبئة سريعة للأسعار الناقصة", "Quick-fill missing prices", "پڕکردنی خێرای نرخەکان")}
+          </button>
+          <span className="text-[11px] text-muted-foreground">
+            {t("يضيف سعراً افتراضياً لكل أداة ناقصة دون المساس بالأسعار المحددة.", "Adds a default price for every gap without touching prices you already set.", "نرخی بنەڕەتی بۆ هەر کەلێنێک زیاد دەکات.")}
+          </span>
+        </div>
+        {fillMsg && <p className="mt-2 text-[11px] text-primary">{fillMsg}</p>}
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {t("الإصلاح: افتح «الخطط × الأدوات» وحدّد التوكن/السعر لكل أداة مفقودة.", "Fix: open Plans × Tools and set tokens/price for each gap.", "ڕاستکردنەوە: پلان × ئامراز.")}
+          {t("للتعديل اليدوي: افتح «الخطط × الأدوات».", "Manual edit: open Plans × Tools.", "دەستکاری: پلان × ئامراز.")}
         </p>
       </Section>
 

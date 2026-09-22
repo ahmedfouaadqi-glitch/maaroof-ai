@@ -255,3 +255,62 @@ export const getSystemHealth = createServerFn({ method: "POST" })
       },
     };
   });
+
+/**
+ * Fill every pricing gap in one pass:
+ *  - tool_pricing_catalog gets a default row for any catalog tool missing from it
+ *    (tokens derived from the tool's costPerRun, usd left at 0 for admin review).
+ *  - tool_plan_access gets a row for every active plan x catalog tool that is
+ *    missing, and zero-priced enabled rows are filled from the catalog default.
+ * Existing non-zero prices are never overwritten.
+ */
+export const adminFillPricingGaps = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = context as any;
+    const { TOOL_CATALOG } = await import("@/lib/tool-catalog");
+
+    const { data: catRows } = await supabaseAdmin.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd");
+    const catalog = new Map<string, { tokens: number; usd: number }>();
+    for (const r of ((catRows || []) as any[])) catalog.set(r.tool_key, { tokens: Number(r.default_tokens) || 0, usd: Number(r.default_usd) || 0 });
+
+    // 1) Seed the suggestion catalog for any tool that has no entry yet.
+    const catalogInserts = TOOL_CATALOG.filter((tdef) => !catalog.has(tdef.key as string)).map((tdef) => ({
+      tool_key: tdef.key as string,
+      default_tokens: Math.max(1, Number((tdef as any).costPerRun) || 1) * 1000,
+      default_usd: 0,
+      notes: "auto-filled from tool catalog",
+    }));
+    if (catalogInserts.length) {
+      await supabaseAdmin.from("tool_pricing_catalog").upsert(catalogInserts, { onConflict: "tool_key" });
+      for (const r of catalogInserts) catalog.set(r.tool_key, { tokens: r.default_tokens, usd: r.default_usd });
+    }
+
+    // 2) Fill plan x tool rows.
+    const { data: activePlans } = await supabaseAdmin.from("subscription_plans").select("id, name").eq("active", true);
+    const { data: accessRows } = await supabaseAdmin
+      .from("tool_plan_access").select("plan_id, tool_key, enabled, tokens_per_use, usd_per_use");
+    const accessMap = new Map<string, any>();
+    for (const r of ((accessRows || []) as any[])) accessMap.set(`${r.plan_id}::${r.tool_key}`, r);
+
+    const upserts: any[] = [];
+    for (const p of ((activePlans || []) as any[])) {
+      for (const tdef of TOOL_CATALOG) {
+        const key = tdef.key as string;
+        const row = accessMap.get(`${p.id}::${key}`);
+        const fallbackTokens = catalog.get(key)?.tokens || Math.max(1, Number((tdef as any).costPerRun) || 1) * 1000;
+        const fallbackUsd = catalog.get(key)?.usd || 0;
+        if (!row) {
+          upserts.push({ plan_id: p.id, tool_key: key, enabled: true, tokens_per_use: fallbackTokens, usd_per_use: fallbackUsd });
+        } else if (row.enabled && !Number(row.tokens_per_use) && !Number(row.usd_per_use)) {
+          upserts.push({ plan_id: p.id, tool_key: key, enabled: true, tokens_per_use: fallbackTokens, usd_per_use: fallbackUsd });
+        }
+      }
+    }
+    if (upserts.length) {
+      const { error } = await supabaseAdmin.from("tool_plan_access").upsert(upserts, { onConflict: "plan_id,tool_key" });
+      if (error) throw new Error(error.message);
+    }
+
+    return { catalogAdded: catalogInserts.length, planRowsFixed: upserts.length };
+  });
