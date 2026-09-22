@@ -196,8 +196,13 @@ export const Route = createFileRoute("/api/brand-boost")({
             : null;
           const entitlement = await enginesAllowedForUser(admin, userId);
           const requested = applyEntitlement(platforms, entitlement);
-          const targets = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
-          if (!targets.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
+          const picked = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
+          if (!picked.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
+          // A provider that is currently failing is skipped instead of failing
+          // the whole run; the reason travels back in the response.
+          const { excludeUnhealthyEngines } = await import("@/lib/ai-engines.server");
+          const healthFilter = await excludeUnhealthyEngines(picked as EngineKey[]);
+          const targets = healthFilter.engines as Platform[];
           const engineModels = await resolveEngineModels(targets, "final");
           const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
 If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
