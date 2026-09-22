@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ToolResultExport } from "@/components/ToolResultExport";
 import { Eye, Loader2, Sparkles } from "lucide-react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -123,6 +124,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         </button>
       </div>
 
+      {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="visibility" result={out} /></div>}
       {out && (
         <div className="mt-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">

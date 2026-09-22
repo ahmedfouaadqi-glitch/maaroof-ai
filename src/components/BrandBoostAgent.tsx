@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ToolResultExport } from "@/components/ToolResultExport";
 import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Search, Mail, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -243,6 +244,7 @@ export function BrandBoostAgent() {
             : err}
         </div>
       )}
+      {report && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="brand_boost" result={report} /></div>}
       {report && (
         <div className="mt-4 space-y-2">
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}

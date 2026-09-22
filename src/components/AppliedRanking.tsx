@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ToolResultExport } from "@/components/ToolResultExport";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -257,6 +258,7 @@ export function AppliedRanking() {
         </div>
       )}
 
+      {result && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="applied_ranking" result={result} /></div>}
       {result && (
         <div className="mt-6 space-y-5">
           <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-5">

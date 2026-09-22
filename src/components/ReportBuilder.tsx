@@ -5,6 +5,8 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
+import { useCapturedResults } from "@/lib/export-bus";
+
 import {
   LineChart, Line, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis,
   XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid, Legend,
@@ -50,6 +52,21 @@ export function ReportBuilder() {
   const [data, setData] = useState<Record<string, any[]>>({});
   const [templates, setTemplates] = useState<any[]>([]);
   const [tplName, setTplName] = useState("");
+  // Live results captured from the tools during this session.
+  const captured = useCapturedResults();
+  const [pickedTools, setPickedTools] = useState<string[]>([]);
+  useEffect(() => {
+    setPickedTools((prev) => {
+      const keys = captured.map((c) => c.toolKey);
+      const kept = prev.filter((k) => keys.includes(k));
+      const added = keys.filter((k) => !prev.includes(k));
+      return [...kept, ...added];
+    });
+  }, [captured.length]);
+  function toggleTool(k: string) {
+    setPickedTools((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  }
+
 
   function toggle(id: MetricId) { setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
 
@@ -119,6 +136,13 @@ export function ReportBuilder() {
 
   const payload = useMemo<() => ExportPayload>(() => () => {
     const sections: any[] = [];
+    // 1) Live tool results captured from the tools themselves.
+    for (const c of captured) {
+      if (!pickedTools.includes(c.toolKey)) continue;
+      sections.push({ kind: "text", heading: c.title, text: new Date(c.at).toLocaleString() });
+      sections.push(...c.payload.sections);
+    }
+    // 2) Database metrics — complete, nothing truncated.
     for (const k of selected) {
       const rows = data[k] || [];
       const label = METRICS.find((m) => m.id === k)?.label || k;
@@ -126,24 +150,25 @@ export function ReportBuilder() {
         sections.push({ kind: "text", heading: label, text: t("report_no_data") });
         continue;
       }
-      const cols = Object.keys(rows[0]).filter((c) => !["user_id", "id"].includes(c)).slice(0, 6);
+      const cols = Array.from(new Set(rows.flatMap((r) => Object.keys(r)))).filter((c) => !["user_id", "id"].includes(c));
       sections.push({
         kind: "table",
         heading: label,
         table: {
           columns: cols,
-          data: rows.slice(0, 50).map((r) => cols.map((c) => {
+          data: rows.map((r) => cols.map((c) => {
             const v = (r as any)[c];
             if (v == null) return "";
-            if (typeof v === "object") return JSON.stringify(v).slice(0, 120);
-            return String(v).slice(0, 200);
+            if (typeof v === "object") return JSON.stringify(v);
+            return String(v);
           })),
         },
       });
     }
     sections.push({ kind: "kv", heading: t("report_preview_title"), rows: selected.map((k) => [METRICS.find((m) => m.id === k)?.label || k, (data[k] || []).length]) });
     return { title, sections };
-  }, [selected, data, title, t]);
+  }, [selected, data, title, t, captured, pickedTools]);
+
 
   const chartButtons: { id: ChartType; label: string; Icon: any }[] = [
     { id: "bar", label: t("report_chart_bar"), Icon: BarChart3 },
@@ -170,6 +195,26 @@ export function ReportBuilder() {
             <button key={m.id} onClick={() => toggle(m.id)} className={`rounded-full px-3 py-1 text-xs border transition ${selected.includes(m.id) ? "bg-primary text-primary-foreground border-primary shadow-sm" : "border-border hover:border-primary/40"}`}>{m.label}</button>
           ))}
         </div>
+
+        {/* Live tool results */}
+        {captured.length > 0 && (
+          <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <div className="text-xs font-semibold text-primary">{t("report_src_tools")}</div>
+            <p className="mb-2 text-[11px] text-muted-foreground">{t("report_src_tools_hint")}</p>
+            <div className="flex flex-wrap gap-2">
+              {captured.map((c) => (
+                <button
+                  key={c.toolKey}
+                  onClick={() => toggleTool(c.toolKey)}
+                  className={`rounded-full px-3 py-1 text-xs border transition ${pickedTools.includes(c.toolKey) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"}`}
+                >
+                  {c.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
 
         {/* Chart-type segmented */}
         <div className="mt-3 inline-flex rounded-full border border-border bg-background p-1">

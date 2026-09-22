@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ToolResultExport } from "@/components/ToolResultExport";
 import { Loader2, FlaskConical } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -65,6 +66,7 @@ export function WhatIfSimulator() {
         {err && <p className="mt-2 text-xs text-destructive">{err === "subscription_required" ? t("auto.subscription_required_or_insufficient_balance") : err}</p>}
       </div>
 
+      {res && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="what_if" result={res} /></div>}
       {res && (
         <div className="space-y-3 text-sm">
           {res.summary && <div className="rounded-xl border border-primary/30 bg-card/60 p-4">{res.summary}</div>}

@@ -463,3 +463,64 @@ export const adminResetTrialGrant = createServerFn({ method: "POST" })
     if (error) throw new Response(error.message, { status: 400 });
     return { ok: true };
   });
+
+// ============ per-user export overrides ============
+export const adminListExportOverrides = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = context as any;
+    const { data, error } = await supabaseAdmin
+      .from("user_export_overrides")
+      .select("*")
+      .order("updated_at", { ascending: false });
+    if (error) throw new Response(error.message, { status: 400 });
+    return { rows: data || [] };
+  });
+
+export const adminUpsertExportOverride = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((d: any) =>
+    z.object({
+      email: z.string().email(),
+      exports_enabled: z.boolean(),
+      allowed_formats: z.array(z.string()).default([]),
+      allowed_tools: z.array(z.string()).default([]),
+      show_user_name: z.boolean().nullable().default(null),
+      email_privacy: z.enum(["mask", "code", "hide"]).nullable().default(null),
+      show_logo: z.boolean().nullable().default(null),
+      note: z.string().nullable().default(null),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = context as any;
+    const { data: prof, error: pErr } = await supabaseAdmin
+      .from("profiles").select("id, email").ilike("email", data.email).maybeSingle();
+    if (pErr) throw new Response(pErr.message, { status: 400 });
+    if (!prof) return { ok: false, error: "user_not_found" };
+    const { error } = await supabaseAdmin
+      .from("user_export_overrides")
+      .upsert({
+        user_id: prof.id,
+        email: prof.email || data.email,
+        exports_enabled: data.exports_enabled,
+        allowed_formats: data.allowed_formats,
+        allowed_tools: data.allowed_tools,
+        show_user_name: data.show_user_name,
+        email_privacy: data.email_privacy,
+        show_logo: data.show_logo,
+        note: data.note,
+      }, { onConflict: "user_id" });
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
+
+export const adminDeleteExportOverride = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((d: any) => z.object({ id: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = context as any;
+    const { error } = await supabaseAdmin.from("user_export_overrides").delete().eq("id", data.id);
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
+

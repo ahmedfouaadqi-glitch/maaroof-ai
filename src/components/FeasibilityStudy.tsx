@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ToolResultExport } from "@/components/ToolResultExport";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -146,6 +147,7 @@ export function FeasibilityStudy() {
 
       {error && <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
+      {result && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="feasibility" result={result} /></div>}
       {result && (
         <div className="mt-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
