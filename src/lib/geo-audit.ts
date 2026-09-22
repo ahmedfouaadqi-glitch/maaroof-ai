@@ -1,7 +1,7 @@
 // Pure client-side heuristics — ZERO AI calls.
 // Detects what a GEO-citable text needs but is missing for the selected geographic scope.
 
-export type GeoScope = { scope: "world" | "country" | "city" | "province"; country?: string; city?: string };
+export type GeoScope = { scope: "auto" | "world" | "country" | "region" | "city" | "province"; country?: string; city?: string; region?: string };
 
 export type AuditCheck = {
   key: string;
