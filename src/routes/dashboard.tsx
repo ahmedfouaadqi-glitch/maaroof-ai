@@ -14,6 +14,7 @@ import { BrandBoostAgent } from "@/components/BrandBoostAgent";
 import { AppliedRanking } from "@/components/AppliedRanking";
 import { SocialAnalysis } from "@/components/SocialAnalysis";
 import { CompetitorMonitor } from "@/components/CompetitorMonitor";
+import { KnownDiscovery } from "@/components/KnownDiscovery";
 import { GeoStrategist } from "@/components/GeoStrategist";
 import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { ReportBuilder } from "@/components/ReportBuilder";
@@ -21,12 +22,12 @@ import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { AuthGate } from "@/components/AuthGate";
 
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid, ChevronLeft, ChevronRight, Radar } from "lucide-react";
 import { useVisibility, useToolPrice } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
 import { CostBadge } from "@/components/CostBadge";
 
-type ToolKey = "analyze" | "suggest" | "compare" | "feasibility" | "bizdev" | "boost" | "applied" | "social" | "monitor" | "strategist" | "whatif" | "report";
+type ToolKey = "analyze" | "suggest" | "compare" | "known" | "feasibility" | "bizdev" | "boost" | "applied" | "social" | "monitor" | "strategist" | "whatif" | "report";
 
 type ToolDef = {
   key: ToolKey;
@@ -42,6 +43,7 @@ const TOOLS: ToolDef[] = [
   { key: "analyze", icon: <Activity className="size-5" />, catalog: "analyze", titleKey: "dash_tool_analyze_t", descKey: "dash_tool_analyze_d", render: () => <Sandbox /> },
   { key: "suggest", icon: <Sparkles className="size-5" />, catalog: "suggest", titleKey: "dash_tool_suggest_t", descKey: "dash_tool_suggest_d", render: () => <PostSuggester /> },
   { key: "compare", icon: <Search className="size-5" />, catalog: "compare", titleKey: "compare_title", descKey: "compare_desc", render: () => <CompetitorCompare /> },
+  { key: "known", icon: <Radar className="size-5" />, catalog: "known", titleKey: "dash_tool_known_t", descKey: "dash_tool_known_d", render: () => <KnownDiscovery /> },
   { key: "feasibility", icon: <ClipboardList className="size-5" />, catalog: "feasibility", titleKey: "dash_tool_feas_t", descKey: "dash_tool_feas_d", render: () => <FeasibilityStudy /> },
   { key: "bizdev", icon: <TrendingUp className="size-5" />, catalog: "bizdev", titleKey: "dash_tool_biz_t", descKey: "dash_tool_biz_d", render: () => <BizDev /> },
   { key: "boost", icon: <Megaphone className="size-5" />, catalog: "brand_boost", titleKey: "boost_title", descKey: "boost_desc", render: () => <BrandBoostAgent /> },
