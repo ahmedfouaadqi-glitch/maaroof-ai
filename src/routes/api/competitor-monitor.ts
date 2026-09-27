@@ -41,11 +41,11 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         const { action, id, brand, competitors = [], frequency_hours = 24, lang = "ar", scope } = body;
 
         // Only billable actions consume quota (list/delete/policy are free).
-        if (action === "create" || action === "recheck") {
-          const _runId = crypto.randomUUID();
-          const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor", action } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-        }
+        const charge = async () => {
+          const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor", runId: crypto.randomUUID(), meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor", action } });
+          return _chg.ok ? null : Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+        };
+        if (action === "recheck") { const f = await charge(); if (f) return f; }
 
         const loadPolicy = async () => {
           const [{ data: gs }, { data: pr }] = await Promise.all([
@@ -81,6 +81,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const { count: active } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
           const pc = checkMonitorPolicy(policy, active || 0, competitors.length, Number(frequency_hours) || 24);
           if (!pc.ok) return Response.json({ error: pc.reason, policy }, { status: 403 });
+          { const f = await charge(); if (f) return f; }
           const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,quota_overrides").eq("id", userId).maybeSingle();
           const used = Number((prof as any)?.monthly_analyses_used || 0);
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
