@@ -119,3 +119,28 @@ export function relationTruth(r: RelationDraft) {
     verification_state: aiOnly ? "inferred" : "observed",
   };
 }
+
+/** Count how many AI engines named each candidate (by normalized name/root match). */
+export function engineMentions(name: string, byEngine: Record<string, string[]>): string[] {
+  const n = normalizeName(name);
+  if (!n) return [];
+  return Object.entries(byEngine)
+    .filter(([, list]) => list.some((x) => { const m = normalizeName(x); return m === n || (m.length > 3 && n.length > 3 && (m.includes(n) || n.includes(m))); }))
+    .map(([e]) => e);
+}
+
+/** Build localized discovery queries anchored to the chosen market. */
+export function localQueries(brand: string, sector: string, place: string, lang: string, deep: boolean): string[] {
+  const q: string[] = [];
+  const s = sector || brand;
+  if (place) {
+    q.push(`${brand} competitors ${place}`, `best ${s} ${place}`);
+    if (lang !== "en") q.push(`منافسو ${brand} في ${place}`, `أفضل ${s} في ${place}`);
+    else q.push(`${brand} alternatives ${place}`);
+    if (deep) q.push(`${s} companies ${place}`, `بديل ${brand} ${place}`);
+  } else {
+    q.push(`${brand} competitors`, `${brand} alternatives`, `best ${s} companies`);
+    if (deep) q.push(`${brand} vs`, `منافسو ${brand}`);
+  }
+  return Array.from(new Set(q));
+}
