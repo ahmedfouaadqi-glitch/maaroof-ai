@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
-import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { chargeTokens, chargeFailureBody, resolveToolCost } from "@/lib/tokens.server";
+import { resolveMonitorPolicy, checkMonitorPolicy } from "@/lib/monitor-policy";
 
 const COST = 2;
 
@@ -35,14 +36,31 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-        const _runId = crypto.randomUUID();
-          const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor", runId: _runId, meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor" } });
-        if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-
         const body = await request.json();
 
         const { action, id, brand, competitors = [], frequency_hours = 24, lang = "ar", scope } = body;
+
+        // Only billable actions consume quota (list/delete/policy are free).
+        const charge = async () => {
+          const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor", runId: crypto.randomUUID(), meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor", action } });
+          return _chg.ok ? null : Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+        };
+        if (action === "recheck") { const f = await charge(); if (f) return f; }
+
+        const loadPolicy = async () => {
+          const [{ data: gs }, { data: pr }] = await Promise.all([
+            admin.from("app_settings").select("value").eq("key", "monitor_policy").maybeSingle(),
+            admin.from("profiles").select("quota_overrides").eq("id", userId).maybeSingle(),
+          ]);
+          return resolveMonitorPolicy((gs as any)?.value, (pr as any)?.quota_overrides?.monitor);
+        };
+
+        if (action === "policy") {
+          const policy = await loadPolicy();
+          const { count } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
+          const cost = await resolveToolCost(userId, "competitor_monitor");
+          return Response.json({ policy, active: count || 0, cost_tokens: cost.tokens });
+        }
 
         if (action === "list") {
           const { data } = await admin.from("competitor_watch").select("*").eq("user_id", userId).order("created_at", { ascending: false });
@@ -59,6 +77,11 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           if (!brand || !Array.isArray(competitors) || competitors.length === 0) {
             return Response.json({ error: "brand_and_competitors_required" }, { status: 400 });
           }
+          const policy = await loadPolicy();
+          const { count: active } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
+          const pc = checkMonitorPolicy(policy, active || 0, competitors.length, Number(frequency_hours) || 24);
+          if (!pc.ok) return Response.json({ error: pc.reason, policy }, { status: 403 });
+          { const f = await charge(); if (f) return f; }
           const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,quota_overrides").eq("id", userId).maybeSingle();
           const used = Number((prof as any)?.monthly_analyses_used || 0);
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);

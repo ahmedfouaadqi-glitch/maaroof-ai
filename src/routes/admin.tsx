@@ -16,6 +16,7 @@ import { AdminFreePlanPolicyPanel } from "@/components/admin/AdminFreePlanPolicy
 import { ContentStudioTab } from "@/components/admin/ContentStudioTab";
 import { HeaderConfigTab } from "@/components/admin/HeaderConfigTab";
 import { ExportConfigTab } from "@/components/admin/ExportConfigTab";
+import { MonitorPolicyPanel } from "@/components/admin/MonitorPolicyPanel";
 import { UserIntelligenceTab } from "@/components/admin/UserIntelligenceTab";
 import { CognitiveInsightsTab } from "@/components/admin/CognitiveInsightsTab";
 import { FirecrawlMonitorTab } from "@/components/admin/FirecrawlMonitorTab";
@@ -138,7 +139,7 @@ function AdminPage() {
         {activeSub === "overview" && <Overview />}
         {activeSub === "users" && <AdminTokensPanel />}
         {activeSub === "freeplan" && <AdminFreePlanPolicyPanel />}
-        {activeSub === "pricing" && <AdminPlansMatrixPanel />}
+        {activeSub === "pricing" && <><AdminPlansMatrixPanel /><MonitorPolicyPanel /></>}
         {activeSub === "plans" && <PlansTab />}
         {activeSub === "agent" && <AgentTab />}
         {activeSub === "access" && <AccessTab />}

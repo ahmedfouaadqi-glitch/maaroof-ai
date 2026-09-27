@@ -38,6 +38,7 @@ import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
 import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
+import { Route as ApiKnownRouteImport } from './routes/api/known'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
@@ -201,6 +202,11 @@ const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
   path: '/api/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKnownRoute = ApiKnownRouteImport.update({
+  id: '/api/known',
+  path: '/api/known',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
   id: '/api/geo-strategist',
   path: '/api/geo-strategist',
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
@@ -366,6 +373,7 @@ export interface FileRoutesByTo {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
@@ -415,6 +423,7 @@ export interface FileRoutesById {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
@@ -465,6 +474,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/known'
     | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/known'
     | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/known'
     | '/api/maaroof'
     | '/api/research'
     | '/api/social-analysis'
@@ -610,6 +622,7 @@ export interface RootRouteChildren {
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
+  ApiKnownRoute: typeof ApiKnownRoute
   ApiMaaroofRoute: typeof ApiMaaroofRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
@@ -832,6 +845,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/known': {
+      id: '/api/known'
+      path: '/api/known'
+      fullPath: '/api/known'
+      preLoaderRoute: typeof ApiKnownRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/geo-strategist': {
       id: '/api/geo-strategist'
       path: '/api/geo-strategist'
@@ -1007,6 +1027,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
+  ApiKnownRoute: ApiKnownRoute,
   ApiMaaroofRoute: ApiMaaroofRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,

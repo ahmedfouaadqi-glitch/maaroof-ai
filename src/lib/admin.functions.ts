@@ -524,3 +524,50 @@ export const adminDeleteExportOverride = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// ============ competitor monitoring policy ============
+export const adminGetMonitorPolicy = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = context as any;
+    const { data } = await supabaseAdmin.from("app_settings").select("value").eq("key", "monitor_policy").maybeSingle();
+    const { data: profs } = await supabaseAdmin
+      .from("profiles").select("id, email, full_name, quota_overrides")
+      .not("quota_overrides->monitor", "is", null).limit(200);
+    return {
+      global: (data as any)?.value || null,
+      users: ((profs as any[]) || []).map((p) => ({ id: p.id, email: p.email, name: p.full_name, monitor: p.quota_overrides?.monitor })),
+    };
+  });
+
+const monitorShape = z.object({
+  enabled: z.boolean(),
+  max_watches: z.number().int().min(0).max(1000),
+  max_competitors: z.number().int().min(1).max(50),
+  min_frequency_hours: z.number().int().min(1).max(24 * 30),
+});
+
+export const adminSetMonitorPolicy = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((d: any) => monitorShape.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin, userId } = context as any;
+    const { error } = await supabaseAdmin.from("app_settings")
+      .upsert({ key: "monitor_policy", value: data, updated_by: userId, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
+
+export const adminSetUserMonitorOverride = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((d: any) => z.object({ email: z.string().email(), monitor: monitorShape.partial().nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = context as any;
+    const { data: prof } = await supabaseAdmin.from("profiles").select("id, quota_overrides").ilike("email", data.email).maybeSingle();
+    if (!prof) throw new Response("user_not_found", { status: 404 });
+    const q = { ...((prof as any).quota_overrides || {}) };
+    if (data.monitor) q.monitor = data.monitor; else delete q.monitor;
+    const { error } = await supabaseAdmin.from("profiles").update({ quota_overrides: q }).eq("id", (prof as any).id);
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
+  });
