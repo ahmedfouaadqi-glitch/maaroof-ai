@@ -15,6 +15,7 @@ export type Candidate = {
   fromAi: boolean;
 };
 
+const STOP = new Set(["inc", "llc", "ltd", "co", "company", "group", "corp", "شركه", "مجموعه"]);
 const AR_DIACRITICS = /[\u064B-\u0652\u0640]/g;
 
 export function normalizeName(s: string): string {
@@ -22,9 +23,10 @@ export function normalizeName(s: string): string {
     .toLowerCase()
     .replace(AR_DIACRITICS, "")
     .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
-    .replace(/\b(inc|llc|ltd|co|company|group|corp|شركة|مجموعة)\b\.?/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+    .split(" ")
+    .filter((w) => w && !STOP.has(w))
+    .join(" ");
 }
 
 export function normalizeDomain(u?: string | null): string | null {
