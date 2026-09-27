@@ -5,9 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
+import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
+import { useAuth } from "@/lib/auth";
 
 const TX = {
   ar: {
+    market: "السوق", engines: "ذكرته المحركات", step: "مرحلة", steps: ["البحث في مصادر السوق…","سؤال المحركات…","استخراج المنافسين وتصنيفهم…","التحقق من الأدلة…"] as string[],
     intro: "اكتشف من يُنافسك فعلاً — حتى من لم تسمّهم — مع سبب كل علاقة ومصادرها. ما يأتي من ملاحظة الذكاء الاصطناعي وحدها يُوسَم بوضوح ولا يُعدّ موثّقاً.",
     brand: "اسم علامتك", site: "موقعك (اختياري)", sector: "القطاع (اختياري)", quick: "سريع", deep: "عميق", run: "اكتشف المنافسين",
     running: "جارٍ البحث في الويب وتصنيف العلاقات…", why: "لماذا؟", conf: "الثقة", ai: "ملاحظة ذكاء اصطناعي", observed: "مرصود من مصادر", sources: "المصادر",
@@ -17,6 +20,7 @@ const TX = {
     errs: { monitor_disabled: "المراقبة غير مفعّلة لحسابك.", monitor_max_watches: "بلغت الحد الأقصى لعدد المراقبات.", monitor_max_competitors: "اخترت منافسين أكثر من المسموح.", monitor_min_frequency: "التكرار أقل من المسموح.", brand_required: "اكتب اسم العلامة." } as Record<string, string>,
   },
   en: {
+    market: "Market", engines: "Named by engines", step: "Step", steps: ["Searching market sources…","Asking AI engines…","Extracting and classifying…","Checking evidence…"] as string[],
     intro: "Discover who actually competes with you — even unnamed rivals — with a reason and sources for every relation. AI-only observations are clearly flagged and never treated as verified.",
     brand: "Your brand", site: "Website (optional)", sector: "Sector (optional)", quick: "Quick", deep: "Deep", run: "Discover competitors",
     running: "Searching the web and classifying relations…", why: "Why?", conf: "Confidence", ai: "AI observation", observed: "Observed in sources", sources: "Sources",
@@ -26,6 +30,7 @@ const TX = {
     errs: { monitor_disabled: "Monitoring is disabled for your account.", monitor_max_watches: "You reached the maximum number of watches.", monitor_max_competitors: "Too many competitors selected.", monitor_min_frequency: "Frequency below the allowed minimum.", brand_required: "Enter a brand name." } as Record<string, string>,
   },
   ku: {
+    market: "بازاڕ", engines: "بزوێنەرەکان ناویان برد", step: "هەنگاو", steps: ["گەڕان لە سەرچاوەکانی بازاڕ…","پرسیار لە بزوێنەرەکان…","دەرهێنان و پۆلێنکردن…","پشکنینی بەڵگەکان…"] as string[],
     intro: "بزانە کێ بەڕاستی ڕکابەرتە — تەنانەت ئەوانەی ناوت نەبردوون — لەگەڵ هۆکار و سەرچاوەی هەر پەیوەندییەک. تێبینی تەنها زیرەکی دەستکرد بە ڕوونی نیشان دەدرێت.",
     brand: "ناوی براندەکەت", site: "ماڵپەڕ (ئارەزوومەندانە)", sector: "کەرت (ئارەزوومەندانە)", quick: "خێرا", deep: "قووڵ", run: "دۆزینەوەی ڕکابەران",
     running: "گەڕان لە وێب و پۆلێنکردنی پەیوەندییەکان…", why: "بۆچی؟", conf: "متمانە", ai: "تێبینی زیرەکی دەستکرد", observed: "لە سەرچاوەکان بینراوە", sources: "سەرچاوەکان",
@@ -61,12 +66,15 @@ export function KnownDiscovery() {
   const [picked, setPicked] = useState<string[]>([]);
   const [policy, setPolicy] = useState<any>(null);
   const [note, setNote] = useState("");
+  const auth = useAuth() as any;
+  const [stage, setStage] = useState(0);
+  useEffect(() => { if (!busy) { setStage(0); return; } const t = setInterval(() => setStage((x) => Math.min(x + 1, 3)), 9000); return () => clearInterval(t); }, [busy]);
 
   useEffect(() => { post("/api/competitor-monitor", { action: "policy" }).then(setPolicy).catch(() => {}); }, []);
 
   const run = async () => {
     setBusy(true); setErr(""); setNote(""); setPicked([]);
-    try { setResult(await post("/api/known", { brand, website: site, sector, depth, lang })); }
+    try { setResult(await post("/api/known", { brand, website: site, sector, depth, lang, scope: getEffectiveScope(auth?.profile, "known") })); }
     catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
     finally { setBusy(false); }
   };
@@ -99,6 +107,7 @@ export function KnownDiscovery() {
           <input value={site} onChange={(e) => setSite(e.target.value)} placeholder={L.site} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
           <input value={sector} onChange={(e) => setSector(e.target.value)} placeholder={L.sector} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
         </div>
+        <div className="mt-3"><GeoScopeSelector compact toolKey="known" /></div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {(["quick", "deep"] as const).map((d) => (
             <button key={d} onClick={() => setDepth(d)} className={`rounded-full border px-3 py-1 text-xs ${depth === d ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{L[d]}</button>
@@ -107,7 +116,7 @@ export function KnownDiscovery() {
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Radar className="size-4" />} {L.run}
           </button>
         </div>
-        {busy && <p className="mt-2 text-xs text-muted-foreground">{L.running}</p>}
+        {busy && <p className="mt-2 text-xs text-muted-foreground">{L.step} {stage + 1}/4 — {L.steps[stage]}</p>}
         {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
         {note && <p className="mt-2 text-xs text-primary">{note}</p>}
       </div>
@@ -115,6 +124,7 @@ export function KnownDiscovery() {
       {result && (
         <>
           <div className="flex justify-end"><ToolResultExport toolKey="known" result={result} /></div>
+          <p className="text-xs text-muted-foreground">{L.market}: <b className="text-foreground">{result.market}</b>{result.engines_asked?.length ? ` · ${L.engines}: ${result.engines_asked.length}` : ""}</p>
           {result.summary && <p className="rounded-xl border border-border bg-card/40 p-3 text-sm">{result.summary}</p>}
           {(result.relations || []).length === 0 && <p className="text-sm text-muted-foreground">{L.none}</p>}
           {Object.entries(groups).map(([cat, rows]) => (
@@ -129,6 +139,7 @@ export function KnownDiscovery() {
                     <span className={`rounded-full px-2 py-0.5 text-[11px] ${r.is_ai_observation ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground"}`}>
                       {r.is_ai_observation ? <><Sparkles className="inline size-3" /> {L.ai}</> : L.observed}
                     </span>
+                    {r.engines?.length > 0 && <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-secondary-foreground">{L.engines} {r.engines.length}/{result.engines_asked?.length || 0}</span>}
                     {canWatch && (
                       <label className="ms-auto flex items-center gap-1 text-xs">
                         <input type="checkbox" checked={picked.includes(r.entity_name)} disabled={!picked.includes(r.entity_name) && picked.length >= maxComp}
