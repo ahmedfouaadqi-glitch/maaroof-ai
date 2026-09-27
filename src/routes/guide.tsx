@@ -45,6 +45,7 @@ const HOWTO_KEY: Record<ToolKey, string> = {
   analyze: "guide_how_analyze",
   suggest: "guide_how_suggest",
   compare: "guide_how_compare",
+  known: "guide_how_compare",
   feasibility: "guide_how_feasibility",
   bizdev: "guide_how_bizdev",
   research: "guide_how_research",

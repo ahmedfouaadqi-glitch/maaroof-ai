@@ -163,7 +163,7 @@ export const TOOL_CATALOG: ToolDef[] = [
     strengths: ["discovers unnamed rivals", "evidence-backed relation types", "AI-perception vs reality"],
     weaknesses: ["web-evidence bound", "weak local sources in some markets"],
     preferredModels: ["google/gemini-2.5-pro"],
-    costProfile: "high",
+    costProfile: "heavy",
     dna: "Knownness discoverer: finds and classifies competitors with evidence.",
   },
   {
