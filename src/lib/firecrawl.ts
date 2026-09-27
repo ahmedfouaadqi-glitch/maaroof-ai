@@ -154,9 +154,9 @@ async function checkLimits(userId: string | null | undefined, toolKey: string | 
 
 export type FcCtx = { userId?: string | null; toolKey?: string | null };
 
-export async function fcSearch(query: string, opts: { limit?: number; lang?: string } = {}, ctx: FcCtx = {}) {
+export async function fcSearch(query: string, opts: { limit?: number; lang?: string; location?: string } = {}, ctx: FcCtx = {}) {
   const limit = Math.min(opts.limit ?? 4, 10); // lowered default 6 -> 4
-  const payload = { query, limit, lang: opts.lang, scrapeOptions: { formats: ["markdown"], onlyMainContent: true } };
+  const payload: any = { query, limit, lang: opts.lang, ...(opts.location ? { location: opts.location } : {}), scrapeOptions: { formats: ["markdown"], onlyMainContent: true } };
   const hash = hashKey("search", payload);
   const policy = await getPolicy();
 

@@ -32,3 +32,14 @@ describe("MKD helpers", () => {
     expect(w.confidence).toBeLessThanOrEqual(64);
   });
 });
+
+import { engineMentions, localQueries } from "../mkd";
+describe("mkd local + engines", () => {
+  it("counts engine mentions", () => {
+    expect(engineMentions("Zain Iraq", { chatgpt: ["zain iraq", "Asiacell"], gemini: ["Korek"] })).toEqual(["chatgpt"]);
+  });
+  it("anchors queries to place", () => {
+    const q = localQueries("X", "coffee", "Baghdad, Iraq", "ar", false);
+    expect(q.every((s) => s.includes("Baghdad"))).toBe(true);
+  });
+});

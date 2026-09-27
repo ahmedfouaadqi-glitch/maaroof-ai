@@ -4,9 +4,11 @@ import { fcSearch } from "@/lib/firecrawl";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
-import { resolveToolModel } from "@/lib/ai-engines.server";
+import { resolveToolModel, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
+import { ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
+import { detectGeoFromRequest } from "@/lib/maaroof/geo.server";
 import { asText } from "@/lib/input-coerce";
-import { dedupeCandidates, falsePositiveReason, relationTruth, normalizeDomain, type Candidate } from "@/lib/maaroof/mkd";
+import { dedupeCandidates, falsePositiveReason, relationTruth, normalizeDomain, type Candidate, engineMentions, localQueries } from "@/lib/maaroof/mkd";
 
 const LANG: Record<string, string> = {
   ar: "اكتب القيم النصية بالعربية الفصحى.",
@@ -19,6 +21,29 @@ type Src = { url: string; title: string; snippet: string };
 function listFrom(sr: any): any[] {
   const items = sr?.data?.web || sr?.web || sr?.data || [];
   return Array.isArray(items) ? items : [];
+}
+
+async function askEngines(brand: string, sector: string, place: string, lang: string, n: number, apiKey: string) {
+  const { engines, excluded } = await excludeUnhealthyEngines(ENGINE_KEYS.slice(0, n) as EngineKey[]);
+  const models = await resolveEngineModels(engines);
+  const byEngine: Record<string, string[]> = {};
+  await Promise.allSettled(engines.map(async (e) => {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+        method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
+        body: JSON.stringify({ model: models[e]?.model, max_tokens: 400, messages: [
+          { role: "system", content: `Answer as the ${e} assistant would for a user in ${place}. Return JSON only: {"competitors":["name",...]} max 8.` },
+          { role: "user", content: `Who are the main competitors of "${brand}"${sector ? ` (${sector})` : ""} in ${place}?` },
+        ] }),
+      });
+      if (!r.ok) return;
+      const j: any = await r.json();
+      const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
+      if (Array.isArray(p.competitors)) byEngine[e] = p.competitors.map((x: any) => String(x).slice(0, 100)).slice(0, 8);
+    } catch {} finally { clearTimeout(t); }
+  }));
+  return { byEngine, asked: engines, excluded };
 }
 
 export const Route = createFileRoute("/api/known")({
@@ -43,7 +68,12 @@ export const Route = createFileRoute("/api/known")({
         const sector = asText(body.sector, 200);
         const depth = body.depth === "deep" ? "deep" : "quick";
         const lang = body.lang === "en" || body.lang === "ku" ? body.lang : "ar";
-        const scope = (body.scope || null) as GeoScope | null;
+        let scope = (body.scope || null) as GeoScope | null;
+        if (!scope || (scope as any).scope === "auto") {
+          const g = detectGeoFromRequest(request);
+          scope = g.country ? { scope: "country", country: g.country } : { scope: "world" };
+        }
+        const place = scope.scope === "world" ? "" : [scope.city, scope.region, scope.country].filter(Boolean).join(", ");
         if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });
 
         const runId = crypto.randomUUID();
@@ -59,16 +89,13 @@ export const Route = createFileRoute("/api/known")({
 
         try {
           // 1) Discovery — web search (bounded)
-          const qs = [
-            `${brand} competitors`,
-            `${brand} alternatives`,
-            sector ? `${sector} ${m.region}` : `${brand} ${m.region}`,
-          ];
-          if (depth === "deep") qs.push(`منافسو ${brand}`, sector ? `best ${sector} companies ${m.region}` : `${brand} vs`);
+          const qs = localQueries(brand, sector, place, lang, depth === "deep");
+          // Engine perception runs in parallel with web discovery.
+          const enginePromise = askEngines(brand, sector, place || "worldwide", lang, depth === "deep" ? 9 : 4, apiKey);
           const sources: Src[] = [];
           for (const q of qs.slice(0, depth === "deep" ? 5 : 3)) {
             try {
-              const sr = await fcSearch(q, { limit: depth === "deep" ? 6 : 4, lang }, { userId, toolKey: "known" });
+              const sr = await fcSearch(q, { limit: depth === "deep" ? 6 : 4, lang, ...(scope.country && scope.scope !== "world" ? { location: place } : {}) }, { userId, toolKey: "known" });
               for (const it of listFrom(sr)) {
                 const url = String(it?.url || "");
                 if (!url || sources.some((s) => s.url === url)) continue;
@@ -85,16 +112,23 @@ You discover competitive relationships for a brand. Market: ${m.region} (${m.mar
 Categories: direct, indirect, substitute, hidden, emerging, perceived (AI engines associate them but no market evidence), seasonal.
 Return JSON only: {"summary":"...","candidates":[{"name":"...","domain":"example.com or null","category":"...","confidence":0-100,"reason":"one or two sentences: why","source_ids":[1,2]}]}
 Rules: up to 25 candidates. Use source_ids only for sources that actually mention the entity. If you name an entity from your own knowledge without a source, use source_ids: [] and category "perceived" unless strongly justified. Exclude the brand itself, platforms, directories and marketplaces. ${LANG[lang]}`;
-          const prompt = `Brand: ${brand}\nWebsite: ${website || "-"}\nSector: ${sector || "-"}\n\nSources:\n${srcBlock || "(none)"}`;
+          const eng = await enginePromise;
+          const engBlock = Object.entries(eng.byEngine).map(([e, l]) => `${e}: ${l.join(", ")}`).join("\n");
+          const prompt = `Market: ${place || "worldwide"} — prefer entities operating in this market; exclude foreign-only players unless market is worldwide.\nAI engines named (unverified): ${engBlock || "-"}\nBrand: ${brand}\nWebsite: ${website || "-"}\nSector: ${sector || "-"}\n\nSources:\n${srcBlock || "(none)"}`;
           const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
             headers: lovableAiHeaders(apiKey),
-            body: JSON.stringify({ model: MODEL, max_tokens: 4096, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
+            body: JSON.stringify({ model: MODEL, max_tokens: 12000, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
           });
           if (!r.ok) throw new Error(r.status === 429 ? "rate_limited" : r.status === 402 ? "ai_credits" : "ai_failed");
           const j: any = await r.json();
           const parsed = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-          const raw: any[] = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+          let raw: any[] = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+          if (!raw.length) {
+            // Fallback: engine-named entities, flagged as AI perception (never verified).
+            const seen = new Set<string>();
+            for (const l of Object.values(eng.byEngine)) for (const n of l) if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); raw.push({ name: n, category: "perceived", confidence: 40, reason: "", source_ids: sources.map((s, i) => s.snippet.toLowerCase().includes(n.toLowerCase()) || s.title.toLowerCase().includes(n.toLowerCase()) ? i + 1 : 0).filter(Boolean) }); }
+          }
 
           // 3) Normalize, dedupe, filter
           const meta = new Map<string, any>();
@@ -117,8 +151,9 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
           const relations = kept.map((c) => {
             const mm = meta.get(c.name) || {};
             const t = relationTruth({ category: String(mm.category || ""), confidence: Number(mm.confidence), fromWeb: c.fromWeb, fromAi: c.fromAi, sourceCount: c.sources.length });
-            return { entity_name: c.name, entity_domain: c.domain || null, reason: String(mm.reason || "").slice(0, 600), sources: c.sources, ...t };
-          }).sort((a, b) => b.confidence - a.confidence);
+            const engines = engineMentions(c.name, eng.byEngine);
+            return { entity_name: c.name, entity_domain: c.domain || null, reason: String(mm.reason || "").slice(0, 600), sources: c.sources, engines, ...t };
+          }).sort((a, b) => (Number(b.sources.length > 0) - Number(a.sources.length > 0)) || b.confidence - a.confidence);
 
           if (dbRunId && relations.length) {
             await admin.from("mkd_relations").insert(relations.map((x) => ({
@@ -130,7 +165,7 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
           const summary = { text: String(parsed.summary || "").slice(0, 1200), sources: sources.length, candidates: relations.length, filtered };
           if (dbRunId) await admin.from("mkd_runs").update({ status: "done", summary: summary as any }).eq("id", dbRunId);
 
-          return Response.json({ run_id: dbRunId, brand, depth, market: m.region, summary: summary.text, relations, filtered, sources });
+          return Response.json({ run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, summary: summary.text, relations, filtered, sources });
         } catch (e: any) {
           if (dbRunId) await admin.from("mkd_runs").update({ status: "failed", error: String(e?.message || e).slice(0, 300) }).eq("id", dbRunId);
           return Response.json({ error: String(e?.message || "failed") }, { status: 502 });
