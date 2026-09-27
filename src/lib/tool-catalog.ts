@@ -13,6 +13,7 @@ export type ToolKey =
   | "analyze"
   | "suggest"
   | "compare"
+  | "known"
   | "feasibility"
   | "bizdev"
   | "research"
@@ -154,6 +155,16 @@ export const TOOL_CATALOG: ToolDef[] = [
     preferredModels: ["google/gemini-2.5-pro"],
     costProfile: "medium",
     dna: "Rival strategist: reveals gaps vs named competitors.",
+  },
+  {
+    key: "known", group: "tools", costPerRun: 3,
+    labels: { ar: "من المعروفين؟", en: "Who's Known?", ku: "کێ ناسراوە؟" },
+    capabilities: ["competitor_analysis", "market_intelligence", "research"],
+    strengths: ["discovers unnamed rivals", "evidence-backed relation types", "AI-perception vs reality"],
+    weaknesses: ["web-evidence bound", "weak local sources in some markets"],
+    preferredModels: ["google/gemini-2.5-pro"],
+    costProfile: "heavy",
+    dna: "Knownness discoverer: finds and classifies competitors with evidence.",
   },
   {
     key: "feasibility", group: "tools", costPerRun: 2,

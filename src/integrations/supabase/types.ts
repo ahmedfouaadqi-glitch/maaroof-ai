@@ -3339,6 +3339,107 @@ export type Database = {
           },
         ]
       }
+      mkd_relations: {
+        Row: {
+          category: string
+          confidence: number
+          created_at: string
+          entity_domain: string | null
+          entity_name: string
+          evidence_ids: string[]
+          id: string
+          is_ai_observation: boolean
+          knowledge_node_id: string | null
+          reason: string | null
+          run_id: string
+          updated_at: string
+          user_id: string
+          verification_state: string
+        }
+        Insert: {
+          category: string
+          confidence?: number
+          created_at?: string
+          entity_domain?: string | null
+          entity_name: string
+          evidence_ids?: string[]
+          id?: string
+          is_ai_observation?: boolean
+          knowledge_node_id?: string | null
+          reason?: string | null
+          run_id: string
+          updated_at?: string
+          user_id: string
+          verification_state?: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          entity_domain?: string | null
+          entity_name?: string
+          evidence_ids?: string[]
+          id?: string
+          is_ai_observation?: boolean
+          knowledge_node_id?: string | null
+          reason?: string | null
+          run_id?: string
+          updated_at?: string
+          user_id?: string
+          verification_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mkd_relations_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "mkd_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mkd_runs: {
+        Row: {
+          brand: string
+          cost_tokens: number
+          created_at: string
+          depth: string
+          error: string | null
+          id: string
+          scope: Json
+          status: string
+          summary: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          cost_tokens?: number
+          created_at?: string
+          depth?: string
+          error?: string | null
+          id?: string
+          scope?: Json
+          status?: string
+          summary?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          cost_tokens?: number
+          created_at?: string
+          depth?: string
+          error?: string | null
+          id?: string
+          scope?: Json
+          status?: string
+          summary?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_link_states: {
         Row: {
           code_verifier: string | null
