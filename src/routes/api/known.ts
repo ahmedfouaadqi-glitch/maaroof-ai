@@ -118,12 +118,17 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
           const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
             headers: lovableAiHeaders(apiKey),
-            body: JSON.stringify({ model: MODEL, max_tokens: 4096, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
+            body: JSON.stringify({ model: MODEL, max_tokens: 12000, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
           });
           if (!r.ok) throw new Error(r.status === 429 ? "rate_limited" : r.status === 402 ? "ai_credits" : "ai_failed");
           const j: any = await r.json();
           const parsed = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-          const raw: any[] = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+          let raw: any[] = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+          if (!raw.length) {
+            // Fallback: engine-named entities, flagged as AI perception (never verified).
+            const seen = new Set<string>();
+            for (const l of Object.values(eng.byEngine)) for (const n of l) if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); raw.push({ name: n, category: "perceived", confidence: 40, reason: "", source_ids: sources.map((s, i) => s.snippet.toLowerCase().includes(n.toLowerCase()) || s.title.toLowerCase().includes(n.toLowerCase()) ? i + 1 : 0).filter(Boolean) }); }
+          }
 
           // 3) Normalize, dedupe, filter
           const meta = new Map<string, any>();
