@@ -68,7 +68,7 @@ export function MkdMap({ brand, relations, cats, observedLabel, aiLabel }: {
         ))}
       </div>
 
-      <svg dir="ltr" style={{ direction: "ltr" }} viewBox={`0 0 ${S} ${S}`} className="mx-auto hidden w-full max-w-3xl sm:block" role="img" aria-label="competitive map">
+      <svg style={{ direction: "ltr" }} viewBox={`0 0 ${S} ${S}`} className="mx-auto hidden w-full max-w-3xl sm:block" role="img" aria-label="competitive map">
         {[0.33, 0.66, 1].map((f) => <circle key={f} cx={C} cy={C} r={R * f} fill="none" className="stroke-border" strokeWidth={1} opacity={0.6} />)}
         {wedges.map((w, i) => {
           const mid = (w.a0 + w.a1) / 2;
