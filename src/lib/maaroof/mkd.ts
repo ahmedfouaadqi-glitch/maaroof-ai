@@ -129,6 +129,28 @@ export function engineMentions(name: string, byEngine: Record<string, string[]>)
     .map(([e]) => e);
 }
 
+export type EvidenceDraft = { title: string; claim: string; sourceRef: string };
+
+/** Map discovered relations to evidence drafts (one per source, capped). Pure + testable. */
+export function mkdEvidenceDrafts(
+  brand: string,
+  relations: { entity_name: string; reason?: string; sources?: string[] }[],
+  maxPerEntity = 3,
+): EvidenceDraft[] {
+  const out: EvidenceDraft[] = [];
+  for (const r of relations || []) {
+    for (const url of (r.sources || []).slice(0, maxPerEntity)) {
+      if (!url) continue;
+      out.push({
+        title: `${r.entity_name} — competitor of ${brand}`,
+        claim: String(r.reason || `${r.entity_name} competes with ${brand}`).slice(0, 600),
+        sourceRef: url,
+      });
+    }
+  }
+  return out;
+}
+
 /** Build localized discovery queries anchored to the chosen market. */
 export function localQueries(brand: string, sector: string, place: string, lang: string, deep: boolean): string[] {
   const q: string[] = [];
