@@ -1019,6 +1019,27 @@ export type Database = {
         }
         Relationships: []
       }
+      engine_answer_cache: {
+        Row: {
+          answer: Json
+          cache_key: string
+          created_at: string
+          engine: string
+        }
+        Insert: {
+          answer: Json
+          cache_key: string
+          created_at?: string
+          engine: string
+        }
+        Update: {
+          answer?: Json
+          cache_key?: string
+          created_at?: string
+          engine?: string
+        }
+        Relationships: []
+      }
       evidence_items: {
         Row: {
           business_value: number
@@ -3268,6 +3289,54 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      mci_decisions: {
+        Row: {
+          created_at: string
+          decision: string
+          fallback: boolean
+          firecrawl_calls: number
+          firecrawl_calls_saved: number
+          id: string
+          intent: string | null
+          llm_calls: number
+          llm_calls_saved: number
+          meta: Json
+          reused_run_id: string | null
+          tool_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          fallback?: boolean
+          firecrawl_calls?: number
+          firecrawl_calls_saved?: number
+          id?: string
+          intent?: string | null
+          llm_calls?: number
+          llm_calls_saved?: number
+          meta?: Json
+          reused_run_id?: string | null
+          tool_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          fallback?: boolean
+          firecrawl_calls?: number
+          firecrawl_calls_saved?: number
+          id?: string
+          intent?: string | null
+          llm_calls?: number
+          llm_calls_saved?: number
+          meta?: Json
+          reused_run_id?: string | null
+          tool_key?: string
+          user_id?: string
         }
         Relationships: []
       }
