@@ -250,6 +250,12 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
       is_subscribed: isSub,
       subscription_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       max_devices: Math.max(1, Number(maxDevices) || 1),
+      ...(resetLegacyMonth
+        ? { monthly_analyses_used: 0, monthly_suggestions_used: 0, usage_period_start: new Date().toISOString() }
+        : {}),
+      ...(resetLegacyDay
+        ? { daily_analyses_used: 0, daily_suggestions_used: 0, usage_day_start: new Date().toISOString().slice(0, 10) }
+        : {}),
     } } });
     // Clear cached price for this user so the next tool open re-reads overrides + plan
     try {
