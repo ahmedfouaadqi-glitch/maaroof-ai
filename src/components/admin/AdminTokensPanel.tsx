@@ -189,6 +189,11 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
   const [monthly, setMonthly] = useState<number | "">(user.tokens_monthly_limit ?? "");
   const [usedToday, setUsedToday] = useState<number>(user.tokens_used_today || 0);
   const [usedMonth, setUsedMonth] = useState<number>(user.tokens_used_month || 0);
+  // When an admin presses "reset month"/"reset today" we must also clear the
+  // legacy per-run counters (monthly_analyses_used etc.), otherwise the old
+  // 200-analyses gate keeps blocking the user despite a full token balance.
+  const [resetLegacyMonth, setResetLegacyMonth] = useState(false);
+  const [resetLegacyDay, setResetLegacyDay] = useState(false);
   const [hideUsage, setHideUsage] = useState<boolean>(!!user.hide_usage_counter);
   const [overrides, setOverrides] = useState<Record<string, any>>(user.per_user_tool_overrides || {});
   const [uiVis, setUiVis] = useState<NonNullable<Profile["ui_visibility"]>>(user.ui_visibility || {});
