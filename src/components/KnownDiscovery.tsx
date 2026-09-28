@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api-client";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
+import { MkdMap } from "@/components/MkdMap";
 import { useAuth } from "@/lib/auth";
 
 const TX = {
@@ -15,7 +16,7 @@ const TX = {
     brand: "اسم علامتك", site: "موقعك (اختياري)", sector: "القطاع (اختياري)", quick: "سريع", deep: "عميق", run: "اكتشف المنافسين",
     running: "جارٍ البحث في الويب وتصنيف العلاقات…", why: "لماذا؟", conf: "الثقة", ai: "ملاحظة ذكاء اصطناعي", observed: "مرصود من مصادر", sources: "المصادر",
     watch: "راقب", startWatch: "ابدأ المراقبة للمختارين", watchCost: "كل فحص للمراقبة يُخصم من حصتك", left: "مراقبات متاحة", none: "لم يُعثر على منافسين موثوقين.", started: "تم إنشاء المراقبة. تجدها في أداة «مراقبة المنافسين».",
-    filtered: "استُبعد كنتائج كاذبة",
+    filtered: "استُبعد كنتائج كاذبة", map: "خريطة العلاقات",
     cats: { direct: "مباشر", indirect: "غير مباشر", substitute: "بديل", hidden: "خفي", emerging: "ناشئ", perceived: "إدراك الذكاء الاصطناعي", seasonal: "موسمي" },
     errs: { monitor_disabled: "المراقبة غير مفعّلة لحسابك.", monitor_max_watches: "بلغت الحد الأقصى لعدد المراقبات.", monitor_max_competitors: "اخترت منافسين أكثر من المسموح.", monitor_min_frequency: "التكرار أقل من المسموح.", brand_required: "اكتب اسم العلامة." } as Record<string, string>,
   },
@@ -25,7 +26,7 @@ const TX = {
     brand: "Your brand", site: "Website (optional)", sector: "Sector (optional)", quick: "Quick", deep: "Deep", run: "Discover competitors",
     running: "Searching the web and classifying relations…", why: "Why?", conf: "Confidence", ai: "AI observation", observed: "Observed in sources", sources: "Sources",
     watch: "Watch", startWatch: "Start monitoring selected", watchCost: "Each monitoring check is charged from your quota", left: "Watches available", none: "No reliable competitors found.", started: "Monitoring created. Find it in the Competitor Monitor tool.",
-    filtered: "Filtered as false positives",
+    filtered: "Filtered as false positives", map: "Relations map",
     cats: { direct: "Direct", indirect: "Indirect", substitute: "Substitute", hidden: "Hidden", emerging: "Emerging", perceived: "AI perception", seasonal: "Seasonal" },
     errs: { monitor_disabled: "Monitoring is disabled for your account.", monitor_max_watches: "You reached the maximum number of watches.", monitor_max_competitors: "Too many competitors selected.", monitor_min_frequency: "Frequency below the allowed minimum.", brand_required: "Enter a brand name." } as Record<string, string>,
   },
@@ -35,7 +36,7 @@ const TX = {
     brand: "ناوی براندەکەت", site: "ماڵپەڕ (ئارەزوومەندانە)", sector: "کەرت (ئارەزوومەندانە)", quick: "خێرا", deep: "قووڵ", run: "دۆزینەوەی ڕکابەران",
     running: "گەڕان لە وێب و پۆلێنکردنی پەیوەندییەکان…", why: "بۆچی؟", conf: "متمانە", ai: "تێبینی زیرەکی دەستکرد", observed: "لە سەرچاوەکان بینراوە", sources: "سەرچاوەکان",
     watch: "چاودێری", startWatch: "دەستپێکردنی چاودێری بۆ هەڵبژێردراوەکان", watchCost: "هەر پشکنینێکی چاودێری لە بەشەکەت دەبڕدرێت", left: "چاودێری بەردەست", none: "هیچ ڕکابەرێکی متمانەپێکراو نەدۆزرایەوە.", started: "چاودێری دروستکرا. لە ئامرازی چاودێری ڕکابەران بیدۆزەوە.",
-    filtered: "وەک ئەنجامی هەڵە لابرا",
+    filtered: "وەک ئەنجامی هەڵە لابرا", map: "نەخشەی پەیوەندییەکان",
     cats: { direct: "ڕاستەوخۆ", indirect: "ناڕاستەوخۆ", substitute: "جێگرەوە", hidden: "شاراوە", emerging: "نوێ", perceived: "تێگەیشتنی AI", seasonal: "وەرزی" },
     errs: { monitor_disabled: "چاودێری بۆ هەژمارەکەت ناچالاکە.", monitor_max_watches: "گەیشتیتە زۆرترین ژمارەی چاودێری.", monitor_max_competitors: "ڕکابەری زیاتر لە ڕێگەپێدراو.", monitor_min_frequency: "دووبارەبوونەوە کەمترە لە ڕێگەپێدراو.", brand_required: "ناوی براند بنووسە." } as Record<string, string>,
   },
@@ -68,14 +69,44 @@ export function KnownDiscovery() {
   const [note, setNote] = useState("");
   const auth = useAuth() as any;
   const [stage, setStage] = useState(0);
-  useEffect(() => { if (!busy) { setStage(0); return; } const t = setInterval(() => setStage((x) => Math.min(x + 1, 3)), 9000); return () => clearInterval(t); }, [busy]);
 
   useEffect(() => { post("/api/competitor-monitor", { action: "policy" }).then(setPolicy).catch(() => {}); }, []);
 
+  // Real server-driven progress via SSE: stages arrive as the run advances.
   const run = async () => {
-    setBusy(true); setErr(""); setNote(""); setPicked([]);
-    try { setResult(await post("/api/known", { brand, website: site, sector, depth, lang, scope: getEffectiveScope(auth?.profile, "known") })); }
-    catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
+    setBusy(true); setErr(""); setNote(""); setPicked([]); setStage(0);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await apiFetch("/api/known", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ brand, website: site, sector, depth, lang, scope: getEffectiveScope(auth?.profile, "known") }),
+      });
+      if (!r.ok || !r.body) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j?.error || "failed");
+      }
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() || "";
+        for (const p of parts) {
+          const ev = p.match(/^event: (\w+)/m)?.[1];
+          const raw = p.match(/^data: (.*)$/m)?.[1];
+          if (!ev || !raw) continue;
+          let j: any = {};
+          try { j = JSON.parse(raw); } catch { continue; }
+          if (ev === "progress") setStage(Math.max(0, Math.min(3, Number(j.stage) || 0)));
+          else if (ev === "result") setResult(j);
+          else if (ev === "error") throw new Error(j.error || "failed");
+        }
+      }
+    } catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
     finally { setBusy(false); }
   };
 
@@ -126,6 +157,12 @@ export function KnownDiscovery() {
           <div className="flex justify-end"><ToolResultExport toolKey="known" result={result} /></div>
           <p className="text-xs text-muted-foreground">{L.market}: <b className="text-foreground">{result.market}</b>{result.engines_asked?.length ? ` · ${L.engines}: ${result.engines_asked.length}` : ""}</p>
           {result.summary && <p className="rounded-xl border border-border bg-card/40 p-3 text-sm">{result.summary}</p>}
+          {(result.relations || []).length > 0 && (
+            <div>
+              <h4 className="mb-1 text-sm font-semibold text-primary">{L.map}</h4>
+              <MkdMap brand={result.brand} relations={result.relations} cats={L.cats as any} observedLabel={L.observed} aiLabel={L.ai} />
+            </div>
+          )}
           {(result.relations || []).length === 0 && <p className="text-sm text-muted-foreground">{L.none}</p>}
           {Object.entries(groups).map(([cat, rows]) => (
             <div key={cat} className="space-y-2">

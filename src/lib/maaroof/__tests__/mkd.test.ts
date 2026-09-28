@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dedupeCandidates, falsePositiveReason, normalizeName, relationTruth } from "../mkd";
+import { dedupeCandidates, falsePositiveReason, normalizeName, relationTruth, mkdEvidenceDrafts } from "../mkd";
 
 describe("MKD helpers", () => {
   it("normalizes Arabic variants", () => {
@@ -41,5 +41,25 @@ describe("mkd local + engines", () => {
   it("anchors queries to place", () => {
     const q = localQueries("X", "coffee", "Baghdad, Iraq", "ar", false);
     expect(q.every((s) => s.includes("Baghdad"))).toBe(true);
+  });
+});
+
+describe("mkdEvidenceDrafts", () => {
+  it("maps relations to one draft per source, capped per entity", () => {
+    const drafts = mkdEvidenceDrafts("BrandX", [
+      { entity_name: "RivalA", reason: "same market", sources: ["https://a.com", "https://b.com", "https://c.com", "https://d.com"] },
+      { entity_name: "RivalB", reason: "", sources: [] },
+    ]);
+    expect(drafts).toHaveLength(3);
+    expect(drafts[0].title).toContain("RivalA");
+    expect(drafts[0].title).toContain("BrandX");
+    expect(drafts[0].sourceRef).toBe("https://a.com");
+    expect(drafts[0].claim).toContain("same market");
+  });
+
+  it("falls back to a default claim and skips empty sources", () => {
+    const drafts = mkdEvidenceDrafts("BrandX", [{ entity_name: "RivalC", sources: ["", "https://e.com"] }]);
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0].claim).toContain("competes with BrandX");
   });
 });
