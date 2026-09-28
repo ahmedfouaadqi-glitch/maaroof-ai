@@ -11,6 +11,8 @@ import { asText } from "@/lib/input-coerce";
 import { dedupeCandidates, falsePositiveReason, relationTruth, normalizeDomain, type Candidate, engineMentions, localQueries, mkdEvidenceDrafts } from "@/lib/maaroof/mkd";
 import { recordEvidence } from "@/lib/maaroof/evidence.server";
 import { upsertKnowledgeNode, linkKnowledge } from "@/lib/maaroof/knowledge.server";
+import { loadMciSettings, mciActiveFor, findReusableKnownRun, logMciDecision, getEngineCache, setEngineCache } from "@/lib/mci/resolver.server";
+import { requestFingerprint } from "@/lib/mci/registry";
 
 const LANG: Record<string, string> = {
   ar: "اكتب القيم النصية بالعربية الفصحى.",
@@ -25,11 +27,18 @@ function listFrom(sr: any): any[] {
   return Array.isArray(items) ? items : [];
 }
 
-async function askEngines(brand: string, sector: string, place: string, lang: string, n: number, apiKey: string) {
+async function askEngines(brand: string, sector: string, place: string, lang: string, n: number, apiKey: string, cache?: { admin: any; hours: number }) {
   const { engines, excluded } = await excludeUnhealthyEngines(ENGINE_KEYS.slice(0, n) as EngineKey[]);
   const models = await resolveEngineModels(engines);
   const byEngine: Record<string, string[]> = {};
+  let cached = 0, called = 0;
   await Promise.allSettled(engines.map(async (e) => {
+    const ck = `${e}|${requestFingerprint([brand, sector, place])}`;
+    if (cache) {
+      const hit = await getEngineCache(cache.admin, ck, cache.hours);
+      if (hit) { byEngine[e] = hit; cached++; return; }
+    }
+    called++;
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
     try {
       const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
@@ -42,10 +51,13 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
       if (!r.ok) return;
       const j: any = await r.json();
       const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-      if (Array.isArray(p.competitors)) byEngine[e] = p.competitors.map((x: any) => String(x).slice(0, 100)).slice(0, 8);
+      if (Array.isArray(p.competitors)) {
+        byEngine[e] = p.competitors.map((x: any) => String(x).slice(0, 100)).slice(0, 8);
+        if (cache) await setEngineCache(cache.admin, ck, e, byEngine[e]);
+      }
     } catch {} finally { clearTimeout(t); }
   }));
-  return { byEngine, asked: engines, excluded };
+  return { byEngine, asked: engines, excluded, cached, called };
 }
 
 /** Persist sources as platform evidence; returns entity_name -> evidence ids. Never throws. */
@@ -146,6 +158,22 @@ export const Route = createFileRoute("/api/known")({
         const place = scope.scope === "world" ? "" : [scope.city, scope.region, scope.country].filter(Boolean).join(", ");
         if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });
 
+        // MCI: reuse a fresh identical result before spending any AI/web call.
+        const force = body.force === true;
+        const mci = await loadMciSettings(admin).catch(() => ({ enabled: false, tools: {} }));
+        const mciOn = mciActiveFor(mci as any, "known");
+        if (mciOn && !force) {
+          try {
+            const hit = await findReusableKnownRun(admin, userId, brand, place, depth);
+            if (hit) {
+              const res = { ...hit.summary.result, run_id: hit.id, reused: { from: hit.created_at } };
+              const saved = (res.engines_asked?.length || 0) + 1;
+              await logMciDecision(admin, { userId, toolKey: "known", decision: "reuse", reusedRunId: hit.id, llmSaved: saved, fcSaved: depth === "deep" ? 5 : 3 });
+              return new Response(`event: progress\ndata: {"stage":3}\n\nevent: result\ndata: ${JSON.stringify(res)}\n\n`, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache" } });
+            }
+          } catch { /* fail open: run normally */ }
+        }
+
         const runId = crypto.randomUUID();
         const MODEL = await resolveToolModel("google/gemini-2.5-pro");
         const chg = await chargeTokens({ userId, toolKey: "known", runId, meta: { provider: "lovable_ai", model: MODEL, endpoint: "/api/known", depth } });
@@ -167,7 +195,7 @@ export const Route = createFileRoute("/api/known")({
               // Stage 0 — web discovery (bounded); engines asked in parallel.
               send("progress", { stage: 0 });
               const qs = localQueries(brand, sector, place, lang, depth === "deep");
-              const enginePromise = askEngines(brand, sector, place || "worldwide", lang, depth === "deep" ? 9 : 4, apiKey);
+              const enginePromise = askEngines(brand, sector, place || "worldwide", lang, depth === "deep" ? 9 : 4, apiKey, mciOn ? { admin, hours: 24 } : undefined);
               const sources: Src[] = [];
               for (const q of qs.slice(0, depth === "deep" ? 5 : 3)) {
                 try {
@@ -263,9 +291,11 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
                 })) as any);
               }
               const summary = { text: String(parsed.summary || "").slice(0, 1200), sources: sources.length, candidates: relations.length, filtered };
-              if (dbRunId) await admin.from("mkd_runs").update({ status: "done", summary: summary as any }).eq("id", dbRunId);
+              const result = { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, summary: summary.text, relations, filtered, sources };
+              if (dbRunId) await admin.from("mkd_runs").update({ status: "done", summary: { ...summary, result } as any }).eq("id", dbRunId);
+              if (mciOn) await logMciDecision(admin, { userId, toolKey: "known", decision: "execute", llmCalls: eng.called + 1, llmSaved: eng.cached, fcCalls: qs.slice(0, depth === "deep" ? 5 : 3).length, meta: { force } });
 
-              send("result", { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, summary: summary.text, relations, filtered, sources });
+              send("result", result);
             } catch (e: any) {
               if (dbRunId) await admin.from("mkd_runs").update({ status: "failed", error: String(e?.message || e).slice(0, 300) }).eq("id", dbRunId);
               send("error", { error: String(e?.message || "failed") });
