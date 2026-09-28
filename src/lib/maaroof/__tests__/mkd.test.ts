@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dedupeCandidates, falsePositiveReason, normalizeName, relationTruth } from "../mkd";
+import { dedupeCandidates, falsePositiveReason, normalizeName, relationTruth, mkdEvidenceDrafts } from "../mkd";
 
 describe("MKD helpers", () => {
   it("normalizes Arabic variants", () => {
