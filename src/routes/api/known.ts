@@ -49,12 +49,13 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
 }
 
 /** Persist sources as platform evidence; returns entity_name -> evidence ids. Never throws. */
-async function persistEvidence(userId: string, brand: string, relations: any[], lang: string): Promise<Map<string, string[]>> {
+async function persistEvidence(userId: string, brand: string, relations: any[], lang: string, realityRecordId: string | null): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   try {
     const drafts = mkdEvidenceDrafts(brand, relations);
     for (const d of drafts) {
       const id = await recordEvidence({
+        realityRecordId,
         userId,
         title: d.title,
         claim: d.claim,
@@ -236,8 +237,19 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
 
               // Stage 3 — evidence + knowledge graph, then persist.
               send("progress", { stage: 3 });
+              // evidence_items.reality_record_id is NOT NULL: anchor this run's
+              // evidence to one reality record describing the discovery.
+              let realityRecordId: string | null = null;
+              try {
+                const { data: rr } = await admin.from("reality_records").insert({
+                  run_id: dbRunId || null, user_id: userId, subject: "market", subject_ref: brand,
+                  reality_state: relations.some((x) => !x.is_ai_observation) ? "observed" : "inferred",
+                  signals: { tool: "known", market: place || "world", depth, relations: relations.length },
+                } as any).select("id").single();
+                realityRecordId = (rr as any)?.id ?? null;
+              } catch {}
               const [evidenceMap, nodeMap] = await Promise.all([
-                persistEvidence(userId, brand, relations, lang),
+                persistEvidence(userId, brand, relations, lang, realityRecordId),
                 persistKnowledge(userId, brand, sector, place, relations),
               ]);
 
