@@ -83,16 +83,15 @@ export function MkdMap({ brand, relations, cats, observedLabel, aiLabel }: {
             </g>
           );
         })}
-        {nodes.map(({ r, x, y, right }) => {
+        {nodes.map(({ r, x, y }) => {
           const rad = 6 + (r.confidence / 100) * 6;
           const dim = hover && hover !== r.entity_name;
           const name = r.entity_name.length > 22 ? r.entity_name.slice(0, 21) + "…" : r.entity_name;
           return (
             <g key={r.entity_name} opacity={dim ? 0.3 : 1} onMouseEnter={() => setHover(r.entity_name)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
               <circle cx={x} cy={y} r={rad} className={r.is_ai_observation ? "fill-accent/20 stroke-accent" : "fill-primary/30 stroke-primary"} strokeWidth={1.8} strokeDasharray={r.is_ai_observation ? "3 3" : undefined} />
-              <text x={right ? x + rad + 5 : x - rad - 5} y={y + 4} textAnchor={right ? "start" : "end"} className="fill-foreground" fontSize={12} fontWeight={600}>
-                <tspan style={{ unicodeBidi: "plaintext" } as any}>{name}</tspan><tspan className="fill-muted-foreground" fontWeight={400}>{`  ${r.confidence}%`}</tspan>
-              </text>
+              <text x={x} y={y + rad + 14} textAnchor="middle" className="fill-foreground" fontSize={12} fontWeight={600}>{name}</text>
+              <text x={x} y={y + rad + 27} textAnchor="middle" className="fill-muted-foreground" fontSize={10}>{r.confidence}%</text>
             </g>
           );
         })}
