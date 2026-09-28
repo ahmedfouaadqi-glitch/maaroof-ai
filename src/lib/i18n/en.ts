@@ -668,6 +668,7 @@ export const en: Dict = {
   guide_how_analyze: "Open Analyze, paste your text or URL, click Analyze. You get a 0–100 GEO score with breakdown: technical authority, local relevance, citation likelihood.",
   guide_how_suggest: "Pick target language and tone, get several ready-to-publish post drafts.",
   guide_how_compare: "Add 2–4 competitors, we score and contrast their GEO presence so you see the gap.",
+  guide_how_known: "Enter your brand (optionally your site and market), pick Quick or Deep, and we discover who actually competes with you in that market — with sources, a reason and a confidence score for each rival, plus a relations map. Rivals named only by AI engines are flagged 'AI observation' and never treated as verified. Tick 'Watch' on any rival to hand it to the Competitor Monitor within your quota.",
   guide_how_feasibility: "Fill the 12-field form (market, finance, ops, risks) and get a structured feasibility study.",
   guide_how_bizdev: "Enter your business data and get a 12-month growth plan with SWOT, levers and roadmap.",
   guide_how_research: "Type a topic, we search the live web via Firecrawl and summarize with sources.",

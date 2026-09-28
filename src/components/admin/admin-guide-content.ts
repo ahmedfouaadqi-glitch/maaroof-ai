@@ -48,6 +48,13 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         purpose: { ar: "تحديد أي أداة متاحة لأي خطة.", en: "Decide which tool is available to which plan.", ku: "دیاریکردنی ئەوەی کام ئامراز بۆ کام پلان بەردەستە." },
         usage: { ar: "فعّل أو عطّل الأداة داخل الخطة، ثم احفظ.", en: "Toggle a tool inside a plan, then save.", ku: "ئامراز لەناو پلان کارا/ناکارا بکە و پاشەکەوتی بکە." },
       },
+      {
+        key: "monitor",
+        label: { ar: "سياسة مراقبة المنافسين", en: "Competitor Monitor Policy", ku: "سیاسەتی چاودێری ڕکابەران" },
+        purpose: { ar: "التحكم العام والتفصيلي بمراقبة المنافسين القادمة من أداة «من المعروفين؟».", en: "Global and per-user control of competitor monitoring created from the Known Discovery tool.", ku: "کۆنترۆڵی گشتی و تایبەت بە بەکارهێنەر بۆ چاودێری ڕکابەران." },
+        usage: { ar: "اضبط التفعيل، أقصى عدد مراقبات، أقصى منافسين في المراقبة، وأقل تكرار مسموح. أضف استثناء لأي مستخدم ببريده.", en: "Set enablement, max watches, max competitors per watch and minimum frequency. Add a per-user exception by email.", ku: "چالاکی، زۆرترین چاودێری، زۆرترین ڕکابەر و کەمترین دووبارەبوونەوە دابنێ؛ ئەنجامدەری تایبەت بە ئیمەیڵ زیاد بکە." },
+        warning: { ar: "كل إعادة فحص تُخصم من حصة المستخدم بسعر أداة المراقبة في خطته.", en: "Every re-check is charged from the user's quota at the monitor tool price in their plan.", ku: "هەر پشکنینێک لە بەشی بەکارهێنەر دەبڕدرێت." },
+      },
 
       {
         key: "plans",
