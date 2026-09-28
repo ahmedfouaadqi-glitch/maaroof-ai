@@ -1,0 +1,1 @@
+- MCI (Context Intelligence) lives in src/lib/mci/: registry + fail-open resolver run before tools; additive only, never changes tool logic — why: cut repeat AI/web calls safely.
