@@ -319,13 +319,13 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           <Field label={L.usedToday}>
             <div className="flex gap-1">
               <input type="number" min={0} value={usedToday} onChange={(e) => setUsedToday(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
-              <button type="button" onClick={() => setUsedToday(0)} className="rounded-lg border border-border bg-card/60 px-2 text-[10px] hover:bg-card">{L.resetToday}</button>
+              <button type="button" title={L.resetAllHint} onClick={() => { setUsedToday(0); setResetLegacyDay(true); }} className={`rounded-lg border px-2 text-[10px] hover:bg-card ${resetLegacyDay ? "border-success bg-success/10 text-success" : "border-border bg-card/60"}`}>{L.resetToday}</button>
             </div>
           </Field>
           <Field label={L.usedMonth}>
             <div className="flex gap-1">
               <input type="number" min={0} value={usedMonth} onChange={(e) => setUsedMonth(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm" />
-              <button type="button" onClick={() => setUsedMonth(0)} className="rounded-lg border border-border bg-card/60 px-2 text-[10px] hover:bg-card">{L.resetMonth}</button>
+              <button type="button" title={L.resetAllHint} onClick={() => { setUsedMonth(0); setResetLegacyMonth(true); }} className={`rounded-lg border px-2 text-[10px] hover:bg-card ${resetLegacyMonth ? "border-success bg-success/10 text-success" : "border-border bg-card/60"}`}>{L.resetMonth}</button>
             </div>
           </Field>
           <Field label={L.hideUsage}>
