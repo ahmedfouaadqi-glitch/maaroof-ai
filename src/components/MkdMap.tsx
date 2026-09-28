@@ -68,7 +68,7 @@ export function MkdMap({ brand, relations, cats, observedLabel, aiLabel }: {
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${S} ${S}`} className="mx-auto hidden w-full max-w-3xl sm:block" role="img" aria-label="competitive map">
+      <svg dir="ltr" style={{ direction: "ltr" }} viewBox={`0 0 ${S} ${S}`} className="mx-auto hidden w-full max-w-3xl sm:block" role="img" aria-label="competitive map">
         {[0.33, 0.66, 1].map((f) => <circle key={f} cx={C} cy={C} r={R * f} fill="none" className="stroke-border" strokeWidth={1} opacity={0.6} />)}
         {wedges.map((w, i) => {
           const mid = (w.a0 + w.a1) / 2;
@@ -91,7 +91,7 @@ export function MkdMap({ brand, relations, cats, observedLabel, aiLabel }: {
             <g key={r.entity_name} opacity={dim ? 0.3 : 1} onMouseEnter={() => setHover(r.entity_name)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
               <circle cx={x} cy={y} r={rad} className={r.is_ai_observation ? "fill-accent/20 stroke-accent" : "fill-primary/30 stroke-primary"} strokeWidth={1.8} strokeDasharray={r.is_ai_observation ? "3 3" : undefined} />
               <text x={right ? x + rad + 5 : x - rad - 5} y={y + 4} textAnchor={right ? "start" : "end"} className="fill-foreground" fontSize={12} fontWeight={600}>
-                {name} <tspan className="fill-muted-foreground" fontWeight={400}>{r.confidence}%</tspan>
+                <tspan style={{ unicodeBidi: "plaintext" } as any}>{name}</tspan><tspan className="fill-muted-foreground" fontWeight={400}>{`  ${r.confidence}%`}</tspan>
               </text>
             </g>
           );
