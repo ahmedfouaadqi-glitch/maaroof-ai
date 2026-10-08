@@ -13,12 +13,16 @@ export function MciPanel() {
   const L = T[(lang as "ar" | "en" | "ku")] || T.ar;
   const [enabled, setEnabled] = useState(true);
   const [st, setSt] = useState({ runs: 0, reused: 0, llm: 0, fc: 0 });
+  const [byTool, setByTool] = useState<Record<string, number>>({});
 
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "mci").maybeSingle().then(({ data }) => setEnabled((data as any)?.value?.enabled !== false));
     const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-    supabase.from("mci_decisions" as any).select("decision, llm_calls_saved, firecrawl_calls_saved").gte("created_at", since).limit(5000).then(({ data }) => {
+    supabase.from("mci_decisions" as any).select("decision, tool_key, llm_calls_saved, firecrawl_calls_saved").gte("created_at", since).limit(5000).then(({ data }) => {
       const rows = (data || []) as any[];
+      const by: Record<string, number> = {};
+      rows.filter((r) => r.decision === "reuse").forEach((r) => { by[r.tool_key] = (by[r.tool_key] || 0) + 1; });
+      setByTool(by);
       setSt({
         runs: rows.filter((r) => r.decision === "execute").length,
         reused: rows.filter((r) => r.decision === "reuse").length,
@@ -44,6 +48,11 @@ export function MciPanel() {
           <div key={k} className="rounded-lg border border-border p-2 text-center"><div className="text-lg font-bold text-primary">{v}</div><div className="text-[11px] text-muted-foreground">{(L as any)[k]}</div></div>
         ))}
       </div>
+      {Object.keys(byTool).length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+          {Object.entries(byTool).map(([k, v]) => <span key={k} className="rounded-full border border-border px-2 py-0.5">{k}: {v}</span>)}
+        </div>
+      )}
       <p className="mt-2 text-[11px] text-muted-foreground">{L.hint}</p>
     </div>
   );

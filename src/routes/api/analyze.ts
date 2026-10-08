@@ -1,3 +1,4 @@
+import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
@@ -102,6 +103,9 @@ export const Route = createFileRoute("/api/analyze")({
           const runId = crypto.randomUUID();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _mci = await mciReuse(admin as any, "analyze", userId, [text, lang, scopeKey], !!(body as any)?.force);
+          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
@@ -220,7 +224,7 @@ export const Route = createFileRoute("/api/analyze")({
           }).eq("id", userId);
           await admin.from("activity_log").insert({ user_id: userId, action: "analyze", metadata: { score: result.score, cached: fromCache } });
 
-          return Response.json({ ...result, cached: fromCache });
+          { const _out = { ...result, cached: fromCache }; await mciStore(admin as any, "analyze", userId, _mci.key, _out); return Response.json(_out); }
         } catch (e) {
           console.error("[api/analyze] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });

@@ -14,6 +14,6 @@ describe("MCI registry", () => {
   });
   it("known is MCI-enabled by default, others are not", () => {
     expect(toolProfile("known")?.mciEnabled).toBe(true);
-    expect(toolProfile("analyze")?.mciEnabled).toBe(false);
+    expect(toolProfile("analyze")?.mciEnabled).toBe(true);
   });
 });

@@ -1,3 +1,4 @@
+import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
@@ -96,6 +97,9 @@ export const Route = createFileRoute("/api/compare")({
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-3-flash-preview");
+          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _mci = await mciReuse(admin as any, "compare", userId, [brand, competitors, keywords, lang, body.scope], !!(body as any)?.force);
+          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
@@ -552,7 +556,7 @@ export const Route = createFileRoute("/api/compare")({
 
           const _evPack = evidenceFromResults(`${brand} vs ${competitors.join(", ")}`, sources.map((s: any) => ({ title: s.title, url: s.url, snippet: s.snippet })), 8);
           const _q = pickQualityFields(result);
-          return Response.json({ ok: true, result: { ...result, sources: _evPack.sources, ..._q }, sources: _evPack.sources, ..._q });
+          { const _out = { ok: true, result: { ...result, sources: _evPack.sources, ..._q }, sources: _evPack.sources, ..._q }; await mciStore(admin as any, "compare", userId, _mci.key, _out); return Response.json(_out); }
 
 
         } catch (e) {

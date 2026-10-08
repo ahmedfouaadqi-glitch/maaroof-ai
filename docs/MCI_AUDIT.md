@@ -16,3 +16,9 @@
 - Reuse is per-user only (fingerprint = brand + market + depth); "Refresh now" forces a fresh run.
 - Reused results are not charged (`reuseChargeRatio: 0`).
 - Savings are reported only from measured rows, never estimated.
+
+## Phase 2 — Tool wiring by nature (2026-10-08)
+- Reuse (same user + same request, no charge, `force` to refresh): analyze 24h, visibility 24h, compare 24h, research 12h, known 7d.
+- Not wired (by nature): geo-strategist, what-if (generative/strategy — always fresh), outreach, bizdev, publishing, suggest, admin.
+- Storage: `engine_answer_cache` with user-scoped key `tool:<tool>:<user>:<sha>`; decisions in `mci_decisions` (intent = tool key).
+- Fail-open: any MCI error → tool runs exactly as before. Admin toggle in `app_settings.mci` (global or `tools.<key>`).
