@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { MciReuseBadge } from "@/components/MciReuseBadge";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { fromResearch } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe } from "lucide-react";
@@ -130,6 +133,7 @@ export function SmartResearch() {
       </div>
 
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
+      {out && <MciReuseBadge mci={out.mci} path="/api/research" onRefresh={run} />}
       {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="research" result={out} /></div>}
       <ToolHistory toolKey="research" />
       {out && (
@@ -229,6 +233,7 @@ export function SmartResearch() {
               </ul>
             </div>
           )}
+          {fromResearch(out).length > 0 && <EngineResponseFlow answers={fromResearch(out)} compact />}
           <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <HandoffMenu source="research" getText={() => `${q}\n\n${out.sge_summary || out.answer || ""}`} />
 

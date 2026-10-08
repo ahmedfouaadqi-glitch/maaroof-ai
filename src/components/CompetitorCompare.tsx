@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { useI18n, type Lang } from "@/lib/i18n";
@@ -219,6 +220,7 @@ export function CompetitorCompare() {
 
       {error && <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
+      {result && <MciReuseBadge mci={(result as any).mci} path="/api/compare" onRefresh={run} />}
       {result && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="compare" result={result} /></div>}
       <ToolHistory toolKey="compare" />
       {result && (

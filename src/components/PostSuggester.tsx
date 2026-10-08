@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { fromSuggestion } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { useI18n, type Lang } from "@/lib/i18n";
@@ -505,6 +507,7 @@ export function PostSuggester({
             </div>
           )}
 
+          {fromSuggestion(result).length > 0 && <EngineResponseFlow answers={fromSuggestion(result)} compact />}
           {result.variants.map((v, i) => (
             <div key={i} className="rounded-xl border border-border bg-background/60 p-4">
               <div className="mb-2 flex items-center justify-between">
