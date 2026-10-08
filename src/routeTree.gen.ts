@@ -9,122 +9,57 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as MethodologyRouteImport } from './routes/methodology'
-import { Route as MarketsRouteImport } from './routes/markets'
-import { Route as MaaroofRouteImport } from './routes/maaroof'
-import { Route as GuideRouteImport } from './routes/guide'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AgentRouteImport } from './routes/agent'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UUsernameRouteImport } from './routes/u.$username'
-import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
-import { Route as PSlugRouteImport } from './routes/p.$slug'
-import { Route as MaaroofMemoryRouteImport } from './routes/maaroof.memory'
-import { Route as GuideWhatIsGeoRouteImport } from './routes/guide.what-is-geo'
-import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
-import { Route as GuideArabicKurdishGeoRouteImport } from './routes/guide.arabic-kurdish-geo'
-import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
-import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
-import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
-import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
-import { Route as ApiResearchRouteImport } from './routes/api/research'
-import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
-import { Route as ApiKnownRouteImport } from './routes/api/known'
-import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
-import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
-import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
-import { Route as ApiCompetitorMonitorRouteImport } from './routes/api/competitor-monitor'
-import { Route as ApiCompareRouteImport } from './routes/api/compare'
-import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
-import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
-import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-authority'
-import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
-import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AgentRouteImport } from './routes/agent'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as GuideRouteImport } from './routes/guide'
+import { Route as MaaroofRouteImport } from './routes/maaroof'
+import { Route as MarketsRouteImport } from './routes/markets'
+import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
-import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
+import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
+import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
+import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-authority'
+import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
+import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
+import { Route as ApiCompareRouteImport } from './routes/api/compare'
+import { Route as ApiCompetitorMonitorRouteImport } from './routes/api/competitor-monitor'
+import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
+import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
+import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
+import { Route as ApiKnownRouteImport } from './routes/api/known'
+import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
+import { Route as ApiResearchRouteImport } from './routes/api/research'
+import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
+import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
+import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
+import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
+import { Route as GuideArabicKurdishGeoRouteImport } from './routes/guide.arabic-kurdish-geo'
+import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
+import { Route as GuideWhatIsGeoRouteImport } from './routes/guide.what-is-geo'
+import { Route as MaaroofMemoryRouteImport } from './routes/maaroof.memory'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
+import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
+import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth/$provider/callback'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MethodologyRoute = MethodologyRouteImport.update({
-  id: '/methodology',
-  path: '/methodology',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketsRoute = MarketsRouteImport.update({
-  id: '/markets',
-  path: '/markets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MaaroofRoute = MaaroofRouteImport.update({
-  id: '/maaroof',
-  path: '/maaroof',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideRoute = GuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentRoute = AgentRouteImport.update({
-  id: '/agent',
-  path: '/agent',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -132,129 +67,74 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AgentRoute = AgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UUsernameRoute = UUsernameRouteImport.update({
-  id: '/u/$username',
-  path: '/u/$username',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ToolsSlugRoute = ToolsSlugRouteImport.update({
-  id: '/tools/$slug',
-  path: '/tools/$slug',
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PSlugRoute = PSlugRouteImport.update({
-  id: '/p/$slug',
-  path: '/p/$slug',
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MaaroofMemoryRoute = MaaroofMemoryRouteImport.update({
-  id: '/memory',
-  path: '/memory',
-  getParentRoute: () => MaaroofRoute,
-} as any)
-const GuideWhatIsGeoRoute = GuideWhatIsGeoRouteImport.update({
-  id: '/what-is-geo',
-  path: '/what-is-geo',
-  getParentRoute: () => GuideRoute,
-} as any)
-const GuideGeoVsAeoRoute = GuideGeoVsAeoRouteImport.update({
-  id: '/geo-vs-aeo',
-  path: '/geo-vs-aeo',
-  getParentRoute: () => GuideRoute,
-} as any)
-const GuideArabicKurdishGeoRoute = GuideArabicKurdishGeoRouteImport.update({
-  id: '/arabic-kurdish-geo',
-  path: '/arabic-kurdish-geo',
-  getParentRoute: () => GuideRoute,
-} as any)
-const ApiWhatIfRoute = ApiWhatIfRouteImport.update({
-  id: '/api/what-if',
-  path: '/api/what-if',
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiVisibilityRoute = ApiVisibilityRouteImport.update({
-  id: '/api/visibility',
-  path: '/api/visibility',
+const MaaroofRoute = MaaroofRouteImport.update({
+  id: '/maaroof',
+  path: '/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSuggestRoute = ApiSuggestRouteImport.update({
-  id: '/api/suggest',
-  path: '/api/suggest',
+const MarketsRoute = MarketsRouteImport.update({
+  id: '/markets',
+  path: '/markets',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSocialAnalysisRoute = ApiSocialAnalysisRouteImport.update({
-  id: '/api/social-analysis',
-  path: '/api/social-analysis',
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiResearchRoute = ApiResearchRouteImport.update({
-  id: '/api/research',
-  path: '/api/research',
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
-  id: '/api/maaroof',
-  path: '/api/maaroof',
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiKnownRoute = ApiKnownRouteImport.update({
-  id: '/api/known',
-  path: '/api/known',
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
-  id: '/api/geo-strategist',
-  path: '/api/geo-strategist',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiGeoRewriteRoute = ApiGeoRewriteRouteImport.update({
-  id: '/api/geo-rewrite',
-  path: '/api/geo-rewrite',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
-  id: '/api/feasibility',
-  path: '/api/feasibility',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCompetitorMonitorRoute = ApiCompetitorMonitorRouteImport.update({
-  id: '/api/competitor-monitor',
-  path: '/api/competitor-monitor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCompareRoute = ApiCompareRouteImport.update({
-  id: '/api/compare',
-  path: '/api/compare',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCompanyEmailRoute = ApiCompanyEmailRouteImport.update({
-  id: '/api/company-email',
-  path: '/api/company-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBrandBoostRoute = ApiBrandBoostRouteImport.update({
-  id: '/api/brand-boost',
-  path: '/api/brand-boost',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBrandAuthorityRoute = ApiBrandAuthorityRouteImport.update({
-  id: '/api/brand-authority',
-  path: '/api/brand-authority',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBizdevRoute = ApiBizdevRouteImport.update({
-  id: '/api/bizdev',
-  path: '/api/bizdev',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAppliedRankingRoute = ApiAppliedRankingRouteImport.update({
-  id: '/api/applied-ranking',
-  path: '/api/applied-ranking',
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
@@ -262,31 +142,151 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
   path: '/api/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
+const ApiAppliedRankingRoute = ApiAppliedRankingRouteImport.update({
+  id: '/api/applied-ranking',
+  path: '/api/applied-ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
+const ApiBizdevRoute = ApiBizdevRouteImport.update({
+  id: '/api/bizdev',
+  path: '/api/bizdev',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTelegramWebhookRoute =
-  ApiPublicTelegramWebhookRouteImport.update({
-    id: '/api/public/telegram/webhook',
-    path: '/api/public/telegram/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiBrandAuthorityRoute = ApiBrandAuthorityRouteImport.update({
+  id: '/api/brand-authority',
+  path: '/api/brand-authority',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandBoostRoute = ApiBrandBoostRouteImport.update({
+  id: '/api/brand-boost',
+  path: '/api/brand-boost',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompanyEmailRoute = ApiCompanyEmailRouteImport.update({
+  id: '/api/company-email',
+  path: '/api/company-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompareRoute = ApiCompareRouteImport.update({
+  id: '/api/compare',
+  path: '/api/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompetitorMonitorRoute = ApiCompetitorMonitorRouteImport.update({
+  id: '/api/competitor-monitor',
+  path: '/api/competitor-monitor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
+  id: '/api/feasibility',
+  path: '/api/feasibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGeoRewriteRoute = ApiGeoRewriteRouteImport.update({
+  id: '/api/geo-rewrite',
+  path: '/api/geo-rewrite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
+  id: '/api/geo-strategist',
+  path: '/api/geo-strategist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiKnownRoute = ApiKnownRouteImport.update({
+  id: '/api/known',
+  path: '/api/known',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
+  id: '/api/maaroof',
+  path: '/api/maaroof',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiResearchRoute = ApiResearchRouteImport.update({
+  id: '/api/research',
+  path: '/api/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSocialAnalysisRoute = ApiSocialAnalysisRouteImport.update({
+  id: '/api/social-analysis',
+  path: '/api/social-analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSuggestRoute = ApiSuggestRouteImport.update({
+  id: '/api/suggest',
+  path: '/api/suggest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVisibilityRoute = ApiVisibilityRouteImport.update({
+  id: '/api/visibility',
+  path: '/api/visibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWhatIfRoute = ApiWhatIfRouteImport.update({
+  id: '/api/what-if',
+  path: '/api/what-if',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideArabicKurdishGeoRoute = GuideArabicKurdishGeoRouteImport.update({
+  id: '/arabic-kurdish-geo',
+  path: '/arabic-kurdish-geo',
+  getParentRoute: () => GuideRoute,
+} as any)
+const GuideGeoVsAeoRoute = GuideGeoVsAeoRouteImport.update({
+  id: '/geo-vs-aeo',
+  path: '/geo-vs-aeo',
+  getParentRoute: () => GuideRoute,
+} as any)
+const GuideWhatIsGeoRoute = GuideWhatIsGeoRouteImport.update({
+  id: '/what-is-geo',
+  path: '/what-is-geo',
+  getParentRoute: () => GuideRoute,
+} as any)
+const MaaroofMemoryRoute = MaaroofMemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
+  getParentRoute: () => MaaroofRoute,
+} as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsSlugRoute = ToolsSlugRouteImport.update({
+  id: '/tools/$slug',
+  path: '/tools/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UUsernameRoute = UUsernameRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
+  id: '/api/public/brand/$slug',
+  path: '/api/public/brand/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksAgentRunnerRoute =
   ApiPublicHooksAgentRunnerRouteImport.update({
     id: '/api/public/hooks/agent-runner',
     path: '/api/public/hooks/agent-runner',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
-  id: '/api/public/brand/$slug',
-  path: '/api/public/brand/$slug',
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram/webhook',
+    path: '/api/public/telegram/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicOauthProviderCallbackRoute =
@@ -642,102 +642,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/methodology': {
-      id: '/methodology'
-      path: '/methodology'
-      fullPath: '/methodology'
-      preLoaderRoute: typeof MethodologyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/markets': {
-      id: '/markets'
-      path: '/markets'
-      fullPath: '/markets'
-      preLoaderRoute: typeof MarketsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/maaroof': {
-      id: '/maaroof'
-      path: '/maaroof'
-      fullPath: '/maaroof'
-      preLoaderRoute: typeof MaaroofRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide': {
-      id: '/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof GuideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent': {
-      id: '/agent'
-      path: '/agent'
-      fullPath: '/agent'
-      preLoaderRoute: typeof AgentRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -747,179 +656,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/agent': {
+      id: '/agent'
+      path: '/agent'
+      fullPath: '/agent'
+      preLoaderRoute: typeof AgentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/u/$username': {
-      id: '/u/$username'
-      path: '/u/$username'
-      fullPath: '/u/$username'
-      preLoaderRoute: typeof UUsernameRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tools/$slug': {
-      id: '/tools/$slug'
-      path: '/tools/$slug'
-      fullPath: '/tools/$slug'
-      preLoaderRoute: typeof ToolsSlugRouteImport
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/p/$slug': {
-      id: '/p/$slug'
-      path: '/p/$slug'
-      fullPath: '/p/$slug'
-      preLoaderRoute: typeof PSlugRouteImport
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/maaroof/memory': {
-      id: '/maaroof/memory'
-      path: '/memory'
-      fullPath: '/maaroof/memory'
-      preLoaderRoute: typeof MaaroofMemoryRouteImport
-      parentRoute: typeof MaaroofRoute
-    }
-    '/guide/what-is-geo': {
-      id: '/guide/what-is-geo'
-      path: '/what-is-geo'
-      fullPath: '/guide/what-is-geo'
-      preLoaderRoute: typeof GuideWhatIsGeoRouteImport
-      parentRoute: typeof GuideRoute
-    }
-    '/guide/geo-vs-aeo': {
-      id: '/guide/geo-vs-aeo'
-      path: '/geo-vs-aeo'
-      fullPath: '/guide/geo-vs-aeo'
-      preLoaderRoute: typeof GuideGeoVsAeoRouteImport
-      parentRoute: typeof GuideRoute
-    }
-    '/guide/arabic-kurdish-geo': {
-      id: '/guide/arabic-kurdish-geo'
-      path: '/arabic-kurdish-geo'
-      fullPath: '/guide/arabic-kurdish-geo'
-      preLoaderRoute: typeof GuideArabicKurdishGeoRouteImport
-      parentRoute: typeof GuideRoute
-    }
-    '/api/what-if': {
-      id: '/api/what-if'
-      path: '/api/what-if'
-      fullPath: '/api/what-if'
-      preLoaderRoute: typeof ApiWhatIfRouteImport
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/visibility': {
-      id: '/api/visibility'
-      path: '/api/visibility'
-      fullPath: '/api/visibility'
-      preLoaderRoute: typeof ApiVisibilityRouteImport
+    '/maaroof': {
+      id: '/maaroof'
+      path: '/maaroof'
+      fullPath: '/maaroof'
+      preLoaderRoute: typeof MaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/suggest': {
-      id: '/api/suggest'
-      path: '/api/suggest'
-      fullPath: '/api/suggest'
-      preLoaderRoute: typeof ApiSuggestRouteImport
+    '/markets': {
+      id: '/markets'
+      path: '/markets'
+      fullPath: '/markets'
+      preLoaderRoute: typeof MarketsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/social-analysis': {
-      id: '/api/social-analysis'
-      path: '/api/social-analysis'
-      fullPath: '/api/social-analysis'
-      preLoaderRoute: typeof ApiSocialAnalysisRouteImport
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/research': {
-      id: '/api/research'
-      path: '/api/research'
-      fullPath: '/api/research'
-      preLoaderRoute: typeof ApiResearchRouteImport
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/maaroof': {
-      id: '/api/maaroof'
-      path: '/api/maaroof'
-      fullPath: '/api/maaroof'
-      preLoaderRoute: typeof ApiMaaroofRouteImport
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/known': {
-      id: '/api/known'
-      path: '/api/known'
-      fullPath: '/api/known'
-      preLoaderRoute: typeof ApiKnownRouteImport
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/geo-strategist': {
-      id: '/api/geo-strategist'
-      path: '/api/geo-strategist'
-      fullPath: '/api/geo-strategist'
-      preLoaderRoute: typeof ApiGeoStrategistRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/geo-rewrite': {
-      id: '/api/geo-rewrite'
-      path: '/api/geo-rewrite'
-      fullPath: '/api/geo-rewrite'
-      preLoaderRoute: typeof ApiGeoRewriteRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/feasibility': {
-      id: '/api/feasibility'
-      path: '/api/feasibility'
-      fullPath: '/api/feasibility'
-      preLoaderRoute: typeof ApiFeasibilityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/competitor-monitor': {
-      id: '/api/competitor-monitor'
-      path: '/api/competitor-monitor'
-      fullPath: '/api/competitor-monitor'
-      preLoaderRoute: typeof ApiCompetitorMonitorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/compare': {
-      id: '/api/compare'
-      path: '/api/compare'
-      fullPath: '/api/compare'
-      preLoaderRoute: typeof ApiCompareRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/company-email': {
-      id: '/api/company-email'
-      path: '/api/company-email'
-      fullPath: '/api/company-email'
-      preLoaderRoute: typeof ApiCompanyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/brand-boost': {
-      id: '/api/brand-boost'
-      path: '/api/brand-boost'
-      fullPath: '/api/brand-boost'
-      preLoaderRoute: typeof ApiBrandBoostRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/brand-authority': {
-      id: '/api/brand-authority'
-      path: '/api/brand-authority'
-      fullPath: '/api/brand-authority'
-      preLoaderRoute: typeof ApiBrandAuthorityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/bizdev': {
-      id: '/api/bizdev'
-      path: '/api/bizdev'
-      fullPath: '/api/bizdev'
-      preLoaderRoute: typeof ApiBizdevRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/applied-ranking': {
-      id: '/api/applied-ranking'
-      path: '/api/applied-ranking'
-      fullPath: '/api/applied-ranking'
-      preLoaderRoute: typeof ApiAppliedRankingRouteImport
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analyze': {
@@ -929,25 +761,179 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/webhook': {
-      id: '/lovable/email/auth/webhook'
-      path: '/lovable/email/auth/webhook'
-      fullPath: '/lovable/email/auth/webhook'
-      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+    '/api/applied-ranking': {
+      id: '/api/applied-ranking'
+      path: '/api/applied-ranking'
+      fullPath: '/api/applied-ranking'
+      preLoaderRoute: typeof ApiAppliedRankingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+    '/api/bizdev': {
+      id: '/api/bizdev'
+      path: '/api/bizdev'
+      fullPath: '/api/bizdev'
+      preLoaderRoute: typeof ApiBizdevRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/telegram/webhook': {
-      id: '/api/public/telegram/webhook'
-      path: '/api/public/telegram/webhook'
-      fullPath: '/api/public/telegram/webhook'
-      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+    '/api/brand-authority': {
+      id: '/api/brand-authority'
+      path: '/api/brand-authority'
+      fullPath: '/api/brand-authority'
+      preLoaderRoute: typeof ApiBrandAuthorityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-boost': {
+      id: '/api/brand-boost'
+      path: '/api/brand-boost'
+      fullPath: '/api/brand-boost'
+      preLoaderRoute: typeof ApiBrandBoostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/company-email': {
+      id: '/api/company-email'
+      path: '/api/company-email'
+      fullPath: '/api/company-email'
+      preLoaderRoute: typeof ApiCompanyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/compare': {
+      id: '/api/compare'
+      path: '/api/compare'
+      fullPath: '/api/compare'
+      preLoaderRoute: typeof ApiCompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/competitor-monitor': {
+      id: '/api/competitor-monitor'
+      path: '/api/competitor-monitor'
+      fullPath: '/api/competitor-monitor'
+      preLoaderRoute: typeof ApiCompetitorMonitorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/feasibility': {
+      id: '/api/feasibility'
+      path: '/api/feasibility'
+      fullPath: '/api/feasibility'
+      preLoaderRoute: typeof ApiFeasibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/geo-rewrite': {
+      id: '/api/geo-rewrite'
+      path: '/api/geo-rewrite'
+      fullPath: '/api/geo-rewrite'
+      preLoaderRoute: typeof ApiGeoRewriteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/geo-strategist': {
+      id: '/api/geo-strategist'
+      path: '/api/geo-strategist'
+      fullPath: '/api/geo-strategist'
+      preLoaderRoute: typeof ApiGeoStrategistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/known': {
+      id: '/api/known'
+      path: '/api/known'
+      fullPath: '/api/known'
+      preLoaderRoute: typeof ApiKnownRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/maaroof': {
+      id: '/api/maaroof'
+      path: '/api/maaroof'
+      fullPath: '/api/maaroof'
+      preLoaderRoute: typeof ApiMaaroofRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/research': {
+      id: '/api/research'
+      path: '/api/research'
+      fullPath: '/api/research'
+      preLoaderRoute: typeof ApiResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social-analysis': {
+      id: '/api/social-analysis'
+      path: '/api/social-analysis'
+      fullPath: '/api/social-analysis'
+      preLoaderRoute: typeof ApiSocialAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/suggest': {
+      id: '/api/suggest'
+      path: '/api/suggest'
+      fullPath: '/api/suggest'
+      preLoaderRoute: typeof ApiSuggestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/visibility': {
+      id: '/api/visibility'
+      path: '/api/visibility'
+      fullPath: '/api/visibility'
+      preLoaderRoute: typeof ApiVisibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/what-if': {
+      id: '/api/what-if'
+      path: '/api/what-if'
+      fullPath: '/api/what-if'
+      preLoaderRoute: typeof ApiWhatIfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide/arabic-kurdish-geo': {
+      id: '/guide/arabic-kurdish-geo'
+      path: '/arabic-kurdish-geo'
+      fullPath: '/guide/arabic-kurdish-geo'
+      preLoaderRoute: typeof GuideArabicKurdishGeoRouteImport
+      parentRoute: typeof GuideRoute
+    }
+    '/guide/geo-vs-aeo': {
+      id: '/guide/geo-vs-aeo'
+      path: '/geo-vs-aeo'
+      fullPath: '/guide/geo-vs-aeo'
+      preLoaderRoute: typeof GuideGeoVsAeoRouteImport
+      parentRoute: typeof GuideRoute
+    }
+    '/guide/what-is-geo': {
+      id: '/guide/what-is-geo'
+      path: '/what-is-geo'
+      fullPath: '/guide/what-is-geo'
+      preLoaderRoute: typeof GuideWhatIsGeoRouteImport
+      parentRoute: typeof GuideRoute
+    }
+    '/maaroof/memory': {
+      id: '/maaroof/memory'
+      path: '/memory'
+      fullPath: '/maaroof/memory'
+      preLoaderRoute: typeof MaaroofMemoryRouteImport
+      parentRoute: typeof MaaroofRoute
+    }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/$slug': {
+      id: '/tools/$slug'
+      path: '/tools/$slug'
+      fullPath: '/tools/$slug'
+      preLoaderRoute: typeof ToolsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/u/$username': {
+      id: '/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/brand/$slug': {
+      id: '/api/public/brand/$slug'
+      path: '/api/public/brand/$slug'
+      fullPath: '/api/public/brand/$slug'
+      preLoaderRoute: typeof ApiPublicBrandSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/agent-runner': {
@@ -957,11 +943,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAgentRunnerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/brand/$slug': {
-      id: '/api/public/brand/$slug'
-      path: '/api/public/brand/$slug'
-      fullPath: '/api/public/brand/$slug'
-      preLoaderRoute: typeof ApiPublicBrandSlugRouteImport
+    '/api/public/telegram/webhook': {
+      id: '/api/public/telegram/webhook'
+      path: '/api/public/telegram/webhook'
+      fullPath: '/api/public/telegram/webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/oauth/$provider/callback': {
