@@ -18,9 +18,10 @@ export type ToolProfile = {
 
 export const TOOL_REGISTRY: Record<string, ToolProfile> = {
   known: { key: "known", kind: "research", needsExternalData: true, reuseHours: 24 * 7, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: true },
-  analyze: { key: "analyze", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: false },
-  compare: { key: "compare", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: false },
-  research: { key: "research", kind: "research", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: false },
+  analyze: { key: "analyze", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: true },
+  compare: { key: "compare", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: true },
+  research: { key: "research", kind: "research", needsExternalData: true, reuseHours: 12, engineCacheHours: 12, reuseChargeRatio: 0, mciEnabled: true },
+  visibility: { key: "visibility", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: true },
   suggest: { key: "suggest", kind: "content", needsExternalData: false, reuseHours: 0, engineCacheHours: 0, reuseChargeRatio: 1, mciEnabled: false },
 };
 
