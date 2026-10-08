@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { Eye, Loader2, Sparkles } from "lucide-react";
@@ -127,6 +128,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         </button>
       </div>
 
+      {out && <MciReuseBadge mci={out.mci} path="/api/visibility" onRefresh={run} />}
       {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="visibility" result={out} /></div>}
       <ToolHistory toolKey="visibility" />
       {out && (
