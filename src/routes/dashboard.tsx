@@ -360,7 +360,7 @@ function DashboardPage() {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6">{active.render()}</div>
+              <div className="p-4 sm:p-6"><Suspense fallback={<div className="grid place-items-center py-10"><Loader2 className="size-5 animate-spin text-primary" /></div>}>{active.render()}</Suspense></div>
 
             </section>
           )}
