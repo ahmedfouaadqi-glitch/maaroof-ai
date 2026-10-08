@@ -74,3 +74,23 @@ export function fromSuggestion(res: any): EngineCard[] {
   }
   return ALL.map((key) => { const b = best[ENGINE_FAMILY[key]]; return { key, score: b.s, items: b.p ? [b.p] : [], basis: "estimated" as const }; });
 }
+
+/** Agent stage: pick the right adapter for a finished tool step. Empty when data is insufficient. */
+export function cardsForStep(tool: string, out: any): EngineCard[] {
+  try {
+    if (!out || typeof out !== "object") return [];
+    if (tool === "geo_strategist") return fromStrategist(out);
+    if (tool === "what_if") return fromWhatIf(out);
+    if (tool === "research") return fromResearch(out);
+    if (tool === "suggest") return fromSuggestion(out);
+    if (tool === "analyze" && Array.isArray(out.platform_views)) {
+      const res: EngineCard[] = [];
+      for (const p of out.platform_views) {
+        const key = engineKeyFromName(String(p?.name || ""));
+        if (key && !res.some((r) => r.key === key)) res.push({ key, score: typeof p?.score === "number" ? p.score : null, verdict: p?.verdict, text: p?.benefit, basis: "estimated" });
+      }
+      return res;
+    }
+    return [];
+  } catch { return []; }
+}

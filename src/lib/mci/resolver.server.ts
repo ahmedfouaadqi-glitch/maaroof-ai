@@ -101,3 +101,21 @@ export async function mciStore(admin: SupabaseClient, toolKey: string, userId: s
     await logMciDecision(admin, { userId, toolKey, decision: "execute", llmCalls: 1, intent: toolKey } as any);
   } catch {}
 }
+
+/** Agent planning hints: which tools already hold a fresh result for this user. Read-only, never throws. */
+export async function mciPlanningHints(admin: SupabaseClient, userId: string): Promise<Array<{ tool: string; at: string }>> {
+  try {
+    const s = await loadMciSettings(admin);
+    if (!s.enabled || s.tools.agent === false) return [];
+    const { data } = await admin.from("engine_answer_cache").select("cache_key, created_at")
+      .like("cache_key", `tool:%:${userId}:%`).order("created_at", { ascending: false }).limit(30);
+    const out: Array<{ tool: string; at: string }> = [];
+    for (const r of (data || []) as any[]) {
+      const tool = String(r.cache_key).split(":")[1];
+      const p = toolProfile(tool);
+      if (!p || !isFresh(r.created_at, p.reuseHours) || out.some((o) => o.tool === tool)) continue;
+      out.push({ tool, at: r.created_at });
+    }
+    return out;
+  } catch { return []; }
+}
