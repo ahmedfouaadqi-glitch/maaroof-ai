@@ -15,6 +15,8 @@ import { ENGINES } from "@/components/engine-logos";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { SourcesList } from "@/components/SourcesList";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { engineKeyFromName } from "@/lib/engine-families";
 
 
 type PanelProps = {
@@ -152,29 +154,13 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
               <Sparkles className="size-3.5 text-primary" /> {t("ag_vis_platforms")}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(out.platforms || []).map((p: any, i: number) => {
-                const eng = findEngine(p.name);
-                const Logo = eng?.Logo;
-                return (
-                  <div key={i} className={`rounded-lg border border-border bg-gradient-to-br ${eng?.tint || "from-primary/10 to-accent/5"} p-3`}>
-                    <div className="flex items-center gap-2">
-                      {Logo && <Logo size={22} />}
-                      <strong className="text-sm">{p.name}</strong>
-                      <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-mono text-primary">{p.score}%</span>
-                    </div>
-                    {p.trust_signal && <div className="mt-1 text-[11px] text-muted-foreground"><b>{t("ag_vis_trust")}:</b> {p.trust_signal}</div>}
-                    {p.citation_method && <div className="mt-0.5 text-[11px] text-muted-foreground"><b>{t("ag_vis_citation")}:</b> {p.citation_method}</div>}
-                    {p.why && <div className="mt-1 text-xs text-foreground/80">{p.why}</div>}
-                    {p.action && (
-                      <div className="mt-2 rounded border border-accent/30 bg-accent/10 px-2 py-1 text-[11px]">
-                        <b>{t("ag_vis_action")}:</b> {p.action}
-                      </div>
-                    )}
-                  </div>
-                );
+            <EngineResponseFlow
+              answers={(out.platforms || []).flatMap((p: any) => {
+                const key = engineKeyFromName(p.name);
+                const meta = [p.trust_signal, p.citation_method].filter(Boolean).join(" · ");
+                return key ? [{ key, score: p.score, verdict: meta, text: p.why, action: p.action, basis: "estimated" as const }] : [];
               })}
-            </div>
+            />
           </div>
 
           {out.recommendations?.length > 0 && (

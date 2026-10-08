@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { ENGINE_LOGOS } from "@/components/engine-logos";
 import { ENGINE_CATALOG, isEngineKey } from "@/lib/ai-engines";
 import { sendHandoff } from "@/lib/tool-handoff";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 
 const TX = {
   ar: {
@@ -169,6 +170,12 @@ export function KnownDiscovery() {
           <div className="flex justify-end"><ToolResultExport toolKey="known" result={result} /></div>
           <p className="text-xs text-muted-foreground">{L.market}: <b className="text-foreground">{result.market}</b>{result.engines_asked?.length ? ` · ${L.engines}: ${result.engines_asked.length}` : ""}</p>
           {result.summary && <p className="rounded-xl border border-border bg-card/40 p-3 text-sm">{result.summary}</p>}
+          {result.engine_answers && (
+            <EngineResponseFlow
+              compact
+              answers={(result.engines_asked || []).filter(isEngineKey).map((k: any) => ({ key: k, items: result.engine_answers[k] || [], basis: "measured" as const }))}
+            />
+          )}
           {(result.relations || []).length > 0 && (
             <div>
               <h4 className="mb-1 text-sm font-semibold text-primary">{L.map}</h4>
