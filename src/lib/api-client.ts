@@ -21,8 +21,38 @@ function currentLang(): "ar" | "en" | "ku" {
   return l === "en" || l === "ku" ? l : "ar";
 }
 
+const MCI_TOOLS = ["/api/analyze", "/api/visibility", "/api/research", "/api/compare"];
+const MCI_TXT = {
+  ar: { reused: "استخدمنا نتيجة سابقة لنفس الطلب دون خصم", refresh: "تحديث الآن", again: "اضغط زر التشغيل مرة أخرى لفحص جديد" },
+  en: { reused: "Reused a previous result for the same request — no charge", refresh: "Refresh now", again: "Run the tool again for a fresh check" },
+  ku: { reused: "ئەنجامێکی پێشووی هەمان داواکاری بەکارهات — بێ تێچوون", refresh: "نوێکردنەوە", again: "دووبارە کارپێبکە بۆ پشکنینی نوێ" },
+};
+
+/** MCI: if the user asked to refresh, add force:true to the next JSON body for that tool. */
+function applyMciForce(path: string, init?: RequestInit): RequestInit | undefined {
+  if (typeof window === "undefined" || !init || typeof init.body !== "string") return init;
+  const key = `mci_force:${path}`;
+  if (!sessionStorage.getItem(key)) return init;
+  sessionStorage.removeItem(key);
+  try { return { ...init, body: JSON.stringify({ ...JSON.parse(init.body), force: true }) }; } catch { return init; }
+}
+
 export async function apiFetch(path: string, init?: RequestInit) {
+  const isMci = MCI_TOOLS.includes(path);
+  if (isMci) init = applyMciForce(path, init);
   const res = await fetch(withPreviewAuth(path), init);
+
+  if (isMci && res.ok && typeof window !== "undefined") {
+    res.clone().json().then((b: any) => {
+      if (!b?.mci?.reused) return;
+      const T = MCI_TXT[currentLang()];
+      const when = b.mci.at ? new Date(b.mci.at).toLocaleString() : "";
+      toast.info(`${T.reused}${when ? ` (${when})` : ""}`, {
+        duration: 10000,
+        action: { label: T.refresh, onClick: () => { sessionStorage.setItem(`mci_force:${path}`, "1"); toast(T.again); } },
+      });
+    }).catch(() => {});
+  }
 
   // Handle token-related 402 with a localized toast
   if (res.status === 402 && path.startsWith("/api/")) {
