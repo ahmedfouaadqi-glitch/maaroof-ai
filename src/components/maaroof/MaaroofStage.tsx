@@ -3,6 +3,8 @@ import { Component, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { cardsForStep } from "@/lib/engine-card-adapters";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
@@ -51,7 +53,7 @@ const TOOL_ICON: Record<string, string> = {
 };
 
 export function MaaroofStage({ events, running, geoMode, country, detected, finalText, onExport, onPickCountry, typing }: Props) {
-  const { t } = useI18n();
+  const { t, lang: L } = useI18n();
   const [showRaw, setShowRaw] = useState(false);
 
   const plan = useMemo(() => {
@@ -154,6 +156,10 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                       {running_ && <Wrench className="w-4 h-4 text-amber-500 animate-spin" />}
                     </div>
                     {step.reason && <div className="text-muted-foreground line-clamp-2 mb-1">{step.reason}</div>}
+                    {ok && st?.output?.mci?.reused && (
+                      <div className="text-[10px] text-primary mb-1">♻ {L === "en" ? "Previous result reused — no charge" : L === "ku" ? "ئەنجامی پێشوو — بێ تێچوون" : "نتيجة سابقة — بلا خصم"}</div>
+                    )}
+                    {ok && <StepEngines tool={step.tool} output={st?.output} lang={L} />}
                     {fail && (
                       <div className="text-destructive line-clamp-3">
                         ⚠ {String(st?.output?.error || "") === "internal_error"
@@ -331,3 +337,17 @@ function TrustPanel({ events }: { events: StageEvent[] }) {
   );
 }
 
+
+function StepEngines({ tool, output, lang }: { tool: string; output: any; lang: string }) {
+  const [open, setOpen] = useState(false);
+  const cards = useMemo(() => cardsForStep(tool, output), [tool, output]);
+  if (!cards.length) return null;
+  return (
+    <div className="mt-1">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="text-[11px] text-primary underline-offset-2 hover:underline">
+        {open ? (lang === "en" ? "Hide models" : lang === "ku" ? "شاردنەوەی مۆدێلەکان" : "إخفاء النماذج") : (lang === "en" ? "Show models" : lang === "ku" ? "پیشاندانی مۆدێلەکان" : "عرض النماذج")}
+      </button>
+      {open && <div className="mt-2 sm:col-span-2"><CardBoundary><EngineResponseFlow answers={cards} compact /></CardBoundary></div>}
+    </div>
+  );
+}

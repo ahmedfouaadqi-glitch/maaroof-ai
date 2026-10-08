@@ -414,7 +414,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
     // 3) PLAN (uses envision output when present)
     await ctx.emit("phase", { phase: "planning" });
-    const planUserMsg =
+    // MCI planning hints (additive, fail-open): tools with a fresh result for this user.
+    let mciHintLine = "";
+    try {
+      const { mciPlanningHints } = await import("@/lib/mci/resolver.server");
+      const hints = await mciPlanningHints(db() as any, ctx.userId);
+      if (hints.length) {
+        mciHintLine = `Context note: these tools already have a fresh result for this user (reused at no cost if called with the same input): ${hints.map((h) => `${h.tool} (${h.at})`).join(", ")}.\n\n`;
+        await ctx.emit("mci_hints", { items: hints });
+      }
+    } catch {}
+    const planUserMsg = mciHintLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
     const planResp = await call("planning", [

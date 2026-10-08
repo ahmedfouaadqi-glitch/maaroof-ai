@@ -22,6 +22,7 @@ export const TOOL_REGISTRY: Record<string, ToolProfile> = {
   compare: { key: "compare", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: true },
   research: { key: "research", kind: "research", needsExternalData: true, reuseHours: 12, engineCacheHours: 12, reuseChargeRatio: 0, mciEnabled: true },
   visibility: { key: "visibility", kind: "analysis", needsExternalData: true, reuseHours: 24, engineCacheHours: 24, reuseChargeRatio: 0, mciEnabled: true },
+  agent: { key: "agent", kind: "execution", needsExternalData: false, reuseHours: 0, engineCacheHours: 0, reuseChargeRatio: 1, mciEnabled: true },
   suggest: { key: "suggest", kind: "content", needsExternalData: false, reuseHours: 0, engineCacheHours: 0, reuseChargeRatio: 1, mciEnabled: false },
 };
 

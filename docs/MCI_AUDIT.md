@@ -22,3 +22,7 @@
 - Not wired (by nature): geo-strategist, what-if (generative/strategy — always fresh), outreach, bizdev, publishing, suggest, admin.
 - Storage: `engine_answer_cache` with user-scoped key `tool:<tool>:<user>:<sha>`; decisions in `mci_decisions` (intent = tool key).
 - Fail-open: any MCI error → tool runs exactly as before. Admin toggle in `app_settings.mci` (global or `tools.<key>`).
+
+## Phase 3 — Agent (2026-10-08)
+- Planning: `mciPlanningHints` (read-only, user-scoped) adds a context note listing tools with a fresh result; toggle `app_settings.mci.tools.agent`. Fail-open.
+- Stage UI: reuse badge per step + "Show models" cards via `cardsForStep` (pure, no model calls).
