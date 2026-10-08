@@ -10,15 +10,15 @@ export type EngineAnswer = {
   text?: string;
   action?: string;
   /** measured = real call to the engine; estimated = algorithmic estimate. */
-  basis?: "measured" | "estimated";
+  basis?: "measured" | "estimated" | "recommended";
   /** Optional list (e.g. competitor names an engine returned). */
   items?: string[];
 };
 
 const TX = {
-  ar: { title: "كيف تُجيب النماذج التسعة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة" },
-  en: { title: "How the nine engines answer", measured: "Live answer", estimated: "Algorithmic estimate", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
-  ku: { title: "نۆ بزوێنەرەکە چۆن وەڵام دەدەنەوە", measured: "وەڵامی ڕاستەقینە", estimated: "خەمڵاندنی ئەلگۆریتمی", focus: "ئەوەی بۆ ئەم بزوێنەرە گرنگە", none: "ئەم بزوێنەرە وەڵامی نەدایەوە", action: "هەنگاو" },
+  ar: { title: "كيف تُجيب النماذج التسعة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", recommended: "توصية", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة" },
+  en: { title: "How the nine engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
+  ku: { title: "نۆ بزوێنەرەکە چۆن وەڵام دەدەنەوە", measured: "وەڵامی ڕاستەقینە", estimated: "خەمڵاندنی ئەلگۆریتمی", recommended: "پێشنیار", focus: "ئەوەی بۆ ئەم بزوێنەرە گرنگە", none: "ئەم بزوێنەرە وەڵامی نەدایەوە", action: "هەنگاو" },
 };
 
 /**
@@ -63,7 +63,7 @@ export function EngineResponseFlow({ answers, title, compact = false }: { answer
               )}
               {a?.basis && !empty && (
                 <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] ${a.basis === "measured" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                  {a.basis === "measured" ? T.measured : T.estimated}
+                  {a.basis === "measured" ? T.measured : a.basis === "recommended" ? T.recommended : T.estimated}
                 </span>
               )}
               {a?.verdict && <div className="mt-1 text-[11px] font-medium text-accent">{a.verdict}</div>}
