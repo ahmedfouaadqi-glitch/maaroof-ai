@@ -1,3 +1,4 @@
+import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
@@ -181,6 +182,9 @@ export const Route = createFileRoute("/api/visibility")({
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _mci = await mciReuse(admin as any, "visibility", userId, [brand, keywords, lang, body.scope], !!(body as any)?.force);
+          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
@@ -305,7 +309,7 @@ export const Route = createFileRoute("/api/visibility")({
           }
 
           const _q = pickQualityFields(parsed || {});
-          return Response.json({ ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q });
+          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); return Response.json(_out); }
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);

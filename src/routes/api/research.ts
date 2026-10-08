@@ -1,3 +1,4 @@
+import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
@@ -36,6 +37,9 @@ export const Route = createFileRoute("/api/research")({
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
+          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _mci = await mciReuse(admin as any, "research", userId, [limited, lang, scope, mode], !!(reqBody as any)?.force);
+          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           const userCtx = await getUserContext(admin, userId);
@@ -166,7 +170,7 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
             } catch { /* non-fatal */ }
           }
 
-          return Response.json({ query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty, sources_used, rarity_score, uniqueness_notes, evidence_missing });
+          { const _out = { query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty, sources_used, rarity_score, uniqueness_notes, evidence_missing }; await mciStore(admin as any, "research", userId, _mci.key, _out); return Response.json(_out); }
         } catch (e) {
           console.error("[api/research] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
