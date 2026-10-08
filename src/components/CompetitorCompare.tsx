@@ -17,6 +17,7 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { toast } from "sonner";
 import { SourcesList } from "@/components/SourcesList";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 
 
 type Brand = {
@@ -245,6 +246,25 @@ export function CompetitorCompare() {
 
           {result.overview && (
             <div className="rounded-xl border border-border bg-background/60 p-4 text-sm leading-relaxed">{result.overview}</div>
+          )}
+          {(() => {
+            const main = result.brands.find((b) => b.is_main) || result.brands[0];
+            if (!main?.platform_presence) return null;
+            return (
+              <EngineResponseFlow
+                compact
+                title={main.name}
+                answers={PLATFORMS.map((p) => ({
+                  key: p,
+                  score: main.platform_presence?.[p] ?? null,
+                  text: main.platform_reasons?.[p] || "",
+                  basis: result.platform_measured?.[main.name]?.includes(p) ? "measured" as const : "estimated" as const,
+                }))}
+              />
+            );
+          })()}
+          {false && (
+            <div />
           )}
 
           <div className="grid gap-3 md:grid-cols-2">
