@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { fromStrategist } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { Loader2, Target } from "lucide-react";
@@ -103,6 +105,7 @@ export function GeoStrategist() {
           )}
           {res.kpi_targets && <div><b>{t("auto.kpi_goals")}</b> <span className="text-muted-foreground">{Object.entries(res.kpi_targets).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span></div>}
           {res.risks?.length > 0 && <div className="text-destructive"><b>{t("auto.risks")}</b> {res.risks.join("، ")}</div>}
+          {fromStrategist(res).length > 0 && <EngineResponseFlow answers={fromStrategist(res)} compact />}
           <SourcesList sources={res.sources} sourcesUsed={res.sources_used} rarityScore={res.rarity_score} uniquenessNotes={res.uniqueness_notes} evidenceMissing={res.evidence_missing} />
           <ProactiveNextStep
 

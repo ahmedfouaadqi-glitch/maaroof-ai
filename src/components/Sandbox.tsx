@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { useI18n } from "@/lib/i18n";
@@ -284,6 +285,7 @@ export function Sandbox() {
         </div>
       )}
 
+      {result && <MciReuseBadge mci={(result as any).mci} path="/api/analyze" onRefresh={run} />}
       {result && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="analyze" result={result} /></div>}
       <ToolHistory toolKey="analyze" />
       {result && (

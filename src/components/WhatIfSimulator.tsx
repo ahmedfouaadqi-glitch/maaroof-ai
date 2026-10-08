@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { fromWhatIf } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { Loader2, FlaskConical } from "lucide-react";
@@ -103,6 +105,7 @@ export function WhatIfSimulator() {
             {res.time_to_impact_weeks && <span className="rounded-full border border-border px-3 py-1">الوقت: {res.time_to_impact_weeks} أسبوع</span>}
             {res.final_recommendation && <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-semibold">{res.final_recommendation}</span>}
           </div>
+          {fromWhatIf(res).length > 0 && <EngineResponseFlow answers={fromWhatIf(res)} compact />}
           {res.risks?.length > 0 && <div className="text-destructive text-xs"><b>{t("auto.risks")}</b> {res.risks.join("، ")}</div>}
           <ProactiveNextStep
             toolKey="what_if"

@@ -1,23 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BlurText } from "@/components/motion/BlurText";
 import { MagicRings } from "@/components/backgrounds/MagicRings";
-import { Sandbox } from "@/components/Sandbox";
-import { PostSuggester } from "@/components/PostSuggester";
-import { CompetitorCompare } from "@/components/CompetitorCompare";
-import { FeasibilityStudy } from "@/components/FeasibilityStudy";
-import { BizDev } from "@/components/BizDev";
-import { BrandBoostAgent } from "@/components/BrandBoostAgent";
-import { AppliedRanking } from "@/components/AppliedRanking";
-import { SocialAnalysis } from "@/components/SocialAnalysis";
-import { CompetitorMonitor } from "@/components/CompetitorMonitor";
-import { KnownDiscovery } from "@/components/KnownDiscovery";
-import { GeoStrategist } from "@/components/GeoStrategist";
-import { WhatIfSimulator } from "@/components/WhatIfSimulator";
-import { ReportBuilder } from "@/components/ReportBuilder";
 import { SpecialtyBanner } from "@/components/SpecialtyBanner";
 import { AuthGate } from "@/components/AuthGate";
 
@@ -26,6 +13,21 @@ import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp
 import { useVisibility, useToolPrice } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
 import { CostBadge } from "@/components/CostBadge";
+
+// Tool UIs load only when opened — keeps the dashboard light and fast.
+const Sandbox = lazy(() => import("@/components/Sandbox").then((m) => ({ default: m.Sandbox })));
+const PostSuggester = lazy(() => import("@/components/PostSuggester").then((m) => ({ default: m.PostSuggester })));
+const CompetitorCompare = lazy(() => import("@/components/CompetitorCompare").then((m) => ({ default: m.CompetitorCompare })));
+const FeasibilityStudy = lazy(() => import("@/components/FeasibilityStudy").then((m) => ({ default: m.FeasibilityStudy })));
+const BizDev = lazy(() => import("@/components/BizDev").then((m) => ({ default: m.BizDev })));
+const BrandBoostAgent = lazy(() => import("@/components/BrandBoostAgent").then((m) => ({ default: m.BrandBoostAgent })));
+const AppliedRanking = lazy(() => import("@/components/AppliedRanking").then((m) => ({ default: m.AppliedRanking })));
+const SocialAnalysis = lazy(() => import("@/components/SocialAnalysis").then((m) => ({ default: m.SocialAnalysis })));
+const CompetitorMonitor = lazy(() => import("@/components/CompetitorMonitor").then((m) => ({ default: m.CompetitorMonitor })));
+const KnownDiscovery = lazy(() => import("@/components/KnownDiscovery").then((m) => ({ default: m.KnownDiscovery })));
+const GeoStrategist = lazy(() => import("@/components/GeoStrategist").then((m) => ({ default: m.GeoStrategist })));
+const WhatIfSimulator = lazy(() => import("@/components/WhatIfSimulator").then((m) => ({ default: m.WhatIfSimulator })));
+const ReportBuilder = lazy(() => import("@/components/ReportBuilder").then((m) => ({ default: m.ReportBuilder })));
 
 type ToolKey = "analyze" | "suggest" | "compare" | "known" | "feasibility" | "bizdev" | "boost" | "applied" | "social" | "monitor" | "strategist" | "whatif" | "report";
 
@@ -358,7 +360,7 @@ function DashboardPage() {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6">{active.render()}</div>
+              <div className="p-4 sm:p-6"><Suspense fallback={<div className="grid place-items-center py-10"><Loader2 className="size-5 animate-spin text-primary" /></div>}>{active.render()}</Suspense></div>
 
             </section>
           )}
