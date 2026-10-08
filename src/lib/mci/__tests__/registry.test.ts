@@ -17,3 +17,14 @@ describe("MCI registry", () => {
     expect(toolProfile("analyze")?.mciEnabled).toBe(true);
   });
 });
+
+import { cardsForStep } from "@/lib/engine-card-adapters";
+describe("agent stage cards", () => {
+  it("empty for unknown tool or missing data", () => {
+    expect(cardsForStep("bizdev", { a: 1 })).toEqual([]);
+    expect(cardsForStep("analyze", null)).toEqual([]);
+  });
+  it("maps analyze platform views", () => {
+    expect(cardsForStep("analyze", { platform_views: [{ name: "ChatGPT", score: 70 }] })[0].key).toBe("chatgpt");
+  });
+});

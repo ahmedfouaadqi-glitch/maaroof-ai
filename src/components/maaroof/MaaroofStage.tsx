@@ -53,7 +53,7 @@ const TOOL_ICON: Record<string, string> = {
 };
 
 export function MaaroofStage({ events, running, geoMode, country, detected, finalText, onExport, onPickCountry, typing }: Props) {
-  const { t } = useI18n();
+  const { t, lang: L } = useI18n();
   const [showRaw, setShowRaw] = useState(false);
 
   const plan = useMemo(() => {
