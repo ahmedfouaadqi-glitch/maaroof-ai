@@ -17,6 +17,7 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { SourcesList } from "@/components/SourcesList";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { EngineProbePanel } from "@/components/EngineProbePanel";
 import { engineKeyFromName } from "@/lib/engine-families";
 
 
@@ -164,6 +165,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
               })}
             />
           </div>
+
+          <EngineProbePanel brand={brand} keywords={keywords} scope={getEffectiveScope(auth?.profile, toolKey)} />
 
           {out.recommendations?.length > 0 && (
             <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-sm">

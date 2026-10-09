@@ -75,7 +75,12 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
     }
   }
 
-  // 3) No admin-set price → unpriced
+  // 3) Sub-operation (e.g. "visibility.probe") with no own price → parent tool price.
+  if (toolKey.includes(".") && !toolKey.startsWith("agent.")) {
+    return resolveToolCost(userId, toolKey.split(".")[0]);
+  }
+
+  // 4) No admin-set price → unpriced
   return { tokens: 0, usd: 0, source: "unpriced" };
 }
 
@@ -93,6 +98,10 @@ export async function chargeTokens(opts: {
   toolKey: string;
   runId?: string;
   meta?: Record<string, any>;
+  /** Optional: charge this many units (e.g. number of engines in a probe). Default 1. */
+  units?: number;
+  /** Optional: per-unit token price that replaces the resolved price (admin-configured). */
+  unitTokens?: number;
 }): Promise<ChargeResult> {
   const db = admin();
   const { data: prof } = await db
@@ -120,6 +129,10 @@ export async function chargeTokens(opts: {
     return { ok: false, reason: "unpriced" };
   }
 
+  const units = Math.max(1, Math.round(Number(opts.units) || 1));
+  const per = Number(opts.unitTokens) > 0 ? Math.round(Number(opts.unitTokens)) : cost.tokens;
+  cost.tokens = per * units;
+  cost.usd = cost.usd * units;
   const { data, error } = await (db.rpc as any)("charge_tokens", {
     _user_id: opts.userId,
     _tool_key: opts.toolKey,
@@ -181,4 +194,30 @@ export function chargeFailureBody(reason: ChargeResult extends { ok: false; reas
   };
   const base = map[String(reason)] || { ar: String(reason), en: String(reason), ku: String(reason) };
   return { ok: false, reason, left, message: base };
+}
+
+export type ProbePolicy = { tokensPerEngine: number | null; maxEngines: number | null; notifyAllowed: boolean };
+
+/**
+ * Probe (live check with selected engines) policy for one user.
+ * Order: per-user override on "visibility" → app_settings.tool_run_modes → none (parent price).
+ */
+export async function resolveProbePolicy(userId: string): Promise<ProbePolicy> {
+  const db = admin();
+  let global: any = {};
+  try {
+    const { data } = await db.from("app_settings").select("value").eq("key", "tool_run_modes").maybeSingle();
+    global = (data as any)?.value || {};
+  } catch {}
+  let ov: any = {};
+  try {
+    const { data } = await db.from("profiles").select("per_user_tool_overrides").eq("id", userId).maybeSingle();
+    ov = (data as any)?.per_user_tool_overrides?.visibility || {};
+  } catch {}
+  const num = (v: any) => (Number(v) > 0 ? Number(v) : null);
+  return {
+    tokensPerEngine: num(ov.probe_tokens_per_engine) ?? num(global.probe_tokens_per_engine),
+    maxEngines: num(ov.max_engines) ?? num(global.probe_max_engines),
+    notifyAllowed: ov.notify_allowed === false ? false : global.notify_allowed !== false,
+  };
 }

@@ -10,6 +10,8 @@ import { PostSuggester } from "./PostSuggester";
 import { auditText, explainScoreDrops } from "@/lib/geo-audit";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { EngineProbePanel } from "@/components/EngineProbePanel";
+import { MachineFilesPanel } from "@/components/MachineFilesPanel";
 import { engineKeyFromName } from "@/lib/engine-families";
 
 import { ToolHelpBanner } from "./ToolHelpBanner";
@@ -354,6 +356,13 @@ export function Sandbox() {
               />
             </div>
           )}
+
+          <div className="mt-5 space-y-3">
+            {(auth?.profile as any)?.brand_name && (
+              <EngineProbePanel brand={(auth?.profile as any).brand_name} keywords={(auth?.profile as any)?.brand_keywords || ""} scope={getEffectiveScope(auth?.profile, "analyze")} />
+            )}
+            <MachineFilesPanel text={text} brand={(auth?.profile as any)?.brand_name || ""} />
+          </div>
 
           {(() => {
             const reasons = explainScoreDrops({

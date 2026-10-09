@@ -113,6 +113,8 @@ export function AdminTokensPanel() {
         </div>
       </div>
 
+      <GlobalProbeBox lang={lang} />
+
       {busy ? (
         <div className="flex justify-center p-10"><Loader2 className="size-6 animate-spin text-primary" /></div>
       ) : (
@@ -233,7 +235,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
     // Clean: drop empty overrides, but KEEP entries that only disable the tool
     const clean: Record<string, any> = {};
     for (const [k, v] of Object.entries(overrides)) {
-      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0;
+      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0 || Number(v?.probe_tokens_per_engine) > 0 || Number(v?.max_engines) > 0 || v?.notify_allowed === false;
       const isDisabled = v?.enabled === false;
       if (hasPrice || isDisabled) clean[k] = v;
     }
@@ -457,6 +459,8 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           </table>
         </div>
 
+        <ProbeOverrideBox value={overrides.visibility || {}} onChange={(patch) => patchTool("visibility", patch)} lang={lang} />
+
         {TOOL_CATALOG.some((t) => effective(t.key).source === "none") && (
           <div className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
             {L.priceUnsetWarn}
@@ -564,5 +568,65 @@ function CheckRow({ label, hint, checked, onChange }: { label: string; hint?: st
         {hint && <div className="text-[9px] text-muted-foreground">{hint}</div>}
       </div>
     </label>
+  );
+}
+
+const PROBE_TX = {
+  ar: { t: "الفحص المصغّر وأنماط التشغيل لهذا المستخدم", per: "توكن لكل نموذج", max: "أقصى عدد نماذج", notify: "السماح بالتشغيل الإشعاري", hint: "اتركه فارغاً لاستخدام الإعداد العام أو سعر فحص الظهور." },
+  en: { t: "Micro-probe & run modes for this user", per: "Tokens per engine", max: "Max engines", notify: "Allow notify mode", hint: "Leave empty to use the global setting or the visibility price." },
+  ku: { t: "پشکنینی بچووک بۆ ئەم بەکارهێنەرە", per: "تۆکن بۆ هەر بزوێنەرێک", max: "زۆرترین بزوێنەر", notify: "ڕێگەدان بە ئاگادارکردنەوە", hint: "بەتاڵی بهێڵە بۆ ڕێکخستنی گشتی." },
+};
+
+function ProbeOverrideBox({ value, onChange, lang }: { value: any; onChange: (p: any) => void; lang: string }) {
+  const T = PROBE_TX[(lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku"];
+  return (
+    <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <div className="text-sm font-semibold">{T.t}</div>
+      <p className="mb-2 text-[11px] text-muted-foreground">{T.hint}</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <label className="text-xs">{T.per}
+          <input type="number" min={0} value={value.probe_tokens_per_engine ?? ""} onChange={(e) => onChange({ probe_tokens_per_engine: e.target.value === "" ? undefined : Number(e.target.value) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+        </label>
+        <label className="text-xs">{T.max}
+          <input type="number" min={1} max={9} value={value.max_engines ?? ""} onChange={(e) => onChange({ max_engines: e.target.value === "" ? undefined : Math.min(9, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={value.notify_allowed !== false} onChange={(e) => onChange({ notify_allowed: e.target.checked ? undefined : false })} /> {T.notify}
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function GlobalProbeBox({ lang }: { lang: string }) {
+  const L3 = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
+  const T = { ...PROBE_TX[L3], t: { ar: "الإعداد العام: الفحص المصغّر وأنماط التشغيل (لكل المستخدمين)", en: "Global: micro-probe & run modes (all users)", ku: "گشتی: پشکنینی بچووک" }[L3], save: { ar: "حفظ", en: "Save", ku: "پاشەکەوت" }[L3] };
+  const [v, setV] = useState<any>({});
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    supabase.from("app_settings").select("value").eq("key", "tool_run_modes").maybeSingle().then(({ data }) => setV((data as any)?.value || {}));
+  }, []);
+  async function save() {
+    const { adminSetAppSetting } = await import("@/lib/admin.functions");
+    await adminSetAppSetting({ data: { key: "tool_run_modes", value: v } });
+    setSaved(true); setTimeout(() => setSaved(false), 1500);
+  }
+  return (
+    <div className="rounded-xl border border-border bg-card/50 p-3">
+      <div className="text-sm font-semibold">{T.t}</div>
+      <p className="mb-2 text-[11px] text-muted-foreground">{T.hint}</p>
+      <div className="grid gap-2 sm:grid-cols-4 items-end">
+        <label className="text-xs">{T.per}
+          <input type="number" min={0} value={v.probe_tokens_per_engine ?? ""} onChange={(e) => setV({ ...v, probe_tokens_per_engine: e.target.value === "" ? undefined : Number(e.target.value) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+        </label>
+        <label className="text-xs">{T.max}
+          <input type="number" min={1} max={9} value={v.probe_max_engines ?? ""} onChange={(e) => setV({ ...v, probe_max_engines: e.target.value === "" ? undefined : Math.min(9, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={v.notify_allowed !== false} onChange={(e) => setV({ ...v, notify_allowed: e.target.checked })} /> {T.notify}
+        </label>
+        <button type="button" onClick={save} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">{saved ? "✓" : T.save}</button>
+      </div>
+    </div>
   );
 }

@@ -36,6 +36,13 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         warning: { ar: "منح صلاحية الإدارة يفتح كل اللوحة — استخدمه بحذر.", en: "Granting admin opens the whole console — use carefully.", ku: "دانی دەسەڵاتی ئەدمین هەموو کۆنسۆڵ دەکاتەوە — وریابە." },
       },
       {
+        key: "probe_modes",
+        label: { ar: "الفحص المصغّر والرصيد وأنماط التشغيل", en: "Micro-probe, balance & run modes", ku: "پشکنینی بچووک و باڵانس" },
+        purpose: { ar: "التحكم بكلفة سؤال النماذج فعلياً: سعر كل نموذج، أقصى عدد نماذج، والسماح بالتشغيل الإشعاري — عاماً أو لكل مستخدم. كل أداة وكل عملية فرعية تخصم من الرصيد نفسه.", en: "Control the cost of live engine checks: price per engine, max engines and whether notify mode is allowed — globally or per user. Every tool and sub-operation charges the same balance.", ku: "کۆنترۆڵی تێچووی پشکنینی ڕاستەوخۆ: نرخ، زۆرترین بزوێنەر، ئاگادارکردنەوە." },
+        usage: { ar: "في «المستخدمون والتوكنات» أعلى الصفحة: الإعداد العام. داخل نافذة أي مستخدم: صندوق «الفحص المصغّر» لتجاوز القيم له. مثال 1: سعر 50 توكن لكل نموذج وحد 5 نماذج — مستخدم يختار 4 نماذج يدفع 200. مثال 2: شركة كبيرة ترفع حدها إلى 9 نماذج بسعر 30. مثال 3: إيقاف «الإشعاري» لمستخدم تجريبي. إن تُرك السعر فارغاً يُستخدم سعر «فحص الظهور» لكل نموذج. الأسعار والأدوات الأخرى تبقى في جدول الأدوات كما هي، وما يُخصم يظهر في سجل الاستهلاك تحت visibility.probe.", en: "In Users & Tokens, top box = global setting; inside any user's window, the micro-probe box overrides it for that user. Example 1: 50 tokens per engine, max 5 — a user picking 4 pays 200. Example 2: a large company gets max 9 at 30. Example 3: disable notify for a trial user. Empty price = the visibility price per engine. Spend shows in the ledger as visibility.probe.", ku: "ڕێکخستنی گشتی لە سەرەوە، و تایبەت لە پەنجەرەی هەر بەکارهێنەرێک. نموونە: 50 تۆکن × 4 = 200." },
+        warning: { ar: "الفحص المصغّر يسأل النماذج فعلاً ويستهلك كلفة حقيقية لكل نموذج — لا تجعل السعر صفراً لحسابات عامة.", en: "The probe really queries each engine and has real cost per engine — do not price it at zero for public accounts.", ku: "پشکنین تێچووی ڕاستەقینەی هەیە." },
+      },
+      {
         key: "freeplan",
         label: { ar: "الخطة المجانية والحسابات الجديدة", en: "Free Plan & New Accounts", ku: "پلانی خۆڕایی و هەژمارە نوێیەکان" },
         purpose: { ar: "تحديد ما يحصل عليه كل حساب جديد: تجربة تلقائية، رصيد ابتدائي، حدود يومية وشهرية، وجلسات معروف المجانية.", en: "Decide what every new account receives: automatic trial, starting balance, daily/monthly caps and free Maaroof sessions.", ku: "دیاریکردنی ئەوەی هەر هەژمارێکی نوێ چی وەردەگرێت." },

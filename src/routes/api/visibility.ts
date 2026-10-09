@@ -5,11 +5,11 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
-import { resolveToolModel } from "@/lib/ai-engines.server";
+import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
 
 
-type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope };
+type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -176,6 +176,52 @@ export const Route = createFileRoute("/api/visibility")({
           const userId = authData.user?.id;
           if (!userId) {
             return Response.json({ error: "auth_required" }, { status: 401 });
+          }
+
+          // Micro-probe (optional): live question to the engines the user selected.
+          // Absent `probe_engines` → the original visibility flow below runs unchanged.
+          if (Array.isArray(body.probe_engines) && body.probe_engines.length) {
+            const { resolveProbePolicy } = await import("@/lib/tokens.server");
+            const ent = await enginesAllowedForUser(admin, userId);
+            const policy = await resolveProbePolicy(userId);
+            let picked = applyEntitlement(body.probe_engines, ent);
+            if (policy.maxEngines) picked = picked.slice(0, policy.maxEngines);
+            const { engines } = await excludeUnhealthyEngines(picked);
+            if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
+            const pRun = crypto.randomUUID();
+            const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
+            if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
+            const market = describeMarket(body.scope);
+            const models = await resolveEngineModels(engines);
+            const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
+            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] }[] = [];
+            await Promise.allSettled(engines.map(async (e) => {
+              const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+              try {
+                const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+                  method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
+                  body: JSON.stringify({ model: models[e]?.model, max_tokens: 500, messages: [
+                    { role: "system", content: `Answer as the ${e} assistant would for a user in ${market.region}. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en} Return JSON only: {"answer":"short answer","brands":["brand names you would recommend, in order"]}` },
+                    { role: "user", content: q },
+                  ] }),
+                });
+                if (!r.ok) return;
+                const j: any = await r.json();
+                const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
+                const brands: string[] = Array.isArray(p.brands) ? p.brands.map((x: any) => String(x).slice(0, 80)).slice(0, 8) : [];
+                const idx = brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
+                const ans = String(p.answer || "").slice(0, 600);
+                answers.push({ engine: e, mentioned: idx >= 0 || ans.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: ans, brands });
+              } catch {} finally { clearTimeout(t); }
+            }));
+            if (body.notify) {
+              try {
+                const { notifyUser } = await import("@/lib/notify.server");
+                const hit = answers.filter((a) => a.mentioned).length;
+                await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
+              } catch {}
+            }
+            return Response.json({ ok: true, probe: { query: q, asked: engines, answers, charged: pChg.tokens } });
           }
 
           const _runId = crypto.randomUUID();
