@@ -113,6 +113,8 @@ export function AdminTokensPanel() {
         </div>
       </div>
 
+      <GlobalProbeBox lang={lang} />
+
       {busy ? (
         <div className="flex justify-center p-10"><Loader2 className="size-6 animate-spin text-primary" /></div>
       ) : (
@@ -591,6 +593,39 @@ function ProbeOverrideBox({ value, onChange, lang }: { value: any; onChange: (p:
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={value.notify_allowed !== false} onChange={(e) => onChange({ notify_allowed: e.target.checked ? undefined : false })} /> {T.notify}
         </label>
+      </div>
+    </div>
+  );
+}
+
+function GlobalProbeBox({ lang }: { lang: string }) {
+  const L3 = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
+  const T = { ...PROBE_TX[L3], t: { ar: "الإعداد العام: الفحص المصغّر وأنماط التشغيل (لكل المستخدمين)", en: "Global: micro-probe & run modes (all users)", ku: "گشتی: پشکنینی بچووک" }[L3], save: { ar: "حفظ", en: "Save", ku: "پاشەکەوت" }[L3] };
+  const [v, setV] = useState<any>({});
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    supabase.from("app_settings").select("value").eq("key", "tool_run_modes").maybeSingle().then(({ data }) => setV((data as any)?.value || {}));
+  }, []);
+  async function save() {
+    const { adminSetAppSetting } = await import("@/lib/admin.functions");
+    await adminSetAppSetting({ data: { key: "tool_run_modes", value: v } });
+    setSaved(true); setTimeout(() => setSaved(false), 1500);
+  }
+  return (
+    <div className="rounded-xl border border-border bg-card/50 p-3">
+      <div className="text-sm font-semibold">{T.t}</div>
+      <p className="mb-2 text-[11px] text-muted-foreground">{T.hint}</p>
+      <div className="grid gap-2 sm:grid-cols-4 items-end">
+        <label className="text-xs">{T.per}
+          <input type="number" min={0} value={v.probe_tokens_per_engine ?? ""} onChange={(e) => setV({ ...v, probe_tokens_per_engine: e.target.value === "" ? undefined : Number(e.target.value) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+        </label>
+        <label className="text-xs">{T.max}
+          <input type="number" min={1} max={9} value={v.probe_max_engines ?? ""} onChange={(e) => setV({ ...v, probe_max_engines: e.target.value === "" ? undefined : Math.min(9, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={v.notify_allowed !== false} onChange={(e) => setV({ ...v, notify_allowed: e.target.checked })} /> {T.notify}
+        </label>
+        <button type="button" onClick={save} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">{saved ? "✓" : T.save}</button>
       </div>
     </div>
   );
