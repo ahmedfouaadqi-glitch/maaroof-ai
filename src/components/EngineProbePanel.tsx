@@ -10,7 +10,6 @@ import { getEngineEntitlement } from "@/lib/ai-engines.functions";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import { apiFetch } from "@/lib/api-client";
 import type { EngineKey } from "@/lib/ai-engines";
-import type { GeoScope } from "@/lib/geo-scope.server";
 
 const TX = {
   ar: { title: "تحقق فعلياً من النماذج", hint: "اختر النماذج التي تريد سؤالها الآن — كلها أو بعضها.", all: "الكل", none: "لا شيء", cost: "الكلفة المتوقعة", bal: "رصيدك", low: "رصيدك لا يكفي لهذا العدد من النماذج", run: "اسأل النماذج المختارة", mode: "طريقة التشغيل", instant: "فوري", notify: "إشعاري (يصلك إشعار عند الانتهاء)", locked: "غير متاح في باقتك", max: "الحد الأقصى", res: "إجابات فعلية من النماذج", rank: "ترتيبك", miss: "لم يذكر علامتك", free: "غير محسوب على رصيد" },
@@ -20,7 +19,7 @@ const TX = {
 
 type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] };
 
-export function EngineProbePanel({ brand, keywords, scope }: { brand: string; keywords?: string; scope?: GeoScope }) {
+export function EngineProbePanel({ brand, keywords, scope }: { brand: string; keywords?: string; scope?: unknown }) {
   const { lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const T = TX[L];
