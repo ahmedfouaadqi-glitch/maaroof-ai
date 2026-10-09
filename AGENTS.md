@@ -6,5 +6,5 @@
 - Dashboard tool UIs are React.lazy + Suspense; nine-engine cards for non-engine tools come from pure adapters in src/lib/engine-card-adapters.ts labelled estimated/recommended — why: faster dashboard and no fabricated live answers.
 - Agent planning reads MCI hints via mciPlanningHints (read-only, fail-open); agent step cards use cardsForStep — why: fewer repeated steps without changing tool logic.
 - Tool sub-operations (e.g. visibility.probe) charge via chargeTokens units/unitTokens and fall back to the parent tool price; probe policy lives in app_settings.tool_run_modes + per_user_tool_overrides.visibility — why: one balance system for every tool, no parallel pricing.
-- Live probe background mode uses Cloudflare waitUntil via dynamic import of cloudflare:workers, falling back to awaiting inline — why: no job queue needed and dev keeps working.
+- Live probe background mode uses the Worker ctx.waitUntil exposed per request via AsyncLocalStorage (src/lib/request-ctx.server.ts, set in src/server.ts), falling back to awaiting inline — why: no job queue, and cloudflare:* imports break the build.
 - Server functions are protected by createCsrfMiddleware filtered to serverFn only — why: block cross-site RPC without touching external webhook routes.
