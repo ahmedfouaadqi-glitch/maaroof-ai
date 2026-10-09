@@ -63,12 +63,16 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id); } catch {}
     }
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const r = await apiFetch("/api/visibility", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ brand, keywords, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
       });
       const j = await r.json().catch(() => ({}));
+      if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
       setAnswers(j?.probe?.answers || []);
@@ -131,7 +135,9 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Radar className="size-3.5" />} {T.run} ({sel.length})
         </button>
       </div>
-      {err && <div className="text-xs text-destructive">{err}</div>}
+      {err === "__signin"
+        ? <div className="text-xs text-destructive">{T.signIn} <a href="/auth" className="underline font-semibold">{T.login}</a></div>
+        : err && <div className="text-xs text-destructive">{err}</div>}
       {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
       {cards.length > 0 && <EngineResponseFlow answers={cards} title={T.res} compact />}
     </div>
