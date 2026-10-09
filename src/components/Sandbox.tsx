@@ -358,8 +358,8 @@ export function Sandbox() {
           )}
 
           <div className="mt-5 space-y-3">
-            {(auth?.profile as any)?.brand_name && (
-              <EngineProbePanel brand={(auth?.profile as any).brand_name} keywords={(auth?.profile as any)?.brand_keywords || ""} scope={getEffectiveScope(auth?.profile, "analyze")} />
+            {auth?.profile && (
+              <EngineProbePanel allowBrandInput brand={(auth?.profile as any)?.brand_name || ""} keywords={(auth?.profile as any)?.brand_keywords || ""} scope={getEffectiveScope(auth?.profile, "analyze")} />
             )}
             <MachineFilesPanel text={text} brand={(auth?.profile as any)?.brand_name || ""} />
           </div>
