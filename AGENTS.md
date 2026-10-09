@@ -8,3 +8,5 @@
 - Tool sub-operations (e.g. visibility.probe) charge via chargeTokens units/unitTokens and fall back to the parent tool price; probe policy lives in app_settings.tool_run_modes + per_user_tool_overrides.visibility — why: one balance system for every tool, no parallel pricing.
 - Live probe background mode uses the Worker ctx.waitUntil exposed per request via AsyncLocalStorage (src/lib/request-ctx.server.ts, set in src/server.ts), falling back to awaiting inline — why: no job queue, and cloudflare:* imports break the build.
 - Server functions are protected by createCsrfMiddleware filtered to serverFn only — why: block cross-site RPC without touching external webhook routes.
+
+- Entity Truth Card fields live on profiles (entity_*, hq_country, target_markets); only server/admin may set verification/lock fields (trigger guard) and consistency checks are pure rules in src/lib/entity-consistency.ts — why: one zero-cost identity source for all tools.

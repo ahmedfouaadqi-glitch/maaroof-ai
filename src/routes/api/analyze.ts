@@ -158,7 +158,7 @@ export const Route = createFileRoute("/api/analyze")({
                 model: _MODEL,
                 messages: [
                   { role: "system", content: `${buildSys(scope)}\n\n${langGuide[lang] || langGuide.en}` },
-                  { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) STRICTLY in language code "${lang}". Do not mix languages, even if the source text below is in a different language.\n\nContent to analyze:\n"""${text}"""` },
+                  { role: "user", content: `REPORT_LANGUAGE: ${lang}\n\nWrite the entire report (ai_view, strengths, weaknesses, recommendations) STRICTLY in language code "${lang}". Do not mix languages, even if the source text below is in a different language.\n\n${entityContextLine(prof as any) ? `${entityContextLine(prof as any)}\nUse this only to judge whether the text fits the author's identity and markets in recommendations; do not change the scoring rubric.\n\n` : ""}Content to analyze:\n"""${text}"""` },
                 ]
               }),
             });
