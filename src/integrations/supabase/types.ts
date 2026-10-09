@@ -3587,10 +3587,17 @@ export type Database = {
           device_fingerprints: Json
           device_locked_at: string | null
           email: string | null
+          entity_facts: Json
+          entity_links: Json
+          entity_locked: boolean
+          entity_type: string
+          entity_unlock_granted: boolean
+          entity_verified_at: string | null
           extra_device_fee_iqd: number
           full_name: string | null
           geo_scope: Json
           hide_usage_counter: boolean
+          hq_country: string | null
           id: string
           is_subscribed: boolean
           max_devices: number
@@ -3601,8 +3608,10 @@ export type Database = {
           preferred_notify_channel: string
           quota_overrides: Json
           specialty: string | null
+          specialty_scope: string | null
           subscription_expires_at: string | null
           subscription_tier: string | null
+          target_markets: string[]
           tokens_balance: number
           tokens_daily_limit: number | null
           tokens_monthly_limit: number | null
@@ -3625,10 +3634,17 @@ export type Database = {
           device_fingerprints?: Json
           device_locked_at?: string | null
           email?: string | null
+          entity_facts?: Json
+          entity_links?: Json
+          entity_locked?: boolean
+          entity_type?: string
+          entity_unlock_granted?: boolean
+          entity_verified_at?: string | null
           extra_device_fee_iqd?: number
           full_name?: string | null
           geo_scope?: Json
           hide_usage_counter?: boolean
+          hq_country?: string | null
           id: string
           is_subscribed?: boolean
           max_devices?: number
@@ -3639,8 +3655,10 @@ export type Database = {
           preferred_notify_channel?: string
           quota_overrides?: Json
           specialty?: string | null
+          specialty_scope?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          target_markets?: string[]
           tokens_balance?: number
           tokens_daily_limit?: number | null
           tokens_monthly_limit?: number | null
@@ -3663,10 +3681,17 @@ export type Database = {
           device_fingerprints?: Json
           device_locked_at?: string | null
           email?: string | null
+          entity_facts?: Json
+          entity_links?: Json
+          entity_locked?: boolean
+          entity_type?: string
+          entity_unlock_granted?: boolean
+          entity_verified_at?: string | null
           extra_device_fee_iqd?: number
           full_name?: string | null
           geo_scope?: Json
           hide_usage_counter?: boolean
+          hq_country?: string | null
           id?: string
           is_subscribed?: boolean
           max_devices?: number
@@ -3677,8 +3702,10 @@ export type Database = {
           preferred_notify_channel?: string
           quota_overrides?: Json
           specialty?: string | null
+          specialty_scope?: string | null
           subscription_expires_at?: string | null
           subscription_tier?: string | null
+          target_markets?: string[]
           tokens_balance?: number
           tokens_daily_limit?: number | null
           tokens_monthly_limit?: number | null
