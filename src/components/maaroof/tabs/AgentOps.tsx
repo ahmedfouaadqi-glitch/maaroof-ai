@@ -113,7 +113,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     setPageLoading(false);
   };
 
-  useEffect(() => { if (user) load(); }, [user, isAdmin]);
+  useEffect(() => { if (user) load(); }, [user?.id, isAdmin]);
 
   const addTarget = async () => {
     if (!user || (!newUrl && !newTopic)) return;

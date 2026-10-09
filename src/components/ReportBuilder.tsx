@@ -80,7 +80,7 @@ export function ReportBuilder() {
         setSavedItems(r?.items || []);
       } catch {}
     })();
-  }, [user]);
+  }, [user?.id]);
   async function toggleSaved(id: string) {
     if (pickedSaved.includes(id)) { setPickedSaved((s) => s.filter((x) => x !== id)); return; }
     if (!savedPayloads[id]) {
@@ -118,7 +118,7 @@ export function ReportBuilder() {
     setTemplates(rows || []);
   }
 
-  useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id]);
 
   async function saveTemplate() {
     if (!user || !tplName.trim()) return;

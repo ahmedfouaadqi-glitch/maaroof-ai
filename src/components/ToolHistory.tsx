@@ -36,10 +36,10 @@ export function ToolHistory({ toolKey, className = "" }: { toolKey: string; clas
       setItems((r?.items || []) as Item[]);
     } catch { /* silent */ }
     finally { setBusy(false); }
-  }, [user, toolKey]);
+  }, [user?.id, toolKey]);
 
   useEffect(() => { if (open) load(); }, [open, load]);
-  useEffect(() => { if (user) load(); /* initial count */ }, [user, load]);
+  useEffect(() => { if (user) load(); /* initial count */ }, [user?.id, load]);
 
   if (!user) return null;
   if (override && !override.exports_enabled) return null;

@@ -1,4 +1,5 @@
 import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
+import { entityContextLine } from "@/lib/entity-consistency";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
