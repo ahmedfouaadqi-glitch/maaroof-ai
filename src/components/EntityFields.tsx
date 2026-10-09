@@ -3,13 +3,15 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { COUNTRY_NAMES } from "@/lib/entity-consistency";
-import { verifyEntityCard } from "@/lib/entity.functions";
+import { COUNTRY_NAMES, normalizeUrl } from "@/lib/entity-consistency";
+import { verifyEntityCard, requestEntityUnlock, getEntityPrices } from "@/lib/entity.functions";
+import { CostBadge } from "@/components/CostBadge";
+import { useEffect } from "react";
 
 const TX = {
-  ar: { h: "هوية علامتك (بطاقة الحقيقة)", hint: "تُستخدم في كل الأدوات لتنبيهك عند تعارض النص مع هويتك. الروابط اختيارية ولا نطلب تعديل البايو.", type: "نوع الكيان", org: "منشأة / شركة", person: "شخص / صانع محتوى", hq: "المقر الرئيسي", mk: "الأسواق التي تخدمها", sp: "التخصص ونطاق الخدمات", links: "روابط الموقع أو الحسابات (سطر لكل رابط)", save: "حفظ الهوية", verify: "توثيق وتثبيت (مرة واحدة، يُخصم من رصيدك)", locked: "البطاقة موثّقة ومقفلة — لتعديلها اطلب إعادة فتح من الإدارة.", ok: "تم التوثيق", conf: "مؤكد من المصدر", unconf: "غير مؤكد", incomplete: "أكمل اسم العلامة والمقر أولاً", none: "—" },
-  en: { h: "Your brand identity (truth card)", hint: "Used by every tool to warn you when a text conflicts with your identity. Links are optional; no bio change needed.", type: "Entity type", org: "Organization / company", person: "Person / creator", hq: "Headquarters", mk: "Markets you serve", sp: "Specialty & service scope", links: "Website or profile links (one per line)", save: "Save identity", verify: "Verify & lock (once, charged to your balance)", locked: "Card verified and locked — ask the admin to reopen it for edits.", ok: "Verified", conf: "Confirmed by source", unconf: "Not confirmed", incomplete: "Fill brand name and HQ first", none: "—" },
-  ku: { h: "ناسنامەی براندەکەت", hint: "لە هەموو ئامرازەکاندا بەکاردێت بۆ ئاگادارکردنەوە. بەستەرەکان ئارەزوومەندانەن.", type: "جۆری کیان", org: "دامەزراوە / کۆمپانیا", person: "کەس / دروستکەری ناوەڕۆک", hq: "بارەگای سەرەکی", mk: "ئەو بازاڕانەی خزمەتیان دەکەیت", sp: "پسپۆڕی و بواری خزمەتگوزاری", links: "بەستەرەکان (هەر یەکە لە دێڕێک)", save: "پاشەکەوت", verify: "پشتڕاستکردنەوە و قوفڵکردن", locked: "کارتەکە پشتڕاستکراوە و قوفڵە.", ok: "پشتڕاستکرا", conf: "پشتڕاستکراو", unconf: "پشتڕاست نەکراو", incomplete: "سەرەتا ناو و بارەگا پڕبکەوە", none: "—" },
+  ar: { unlock: "فتح للتعديل (يُخصم من رصيدك)", nobal: "رصيدك غير كافٍ", err: "حدث خطأ، حاول مجدداً", unlocked: "تم فتح البطاقة للتعديل. بعد التعديل اضغط «توثيق وتثبيت».", h: "هوية علامتك (بطاقة الحقيقة)", hint: "تُستخدم في كل الأدوات لتنبيهك عند تعارض النص مع هويتك. الروابط اختيارية ولا نطلب تعديل البايو.", type: "نوع الكيان", org: "منشأة / شركة", person: "شخص / صانع محتوى", hq: "المقر الرئيسي", mk: "الأسواق التي تخدمها", sp: "التخصص ونطاق الخدمات", links: "روابط الموقع أو الحسابات (سطر لكل رابط)", save: "حفظ الهوية", verify: "توثيق وتثبيت (مرة واحدة، يُخصم من رصيدك)", locked: "البطاقة موثّقة ومقفلة. لتعديلها استخدم «فتح للتعديل» بالكلفة الظاهرة.", ok: "تم التوثيق", conf: "مؤكد من المصدر", unconf: "غير مؤكد", incomplete: "أكمل اسم العلامة والمقر أولاً", none: "—" },
+  en: { unlock: "Unlock for editing (charged to your balance)", nobal: "Insufficient balance", err: "Something went wrong, try again", unlocked: "Card unlocked. After editing, press “Verify & lock”.", h: "Your brand identity (truth card)", hint: "Used by every tool to warn you when a text conflicts with your identity. Links are optional; no bio change needed.", type: "Entity type", org: "Organization / company", person: "Person / creator", hq: "Headquarters", mk: "Markets you serve", sp: "Specialty & service scope", links: "Website or profile links (one per line)", save: "Save identity", verify: "Verify & lock (once, charged to your balance)", locked: "Card verified and locked. To edit, use “Unlock for editing” at the shown cost.", ok: "Verified", conf: "Confirmed by source", unconf: "Not confirmed", incomplete: "Fill brand name and HQ first", none: "—" },
+  ku: { unlock: "کردنەوە بۆ دەستکاری (لە باڵانسەکەت دەبڕدرێت)", nobal: "باڵانس بەس نییە", err: "هەڵەیەک ڕوویدا", unlocked: "کارتەکە کرایەوە. دوای دەستکاری «پشتڕاستکردنەوە» بکە.", h: "ناسنامەی براندەکەت", hint: "لە هەموو ئامرازەکاندا بەکاردێت بۆ ئاگادارکردنەوە. بەستەرەکان ئارەزوومەندانەن.", type: "جۆری کیان", org: "دامەزراوە / کۆمپانیا", person: "کەس / دروستکەری ناوەڕۆک", hq: "بارەگای سەرەکی", mk: "ئەو بازاڕانەی خزمەتیان دەکەیت", sp: "پسپۆڕی و بواری خزمەتگوزاری", links: "بەستەرەکان (هەر یەکە لە دێڕێک)", save: "پاشەکەوت", verify: "پشتڕاستکردنەوە و قوفڵکردن", locked: "کارتەکە پشتڕاستکراوە و قوفڵە.", ok: "پشتڕاستکرا", conf: "پشتڕاستکراو", unconf: "پشتڕاست نەکراو", incomplete: "سەرەتا ناو و بارەگا پڕبکەوە", none: "—" },
 };
 
 export type EntityDraft = { type: string; hq: string; mk: string[]; sp: string; links: string };
@@ -22,7 +24,7 @@ export function entityDraftFrom(profile: any): EntityDraft {
 export function entityUpdateFrom(d: EntityDraft) {
   return {
     entity_type: d.type, hq_country: d.hq || null, target_markets: d.mk, specialty_scope: d.sp.slice(0, 400) || null,
-    entity_links: d.links.split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(0, 10),
+    entity_links: Array.from(new Set(d.links.split(/\n+/).map((s) => normalizeUrl(s)).filter(Boolean) as string[])).slice(0, 10),
   };
 }
 
@@ -40,6 +42,19 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
   const setLinks = (v: string) => set({ links: v });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const unlockFn = useServerFn(requestEntityUnlock);
+  const pricesFn = useServerFn(getEntityPrices);
+  const [prices, setPrices] = useState<{ verify: { tokens: number; usd: number }; unlock: { tokens: number; usd: number } } | null>(null);
+  useEffect(() => { pricesFn().then(setPrices).catch(() => {}); }, []);
+  const errText = (e: string) => /balance|insufficient|limit/i.test(e) ? T.nobal : e === "incomplete" ? T.incomplete : T.err;
+  async function unlock() {
+    setBusy(true); setMsg("");
+    try {
+      const r: any = await unlockFn();
+      setMsg(r.ok ? T.unlocked : errText(String(r.error)));
+      await onSaved();
+    } catch { setMsg(T.err); } finally { setBusy(false); }
+  }
 
   const locked = !!profile?.entity_locked;
   const facts = profile?.entity_facts || {};
@@ -49,9 +64,9 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
     try {
       if (!(await onSaveAll())) return;
       const r: any = await verifyFn();
-      setMsg(r.ok ? T.ok : r.error === "incomplete" ? T.incomplete : String(r.error));
+      setMsg(r.ok ? T.ok : errText(String(r.error)));
       await onSaved();
-    } catch (e: any) { setMsg(String(e?.message || e)); } finally { setBusy(false); }
+    } catch { setMsg(T.err); } finally { setBusy(false); }
   }
 
   const label = (k: string) => k.startsWith("market:") ? `${T.mk}: ${COUNTRY_NAMES[k.slice(7)]?.[L] || k.slice(7)}` : k === "brand_name" ? "Brand" : k === "hq_country" ? T.hq : k;
@@ -92,6 +107,15 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
           <button type="button" onClick={verify} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">
             {busy && <Loader2 className="size-3.5 animate-spin" />} {T.verify}
           </button>
+          {prices && !profile?.entity_unlock_granted && <CostBadge tokens={prices.verify.tokens} usd={prices.verify.usd} compact />}
+        </div>
+      )}
+      {locked && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={unlock} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-50">
+            {busy && <Loader2 className="size-3.5 animate-spin" />} {T.unlock}
+          </button>
+          {prices && <CostBadge tokens={prices.unlock.tokens} usd={prices.unlock.usd} compact />}
         </div>
       )}
       {msg && <div className="text-xs text-muted-foreground">{msg}</div>}

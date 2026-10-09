@@ -24,7 +24,8 @@ export const verifyEntityCard = createServerFn({ method: "POST" })
     }
 
     // Evidence: one scrape of the first website link (Firecrawl cache is reused when present).
-    const links: string[] = (Array.isArray(prof.entity_links) ? prof.entity_links : []).map(String).filter((u: string) => /^https?:\/\//i.test(u));
+    const { normalizeUrl } = await import("@/lib/entity-consistency");
+    const links: string[] = (Array.isArray(prof.entity_links) ? prof.entity_links : []).map((u: any) => normalizeUrl(String(u))).filter(Boolean) as string[];
     const site = links.find((u) => !/(instagram|facebook|tiktok|x\.com|twitter|linkedin|youtube|t\.me|snapchat)\./i.test(u));
     const facts: any = { checked_at: new Date().toISOString(), source: site || null, confirmed: [], unconfirmed: [] };
     if (site) {
@@ -61,4 +62,29 @@ export const grantEntityUnlock = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("profiles").update({ entity_locked: false, entity_unlock_granted: true } as any).eq("id", data.userId);
     return { ok: true };
+  });
+
+export const getEntityPrices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { resolveToolCost } = await import("@/lib/tokens.server");
+    const [v, u] = await Promise.all([
+      resolveToolCost(context.userId, "brand_authority.entity_verify").catch(() => ({ tokens: 0, usd: 0 })),
+      resolveToolCost(context.userId, "brand_authority.entity_unlock").catch(() => ({ tokens: 0, usd: 0 })),
+    ]);
+    return { verify: { tokens: Number(v.tokens || 0), usd: Number(v.usd || 0) }, unlock: { tokens: Number(u.tokens || 0), usd: Number(u.usd || 0) } };
+  });
+
+export const requestEntityUnlock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: p } = await supabaseAdmin.from("profiles").select("entity_locked").eq("id", userId).maybeSingle();
+    if (!(p as any)?.entity_locked) return { ok: true, charged: 0 } as const;
+    const { chargeTokens } = await import("@/lib/tokens.server");
+    const chg: any = await chargeTokens({ userId, toolKey: "brand_authority.entity_unlock", runId: crypto.randomUUID(), meta: { endpoint: "entity.unlock" } });
+    if (!chg.ok) return { ok: false, error: chg.reason || "balance" } as const;
+    await supabaseAdmin.from("profiles").update({ entity_locked: false } as any).eq("id", userId);
+    return { ok: true, charged: Number(chg.tokens || 0) } as const;
   });

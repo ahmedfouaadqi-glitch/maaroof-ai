@@ -26,7 +26,7 @@ export const Route = createFileRoute("/u/$username")({
         const admin = createClient(SUPABASE_URL, SERVICE);
         const { data: profile } = await admin
           .from("profiles")
-          .select("id, username, full_name, brand_name, brand_keywords, entity_type, hq_country, target_markets, specialty_scope, entity_links")
+          .select("id, username, full_name, brand_name, brand_keywords, entity_type, hq_country, target_markets, specialty_scope, entity_links, entity_updated_at")
           .eq("username", raw)
           .maybeSingle();
 
@@ -38,6 +38,13 @@ export const Route = createFileRoute("/u/$username")({
           .eq("user_id", (profile as any).id)
           .order("updated_at", { ascending: false })
           .limit(50);
+
+        const { data: history } = await admin
+          .from("entity_history")
+          .select("field, old_value, changed_at")
+          .eq("user_id", (profile as any).id)
+          .order("changed_at", { ascending: false })
+          .limit(10);
 
         // Log crawler hit (non-blocking)
         const ua = request.headers.get("user-agent") || "";
@@ -86,7 +93,14 @@ export const Route = createFileRoute("/u/$username")({
         if (scopeTxt) jsonLd.description = scopeTxt;
         if (hq) jsonLd[jsonLd["@type"] === "Person" ? "homeLocation" : "address"] = jsonLd["@type"] === "Person" ? { "@type": "Place", address: { "@type": "PostalAddress", addressCountry: hq } } : { "@type": "PostalAddress", addressCountry: hq };
         if (markets.length) jsonLd.areaServed = markets.map((c) => ({ "@type": "Country", name: c }));
-        const identityHtml = `${scopeTxt ? `<p>${escapeHtml(scopeTxt)}</p>` : ""}${hq ? `<p>HQ: ${escapeHtml(hq)}</p>` : ""}${markets.length ? `<p>Markets: ${escapeHtml(markets.join(", "))}</p>` : ""}${sameAs.length ? `<ul>${sameAs.map((l) => `<li><a href="${escapeHtml(l)}" rel="me noopener">${escapeHtml(l)}</a></li>`).join("")}</ul>` : ""}`;
+        const updatedAt = P.entity_updated_at ? String(P.entity_updated_at) : "";
+        if (updatedAt) jsonLd.dateModified = updatedAt;
+        const fieldLabel: Record<string, string> = { entity_type: "Type", hq_country: "HQ", target_markets: "Markets", specialty_scope: "Specialty", entity_links: "Links" };
+        const fmtVal = (v: any) => v == null || (Array.isArray(v) && !v.length) || v === "" ? "—" : Array.isArray(v) ? v.join(", ") : String(v);
+        const historyHtml = (history && history.length)
+          ? `<section><h2>Previous information</h2><ul>${history.map((h: any) => `<li>${escapeHtml(fieldLabel[h.field] || h.field)}: ${escapeHtml(fmtVal(h.old_value))} <small>(changed ${escapeHtml(String(h.changed_at).slice(0, 10))})</small></li>`).join("")}</ul></section>`
+          : "";
+        const identityHtml = (updatedAt ? `<p><small>Last updated: <time datetime="${escapeHtml(updatedAt)}">${escapeHtml(updatedAt.slice(0, 10))}</time></small></p>` : "") + `${scopeTxt ? `<p>${escapeHtml(scopeTxt)}</p>` : ""}${hq ? `<p>HQ: ${escapeHtml(hq)}</p>` : ""}${markets.length ? `<p>Markets: ${escapeHtml(markets.join(", "))}</p>` : ""}${sameAs.length ? `<ul>${sameAs.map((l) => `<li><a href="${escapeHtml(l)}" rel="me noopener">${escapeHtml(l)}</a></li>`).join("")}</ul>` : ""}`;
 
         const packsHtml = (packs && packs.length > 0)
           ? `<section><h2>Brand Authority Cards</h2><ul>${packs.map((p: any) => {
@@ -124,6 +138,7 @@ ${identityHtml}
 </header>
 <main>
 ${packsHtml}
+${historyHtml}
 </main>
 <footer><small>Public profile on <a href="${escapeHtml(url.origin)}/" rel="noopener">MAAROOF Ai</a></small></footer>
 </body>

@@ -110,3 +110,16 @@ export function entityContextLine(card: EntityCard | null | undefined): string {
   if (card.specialty_scope) parts.push(`specialty=${String(card.specialty_scope).slice(0, 160)}`);
   return parts.length ? `Declared entity (user-provided, not independently verified): ${parts.join("; ")}` : "";
 }
+
+/** Normalize a user-typed link: adds https:// when missing; returns null if not a URL-like value. */
+export function normalizeUrl(input: string): string | null {
+  let s = String(input || "").trim();
+  if (!s || s.startsWith("@") || /\s/.test(s)) return null;
+  if (s.startsWith("//")) s = "https:" + s;
+  if (!/^https?:\/\//i.test(s)) s = "https://" + s.replace(/^\/+/, "");
+  try {
+    const u = new URL(s);
+    if (!u.hostname.includes(".")) return null;
+    return u.toString().replace(/\/$/, "");
+  } catch { return null; }
+}
