@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe, Send } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
+import { EntityFields } from "@/components/EntityFields";
 import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
 
 export const Route = createFileRoute("/profile")({
@@ -112,6 +113,7 @@ function ProfilePage() {
           <Field label={t("profile_brand_keywords")}>
             <input value={brandKw} onChange={(e) => setBrandKw(e.target.value)} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
           </Field>
+          <EntityFields profile={profile} userId={user.id} onSaved={refreshProfile} />
           <Field label={t("profile_specialty")}>
             <input value={specialty} disabled placeholder={t("profile_specialty_ph")} className="w-full rounded-lg border border-border bg-background/30 px-3 py-2 text-sm opacity-70" />
             <small className="text-xs text-muted-foreground">{t("specialty_locked_note")}</small>
