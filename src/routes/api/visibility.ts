@@ -218,7 +218,7 @@ export const Route = createFileRoute("/api/visibility")({
               try {
                 const { notifyUser } = await import("@/lib/notify.server");
                 const hit = answers.filter((a) => a.mentioned).length;
-                await notifyUser(userId, "task_done" as any, `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
+                await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
               } catch {}
             }
             return Response.json({ ok: true, probe: { query: q, asked: engines, answers, charged: pChg.tokens } });
