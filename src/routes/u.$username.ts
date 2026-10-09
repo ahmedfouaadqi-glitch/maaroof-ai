@@ -26,7 +26,7 @@ export const Route = createFileRoute("/u/$username")({
         const admin = createClient(SUPABASE_URL, SERVICE);
         const { data: profile } = await admin
           .from("profiles")
-          .select("id, username, full_name, brand_name, brand_keywords")
+          .select("id, username, full_name, brand_name, brand_keywords, entity_type, hq_country, target_markets, specialty_scope, entity_links")
           .eq("username", raw)
           .maybeSingle();
 
@@ -70,13 +70,23 @@ export const Route = createFileRoute("/u/$username")({
 
         const jsonLd: any = {
           "@context": "https://schema.org",
-          "@type": brand ? "Organization" : "Person",
+          "@type": (profile as any).entity_type === "person" ? "Person" : (profile as any).entity_type === "organization" ? "Organization" : (brand ? "Organization" : "Person"),
           name: brand || displayName,
           url: canonical,
           identifier: raw,
         };
         if (kw) jsonLd.knowsAbout = kw.split(/[,،]/).map((s) => s.trim()).filter(Boolean).slice(0, 20);
         if (brand && displayName && brand !== displayName) jsonLd.alternateName = displayName;
+        const P: any = profile;
+        const sameAs: string[] = (Array.isArray(P.entity_links) ? P.entity_links : []).map(String).filter((x: string) => /^https?:\/\//i.test(x)).slice(0, 10);
+        const markets: string[] = Array.isArray(P.target_markets) ? P.target_markets.map(String) : [];
+        const hq = P.hq_country ? String(P.hq_country) : "";
+        const scopeTxt = P.specialty_scope ? String(P.specialty_scope) : "";
+        if (sameAs.length) jsonLd.sameAs = sameAs;
+        if (scopeTxt) jsonLd.description = scopeTxt;
+        if (hq) jsonLd[jsonLd["@type"] === "Person" ? "homeLocation" : "address"] = jsonLd["@type"] === "Person" ? { "@type": "Place", address: { "@type": "PostalAddress", addressCountry: hq } } : { "@type": "PostalAddress", addressCountry: hq };
+        if (markets.length) jsonLd.areaServed = markets.map((c) => ({ "@type": "Country", name: c }));
+        const identityHtml = `${scopeTxt ? `<p>${escapeHtml(scopeTxt)}</p>` : ""}${hq ? `<p>HQ: ${escapeHtml(hq)}</p>` : ""}${markets.length ? `<p>Markets: ${escapeHtml(markets.join(", "))}</p>` : ""}${sameAs.length ? `<ul>${sameAs.map((l) => `<li><a href="${escapeHtml(l)}" rel="me noopener">${escapeHtml(l)}</a></li>`).join("")}</ul>` : ""}`;
 
         const packsHtml = (packs && packs.length > 0)
           ? `<section><h2>Brand Authority Cards</h2><ul>${packs.map((p: any) => {
@@ -85,9 +95,10 @@ export const Route = createFileRoute("/u/$username")({
             }).join("")}</ul></section>`
           : "";
 
-        const description = brand
+        const baseDescription = brand
           ? `${displayName} — ${brand}${kw ? ` (${kw})` : ""}`.slice(0, 280)
           : `${displayName} on MAAROOF Ai.`.slice(0, 280);
+        const description = scopeTxt ? `${baseDescription} — ${scopeTxt}`.slice(0, 280) : baseDescription;
 
         const html = `<!DOCTYPE html>
 <html lang="en">
@@ -109,6 +120,7 @@ ${kw ? `<meta name="keywords" content="${escapeHtml(kw)}" />` : ""}
 <h1>${escapeHtml(displayName)}</h1>
 ${brand ? `<p><strong>${escapeHtml(brand)}</strong></p>` : ""}
 ${kw ? `<p>${escapeHtml(kw)}</p>` : ""}
+${identityHtml}
 </header>
 <main>
 ${packsHtml}
@@ -121,7 +133,7 @@ ${packsHtml}
           status: 200,
           headers: {
             "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "public, max-age=300, s-maxage=600",
+            "Cache-Control": "public, max-age=30, s-maxage=60",
             "X-Robots-Tag": "index, follow",
             "Access-Control-Allow-Origin": "*",
           },
