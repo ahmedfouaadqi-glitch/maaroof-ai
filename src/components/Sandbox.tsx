@@ -24,6 +24,7 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
+import { checkEntityConsistency } from "@/lib/entity-consistency";
 
 type Result = {
   score: number; authority: number; local: number; citation: number;
