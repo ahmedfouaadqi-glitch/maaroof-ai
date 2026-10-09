@@ -132,7 +132,7 @@ export async function chargeTokens(opts: {
   const units = Math.max(1, Math.round(Number(opts.units) || 1));
   const per = Number(opts.unitTokens) > 0 ? Math.round(Number(opts.unitTokens)) : cost.tokens;
   cost.tokens = per * units;
-  cost.usd = Number(opts.unitTokens) > 0 ? cost.usd * units : cost.usd * units;
+  cost.usd = cost.usd * units;
   const { data, error } = await (db.rpc as any)("charge_tokens", {
     _user_id: opts.userId,
     _tool_key: opts.toolKey,
