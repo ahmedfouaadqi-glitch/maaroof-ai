@@ -9,17 +9,21 @@ import { EngineResponseFlow, type EngineAnswer } from "@/components/EngineRespon
 import { getEngineEntitlement } from "@/lib/ai-engines.functions";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import { apiFetch } from "@/lib/api-client";
+import { supabase } from "@/integrations/supabase/client";
 import type { EngineKey } from "@/lib/ai-engines";
 
 const TX = {
-  ar: { title: "تحقق فعلياً من النماذج", hint: "اختر النماذج التي تريد سؤالها الآن — كلها أو بعضها.", all: "الكل", none: "لا شيء", cost: "الكلفة المتوقعة", bal: "رصيدك", low: "رصيدك لا يكفي لهذا العدد من النماذج", run: "اسأل النماذج المختارة", mode: "طريقة التشغيل", instant: "فوري", notify: "إشعاري (يصلك إشعار عند الانتهاء)", locked: "غير متاح في باقتك", max: "الحد الأقصى", res: "إجابات فعلية من النماذج", rank: "ترتيبك", miss: "لم يذكر علامتك", free: "غير محسوب على رصيد" },
-  en: { title: "Check live with the engines", hint: "Pick the engines to ask now — all or some.", all: "All", none: "None", cost: "Expected cost", bal: "Your balance", low: "Your balance is not enough for this many engines", run: "Ask the selected engines", mode: "Run mode", instant: "Instant", notify: "Notify (you get a notification when done)", locked: "Not in your plan", max: "Max", res: "Live answers from the engines", rank: "Your rank", miss: "Did not mention your brand", free: "Not metered" },
-  ku: { title: "پشکنینی ڕاستەوخۆ لەگەڵ بزوێنەرەکان", hint: "ئەو بزوێنەرانە هەڵبژێرە کە دەتەوێت بپرسیت.", all: "هەموو", none: "هیچ", cost: "تێچووی چاوەڕوانکراو", bal: "باڵانسەکەت", low: "باڵانس بەس نییە", run: "پرسیار لە هەڵبژێردراوەکان", mode: "شێوازی کارکردن", instant: "دەستبەجێ", notify: "ئاگادارکردنەوە", locked: "لە پلانەکەتدا نییە", max: "زۆرترین", res: "وەڵامی ڕاستەقینە", rank: "پلەت", miss: "ناوی تۆی نەهێنا", free: "نەژمێردراو" },
+  ar: { title: "تحقق فعلياً من النماذج", hint: "اختر النماذج التي تريد سؤالها الآن — كلها أو بعضها.", all: "الكل", none: "لا شيء", cost: "الكلفة المتوقعة", bal: "رصيدك", low: "رصيدك لا يكفي لهذا العدد من النماذج", run: "اسأل النماذج المختارة", mode: "طريقة التشغيل", instant: "فوري", notify: "إشعاري (يصلك إشعار عند الانتهاء)", bg: "في الخلفية (يمكنك إغلاق الصفحة)", bgOk: "بدأ الفحص في الخلفية — ستصلك النتيجة في الإشعارات وسجل الأداة.", brandPh: "اكتب اسم علامتك التجارية", save: "احفظه في حسابي", locked: "غير متاح في باقتك", max: "الحد الأقصى", res: "إجابات فعلية من النماذج", rank: "ترتيبك", miss: "لم يذكر علامتك", free: "غير محسوب على رصيد" },
+  en: { title: "Check live with the engines", hint: "Pick the engines to ask now — all or some.", all: "All", none: "None", cost: "Expected cost", bal: "Your balance", low: "Your balance is not enough for this many engines", run: "Ask the selected engines", mode: "Run mode", instant: "Instant", notify: "Notify (you get a notification when done)", bg: "Background (you can close the page)", bgOk: "Running in the background — results arrive in notifications and tool history.", brandPh: "Type your brand name", save: "Save to my account", locked: "Not in your plan", max: "Max", res: "Live answers from the engines", rank: "Your rank", miss: "Did not mention your brand", free: "Not metered" },
+  ku: { title: "پشکنینی ڕاستەوخۆ لەگەڵ بزوێنەرەکان", hint: "ئەو بزوێنەرانە هەڵبژێرە کە دەتەوێت بپرسیت.", all: "هەموو", none: "هیچ", cost: "تێچووی چاوەڕوانکراو", bal: "باڵانسەکەت", low: "باڵانس بەس نییە", run: "پرسیار لە هەڵبژێردراوەکان", mode: "شێوازی کارکردن", instant: "دەستبەجێ", notify: "ئاگادارکردنەوە", bg: "لە پاشبنەمادا", bgOk: "لە پاشبنەمادا دەستی پێکرد — ئەنجام لە ئاگادارکردنەوەکاندا دێت.", brandPh: "ناوی براندەکەت بنووسە", save: "لە هەژمارەکەمدا پاشەکەوتی بکە", locked: "لە پلانەکەتدا نییە", max: "زۆرترین", res: "وەڵامی ڕاستەقینە", rank: "پلەت", miss: "ناوی تۆی نەهێنا", free: "نەژمێردراو" },
 };
 
 type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] };
 
-export function EngineProbePanel({ brand, keywords, scope }: { brand: string; keywords?: string; scope?: unknown }) {
+export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean }) {
+  const [typed, setTyped] = useState("");
+  const [saveIt, setSaveIt] = useState(true);
+  const brand = brandProp.trim() || typed;
   const { lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const T = TX[L];
@@ -28,9 +32,10 @@ export function EngineProbePanel({ brand, keywords, scope }: { brand: string; ke
   const [allowed, setAllowed] = useState<EngineKey[] | null>(null);
   const [sel, setSel] = useState<EngineKey[]>([]);
   const [cost, setCost] = useState<CostPreview | null>(null);
-  const [mode, setMode] = useState<"instant" | "notify">(() => {
-    try { return (localStorage.getItem("run_mode:visibility.probe") as any) === "notify" ? "notify" : "instant"; } catch { return "instant"; }
+  const [mode, setMode] = useState<"instant" | "notify" | "background">(() => {
+    try { const m = localStorage.getItem("run_mode:visibility.probe"); return m === "notify" || m === "background" ? m : "instant"; } catch { return "instant"; }
   });
+  const [bgMsg, setBgMsg] = useState(false);
   const [busy, setBusy] = useState(false);
   const [answers, setAnswers] = useState<ProbeAnswer[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -53,15 +58,19 @@ export function EngineProbePanel({ brand, keywords, scope }: { brand: string; ke
 
   async function run() {
     if (!sel.length || busy) return;
-    setBusy(true); setErr(null); setAnswers(null);
+    setBusy(true); setErr(null); setAnswers(null); setBgMsg(false);
+    if (!brandProp.trim() && typed.trim() && saveIt) {
+      try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id); } catch {}
+    }
     try {
       const r = await apiFetch("/api/visibility", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand, keywords, lang: L, scope, probe_engines: sel, notify: mode === "notify" }),
+        body: JSON.stringify({ brand, keywords, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
+      if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
       setAnswers(j?.probe?.answers || []);
     } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); }
   }
@@ -75,12 +84,18 @@ export function EngineProbePanel({ brand, keywords, scope }: { brand: string; ke
     items: a.brands.slice(0, 5),
   })), [answers, L]);
 
-  if (!brand.trim()) return null;
+  if (!brandProp.trim() && !allowBrandInput) return null;
 
   return (
     <div className="rounded-xl border border-primary/30 bg-card/50 p-3 space-y-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Radar className="size-4" /> {T.title}</div>
       <p className="text-xs text-muted-foreground">{T.hint}</p>
+      {!brandProp.trim() && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={T.brandPh} className="flex-1 min-w-40 rounded-md border border-border bg-background px-2 py-1 text-xs" />
+          <label className="flex items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={saveIt} onChange={(e) => setSaveIt(e.target.checked)} /> {T.save}</label>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {ENGINES.map((e) => {
           const ok = allowed?.includes(e.key);
@@ -109,13 +124,15 @@ export function EngineProbePanel({ brand, keywords, scope }: { brand: string; ke
         <select value={mode} onChange={(e) => setMode(e.target.value as any)} className="rounded-md border border-border bg-background px-2 py-1 text-xs">
           <option value="instant">{T.instant}</option>
           {cost?.notifyAllowed !== false && <option value="notify">{T.notify}</option>}
+          {cost?.backgroundAllowed !== false && <option value="background">{T.bg}</option>}
         </select>
-        <button type="button" onClick={run} disabled={busy || !sel.length || (cost ? !cost.enough : false)}
+        <button type="button" onClick={run} disabled={busy || !sel.length || !brand.trim() || (cost ? !cost.enough : false)}
           className="ms-auto inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Radar className="size-3.5" />} {T.run} ({sel.length})
         </button>
       </div>
       {err && <div className="text-xs text-destructive">{err}</div>}
+      {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
       {cards.length > 0 && <EngineResponseFlow answers={cards} title={T.res} compact />}
     </div>
   );

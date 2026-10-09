@@ -235,7 +235,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
     // Clean: drop empty overrides, but KEEP entries that only disable the tool
     const clean: Record<string, any> = {};
     for (const [k, v] of Object.entries(overrides)) {
-      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0 || Number(v?.probe_tokens_per_engine) > 0 || Number(v?.max_engines) > 0 || v?.notify_allowed === false;
+      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0 || Number(v?.probe_tokens_per_engine) > 0 || Number(v?.max_engines) > 0 || v?.notify_allowed === false || v?.background_allowed === false;
       const isDisabled = v?.enabled === false;
       if (hasPrice || isDisabled) clean[k] = v;
     }
@@ -572,9 +572,9 @@ function CheckRow({ label, hint, checked, onChange }: { label: string; hint?: st
 }
 
 const PROBE_TX = {
-  ar: { t: "الفحص المصغّر وأنماط التشغيل لهذا المستخدم", per: "توكن لكل نموذج", max: "أقصى عدد نماذج", notify: "السماح بالتشغيل الإشعاري", hint: "اتركه فارغاً لاستخدام الإعداد العام أو سعر فحص الظهور." },
-  en: { t: "Micro-probe & run modes for this user", per: "Tokens per engine", max: "Max engines", notify: "Allow notify mode", hint: "Leave empty to use the global setting or the visibility price." },
-  ku: { t: "پشکنینی بچووک بۆ ئەم بەکارهێنەرە", per: "تۆکن بۆ هەر بزوێنەرێک", max: "زۆرترین بزوێنەر", notify: "ڕێگەدان بە ئاگادارکردنەوە", hint: "بەتاڵی بهێڵە بۆ ڕێکخستنی گشتی." },
+  ar: { t: "الفحص المصغّر وأنماط التشغيل لهذا المستخدم", per: "توكن لكل نموذج", max: "أقصى عدد نماذج", notify: "السماح بالتشغيل الإشعاري", bg: "السماح بالتشغيل في الخلفية", hint: "اتركه فارغاً لاستخدام الإعداد العام أو سعر فحص الظهور." },
+  en: { t: "Micro-probe & run modes for this user", per: "Tokens per engine", max: "Max engines", notify: "Allow notify mode", bg: "Allow background mode", hint: "Leave empty to use the global setting or the visibility price." },
+  ku: { t: "پشکنینی بچووک بۆ ئەم بەکارهێنەرە", per: "تۆکن بۆ هەر بزوێنەرێک", max: "زۆرترین بزوێنەر", notify: "ڕێگەدان بە ئاگادارکردنەوە", bg: "ڕێگەدان بە کارکردن لە پاشبنەمادا", hint: "بەتاڵی بهێڵە بۆ ڕێکخستنی گشتی." },
 };
 
 function ProbeOverrideBox({ value, onChange, lang }: { value: any; onChange: (p: any) => void; lang: string }) {
@@ -592,6 +592,9 @@ function ProbeOverrideBox({ value, onChange, lang }: { value: any; onChange: (p:
         </label>
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={value.notify_allowed !== false} onChange={(e) => onChange({ notify_allowed: e.target.checked ? undefined : false })} /> {T.notify}
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={value.background_allowed !== false} onChange={(e) => onChange({ background_allowed: e.target.checked ? undefined : false })} /> {T.bg}
         </label>
       </div>
     </div>
@@ -624,6 +627,9 @@ function GlobalProbeBox({ lang }: { lang: string }) {
         </label>
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={v.notify_allowed !== false} onChange={(e) => setV({ ...v, notify_allowed: e.target.checked })} /> {T.notify}
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={v.background_allowed !== false} onChange={(e) => setV({ ...v, background_allowed: e.target.checked })} /> {T.bg}
         </label>
         <button type="button" onClick={save} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">{saved ? "✓" : T.save}</button>
       </div>

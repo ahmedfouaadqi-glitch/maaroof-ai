@@ -9,7 +9,7 @@ import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngin
 import { asText } from "@/lib/input-coerce";
 
 
-type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean };
+type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -195,7 +195,7 @@ export const Route = createFileRoute("/api/visibility")({
             const models = await resolveEngineModels(engines);
             const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
             const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] }[] = [];
-            await Promise.allSettled(engines.map(async (e) => {
+            const askAll = () => Promise.allSettled(engines.map(async (e) => {
               const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
               try {
                 const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
@@ -214,6 +214,29 @@ export const Route = createFileRoute("/api/visibility")({
                 answers.push({ engine: e, mentioned: idx >= 0 || ans.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: ans, brands });
               } catch {} finally { clearTimeout(t); }
             }));
+            // Background mode: finish after the response, save to tool history, notify; refund if nothing came back.
+            if (body.background && policy.backgroundAllowed) {
+              const work = (async () => {
+                await askAll();
+                const { notifyUser } = await import("@/lib/notify.server");
+                if (!answers.length) {
+                  try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -Number(pChg.tokens || 0), _usd: 0, _run_id: pRun, _meta: { refund: true, endpoint: "/api/visibility#probe" } } as any); } catch {}
+                  try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
+                  return;
+                }
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
+                const hit = answers.filter((a) => a.mentioned).length;
+                try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
+              })().catch(() => {});
+              let scheduled = false;
+              try {
+                const cf: any = await import(/* @vite-ignore */ "cloudflare:workers" as string);
+                if (typeof cf?.waitUntil === "function") { cf.waitUntil(work); scheduled = true; }
+              } catch {}
+              if (!scheduled) await work; // fallback: same as notify mode
+              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
+            }
+            await askAll();
             if (body.notify) {
               try {
                 const { notifyUser } = await import("@/lib/notify.server");

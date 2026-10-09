@@ -3,9 +3,9 @@
 | Tool | Kind | External data | LLM calls / run | Firecrawl / run | Existing cache | Duplication | MCI hook |
 |---|---|---|---|---|---|---|---|
 | known (MKD) | research | yes | 4–9 engines + 1 extract | 3–5 searches | none before MCI | same brand+market re-run from scratch | **active**: run reuse (7d) + engine answer cache (24h) |
-| analyze | analysis | yes | 1–2 | scrape | analysis_cache | re-analysis of same URL | planned |
-| compare | analysis | yes | 1 | 1–3 | firecrawl_cache | same pair re-compared | planned |
-| research | research | yes | 1 | 3+ | firecrawl_cache | same query | planned |
+| analyze | analysis | yes | 1–2 | scrape | analysis_cache | re-analysis of same URL | active |
+| compare | analysis | yes | 1 | 1–3 | firecrawl_cache | same pair re-compared | active |
+| research | research | yes | 1 | 3+ | firecrawl_cache | same query | active |
 | suggest | content | no | 1 | 0 | — | — | not applicable (creative output) |
 
 ## Rules applied
@@ -26,3 +26,8 @@
 ## Phase 3 — Agent (2026-10-08)
 - Planning: `mciPlanningHints` (read-only, user-scoped) adds a context note listing tools with a fresh result; toggle `app_settings.mci.tools.agent`. Fail-open.
 - Stage UI: reuse badge per step + "Show models" cards via `cardsForStep` (pure, no model calls).
+
+## Phase 4 — Live micro-probe & run modes (2026-10-09)
+- `/api/visibility` with `probe_engines` asks only the engines the user picked; charged as `visibility.probe` (per engine × count).
+- Run modes: instant, notify, background. Background finishes after the response (Cloudflare `waitUntil`), saves to tool history, notifies; refunds if no engine answered. Falls back to notify behaviour where `waitUntil` is unavailable.
+- Admin: `app_settings.tool_run_modes.background_allowed` and `per_user_tool_overrides.visibility.background_allowed`.

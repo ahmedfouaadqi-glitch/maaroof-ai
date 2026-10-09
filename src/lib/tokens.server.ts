@@ -196,7 +196,7 @@ export function chargeFailureBody(reason: ChargeResult extends { ok: false; reas
   return { ok: false, reason, left, message: base };
 }
 
-export type ProbePolicy = { tokensPerEngine: number | null; maxEngines: number | null; notifyAllowed: boolean };
+export type ProbePolicy = { tokensPerEngine: number | null; maxEngines: number | null; notifyAllowed: boolean; backgroundAllowed: boolean };
 
 /**
  * Probe (live check with selected engines) policy for one user.
@@ -219,5 +219,6 @@ export async function resolveProbePolicy(userId: string): Promise<ProbePolicy> {
     tokensPerEngine: num(ov.probe_tokens_per_engine) ?? num(global.probe_tokens_per_engine),
     maxEngines: num(ov.max_engines) ?? num(global.probe_max_engines),
     notifyAllowed: ov.notify_allowed === false ? false : global.notify_allowed !== false,
+    backgroundAllowed: ov.background_allowed === false ? false : global.background_allowed !== false,
   };
 }

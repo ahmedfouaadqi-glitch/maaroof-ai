@@ -12,6 +12,7 @@ export type CostPreview = {
   enough: boolean;
   maxEngines: number | null;
   notifyAllowed: boolean;
+  backgroundAllowed: boolean;
 };
 
 export const getCostPreview = createServerFn({ method: "POST" })
@@ -43,5 +44,6 @@ export const getCostPreview = createServerFn({ method: "POST" })
       enough: !metered || balance >= total,
       maxEngines: policy?.maxEngines ?? null,
       notifyAllowed: policy?.notifyAllowed ?? true,
+      backgroundAllowed: policy?.backgroundAllowed ?? true,
     };
   });
