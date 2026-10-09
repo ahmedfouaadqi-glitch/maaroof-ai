@@ -5,6 +5,8 @@ import { BookOpen, Wrench, Bot, Globe2, User, Share2 } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
 import { usePageGuard } from "@/lib/visibility";
+import { useEffect, useState } from "react";
+import { PERSONAS, PERSONA_COMMON, type Persona } from "@/lib/guide-personas";
 
 export const Route = createFileRoute("/guide")({
   head: () => ({
@@ -98,6 +100,8 @@ function GuidePage() {
         </div>
 
 
+
+        <PersonaGuideBlock L={L} />
 
         <Section icon={<Bot className="size-5" />} title={t("guide_maaroof_title")}>
           <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
@@ -204,5 +208,33 @@ function ToolRow({ toolKey, name, cost, body }: { toolKey: ToolKey; name: string
       {body && <p className="text-sm text-foreground/85 leading-relaxed">{body}</p>}
       <HowItWorks toolKey={toolKey} />
     </div>
+  );
+}
+
+function PersonaGuideBlock({ L }: { L: "ar" | "en" | "ku" }) {
+  const [p, setP] = useState<Persona>("individual");
+  useEffect(() => { try { const v = localStorage.getItem("guide_persona") as Persona | null; if (v) setP(v); } catch {} }, []);
+  const pick = (k: Persona) => { setP(k); try { localStorage.setItem("guide_persona", k); } catch {} };
+  const cur = PERSONAS.find((x) => x.key === p) || PERSONAS[0];
+  const C = PERSONA_COMMON;
+  return (
+    <Section icon={<User className="size-5" />} title={C.title[L]}>
+      <p className="text-sm text-muted-foreground">{C.pick[L]}</p>
+      <div className="flex flex-wrap gap-2">
+        {PERSONAS.map((x) => (
+          <button key={x.key} type="button" onClick={() => pick(x.key)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${x.key === p ? "border-primary bg-primary/10 text-primary" : "border-border bg-card/60"}`}>
+            {x.label[L]}
+          </button>
+        ))}
+      </div>
+      <div className="rounded-2xl border border-border bg-card/70 p-5 space-y-3 text-sm leading-relaxed">
+        <div><b>{C.tools[L]}:</b> {cur.tools[L]}</div>
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3"><b>{C.example[L]}:</b> {cur.example[L]}</div>
+        <p>{C.fix[L]}</p>
+        <p>{C.balance[L]}</p>
+        <p>{C.modes[L]}</p>
+      </div>
+    </Section>
   );
 }
