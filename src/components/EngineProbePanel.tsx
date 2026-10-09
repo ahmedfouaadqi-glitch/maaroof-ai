@@ -13,9 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { EngineKey } from "@/lib/ai-engines";
 
 const TX = {
-  ar: { title: "تحقق فعلياً من النماذج", hint: "اختر النماذج التي تريد سؤالها الآن — كلها أو بعضها.", all: "الكل", none: "لا شيء", cost: "الكلفة المتوقعة", bal: "رصيدك", low: "رصيدك لا يكفي لهذا العدد من النماذج", run: "اسأل النماذج المختارة", mode: "طريقة التشغيل", instant: "فوري", notify: "إشعاري (يصلك إشعار عند الانتهاء)", bg: "في الخلفية (يمكنك إغلاق الصفحة)", bgOk: "بدأ الفحص في الخلفية — ستصلك النتيجة في الإشعارات وسجل الأداة.", brandPh: "اكتب اسم علامتك التجارية", save: "احفظه في حسابي", locked: "غير متاح في باقتك", max: "الحد الأقصى", res: "إجابات فعلية من النماذج", rank: "ترتيبك", miss: "لم يذكر علامتك", free: "غير محسوب على رصيد" },
-  en: { title: "Check live with the engines", hint: "Pick the engines to ask now — all or some.", all: "All", none: "None", cost: "Expected cost", bal: "Your balance", low: "Your balance is not enough for this many engines", run: "Ask the selected engines", mode: "Run mode", instant: "Instant", notify: "Notify (you get a notification when done)", bg: "Background (you can close the page)", bgOk: "Running in the background — results arrive in notifications and tool history.", brandPh: "Type your brand name", save: "Save to my account", locked: "Not in your plan", max: "Max", res: "Live answers from the engines", rank: "Your rank", miss: "Did not mention your brand", free: "Not metered" },
-  ku: { title: "پشکنینی ڕاستەوخۆ لەگەڵ بزوێنەرەکان", hint: "ئەو بزوێنەرانە هەڵبژێرە کە دەتەوێت بپرسیت.", all: "هەموو", none: "هیچ", cost: "تێچووی چاوەڕوانکراو", bal: "باڵانسەکەت", low: "باڵانس بەس نییە", run: "پرسیار لە هەڵبژێردراوەکان", mode: "شێوازی کارکردن", instant: "دەستبەجێ", notify: "ئاگادارکردنەوە", bg: "لە پاشبنەمادا", bgOk: "لە پاشبنەمادا دەستی پێکرد — ئەنجام لە ئاگادارکردنەوەکاندا دێت.", brandPh: "ناوی براندەکەت بنووسە", save: "لە هەژمارەکەمدا پاشەکەوتی بکە", locked: "لە پلانەکەتدا نییە", max: "زۆرترین", res: "وەڵامی ڕاستەقینە", rank: "پلەت", miss: "ناوی تۆی نەهێنا", free: "نەژمێردراو" },
+  ar: { title: "تحقق فعلياً من النماذج", hint: "اختر النماذج التي تريد سؤالها الآن — كلها أو بعضها.", all: "الكل", none: "لا شيء", cost: "الكلفة المتوقعة", bal: "رصيدك", low: "رصيدك لا يكفي لهذا العدد من النماذج", run: "اسأل النماذج المختارة", mode: "طريقة التشغيل", instant: "فوري", notify: "إشعاري (يصلك إشعار عند الانتهاء)", bg: "في الخلفية (يمكنك إغلاق الصفحة)", bgOk: "بدأ الفحص في الخلفية — ستصلك النتيجة في الإشعارات وسجل الأداة.", brandPh: "اكتب اسم علامتك التجارية", save: "احفظه في حسابي", locked: "غير متاح في باقتك", max: "الحد الأقصى", res: "إجابات فعلية من النماذج", rank: "ترتيبك", miss: "لم يذكر علامتك", free: "غير محسوب على رصيد", signIn: "يرجى تسجيل الدخول لاستخدام الفحص المباشر.", login: "تسجيل الدخول" },
+  en: { title: "Check live with the engines", hint: "Pick the engines to ask now — all or some.", all: "All", none: "None", cost: "Expected cost", bal: "Your balance", low: "Your balance is not enough for this many engines", run: "Ask the selected engines", mode: "Run mode", instant: "Instant", notify: "Notify (you get a notification when done)", bg: "Background (you can close the page)", bgOk: "Running in the background — results arrive in notifications and tool history.", brandPh: "Type your brand name", save: "Save to my account", locked: "Not in your plan", max: "Max", res: "Live answers from the engines", rank: "Your rank", miss: "Did not mention your brand", free: "Not metered", signIn: "Please sign in to use the live check.", login: "Sign in" },
+  ku: { title: "پشکنینی ڕاستەوخۆ لەگەڵ بزوێنەرەکان", hint: "ئەو بزوێنەرانە هەڵبژێرە کە دەتەوێت بپرسیت.", all: "هەموو", none: "هیچ", cost: "تێچووی چاوەڕوانکراو", bal: "باڵانسەکەت", low: "باڵانس بەس نییە", run: "پرسیار لە هەڵبژێردراوەکان", mode: "شێوازی کارکردن", instant: "دەستبەجێ", notify: "ئاگادارکردنەوە", bg: "لە پاشبنەمادا", bgOk: "لە پاشبنەمادا دەستی پێکرد — ئەنجام لە ئاگادارکردنەوەکاندا دێت.", brandPh: "ناوی براندەکەت بنووسە", save: "لە هەژمارەکەمدا پاشەکەوتی بکە", locked: "لە پلانەکەتدا نییە", max: "زۆرترین", res: "وەڵامی ڕاستەقینە", rank: "پلەت", miss: "ناوی تۆی نەهێنا", free: "نەژمێردراو", signIn: "تکایە بچۆ ژوورەوە بۆ بەکارهێنانی پشکنینی ڕاستەوخۆ.", login: "چوونەژوورەوە" },
 };
 
 type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] };
@@ -63,12 +63,16 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id); } catch {}
     }
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const r = await apiFetch("/api/visibility", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ brand, keywords, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
       });
       const j = await r.json().catch(() => ({}));
+      if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
       setAnswers(j?.probe?.answers || []);
@@ -131,7 +135,9 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Radar className="size-3.5" />} {T.run} ({sel.length})
         </button>
       </div>
-      {err && <div className="text-xs text-destructive">{err}</div>}
+      {err === "__signin"
+        ? <div className="text-xs text-destructive">{T.signIn} <a href="/auth" className="underline font-semibold">{T.login}</a></div>
+        : err && <div className="text-xs text-destructive">{err}</div>}
       {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
       {cards.length > 0 && <EngineResponseFlow answers={cards} title={T.res} compact />}
     </div>
