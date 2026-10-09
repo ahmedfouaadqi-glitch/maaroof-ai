@@ -295,9 +295,22 @@ export function Sandbox() {
           <div className="mt-3 grid gap-5 md:grid-cols-[200px_1fr]">
             <Gauge value={result.score} label={t("score_label")} tier={tier} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
-              <Metric icon={<ShieldCheck className="size-4" />} label={t("metric_authority")} value={result.authority} />
-              <Metric icon={<MapPin className="size-4" />} label={t("metric_local")} value={result.local} />
-              <Metric icon={<Quote className="size-4" />} label={t("metric_citation")} value={result.citation} />
+              {(() => {
+                const ex = (result as any).explain || {};
+                const lk = (L === "ar" || L === "ku" ? L : "en") as "ar" | "en" | "ku";
+                const checks = auditText(text, getEffectiveScope(auth?.profile, "analyze"));
+                const noteFor = (keys: string[]) => {
+                  const cs = checks.filter((c) => keys.includes(c.key));
+                  const miss = cs.find((c) => !c.passed);
+                  if (miss) return miss.hint[lk];
+                  return cs.map((c) => c.label[lk]).join(" · ");
+                };
+                return (<>
+                  <Metric icon={<ShieldCheck className="size-4" />} label={t("metric_authority")} value={result.authority} note={ex.authority || noteFor(["entity", "number", "date"])} />
+                  <Metric icon={<MapPin className="size-4" />} label={t("metric_local")} value={result.local} note={ex.local || noteFor(["scope", "currency"])} />
+                  <Metric icon={<Quote className="size-4" />} label={t("metric_citation")} value={result.citation} note={ex.citation || noteFor(["source", "number"])} />
+                </>);
+              })()}
             </div>
           </div>
 
@@ -560,12 +573,13 @@ function Gauge({ value, label, tier }: { value: number; label: string; tier: str
   );
 }
 
-function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: number; note?: string }) {
   return (
     <div className="rounded-xl border border-border bg-background/40 p-3">
       <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><span className="text-primary">{icon}</span>{label}</div>
       <div className="mb-2 font-display text-2xl font-bold text-foreground">{value}</div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${value}%` }} /></div>
+      {note && <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{note}</p>}
     </div>
   );
 }
