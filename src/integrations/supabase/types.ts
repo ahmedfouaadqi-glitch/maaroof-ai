@@ -1040,6 +1040,33 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_history: {
+        Row: {
+          changed_at: string
+          field: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          field: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          field?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       evidence_items: {
         Row: {
           business_value: number
@@ -3592,6 +3619,7 @@ export type Database = {
           entity_locked: boolean
           entity_type: string
           entity_unlock_granted: boolean
+          entity_updated_at: string | null
           entity_verified_at: string | null
           extra_device_fee_iqd: number
           full_name: string | null
@@ -3639,6 +3667,7 @@ export type Database = {
           entity_locked?: boolean
           entity_type?: string
           entity_unlock_granted?: boolean
+          entity_updated_at?: string | null
           entity_verified_at?: string | null
           extra_device_fee_iqd?: number
           full_name?: string | null
@@ -3686,6 +3715,7 @@ export type Database = {
           entity_locked?: boolean
           entity_type?: string
           entity_unlock_granted?: boolean
+          entity_updated_at?: string | null
           entity_verified_at?: string | null
           extra_device_fee_iqd?: number
           full_name?: string | null
