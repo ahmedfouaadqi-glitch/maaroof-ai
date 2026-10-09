@@ -8,6 +8,13 @@
       "when": 1791545486323,
       "tag": "0000_entity_truth_card",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791548227137,
+      "tag": "0001_migration",
+      "breakpoints": true
     }
   ]
 }
