@@ -33,7 +33,7 @@ export function HandoffMenu({ source, getText }: Props) {
       if (!cancelled) setLinked((data?.target_tool as HandoffTarget) || null);
     })();
     return () => { cancelled = true; };
-  }, [user, source]);
+  }, [user?.id, source]);
 
   const fire = (target: HandoffTarget) => {
     const txt = (getText() || "").toString().trim();

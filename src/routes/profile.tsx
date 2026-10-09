@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState , useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -46,8 +46,10 @@ function ProfilePage() {
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/profile" } }); }, [loading, user, navigate]);
 
+  const initFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || initFor.current === (profile as any).id) return;
+    initFor.current = (profile as any).id;
     setFullName((profile as any).full_name || "");
     setBrandName((profile as any).brand_name || "");
     setBrandKw((profile as any).brand_keywords || "");

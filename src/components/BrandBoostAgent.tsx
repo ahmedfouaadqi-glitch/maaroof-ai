@@ -46,7 +46,7 @@ export function BrandBoostAgent() {
     const { data } = await supabase.from("brand_boost_jobs").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
     setJobs(data || []);
   };
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user?.id]);
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
@@ -743,7 +743,7 @@ function LogsPanel() {
       if (!cancelled) { setRows(data || []); setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [user, refreshKey]);
+  }, [user?.id, refreshKey]);
 
   const exportCsv = () => {
     const head = [["created_at", "action", "brand", "details"]];

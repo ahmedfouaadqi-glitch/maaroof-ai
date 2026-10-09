@@ -75,7 +75,7 @@ export function GeoScopeSelector({ compact = false, toolKey }: { compact?: boole
       (toolKey && overrides[toolKey]) || (profile as any)?.geo_scope || { scope: "auto" };
     setVal(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, toolKey]);
+  }, [JSON.stringify(stored), toolKey]);
 
   const effective = useMemo(() => getEffectiveScope(profile, toolKey), [profile, toolKey]);
 

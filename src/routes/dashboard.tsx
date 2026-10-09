@@ -122,7 +122,7 @@ function DashboardPage() {
     if (!user) return;
     supabase.from("user_agent_subscriptions").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle()
       .then(({ data }) => setAgentSub(data));
-  }, [user]);
+  }, [user?.id]);
 
   const tools = useMemo(
     () => TOOLS.filter((x) => (x.catalog ? vis.isToolVisible(x.catalog) : true)),

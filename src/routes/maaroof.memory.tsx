@@ -39,7 +39,7 @@ function MemoryPage() {
       .order("last_accessed_at", { ascending: false }).limit(200);
     setItems((data as any) || []); setBusy(false);
   }
-  useEffect(() => { if (user) load(); }, [user]);
+  useEffect(() => { if (user) load(); }, [user?.id]);
 
   async function del(id: string) {
     if (!confirm(t("auto.delete_this_memory"))) return;

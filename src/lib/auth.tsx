@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
     ]);
-    setProfile(p as Profile | null);
+    setProfile((prev) => (JSON.stringify(prev) === JSON.stringify(p) ? prev : (p as Profile | null)));
     setIsAdmin(!!roles?.some((r: any) => r.role === "admin"));
 
     // Multi-device fingerprint enforcement (admin-controlled limit)
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => {
       setSession(sess);
-      setUser(sess?.user ?? null);
+      setUser((prev) => (prev && sess?.user && prev.id === sess.user.id ? prev : sess?.user ?? null));
       if (sess?.user) {
         setTimeout(() => loadProfile(sess.user.id), 0);
       } else {

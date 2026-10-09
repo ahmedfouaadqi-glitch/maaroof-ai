@@ -79,7 +79,7 @@ function MaaroofPage() {
       const { data } = await q;
       setRuns((data as any) || []);
     })();
-  }, [user, running, activeWs]);
+  }, [user?.id, running, activeWs]);
 
   async function start() {
     if (!goal.trim() || running || !user) return;

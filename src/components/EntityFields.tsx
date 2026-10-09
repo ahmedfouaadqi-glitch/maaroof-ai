@@ -1,5 +1,5 @@
 // Entity Truth Card fields inside the existing profile page.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -26,8 +26,10 @@ export function EntityFields({ profile, userId, onSaved }: { profile: any; userI
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
+  const initFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || initFor.current === profile.id) return;
+    initFor.current = profile.id;
     setType(profile.entity_type || "organization");
     setHq(profile.hq_country || "");
     setMk(profile.target_markets || []);
