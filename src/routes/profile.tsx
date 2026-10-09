@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe, Send } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
+import { EntityFields } from "@/components/EntityFields";
 import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
 
 export const Route = createFileRoute("/profile")({
