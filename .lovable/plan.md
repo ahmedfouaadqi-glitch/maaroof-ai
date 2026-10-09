@@ -1,20 +1,19 @@
-# شرح ديناميكي داخل بطاقات التحليل الثلاث
+# تطوير بطاقات التحليل الثلاث الحالية لتشرح نفسها
 
 ## الهدف
-تحت رقم وشريط كل بطاقة (السلطة، الصلة المحلية، احتمالية الاستشهاد) في أداة التحليل يظهر سطران يشرحان سبب هذه الدرجة **لهذا النص بالذات**، وكيف يرفعها المستخدم — أو لماذا يستحقها إن كانت ممتازة. يُكتب الشرح بلغة التقرير المختارة (عربي/كردي/إنجليزي).
+نطوّر البطاقات الموجودة نفسها (السلطة، الصلة المحلية، احتمالية الاستشهاد) في أداة التحليل، ولا نضيف قسماً جديداً. الفراغ الحالي تحت الرقم والشريط يصبح سطرين يشرحان سبب الدرجة **لهذا النص بالذات**، وكيف يرفعها المستخدم، أو لماذا يستحقها إن كانت ممتازة. يُكتب الشرح بلغة التقرير المختارة (عربي/كردي/إنجليزي).
 
-## ما يراه المستخدم
+## ما يتغير في البطاقة
 - درجة ضعيفة: ما الذي ينقص النص بالضبط ولماذا نقصت النقاط.
 - درجة متوسطة: نقطة قوة واحدة ونقطة ضعف محددة.
 - درجة ممتازة: المعايير التي تؤهله للاقتباس.
-- بلا رصيد إضافي وبلا وقت إضافي: الشرح يأتي ضمن نفس الفحص.
-- النتائج القديمة المحفوظة (بلا شرح) تعرض سطراً احتياطياً يُبنى محلياً من فحوصات النص الموجودة، فلا تبقى البطاقة فارغة.
+- بلا رصيد إضافي وبلا وقت إضافي: الشرح يخرج من نفس الفحص الحالي، لا من طلب جديد.
+- النتائج القديمة المحفوظة تعرض شرحاً مبنياً من فحوصات النص الموجودة أصلاً في الأداة، فلا تبقى البطاقة فارغة.
 
 ## الشروط الصارمة
-إضافة فقط: لا تغيير في طريقة حساب الدرجات أو الأوزان أو التسعير أو إعادة الاستخدام. إذا لم يُرجع النموذج الشرح، تعمل الأداة كما هي.
+تطوير للموجود فقط: نفس البطاقة ونفس الفحص ونفس الطلب. لا تغيير في حساب الدرجات أو الأوزان أو التسعير أو إعادة الاستخدام. إذا لم يُرجع النموذج الشرح، تعمل البطاقة كما كانت.
 
 ## Technical details
-- `src/routes/api/analyze.ts`: add optional `explain: { authority, local, citation }` (each ≤ 160 chars, report language, must cite a concrete element from the text, no invented facts) to the JSON schema in the prompt; parse with string clamp; include in `result`. Scoring rubric untouched.
-- `src/components/Sandbox.tsx`: `Metric` gets optional `note` prop rendered as small muted text under the bar; pass `result.explain?.x` or fallback from `auditText` (src/lib/geo-audit.ts) failed/passed checks mapped per metric.
-- Also apply to rewrite result type as optional (no UI change required).
+- `src/routes/api/analyze.ts`: extend the existing JSON output schema in the same prompt with optional `explain: { authority, local, citation }` (each ≤ 160 chars, report language, must reference a concrete element of the text, no invented facts); parse into the existing `result`. Rubric/weights untouched.
+- `src/components/Sandbox.tsx`: extend the existing `Metric` component with an optional `note` rendered under its bar; source = `result.explain` or fallback from existing `auditText` checks (src/lib/geo-audit.ts) mapped per metric.
 - Typecheck + existing tests; nothing published.
