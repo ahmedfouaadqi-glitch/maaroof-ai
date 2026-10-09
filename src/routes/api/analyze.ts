@@ -66,7 +66,8 @@ OUTPUT — return ONLY a compact JSON object with these exact keys:
   "weaknesses": array of 2-4 short bullets in REPORT language — each must name a CONCRETE missing element,
   "recommendations": array of 3-5 actionable improvements in REPORT language — tailored to ${target},
   "keywords": array of 4-8 high-value entities/keywords actually present (kept in their original language; do NOT invent any),
-  "platform_views": array of EXACTLY 9 objects — one per engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). Each: { "name": engine name, "score": int 0-100 estimating how likely THIS engine cites this content for ${target}, "verdict": short label in REPORT language (e.g. "likely to cite", "rarely cites", "ignored"), "benefit": one sentence in REPORT language describing how the user benefits if they optimize this content specifically for THIS engine }
+  "platform_views": array of EXACTLY 9 objects — one per engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). Each: { "name": engine name, "score": int 0-100 estimating how likely THIS engine cites this content for ${target}, "verdict": short label in REPORT language (e.g. "likely to cite", "rarely cites", "ignored"), "benefit": one sentence in REPORT language describing how the user benefits if they optimize this content specifically for THIS engine },
+  "explain": { "authority": string, "local": string, "citation": string } — one sentence each (max 160 chars) in REPORT language explaining WHY this exact score, referencing a concrete element actually in (or missing from) the text. Low score: what is missing. Mid: one strength + one gap. High: what qualifies it. Never invent facts.
 }
 The REPORT language MUST be: "en"=English, "ar"=العربية, "ku"=کوردی. No prose outside JSON. No markdown.`;
 }
@@ -206,6 +207,11 @@ export const Route = createFileRoute("/api/analyze")({
                 recommendations: arr(parsed.recommendations),
                 keywords: arr(parsed.keywords),
                 platform_views,
+                explain: parsed.explain && typeof parsed.explain === "object" ? {
+                  authority: String(parsed.explain.authority || "").slice(0, 200),
+                  local: String(parsed.explain.local || "").slice(0, 200),
+                  citation: String(parsed.explain.citation || "").slice(0, 200),
+                } : undefined,
               };
             } else {
               console.error("[api/analyze] parse failed", content.slice(0, 500));
