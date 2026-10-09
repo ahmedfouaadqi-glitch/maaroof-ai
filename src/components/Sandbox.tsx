@@ -313,6 +313,17 @@ export function Sandbox() {
               })()}
             </div>
           </div>
+          {(() => {
+            const lk = (L === "ar" || L === "ku" ? L : "en") as "ar" | "en" | "ku";
+            const alerts = checkEntityConsistency(text, auth?.profile as any);
+            if (!alerts.length) return null;
+            return (
+              <div className="mt-4 rounded-xl border border-border bg-card/50 p-3 text-xs space-y-1">
+                <div className="font-semibold text-primary">{lk === "ar" ? "اتساق النص مع هوية علامتك" : lk === "ku" ? "گونجانی دەق لەگەڵ ناسنامەی براند" : "Consistency with your brand identity"}</div>
+                {alerts.map((a, i) => <p key={i} className="text-muted-foreground">• {a.text[lk]}</p>)}
+              </div>
+            );
+          })()}
 
           {result.ai_view && (
             <div className="mt-5 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
