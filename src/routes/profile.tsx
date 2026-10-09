@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe, Send } from "lucide-react";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
-import { EntityFields } from "@/components/EntityFields";
+import { EntityFields, entityDraftFrom, entityUpdateFrom, type EntityDraft } from "@/components/EntityFields";
 import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
 
 export const Route = createFileRoute("/profile")({
@@ -43,6 +43,7 @@ function ProfilePage() {
   const [done, setDone] = useState(false);
   const [locking, setLocking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [entity, setEntity] = useState<EntityDraft>(() => entityDraftFrom(null));
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/profile" } }); }, [loading, user, navigate]);
 
@@ -55,24 +56,29 @@ function ProfilePage() {
     setBrandKw((profile as any).brand_keywords || "");
     setSpecialty((profile as any).specialty || "");
     setUsername((profile as any).username || "");
+    setEntity(entityDraftFrom(profile));
   }, [profile]);
 
-  const save = async () => {
-    if (!user) return;
+  const save = async (): Promise<boolean> => {
+    if (!user) return false;
     setUsernameErr("");
     const u = username.trim().toLowerCase();
     if (u && !/^[a-z0-9_-]{3,32}$/.test(u)) {
       setUsernameErr("3–32, a–z 0–9 _ -");
-      return;
+      return false;
     }
     setSaving(true);
+    const entityLocked = !!(profile as any)?.entity_locked;
     const { error } = await supabase.from("profiles").update({
       full_name: fullName, brand_name: brandName, brand_keywords: brandKw,
       ...(u ? { username: u } : {}),
-    }).eq("id", user.id);
+      ...(entityLocked ? {} : entityUpdateFrom(entity)),
+    } as any).eq("id", user.id);
     if (error) setUsernameErr(error.message);
     await refreshProfile();
-    setSaving(false); setDone(true); setTimeout(() => setDone(false), 1500);
+    setSaving(false);
+    if (!error) { setDone(true); setTimeout(() => setDone(false), 1500); }
+    return !error;
   };
 
   const publicUrl = username ? `https://maaroofai.com/u/${username}` : "";
@@ -115,7 +121,7 @@ function ProfilePage() {
           <Field label={t("profile_brand_keywords")}>
             <input value={brandKw} onChange={(e) => setBrandKw(e.target.value)} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
           </Field>
-          <EntityFields profile={profile} userId={user.id} onSaved={refreshProfile} />
+          <EntityFields profile={profile} value={entity} onChange={setEntity} onSaveAll={save} onSaved={refreshProfile} />
           <Field label={t("profile_specialty")}>
             <input value={specialty} disabled placeholder={t("profile_specialty_ph")} className="w-full rounded-lg border border-border bg-background/30 px-3 py-2 text-sm opacity-70" />
             <small className="text-xs text-muted-foreground">{t("specialty_locked_note")}</small>
@@ -125,9 +131,10 @@ function ProfilePage() {
             <div className="text-sm">{profile?.is_subscribed ? (profile as any).subscription_tier || "Pro" : "Free"}</div>
             <small className="text-xs text-muted-foreground">{t("profile_subscription_locked")}</small>
           </Field>
-          <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+          <button onClick={() => { void save(); }} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {done ? t("profile_saved") : t("profile_save")}
           </button>
+          {usernameErr && <div className="text-xs text-destructive">{usernameErr}</div>}
 
           <GeoScopeSelector />
         </div>
@@ -161,7 +168,7 @@ function ProfilePage() {
           )}
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+            <button onClick={() => { void save(); }} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} حفظ / Save
             </button>
             <button onClick={copyUrl} disabled={!publicUrl} className="inline-flex items-center gap-2 rounded-lg border border-border bg-background/60 px-4 py-2 text-sm font-semibold disabled:opacity-50">

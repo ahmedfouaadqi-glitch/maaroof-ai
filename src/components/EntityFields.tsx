@@ -1,9 +1,8 @@
 // Entity Truth Card fields inside the existing profile page.
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
 import { COUNTRY_NAMES } from "@/lib/entity-consistency";
 import { verifyEntityCard } from "@/lib/entity.functions";
 
@@ -13,47 +12,42 @@ const TX = {
   ku: { h: "ناسنامەی براندەکەت", hint: "لە هەموو ئامرازەکاندا بەکاردێت بۆ ئاگادارکردنەوە. بەستەرەکان ئارەزوومەندانەن.", type: "جۆری کیان", org: "دامەزراوە / کۆمپانیا", person: "کەس / دروستکەری ناوەڕۆک", hq: "بارەگای سەرەکی", mk: "ئەو بازاڕانەی خزمەتیان دەکەیت", sp: "پسپۆڕی و بواری خزمەتگوزاری", links: "بەستەرەکان (هەر یەکە لە دێڕێک)", save: "پاشەکەوت", verify: "پشتڕاستکردنەوە و قوفڵکردن", locked: "کارتەکە پشتڕاستکراوە و قوفڵە.", ok: "پشتڕاستکرا", conf: "پشتڕاستکراو", unconf: "پشتڕاست نەکراو", incomplete: "سەرەتا ناو و بارەگا پڕبکەوە", none: "—" },
 };
 
-export function EntityFields({ profile, userId, onSaved }: { profile: any; userId: string; onSaved: () => Promise<void> | void }) {
+export type EntityDraft = { type: string; hq: string; mk: string[]; sp: string; links: string };
+export function entityDraftFrom(profile: any): EntityDraft {
+  return {
+    type: profile?.entity_type || "organization", hq: profile?.hq_country || "", mk: profile?.target_markets || [],
+    sp: profile?.specialty_scope || "", links: (Array.isArray(profile?.entity_links) ? profile.entity_links : []).join("\n"),
+  };
+}
+export function entityUpdateFrom(d: EntityDraft) {
+  return {
+    entity_type: d.type, hq_country: d.hq || null, target_markets: d.mk, specialty_scope: d.sp.slice(0, 400) || null,
+    entity_links: d.links.split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(0, 10),
+  };
+}
+
+export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: { profile: any; value: EntityDraft; onChange: (d: EntityDraft) => void; onSaveAll: () => Promise<boolean>; onSaved: () => Promise<void> | void }) {
   const { lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const T = TX[L];
   const verifyFn = useServerFn(verifyEntityCard);
-  const [type, setType] = useState("organization");
-  const [hq, setHq] = useState("");
-  const [mk, setMk] = useState<string[]>([]);
-  const [sp, setSp] = useState("");
-  const [links, setLinks] = useState("");
+  const { type, hq, mk, sp, links } = value;
+  const set = (patch: Partial<EntityDraft>) => onChange({ ...value, ...patch });
+  const setType = (v: string) => set({ type: v });
+  const setHq = (v: string) => set({ hq: v });
+  const setMk = (f: (p: string[]) => string[]) => set({ mk: f(mk) });
+  const setSp = (v: string) => set({ sp: v });
+  const setLinks = (v: string) => set({ links: v });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
-
-  const initFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!profile || initFor.current === profile.id) return;
-    initFor.current = profile.id;
-    setType(profile.entity_type || "organization");
-    setHq(profile.hq_country || "");
-    setMk(profile.target_markets || []);
-    setSp(profile.specialty_scope || "");
-    setLinks((Array.isArray(profile.entity_links) ? profile.entity_links : []).join("\n"));
-  }, [profile]);
 
   const locked = !!profile?.entity_locked;
   const facts = profile?.entity_facts || {};
 
-  async function save() {
-    setBusy(true); setMsg("");
-    const { error } = await supabase.from("profiles").update({
-      entity_type: type, hq_country: hq || null, target_markets: mk, specialty_scope: sp.slice(0, 400) || null,
-      entity_links: links.split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(0, 10),
-    } as any).eq("id", userId);
-    setMsg(error ? error.message : "✓");
-    await onSaved(); setBusy(false);
-  }
-
   async function verify() {
     setBusy(true); setMsg("");
     try {
-      await save();
+      if (!(await onSaveAll())) return;
       const r: any = await verifyFn();
       setMsg(r.ok ? T.ok : r.error === "incomplete" ? T.incomplete : String(r.error));
       await onSaved();
@@ -95,7 +89,6 @@ export function EntityFields({ profile, userId, onSaved }: { profile: any; userI
       <label className="block text-xs">{T.links}<textarea rows={3} value={links} disabled={locked} onChange={(e) => setLinks(e.target.value)} className={cls} /></label>
       {!locked && (
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={save} disabled={busy} className="rounded-lg border border-border px-3 py-1.5 text-xs">{T.save}</button>
           <button type="button" onClick={verify} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">
             {busy && <Loader2 className="size-3.5 animate-spin" />} {T.verify}
           </button>
