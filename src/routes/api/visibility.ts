@@ -230,8 +230,8 @@ export const Route = createFileRoute("/api/visibility")({
               })().catch(() => {});
               let scheduled = false;
               try {
-                const cf: any = await import(/* @vite-ignore */ "cloudflare:workers" as string);
-                if (typeof cf?.waitUntil === "function") { cf.waitUntil(work); scheduled = true; }
+                const { runAfterResponse } = await import("@/lib/request-ctx.server");
+                scheduled = runAfterResponse(work);
               } catch {}
               if (!scheduled) await work; // fallback: same as notify mode
               return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
