@@ -5,3 +5,4 @@
 - [ ] Batch 3: public brand page Person/Organization + sameAs; creator post formats in Boost plan
 - [ ] Batch 4: "why not cited" in live check; before/after timeline + estimated horizon in dashboard; 90-day staleness alert
 - [ ] Batch 5: agent reads the card; admin unlock button in tokens panel
+- [x] Links without https/www accepted; visible verify/unlock cost; paid unlock; public page shows last update + previous info

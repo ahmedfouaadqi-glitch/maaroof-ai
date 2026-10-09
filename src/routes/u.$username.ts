@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectBot } from "@/lib/crawler-bots";
+import { normalizeUrl } from "@/lib/entity-consistency";
 
 /**
  * Public per-user page — readable by AI crawlers (GPTBot, PerplexityBot, etc.)
@@ -85,7 +86,7 @@ export const Route = createFileRoute("/u/$username")({
         if (kw) jsonLd.knowsAbout = kw.split(/[,،]/).map((s) => s.trim()).filter(Boolean).slice(0, 20);
         if (brand && displayName && brand !== displayName) jsonLd.alternateName = displayName;
         const P: any = profile;
-        const sameAs: string[] = (Array.isArray(P.entity_links) ? P.entity_links : []).map(String).filter((x: string) => /^https?:\/\//i.test(x)).slice(0, 10);
+        const sameAs: string[] = (Array.isArray(P.entity_links) ? P.entity_links : []).map((x: any) => normalizeUrl(String(x))).filter(Boolean).slice(0, 10) as string[];
         const markets: string[] = Array.isArray(P.target_markets) ? P.target_markets.map(String) : [];
         const hq = P.hq_country ? String(P.hq_country) : "";
         const scopeTxt = P.specialty_scope ? String(P.specialty_scope) : "";
