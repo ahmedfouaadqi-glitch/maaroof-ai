@@ -18,11 +18,44 @@ export const KNOWN_BOTS: { name: string; match: RegExp }[] = [
   { name: "MistralAI-User", match: /MistralAI/i },
   { name: "DeepSeekBot", match: /DeepSeek/i },
   { name: "DuckAssistBot", match: /DuckAssistBot/i },
+  // SEO / web-analysis crawlers
+  { name: "SemrushBot", match: /SemrushBot|SiteAuditBot|SplitSignalBot/i },
+  { name: "AhrefsBot", match: /AhrefsBot|AhrefsSiteAudit/i },
+  { name: "MJ12bot", match: /MJ12bot/i },
+  { name: "DotBot", match: /DotBot/i },
+  { name: "YandexBot", match: /YandexBot|YandexMobileBot/i },
+  { name: "PetalBot", match: /PetalBot/i },
+  // Link previews (messaging / social)
+  { name: "WhatsApp", match: /WhatsApp/i },
+  { name: "TelegramBot", match: /TelegramBot/i },
+  { name: "FacebookPreview", match: /facebookexternalhit|facebookcatalog/i },
+  { name: "Twitterbot", match: /Twitterbot/i },
+  { name: "LinkedInBot", match: /LinkedInBot/i },
+  { name: "Slackbot", match: /Slackbot/i },
+  { name: "Discordbot", match: /Discordbot/i },
 ];
+
+const AI_BOTS = new Set(["GPTBot", "ChatGPT-User", "OAI-SearchBot", "PerplexityBot", "Perplexity-User", "ClaudeBot", "Google-Extended", "Applebot-Extended", "Meta-ExternalAgent", "YouBot", "Bytespider", "MistralAI-User", "DeepSeekBot", "DuckAssistBot"]);
+const SEARCH_BOTS = new Set(["Googlebot", "Bingbot", "Applebot", "YandexBot", "PetalBot"]);
+const SEO_BOTS = new Set(["SemrushBot", "AhrefsBot", "MJ12bot", "DotBot"]);
+const PREVIEW_BOTS = new Set(["WhatsApp", "TelegramBot", "FacebookPreview", "Twitterbot", "LinkedInBot", "Slackbot", "Discordbot"]);
+
+export type BotCategory = "ai" | "search" | "seo" | "preview" | "browser" | "unclassified";
+export function botCategory(name: string | null | undefined): BotCategory {
+  const n = String(name || "");
+  if (AI_BOTS.has(n)) return "ai";
+  if (SEARCH_BOTS.has(n)) return "search";
+  if (SEO_BOTS.has(n)) return "seo";
+  if (PREVIEW_BOTS.has(n)) return "preview";
+  if (n === "Browser") return "browser";
+  return "unclassified";
+}
 
 export function detectBot(userAgent: string): string | null {
   if (!userAgent) return null;
   for (const b of KNOWN_BOTS) if (b.match.test(userAgent)) return b.name;
+  if (/bot|crawl|spider|slurp/i.test(userAgent)) return null;
+  if (/Mozilla\/5\.0/.test(userAgent) && /(Chrome|Safari|Firefox|Edg)\//.test(userAgent)) return "Browser";
   return null;
 }
 
