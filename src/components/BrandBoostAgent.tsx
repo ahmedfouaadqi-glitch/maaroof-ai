@@ -24,6 +24,7 @@ import { ENGINES } from "@/components/engine-logos";
 import EngineSelector from "@/components/EngineSelector";
 
 import { ENGINE_KEYS } from "@/lib/ai-engines";
+import { botCategory, type BotCategory } from "@/lib/crawler-bots";
 const PLATFORMS: string[] = [...ENGINE_KEYS];
 const MAX_PLATFORMS_PER_RUN = 10;
 
@@ -655,7 +656,20 @@ function PropagationPanel() {
     }
     return m;
   }, [hits]);
-  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
+  const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown" && k !== "Browser").length;
+  const catLabel = (b: string | null | undefined): string => {
+    const c: BotCategory = botCategory(b);
+    const L: Record<BotCategory, [string, string, string]> = {
+      ai: ["زاحف ذكاء اصطناعي", "AI crawler", "کرۆلەری AI"],
+      search: ["محرك بحث", "Search engine", "بزوێنەری گەڕان"],
+      seo: ["أداة تحليل ويب", "Web-analysis tool", "ئامرازی شیکاری وێب"],
+      preview: ["معاينة رابط (تطبيق مراسلة/تواصل)", "Link preview (messaging/social)", "پێشبینینی لینک"],
+      browser: ["زيارة مباشرة (متصفح)", "Direct visit (browser)", "سەردانی ڕاستەوخۆ (وێبگەڕ)"],
+      unclassified: ["غير مصنّف", "Unclassified", "پۆلێن نەکراو"],
+    };
+    const v = L[c];
+    return lang === "ar" ? v[0] : lang === "ku" ? v[2] : v[1];
+  };
   const [shown, setShown] = useState(100);
   const stats = data?.stats;
   const buildExport = (): ExportPayload => ({
@@ -669,21 +683,25 @@ function PropagationPanel() {
         [lang === "ar" ? "آخر زيارة" : "Last visit", stats?.last ? new Date(stats.last).toLocaleString() : "-"],
       ] } as any,
       { heading: lang === "ar" ? "حسب الزاحف" : "By crawler", kind: "table", table: {
-        columns: ["Bot", "Count", "Last"],
-        data: Array.from(byBot.entries()).map(([b, i]) => [botName(b), i.count, new Date(i.last).toLocaleString()]),
+        columns: ["Bot", "Type", "Count", "Last"],
+        data: Array.from(byBot.entries()).map(([b, i]) => [botName(b), catLabel(b), i.count, new Date(i.last).toLocaleString()]),
       } } as any,
       { heading: lang === "ar" ? "كل الزيارات" : "All visits", kind: "table", table: {
-        columns: ["Date", "Bot", "Page", "User-Agent"],
-        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), h.bot_name || "Unknown", safeDecode(h.path || ""), h.user_agent || ""]),
+        columns: ["Date", "Bot", "Type", "Page", "Source", "User-Agent"],
+        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), botName(h.bot_name || "Unknown"), catLabel(h.bot_name), safeDecode(h.path || ""), packLabel(h.brand_slug), h.user_agent || ""]),
       } } as any,
     ],
   });
 
+  function packLabel(slug: string | null | undefined): string {
+    if (slug) return safeDecode(slug);
+    return lang === "ar" ? "الملف المعتمد الأساسي" : lang === "ku" ? "پرۆفایلی سەرەکی" : "Verified main profile";
+  }
 
   const exportCsv = () => {
-    const rows = [["bot_name", "user_agent", "path", "hit_at"]];
-    for (const h of hits) rows.push([h.bot_name || "Unknown", h.user_agent || "", h.path || "", h.hit_at || ""]);
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const rows = [["bot_name", "type", "source", "user_agent", "path", "hit_at"]];
+    for (const h of hits) rows.push([h.bot_name || "Unknown", catLabel(h.bot_name), packLabel(h.brand_slug), h.user_agent || "", h.path || "", h.hit_at || ""]);
+    const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     downloadFile(`crawler-hits-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
   };
 
@@ -697,7 +715,10 @@ function PropagationPanel() {
       Applebot: "Apple Search", "Meta-ExternalAgent": "Meta AI",
       YouBot: "You.com", Bytespider: "ByteDance/Doubao",
       "MistralAI-User": "Mistral", DeepSeekBot: "DeepSeek", DuckAssistBot: "DuckDuckGo AI",
+      SemrushBot: "Semrush", AhrefsBot: "Ahrefs", YandexBot: "Yandex",
     };
+    if (b === "Browser") return lang === "ar" ? "متصفح" : "Browser";
+    if (b === "Unknown") return lang === "ar" ? "غير مصنّف" : "Unclassified";
     return map[b] ? `${b} — ${map[b]}` : b;
   };
 
@@ -738,6 +759,7 @@ function PropagationPanel() {
           <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
             {t("propagation_visible_to").replace("{n}", String(knownCount))}
           </div>
+          <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "يشمل السجل: زواحف الذكاء الاصطناعي، محركات البحث، أدوات تحليل الويب، معاينات الروابط، والزيارات المباشرة عبر المتصفح. «الملف المعتمد الأساسي» يعني أن الزيارة قرأت رابطك المعتمد مباشرة قبل ربطها بحزمة تعزيز." : "Log includes AI crawlers, search engines, web-analysis tools, link previews and direct browser visits. “Verified main profile” means the visit read your official link directly, not a specific boost pack."}</p>
           <div className="overflow-auto rounded-lg border border-border">
             <table className="w-full text-xs">
               <thead className="bg-background/60 text-muted-foreground">
@@ -777,7 +799,7 @@ function PropagationPanel() {
                 {hits.slice(0, shown).map((h, i) => (
                   <tr key={i} className="border-t border-border align-top">
                     <td className="whitespace-nowrap px-2 py-1.5">{new Date(h.hit_at).toLocaleString()}</td>
-                    <td className="px-2 py-1.5 font-semibold">{botName(h.bot_name || "Unknown")}</td>
+                    <td className="px-2 py-1.5"><div className="font-semibold">{botName(h.bot_name || "Unknown")}</div><div className="text-[10px] text-muted-foreground">{catLabel(h.bot_name)} · {packLabel(h.brand_slug)}</div></td>
                     <td className="break-all px-2 py-1.5 text-[10px]">{safeDecode(h.path || "")}</td>
                     <td className="break-all px-2 py-1.5 text-[10px] text-muted-foreground">{h.user_agent || ""}</td>
                   </tr>
