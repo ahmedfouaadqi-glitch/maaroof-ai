@@ -11,8 +11,8 @@ describe("engine card adapters", () => {
   it("empty results produce no cards", () => {
     expect(fromResearch({})).toEqual([]); expect(fromSuggestion({ variants: [] })).toEqual([]);
   });
-  it("suggestion yields 9 estimated cards", () => {
+  it("suggestion yields 10 estimated cards", () => {
     const r = fromSuggestion({ variants: [{ platform: "linkedin", content: "في 2026 نمت المبيعات 40% لدى 3 فروع", geo_score: 70 }] });
-    expect(r).toHaveLength(9); expect(r.every((c) => c.basis === "estimated")).toBe(true);
+    expect(r).toHaveLength(10); expect(r.every((c) => c.basis === "estimated")).toBe(true);
   });
 });
