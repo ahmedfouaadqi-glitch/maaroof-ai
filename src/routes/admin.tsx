@@ -1103,7 +1103,7 @@ function AccessTab() {
   );
 }
 
-const ALL_PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi"] as const;
+const ALL_PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi","qwen"] as const;
 
 function BoostTab() {
   const { t } = useI18n();
