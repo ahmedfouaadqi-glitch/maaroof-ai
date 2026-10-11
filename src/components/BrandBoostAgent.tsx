@@ -759,6 +759,7 @@ function PropagationPanel() {
           <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
             {t("propagation_visible_to").replace("{n}", String(knownCount))}
           </div>
+          <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "يشمل السجل: زواحف الذكاء الاصطناعي، محركات البحث، أدوات تحليل الويب، معاينات الروابط، والزيارات المباشرة عبر المتصفح. «الملف المعتمد الأساسي» يعني أن الزيارة قرأت رابطك المعتمد مباشرة قبل ربطها بحزمة تعزيز." : "Log includes AI crawlers, search engines, web-analysis tools, link previews and direct browser visits. “Verified main profile” means the visit read your official link directly, not a specific boost pack."}</p>
           <div className="overflow-auto rounded-lg border border-border">
             <table className="w-full text-xs">
               <thead className="bg-background/60 text-muted-foreground">
@@ -798,7 +799,7 @@ function PropagationPanel() {
                 {hits.slice(0, shown).map((h, i) => (
                   <tr key={i} className="border-t border-border align-top">
                     <td className="whitespace-nowrap px-2 py-1.5">{new Date(h.hit_at).toLocaleString()}</td>
-                    <td className="px-2 py-1.5 font-semibold">{botName(h.bot_name || "Unknown")}</td>
+                    <td className="px-2 py-1.5"><div className="font-semibold">{botName(h.bot_name || "Unknown")}</div><div className="text-[10px] text-muted-foreground">{catLabel(h.bot_name)} · {packLabel(h.brand_slug)}</div></td>
                     <td className="break-all px-2 py-1.5 text-[10px]">{safeDecode(h.path || "")}</td>
                     <td className="break-all px-2 py-1.5 text-[10px] text-muted-foreground">{h.user_agent || ""}</td>
                   </tr>

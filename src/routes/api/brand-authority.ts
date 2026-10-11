@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/brand-authority")({
           hits.push(h);
         }
         hits.sort((a, b) => String(b.hit_at).localeCompare(String(a.hit_at)));
-        const known = hits.filter((h) => h.bot_name && h.bot_name !== "Unknown");
+        const known = hits.filter((h) => h.bot_name && h.bot_name !== "Unknown" && h.bot_name !== "Browser");
         const stats = {
           total: hits.length,
           known: known.length,
