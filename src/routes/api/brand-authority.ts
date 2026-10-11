@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/brand-authority")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const { admin, userId, err } = await authUser(request);
+        const { admin, userId, profile, err } = await authUser(request);
         if (err) return err;
 
         const url = new URL(request.url);
