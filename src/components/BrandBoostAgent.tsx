@@ -510,6 +510,7 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
               <a href={pack.public_url} target="_blank" rel="noreferrer" className="rounded border border-border px-2 py-0.5 text-[10px]"><ExternalLink className="inline size-3" /> {t("authority_open")}</a>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">{t("authority_public_hint")}</p>
+            <p className="mt-2 rounded border border-primary/20 bg-background/50 p-2 text-[11px] text-foreground/85">{lang === "ar" ? "ضع هذا الرابط في خانة الرابط (Bio) في إنستغرام أو X أو لينكدإن أو تيك توك — لا تحتاج مبرمجاً ولا موقعاً." : lang === "ku" ? "ئەم لینکە لە بەشی Bio ی ئینستاگرام، X، لینکدئین یان تیکتۆک دابنێ — پێویستت بە پرۆگرامەر نییە." : "Paste this link in your bio on Instagram, X, LinkedIn or TikTok — no developer or website needed."}</p>
 
             {/* Share buttons */}
             <div className="mt-3">
@@ -524,6 +525,9 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
           {pack.summary && <div className="rounded-lg border border-border bg-background/40 p-3">{pack.summary}</div>}
 
+          <details className="rounded-lg border border-border bg-background/30 p-2">
+            <summary className="cursor-pointer text-[11px] font-semibold text-foreground">{lang === "ar" ? "لأصحاب المواقع: الأكواد التقنية (اختياري)" : lang === "ku" ? "بۆ خاوەن ماڵپەڕ: کۆدە تەکنیکییەکان (ئارەزوومەندانە)" : "For website owners: technical code (optional)"}</summary>
+            <div className="mt-2 space-y-3">
           <div className="rounded-lg border border-border bg-background/40 p-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase text-muted-foreground">{t("authority_jsonld")}</span>
@@ -539,6 +543,9 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
             </div>
             <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-foreground/90">{pack.markdown}</pre>
           </div>
+
+            </div>
+          </details>
 
           {/* Export buttons */}
           <div className="flex flex-wrap gap-2">
@@ -655,7 +662,7 @@ function PropagationPanel() {
     title: lang === "ar" ? "سجل زيارات الزواحف الكامل" : lang === "ku" ? "تۆماری تەواوی سەردانی کرۆلەرەکان" : "Full crawler visit log",
     subtitle: stats?.first ? `${new Date(stats.first).toLocaleDateString()} → ${new Date(stats.last || stats.first).toLocaleDateString()}` : undefined,
     sections: [
-      { heading: lang === "ar" ? "الملخص" : "Summary", kind: "kv", kv: [
+      { heading: lang === "ar" ? "الملخص" : "Summary", kind: "kv", rows: [
         [lang === "ar" ? "إجمالي الزيارات" : "Total visits", String(stats?.total ?? hits.length)],
         [lang === "ar" ? "زيارات زواحف معروفة" : "Known crawler visits", String(stats?.known ?? 0)],
         [lang === "ar" ? "أول زيارة" : "First visit", stats?.first ? new Date(stats.first).toLocaleString() : "-"],
