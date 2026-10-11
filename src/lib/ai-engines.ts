@@ -15,6 +15,7 @@ export const ENGINE_KEYS = [
   "mistral",
   "deepseek",
   "kimi",
+  "qwen",
 ] as const;
 
 export type EngineKey = (typeof ENGINE_KEYS)[number];
@@ -98,6 +99,13 @@ export const ENGINE_CATALOG: Record<EngineKey, EngineDef> = {
     proxy: true,
     defaultModel: "google/gemini-2.5-pro",
   },
+  qwen: {
+    key: "qwen",
+    name: "Qwen",
+    tint: "from-violet-500/20 to-indigo-500/5",
+    proxy: true,
+    defaultModel: "google/gemini-2.5-flash",
+  },
 };
 
 export const ENGINE_LIST: EngineDef[] = ENGINE_KEYS.map((k) => ENGINE_CATALOG[k]);
@@ -121,7 +129,7 @@ export function normalizeEngines(input: unknown): EngineKey[] {
 export const ENGINE_LIMIT_BY_PLAN: Record<string, number> = {
   "MARK 1": 3,
   "MARK 2": 6,
-  "MARK 3": 9,
+  "MARK 3": 10,
 };
 
 /** Free / trial / unknown plans get the Starter allowance. */

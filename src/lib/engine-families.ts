@@ -16,6 +16,7 @@ export const ENGINE_FAMILY: Record<EngineKey, EngineFamily> = {
   deepseek: "deep_reasoning",
   mistral: "deep_reasoning",
   kimi: "deep_reasoning",
+  qwen: "deep_reasoning",
 };
 
 type L3 = { ar: string; en: string; ku: string };
@@ -48,6 +49,6 @@ export const FAMILY_FOCUS: Record<EngineFamily, L3> = {
 /** Map any engine display name ("ChatGPT", "chatgpt") to its key. */
 export function engineKeyFromName(name: string): EngineKey | null {
   const n = String(name || "").toLowerCase().replace(/[^a-z]/g, "");
-  const keys: EngineKey[] = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"];
+  const keys: EngineKey[] = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi", "qwen"];
   return keys.find((k) => n.startsWith(k)) || null;
 }

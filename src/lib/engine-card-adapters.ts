@@ -6,7 +6,7 @@ import type { EngineKey } from "@/lib/ai-engines";
 export type CardBasis = "measured" | "estimated" | "recommended";
 export type EngineCard = { key: EngineKey; score?: number | null; verdict?: string; text?: string; action?: string; basis?: CardBasis; items?: string[] };
 
-const ALL: EngineKey[] = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi"];
+const ALL: EngineKey[] = ["chatgpt", "gemini", "claude", "perplexity", "copilot", "grok", "mistral", "deepseek", "kimi", "qwen"];
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 /** GEO Strategist: priority_platforms → recommendation cards (only engines the plan named). */

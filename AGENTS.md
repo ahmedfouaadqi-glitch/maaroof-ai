@@ -10,3 +10,4 @@
 - Server functions are protected by createCsrfMiddleware filtered to serverFn only — why: block cross-site RPC without touching external webhook routes.
 
 - Entity Truth Card fields live on profiles (entity_*, hq_country, target_markets); only server/admin may set verification/lock fields (trigger guard) and consistency checks are pure rules in src/lib/entity-consistency.ts — why: one zero-cost identity source for all tools.
+- Engine catalog (src/lib/ai-engines.ts) is the single source for all AI engines, incl. proxied ones like Qwen — why: adding an engine propagates to every tool, agent and UI.

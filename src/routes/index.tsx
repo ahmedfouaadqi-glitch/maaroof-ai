@@ -14,7 +14,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "MAAROOF Ai — GEO - SEO - AEO , Cited by ChatGPT & Gemini" },
-      { name: "description", content: "Score, optimize and publish content so 9 AI engines cite your brand in English, Arabic and Kurdish." },
+      { name: "description", content: "Score, optimize and publish content so 10 AI engines cite your brand in English, Arabic and Kurdish." },
       { property: "og:title", content: "MAAROOF Ai — Get cited by ChatGPT, Gemini & Perplexity" },
       { property: "og:description", content: "Analyze, score and publish GEO-ready content so AI answer engines cite your brand across MENA." },
       { property: "og:url", content: "https://maaroofai.com/" },
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
         operatingSystem: "Web",
         url: "https://maaroofai.com/",
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content optimized for 9 AI search engines.",
+        description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content optimized for 10 AI search engines.",
       }),
     }],
   }),
@@ -82,7 +82,7 @@ function Page() {
 
         </div>
 
-        {/* HERO — 9 engines, concise */}
+        {/* HERO — 10 engines, concise */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 grid-bg opacity-40" />
           <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[600px] max-w-5xl rounded-full bg-primary/15 blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
@@ -121,7 +121,7 @@ function Page() {
                 className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg"
               />
 
-              {/* 9 engine chips */}
+              {/* 10 engine chips */}
               <div className="mx-auto mt-7 flex max-w-3xl flex-wrap items-center justify-center gap-2.5">
                 {ENGINES.map((e) => (
                   <span key={e.name} className={`inline-flex items-center gap-2 rounded-full border border-border bg-gradient-to-br ${e.tint} px-3 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur transition hover:scale-105 hover:border-primary/50`}>
