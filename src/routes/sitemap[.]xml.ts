@@ -64,6 +64,16 @@ export const Route = createFileRoute("/sitemap.xml")({
               const slug = String((p as any).slug || "").trim();
               if (slug) entries.push({ path: `/p/${slug}`, changefreq: "monthly", priority: "0.6" });
             }
+
+            // Public brand authority packs
+            const { data: bpacks } = await admin
+              .from("brand_authority_packs")
+              .select("brand_slug")
+              .limit(5000);
+            for (const b of bpacks || []) {
+              const s = String((b as any).brand_slug || "").trim();
+              if (s) entries.push({ path: `/api/public/brand/${encodeURIComponent(s)}`, changefreq: "weekly", priority: "0.5" });
+            }
           }
         } catch {
           // Sitemap should still render even if DB is unreachable.

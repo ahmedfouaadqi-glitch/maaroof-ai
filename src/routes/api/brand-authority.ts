@@ -31,22 +31,49 @@ export const Route = createFileRoute("/api/brand-authority")({
 
         let packQ = admin.from("brand_authority_packs").select("*").eq("user_id", userId!);
         if (slug) packQ = packQ.eq("brand_slug", slug);
-        const { data: packs } = await packQ.order("updated_at", { ascending: false }).limit(5);
+        const { data: packs } = await packQ.order("updated_at", { ascending: false }).limit(50);
 
-        const slugs = (packs || []).map((p: any) => p.brand_slug);
-        let hits: any[] = [];
-        if (slugs.length) {
-          const since = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
-          const { data: h } = await admin
-            .from("crawler_hits")
-            .select("brand_slug, bot_name, user_agent, path, hit_at")
-            .eq("user_id", userId!)
-            .gte("hit_at", since)
-            .order("hit_at", { ascending: false })
-            .limit(200);
-          hits = h || [];
+        // Full history (no day window): match by owner id, any of the user's brand slugs,
+        // and their public profile path. Paged in 1000-row batches, hard-capped for safety.
+        const { data: allPacks } = await admin.from("brand_authority_packs").select("brand_slug").eq("user_id", userId!).limit(200);
+        const slugs = Array.from(new Set((allPacks || []).map((p: any) => String(p.brand_slug || "")).filter(Boolean)));
+        const username = String((profile as any)?.username || "").trim();
+        const COLS = "brand_slug, bot_name, user_agent, path, hit_at";
+        const CAP = 20000;
+        const fetchAll = async (apply: (q: any) => any) => {
+          const out: any[] = [];
+          for (let from = 0; from < CAP; from += 1000) {
+            const { data, error } = await apply(admin.from("crawler_hits").select(COLS))
+              .order("hit_at", { ascending: false })
+              .range(from, from + 999);
+            if (error || !data?.length) break;
+            out.push(...data);
+            if (data.length < 1000) break;
+          }
+          return out;
+        };
+        const batches = await Promise.all([
+          fetchAll((q) => q.eq("user_id", userId!)),
+          slugs.length ? fetchAll((q) => q.in("brand_slug", slugs)) : Promise.resolve([]),
+          username ? fetchAll((q) => q.like("path", `/u/${username.replace(/[%_]/g, "")}%`)) : Promise.resolve([]),
+        ]);
+        const seen = new Set<string>();
+        const hits: any[] = [];
+        for (const h of batches.flat()) {
+          const k = `${h.hit_at}|${h.path}|${h.user_agent}|${h.bot_name}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          hits.push(h);
         }
-        return Response.json({ packs: packs || [], hits });
+        hits.sort((a, b) => String(b.hit_at).localeCompare(String(a.hit_at)));
+        const known = hits.filter((h) => h.bot_name && h.bot_name !== "Unknown");
+        const stats = {
+          total: hits.length,
+          known: known.length,
+          first: hits.length ? hits[hits.length - 1].hit_at : null,
+          last: hits.length ? hits[0].hit_at : null,
+        };
+        return Response.json({ packs: packs || [], hits, stats, username });
       },
 
       POST: async ({ request }) => {
