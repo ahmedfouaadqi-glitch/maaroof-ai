@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
+import { ExportButtons } from "@/components/ExportButtons";
 import { ToolHistory } from "@/components/ToolHistory";
 import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Search, Mail, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -24,7 +25,7 @@ import EngineSelector from "@/components/EngineSelector";
 
 import { ENGINE_KEYS } from "@/lib/ai-engines";
 const PLATFORMS: string[] = [...ENGINE_KEYS];
-const MAX_PLATFORMS_PER_RUN = 9;
+const MAX_PLATFORMS_PER_RUN = 10;
 
 export function BrandBoostAgent() {
   const { t, lang } = useI18n();
@@ -33,6 +34,13 @@ export function BrandBoostAgent() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
   const [kw, setKw] = useState((profile as any)?.brand_keywords || "");
+  // Fill once from the saved profile when it arrives; never overwrite what the user typed.
+  useEffect(() => {
+    const pb = (profile as any)?.brand_name;
+    const pk = (profile as any)?.brand_keywords;
+    if (pb) setBrand((cur: string) => cur || pb);
+    if (pk) setKw((cur: string) => cur || pk);
+  }, [(profile as any)?.brand_name, (profile as any)?.brand_keywords]);
   const [freq, setFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [sel, setSel] = useState<string[]>(PLATFORMS.slice(0, MAX_PLATFORMS_PER_RUN));
   const [approved, setApproved] = useState(false);
@@ -600,9 +608,13 @@ function downloadFile(name: string, content: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+function safeDecode(s: string): string {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+
 function PropagationPanel() {
   const { t, lang } = useI18n();
-  const [data, setData] = useState<{ packs: any[]; hits: any[] } | null>(null);
+  const [data, setData] = useState<{ packs: any[]; hits: any[]; stats?: { total: number; known: number; first: string | null; last: string | null } } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -637,6 +649,29 @@ function PropagationPanel() {
     return m;
   }, [hits]);
   const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown").length;
+  const [shown, setShown] = useState(100);
+  const stats = data?.stats;
+  const buildExport = (): ExportPayload => ({
+    title: lang === "ar" ? "سجل زيارات الزواحف الكامل" : lang === "ku" ? "تۆماری تەواوی سەردانی کرۆلەرەکان" : "Full crawler visit log",
+    subtitle: stats?.first ? `${new Date(stats.first).toLocaleDateString()} → ${new Date(stats.last || stats.first).toLocaleDateString()}` : undefined,
+    sections: [
+      { heading: lang === "ar" ? "الملخص" : "Summary", kind: "kv", kv: [
+        [lang === "ar" ? "إجمالي الزيارات" : "Total visits", String(stats?.total ?? hits.length)],
+        [lang === "ar" ? "زيارات زواحف معروفة" : "Known crawler visits", String(stats?.known ?? 0)],
+        [lang === "ar" ? "أول زيارة" : "First visit", stats?.first ? new Date(stats.first).toLocaleString() : "-"],
+        [lang === "ar" ? "آخر زيارة" : "Last visit", stats?.last ? new Date(stats.last).toLocaleString() : "-"],
+      ] } as any,
+      { heading: lang === "ar" ? "حسب الزاحف" : "By crawler", kind: "table", table: {
+        columns: ["Bot", "Count", "Last"],
+        data: Array.from(byBot.entries()).map(([b, i]) => [botName(b), i.count, new Date(i.last).toLocaleString()]),
+      } } as any,
+      { heading: lang === "ar" ? "كل الزيارات" : "All visits", kind: "table", table: {
+        columns: ["Date", "Bot", "Page", "User-Agent"],
+        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), h.bot_name || "Unknown", safeDecode(h.path || ""), h.user_agent || ""]),
+      } } as any,
+    ],
+  });
+
 
   const exportCsv = () => {
     const rows = [["bot_name", "user_agent", "path", "hit_at"]];
@@ -672,7 +707,10 @@ function PropagationPanel() {
           <div className="flex items-center gap-1">
             <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-full border border-border bg-background/60 px-2 py-1 text-[11px]"><RefreshCw className="inline size-3" /> {lang === "ar" ? "تحديث" : lang === "ku" ? "نوێکردن" : "Refresh"}</button>
             {hits.length > 0 && (
-              <button onClick={exportCsv} className="rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><Download className="inline size-3" /> CSV</button>
+              <>
+                <button onClick={exportCsv} className="rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><Download className="inline size-3" /> CSV</button>
+                <ExportButtons size="xs" toolKey="brand_boost" build={buildExport} />
+              </>
             )}
           </div>
         </div>
@@ -715,6 +753,36 @@ function PropagationPanel() {
               </tbody>
             </table>
           </div>
+          <div className="text-xs font-semibold text-foreground">
+            {lang === "ar" ? "كل الزيارات بالتفصيل" : lang === "ku" ? "هەموو سەردانەکان بە وردی" : "All visits in detail"} ({hits.length})
+          </div>
+          <div className="max-h-96 overflow-auto rounded-lg border border-border">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-background text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-1.5 text-start">{lang === "ar" ? "التاريخ والوقت" : lang === "ku" ? "بەروار و کات" : "Date & time"}</th>
+                  <th className="px-2 py-1.5 text-start">{t("propagation_bot")}</th>
+                  <th className="px-2 py-1.5 text-start">{lang === "ar" ? "الصفحة" : lang === "ku" ? "پەڕە" : "Page"}</th>
+                  <th className="px-2 py-1.5 text-start">User-Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hits.slice(0, shown).map((h, i) => (
+                  <tr key={i} className="border-t border-border align-top">
+                    <td className="whitespace-nowrap px-2 py-1.5">{new Date(h.hit_at).toLocaleString()}</td>
+                    <td className="px-2 py-1.5 font-semibold">{botName(h.bot_name || "Unknown")}</td>
+                    <td className="break-all px-2 py-1.5 text-[10px]">{safeDecode(h.path || "")}</td>
+                    <td className="break-all px-2 py-1.5 text-[10px] text-muted-foreground">{h.user_agent || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {hits.length > shown && (
+            <button onClick={() => setShown((s) => s + 100)} className="rounded-full border border-border px-3 py-1 text-[11px]">
+              {lang === "ar" ? "عرض المزيد" : lang === "ku" ? "زیاتر" : "Show more"}
+            </button>
+          )}
         </>
       )}
     </div>
