@@ -1,5 +1,6 @@
 {
   "name": "tanstack_start_ts",
+  "author": "Ahmed Maaroof",
   "private": true,
   "sideEffects": false,
   "type": "module",
