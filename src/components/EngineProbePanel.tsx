@@ -1,4 +1,4 @@
-// Micro-probe: let the user pick which of the nine engines to question live,
+// Micro-probe: let the user pick which of the ten engines to question live,
 // see the expected cost against their balance, then show real answers.
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Radar, Lock } from "lucide-react";

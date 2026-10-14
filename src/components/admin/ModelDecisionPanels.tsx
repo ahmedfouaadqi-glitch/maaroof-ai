@@ -29,7 +29,7 @@ const money = (n: any) => `$${Number(n || 0).toFixed(4)}`;
 import { ENGINES } from "@/components/engine-logos";
 import { getEngineEntitlement } from "@/lib/ai-engines.functions";
 
-/** المحركات التسعة ← النموذج المُختار حالياً لكل محرك (شفافية كاملة للإدارة). */
+/** المحركات العشرة ← النموذج المُختار حالياً لكل محرك (شفافية كاملة للإدارة). */
 function NineEnginesMap() {
   const { t } = useI18n();
   const load = useServerFn(getEngineEntitlement);

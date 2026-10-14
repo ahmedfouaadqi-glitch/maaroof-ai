@@ -16,8 +16,8 @@ export type EngineAnswer = {
 };
 
 const TX = {
-  ar: { title: "كيف تُجيب النماذج التسعة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", recommended: "توصية", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة" },
-  en: { title: "How the nine engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
+  ar: { title: "كيف تُجيب النماذج العشرة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", recommended: "توصية", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة" },
+  en: { title: "How the ten engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
   ku: { title: "نۆ بزوێنەرەکە چۆن وەڵام دەدەنەوە", measured: "وەڵامی ڕاستەقینە", estimated: "خەمڵاندنی ئەلگۆریتمی", recommended: "پێشنیار", focus: "ئەوەی بۆ ئەم بزوێنەرە گرنگە", none: "ئەم بزوێنەرە وەڵامی نەدایەوە", action: "هەنگاو" },
 };
 

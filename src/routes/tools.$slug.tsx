@@ -42,8 +42,8 @@ const SLUGS: Record<string, SlugDef> = {
   visibility: {
     key: "visibility",
     to: "/dashboard",
-    metaAr: { title: "تحليل الظهور — في 9 محركات", desc: "نسأل المحركات التسعة عن استعلاماتك ونعطيك GEO Trust Score وخطة رفع.", when: "كل أسبوع أو بعد كل حملة." },
-    metaEn: { title: "AI Visibility — Across 9 engines", desc: "We probe 9 engines on your queries and return a GEO Trust Score with an uplift plan.", when: "Weekly, or after every campaign." },
+    metaAr: { title: "تحليل الظهور — في 10 محركات", desc: "نسأل المحركات العشرة عن استعلاماتك ونعطيك GEO Trust Score وخطة رفع.", when: "كل أسبوع أو بعد كل حملة." },
+    metaEn: { title: "AI Visibility — Across 10 engines", desc: "We probe 10 engines on your queries and return a GEO Trust Score with an uplift plan.", when: "Weekly, or after every campaign." },
     metaKu: { title: "پشکنینی دیارییەتی", desc: "٩ بزوێنەر دەپرسرێت.", when: "هەفتانە یان دوای کەمپەین." },
   },
   brand_boost: {

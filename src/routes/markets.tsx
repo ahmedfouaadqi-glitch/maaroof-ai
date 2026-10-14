@@ -59,8 +59,8 @@ export const Route = createFileRoute("/markets")({
 
 const LEVELS = [
   {
-    en: ["Worldwide", "No place assumed. Recommendations target a global audience across all nine answer engines."],
-    ar: ["عالمي", "لا نفترض أي مكان. التوصيات تستهدف جمهوراً عالمياً عبر المحركات التسعة."],
+    en: ["Worldwide", "No place assumed. Recommendations target a global audience across all ten answer engines."],
+    ar: ["عالمي", "لا نفترض أي مكان. التوصيات تستهدف جمهوراً عالمياً عبر المحركات العشرة."],
     ku: ["جیهانی", "هیچ شوێنێک دانانرێت. ڕاسپاردەکان ئامانجی بینەری جیهانین بە نۆ بزوێنەر."],
   },
   {
