@@ -1,5 +1,6 @@
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
+import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
 import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
@@ -119,6 +120,12 @@ export type RunContext = {
   signal: AbortSignal;
   /** Part 6 — three-way execution mode. Defaults to "execution" for backward compat. */
   executionMode?: ExecutionMode;
+  /** Run the expert council / specialised sub-agents. Default true (current behaviour). */
+  useSubagents?: boolean;
+  /** Allow live probes of the AI engines. Default true (current behaviour). */
+  liveProbe?: boolean;
+  /** Answers to earlier clarify questions, e.g. { brand: "X" }. */
+  clarifications?: Record<string, string>;
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
@@ -168,6 +175,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       workspaceProfile = data || null;
     } catch {}
   }
+  // Entity Truth Card fallback for tool inputs (fail-open).
+  let entityProfile: any = null;
+  try {
+    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country").eq("id", ctx.userId).maybeSingle();
+    entityProfile = data || null;
+  } catch {}
+  const clarBrand = String(ctx.clarifications?.brand || "").trim().slice(0, 200) || null;
 
   // Part 6 — three-way execution mode. Backward compatible: defaults to "execution".
   // The safe modes (simulation / recommendation) NEVER execute tools, so they are
@@ -622,7 +636,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       } catch {}
     }
 
-    if (settings.council?.enabled) {
+    if (settings.council?.enabled && ctx.useSubagents !== false) {
       await ctx.emit("phase", { phase: "council" });
       const requiredCaps = new Set<Capability>();
       for (const s of steps) {
@@ -866,8 +880,24 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await logMsg("tool_result", err);
         continue;
       }
+      // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
+      const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
+      const missing = missingFields(step.tool, filled);
+      if (ctx.liveProbe === false && step.tool === "visibility") {
+        const skip = { skipped: "live_probe_disabled_by_user", tool: step.tool };
+        results.push({ tool: step.tool, ok: false, output: skip });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+        continue;
+      }
+      if (missing.length) {
+        const q = { index: i, tool: step.tool, field: missing[0], question: clarifyQuestion(missing[0], ctx.language) };
+        results.push({ tool: step.tool, ok: false, output: { needs_input: missing } });
+        await ctx.emit("clarify", q);
+        await logMsg("clarify", q);
+        continue;
+      }
       try {
-        const body = { ...normalizeToolInput(step.input), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        const body = { ...normalizeToolInput(filled), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
         const toolTimer = setTimeout(() => toolCtl.abort(), settings.tool_timeout_ms);
         const onAbort = () => toolCtl.abort();
@@ -888,6 +918,15 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const ok = resp.ok;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
+        // Contradiction check against the saved headquarters (no source named to the user).
+        try {
+          const hq = String(entityProfile?.hq_country || "").trim().toLowerCase();
+          const seen = String((json as any)?.country || (json as any)?.hq_country || "").trim().toLowerCase();
+          if (ok && hq && seen && seen !== hq && !seen.includes(hq) && !hq.includes(seen)) {
+            const msg = ctx.language === "en" ? `We found the country "${seen}" while your saved headquarters is "${hq}". Is that correct?` : ctx.language === "ku" ? `وڵاتی "${seen}" دۆزرایەوە بەڵام بارەگای تۆمارکراو "${hq}"ە. ئایا ئەمە ڕاستە؟` : `وجدنا أن الدولة "${seen}" بينما المقر المحفوظ "${hq}". هل هذا صحيح؟`;
+            await ctx.emit("clarify", { index: i, tool: step.tool, field: "hq_country", question: msg });
+          }
+        } catch {}
         await logMsg("tool_result", { tool: step.tool, ok, output: json });
         // Record tool usage in token_ledger for finance/health tracking.
         try {
@@ -914,7 +953,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
         ]);
         totalUsd += ref.usd; totalTokens += ref.tokens;
-        await ctx.emit("reflection", { text: ref.text });
+        await ctx.emit("reflection", { text: sanitizeReflection(ref.text) });
         await logMsg("reflection", { text: ref.text }, ref.tokens, ref.usd);
       }
     }
