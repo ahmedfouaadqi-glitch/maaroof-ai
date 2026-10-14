@@ -181,31 +181,14 @@ function MaaroofPage() {
     setEvents(evs);
   }
 
-  /** Full session report: every step, input, result, reflection, council note and cost. */
+  /** Full session report: readable sections; technical data only when chosen. */
   function buildReport(): ExportPayload {
-    const j = (v: any) => { try { return typeof v === "string" ? v : JSON.stringify(v, null, 2); } catch { return String(v); } };
-    const sections: ExportPayload["sections"] = [{ heading: t("auto.target"), kind: "text", text: goal }];
-    const plan = events.find((e) => e.type === "plan")?.data;
-    if (plan) sections.push({ heading: lang === "en" ? "Plan" : lang === "ku" ? "پلان" : "الخطة", kind: "text", text: j(plan) });
-    const rows: (string | number)[][] = [];
-    events.forEach((e) => {
-      if (e.type === "tool_call") rows.push([Number(e.data?.index ?? rows.length) + 1, String(e.data?.tool || ""), j(e.data?.input ?? {}), String(e.data?.reason || ""), "", ""]);
-      if (e.type === "tool_result") {
-        const r = rows.find((x) => x[0] === Number(e.data?.index) + 1 && x[1] === e.data?.tool);
-        if (r) { r[4] = e.data?.ok ? "ok" : "failed"; r[5] = j(e.data?.output); }
-      }
-    });
-    if (rows.length) sections.push({ heading: lang === "en" ? "Steps & results" : lang === "ku" ? "هەنگاو و ئەنجام" : "الخطوات والنتائج", kind: "table", table: { columns: ["#", "tool", "input", "reason", "status", "output"], data: rows } });
-    const council = events.filter((e) => e.type === "council").map((e) => `${e.data?.expert || e.data?.capability || ""}: ${e.data?.opinion || e.data?.error || ""}`);
-    if (council.length) sections.push({ heading: lang === "en" ? "Expert council" : "مجلس الخبراء", kind: "list", list: council });
-    const refl = events.filter((e) => e.type === "reflection").map((e) => String(e.data?.text || ""));
-    if (refl.length) sections.push({ heading: lang === "en" ? "Reflections" : "التأملات", kind: "list", list: refl });
-    const clar = events.filter((e) => e.type === "clarify").map((e) => String(e.data?.question || ""));
-    if (clar.length) sections.push({ heading: lang === "en" ? "Questions asked" : "الأسئلة المطروحة", kind: "list", list: clar });
-    if (finalEventText) sections.push({ heading: t("auto.final_answer"), kind: "text", text: finalEventText });
-    const done = [...events].reverse().find((e) => e.type === "done")?.data;
-    if (done) sections.push({ heading: lang === "en" ? "Cost" : "الكلفة", kind: "kv", rows: [["USD", Number(done.totalUsd || 0).toFixed(4)], ["tokens", Number(done.totalTokens || 0)], ["steps", Number(done.steps || 0)]] });
-    return { title: t("auto.maaroof_report"), lang: lang as any, sections };
+    const steps = pickedSteps.length ? pickedSteps : undefined;
+    return {
+      title: t("auto.maaroof_report"),
+      lang: lang as any,
+      sections: buildSessionSections({ events, lang, goal, finalText: finalEventText, selection: { steps, includeTechnical: techOn } }),
+    };
   }
   function exportFinal() { /* kept for the stage button; full export lives in ExportButtons below */ }
 
@@ -441,6 +424,23 @@ function MaaroofPage() {
                 <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{lang === "en" ? "Full session report:" : "التقرير الكامل للجلسة:"}</span>
                   <ExportButtons toolKey="maaroof" size="xs" build={buildReport} />
+                </div>
+              )}
+              {events.length > 0 && !running && sessionSteps.length > 0 && (
+                <div className="mt-2 rounded-lg border bg-card/60 p-3 text-xs space-y-2">
+                  <div className="font-semibold">{lang === "en" ? "Choose what to export (none selected = everything)" : lang === "ku" ? "هەڵبژێرە چی هەناردە بکەیت" : "اختر ما تريد تصديره (بدون اختيار = الكل)"}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {sessionSteps.map((s) => (
+                      <label key={s.index} className="inline-flex items-center gap-1 rounded-full border px-2 py-1 cursor-pointer">
+                        <input type="checkbox" checked={pickedSteps.includes(s.index)} onChange={(e) => setPickedSteps((p) => e.target.checked ? [...p, s.index] : p.filter((x) => x !== s.index))} />
+                        <span>{s.index + 1}. {s.tool}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" checked={techOn} onChange={(e) => setTechOn(e.target.checked)} />
+                    <span>{lang === "en" ? "Include technical details (optional)" : lang === "ku" ? "وردەکاری تەکنیکی" : "تضمين التفاصيل التقنية (اختياري)"}</span>
+                  </label>
                 </div>
               )}
               <div ref={scrollRef} className="hidden" />
