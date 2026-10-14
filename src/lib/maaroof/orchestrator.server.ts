@@ -1,5 +1,7 @@
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
+import { describeToolOptions, enforceEnums } from "@/lib/tool-options";
+import { checkEntityConsistency } from "@/lib/entity-consistency";
 import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
@@ -101,7 +103,7 @@ export function normalizeToolInput(input: any): Record<string, any> {
 
 function toolsDescription(): string {
   return TOOL_CATALOG.filter((t) => t.group === "tools")
-    .map((t) => `- ${t.key}: ${t.labels.en}`)
+    .map((t) => { const o = describeToolOptions(t.key); return `- ${t.key}: ${t.labels.en}${o ? ` (${o})` : ""}`; })
     .join("\n");
 }
 
@@ -178,7 +180,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   // Entity Truth Card fallback for tool inputs (fail-open).
   let entityProfile: any = null;
   try {
-    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country").eq("id", ctx.userId).maybeSingle();
+    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope").eq("id", ctx.userId).maybeSingle();
     entityProfile = data || null;
   } catch {}
   const clarBrand = String(ctx.clarifications?.brand || "").trim().slice(0, 200) || null;
@@ -438,7 +440,23 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await ctx.emit("mci_hints", { items: hints });
       }
     } catch {}
-    const planUserMsg = mciHintLine +
+    // User's own recent tool runs (saved results + chosen options) — read-only, fail-open.
+    let historyLine = "";
+    try {
+      const { data: hist } = await db().from("report_drafts").select("tool_key, title, payload, created_at")
+        .eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(30);
+      const seen = new Set<string>(); const lines: string[] = [];
+      for (const h of (hist as any[]) || []) {
+        if (seen.has(h.tool_key) || lines.length >= 8) continue; seen.add(h.tool_key);
+        let snippet = ""; try { snippet = JSON.stringify(h.payload?.sections || h.payload).slice(0, 300); } catch {}
+        lines.push(`- ${h.tool_key} (${String(h.created_at).slice(0, 10)}): ${snippet}`);
+      }
+      if (lines.length) {
+        historyLine = `The user already ran these tools themselves (latest result per tool; prefer reusing over re-running):\n${lines.join("\n")}\n\n`;
+        await ctx.emit("user_history", { tools: Array.from(seen).slice(0, 8) });
+      }
+    } catch {}
+    const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
     const planResp = await call("planning", [
@@ -866,6 +884,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
+    const specialists = new Set<string>();
     for (let i = 0; i < steps.length; i++) {
       if (ctx.signal.aborted) break;
       const step = steps[i];
@@ -883,6 +902,20 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
       const missing = missingFields(step.tool, filled);
+      // Specialised sub-agent per tool (reused once created). Fail-open.
+      if (ctx.useSubagents !== false && !specialists.has(step.tool)) {
+        specialists.add(step.tool);
+        try {
+          const def = TOOL_CATALOG.find((t) => t.key === step.tool);
+          const { agent, reused } = await getOrCreateAgent({
+            userId: ctx.userId, workspaceId: ctx.workspaceId, role: `specialist:${step.tool}`,
+            mission: `Run ${step.tool} with correct tabs/options: ${describeToolOptions(step.tool)}`.slice(0, 500),
+            dna: { capabilities: (def?.capabilities as string[]) || [step.tool] } as any,
+            warmReuse: true, minSuccessRate: 0.5,
+          });
+          if (agent) await ctx.emit("agent", { id: agent.id, role: agent.role, version: agent.version, lifecycle_state: agent.lifecycle_state, reused, specialist: step.tool });
+        } catch {}
+      }
       if (ctx.liveProbe === false && step.tool === "visibility") {
         const skip = { skipped: "live_probe_disabled_by_user", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: skip });
@@ -897,7 +930,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         continue;
       }
       try {
-        const body = { ...normalizeToolInput(filled), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        const body = { ...normalizeToolInput(enforceEnums(step.tool, filled)), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
         const toolTimer = setTimeout(() => toolCtl.abort(), settings.tool_timeout_ms);
         const onAbort = () => toolCtl.abort();
@@ -918,13 +951,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const ok = resp.ok;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
-        // Contradiction check against the saved headquarters (no source named to the user).
+        // Brand agent: identity consistency vs the Entity Truth Card (pure rules, no model cost).
         try {
-          const hq = String(entityProfile?.hq_country || "").trim().toLowerCase();
-          const seen = String((json as any)?.country || (json as any)?.hq_country || "").trim().toLowerCase();
-          if (ok && hq && seen && seen !== hq && !seen.includes(hq) && !hq.includes(seen)) {
-            const msg = ctx.language === "en" ? `We found the country "${seen}" while your saved headquarters is "${hq}". Is that correct?` : ctx.language === "ku" ? `وڵاتی "${seen}" دۆزرایەوە بەڵام بارەگای تۆمارکراو "${hq}"ە. ئایا ئەمە ڕاستە؟` : `وجدنا أن الدولة "${seen}" بينما المقر المحفوظ "${hq}". هل هذا صحيح؟`;
-            await ctx.emit("clarify", { index: i, tool: step.tool, field: "hq_country", question: msg });
+          if (ok && entityProfile) {
+            const alerts = checkEntityConsistency(JSON.stringify(json).slice(0, 6000), entityProfile as any);
+            for (const al of alerts.filter((x) => x.kind === "geo").slice(0, 1)) {
+              await ctx.emit("clarify", { index: i, tool: step.tool, field: "hq_country", question: `${al.text[ctx.language] || al.text.ar} ${ctx.language === "en" ? "Is that correct?" : ctx.language === "ku" ? "ئایا ئەمە ڕاستە؟" : "هل هذا صحيح؟"}` });
+            }
+            if (alerts.length) await ctx.emit("brand_check", { index: i, tool: step.tool, alerts });
           }
         } catch {}
         await logMsg("tool_result", { tool: step.tool, ok, output: json });
