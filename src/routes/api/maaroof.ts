@@ -51,7 +51,8 @@ export const Route = createFileRoute("/api/maaroof")({
 
         // Plan/token gate — treats Maaroof as a regular tool.
         const { chargeTokens, chargeFailureBody, resolveToolCost } = await import("@/lib/tokens.server");
-        const cost = await resolveToolCost(userId, "maaroof");
+        const priceKey = executionMode === "recommendation" || executionMode === "simulation" ? `maaroof.${executionMode}` : "maaroof";
+        const cost = await resolveToolCost(userId, priceKey);
         const { data: prof } = await admin.from("profiles").select("is_subscribed, tokens_balance, tokens_daily_limit, tokens_monthly_limit").eq("id", userId).maybeSingle();
         const hasMeter = Number((prof as any)?.tokens_balance) > 0 || (prof as any)?.tokens_daily_limit != null || (prof as any)?.tokens_monthly_limit != null;
 
@@ -59,7 +60,7 @@ export const Route = createFileRoute("/api/maaroof")({
           return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
         }
         if (hasMeter) {
-          const charge = await chargeTokens({ userId, toolKey: "maaroof", meta: { goal: goal.slice(0, 200) } });
+          const charge = await chargeTokens({ userId, toolKey: priceKey, meta: { goal: goal.slice(0, 200), mode: executionMode || "execution" } });
           if (!charge.ok) {
             const status = charge.reason === "unpriced" ? 402 : charge.reason === "balance" || charge.reason === "daily_limit" || charge.reason === "monthly_limit" ? 402 : 403;
             return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status });
