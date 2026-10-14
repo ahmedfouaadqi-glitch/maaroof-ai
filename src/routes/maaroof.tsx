@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
 const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: n.ar, en: n.en }));
 import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain, ListChecks, Share2, ShieldCheck, GraduationCap } from "lucide-react";
-import { exportToPDF } from "@/lib/exports";
+import type { ExportPayload } from "@/lib/exports";
+import { ExportButtons } from "@/components/ExportButtons";
 import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
@@ -27,9 +28,9 @@ export const Route = createFileRoute("/maaroof")({
   head: () => ({
     meta: [
       { title: "معروف — الوكيل الذكي · MAAROOF Ai" },
-      { name: "description", content: "Maaroof is the MAAROOF Ai autonomous agent: plans, researches and executes global GEO marketing tasks across 9 AI engines in Arabic, Kurdish and English." },
+      { name: "description", content: "Maaroof is the MAAROOF Ai autonomous agent: plans, researches and executes global GEO marketing tasks across 10 AI engines in Arabic, Kurdish and English." },
       { property: "og:title", content: "Maaroof — Autonomous GEO Agent · MAAROOF Ai" },
-      { property: "og:description", content: "Plans, researches and executes global GEO marketing tasks across 9 AI engines in AR, KU and EN." },
+      { property: "og:description", content: "Plans, researches and executes global GEO marketing tasks across 10 AI engines in AR, KU and EN." },
       { property: "og:url", content: "https://maaroofai.com/maaroof" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/maaroof" }],
@@ -57,6 +58,9 @@ function MaaroofPage() {
   const [activeWs, setActiveWs] = useState<Workspace | null>(null);
   const [executionMode, setExecutionMode] = useState<"simulation" | "recommendation" | "execution">("execution");
   const [typing, setTyping] = useState(false);
+  const [useSubagents, setUseSubagents] = useState(true);
+  const [liveProbe, setLiveProbe] = useState(true);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,7 +85,7 @@ function MaaroofPage() {
     })();
   }, [user?.id, running, activeWs]);
 
-  async function start() {
+  async function start(clarifications?: Record<string, string>) {
     if (!goal.trim() || running || !user) return;
     setRunning(true); setEvents([]);
     const { data: { session } } = await supabase.auth.getSession();
@@ -97,6 +101,9 @@ function MaaroofPage() {
           lang,
           workspace_id: activeWs?.id,
           execution_mode: executionMode,
+          use_subagents: useSubagents,
+          live_probe: liveProbe,
+          clarifications,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
         signal: ctl.signal,
@@ -152,24 +159,39 @@ function MaaroofPage() {
     }
     const { data: msgs } = await supabase.from("maaroof_messages").select("role, parts, created_at").eq("run_id", runId).order("created_at");
     const evs: Event[] = ((msgs as any[]) || []).map((m) => {
-      const map: Record<string, string> = { plan: "plan", tool_call: "tool_call", tool_result: "tool_result", reflection: "reflection", assistant: "final" };
+      const map: Record<string, string> = { plan: "plan", tool_call: "tool_call", tool_result: "tool_result", reflection: "reflection", assistant: "final", council: "council", clarify: "clarify" };
       return { type: map[m.role] || "phase", data: m.parts, t: new Date(m.created_at).getTime() };
     });
     setEvents(evs);
   }
 
-  function exportFinal() {
-    const text = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
-    if (!text) return;
-    exportToPDF({
-      title: t("auto.maaroof_report"),
-      lang: "ar",
-      sections: [
-        { heading: t("auto.target"), kind: "text", text: goal },
-        { heading: t("auto.final_answer"), kind: "text", text },
-      ],
+  /** Full session report: every step, input, result, reflection, council note and cost. */
+  function buildReport(): ExportPayload {
+    const j = (v: any) => { try { return typeof v === "string" ? v : JSON.stringify(v, null, 2); } catch { return String(v); } };
+    const sections: ExportPayload["sections"] = [{ heading: t("auto.target"), kind: "text", text: goal }];
+    const plan = events.find((e) => e.type === "plan")?.data;
+    if (plan) sections.push({ heading: lang === "en" ? "Plan" : lang === "ku" ? "پلان" : "الخطة", kind: "text", text: j(plan) });
+    const rows: (string | number)[][] = [];
+    events.forEach((e) => {
+      if (e.type === "tool_call") rows.push([Number(e.data?.index ?? rows.length) + 1, String(e.data?.tool || ""), j(e.data?.input ?? {}), String(e.data?.reason || ""), "", ""]);
+      if (e.type === "tool_result") {
+        const r = rows.find((x) => x[0] === Number(e.data?.index) + 1 && x[1] === e.data?.tool);
+        if (r) { r[4] = e.data?.ok ? "ok" : "failed"; r[5] = j(e.data?.output); }
+      }
     });
+    if (rows.length) sections.push({ heading: lang === "en" ? "Steps & results" : lang === "ku" ? "هەنگاو و ئەنجام" : "الخطوات والنتائج", kind: "table", table: { columns: ["#", "tool", "input", "reason", "status", "output"], data: rows } });
+    const council = events.filter((e) => e.type === "council").map((e) => `${e.data?.expert || e.data?.capability || ""}: ${e.data?.opinion || e.data?.error || ""}`);
+    if (council.length) sections.push({ heading: lang === "en" ? "Expert council" : "مجلس الخبراء", kind: "list", list: council });
+    const refl = events.filter((e) => e.type === "reflection").map((e) => String(e.data?.text || ""));
+    if (refl.length) sections.push({ heading: lang === "en" ? "Reflections" : "التأملات", kind: "list", list: refl });
+    const clar = events.filter((e) => e.type === "clarify").map((e) => String(e.data?.question || ""));
+    if (clar.length) sections.push({ heading: lang === "en" ? "Questions asked" : "الأسئلة المطروحة", kind: "list", list: clar });
+    if (finalEventText) sections.push({ heading: t("auto.final_answer"), kind: "text", text: finalEventText });
+    const done = [...events].reverse().find((e) => e.type === "done")?.data;
+    if (done) sections.push({ heading: lang === "en" ? "Cost" : "الكلفة", kind: "kv", rows: [["USD", Number(done.totalUsd || 0).toFixed(4)], ["tokens", Number(done.totalTokens || 0)], ["steps", Number(done.steps || 0)]] });
+    return { title: t("auto.maaroof_report"), lang: lang as any, sections };
   }
+  function exportFinal() { /* kept for the stage button; full export lives in ExportButtons below */ }
 
   if (loading || !user) return (
     <AuthGate
@@ -182,6 +204,7 @@ function MaaroofPage() {
 
   const totalUsd = events.reduce((s, e) => e.type === "done" ? s + (e.data?.totalUsd || 0) : s, 0);
   const stepsCount = events.filter((e) => e.type === "tool_call").length;
+  const clarifyEvents = events.filter((e) => e.type === "clarify");
   const finalEventText = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
   const lastErrorText = [...events].reverse().find((e) => e.type === "error")?.data?.message as string | undefined;
   // Show a readable sentence when a run fails instead of leaving the stage blank.
@@ -336,11 +359,17 @@ function MaaroofPage() {
                       </button>
                     ))}
                   </div>
+                  <div className="flex flex-col gap-1 text-xs">
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={useSubagents} disabled={running} onChange={(e) => setUseSubagents(e.target.checked)} />
+                      <span>{lang === "en" ? "Specialised sub-agents — deeper advice from expert agents; off = faster and cheaper" : lang === "ku" ? "بریکاری پسپۆڕ — ڕاوێژی قووڵتر؛ ناچالاک = خێراتر و هەرزانتر" : "الوكلاء المتخصصون — رأي أعمق من وكلاء خبراء؛ الإيقاف = أسرع وأقل كلفة"}</span></label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={liveProbe} disabled={running} onChange={(e) => setLiveProbe(e.target.checked)} />
+                      <span>{lang === "en" ? "Ask the 10 AI models live — real answers, uses extra balance; off = estimate only" : lang === "ku" ? "پرسیاری ڕاستەوخۆ لە 10 مۆدێل — وەڵامی ڕاستەقینە، باڵانسی زیاتر" : "سؤال النماذج العشرة فعلياً — إجابات حقيقية وتستهلك رصيداً إضافياً؛ الإيقاف = تقدير فقط"}</span></label>
+                  </div>
                   <div className="flex gap-2">
                     {running ? (
                       <button onClick={stop} className="px-4 py-2 rounded bg-destructive text-destructive-foreground flex items-center gap-2"><StopCircle className="w-4 h-4" /> {t("mrf_stop")}</button>
                     ) : (
-                      <button onClick={start} disabled={!goal.trim()} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"><Send className="w-4 h-4" /> {t("mrf_start")}</button>
+                      <button onClick={() => start()} disabled={!goal.trim()} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"><Send className="w-4 h-4" /> {t("mrf_start")}</button>
                     )}
                   </div>
                 </div>
@@ -358,6 +387,24 @@ function MaaroofPage() {
                 onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
                 typing={typing}
               />
+              {clarifyEvents.length > 0 && !running && (
+                <div className="mt-4 rounded-lg border border-primary/40 bg-card p-4 space-y-3">
+                  <div className="text-sm font-semibold">{lang === "en" ? "Maaroof needs a quick answer to continue" : lang === "ku" ? "ماعروف پێویستی بە وەڵامێکی خێرایە" : "يحتاج معروف إلى إجابة سريعة ليكمل"}</div>
+                  {clarifyEvents.map((e, i) => (
+                    <label key={i} className="block text-sm">
+                      <span className="text-muted-foreground">{String(e.data?.question || "")}</span>
+                      <input value={answers[e.data?.field] || ""} onChange={(ev) => setAnswers((a) => ({ ...a, [e.data?.field]: ev.target.value }))} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5" />
+                    </label>
+                  ))}
+                  <button onClick={() => { const c = { ...answers }; if (c.brand_name || c.company || c.business_name || c.project_name) c.brand = c.brand || c.brand_name || c.company || c.business_name || c.project_name; start(c); }} className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm">{lang === "en" ? "Continue with my answer" : lang === "ku" ? "بەردەوام بە" : "أكمل بإجابتي"}</button>
+                </div>
+              )}
+              {events.length > 0 && !running && (
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{lang === "en" ? "Full session report:" : "التقرير الكامل للجلسة:"}</span>
+                  <ExportButtons toolKey="maaroof" size="xs" build={buildReport} />
+                </div>
+              )}
               <div ref={scrollRef} className="hidden" />
             </>
           )}
