@@ -5,6 +5,8 @@ import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 import { cardsForStep } from "@/lib/engine-card-adapters";
+import { directAnswer, sectionsForTool } from "@/lib/maaroof/report-sections";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
 export type StageEvent = { type: string; data: any; t: number };
@@ -144,8 +146,8 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                 const ok = st?.ok;
                 const fail = st && !st.ok;
                 return (
-                  <div key={i} className={[
-                    "rounded-lg border p-3 text-xs transition-all",
+                  <div key={i} style={{ animationDelay: `${Math.min(i, 8) * 70}ms` }} className={[
+                    "rounded-lg border p-3 text-xs transition-all motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both",
                     ok ? "border-green-500/40 bg-green-500/5" : fail ? "border-destructive/40 bg-destructive/5" : running_ ? "border-amber-500/40 bg-amber-500/5 animate-pulse" : "border-border bg-card/60",
                   ].join(" ")}>
                     <div className="flex items-center gap-2 font-semibold mb-1">
@@ -159,6 +161,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                     {ok && st?.output?.mci?.reused && (
                       <div className="text-[10px] text-primary mb-1">♻ {L === "en" ? "Previous result reused — no charge" : L === "ku" ? "ئەنجامی پێشوو — بێ تێچوون" : "نتيجة سابقة — بلا خصم"}</div>
                     )}
+                    {ok && <StepAnswer tool={step.tool} output={st?.output} lang={L} />}
                     {ok && <StepEngines tool={step.tool} output={st?.output} lang={L} />}
                     {fail && (
                       <div className="text-destructive line-clamp-3">
@@ -348,6 +351,22 @@ function StepEngines({ tool, output, lang }: { tool: string; output: any; lang: 
         {open ? (lang === "en" ? "Hide models" : lang === "ku" ? "شاردنەوەی مۆدێلەکان" : "إخفاء النماذج") : (lang === "en" ? "Show models" : lang === "ku" ? "پیشاندانی مۆدێلەکان" : "عرض النماذج")}
       </button>
       {open && <div className="mt-2 sm:col-span-2"><CardBoundary><EngineResponseFlow answers={cards} compact /></CardBoundary></div>}
+    </div>
+  );
+}
+
+
+/** Direct, readable answer of one tool + optional single-step export. */
+function StepAnswer({ tool, output, lang }: { tool: string; output: any; lang: string }) {
+  const ans = useMemo(() => directAnswer(output), [output]);
+  if (!ans) return null;
+  return (
+    <div className="mb-1 rounded-md bg-background/60 p-2">
+      <div className="text-[10px] uppercase tracking-wide text-primary mb-0.5">{lang === "en" ? "Direct answer" : lang === "ku" ? "وەڵامی ڕاستەوخۆ" : "الإجابة المباشرة"}</div>
+      <div className="text-foreground leading-relaxed">{ans}</div>
+      <div className="mt-1">
+        <ExportButtons toolKey={`maaroof-${tool}`} size="xs" build={() => ({ title: tool, lang: lang as any, sections: [{ heading: lang === "en" ? "Direct answer" : "الإجابة المباشرة", kind: "text", text: ans }, ...sectionsForTool(tool, output)] })} />
+      </div>
     </div>
   );
 }
