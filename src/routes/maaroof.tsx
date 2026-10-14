@@ -11,6 +11,7 @@ const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: 
 import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain, ListChecks, Share2, ShieldCheck, GraduationCap } from "lucide-react";
 import type { ExportPayload } from "@/lib/exports";
 import { ExportButtons } from "@/components/ExportButtons";
+import { buildSessionSections, collectSteps } from "@/lib/maaroof/report-sections";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
@@ -70,6 +71,8 @@ function MaaroofPage() {
   const [costRun, setCostRun] = useState<CostPreview | null>(null);
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [pickedSteps, setPickedSteps] = useState<number[]>([]);
+  const [techOn, setTechOn] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,6 +208,7 @@ function MaaroofPage() {
   const stepsCount = events.filter((e) => e.type === "tool_call").length;
   const clarifyEvents = events.filter((e) => e.type === "clarify");
   const finalEventText = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
+  const sessionSteps = collectSteps(events).filter((x) => x.ok);
   const lastErrorText = [...events].reverse().find((e) => e.type === "error")?.data?.message as string | undefined;
   // Show a readable sentence when a run fails instead of leaving the stage blank.
   const finalText = finalEventText || (lastErrorText ? `⚠️ ${lastErrorText}` : undefined);
