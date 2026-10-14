@@ -190,7 +190,7 @@ export const Route = createFileRoute("/api/brand-boost")({
 
           // ── Step 2: probe each selected engine with its governed model
           // Admin may restrict the engine set globally; the user's plan caps how
-          // many of the nine engines a single run may probe (MARK 1/2/3 = 3/6/9).
+          // many of the nine engines a single run may probe (MARK 1/2/3 = 3/6/10).
           const adminAllowed: Platform[] | null = Array.isArray(adminCfg.enabled_platforms) && adminCfg.enabled_platforms.length
             ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
             : null;

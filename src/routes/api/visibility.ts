@@ -6,6 +6,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
+import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
 
 

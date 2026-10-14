@@ -63,7 +63,7 @@ export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
               name: "Which AI engines should an Iraqi business optimize for?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Prioritize ChatGPT, Gemini, Claude, Perplexity and Copilot. MAAROOF Ai measures citation share across nine engines and recommends per-engine fixes.",
+                text: "Prioritize ChatGPT, Gemini, Claude, Perplexity and Copilot. MAAROOF Ai measures citation share across ten engines and recommends per-engine fixes.",
               },
             },
           ],
@@ -117,7 +117,7 @@ function Page() {
         </ol>
 
         <p>
-          MAAROOF Ai automates these steps for you across nine engines. See the{" "}
+          MAAROOF Ai automates these steps for you across ten engines. See the{" "}
           <Link to="/guide" className="text-primary underline">tool guide</Link>{" "}
           or compare with our{" "}
           <Link to="/guide/geo-vs-aeo" className="text-primary underline">GEO vs AEO explainer</Link>.
