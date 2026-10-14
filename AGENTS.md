@@ -12,3 +12,4 @@
 - Entity Truth Card fields live on profiles (entity_*, hq_country, target_markets); only server/admin may set verification/lock fields (trigger guard) and consistency checks are pure rules in src/lib/entity-consistency.ts — why: one zero-cost identity source for all tools.
 - Engine catalog (src/lib/ai-engines.ts) is the single source for all AI engines, incl. proxied ones like Qwen — why: adding an engine propagates to every tool, agent and UI.
 - Maaroof fills missing tool inputs via pure src/lib/maaroof/agent-input.ts (goal > workspace > Entity Truth Card) and emits a `clarify` event instead of calling a tool with a missing required field — why: no failed paid steps, user is asked instead.
+- Tool tabs/fields/enums the agent may use live in data-only src/lib/tool-options.ts (read from each /api route body); planner sees them and executor drops invalid enums — why: correct options per tool without touching tool logic.
