@@ -543,7 +543,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // Part 6 — Recommendation mode: stop after producing the plan.
     if (executionMode === "recommendation") {
       await ctx.emit("phase", { phase: "recommendation" });
-      await ctx.emit("final", { text: `**Recommended plan** (not executed):\n\n${JSON.stringify(planObj, null, 2)}` });
+      await ctx.emit("plan_raw", { plan: planObj });
+      let report = "";
+      try {
+        const r = await call("final" as ModelPhase, [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Goal: ${ctx.goal}\n\nPlan (internal, do NOT print JSON or tool keys as code):\n${JSON.stringify(planObj).slice(0, 6000)}\n\nWrite an executive recommendation report in Markdown, in language "${ctx.language}". Sections: Goal, Diagnosis, Timeline phases matching any duration stated in the goal (weeks/months; default 4 weeks), for each phase: actions, which platform tool and why, success metric. End with Risks. Never output code blocks or JSON.` },
+        ]);
+        totalUsd += r.usd; totalTokens += r.tokens;
+        report = sanitizeReport(r.text);
+      } catch {}
+      if (!report) report = planAsList(planObj, ctx.language);
+      await ctx.emit("final", { text: report, mode: "recommendation" });
       await db().from("maaroof_runs").update({
         status: "done", total_tokens: totalTokens, total_usd: totalUsd,
         steps_count: 0, finished_at: new Date().toISOString(),
@@ -822,7 +833,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           axes: { workspace: workspaceProfile?.id || null, geo: { country: geo.country, city: geo.city } },
         });
       } catch {}
-      await ctx.emit("final", { text: "**Simulation complete** — plan and council opinions were captured as a scenario. No tools were executed." });
+      await ctx.emit("plan_raw", { plan: planObj });
+      await ctx.emit("final", { text: simulationSummary(planObj, decisionLog, envision, ctx.language), mode: "simulation" });
       await db().from("maaroof_runs").update({
         status: "done", total_tokens: totalTokens, total_usd: totalUsd,
         steps_count: 0, finished_at: new Date().toISOString(),
