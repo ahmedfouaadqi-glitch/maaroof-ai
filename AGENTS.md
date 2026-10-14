@@ -13,3 +13,4 @@
 - Engine catalog (src/lib/ai-engines.ts) is the single source for all AI engines, incl. proxied ones like Qwen — why: adding an engine propagates to every tool, agent and UI.
 - Maaroof fills missing tool inputs via pure src/lib/maaroof/agent-input.ts (goal > workspace > Entity Truth Card) and emits a `clarify` event instead of calling a tool with a missing required field — why: no failed paid steps, user is asked instead.
 - Tool tabs/fields/enums the agent may use live in data-only src/lib/tool-options.ts (read from each /api route body); planner sees them and executor drops invalid enums — why: correct options per tool without touching tool logic.
+- Maaroof recommendation/simulation results are formatted by pure src/lib/maaroof/mode-report.ts and priced as maaroof.<mode> (falls back to maaroof price) — why: no raw JSON for users, every mode is a real charged run.
