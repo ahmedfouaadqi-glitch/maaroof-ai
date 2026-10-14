@@ -34,7 +34,7 @@ const GUIDES: Partial<Record<ToolKey, StepSpec>> = {
     inputAr: "اختر استعلامات حقيقية يبحث فيها جمهورك (مثلاً \"أفضل مطعم كباب في بغداد\").",
     inputEn: "Pick real queries your audience asks (e.g. \"best kebab restaurant in Baghdad\").",
     inputKu: "پرسیارە ڕاستەقینەکان هەڵبژێرە.",
-    engineAr: "نسأل المحركات الـ9 (مع Kimi) ونرصد إن كانت تذكرك أم لا.",
+    engineAr: "نسأل المحركات الـ10 (مع Kimi وQwen) ونرصد إن كانت تذكرك أم لا.",
     engineEn: "We query all 10 engines (Kimi and Qwen included) and record whether you appear.",
     engineKu: "هەموو ٩ ماشێنەکە دەپرسرێن.",
     outputAr: "GEO Trust Score من 100 + جدول ظهور لكل محرك + خطة رفع الظهور.",
