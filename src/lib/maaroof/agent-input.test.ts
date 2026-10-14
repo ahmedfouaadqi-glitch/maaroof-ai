@@ -1,0 +1,22 @@
+import { describe, it, expect } from "vitest";
+import { fillToolInput, missingFields, sanitizeReflection } from "./agent-input";
+
+describe("agent-input", () => {
+  it("fills the tool's own brand key with priority goal > workspace > profile", () => {
+    const ctx = { goalBrand: "G", workspace: { name: "W" }, profile: { brand_name: "P" } };
+    expect(fillToolInput("brand_boost", {}, ctx).brand_name).toBe("G");
+    expect(fillToolInput("company_email", {}, { workspace: { name: "W" }, profile: { brand_name: "P" } }).company).toBe("W");
+    expect(fillToolInput("visibility", {}, { profile: { brand_name: "P" } }).brand).toBe("P");
+  });
+  it("never overwrites planner values", () => {
+    expect(fillToolInput("visibility", { brand: "X" }, { goalBrand: "G" }).brand).toBe("X");
+  });
+  it("reports missing required fields", () => {
+    expect(missingFields("visibility", fillToolInput("visibility", {}, {}))).toEqual(["brand"]);
+    expect(missingFields("research", fillToolInput("research", {}, { goal: "best perfume shops" }))).toEqual([]);
+  });
+  it("turns JSON reflections into plain text", () => {
+    expect(sanitizeReflection('```json\n{"decision":"stop","why":"brand missing"}\n```')).toBe("stop — brand missing");
+    expect(sanitizeReflection("continue")).toBe("continue");
+  });
+});

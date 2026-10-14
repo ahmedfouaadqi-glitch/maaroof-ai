@@ -40,6 +40,12 @@ export const Route = createFileRoute("/api/maaroof")({
           if (ws) verifiedWorkspaceId = workspaceId;
         }
 
+        const useSubagents = body?.use_subagents === false ? false : undefined;
+        const liveProbe = body?.live_probe === false ? false : undefined;
+        const clarifications: Record<string, string> = {};
+        if (body?.clarifications && typeof body.clarifications === "object") {
+          for (const [k, v] of Object.entries(body.clarifications).slice(0, 10)) if (typeof v === "string") clarifications[String(k).slice(0, 40)] = v.slice(0, 200);
+        }
         const detectedGeo = detectGeoFromRequest(request);
         const origin = new URL(request.url).origin;
 
@@ -81,7 +87,7 @@ export const Route = createFileRoute("/api/maaroof")({
             try {
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode,
+                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, clarifications,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
