@@ -11,6 +11,7 @@ const COUNTRIES = Object.entries(COUNTRY_NAMES).map(([code, n]) => ({ code, ar: 
 import { Loader2, Sparkles, Bot, Globe, StopCircle, Send, History, Brain, ListChecks, Share2, ShieldCheck, GraduationCap } from "lucide-react";
 import type { ExportPayload } from "@/lib/exports";
 import { ExportButtons } from "@/components/ExportButtons";
+import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
@@ -60,6 +61,8 @@ function MaaroofPage() {
   const [typing, setTyping] = useState(false);
   const [useSubagents, setUseSubagents] = useState(true);
   const [liveProbe, setLiveProbe] = useState(true);
+  const [costRun, setCostRun] = useState<CostPreview | null>(null);
+  const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -84,6 +87,12 @@ function MaaroofPage() {
       setRuns((data as any) || []);
     })();
   }, [user?.id, running, activeWs]);
+
+  useEffect(() => {
+    if (!user) return;
+    getCostPreview({ data: { toolKey: "maaroof" } }).then(setCostRun).catch(() => {});
+    getCostPreview({ data: { toolKey: "visibility.probe", units: 10 } }).then(setCostProbe).catch(() => {});
+  }, [user?.id]);
 
   async function start(clarifications?: Record<string, string>) {
     if (!goal.trim() || running || !user) return;
@@ -365,6 +374,12 @@ function MaaroofPage() {
                     <label className="flex items-center gap-2"><input type="checkbox" checked={liveProbe} disabled={running} onChange={(e) => setLiveProbe(e.target.checked)} />
                       <span>{lang === "en" ? "Ask the 10 AI models live — real answers, uses extra balance; off = estimate only" : lang === "ku" ? "پرسیاری ڕاستەوخۆ لە 10 مۆدێل — وەڵامی ڕاستەقینە، باڵانسی زیاتر" : "سؤال النماذج العشرة فعلياً — إجابات حقيقية وتستهلك رصيداً إضافياً؛ الإيقاف = تقدير فقط"}</span></label>
                   </div>
+                  {costRun?.metered && (
+                    <div className="text-xs text-muted-foreground">
+                      {lang === "en" ? "Expected cost" : lang === "ku" ? "تێچووی چاوەڕوانکراو" : "الكلفة المتوقعة"}: {costRun.total}{liveProbe && costProbe ? ` + ${costProbe.total} (${lang === "en" ? "10 models live" : "سؤال 10 نماذج"})` : ""} · {lang === "en" ? "Your balance" : lang === "ku" ? "باڵانسەکەت" : "رصيدك"}: {costRun.balance}
+                      {costRun.balance < costRun.total + (liveProbe && costProbe ? costProbe.total : 0) && <span className="text-destructive"> — {lang === "en" ? "not enough balance" : "الرصيد غير كافٍ"}</span>}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     {running ? (
                       <button onClick={stop} className="px-4 py-2 rounded bg-destructive text-destructive-foreground flex items-center gap-2"><StopCircle className="w-4 h-4" /> {t("mrf_stop")}</button>
