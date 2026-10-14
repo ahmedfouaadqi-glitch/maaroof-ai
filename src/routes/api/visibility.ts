@@ -201,7 +201,7 @@ export const Route = createFileRoute("/api/visibility")({
                 const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                   method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
                   body: JSON.stringify({ model: models[e]?.model, max_tokens: 500, messages: [
-                    { role: "system", content: `Answer as the ${e} assistant would for a user in ${market.region}. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en} Return JSON only: {"answer":"short answer","brands":["brand names you would recommend, in order"]}` },
+                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en} Return JSON only: {"answer":"short answer","brands":["brand names you would recommend, in order"]}` },
                     { role: "user", content: q },
                   ] }),
                 });

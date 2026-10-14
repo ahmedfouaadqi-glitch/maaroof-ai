@@ -1,4 +1,4 @@
-// Single source of truth for the nine AI answer engines used across MAAROOF Ai.
+// Single source of truth for the ten AI answer engines used across MAAROOF Ai.
 //
 // Evolution, not duplication: the engine ⇄ model map used to live only inside
 // `src/routes/api/brand-boost.ts` and the display list only inside
@@ -97,7 +97,7 @@ export const ENGINE_CATALOG: Record<EngineKey, EngineDef> = {
     name: "Kimi",
     tint: "from-violet-400/20 to-cyan-500/5",
     proxy: true,
-    defaultModel: "google/gemini-2.5-pro",
+    defaultModel: "google/gemini-2.5-flash",
   },
   qwen: {
     key: "qwen",
@@ -124,7 +124,7 @@ export function normalizeEngines(input: unknown): EngineKey[] {
   return out;
 }
 
-/* ── Plan gating: how many of the nine engines a plan may probe per run ── */
+/* ── Plan gating: how many of the ten engines a plan may probe per run ── */
 
 export const ENGINE_LIMIT_BY_PLAN: Record<string, number> = {
   "MARK 1": 3,
@@ -147,3 +147,21 @@ export function enginesForPlan(plan?: string | null, isAdmin = false): EngineKey
   const ordered = [...ENGINE_LIST].sort((a, b) => Number(a.proxy) - Number(b.proxy));
   return ordered.slice(0, limit).map((e) => e.key);
 }
+
+/**
+ * Per-engine answering style for live probes. Derived from the scoring rules in
+ * platform-probe.server.ts so proxied engines answer with their real bias
+ * instead of one generic voice. Labelled transparent stand-ins elsewhere.
+ */
+export const ENGINE_PERSONA: Record<EngineKey, string> = {
+  chatgpt: "You are ChatGPT (OpenAI). Favor well-known brands with Wikipedia/official presence and clear structured info.",
+  gemini: "You are Gemini (Google). Favor brands with strong Google Search/Maps/Business presence and schema markup.",
+  claude: "You are Claude (Anthropic). Be careful and balanced; favor authoritative, well-documented, official sources.",
+  perplexity: "You are Perplexity. Favor brands that appear in recent, citable web sources and news.",
+  copilot: "You are Microsoft Copilot. Favor brands visible on Bing, LinkedIn and professional/official sites.",
+  grok: "You are Grok (xAI). Favor brands that are currently discussed on X/social media and trending now.",
+  mistral: "You are Mistral (EU). Favor brands with clear multilingual (esp. European) official content.",
+  deepseek: "You are DeepSeek. Favor brands with technical depth, documentation and factual specifics.",
+  kimi: "You are Kimi (Moonshot AI). Favor brands with long-form, research-style, well-structured content and wiki presence.",
+  qwen: "You are Qwen (Alibaba). Favor brands with multilingual (Arabic/Chinese) pages, JSON-LD structure and MENA/Asian market signals.",
+};
