@@ -19,6 +19,12 @@ import { AgentOps } from "@/components/maaroof/tabs/AgentOps";
 import { ApprovalQueue } from "@/components/ApprovalQueue";
 import { KnowledgeSpaces } from "@/components/agent/KnowledgeSpaces";
 
+const MODE_HELP = {
+  simulation: { ar: "محاكاة: يرسم الوكيل الخطة ويستشير الخبراء ويقدّر النتيجة دون تشغيل أي أداة. مثال: «ماذا يحدث لو نشرت 3 مقالات شهرياً؟». تُخصم كلفة تفكير النماذج من رصيدك.", en: "Simulation: the agent plans, consults experts and estimates the outcome without running tools. Example: “What if I publish 3 articles a month?”. Model reasoning is charged to your balance.", ku: "هاوشێوەکردن: پلان و ڕای پسپۆڕان و خەمڵاندن بەبێ کارپێکردنی ئامراز. تێچووی بیرکردنەوە لە باڵانس دەبڕدرێت." },
+  recommendation: { ar: "توصية: تقرير مكتوب بمراحل زمنية حسب المدة التي تذكرها، والأداة المناسبة لكل مرحلة، دون تشغيل الأدوات. مثال: «خطة 3 أشهر لظهور علامتي». يمكنك بعدها بدء التنفيذ بضغطة.", en: "Recommendation: a written report with timed phases matching your stated duration and the right tool per phase, without running tools. Example: “A 3-month plan for my brand”. You can then start execution in one click.", ku: "پێشنیار: ڕاپۆرتێکی نووسراو بە قۆناغی کاتی، بەبێ کارپێکردنی ئامراز. دواتر دەتوانیت جێبەجێکردن دەست پێبکەیت." },
+  execution: { ar: "تنفيذ: يشغّل الوكيل الأدوات فعلياً ويجمع نتائج حقيقية قابلة للتصدير. مثال: «افحص ظهور علامتي في النماذج العشرة». كل أداة تُخصم من رصيدك عند نجاحها.", en: "Execution: the agent actually runs the tools and collects real, exportable results. Example: “Check my brand across the 10 models”. Each tool is charged when it succeeds.", ku: "جێبەجێکردن: ئامرازەکان بە ڕاستی کار دەکەن و ئەنجامی ڕاستەقینە کۆدەکەنەوە." },
+} as const;
+
 const TABS = ["chat", "tasks", "channels", "approvals", "knowledge"] as const;
 type TabKey = (typeof TABS)[number];
 
@@ -90,12 +96,13 @@ function MaaroofPage() {
 
   useEffect(() => {
     if (!user) return;
-    getCostPreview({ data: { toolKey: "maaroof" } }).then(setCostRun).catch(() => {});
+    getCostPreview({ data: { toolKey: executionMode === "execution" ? "maaroof" : `maaroof.${executionMode}` } }).then(setCostRun).catch(() => {});
     getCostPreview({ data: { toolKey: "visibility.probe", units: 10 } }).then(setCostProbe).catch(() => {});
-  }, [user?.id]);
+  }, [user?.id, executionMode]);
 
-  async function start(clarifications?: Record<string, string>) {
+  async function start(clarifications?: Record<string, string>, modeOverride?: "simulation" | "recommendation" | "execution") {
     if (!goal.trim() || running || !user) return;
+    const mode = modeOverride || executionMode;
     setRunning(true); setEvents([]);
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
@@ -109,7 +116,7 @@ function MaaroofPage() {
           goal: goal.trim(),
           lang,
           workspace_id: activeWs?.id,
-          execution_mode: executionMode,
+          execution_mode: mode,
           use_subagents: useSubagents,
           live_probe: liveProbe,
           clarifications,
@@ -218,6 +225,8 @@ function MaaroofPage() {
   const lastErrorText = [...events].reverse().find((e) => e.type === "error")?.data?.message as string | undefined;
   // Show a readable sentence when a run fails instead of leaving the stage blank.
   const finalText = finalEventText || (lastErrorText ? `⚠️ ${lastErrorText}` : undefined);
+  const finalMode = [...events].reverse().find((e) => e.type === "final")?.data?.mode as string | undefined;
+  const rawPlan = [...events].reverse().find((e) => e.type === "plan_raw")?.data?.plan;
 
   const TAB_META: Record<TabKey, { icon: typeof Sparkles; label: string }> = {
     chat: { icon: Sparkles, label: t("mrf_tab_chat") },
@@ -374,6 +383,7 @@ function MaaroofPage() {
                     <label className="flex items-center gap-2"><input type="checkbox" checked={liveProbe} disabled={running} onChange={(e) => setLiveProbe(e.target.checked)} />
                       <span>{lang === "en" ? "Ask the 10 AI models live — real answers, uses extra balance; off = estimate only" : lang === "ku" ? "پرسیاری ڕاستەوخۆ لە 10 مۆدێل — وەڵامی ڕاستەقینە، باڵانسی زیاتر" : "سؤال النماذج العشرة فعلياً — إجابات حقيقية وتستهلك رصيداً إضافياً؛ الإيقاف = تقدير فقط"}</span></label>
                   </div>
+                  <p className="basis-full text-xs text-muted-foreground">{MODE_HELP[executionMode][lang === "en" ? "en" : lang === "ku" ? "ku" : "ar"]}</p>
                   {costRun?.metered && (
                     <div className="text-xs text-muted-foreground">
                       {lang === "en" ? "Expected cost" : lang === "ku" ? "تێچووی چاوەڕوانکراو" : "الكلفة المتوقعة"}: {costRun.total}{liveProbe && costProbe ? ` + ${costProbe.total} (${lang === "en" ? "10 models live" : "سؤال 10 نماذج"})` : ""} · {lang === "en" ? "Your balance" : lang === "ku" ? "باڵانسەکەت" : "رصيدك"}: {costRun.balance}
@@ -402,6 +412,19 @@ function MaaroofPage() {
                 onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
                 typing={typing}
               />
+              {!running && (finalMode === "recommendation" || finalMode === "simulation") && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button onClick={() => { setExecutionMode("execution"); start(undefined, "execution"); }} className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm">
+                    {lang === "en" ? "Start executing this plan" : lang === "ku" ? "دەستپێکردنی جێبەجێکردنی ئەم پلانە" : "بدء تنفيذ هذه الخطة"}
+                  </button>
+                  {rawPlan && (
+                    <details className="text-xs w-full">
+                      <summary className="cursor-pointer text-muted-foreground">{lang === "en" ? "Show technical details of the steps" : lang === "ku" ? "وردەکاری تەکنیکی" : "عرض التفاصيل التقنية للخطوات"}</summary>
+                      <pre dir="ltr" className="mt-2 max-h-64 overflow-auto rounded border bg-muted p-2 text-left">{JSON.stringify(rawPlan, null, 2)}</pre>
+                    </details>
+                  )}
+                </div>
+              )}
               {clarifyEvents.length > 0 && !running && (
                 <div className="mt-4 rounded-lg border border-primary/40 bg-card p-4 space-y-3">
                   <div className="text-sm font-semibold">{lang === "en" ? "Maaroof needs a quick answer to continue" : lang === "ku" ? "ماعروف پێویستی بە وەڵامێکی خێرایە" : "يحتاج معروف إلى إجابة سريعة ليكمل"}</div>
