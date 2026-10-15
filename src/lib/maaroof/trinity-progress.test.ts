@@ -25,3 +25,11 @@ describe("creator url", () => {
     expect(o.url).toBe("https://instagram.com/x");
   });
 });
+import { suggestEntityType } from "@/components/EntityFields";
+describe("entity type suggestion", () => {
+  it("works", () => {
+    expect(suggestEntityType("")).toBe("individual");
+    expect(suggestEntityType("https://instagram.com/a\nhttps://youtube.com/b")).toBe("person");
+    expect(suggestEntityType("https://site.com")).toBe("organization");
+  });
+});
