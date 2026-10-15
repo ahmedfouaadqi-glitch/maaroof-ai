@@ -210,6 +210,7 @@ function MaaroofPage() {
   const totalUsd = events.reduce((s, e) => e.type === "done" ? s + (e.data?.totalUsd || 0) : s, 0);
   const stepsCount = events.filter((e) => e.type === "tool_call").length;
   const clarifyEvents = events.filter((e) => e.type === "clarify");
+  const reusedAnswers = (events.find((e) => e.type === "reused_answers")?.data?.answers || null) as Record<string, string> | null;
   const finalEventText = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
   const sessionSteps = collectSteps(events).filter((x) => x.ok);
   const lastErrorText = [...events].reverse().find((e) => e.type === "error")?.data?.message as string | undefined;
@@ -406,6 +407,12 @@ function MaaroofPage() {
                 onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
                 typing={typing}
               />
+              {reusedAnswers && (
+                <div className="mt-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs flex flex-wrap items-center gap-2">
+                  <span>{lang === "en" ? "We used your previous answer: " : lang === "ku" ? "وەڵامی پێشووت بەکارهات: " : "استخدمنا إجابتك السابقة: "}{Object.values(reusedAnswers).join("، ")}</span>
+                  {!running && <button className="text-primary underline" onClick={() => { const k = Object.keys(reusedAnswers)[0]; const v = window.prompt(lang === "en" ? "Edit your answer" : "عدّل إجابتك", reusedAnswers[k]); if (v != null && v.trim()) start({ [k]: v.trim() }); }}>{lang === "en" ? "Edit" : lang === "ku" ? "دەستکاری" : "تعديل"}</button>}
+                </div>
+              )}
               {!running && finalMode && <div className="mt-3"><ProgressLine userId={user?.id} lang={(lang as any) || "ar"} /></div>}
               {!running && (finalMode === "recommendation" || finalMode === "simulation") && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
