@@ -45,7 +45,7 @@ export function TrinityPanel({ userId, profile, lang }: { userId: string; profil
       setProgress(compareProbes(snaps, lang));
     })().catch(() => {});
     return () => { alive = false; };
-  }, [userId, profile, lang]);
+  }, [userId, profile?.id, profile?.entity_locked, lang]);
   if (!t) return null;
   const L = lang === "en" ? { h: "Your SEO / AEO / GEO index", none: "Not measured yet", seo: "SEO — technical foundation", aeo: "AEO — clear identity for answers", geo: "GEO — mentions in the 10 models", go: "Measure now" }
     : lang === "ku" ? { h: "پێوەری SEO / AEO / GEO", none: "هێشتا نەپێوراوە", seo: "SEO — بنەمای تەکنیکی", aeo: "AEO — ناسنامەی ڕوون", geo: "GEO — ناوهاتن لە 10 مۆدێل", go: "ئێستا بپێوە" }
