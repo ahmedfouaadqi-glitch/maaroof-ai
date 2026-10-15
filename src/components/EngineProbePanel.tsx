@@ -18,7 +18,8 @@ const TX = {
   ku: { title: "پشکنینی ڕاستەوخۆ لەگەڵ بزوێنەرەکان", hint: "ئەو بزوێنەرانە هەڵبژێرە کە دەتەوێت بپرسیت.", all: "هەموو", none: "هیچ", cost: "تێچووی چاوەڕوانکراو", bal: "باڵانسەکەت", low: "باڵانس بەس نییە", run: "پرسیار لە هەڵبژێردراوەکان", mode: "شێوازی کارکردن", instant: "دەستبەجێ", notify: "ئاگادارکردنەوە", bg: "لە پاشبنەمادا", bgOk: "لە پاشبنەمادا دەستی پێکرد — ئەنجام لە ئاگادارکردنەوەکاندا دێت.", brandPh: "ناوی براندەکەت بنووسە", save: "لە هەژمارەکەمدا پاشەکەوتی بکە", locked: "لە پلانەکەتدا نییە", max: "زۆرترین", res: "وەڵامی ڕاستەقینە", rank: "پلەت", miss: "ناوی تۆی نەهێنا", free: "نەژمێردراو", signIn: "تکایە بچۆ ژوورەوە بۆ بەکارهێنانی پشکنینی ڕاستەوخۆ.", login: "چوونەژوورەوە" },
 };
 
-type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] };
+type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[]; reason?: string };
+type Council = { agreement: string; disagreement: string | null; decision: string };
 
 export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean }) {
   const [typed, setTyped] = useState("");
@@ -39,9 +40,10 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   const [busy, setBusy] = useState(false);
   const [answers, setAnswers] = useState<ProbeAnswer[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [council, setCouncil] = useState<Council | null>(null);
 
   useEffect(() => {
-    entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 3)); }).catch(() => setAllowed([]));
+    entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 10)); }).catch(() => setAllowed([]));
   }, []);
 
   const maxN = cost?.maxEngines ?? 9;
@@ -75,7 +77,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
-      setAnswers(j?.probe?.answers || []);
+      setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null);
     } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); }
   }
 
@@ -84,6 +86,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
     basis: "measured",
     score: a.rank ? Math.max(10, 100 - (a.rank - 1) * 15) : 0,
     verdict: a.rank ? `${T.rank}: #${a.rank}` : T.miss,
+    action: a.mentioned ? undefined : a.reason,
     text: a.answer,
     items: a.brands.slice(0, 5),
   })), [answers, L]);
@@ -140,6 +143,14 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
         : err && <div className="text-xs text-destructive">{err}</div>}
       {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
       {cards.length > 0 && <EngineResponseFlow answers={cards} title={T.res} compact />}
+      {council && (
+        <div className="rounded-lg border border-border bg-background/60 p-2 text-xs space-y-1">
+          <div className="font-semibold text-primary">{L === "en" ? "Engines council" : L === "ku" ? "ئەنجومەنی بزوێنەرەکان" : "مجلس النماذج"}</div>
+          <p>{council.agreement}</p>
+          {council.disagreement && <p className="text-muted-foreground">{council.disagreement}</p>}
+          <p className="font-semibold">{council.decision}</p>
+        </div>
+      )}
     </div>
   );
 }

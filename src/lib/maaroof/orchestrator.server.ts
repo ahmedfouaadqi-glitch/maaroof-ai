@@ -70,7 +70,7 @@ const TEXT_FIELDS = new Set([
   "source_url", "description", "sourceText", "topic", "goal", "kind", "action",
 ]);
 // Fields that must stay arrays of strings.
-const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls"]);
+const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls", "probe_engines"]);
 
 function flatten(v: unknown): string {
   if (v == null) return "";
