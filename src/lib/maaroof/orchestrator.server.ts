@@ -488,9 +488,9 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       const { resolveToolCost } = await import("@/lib/tokens.server");
       const keys = Object.keys(TOOL_OPTIONS);
       const costs = await Promise.all(keys.map(async (k) => { try { return (await resolveToolCost(ctx.userId, k)).tokens || 0; } catch { return 0; } }));
-      const { data: bal } = await db().from("profiles").select("token_balance").eq("id", ctx.userId).maybeSingle();
+      const { data: bal } = await db().from("profiles").select("tokens_balance").eq("id", ctx.userId).maybeSingle();
       await ctx.emit("tool_catalog", {
-        balance: typeof (bal as any)?.token_balance === "number" ? (bal as any).token_balance : null,
+        balance: typeof (bal as any)?.tokens_balance != null ? Number((bal as any).tokens_balance) : null,
         tools: keys.map((k, i) => {
           const st = steps.find((s) => s.tool === k);
           const def = TOOL_CATALOG.find((t) => t.key === k);
