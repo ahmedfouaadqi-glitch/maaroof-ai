@@ -185,6 +185,21 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
     entityProfile = data || null;
   } catch {}
+  // Saved clarification answers (only stored with the user's memory consent): reuse instead of asking again.
+  try {
+    const fresh = Object.entries(ctx.clarifications || {}).filter(([k, v]) => k !== "tools" && String(v || "").trim());
+    for (const [k, v] of fresh) await remember({ userId: ctx.userId, kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
+    const { data: saved } = await db().from("maaroof_memory").select("content").eq("user_id", ctx.userId).like("content", "clarify:%").order("created_at", { ascending: false }).limit(20);
+    const reused: Record<string, string> = {};
+    for (const r of (saved as any[]) || []) {
+      const m = String(r.content).match(/^clarify:([a-z_]+)=([\s\S]+)$/);
+      if (m && !(m[1] in reused) && !String(ctx.clarifications?.[m[1]] || "").trim()) reused[m[1]] = m[2];
+    }
+    if (Object.keys(reused).length) {
+      ctx.clarifications = { ...reused, ...(ctx.clarifications || {}) };
+      await ctx.emit("reused_answers", { answers: reused });
+    }
+  } catch {}
   const clarBrand = String(ctx.clarifications?.brand || "").trim().slice(0, 200) || null;
 
   // Part 6 — three-way execution mode. Backward compatible: defaults to "execution".
