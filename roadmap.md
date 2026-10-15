@@ -10,5 +10,7 @@
 # Roadmap — 4 packages (approved plan 2026-10-15)
 - [x] P1: copy/right-click allowed; F12/Inspect blocked with notice; no iPhone lock; deferred/static background on phones
 - [x] P2: free timeframe parser + strategist uses user's horizon; agent passes goal horizon
-- [ ] P3: 10 live engines by default + model council + brand-name only + reasons for "not found" + show all tools
-- [ ] P4: account type, SEO/AEO/GEO index, export language, user-visible evolution
+- [x] P3: 10 live engines default (agent + probe panel), council from live answers, brand-name scrub in reports, reasons for not-mentioned
+- [ ] P3 rest: list of all tools with selection reason + cost before execution
+- [x] P4 part: export language selector + Arabic/Kurdish labels instead of English keys
+- [ ] P4 rest: account type detection, SEO/AEO/GEO index, user-visible evolution

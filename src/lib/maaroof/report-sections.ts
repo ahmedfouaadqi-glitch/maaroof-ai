@@ -3,6 +3,7 @@
 // Never emits raw JSON in the readable part; technical data is an opt-in section.
 import { sectionsFromResult } from "@/lib/export-bus";
 import type { ExportSection } from "@/lib/exports";
+import { scrubModelNames } from "@/lib/maaroof/model-council";
 
 export type SessionEvent = { type: string; data: any; t?: number };
 export type ReportSelection = {
@@ -12,9 +13,31 @@ export type ReportSelection = {
   includeProcess?: boolean; // experts, reflections, questions
 };
 
-const TECH_KEYS = new Set(["mci", "usage", "raw", "debug", "trace", "ok", "tokens", "cost_usd", "model_raw", "_meta"]);
+const TECH_KEYS = new Set(["mci", "usage", "raw", "debug", "trace", "ok", "tokens", "cost_usd", "model_raw", "_meta", "model", "provider", "endpoint", "proxy", "via"]);
 
-const humanize = (k: string) => k.replace(/[_.-]+/g, " ").replace(/\s+/g, " ").trim();
+const KEY_LABELS: Record<string, { ar: string; ku: string }> = {
+  engine: { ar: "النموذج", ku: "بزوێنەر" }, engines: { ar: "النماذج", ku: "بزوێنەرەکان" }, mentioned: { ar: "مذكور", ku: "باسکراوە" },
+  reason: { ar: "السبب", ku: "هۆکار" }, rank: { ar: "الترتيب", ku: "پلە" }, answer: { ar: "الإجابة", ku: "وەڵام" }, answers: { ar: "الإجابات", ku: "وەڵامەکان" },
+  brands: { ar: "العلامات المرشحة", ku: "براندەکان" }, query: { ar: "السؤال", ku: "پرسیار" }, asked: { ar: "النماذج المسؤولة", ku: "پرسیارلێکراوەکان" },
+  summary: { ar: "الملخص", ku: "پوختە" }, score: { ar: "الدرجة", ku: "نمرە" }, platform: { ar: "المنصة", ku: "پلاتفۆرم" }, platforms: { ar: "المنصات", ku: "پلاتفۆرمەکان" },
+  title: { ar: "العنوان", ku: "ناونیشان" }, kpi: { ar: "مؤشر الأداء", ku: "پێوەر" }, week: { ar: "الأسبوع", ku: "هەفتە" }, month: { ar: "الشهر", ku: "مانگ" },
+  day: { ar: "اليوم", ku: "ڕۆژ" }, hour: { ar: "الساعة", ku: "کاتژمێر" }, horizon: { ar: "المدة", ku: "ماوە" }, risks: { ar: "المخاطر", ku: "مەترسییەکان" },
+  council: { ar: "مجلس النماذج", ku: "ئەنجومەن" }, agreement: { ar: "الاتفاق", ku: "ڕێککەوتن" }, disagreement: { ar: "الخلاف", ku: "ناکۆکی" }, decision: { ar: "القرار", ku: "بڕیار" },
+  "mentioned by": { ar: "ذكرها", ku: "باسیکرد" }, "silent on": { ar: "لم يذكرها", ku: "باسی نەکرد" }, "consensus brands": { ar: "علامات متفق عليها", ku: "براندە هاوبەشەکان" },
+  "priority keywords": { ar: "الكلمات ذات الأولوية", ku: "وشە گرنگەکان" }, "content types": { ar: "أنواع المحتوى", ku: "جۆری ناوەڕۆک" }, "priority platforms": { ar: "المنصات ذات الأولوية", ku: "پلاتفۆرمە گرنگەکان" },
+  "editorial calendar": { ar: "التقويم التحريري", ku: "ساڵنامەی ناوەڕۆک" }, "kpi targets": { ar: "أهداف المؤشرات", ku: "ئامانجەکان" }, type: { ar: "النوع", ku: "جۆر" },
+  visibility: { ar: "الظهور", ku: "دەرکەوتن" }, probe: { ar: "الفحص الحي", ku: "پشکنینی ڕاستەوخۆ" }, basis: { ar: "الأساس", ku: "بنەما" }, charged: { ar: "المخصوم", ku: "بڕاو" },
+  "realism note": { ar: "ملاحظة واقعية", ku: "تێبینی" }, sources: { ar: "المصادر", ku: "سەرچاوەکان" }, true: { ar: "نعم", ku: "بەڵێ" }, false: { ar: "لا", ku: "نەخێر" }, measured: { ar: "مقاس حي", ku: "پێوراو" },
+};
+let CUR_LANG = "en";
+/** Localized label for a JSON key (falls back to the readable key). */
+export function labelFor(k: string, lang = CUR_LANG): string {
+  const h = k.replace(/[_.-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (lang !== "ar" && lang !== "ku") return h;
+  const e = KEY_LABELS[h.toLowerCase()];
+  return e ? e[lang as "ar" | "ku"] : h;
+}
+const humanize = (k: string) => labelFor(k);
 
 /** Flatten any value into readable text (no braces, no JSON). */
 export function flattenValue(v: any, depth = 0): string {
@@ -49,10 +72,14 @@ function stripTech(o: any, depth = 0): any {
 
 function scrub(s: ExportSection): ExportSection {
   const c: any = { ...s };
-  if (typeof c.text === "string") c.text = flattenValue(c.text);
-  if (Array.isArray(c.list)) c.list = c.list.map((x: any) => flattenValue(x));
-  if (Array.isArray(c.rows)) c.rows = c.rows.map(([k, v]: any) => [k, typeof v === "number" ? v : flattenValue(v)]);
-  if (c.table) c.table = { ...c.table, data: c.table.data.map((r: any[]) => r.map((x) => (typeof x === "number" ? x : flattenValue(x)))) };
+  const f = (x: any) => scrubModelNames(flattenValue(x));
+  if (typeof c.heading === "string") c.heading = scrubModelNames(c.heading.split(" · ").map((p: string) => labelFor(p)).join(" · "));
+  if (Array.isArray(c.rows)) c.rows = c.rows.map(([k, v]: any) => [typeof k === "string" ? labelFor(k) : k, v]);
+  if (c.table?.columns) c.table = { ...c.table, columns: c.table.columns.map((x: any) => (typeof x === "string" ? labelFor(x) : x)) };
+  if (typeof c.text === "string") c.text = f(c.text);
+  if (Array.isArray(c.list)) c.list = c.list.map((x: any) => f(x));
+  if (Array.isArray(c.rows)) c.rows = c.rows.map(([k, v]: any) => [k, typeof v === "number" ? v : f(v)]);
+  if (c.table) c.table = { ...c.table, data: c.table.data.map((r: any[]) => r.map((x) => (typeof x === "number" ? x : f(x)))) };
   return c;
 }
 
@@ -112,6 +139,9 @@ export function buildSessionSections(args: {
   selection?: ReportSelection;
 }): ExportSection[] {
   const { events, lang, goal, finalText } = args;
+  const prevLang = CUR_LANG; CUR_LANG = lang;
+  try { return buildInner(); } finally { CUR_LANG = prevLang; }
+  function buildInner(): ExportSection[] {
   const sel = args.selection || {};
   const out: ExportSection[] = [];
   const steps = collectSteps(events);
@@ -153,6 +183,7 @@ export function buildSessionSections(args: {
     }
   }
   return out;
+  }
 }
 
 export type CouncilCard = { kind: "opinion" | "objection" | "conflict" | "decision" | "reflection"; who: string; text: string; confidence?: number | null };
