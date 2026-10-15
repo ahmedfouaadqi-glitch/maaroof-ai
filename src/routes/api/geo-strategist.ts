@@ -42,8 +42,13 @@ export const Route = createFileRoute("/api/geo-strategist")({
 
         const body = await request.json();
 
-        const { brand, keywords = "", goals = {}, lang = "ar", scope } = body;
+        const { brand, keywords = "", goals = {}, lang = "ar", scope, timeframe: tfRaw } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
+        const { parseTimeframe, calendarUnit, realismNote } = await import("@/lib/maaroof/timeframe");
+        const tf = parseTimeframe(typeof tfRaw === "string" ? tfRaw : tfRaw?.raw || `${(goals as any)?.timeframe || ""} ${keywords}`) || parseTimeframe("12 weeks")!;
+        const cal = calendarUnit(tf);
+        const periodKey = cal.unit === "hours" ? "hour" : cal.unit === "days" ? "day" : cal.unit === "weeks" ? "week" : "month";
+        const horizon = `${tf.count} ${tf.unit}`;
 
         // Pull last brand-boost report for grounding
         const { data: lastReport } = await admin.from("brand_boost_runs").select("report").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -51,15 +56,18 @@ export const Route = createFileRoute("/api/geo-strategist")({
         const market = describeMarket(scope);
         const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish Sorani" : "English";
         const baseSys = `${FACTUAL_SAFETY_PROMPT}
-You are a senior GEO strategist for ${market.market}. Reply ONLY in ${langName}.
-Based on the brand's goals and the last brand-boost report (if any), produce a 12-week GEO action plan.
+You are a senior GEO strategist for ${market.market}. Reply ONLY in ${langName} (all keys' values, headings and labels).
+Based on the brand's goals and the last brand-boost report (if any), produce a GEO action plan for exactly ${horizon}.
+The editorial calendar must cover the WHOLE horizon using "${periodKey}" numbers 1..${cal.steps} (group consecutive periods into phases if many). Never assume a 12-week plan unless asked.
+When something is not found or not recommended, always state the reason.
 Return ONLY valid JSON:
 {
   "summary": "2-3 sentences",
+  "horizon": "${horizon}",
   "priority_keywords": ["kw1","kw2","..."],
   "content_types": [{"type":"e.g. how-to article","reason":"why"}],
-  "priority_platforms": [{"engine":"chatgpt|gemini|perplexity|copilot|grok|claude","reason":"..."}],
-  "editorial_calendar": [{"week":1,"title":"...","platform":"...","kpi":"..."}],
+  "priority_platforms": [{"engine":"chatgpt|gemini|perplexity|copilot|grok|claude|mistral|deepseek|kimi|qwen","reason":"..."}],
+  "editorial_calendar": [{"${periodKey}":1,"title":"...","platform":"...","kpi":"..."}],
   "kpi_targets": {"visibility":"e.g. +15%","mentions":"...","backlinks":"..."},
   "risks": ["risk1"]
 }`;
@@ -98,7 +106,7 @@ ${pack.context_block}`;
         await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
         await admin.from("activity_log").insert({ user_id: userId, action: "geo_strategist", metadata: { brand, cost: COST } });
 
-        return Response.json({ id: (row as any)?.id, ...parsed, sources: pack.sources, ...pickQualityFields(parsed) });
+        return Response.json({ id: (row as any)?.id, ...parsed, horizon: parsed?.horizon || horizon, timeframe: tf, realism_note: realismNote(tf, lang), sources: pack.sources, ...pickQualityFields(parsed) });
       },
     },
   },

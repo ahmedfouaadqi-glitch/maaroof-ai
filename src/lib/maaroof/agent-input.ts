@@ -54,6 +54,8 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
   }
   if (!str(out.url) && str(ctx.workspace?.brand_url) && ["analyze", "known", "brand_authority"].includes(tool)) out.url = str(ctx.workspace?.brand_url);
   if (tool === "research" && !str(out.query) && ctx.goal) out.query = ctx.goal.slice(0, 300);
+  // Planning tools receive the user's own horizon (any unit), never a fixed one.
+  if (["geo_strategist", "what_if", "brand_boost"].includes(tool) && !out.timeframe && ctx.goal) out.timeframe = ctx.goal.slice(0, 300);
   return out;
 }
 

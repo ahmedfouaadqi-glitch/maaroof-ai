@@ -11,7 +11,12 @@ export default function SiteBackground() {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    // Defer the animated layer until the browser is idle so it never
+    // competes with first paint (better PageSpeed / TBT).
+    const w = window as any;
+    const id = w.requestIdleCallback
+      ? w.requestIdleCallback(() => setMounted(true), { timeout: 2500 })
+      : window.setTimeout(() => setMounted(true), 1500);
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const smallQuery = window.matchMedia("(max-width: 768px), (pointer: coarse)");
     const sync = () => {
@@ -22,6 +27,7 @@ export default function SiteBackground() {
     motionQuery.addEventListener("change", sync);
     smallQuery.addEventListener("change", sync);
     return () => {
+      if (w.cancelIdleCallback && w.requestIdleCallback) w.cancelIdleCallback(id); else window.clearTimeout(id);
       motionQuery.removeEventListener("change", sync);
       smallQuery.removeEventListener("change", sync);
     };
@@ -39,7 +45,8 @@ export default function SiteBackground() {
     />
   );
 
-  if (!mounted || reduced) return staticFallback;
+  // Phones / touch devices keep the static background (no WebGL cost).
+  if (!mounted || reduced || compact) return staticFallback;
 
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
