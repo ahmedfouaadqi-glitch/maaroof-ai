@@ -1,3 +1,4 @@
+import { ProgressLine } from "@/components/TrinityPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
@@ -405,6 +406,7 @@ function MaaroofPage() {
                 onPickCountry={(code) => { setGeoMode("country"); setCountry(code); }}
                 typing={typing}
               />
+              {!running && finalMode && <div className="mt-3"><ProgressLine userId={user?.id} lang={(lang as any) || "ar"} /></div>}
               {!running && (finalMode === "recommendation" || finalMode === "simulation") && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {catalog && (

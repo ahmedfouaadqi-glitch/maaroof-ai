@@ -10,6 +10,7 @@ import { GeoScopeSelector } from "@/components/GeoScopeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { Loader2, Save, Lock, ShieldCheck, Copy, ExternalLink, Globe, Send } from "lucide-react";
+import { TrinityPanel } from "@/components/TrinityPanel";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
 import { EntityFields, entityDraftFrom, entityUpdateFrom, type EntityDraft } from "@/components/EntityFields";
 import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, profile, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
@@ -138,6 +139,8 @@ function ProfilePage() {
 
           <GeoScopeSelector />
         </div>
+
+        <TrinityPanel userId={user.id} profile={profile} lang={(lang as any) || "ar"} />
 
         {/* Public page card */}
         <div className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-5">
