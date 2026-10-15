@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { describeToolOptions, enforceEnums } from "@/lib/tool-options";

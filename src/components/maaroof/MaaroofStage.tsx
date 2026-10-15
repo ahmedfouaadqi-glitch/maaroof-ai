@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 // MaaroofStage — interactive visual replacement for the raw JSON stream.
 import { Component, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -5,7 +6,7 @@ import { MatrixRain } from "./MatrixRain";
 import { AgentPulse } from "@/components/agent/AgentPulse";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 import { cardsForStep } from "@/lib/engine-card-adapters";
-import { directAnswer, sectionsForTool } from "@/lib/maaroof/report-sections";
+import { directAnswer, sectionsForTool, councilCards } from "@/lib/maaroof/report-sections";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
 
@@ -183,6 +184,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
             </div>
           )}
 
+          <CardBoundary><CouncilPanel events={events} lang={L} /></CardBoundary>
           <CardBoundary><ConflictCard events={events} /></CardBoundary>
           <CardBoundary><TimingChip events={events} /></CardBoundary>
           <CardBoundary><ComplianceCard events={events} /></CardBoundary>
@@ -367,6 +369,30 @@ function StepAnswer({ tool, output, lang }: { tool: string; output: any; lang: s
       <div className="mt-1">
         <ExportButtons toolKey={`maaroof-${tool}`} size="xs" build={() => ({ title: tool, lang: lang as any, sections: [{ heading: lang === "en" ? "Direct answer" : "الإجابة المباشرة", kind: "text", text: ans }, ...sectionsForTool(tool, output)] })} />
       </div>
+    </div>
+  );
+}
+
+function CouncilPanel({ events, lang }: { events: StageEvent[]; lang: string }) {
+  const cards = useMemo(() => councilCards(events), [events]);
+  const [open, setOpen] = useState(false);
+  if (!cards.length) return null;
+  const T = lang === "en" ? { h: "How we got there — expert council", o: "Opinion", x: "Objection", c: "Conflict resolved", d: "Decision", r: "Self-review", m: "Show all", l: "Show less" }
+    : lang === "ku" ? { h: "چۆن گەیشتین — ئەنجومەنی پسپۆڕان", o: "ڕا", x: "ناڕەزایی", c: "چارەسەری ناکۆکی", d: "بڕیار", r: "پێداچوونەوە", m: "هەموو", l: "کەمتر" }
+    : { h: "كيف وصلنا — مجلس الخبراء", o: "رأي", x: "اعتراض", c: "حل تعارض", d: "قرار", r: "مراجعة ذاتية", m: "عرض الكل", l: "عرض أقل" };
+  const label = { opinion: T.o, objection: T.x, conflict: T.c, decision: T.d, reflection: T.r } as const;
+  const tone = { opinion: "border-border", objection: "border-orange-500/40", conflict: "border-amber-500/40", decision: "border-primary/40", reflection: "border-purple-500/40" } as const;
+  const shown = open ? cards : cards.slice(0, 4);
+  return (
+    <div className="rounded-lg border bg-card/60 p-3 text-xs space-y-2">
+      <div className="flex items-center gap-2 font-semibold"><Brain className="w-4 h-4 text-primary" /> {T.h}</div>
+      {shown.map((c, i) => (
+        <div key={i} style={{ animationDelay: `${i * 60}ms` }} className={`rounded border-s-2 ${tone[c.kind]} ps-2 py-1 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:fill-mode-both`}>
+          <div className="text-[10px] text-muted-foreground">{label[c.kind]}{c.who ? ` · ${c.who}` : ""}{c.confidence ? ` · ${c.confidence}%` : ""}</div>
+          <div className="whitespace-pre-wrap line-clamp-4">{c.text}</div>
+        </div>
+      ))}
+      {cards.length > 4 && <button onClick={() => setOpen(!open)} className="text-primary text-[11px]">{open ? T.l : `${T.m} (${cards.length})`}</button>}
     </div>
   );
 }
