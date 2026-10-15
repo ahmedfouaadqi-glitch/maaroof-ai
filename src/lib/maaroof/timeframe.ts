@@ -53,7 +53,7 @@ export function parseTimeframe(text: string | null | undefined): Timeframe | nul
 export function calendarUnit(tf: Timeframe): { unit: TimeUnit; steps: number } {
   if (tf.hours <= 48) return { unit: "hours", steps: Math.max(1, Math.round(tf.hours)) };
   if (tf.hours <= 24 * 21) return { unit: "days", steps: Math.round(tf.hours / 24) };
-  if (tf.hours <= 730 * 4) return { unit: "weeks", steps: Math.round(tf.hours / 168) };
+  if (tf.hours <= 730 * 6) return { unit: "weeks", steps: Math.round(tf.hours / 168) };
   return { unit: "months", steps: Math.round(tf.hours / 730) };
 }
 
