@@ -3,6 +3,7 @@
 // Never emits raw JSON in the readable part; technical data is an opt-in section.
 import { sectionsFromResult } from "@/lib/export-bus";
 import type { ExportSection } from "@/lib/exports";
+import { scrubModelNames } from "@/lib/maaroof/model-council";
 
 export type SessionEvent = { type: string; data: any; t?: number };
 export type ReportSelection = {
@@ -49,10 +50,12 @@ function stripTech(o: any, depth = 0): any {
 
 function scrub(s: ExportSection): ExportSection {
   const c: any = { ...s };
-  if (typeof c.text === "string") c.text = flattenValue(c.text);
-  if (Array.isArray(c.list)) c.list = c.list.map((x: any) => flattenValue(x));
-  if (Array.isArray(c.rows)) c.rows = c.rows.map(([k, v]: any) => [k, typeof v === "number" ? v : flattenValue(v)]);
-  if (c.table) c.table = { ...c.table, data: c.table.data.map((r: any[]) => r.map((x) => (typeof x === "number" ? x : flattenValue(x)))) };
+  const f = (x: any) => scrubModelNames(flattenValue(x));
+  if (typeof c.heading === "string") c.heading = scrubModelNames(c.heading);
+  if (typeof c.text === "string") c.text = f(c.text);
+  if (Array.isArray(c.list)) c.list = c.list.map((x: any) => f(x));
+  if (Array.isArray(c.rows)) c.rows = c.rows.map(([k, v]: any) => [k, typeof v === "number" ? v : f(v)]);
+  if (c.table) c.table = { ...c.table, data: c.table.data.map((r: any[]) => r.map((x) => (typeof x === "number" ? x : f(x)))) };
   return c;
 }
 
