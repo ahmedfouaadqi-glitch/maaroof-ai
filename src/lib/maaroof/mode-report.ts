@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 // Pure formatters for recommendation / simulation results — never show raw JSON to users.
 type Lang = "ar" | "en" | "ku";
 
@@ -42,4 +43,20 @@ export function simulationSummary(plan: any, council: any[], envision: any, lang
   const m = Array.isArray(envision?.success_metrics) ? envision.success_metrics : [];
   if (m.length) out.push(`### ${L.m}\n${m.map((x: any) => `- ${x}`).join("\n")}`);
   return out.join("\n\n");
+}
+
+/** Mode example built from real session data; null when nothing is known (caller keeps the generic text). */
+export function liveExample(mode: "simulation" | "recommendation" | "execution", d: { brand?: string; country?: string; lastGoal?: string }, lang: Lang): string | null {
+  const b = (d.brand || "").trim(); const c = (d.country || "").trim(); const g = (d.lastGoal || "").trim().slice(0, 80);
+  if (!b && !c && !g) return null;
+  const who = b || (lang === "en" ? "my brand" : lang === "ku" ? "براندەکەم" : "علامتي");
+  const where = c ? (lang === "en" ? ` in ${c}` : lang === "ku" ? ` لە ${c}` : ` في ${c}`) : "";
+  const pre = lang === "en" ? "Example from your data: " : lang === "ku" ? "نموونە لە داتاکەت: " : "مثال من بياناتك: ";
+  if (g && !b) return `${pre}«${g}»`;
+  const ex = mode === "simulation"
+    ? (lang === "en" ? `What if ${who} publishes 3 articles a month${where}?` : lang === "ku" ? `چی دەبێت ئەگەر ${who} مانگانە ٣ وتار بڵاو بکاتەوە${where}؟` : `ماذا يحدث لو نشرت ${who} 3 مقالات شهرياً${where}؟`)
+    : mode === "recommendation"
+    ? (lang === "en" ? `A 3-month plan for ${who}${where}` : lang === "ku" ? `پلانی ٣ مانگ بۆ ${who}${where}` : `خطة 3 أشهر لظهور ${who}${where}`)
+    : (lang === "en" ? `Check ${who} across the 10 models${where}` : lang === "ku" ? `${who} لە ١٠ مۆدێلەکەدا بپشکنە${where}` : `افحص ظهور ${who} في النماذج العشرة${where}`);
+  return `${pre}«${ex}»`;
 }
