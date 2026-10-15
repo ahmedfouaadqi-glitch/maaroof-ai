@@ -211,7 +211,7 @@ export function councilCards(events: Array<{ type: string; data: any }>): Counci
 export function cleanCouncilText(t: string): string {
   return String(t || "")
     .replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){0,4}(?:-[0-9a-f]{12})?\b/gi, "")
-    .replace(/\b[a-z_]+\s*[:=]\s*(true|false|null|\d+)\b/gi, "")
+    .replace(/\b[a-z_]+\s*[:=]\s*(true|false|null)\b/gi, "")
     .replace(/\((?:\s*(?:nodes?|scope|trace|run|id)[^)]*)\)/gi, "")
     .replace(/[ \t]{2,}/g, " ").replace(/\s+([،,.])/g, "$1").trim();
 }
