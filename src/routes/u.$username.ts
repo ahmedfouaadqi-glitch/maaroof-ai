@@ -78,7 +78,7 @@ export const Route = createFileRoute("/u/$username")({
 
         const jsonLd: any = {
           "@context": "https://schema.org",
-          "@type": (profile as any).entity_type === "person" ? "Person" : (profile as any).entity_type === "organization" ? "Organization" : (brand ? "Organization" : "Person"),
+          "@type": ["person","individual","creator"].includes((profile as any).entity_type) ? "Person" : (profile as any).entity_type === "organization" ? "Organization" : (brand ? "Organization" : "Person"),
           name: brand || displayName,
           url: canonical,
           identifier: raw,

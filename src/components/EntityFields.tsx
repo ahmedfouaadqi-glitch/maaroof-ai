@@ -14,6 +14,13 @@ const TX = {
   ku: { unlock: "کردنەوە بۆ دەستکاری (لە باڵانسەکەت دەبڕدرێت)", nobal: "باڵانس بەس نییە", err: "هەڵەیەک ڕوویدا", unlocked: "کارتەکە کرایەوە. دوای دەستکاری «پشتڕاستکردنەوە» بکە.", h: "ناسنامەی براندەکەت", hint: "لە هەموو ئامرازەکاندا بەکاردێت بۆ ئاگادارکردنەوە. بەستەرەکان ئارەزوومەندانەن.", type: "جۆری کیان", org: "دامەزراوە / کۆمپانیا", person: "کەس / دروستکەری ناوەڕۆک", hq: "بارەگای سەرەکی", mk: "ئەو بازاڕانەی خزمەتیان دەکەیت", sp: "پسپۆڕی و بواری خزمەتگوزاری", links: "بەستەرەکان (هەر یەکە لە دێڕێک)", save: "پاشەکەوت", verify: "پشتڕاستکردنەوە و قوفڵکردن", locked: "کارتەکە پشتڕاستکراوە و قوفڵە.", ok: "پشتڕاستکرا", conf: "پشتڕاستکراو", unconf: "پشتڕاست نەکراو", incomplete: "سەرەتا ناو و بارەگا پڕبکەوە", none: "—" },
 };
 
+const SOCIAL = /(instagram|tiktok|facebook|fb\.com|x\.com|twitter|youtube|youtu\.be|linkedin|snapchat|threads|telegram|t\.me)/i;
+/** No links -> individual; only social links -> creator; any website -> organization. */
+export function suggestEntityType(links: string): "organization" | "person" | "individual" {
+  const l = String(links || "").split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  if (!l.length) return "individual";
+  return l.every((u) => SOCIAL.test(u)) ? "person" : "organization";
+}
 export type EntityDraft = { type: string; hq: string; mk: string[]; sp: string; links: string };
 export function entityDraftFrom(profile: any): EntityDraft {
   return {
@@ -81,8 +88,12 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs">{T.type}
           <select value={type} disabled={locked} onChange={(e) => setType(e.target.value)} className={cls}>
-            <option value="organization">{T.org}</option><option value="person">{T.person}</option>
+            <option value="organization">{T.org}</option><option value="person">{T.person}</option><option value="individual">{L === "en" ? "Individual — no website or accounts" : L === "ku" ? "تاک — بێ ماڵپەڕ و هەژمار" : "فرد — بلا موقع ولا حسابات"}</option>
           </select>
+          {!locked && (() => { const sug = suggestEntityType(links); return sug !== type ? (
+            <button type="button" onClick={() => setType(sug)} className="mt-1 block text-[11px] text-primary underline">
+              {(L === "en" ? "Suggested from your links: " : L === "ku" ? "پێشنیار لە بەستەرەکانت: " : "مقترح من روابطك: ") + (sug === "organization" ? T.org : sug === "person" ? T.person : (L === "en" ? "Individual" : L === "ku" ? "تاک" : "فرد بلا موقع"))}
+            </button>) : null; })()}
         </label>
         <label className="text-xs">{T.hq}
           <select value={hq} disabled={locked} onChange={(e) => setHq(e.target.value)} className={cls}>
