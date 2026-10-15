@@ -1,7 +1,7 @@
 // Architecture & Concept: Ahmed Maaroof
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
-import { describeToolOptions, enforceEnums } from "@/lib/tool-options";
+import { describeToolOptions, enforceEnums, TOOL_OPTIONS } from "@/lib/tool-options";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
 import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
@@ -182,7 +182,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   // Entity Truth Card fallback for tool inputs (fail-open).
   let entityProfile: any = null;
   try {
-    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope").eq("id", ctx.userId).maybeSingle();
+    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
     entityProfile = data || null;
   } catch {}
   const clarBrand = String(ctx.clarifications?.brand || "").trim().slice(0, 200) || null;
@@ -472,9 +472,32 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
+    // User-edited tool list (from the pre-execution catalog card) wins over the planner.
+    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k]);
+    if (userTools.length) {
+      steps = steps.filter((st) => userTools.includes(st.tool));
+      for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
+      steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
+    }
+    planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
+    // Full tool catalog with per-user cost (no charge) so the user can add/remove tools before running.
+    try {
+      const { resolveToolCost } = await import("@/lib/tokens.server");
+      const keys = Object.keys(TOOL_OPTIONS);
+      const costs = await Promise.all(keys.map(async (k) => { try { return (await resolveToolCost(ctx.userId, k)).tokens || 0; } catch { return 0; } }));
+      const { data: bal } = await db().from("profiles").select("tokens_balance").eq("id", ctx.userId).maybeSingle();
+      await ctx.emit("tool_catalog", {
+        balance: (bal as any)?.tokens_balance != null ? Number((bal as any).tokens_balance) : null,
+        tools: keys.map((k, i) => {
+          const st = steps.find((s) => s.tool === k);
+          const def = TOOL_CATALOG.find((t) => t.key === k);
+          return { key: k, label: def?.labels || null, selected: !!st, reason: st?.reason || null, cost: costs[i] };
+        }),
+      });
+    } catch {}
 
     // Part 13 — pipeline stages 7..16 recorded from the plan we just built.
     if (tracer.enabled) {

@@ -216,6 +216,10 @@ function MaaroofPage() {
   const finalText = finalEventText || (lastErrorText ? `⚠️ ${lastErrorText}` : undefined);
   const finalMode = [...events].reverse().find((e) => e.type === "final")?.data?.mode as string | undefined;
   const rawPlan = [...events].reverse().find((e) => e.type === "plan_raw")?.data?.plan;
+  const catalog = [...events].reverse().find((e) => e.type === "tool_catalog")?.data as { balance: number | null; tools: { key: string; label: any; selected: boolean; reason: string | null; cost: number }[] } | undefined;
+  const [toolPick, setToolPick] = useState<string[] | null>(null);
+  const picked = toolPick ?? (catalog?.tools.filter((x) => x.selected).map((x) => x.key) || []);
+  const pickedCost = (catalog?.tools || []).filter((x) => picked.includes(x.key)).reduce((a, x) => a + (x.cost || 0), 0);
 
   const TAB_META: Record<TabKey, { icon: typeof Sparkles; label: string }> = {
     chat: { icon: Sparkles, label: t("mrf_tab_chat") },
@@ -403,7 +407,29 @@ function MaaroofPage() {
               />
               {!running && (finalMode === "recommendation" || finalMode === "simulation") && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button onClick={() => { setExecutionMode("execution"); start(undefined, "execution"); }} className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm">
+                  {catalog && (
+                    <div className="w-full rounded-lg border bg-card p-3 text-xs space-y-2">
+                      <div className="font-semibold text-sm">{lang === "en" ? "Tools for this plan — add or remove before running" : lang === "ku" ? "ئامرازەکان — زیاد یان لاببە پێش جێبەجێکردن" : "أدوات هذه الخطة — أضف أو أزل قبل التنفيذ"}</div>
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        {catalog.tools.map((x) => (
+                          <label key={x.key} className={`flex items-start gap-2 rounded border p-2 cursor-pointer ${picked.includes(x.key) ? "border-primary/50 bg-primary/5" : "border-border"}`}>
+                            <input type="checkbox" className="mt-0.5" checked={picked.includes(x.key)} onChange={(ev) => setToolPick(ev.target.checked ? [...picked, x.key] : picked.filter((k) => k !== x.key))} />
+                            <span className="flex-1">
+                              <span className="font-medium">{x.label?.[lang] || x.label?.ar || x.key}</span>
+                              <span className="text-muted-foreground"> · {x.cost} {lang === "en" ? "tokens" : "توكن"}</span>
+                              <span className="block text-muted-foreground">{x.selected ? (x.reason || "") : (lang === "en" ? "Not chosen by the agent for this goal." : lang === "ku" ? "بۆ ئەم ئامانجە هەڵنەبژێردرا." : "لم يخترها الوكيل لهذا الهدف.")}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-3 font-medium">
+                        <span>{lang === "en" ? "Total" : "المجموع"}: {pickedCost}</span>
+                        {catalog.balance != null && <span>{lang === "en" ? "Balance after" : "رصيدك بعد التنفيذ"}: {catalog.balance - pickedCost}</span>}
+                        {catalog.balance != null && catalog.balance < pickedCost && <span className="text-destructive">{lang === "en" ? "Not enough balance — remove a tool or top up." : "الرصيد لا يكفي — أزل أداة أو اشحن رصيدك."}</span>}
+                      </div>
+                    </div>
+                  )}
+                  <button disabled={!!catalog && catalog.balance != null && catalog.balance < pickedCost} onClick={() => { setExecutionMode("execution"); start(catalog ? { tools: picked.join(",") } : undefined, "execution"); }} className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm">
                     {lang === "en" ? "Start executing this plan" : lang === "ku" ? "دەستپێکردنی جێبەجێکردنی ئەم پلانە" : "بدء تنفيذ هذه الخطة"}
                   </button>
                   {rawPlan && (

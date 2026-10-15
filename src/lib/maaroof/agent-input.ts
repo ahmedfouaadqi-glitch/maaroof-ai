@@ -7,7 +7,7 @@ export type EntityContext = {
   /** Brand explicitly named in the user's goal (highest priority). */
   goalBrand?: string | null;
   workspace?: { name?: string | null; brand_url?: string | null; keywords?: any; country?: string | null; city?: string | null } | null;
-  profile?: { brand_name?: string | null; brand_keywords?: string | null; hq_country?: string | null } | null;
+  profile?: { brand_name?: string | null; brand_keywords?: string | null; hq_country?: string | null; entity_type?: string | null; entity_links?: any } | null;
   goal?: string;
 };
 
@@ -53,6 +53,12 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
     if (kw) out.keywords = kw;
   }
   if (!str(out.url) && str(ctx.workspace?.brand_url) && ["analyze", "known", "brand_authority"].includes(tool)) out.url = str(ctx.workspace?.brand_url);
+  // Creators / individuals without a website: use their first verified social or entity-page link.
+  if (!str(out.url) && ["analyze", "known", "brand_authority"].includes(tool)) {
+    const links = Array.isArray(ctx.profile?.entity_links) ? ctx.profile!.entity_links : [];
+    const first = links.map((l: any) => str(typeof l === "string" ? l : l?.url)).find((u: string) => /^https?:\/\//.test(u));
+    if (first) out.url = first;
+  }
   if (tool === "research" && !str(out.query) && ctx.goal) out.query = ctx.goal.slice(0, 300);
   // Planning tools receive the user's own horizon (any unit), never a fixed one.
   if (["geo_strategist", "what_if", "brand_boost"].includes(tool) && !out.timeframe && ctx.goal) out.timeframe = ctx.goal.slice(0, 300);
