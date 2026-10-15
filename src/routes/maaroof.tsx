@@ -17,6 +17,7 @@ import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
 import { AgentOps } from "@/components/maaroof/tabs/AgentOps";
+import { liveExample } from "@/lib/maaroof/mode-report";
 import { ApprovalQueue } from "@/components/ApprovalQueue";
 import { KnowledgeSpaces } from "@/components/agent/KnowledgeSpaces";
 
