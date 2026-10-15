@@ -17,7 +17,7 @@ describe("model council", () => {
     expect(c.consensusBrands).toContain("Y");
     expect(c.disagreement).toBeTruthy();
     expect(c.decision).toContain("1/3");
-    expect(JSON.stringify(c)).not.toMatch(/[{}]\s*"/);
+    for (const x of [c.agreement, c.decision, c.disagreement || ""]) expect(x).not.toMatch(/[{}]/);
   });
   it("no answers → no fabricated decision", () => {
     expect(councilFromProbe([], ["chatgpt"], "X").answered).toBe(0);
