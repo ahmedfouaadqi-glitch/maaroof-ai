@@ -74,6 +74,7 @@ function MaaroofPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [pickedSteps, setPickedSteps] = useState<number[]>([]);
   const [techOn, setTechOn] = useState(false);
+  const [exportLang, setExportLang] = useState<string>("");
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -190,8 +191,8 @@ function MaaroofPage() {
     const steps = pickedSteps.length ? pickedSteps : undefined;
     return {
       title: t("auto.maaroof_report"),
-      lang: lang as any,
-      sections: buildSessionSections({ events, lang, goal, finalText: finalEventText, selection: { steps, includeTechnical: techOn } }),
+      lang: (exportLang || lang) as any,
+      sections: buildSessionSections({ events, lang: exportLang || lang, goal, finalText: finalEventText, selection: { steps, includeTechnical: techOn } }),
     };
   }
   function exportFinal() { /* kept for the stage button; full export lives in ExportButtons below */ }
@@ -445,6 +446,13 @@ function MaaroofPage() {
                   <label className="inline-flex items-center gap-1 cursor-pointer">
                     <input type="checkbox" checked={techOn} onChange={(e) => setTechOn(e.target.checked)} />
                     <span>{lang === "en" ? "Include technical details (optional)" : lang === "ku" ? "وردەکاری تەکنیکی" : "تضمين التفاصيل التقنية (اختياري)"}</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1">
+                    <span>{lang === "en" ? "Export language" : lang === "ku" ? "زمانی هەناردە" : "لغة التصدير"}</span>
+                    <select value={exportLang || lang} onChange={(e) => setExportLang(e.target.value)} className="rounded border border-border bg-background px-1 py-0.5">
+                      <option value="ar">العربية</option><option value="en">English</option><option value="ku">کوردی</option>
+                    </select>
+                    <span className="text-muted-foreground">{lang === "en" ? "(headings switch free; results keep the language they were generated in)" : "(العناوين تتحول مجاناً؛ النتائج تبقى بلغة توليدها)"}</span>
                   </label>
                 </div>
               )}
