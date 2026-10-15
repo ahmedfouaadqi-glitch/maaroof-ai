@@ -17,6 +17,7 @@ import { MaaroofStage } from "@/components/maaroof/MaaroofStage";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { SchedulesPanel } from "@/components/maaroof/SchedulesPanel";
 import { AgentOps } from "@/components/maaroof/tabs/AgentOps";
+import { liveExample } from "@/lib/maaroof/mode-report";
 import { ApprovalQueue } from "@/components/ApprovalQueue";
 import { KnowledgeSpaces } from "@/components/agent/KnowledgeSpaces";
 
@@ -370,7 +371,7 @@ function MaaroofPage() {
                     <label className="flex items-center gap-2"><input type="checkbox" checked={liveProbe} disabled={running} onChange={(e) => setLiveProbe(e.target.checked)} />
                       <span>{lang === "en" ? "Ask the 10 AI models live — real answers, uses extra balance; off = estimate only" : lang === "ku" ? "پرسیاری ڕاستەوخۆ لە 10 مۆدێل — وەڵامی ڕاستەقینە، باڵانسی زیاتر" : "سؤال النماذج العشرة فعلياً — إجابات حقيقية وتستهلك رصيداً إضافياً؛ الإيقاف = تقدير فقط"}</span></label>
                   </div>
-                  <p className="basis-full text-xs text-muted-foreground">{MODE_HELP[executionMode][lang === "en" ? "en" : lang === "ku" ? "ku" : "ar"]}</p>
+                  <p className="basis-full text-xs text-muted-foreground">{MODE_HELP[executionMode][lang === "en" ? "en" : lang === "ku" ? "ku" : "ar"]}{(() => { const ex = liveExample(executionMode, { country: geoMode === "country" ? country : detected?.country, lastGoal: undefined }, lang === "en" ? "en" : lang === "ku" ? "ku" : "ar"); return ex ? <span className="block mt-1 text-foreground/80">{ex}</span> : null; })()}</p>
                   {costRun?.metered && (
                     <div className="text-xs text-muted-foreground">
                       {lang === "en" ? "Expected cost" : lang === "ku" ? "تێچووی چاوەڕوانکراو" : "الكلفة المتوقعة"}: {costRun.total}{liveProbe && costProbe ? ` + ${costProbe.total} (${lang === "en" ? "10 models live" : "سؤال 10 نماذج"})` : ""} · {lang === "en" ? "Your balance" : lang === "ku" ? "باڵانسەکەت" : "رصيدك"}: {costRun.balance}

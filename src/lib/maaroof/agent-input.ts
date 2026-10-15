@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 // Pure helpers for the Maaroof executor: fill missing tool inputs from known
 // context, detect fields still missing (ask instead of failing), and turn raw
 // reflection output into a plain sentence. No I/O — safe to unit-test.

@@ -154,3 +154,24 @@ export function buildSessionSections(args: {
   }
   return out;
 }
+
+export type CouncilCard = { kind: "opinion" | "objection" | "conflict" | "decision" | "reflection"; who: string; text: string; confidence?: number | null };
+const txt = (v: any): string => (typeof v === "string" ? v : v == null ? "" : flattenValue(v)).replace(/[{}\[\]"]/g, "").trim();
+/** Turns existing council/conflict/decision/reflection events into readable cards. No model calls. */
+export function councilCards(events: Array<{ type: string; data: any }>): CouncilCard[] {
+  const out: CouncilCard[] = [];
+  for (const e of events || []) {
+    const d = e?.data || {};
+    if (e.type === "council" && !d.error) {
+      if (d.opinion) out.push({ kind: "opinion", who: String(d.expert || d.capability || ""), text: txt(d.opinion), confidence: d.confidence ?? null });
+      if (d.objection) out.push({ kind: "objection", who: String(d.expert || ""), text: txt(d.objection) });
+    } else if (e.type === "conflict") {
+      const t = txt(d.resolution || d.summary || d.text || d.decision); if (t) out.push({ kind: "conflict", who: "", text: t });
+    } else if (e.type === "decision") {
+      const t = txt(d.text || d.decision || d.summary || d.reason); if (t) out.push({ kind: "decision", who: String(d.by || ""), text: t });
+    } else if (e.type === "reflection") {
+      const t = txt(d.text); if (t) out.push({ kind: "reflection", who: "", text: t });
+    }
+  }
+  return out.filter((c) => c.text).slice(-20);
+}

@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 // Single source of truth for the ten AI answer engines used across MAAROOF Ai.
 //
 // Evolution, not duplication: the engine ⇄ model map used to live only inside

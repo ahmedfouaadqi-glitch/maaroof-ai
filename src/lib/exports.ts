@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 /**
  * Branded export utilities for MAAROOF Ai.
  * Supports PDF (via browser print) and Excel (via xlsx) with brand header + disclaimer.

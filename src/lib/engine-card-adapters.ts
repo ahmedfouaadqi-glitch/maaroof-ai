@@ -1,3 +1,4 @@
+// Architecture & Concept: Ahmed Maaroof
 // Pure adapters: turn an existing tool result into nine-engine card data.
 // Read-only — never changes how a tool computes its result, never calls a model.
 import { ENGINE_FAMILY, engineKeyFromName, type EngineFamily } from "@/lib/engine-families";
@@ -83,6 +84,7 @@ export function cardsForStep(tool: string, out: any): EngineCard[] {
     if (tool === "what_if") return fromWhatIf(out);
     if (tool === "research") return fromResearch(out);
     if (tool === "suggest") return fromSuggestion(out);
+    if (tool === "visibility") return fromVisibility(out);
     if (tool === "analyze" && Array.isArray(out.platform_views)) {
       const res: EngineCard[] = [];
       for (const p of out.platform_views) {
@@ -93,4 +95,22 @@ export function cardsForStep(tool: string, out: any): EngineCard[] {
     }
     return [];
   } catch { return []; }
+}
+
+/** Visibility: live probe answers are "measured"; per-platform scores from the report are "estimated". Never invents a score. */
+export function fromVisibility(res: any): EngineCard[] {
+  const out: EngineCard[] = [];
+  const answers = Array.isArray(res?.probe?.answers) ? res.probe.answers : [];
+  for (const a of answers) {
+    const key = engineKeyFromName(String(a?.engine || ""));
+    if (!key || out.some((o) => o.key === key)) continue;
+    out.push({ key, score: null, verdict: a?.mentioned ? (a?.rank ? `#${a.rank}` : "✓") : "✗", text: String(a?.answer || "").slice(0, 400) || undefined, items: Array.isArray(a?.brands) ? a.brands.slice(0, 5) : [], basis: "measured" });
+  }
+  const plats = Array.isArray(res?.platforms) ? res.platforms : [];
+  for (const p of plats) {
+    const key = engineKeyFromName(String(p?.name || ""));
+    if (!key || out.some((o) => o.key === key)) continue;
+    out.push({ key, score: typeof p?.score === "number" ? clamp(p.score) : null, verdict: p?.citation_likelihood ? String(p.citation_likelihood) : undefined, text: p?.why ? String(p.why) : undefined, action: p?.action ? String(p.action) : undefined, items: Array.isArray(p?.authority_factors) ? p.authority_factors.slice(0, 3).map(String) : [], basis: "estimated" });
+  }
+  return out;
 }
