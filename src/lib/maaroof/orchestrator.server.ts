@@ -460,14 +460,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
-      `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse 1-6 steps. Only use tool keys from the list. Return JSON only.`;
+      `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse as many steps as the task needs (up to the platform limit). Only use tool keys from the list. Return JSON only.`;
     const planResp = await call("planning", [
       { role: "system", content: systemPrompt },
       { role: "user", content: planUserMsg },
     ]);
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    const steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
+    let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
+    // Website/technical-check requests must include the analyze tool (deterministic guarantee).
+    if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
+      steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
+    }
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
     await ctx.emit("plan", { plan: planObj });
@@ -1510,7 +1514,8 @@ ${toolsDescription()}
 
 Rules:
 - Be evidence-based; never invent facts, numbers, or sources.
-- Prefer 2-5 well-chosen tool steps over many shallow ones.
+- Choose as many tool steps as the task truly needs (no fixed cap); avoid shallow duplicates. For every step add a short "why" (reason for choosing it).
+- If the goal mentions checking the website/pages/technical/SEO health, ALWAYS include the "analyze" tool.
 - For each tool, provide minimal valid input; the executor injects "scope" and "lang" automatically.
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }

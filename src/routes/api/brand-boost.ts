@@ -121,19 +121,7 @@ export const Route = createFileRoute("/api/brand-boost")({
           if (bbToggle === "off") {
             return Response.json({ error: "tool_disabled_by_admin" }, { status: 403 });
           }
-          let allowed = bbToggle === "on";
-          if (!allowed && (prof as any).is_subscribed) {
-            if ((prof as any).subscription_expires_at && new Date((prof as any).subscription_expires_at) < new Date()) {
-              await admin.from("profiles").update({ is_subscribed: false }).eq("id", userId);
-            } else {
-              allowed = true;
-            }
-          }
-          const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
-          const used = Number((prof as any).monthly_analyses_used || 0);
-          if (!allowed && overrideLimit - used < BRAND_BOOST_COST) {
-            return Response.json({ error: "subscription_required" }, { status: 402 });
-          }
+          // Access is decided by chargeTokens (plan + wallet + per-user overrides); the legacy monthly-subscription gate was removed.
 
           const body = await request.json();
 
