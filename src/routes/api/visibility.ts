@@ -245,7 +245,11 @@ export const Route = createFileRoute("/api/visibility")({
                 await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
               } catch {}
             }
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers, charged: pChg.tokens } });
+            const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
+            const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
+            const reasoned = withReasons(answers, brand, lang as any);
+            const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
+            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();

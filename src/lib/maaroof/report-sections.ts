@@ -12,7 +12,7 @@ export type ReportSelection = {
   includeProcess?: boolean; // experts, reflections, questions
 };
 
-const TECH_KEYS = new Set(["mci", "usage", "raw", "debug", "trace", "ok", "tokens", "cost_usd", "model_raw", "_meta"]);
+const TECH_KEYS = new Set(["mci", "usage", "raw", "debug", "trace", "ok", "tokens", "cost_usd", "model_raw", "_meta", "model", "provider", "endpoint", "proxy", "via"]);
 
 const humanize = (k: string) => k.replace(/[_.-]+/g, " ").replace(/\s+/g, " ").trim();
 
