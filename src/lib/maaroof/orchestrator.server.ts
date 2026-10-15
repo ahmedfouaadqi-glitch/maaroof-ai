@@ -1510,7 +1510,8 @@ ${toolsDescription()}
 
 Rules:
 - Be evidence-based; never invent facts, numbers, or sources.
-- Prefer 2-5 well-chosen tool steps over many shallow ones.
+- Choose as many tool steps as the task truly needs (no fixed cap); avoid shallow duplicates. For every step add a short "why" (reason for choosing it).
+- If the goal mentions checking the website/pages/technical/SEO health, ALWAYS include the "analyze" tool.
 - For each tool, provide minimal valid input; the executor injects "scope" and "lang" automatically.
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
