@@ -204,5 +204,14 @@ export function councilCards(events: Array<{ type: string; data: any }>): Counci
       const t = txt(d.text); if (t) out.push({ kind: "reflection", who: "", text: t });
     }
   }
-  return out.filter((c) => c.text).slice(-20);
+  return out.map((c) => ({ ...c, text: cleanCouncilText(c.text) })).filter((c) => c.text).slice(-20);
+}
+
+/** Removes internal ids, trace counters and code-like flags from council text shown to users. */
+export function cleanCouncilText(t: string): string {
+  return String(t || "")
+    .replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){0,4}(?:-[0-9a-f]{12})?\b/gi, "")
+    .replace(/\b[a-z_]+\s*[:=]\s*(true|false|null)\b/gi, "")
+    .replace(/\((?:\s*(?:nodes?|scope|trace|run|id)[^)]*)\)/gi, "")
+    .replace(/[ \t]{2,}/g, " ").replace(/\s+([،,.])/g, "$1").trim();
 }

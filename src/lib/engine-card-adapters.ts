@@ -1,3 +1,4 @@
+import { cleanCouncilText } from "@/lib/maaroof/report-sections";
 // Architecture & Concept: Ahmed Maaroof
 // Pure adapters: turn an existing tool result into nine-engine card data.
 // Read-only — never changes how a tool computes its result, never calls a model.
@@ -104,7 +105,7 @@ export function fromVisibility(res: any): EngineCard[] {
   for (const a of answers) {
     const key = engineKeyFromName(String(a?.engine || ""));
     if (!key || out.some((o) => o.key === key)) continue;
-    out.push({ key, score: null, verdict: a?.mentioned ? (a?.rank ? `#${a.rank}` : "✓") : "✗", text: (String(a?.answer || "").slice(0, 400) || undefined), action: !a?.mentioned && a?.reason ? String(a.reason) : undefined, items: Array.isArray(a?.brands) ? a.brands.slice(0, 5) : [], basis: "measured" });
+    out.push({ key, score: null, verdict: a?.mentioned ? (a?.rank ? `#${a.rank}` : "✓") : "✗", text: (cleanCouncilText(String(a?.answer || "")).slice(0, 400) || undefined), action: !a?.mentioned && a?.reason ? cleanCouncilText(String(a.reason)) : undefined, items: Array.isArray(a?.brands) ? a.brands.slice(0, 5) : [], basis: "measured" });
   }
   const plats = Array.isArray(res?.platforms) ? res.platforms : [];
   for (const p of plats) {

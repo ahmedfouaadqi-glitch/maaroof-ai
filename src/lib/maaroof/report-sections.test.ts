@@ -25,3 +25,12 @@ describe("report-sections", () => {
     expect(s.some((x) => (x.heading || "").includes("2."))).toBe(false);
   });
 });
+
+import { cleanCouncilText } from "./report-sections";
+describe("cleanCouncilText", () => {
+  it("strips ids and flags", () => {
+    const t = cleanCouncilText("القرار cc1c25ba نهائي background: true (nodes 12)");
+    expect(t).not.toMatch(/cc1c25ba|background|nodes/);
+    expect(t).toContain("القرار");
+  });
+});
