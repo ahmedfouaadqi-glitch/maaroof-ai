@@ -182,7 +182,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   // Entity Truth Card fallback for tool inputs (fail-open).
   let entityProfile: any = null;
   try {
-    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope").eq("id", ctx.userId).maybeSingle();
+    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
     entityProfile = data || null;
   } catch {}
   const clarBrand = String(ctx.clarifications?.brand || "").trim().slice(0, 200) || null;
