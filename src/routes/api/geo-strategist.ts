@@ -106,7 +106,7 @@ ${pack.context_block}`;
         await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
         await admin.from("activity_log").insert({ user_id: userId, action: "geo_strategist", metadata: { brand, cost: COST } });
 
-        return Response.json({ id: (row as any)?.id, ...parsed, sources: pack.sources, ...pickQualityFields(parsed) });
+        return Response.json({ id: (row as any)?.id, ...parsed, horizon: parsed?.horizon || horizon, timeframe: tf, realism_note: realismNote(tf, lang), sources: pack.sources, ...pickQualityFields(parsed) });
       },
     },
   },
