@@ -47,17 +47,27 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
     called++;
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 45000);
     try {
-      const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-        method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
-        body: JSON.stringify({ model: models[e]?.model, max_tokens: 1200, messages: [
-          { role: "system", content: `You are answering a market question for a user located in ${place}. Name real businesses that actually operate in that market. If you do not know the brand, still list the leading players in its sector there. Write names as commonly used in ${LANG_NAME[lang] || "English"} (add the Latin spelling in parentheses when helpful). Return JSON only: {"competitors":["name",...]} with at most 8 names, no commentary.` },
-          { role: "user", content: `Brand: "${brand}"${sector ? `\nSector: ${sector}` : ""}\nMarket: ${place}\nWho are its main competitors in this market?` },
-        ] }),
-      });
-      if (!r.ok) { status[e] = "error"; return; }
-      const j: any = await r.json();
-      const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-      const list = Array.isArray(p.competitors) ? p.competitors.map((x: any) => String(x).slice(0, 100)).filter(Boolean).slice(0, 8) : [];
+      const call = async (maxTokens: number) => {
+        const model = String(models[e]?.model || "");
+        const reasoning = /^openai\/|gemini-2\.5-pro|gemini-3/.test(model) ? { reasoning_effort: "low" } : {};
+        const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+          method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
+          body: JSON.stringify({ model, max_tokens: maxTokens, ...reasoning, messages: [
+            { role: "system", content: `You are answering a market question for a user located in ${place}. Name real businesses that actually operate in that market. If you do not know the brand, still list the leading players in its sector there. Write names as commonly used in ${LANG_NAME[lang] || "English"} (add the Latin spelling in parentheses when helpful). Return JSON only: {"competitors":["name",...]} with at most 8 names, no commentary.` },
+            { role: "user", content: `Brand: "${brand}"${sector ? `\nSector: ${sector}` : ""}\nMarket: ${place}\nWho are its main competitors in this market?` },
+          ] }),
+        });
+        if (!r.ok) return null;
+        const j: any = await r.json();
+        const ch = j?.choices?.[0];
+        const p = extractJsonObject<any>(ch?.message?.content) || {};
+        const list: string[] = Array.isArray(p.competitors) ? p.competitors.map((x: any) => String(x).slice(0, 100)).filter(Boolean).slice(0, 8) : [];
+        return { list, truncated: ch?.finish_reason === "length" };
+      };
+      let res = await call(2500);
+      if (res && !res.list.length && res.truncated) res = await call(4000);
+      if (!res) { status[e] = "error"; return; }
+      const list = res.list;
       byEngine[e] = list;
       status[e] = list.length ? "answered" : "empty";
       if (cache && list.length) await setEngineCache(cache.admin, ck, e, list);
@@ -152,7 +162,7 @@ export const Route = createFileRoute("/api/known")({
         let body: any = {};
         try { body = await request.json(); } catch {}
         const brand = asText(body.brand, 200);
-        const website = asText(body.website, 300);
+        const website = asText(body.website || body.url, 300);
         const sector = asText(body.sector, 200);
         const depth = body.depth === "deep" ? "deep" : "quick";
         const lang = body.lang === "en" || body.lang === "ku" ? body.lang : "ar";
