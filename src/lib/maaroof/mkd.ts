@@ -91,8 +91,9 @@ export function falsePositiveReason(c: Candidate, brand: string, brandDomain?: s
   if (n === bn || (d && bd && d === bd)) return "self";
   const root = domainRoot(d);
   if (root && PLATFORM_DOMAINS.includes(root)) return "platform";
-  if (PLATFORM_DOMAINS.includes(n)) return "platform";
-  if (/\b(top|best|list|directory|دليل|افضل|أفضل)\b/.test(n)) return "directory";
+  const words = n.split(" ");
+  if (PLATFORM_DOMAINS.includes(n) || words.some((w) => PLATFORM_DOMAINS.includes(w) && w.length > 2 && words.length <= 3)) return "platform";
+  if (/(^| )(top|best|list|directory|apps|platforms|دليل|افضل|تطبيقات|منصات|مواقع)( |$)/.test(n)) return "directory";
   return null;
 }
 
@@ -121,11 +122,20 @@ export function relationTruth(r: RelationDraft) {
 }
 
 /** Count how many AI engines named each candidate (by normalized name/root match). */
+export function namesMatch(a: string, b: string): boolean {
+  const m = normalizeName(a), n = normalizeName(b);
+  if (!m || !n) return false;
+  if (m === n) return true;
+  if (m.length > 3 && n.length > 3 && (m.includes(n) || n.includes(m))) return true;
+  const ta = m.split(" ").filter(Boolean), tb = n.split(" ").filter(Boolean);
+  const [short, long] = ta.length <= tb.length ? [ta, new Set(tb)] : [tb, new Set(ta)];
+  return short.length > 0 && short.every((w) => long.has(w));
+}
+
 export function engineMentions(name: string, byEngine: Record<string, string[]>): string[] {
-  const n = normalizeName(name);
-  if (!n) return [];
+  if (!normalizeName(name)) return [];
   return Object.entries(byEngine)
-    .filter(([, list]) => list.some((x) => { const m = normalizeName(x); return m === n || (m.length > 3 && n.length > 3 && (m.includes(n) || n.includes(m))); }))
+    .filter(([, list]) => list.some((x) => namesMatch(x, name)))
     .map(([e]) => e);
 }
 
@@ -154,14 +164,18 @@ export function mkdEvidenceDrafts(
 /** Build localized discovery queries anchored to the chosen market. */
 export function localQueries(brand: string, sector: string, place: string, lang: string, deep: boolean): string[] {
   const q: string[] = [];
-  const s = sector || brand;
+  const s = sector.trim();
   if (place) {
-    q.push(`${brand} competitors ${place}`, `best ${s} ${place}`);
-    if (lang !== "en") q.push(`منافسو ${brand} في ${place}`, `أفضل ${s} في ${place}`);
-    else q.push(`${brand} alternatives ${place}`);
-    if (deep) q.push(`${s} companies ${place}`, `بديل ${brand} ${place}`);
+    q.push(`${brand} competitors ${place}`, `alternatives to ${brand} ${place}`);
+    if (s) q.push(`best ${s} ${place}`);
+    if (lang !== "en") {
+      q.push(`منافسو ${brand} في ${place}`, `بدائل ${brand} في ${place}`);
+      if (s) q.push(`أفضل ${s} في ${place}`);
+    }
+    if (deep) q.push(s ? `${s} companies ${place}` : `companies like ${brand} ${place}`, `شركات منافسة لـ ${brand} ${place}`);
   } else {
-    q.push(`${brand} competitors`, `${brand} alternatives`, `best ${s} companies`);
+    q.push(`${brand} competitors`, `${brand} alternatives`);
+    if (s) q.push(`best ${s} companies`);
     if (deep) q.push(`${brand} vs`, `منافسو ${brand}`);
   }
   return Array.from(new Set(q));

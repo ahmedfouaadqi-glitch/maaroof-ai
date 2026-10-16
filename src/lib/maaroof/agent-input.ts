@@ -60,6 +60,7 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
     const first = links.map((l: any) => str(typeof l === "string" ? l : l?.url)).find((u: string) => /^https?:\/\//.test(u));
     if (first) out.url = first;
   }
+  if (tool === "known" && str(out.url) && !str(out.website)) out.website = str(out.url);
   if (tool === "suggest" && !str(out.description) && !str(out.sourceText)) {
     const d = ctx.goal?.trim() || [str(ctx.profile?.brand_name), str(ctx.profile?.brand_keywords)].filter(Boolean).join(" — ");
     if (d) out.description = d.slice(0, 600);

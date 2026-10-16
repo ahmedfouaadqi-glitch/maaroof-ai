@@ -63,3 +63,26 @@ describe("mkdEvidenceDrafts", () => {
     expect(drafts[0].claim).toContain("competes with BrandX");
   });
 });
+
+import { namesMatch } from "../mkd";
+import { fillToolInput } from "../agent-input";
+describe("known fixes", () => {
+  it("matches reordered bilingual names", () => {
+    expect(namesMatch("طلبات (Talabat)", "Talabat (طلبات)")).toBe(true);
+    expect(engineMentions("Talabat", { gemini: ["طلبات (Talabat)"] })).toEqual(["gemini"]);
+    expect(namesMatch("Careem", "Talabat")).toBe(false);
+  });
+  it("filters platforms and generic phrases", () => {
+    const c = (name: string) => ({ name, sources: [], fromWeb: true, fromAi: false });
+    expect(falsePositiveReason(c("Instagram shops"), "Acme")).toBe("platform");
+    expect(falsePositiveReason(c("تطبيقات التوصيل"), "Acme")).toBe("directory");
+  });
+  it("never uses the brand as sector", () => {
+    const q = localQueries("طلباتي", "", "العراق", "ar", false);
+    expect(q.some((s) => s.includes("أفضل طلباتي"))).toBe(false);
+    expect(q.some((s) => s.includes("بدائل"))).toBe(true);
+  });
+  it("copies url to website for known", () => {
+    expect(fillToolInput("known", { brand: "X", url: "https://x.com" }, {}).website).toBe("https://x.com");
+  });
+});
