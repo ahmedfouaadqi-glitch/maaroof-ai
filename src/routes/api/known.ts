@@ -36,7 +36,7 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
   const models = await resolveEngineModels(engines);
   const byEngine: Record<string, string[]> = {};
   const status: Record<string, EngineStatus> = {};
-  for (const e of excluded as string[]) status[e] = "not_called";
+  for (const x of excluded as Array<{ engine: string }>) status[x.engine] = "not_called";
   let cached = 0, called = 0;
   await Promise.allSettled(engines.map(async (e) => {
     const ck = `${e}|${requestFingerprint([brand, sector, place, "v2"])}`;
