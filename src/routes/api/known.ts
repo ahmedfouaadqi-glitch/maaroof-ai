@@ -163,7 +163,7 @@ export const Route = createFileRoute("/api/known")({
         try { body = await request.json(); } catch {}
         const brand = asText(body.brand, 200);
         const website = asText(body.website || body.url, 300);
-        const sector = asText(body.sector, 200);
+        const sector = asText(body.sector || body.keywords, 200);
         const depth = body.depth === "deep" ? "deep" : "quick";
         const lang = body.lang === "en" || body.lang === "ku" ? body.lang : "ar";
         let scope = (body.scope || null) as GeoScope | null;
