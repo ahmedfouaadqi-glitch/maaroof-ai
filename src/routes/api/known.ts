@@ -201,7 +201,7 @@ export const Route = createFileRoute("/api/known")({
               // Stage 0 — web discovery (bounded); engines asked in parallel.
               send("progress", { stage: 0 });
               const qs = localQueries(brand, sector, place, lang, depth === "deep");
-              const enginePromise = askEngines(brand, sector, place || "worldwide", lang, depth === "deep" ? 9 : 4, apiKey, mciOn ? { admin, hours: 24 } : undefined);
+              const enginePromise = askEngines(brand, sector, place || "worldwide", lang, 10, apiKey, mciOn ? { admin, hours: 24 } : undefined);
               const sources: Src[] = [];
               for (const q of qs.slice(0, depth === "deep" ? 5 : 3)) {
                 try {
@@ -228,7 +228,7 @@ Categories: direct, indirect, substitute, hidden, emerging, perceived (AI engine
 Return JSON only: {"summary":"...","candidates":[{"name":"...","domain":"example.com or null","category":"...","confidence":0-100,"reason":"one or two sentences: why","source_ids":[1,2]}]}
 Rules: up to 25 candidates. Use source_ids only for sources that actually mention the entity. If you name an entity from your own knowledge without a source, use source_ids: [] and category "perceived" unless strongly justified. Exclude the brand itself, platforms, directories and marketplaces. ${LANG[lang]}`;
               const engBlock = Object.entries(eng.byEngine).map(([e, l]) => `${e}: ${l.join(", ")}`).join("\n");
-              const prompt = `Market: ${place || "worldwide"} — prefer entities operating in this market; exclude foreign-only players unless market is worldwide.\nAI engines named (unverified): ${engBlock || "-"}\nBrand: ${brand}\nWebsite: ${website || "-"}\nSector: ${sector || "-"}\n\nSources:\n${srcBlock || "(none)"}`;
+              const prompt = `Market: ${place || "worldwide"} — prefer entities operating in this market; exclude foreign-only players unless market is worldwide.\nNames suggested by AI engines (unverified, NOT provided by the user): ${engBlock || "-"}\nBrand: ${brand}\nWebsite: ${website || "-"}\nSector: ${sector || "-"}\n\nSources:\n${srcBlock || "(none)"}`;
               const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                 method: "POST",
                 headers: lovableAiHeaders(apiKey),
@@ -297,7 +297,7 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
                 })) as any);
               }
               const summary = { text: String(parsed.summary || "").slice(0, 1200), sources: sources.length, candidates: relations.length, filtered };
-              const result = { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, engine_answers: eng.byEngine, summary: summary.text, relations, filtered, sources };
+              const result = { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, engine_answers: eng.byEngine, engine_status: eng.status, summary: summary.text, relations, filtered, sources };
               if (dbRunId) await admin.from("mkd_runs").update({ status: "done", summary: { ...summary, result } as any }).eq("id", dbRunId);
               if (mciOn) await logMciDecision(admin, { userId, toolKey: "known", decision: "execute", llmCalls: eng.called + 1, llmSaved: eng.cached, fcCalls: qs.slice(0, depth === "deep" ? 5 : 3).length, meta: { force } });
 
