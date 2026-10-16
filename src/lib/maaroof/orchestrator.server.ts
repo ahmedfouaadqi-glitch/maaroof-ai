@@ -40,11 +40,16 @@ function db() {
 type ToolCall = { tool: string; input: any; reason?: string };
 type PlanStep = ToolCall;
 
+/** Tools that fan out to many engines or crawl; they get a longer timeout. */
+const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking"]);
+
 function toolPath(toolKey: string): string | null {
   const map: Record<string, string> = {
     analyze: "/api/analyze",
     suggest: "/api/suggest",
     compare: "/api/compare",
+    competitor_compare: "/api/compare",
+    known: "/api/known",
     feasibility: "/api/feasibility",
     bizdev: "/api/bizdev",
     research: "/api/research",
@@ -992,7 +997,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const body = { ...normalizeToolInput(enforceEnums(step.tool, filled)), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
-        const toolTimer = setTimeout(() => toolCtl.abort(), settings.tool_timeout_ms);
+        const toolTimer = setTimeout(() => toolCtl.abort(), Math.round(settings.tool_timeout_ms * (HEAVY_TOOLS.has(step.tool) ? 2.5 : 1)));
         const onAbort = () => toolCtl.abort();
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;

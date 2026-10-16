@@ -15,6 +15,7 @@ export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   analyze: { fields: ["text"] },
   suggest: { fields: ["description", "sourceText", "brand", "audience", "contentType", "count", "length", "platforms", "goal"] },
   compare: { fields: ["brand", "competitors", "keywords", "websites"] },
+  competitor_compare: { fields: ["brand", "competitors", "keywords", "websites"] },
   known: { fields: ["brand", "sector", "website", "depth", "force"], enums: { depth: ["quick", "deep"] } },
   feasibility: { fields: ["project_name", "sector", "city", "problem", "solution", "target_audience", "revenue_model", "budget_iqd", "team_size", "timeline_months", "competitors", "notes"] },
   bizdev: { fields: ["business_name", "sector", "stage", "city", "goals", "challenges", "channels", "budget_iqd", "current_revenue_iqd", "monthly_customers", "team_size", "notes"] },
