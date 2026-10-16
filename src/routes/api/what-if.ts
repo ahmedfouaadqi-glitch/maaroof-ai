@@ -64,7 +64,9 @@ Estimate the LIKELY directional impact of the proposed changes on the brand's vi
         const axesBlock = axes && typeof axes === "object"
           ? `\nSimulation axes (Part 6 — Future Decision Simulator):\n${JSON.stringify(axes).slice(0, 1500)}`
           : "";
-        const user = `Brand: ${brand}
+        const { enrichFacts } = await import("@/lib/knowledge-enrich.server");
+        const facts = await enrichFacts(String(brand || ""), "", { toolKey: "what_if" });
+        const user = `${facts ? `Verified public facts (use only if relevant):\n${facts}\n\n` : ""}Brand: ${brand}
 Simulation kind: ${kind}
 Proposed changes: ${JSON.stringify(changes)}${axesBlock}
 Baseline analysis score: ${(lastAnalysis as any)?.score ?? "unknown"}

@@ -17,6 +17,7 @@ export type EngineAnswer = {
   status?: "answered" | "empty" | "timeout" | "error" | "not_called";
 };
 
+import { TermHint } from "@/components/TermHint";
 const TX = {
   ar: { title: "كيف تُجيب النماذج العشرة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", recommended: "توصية", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة" },
   en: { title: "How the ten engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
@@ -71,7 +72,7 @@ export function EngineResponseFlow({ answers, title, compact = false }: { answer
               )}
               {a?.basis && !empty && (
                 <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] ${a.basis === "measured" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                  {a.basis === "measured" ? T.measured : a.basis === "recommended" ? T.recommended : T.estimated}
+                  <TermHint term={a.basis === "measured" ? "measured" : "estimated"}>{a.basis === "measured" ? T.measured : a.basis === "recommended" ? T.recommended : T.estimated}</TermHint>
                 </span>
               )}
               {a?.verdict && <div className="mt-1 text-[11px] font-medium text-accent">{a.verdict}</div>}
