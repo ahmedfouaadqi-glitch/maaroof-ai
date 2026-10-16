@@ -173,7 +173,7 @@ export function KnownDiscovery() {
           {result.engine_answers && (
             <EngineResponseFlow
               compact
-              answers={(result.engines_asked || []).filter(isEngineKey).map((k: any) => ({ key: k, items: result.engine_answers[k] || [], basis: "measured" as const }))}
+              answers={[...(result.engines_asked || []), ...Object.keys(result.engine_status || {})].filter((k, i, a) => a.indexOf(k) === i).filter(isEngineKey).map((k: any) => ({ key: k, items: result.engine_answers[k] || [], basis: "measured" as const, status: result.engine_status?.[k] }))}
             />
           )}
           {(result.relations || []).length > 0 && (
