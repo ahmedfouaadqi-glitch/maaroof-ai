@@ -76,6 +76,7 @@ function MaaroofPage() {
   const [pickedSteps, setPickedSteps] = useState<number[]>([]);
   const [techOn, setTechOn] = useState(false);
   const [exportLang, setExportLang] = useState<string>("");
+  const [toolPick, setToolPick] = useState<string[] | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -219,7 +220,6 @@ function MaaroofPage() {
   const finalMode = [...events].reverse().find((e) => e.type === "final")?.data?.mode as string | undefined;
   const rawPlan = [...events].reverse().find((e) => e.type === "plan_raw")?.data?.plan;
   const catalog = [...events].reverse().find((e) => e.type === "tool_catalog")?.data as { balance: number | null; tools: { key: string; label: any; selected: boolean; reason: string | null; cost: number }[] } | undefined;
-  const [toolPick, setToolPick] = useState<string[] | null>(null);
   const picked = toolPick ?? (catalog?.tools.filter((x) => x.selected).map((x) => x.key) || []);
   const pickedCost = (catalog?.tools || []).filter((x) => picked.includes(x.key)).reduce((a, x) => a + (x.cost || 0), 0);
 
