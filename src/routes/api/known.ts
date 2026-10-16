@@ -303,6 +303,7 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
 
               send("result", result);
             } catch (e: any) {
+              try { if ((chg as any).tokens) await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "known", _tokens: -Number((chg as any).tokens || 0), _usd: 0, _run_id: runId, _meta: { refund: true, endpoint: "/api/known" } } as any); } catch {}
               if (dbRunId) await admin.from("mkd_runs").update({ status: "failed", error: String(e?.message || e).slice(0, 300) }).eq("id", dbRunId);
               send("error", { error: String(e?.message || "failed") });
             } finally {
