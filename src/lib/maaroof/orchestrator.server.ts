@@ -997,7 +997,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const body = { ...normalizeToolInput(enforceEnums(step.tool, filled)), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         const toolCtl = new AbortController();
-        const toolTimer = setTimeout(() => toolCtl.abort(), Math.round(settings.tool_timeout_ms * (HEAVY_TOOLS.has(step.tool) ? 2.5 : 1)));
+        const baseMs = Math.max(settings.tool_timeout_ms || 0, 90_000);
+        const toolTimer = setTimeout(() => toolCtl.abort(), HEAVY_TOOLS.has(step.tool) ? Math.max(baseMs, 240_000) : baseMs);
         const onAbort = () => toolCtl.abort();
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
@@ -1012,8 +1013,24 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           clearTimeout(toolTimer);
           ctx.signal.removeEventListener("abort", onAbort);
         }
-        const json = await resp.json().catch(() => ({}));
-        const ok = resp.ok;
+        // Some tools (e.g. /api/known) stream SSE; read the final `result` or `error` event.
+        let json: any = {};
+        let sseError = false;
+        if ((resp.headers.get("content-type") || "").includes("text/event-stream")) {
+          const txt = await resp.text().catch(() => "");
+          for (const block of txt.split("\n\n")) {
+            const ev = /^event: (\w+)/m.exec(block)?.[1];
+            const data = /^data: (.*)$/m.exec(block)?.[1];
+            if (!data) continue;
+            try {
+              if (ev === "result") json = JSON.parse(data);
+              else if (ev === "error") { json = JSON.parse(data); sseError = true; }
+            } catch {}
+          }
+        } else {
+          json = await resp.json().catch(() => ({}));
+        }
+        const ok = resp.ok && !sseError;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
         // Brand agent: identity consistency vs the Entity Truth Card (pure rules, no model cost).

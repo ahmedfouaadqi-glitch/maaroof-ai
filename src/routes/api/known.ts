@@ -27,37 +27,43 @@ function listFrom(sr: any): any[] {
   return Array.isArray(items) ? items : [];
 }
 
-async function askEngines(brand: string, sector: string, place: string, lang: string, n: number, apiKey: string, cache?: { admin: any; hours: number }) {
-  const { engines, excluded } = await excludeUnhealthyEngines(ENGINE_KEYS.slice(0, n) as EngineKey[]);
+export type EngineStatus = "answered" | "empty" | "timeout" | "error" | "not_called";
+const LANG_NAME: Record<string, string> = { ar: "Arabic", en: "English", ku: "Kurdish (Sorani)" };
+
+async function askEngines(brand: string, sector: string, place: string, lang: string, _n: number, apiKey: string, cache?: { admin: any; hours: number }) {
+  // All ten engines are asked in every depth; depth changes research breadth, not engine count.
+  const { engines, excluded } = await excludeUnhealthyEngines([...ENGINE_KEYS] as EngineKey[]);
   const models = await resolveEngineModels(engines);
   const byEngine: Record<string, string[]> = {};
+  const status: Record<string, EngineStatus> = {};
+  for (const x of excluded as Array<{ engine: string }>) status[x.engine] = "not_called";
   let cached = 0, called = 0;
   await Promise.allSettled(engines.map(async (e) => {
-    const ck = `${e}|${requestFingerprint([brand, sector, place])}`;
+    const ck = `${e}|${requestFingerprint([brand, sector, place, "v2"])}`;
     if (cache) {
       const hit = await getEngineCache(cache.admin, ck, cache.hours);
-      if (hit) { byEngine[e] = hit; cached++; return; }
+      if (hit) { byEngine[e] = hit; status[e] = hit.length ? "answered" : "empty"; cached++; return; }
     }
     called++;
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 45000);
     try {
       const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
         method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
-        body: JSON.stringify({ model: models[e]?.model, max_tokens: 400, messages: [
-          { role: "system", content: `Answer as the ${e} assistant would for a user in ${place}. Return JSON only: {"competitors":["name",...]} max 8.` },
-          { role: "user", content: `Who are the main competitors of "${brand}"${sector ? ` (${sector})` : ""} in ${place}?` },
+        body: JSON.stringify({ model: models[e]?.model, max_tokens: 1200, messages: [
+          { role: "system", content: `You are answering a market question for a user located in ${place}. Name real businesses that actually operate in that market. If you do not know the brand, still list the leading players in its sector there. Write names as commonly used in ${LANG_NAME[lang] || "English"} (add the Latin spelling in parentheses when helpful). Return JSON only: {"competitors":["name",...]} with at most 8 names, no commentary.` },
+          { role: "user", content: `Brand: "${brand}"${sector ? `\nSector: ${sector}` : ""}\nMarket: ${place}\nWho are its main competitors in this market?` },
         ] }),
       });
-      if (!r.ok) return;
+      if (!r.ok) { status[e] = "error"; return; }
       const j: any = await r.json();
       const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-      if (Array.isArray(p.competitors)) {
-        byEngine[e] = p.competitors.map((x: any) => String(x).slice(0, 100)).slice(0, 8);
-        if (cache) await setEngineCache(cache.admin, ck, e, byEngine[e]);
-      }
-    } catch {} finally { clearTimeout(t); }
+      const list = Array.isArray(p.competitors) ? p.competitors.map((x: any) => String(x).slice(0, 100)).filter(Boolean).slice(0, 8) : [];
+      byEngine[e] = list;
+      status[e] = list.length ? "answered" : "empty";
+      if (cache && list.length) await setEngineCache(cache.admin, ck, e, list);
+    } catch (err: any) { status[e] = err?.name === "AbortError" ? "timeout" : "error"; } finally { clearTimeout(t); }
   }));
-  return { byEngine, asked: engines, excluded, cached, called };
+  return { byEngine, status, asked: engines, excluded, cached, called };
 }
 
 /** Persist sources as platform evidence; returns entity_name -> evidence ids. Never throws. */
@@ -195,7 +201,7 @@ export const Route = createFileRoute("/api/known")({
               // Stage 0 — web discovery (bounded); engines asked in parallel.
               send("progress", { stage: 0 });
               const qs = localQueries(brand, sector, place, lang, depth === "deep");
-              const enginePromise = askEngines(brand, sector, place || "worldwide", lang, depth === "deep" ? 9 : 4, apiKey, mciOn ? { admin, hours: 24 } : undefined);
+              const enginePromise = askEngines(brand, sector, place || "worldwide", lang, 10, apiKey, mciOn ? { admin, hours: 24 } : undefined);
               const sources: Src[] = [];
               for (const q of qs.slice(0, depth === "deep" ? 5 : 3)) {
                 try {
@@ -222,7 +228,7 @@ Categories: direct, indirect, substitute, hidden, emerging, perceived (AI engine
 Return JSON only: {"summary":"...","candidates":[{"name":"...","domain":"example.com or null","category":"...","confidence":0-100,"reason":"one or two sentences: why","source_ids":[1,2]}]}
 Rules: up to 25 candidates. Use source_ids only for sources that actually mention the entity. If you name an entity from your own knowledge without a source, use source_ids: [] and category "perceived" unless strongly justified. Exclude the brand itself, platforms, directories and marketplaces. ${LANG[lang]}`;
               const engBlock = Object.entries(eng.byEngine).map(([e, l]) => `${e}: ${l.join(", ")}`).join("\n");
-              const prompt = `Market: ${place || "worldwide"} — prefer entities operating in this market; exclude foreign-only players unless market is worldwide.\nAI engines named (unverified): ${engBlock || "-"}\nBrand: ${brand}\nWebsite: ${website || "-"}\nSector: ${sector || "-"}\n\nSources:\n${srcBlock || "(none)"}`;
+              const prompt = `Market: ${place || "worldwide"} — prefer entities operating in this market; exclude foreign-only players unless market is worldwide.\nNames suggested by AI engines (unverified, NOT provided by the user): ${engBlock || "-"}\nBrand: ${brand}\nWebsite: ${website || "-"}\nSector: ${sector || "-"}\n\nSources:\n${srcBlock || "(none)"}`;
               const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                 method: "POST",
                 headers: lovableAiHeaders(apiKey),
@@ -291,7 +297,7 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
                 })) as any);
               }
               const summary = { text: String(parsed.summary || "").slice(0, 1200), sources: sources.length, candidates: relations.length, filtered };
-              const result = { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, engine_answers: eng.byEngine, summary: summary.text, relations, filtered, sources };
+              const result = { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, engine_answers: eng.byEngine, engine_status: eng.status, summary: summary.text, relations, filtered, sources };
               if (dbRunId) await admin.from("mkd_runs").update({ status: "done", summary: { ...summary, result } as any }).eq("id", dbRunId);
               if (mciOn) await logMciDecision(admin, { userId, toolKey: "known", decision: "execute", llmCalls: eng.called + 1, llmSaved: eng.cached, fcCalls: qs.slice(0, depth === "deep" ? 5 : 3).length, meta: { force } });
 

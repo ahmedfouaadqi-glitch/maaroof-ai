@@ -319,7 +319,7 @@ const DEFAULTS: MaaroofSettings = {
   enabled_tools: [
     "suggest","geo_rewrite","analyze","research","feasibility","bizdev",
     "brand_boost","what_if","applied_ranking","visibility","social_analysis",
-    "compare","company_email","geo_strategist","competitor_monitor","brand_authority",
+    "compare","company_email","geo_strategist","competitor_monitor","brand_authority","known",
   ],
   system_prompt_extra: "",
   kill_switch: false,
