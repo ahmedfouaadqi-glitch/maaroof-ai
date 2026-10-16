@@ -13,6 +13,8 @@ export type EngineAnswer = {
   basis?: "measured" | "estimated" | "recommended";
   /** Optional list (e.g. competitor names an engine returned). */
   items?: string[];
+  /** Real call outcome, shown when the engine produced nothing. */
+  status?: "answered" | "empty" | "timeout" | "error" | "not_called";
 };
 
 const TX = {
@@ -20,6 +22,12 @@ const TX = {
   en: { title: "How the ten engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
   ku: { title: "نۆ بزوێنەرەکە چۆن وەڵام دەدەنەوە", measured: "وەڵامی ڕاستەقینە", estimated: "خەمڵاندنی ئەلگۆریتمی", recommended: "پێشنیار", focus: "ئەوەی بۆ ئەم بزوێنەرە گرنگە", none: "ئەم بزوێنەرە وەڵامی نەدایەوە", action: "هەنگاو" },
 };
+
+const STATUS_TX = {
+  ar: { empty: "سُئل النموذج لكنه لم يذكر أسماء", timeout: "انتهت مهلة الانتظار قبل أن يرد", error: "تعذّر الوصول إلى النموذج هذه المرة", not_called: "لم يُسأل لأنه غير متاح حالياً" },
+  en: { empty: "Asked, but named no entities", timeout: "Timed out before replying", error: "Could not reach this model this time", not_called: "Not asked — currently unavailable" },
+  ku: { empty: "پرسیاری لێکرا بەڵام ناوی نەهێنا", timeout: "کات تەواو بوو پێش وەڵام", error: "ئەم جارە نەگەیشتین بە مۆدێلەکە", not_called: "نەپرسرا — ئێستا بەردەست نییە" },
+} as const;
 
 /**
  * Shared animated view of per-engine answers with official logos.
@@ -74,7 +82,7 @@ export function EngineResponseFlow({ answers, title, compact = false }: { answer
                 </div>
               )}
               {a?.action && <div className="mt-2 rounded border border-accent/30 bg-accent/10 px-2 py-1 text-[11px]"><b>{T.action}:</b> {a.action}</div>}
-              {empty && <p className="mt-1 text-[11px] text-muted-foreground">{T.none}</p>}
+              {empty && <p className="mt-1 text-[11px] text-muted-foreground">{(a?.status && a.status !== "answered" && STATUS_TX[L][a.status]) || T.none}</p>}
               {!compact && <p className="mt-2 border-t border-border/50 pt-1.5 text-[10px] text-muted-foreground"><b>{T.focus}:</b> {FAMILY_FOCUS[fam][L]}</p>}
             </div>
           );
