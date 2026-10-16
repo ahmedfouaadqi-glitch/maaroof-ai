@@ -1,5 +1,6 @@
 import { RefreshCw, History } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { TermHint } from "@/components/TermHint";
 
 const TX = {
   ar: { reused: "استخدمنا نتيجة سابقة لنفس الطلب — بلا خصم", refresh: "تحديث الآن" },
@@ -16,7 +17,7 @@ export function MciReuseBadge({ mci, path, onRefresh }: { mci?: { reused?: boole
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
       <History className="size-3.5 text-primary" />
-      <span>{T.reused}{when ? ` · ${when}` : ""}</span>
+      <span><TermHint term="cached">{T.reused}</TermHint>{when ? ` · ${when}` : ""}</span>
       <button
         type="button"
         onClick={() => { try { sessionStorage.setItem(`mci_force:${path}`, "1"); } catch {} onRefresh(); }}

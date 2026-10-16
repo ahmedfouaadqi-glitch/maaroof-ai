@@ -1,3 +1,4 @@
+import { TermHint } from "@/components/TermHint";
 // Architecture & Concept: Ahmed Maaroof
 // MaaroofStage — interactive visual replacement for the raw JSON stream.
 import { Component, useMemo, useState, type ReactNode } from "react";
@@ -160,7 +161,7 @@ export function MaaroofStage({ events, running, geoMode, country, detected, fina
                     </div>
                     {step.reason && <div className="text-muted-foreground line-clamp-2 mb-1">{step.reason}</div>}
                     {ok && st?.output?.mci?.reused && (
-                      <div className="text-[10px] text-primary mb-1">♻ {L === "en" ? "Previous result reused — no charge" : L === "ku" ? "ئەنجامی پێشوو — بێ تێچوون" : "نتيجة سابقة — بلا خصم"}</div>
+                      <div className="text-[10px] text-primary mb-1">♻ <TermHint term="cached">{L === "en" ? "Previous result reused — no charge" : L === "ku" ? "ئەنجامی پێشوو — بێ تێچوون" : "نتيجة سابقة — بلا خصم"}</TermHint></div>
                     )}
                     {ok && <StepAnswer tool={step.tool} output={st?.output} lang={L} />}
                     {ok && <StepEngines tool={step.tool} output={st?.output} lang={L} />}
