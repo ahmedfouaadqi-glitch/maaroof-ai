@@ -34,3 +34,16 @@ describe("cleanCouncilText", () => {
     expect(t).toContain("القرار");
   });
 });
+
+import { labelFor as _lf, localizeValue as _lv, glossarySection as _gs } from "./report-sections";
+describe("export language + glossary", () => {
+  it("localizes keys and values both ways", () => {
+    expect(_lf("Frequency Hours", "ar")).toBe("تكرار الفحص (بالساعات)");
+    expect(_lv("Cached", "ar")).toBe("مخزّن مسبقاً");
+    expect(_lf("الحالة", "en")).toBe("Status");
+  });
+  it("adds a glossary for terms present", () => {
+    const g = _gs([{ heading: "x", kind: "kv", rows: [["frequency hours", 6]] } as any], "ar");
+    expect(g?.list?.[0]).toContain("الساعات");
+  });
+});

@@ -253,15 +253,15 @@ function ComplianceCard({ events }: { events: StageEvent[] }) {
   const [open, setOpen] = useState(false);
   const c = [...events].reverse().find((e) => e.type === "compliance")?.data as any;
   if (!c) return null;
-  const tone = c.verdict === "violation" ? "border-destructive/40 bg-destructive/5 text-destructive"
+  const tone = c.verdict !== "compliant" ? "border-amber-500/40 bg-amber-500/5 text-amber-600"
     : c.verdict === "warning" ? "border-amber-500/40 bg-amber-500/5 text-amber-500"
     : "border-green-500/40 bg-green-500/5 text-green-500";
-  const label = c.verdict === "violation" ? t("auto.mandatory_law_violation") : c.verdict === "warning" ? t("auto.constitutional_notes") : t("auto.committed_to_the_constitution");
+  const label = c.verdict === "violation" ? "توصية: راجع النتائج قبل اعتمادها" : c.verdict === "warning" ? t("auto.constitutional_notes") : t("auto.committed_to_the_constitution");
   const violations: any[] = Array.isArray(c.violations) ? c.violations : [];
   return (
     <div className={`rounded-lg border p-3 text-xs ${tone}`}>
       <button onClick={() => setOpen((o) => !o)} className="w-full text-start font-semibold">
-        الامتثال الدستوري: {label} — {c.score}% ({c.satisfied?.length ?? 0}/{c.checked} قانون)
+        مراجعة الجودة: {label} — {c.score}% ({c.satisfied?.length ?? 0}/{c.checked} قانون)
       </button>
       {open && violations.length > 0 && (
         <ul className="list-disc ms-4 mt-2 space-y-1 text-muted-foreground">

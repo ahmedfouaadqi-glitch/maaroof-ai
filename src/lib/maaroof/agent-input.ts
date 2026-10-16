@@ -32,6 +32,7 @@ const BRAND_KEYS: Record<string, string[]> = {
 export const REQUIRED_FIELDS: Record<string, string[]> = {
   ...BRAND_KEYS,
   research: ["query"],
+  suggest: ["description"],
 };
 
 const ANY_BRAND = ["brand", "brand_name", "company", "business_name", "project_name"];
@@ -59,6 +60,10 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
     const first = links.map((l: any) => str(typeof l === "string" ? l : l?.url)).find((u: string) => /^https?:\/\//.test(u));
     if (first) out.url = first;
   }
+  if (tool === "suggest" && !str(out.description) && !str(out.sourceText)) {
+    const d = ctx.goal?.trim() || [str(ctx.profile?.brand_name), str(ctx.profile?.brand_keywords)].filter(Boolean).join(" — ");
+    if (d) out.description = d.slice(0, 600);
+  }
   if (tool === "research" && !str(out.query) && ctx.goal) out.query = ctx.goal.slice(0, 300);
   // Planning tools receive the user's own horizon (any unit), never a fixed one.
   if (["geo_strategist", "what_if", "brand_boost"].includes(tool) && !out.timeframe && ctx.goal) out.timeframe = ctx.goal.slice(0, 300);
@@ -72,11 +77,12 @@ export function missingFields(tool: string, input: Record<string, any>): string[
 
 const Q: Record<string, Record<"ar" | "en" | "ku", string>> = {
   brand: { ar: "لم نجد اسم العلامة لهذه الخطوة، ما هو؟", en: "We couldn't find the brand name for this step — what is it?", ku: "ناوی براند بۆ ئەم هەنگاوە نەدۆزرایەوە، چییە؟" },
+  description: { ar: "ما موضوع المحتوى الذي تريد منشورات عنه؟", en: "What should the posts be about?", ku: "پۆستەکان دەربارەی چی بن؟" },
   query: { ar: "ما الموضوع الذي تريد البحث عنه بالضبط؟", en: "What exactly should we research?", ku: "چی بە وردی لێکۆڵینەوەی بۆ بکەین؟" },
 };
 
 export function clarifyQuestion(field: string, lang: "ar" | "en" | "ku"): string {
-  const k = ANY_BRAND.includes(field) ? "brand" : field === "query" ? "query" : "brand";
+  const k = ANY_BRAND.includes(field) ? "brand" : field in Q ? field : "brand";
   return Q[k][lang] || Q[k].ar;
 }
 

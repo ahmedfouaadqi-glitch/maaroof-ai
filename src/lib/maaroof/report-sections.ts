@@ -27,13 +27,50 @@ const KEY_LABELS: Record<string, { ar: string; ku: string }> = {
   "priority keywords": { ar: "الكلمات ذات الأولوية", ku: "وشە گرنگەکان" }, "content types": { ar: "أنواع المحتوى", ku: "جۆری ناوەڕۆک" }, "priority platforms": { ar: "المنصات ذات الأولوية", ku: "پلاتفۆرمە گرنگەکان" },
   "editorial calendar": { ar: "التقويم التحريري", ku: "ساڵنامەی ناوەڕۆک" }, "kpi targets": { ar: "أهداف المؤشرات", ku: "ئامانجەکان" }, type: { ar: "النوع", ku: "جۆر" },
   visibility: { ar: "الظهور", ku: "دەرکەوتن" }, probe: { ar: "الفحص الحي", ku: "پشکنینی ڕاستەوخۆ" }, basis: { ar: "الأساس", ku: "بنەما" }, charged: { ar: "المخصوم", ku: "بڕاو" },
+  "frequency hours": { ar: "تكرار الفحص (بالساعات)", ku: "دووبارەبوونەوە (کاتژمێر)" }, active: { ar: "نشط", ku: "چالاک" }, cached: { ar: "مخزّن مسبقاً", ku: "پاشەکەوتکراو" },
+  local: { ar: "محلي", ku: "ناوخۆیی" }, status: { ar: "الحالة", ku: "دۆخ" }, competitors: { ar: "المنافسون", ku: "ڕکابەران" }, keywords: { ar: "الكلمات المفتاحية", ku: "وشە سەرەکییەکان" },
+  brand: { ar: "العلامة", ku: "براند" }, url: { ar: "الرابط", ku: "بەستەر" }, name: { ar: "الاسم", ku: "ناو" }, "created at": { ar: "تاريخ الإنشاء", ku: "بەرواری دروستکردن" },
+  "updated at": { ar: "تاريخ التحديث", ku: "بەرواری نوێکردنەوە" }, "last checked at": { ar: "آخر فحص", ku: "دوایین پشکنین" }, confidence: { ar: "الثقة", ku: "متمانە" },
+  evidence: { ar: "الدليل", ku: "بەڵگە" }, recommendations: { ar: "التوصيات", ku: "پێشنیارەکان" }, posts: { ar: "المنشورات", ku: "پۆستەکان" }, content: { ar: "المحتوى", ku: "ناوەڕۆک" },
+  estimated: { ar: "مقدّر", ku: "خەمڵێنراو" }, live: { ar: "حي", ku: "ڕاستەوخۆ" }, pending: { ar: "قيد الانتظار", ku: "چاوەڕوان" }, failed: { ar: "فشل", ku: "شکستی هێنا" },
+  success: { ar: "نجاح", ku: "سەرکەوتوو" }, reused: { ar: "أعيد استخدامه", ku: "دووبارە بەکارهات" }, insights: { ar: "الرؤى", ku: "تێڕوانینەکان" }, gaps: { ar: "الفجوات", ku: "کەلێنەکان" },
   "realism note": { ar: "ملاحظة واقعية", ku: "تێبینی" }, sources: { ar: "المصادر", ku: "سەرچاوەکان" }, true: { ar: "نعم", ku: "بەڵێ" }, false: { ar: "لا", ku: "نەخێر" }, measured: { ar: "مقاس حي", ku: "پێوراو" },
 };
 let CUR_LANG = "en";
+/** Arabic label -> English, so English exports never keep Arabic UI words. */
+const AR_TO_EN: Record<string, string> = Object.fromEntries(Object.entries(KEY_LABELS).map(([k, v]) => [v.ar, k.replace(/\b\w/g, (c) => c.toUpperCase())]));
+/** One-line hints for terms that appear in reports. */
+export const GLOSSARY: Record<string, { ar: string; en: string; ku: string }> = {
+  "frequency hours": { ar: "عدد الساعات بين كل فحص تلقائي والذي يليه.", en: "Hours between one automatic check and the next.", ku: "ژمارەی کاتژمێر لە نێوان دوو پشکنینی خۆکاردا." },
+  active: { ar: "المراقبة تعمل حالياً وتفحص في موعدها.", en: "Monitoring is running and checks on schedule.", ku: "چاودێری کاردەکات." },
+  cached: { ar: "نتيجة سابقة أعيد استخدامها دون كلفة إضافية.", en: "A previous result reused at no extra cost.", ku: "ئەنجامێکی پێشوو بەبێ تێچوو." },
+  local: { ar: "فحص داخل المنصة دون استدعاء نموذج مدفوع.", en: "Checked inside the platform without a paid model call.", ku: "پشکنین لەناو پلاتفۆرم بەبێ تێچوو." },
+  measured: { ar: "رقم مأخوذ من إجابة حقيقية للنموذج الآن.", en: "Number taken from a real model answer just now.", ku: "ژمارە لە وەڵامی ڕاستەقینە." },
+  estimated: { ar: "تقدير مبني على بيانات متاحة وليس قياساً حياً.", en: "An estimate from available data, not a live measurement.", ku: "خەمڵاندن، نەک پێوانی ڕاستەوخۆ." },
+  confidence: { ar: "مدى قوة الأدلة التي تدعم النتيجة.", en: "How strongly the evidence supports the result.", ku: "هێزی بەڵگەکان." },
+  "share of voice": { ar: "نسبة ذكر علامتك مقارنة بالمنافسين في إجابات النماذج.", en: "How often your brand is named versus competitors in AI answers.", ku: "ڕێژەی باسکردنی براندەکەت." },
+};
+const VALUE_WORDS: Record<string, string> = { true: "true", false: "false", active: "active", cached: "cached", local: "local", estimated: "estimated", measured: "measured", live: "live", pending: "pending", failed: "failed", success: "success" };
+/** Translate a short fixed value (yes/no, status words) into the export language. */
+export function localizeValue(v: any, lang = CUR_LANG): any {
+  if (typeof v === "boolean") v = String(v);
+  if (typeof v !== "string") return v;
+  const t = v.trim();
+  if (lang === "en") return AR_TO_EN[t] ?? v;
+  const k = VALUE_WORDS[t.toLowerCase()];
+  return k ? labelFor(k, lang) : v;
+}
+/** Glossary section listing only the terms that appear in the given sections. */
+export function glossarySection(sections: ExportSection[], lang: string): ExportSection | null {
+  const hay = JSON.stringify(sections).toLowerCase();
+  const items = Object.entries(GLOSSARY).filter(([k]) => hay.includes(k) || hay.includes(labelFor(k, lang).toLowerCase()))
+    .map(([k, g]) => `${lang === "en" ? k.replace(/\b\w/g, (c) => c.toUpperCase()) : labelFor(k, lang)}: ${g[lang as "ar" | "en" | "ku"] || g.en}`);
+  return items.length ? { heading: lang === "en" ? "Glossary" : lang === "ku" ? "فەرهەنگ" : "معجم المصطلحات", kind: "list", list: items } : null;
+}
 /** Localized label for a JSON key (falls back to the readable key). */
 export function labelFor(k: string, lang = CUR_LANG): string {
   const h = k.replace(/[_.-]+/g, " ").replace(/\s+/g, " ").trim();
-  if (lang !== "ar" && lang !== "ku") return h;
+  if (lang !== "ar" && lang !== "ku") return AR_TO_EN[h] ?? h;
   const e = KEY_LABELS[h.toLowerCase()];
   return e ? e[lang as "ar" | "ku"] : h;
 }
@@ -72,7 +109,7 @@ function stripTech(o: any, depth = 0): any {
 
 function scrub(s: ExportSection): ExportSection {
   const c: any = { ...s };
-  const f = (x: any) => scrubModelNames(flattenValue(x));
+  const f = (x: any) => scrubModelNames(String(localizeValue(flattenValue(x))));
   if (typeof c.heading === "string") c.heading = scrubModelNames(c.heading.split(" · ").map((p: string) => labelFor(p)).join(" · "));
   if (Array.isArray(c.rows)) c.rows = c.rows.map(([k, v]: any) => [typeof k === "string" ? labelFor(k) : k, v]);
   if (c.table?.columns) c.table = { ...c.table, columns: c.table.columns.map((x: any) => (typeof x === "string" ? labelFor(x) : x)) };
@@ -182,6 +219,8 @@ export function buildSessionSections(args: {
       if (rows.length) out.push({ heading: `${L(lang, "تقني", "Technical")} · ${s.index + 1}. ${humanize(s.tool)}`, kind: "kv", rows });
     }
   }
+  const g = glossarySection(out, lang);
+  if (g) out.push(g);
   return out;
   }
 }
