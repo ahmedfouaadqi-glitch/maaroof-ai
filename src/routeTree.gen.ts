@@ -39,6 +39,7 @@ import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
 import { Route as ApiKnownRouteImport } from './routes/api/known'
 import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
+import { Route as ApiMaaroofJobsRouteImport } from './routes/api/maaroof-jobs'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
@@ -208,6 +209,11 @@ const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
   path: '/api/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMaaroofJobsRoute = ApiMaaroofJobsRouteImport.update({
+  id: '/api/maaroof-jobs',
+  path: '/api/maaroof-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiResearchRoute = ApiResearchRouteImport.update({
   id: '/api/research',
   path: '/api/research',
@@ -333,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
+  '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -383,6 +390,7 @@ export interface FileRoutesByTo {
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
+  '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -434,6 +442,7 @@ export interface FileRoutesById {
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
+  '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/geo-strategist'
     | '/api/known'
     | '/api/maaroof'
+    | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | '/api/geo-strategist'
     | '/api/known'
     | '/api/maaroof'
+    | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -586,6 +597,7 @@ export interface FileRouteTypes {
     | '/api/geo-strategist'
     | '/api/known'
     | '/api/maaroof'
+    | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/social-analysis'
     | '/api/suggest'
@@ -637,6 +649,7 @@ export interface RootRouteChildren {
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
   ApiKnownRoute: typeof ApiKnownRoute
   ApiMaaroofRoute: typeof ApiMaaroofRoute
+  ApiMaaroofJobsRoute: typeof ApiMaaroofJobsRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
@@ -865,6 +878,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/maaroof-jobs': {
+      id: '/api/maaroof-jobs'
+      path: '/api/maaroof-jobs'
+      fullPath: '/api/maaroof-jobs'
+      preLoaderRoute: typeof ApiMaaroofJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/research': {
       id: '/api/research'
       path: '/api/research'
@@ -1050,6 +1070,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
   ApiKnownRoute: ApiKnownRoute,
   ApiMaaroofRoute: ApiMaaroofRoute,
+  ApiMaaroofJobsRoute: ApiMaaroofJobsRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,
   ApiSuggestRoute: ApiSuggestRoute,
