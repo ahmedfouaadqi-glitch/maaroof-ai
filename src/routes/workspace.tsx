@@ -300,7 +300,16 @@ function WorkspacePage() {
                 {tools.length > 0 && <p className="mt-3 text-xs text-muted-foreground">{c.selectedTools}: {tools.map(toolLabel).join("، ")}</p>}
               </div>
 
-              <div className="rounded-2xl border border-border bg-card">
+              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
+                <h2 className="mb-3 font-semibold">{c.mode}</h2>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
+                    <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">
                 <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 p-4 text-start">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-muted"><BrainCircuit className="size-5" /></div>
                   <div className="flex-1">
@@ -329,7 +338,7 @@ function WorkspacePage() {
                     <span className="ms-auto self-center text-xs text-muted-foreground">{selectedModels.length} {c.modelCount}</span>
                   </div>
                 </div>}
-              </div>
+              </div>}
             </div>
 
             <aside className="space-y-3">
