@@ -78,11 +78,14 @@ const DOMAIN_LABELS: Record<InterviewDomain, Record<Locale, string>> = {
 
 const COPY: Record<Locale, Record<string, string>> = {
   ar: {
-    title: "المقابلات والأسئلة الذكية",
-    subtitle: "مقابلة حسب نوع الجهة والمهمة. تُحفظ الإجابات ويمكن متابعة الجلسة لاحقاً.",
+    title: "مقابلة بناء السياق المحفوظ",
+    subtitle: "تبني ملف سياق محفوظاً حسب طبيعة الجهة ومجالات العمل. تبقى أسئلة التوضيح أثناء تنفيذ المهمة منفصلة وتتغير حسب الطلب.",
     open: "فتح المقابلات",
     close: "إخفاء المقابلات",
-    target: "نوع الجهة أو الهدف",
+    target: "طبيعة الجهة التي سنبني ملف سياقها",
+    chooseTargetType: "اختر طبيعة الجهة أولاً",
+    targetHint: "اختر ما نريد جمع سياقه، لا نوع حسابك. تتغير الأسئلة حسب نوع الجهة ومجالات العمل المختارة.",
+    targetTypeRequired: "اختر طبيعة الجهة أو المشروع قبل بدء المقابلة.",
     targetName: "اسم الجهة أو العلامة أو المشروع",
     targetNameHint: "مثال: شركة معروف أو عميل الوكالة",
     workspace: "مساحة العمل (اختياري)",
@@ -125,11 +128,14 @@ const COPY: Record<Locale, Record<string, string>> = {
     count: "إجابة",
   },
   en: {
-    title: "Guided interviews",
-    subtitle: "Context-aware interviews. Answers are saved so you can resume later.",
+    title: "Saved context interview",
+    subtitle: "Builds a saved context profile for the selected entity and workstreams. Task-specific clarification during execution remains separate and adapts to each request.",
     open: "Open interviews",
     close: "Hide interviews",
-    target: "Entity or target type",
+    target: "What are we building context for?",
+    chooseTargetType: "Choose an entity type first",
+    targetHint: "Choose the entity to profile, not your account role. Questions adapt to the entity type and selected workstreams.",
+    targetTypeRequired: "Choose an entity or project type before starting.",
     targetName: "Entity, brand, or project name",
     targetNameHint: "Example: Maaroof company or an agency client",
     workspace: "Workspace (optional)",
@@ -173,12 +179,15 @@ const COPY: Record<Locale, Record<string, string>> = {
     count: "answers",
   },
   ku: {
-    title: "چاوپێکەوتنە ڕێنماییکراوەکان",
+    title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
     subtitle:
-      "چاوپێکەوتن بەپێی لایەن و ئامانج. وەڵامەکان دەپارێزرێن و دواتر دەتوانیت بەردەوام بیت.",
+      "پرۆفایلی کۆنتێکستی پاشەکەوتکراو بەپێی جۆری لایەن و بوارەکانی کار دروست دەکات. پرسیاری ڕوونکردنەوەی ئەرکی ئێستا جیاوازە و بەپێی داواکاری دەگۆڕێت.",
     open: "کردنەوەی چاوپێکەوتنەکان",
     close: "شاردنەوەی چاوپێکەوتنەکان",
-    target: "جۆری لایەن یان ئامانج",
+    target: "جۆری لایەن بۆ دروستکردنی کۆنتێکست",
+    chooseTargetType: "سەرەتا جۆری لایەن هەڵبژێرە",
+    targetHint: "ئەو لایەنە هەڵبژێرە کە دەتەوێت کۆنتێکستی بۆ دروست بکرێت، نەک جۆری هەژمارەکەت. پرسیارەکان بەپێی لایەن و بوارەکان دەگۆڕێن.",
+    targetTypeRequired: "پێش دەستپێکردن جۆری لایەن یان پڕۆژە هەڵبژێرە.",
     targetName: "ناوی لایەن یان پڕۆژە",
     targetNameHint: "نموونە: کۆمپانیای معروف یان کڕیاری ئاژانس",
     workspace: "شوێنی کار (ئارەزوومەندانە)",
@@ -255,7 +264,7 @@ export function InterviewPanel({
   const [error, setError] = useState("");
   const [sessions, setSessions] = useState<InterviewSummary[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
-  const [targetType, setTargetType] = useState<InterviewTargetType>("individual");
+  const [targetType, setTargetType] = useState<InterviewTargetType | "">("");
   const [targetName, setTargetName] = useState("");
   const [workspaceId, setWorkspaceId] = useState("");
   const [domains, setDomains] = useState<InterviewDomain[]>(["general"]);
@@ -335,6 +344,10 @@ export function InterviewPanel({
 
   async function startInterview() {
     if (busy) return;
+    if (!targetType) {
+      setError(c("targetTypeRequired"));
+      return;
+    }
     if (!targetName.trim()) {
       setError(c("nameRequired"));
       return;
@@ -556,16 +569,20 @@ export function InterviewPanel({
                   <label className="mb-1.5 block text-sm font-medium">{c("target")}</label>
                   <select
                     value={targetType}
-                    onChange={(event) => setTargetType(event.target.value as InterviewTargetType)}
+                    onChange={(event) =>
+                      setTargetType(event.target.value as InterviewTargetType | "")
+                    }
                     disabled={busy}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
                   >
+                    <option value="">{c("chooseTargetType")}</option>
                     {INTERVIEW_TARGET_TYPES.map((type) => (
                       <option key={type} value={type}>
                         {TARGET_LABELS[type][locale]}
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{c("targetHint")}</p>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">{c("targetName")}</label>
@@ -632,7 +649,7 @@ export function InterviewPanel({
                   <button
                     type="button"
                     onClick={() => void startInterview()}
-                    disabled={busy || !targetName.trim()}
+                    disabled={busy || !targetType || !targetName.trim()}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                   >
                     {busy ? (
@@ -678,6 +695,9 @@ export function InterviewPanel({
                     disabled={busy}
                     onClick={() => {
                       setSession(null);
+                      setTargetType("");
+                      setTargetName("");
+                      setDomains(["general"]);
                       setNextQuestion(null);
                       setProgress(null);
                       setDataComplete(false);
