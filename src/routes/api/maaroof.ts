@@ -2,7 +2,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
-import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { enqueueMaaroofJob, hasMaaroofQueue } from "@/lib/request-ctx.server";
@@ -47,7 +46,7 @@ export const Route = createFileRoute("/api/maaroof")({
         const planKey = activeSubscription ? normalizePlanAccessKey((userProfile as any)?.subscription_tier) : "";
         const availableInterfaces: string[] = Array.isArray(uiPolicy?.available_interfaces) ? uiPolicy.available_interfaces : uiPolicy?.enabled === false ? ["professional"] : ["workbench", "professional"];
         const requestedInterfaceKey = interfaceMode === "workspace" ? "workbench" : "professional";
-        if (interfaceMode === "workspace" && !hasMaaroofQueue()) {
+        if (!hasMaaroofQueue()) {
           return Response.json({ error: "background_queue_not_configured" }, { status: 503 });
         }
         if (executionMode && Array.isArray(uiPolicy?.allowed_modes) && !uiPolicy.allowed_modes.includes(executionMode)) {
@@ -55,7 +54,6 @@ export const Route = createFileRoute("/api/maaroof")({
         }
         let effectiveSkillKeys: string[] = [];
         if (!availableInterfaces.includes(requestedInterfaceKey)) return Response.json({ error: "interface_disabled" }, { status: 403 });
-        if (interfaceMode === "workspace") {
           const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : MAAROOF_SKILLS.map((skill) => skill.key);
           const accessPolicy = resolveSkillAccessPolicy({
             globalPolicy: uiPolicy?.skill_access && typeof uiPolicy.skill_access === "object" ? uiPolicy.skill_access : {},
@@ -131,7 +129,7 @@ export const Route = createFileRoute("/api/maaroof")({
               geo_scope: geoScope || null,
               detected_geo: detectedGeo || null,
               origin,
-              selected_skills: effectiveSkillKeys,
+              selected_skills: interfaceMode === "workspace" ? effectiveSkillKeys : null,
               live_probe: liveProbe !== false,
               use_subagents: useSubagents !== false,
               clarifications,
@@ -157,34 +155,7 @@ export const Route = createFileRoute("/api/maaroof")({
             return Response.json({ error: "background_enqueue_failed", job_id: jobId }, { status: 503 });
           }
           return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
-        }
-
-        // Preserve the existing professional interface's live SSE contract.
-        const encoder = new TextEncoder();
-        const abortCtl = new AbortController();
-        request.signal.addEventListener("abort", () => abortCtl.abort());
-        const stream = new ReadableStream({
-          async start(controller) {
-            const emit = async (event: string, data: any) => {
-              try { controller.enqueue(encoder.encode("event: " + event + "\ndata: " + JSON.stringify(data) + "\n\n")); } catch {}
-            };
-            try {
-              await runMaaroof({
-                userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe,
-                clarifications, selectedSkills: undefined,
-              });
-            } catch (e: any) {
-              await emit("error", { message: String(e?.message || e) });
-            } finally {
-              try { controller.close(); } catch {}
-            }
-          },
-          cancel() { abortCtl.abort(); },
-        });
-        return new Response(stream, {
-          headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
-        });
+          return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
 
       },
     },
