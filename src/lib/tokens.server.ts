@@ -68,7 +68,8 @@ async function resolveToolAccessMode(userId: string, toolKey: string): Promise<A
   if (configuredToolMode !== "self_service") return configuredToolMode;
   // If no explicit tool override exists, inherit a gate only when every skill mapped
   // to this tool is gated. Shared tools remain available through a self-service skill.
-  const mappedSkills = MAAROOF_SKILLS.filter(skill => skill.tools.includes(toolKey as any));
+  const baseToolKey = toolKey.includes(".") ? toolKey.split(".")[0] : toolKey;
+  const mappedSkills = MAAROOF_SKILLS.filter(skill => skill.tools.includes(baseToolKey as any));
   if (mappedSkills.length) {
     const modes = mappedSkills.map(skill => skillMode(skill.key));
     if (modes.every(mode => mode === "disabled")) return "disabled";
