@@ -59,6 +59,7 @@ function WorkbenchPage() {
       if (!active || !data?.value || typeof data.value !== "object") return;
       const value = data.value as any;
       setPolicy(old => ({ ...old, ...value }));
+      if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
       if (value.enabled === false) navigate({ to: "/maaroof", replace: true });
     }).catch(() => {});
     return () => { active = false; };
@@ -69,7 +70,7 @@ function WorkbenchPage() {
   const safeText = (value: unknown) => typeof value === "string" ? value : value == null ? "" : JSON.stringify(value, null, 2);
 
   async function run() {
-    if (!goal.trim() || running || !user) return;
+    if (!goal.trim() || running || !user || toolKeys.length === 0 || !policy.allowed_modes.includes(mode)) return;
     setError(""); setEvents([]); setRunning(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) { setRunning(false); setError(t.error); return; }
@@ -166,7 +167,7 @@ function WorkbenchPage() {
               </div>}
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="max-w-lg text-xs leading-5 text-muted-foreground">{t.sources}</p>
-                <button type="button" onClick={run} disabled={running||!goal.trim()||(live&&engines.length===0)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{running?<LoaderCircle className="size-4 animate-spin"/>:<Sparkles className="size-4"/>}{running?t.running:t.run}</button>
+                <button type="button" onClick={run} disabled={running||!goal.trim()||toolKeys.length===0||!policy.allowed_modes.includes(mode)||(live&&engines.length===0)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{running?<LoaderCircle className="size-4 animate-spin"/>:<Sparkles className="size-4"/>}{running?t.running:t.run}</button>
               </div>
               {running && <button type="button" onClick={()=>abortRef.current?.abort()} className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"><X className="size-3.5"/>{t.cancel}</button>}
               {error && <div role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
