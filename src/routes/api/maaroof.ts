@@ -85,11 +85,18 @@ export const Route = createFileRoute("/api/maaroof")({
         // are constrained by admin policy and the user's current plan/override.
         if (body?.live_probe !== false && (body?.auto_select_probe_engines === true || Array.isArray(body?.probe_engines))) {
           const { enginesAllowedForUser } = await import("@/lib/ai-engines.server");
-          const { resolveProbePolicy } = await import("@/lib/tokens.server");
+          const { resolveProbePolicy, chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
           const entitlement = await enginesAllowedForUser(admin, userId);
           const policy = await resolveProbePolicy(userId);
           const maxByPolicy = policy.maxEngines == null ? entitlement.limit : Math.min(entitlement.limit, policy.maxEngines);
           const eligible = entitlement.allowed.slice(0, Math.max(0, maxByPolicy));
+          const { data: engineProfile } = await admin.from("profiles")
+            .select("tokens_balance,tokens_daily_limit,tokens_monthly_limit")
+            .eq("id", userId).maybeSingle();
+          const hasEngineMeter = Number((engineProfile as any)?.tokens_balance) > 0 ||
+            (engineProfile as any)?.tokens_daily_limit != null || (engineProfile as any)?.tokens_monthly_limit != null;
+          const probeCost = await resolveToolCost(userId, "visibility.probe");
+          const perEngineTokens = policy.tokensPerEngine ?? probeCost.tokens;
 
           if (body?.auto_select_probe_engines === true) {
             const { data: freshProfile } = await admin.from("profiles")
@@ -99,9 +106,7 @@ export const Route = createFileRoute("/api/maaroof")({
               (freshProfile as any)?.tokens_daily_limit != null || (freshProfile as any)?.tokens_monthly_limit != null;
             let affordableCount = eligible.length;
             if (hasFreshMeter) {
-              const probeCost = await resolveToolCost(userId, "visibility.probe");
-              const perEngineTokens = policy.tokensPerEngine ?? probeCost.tokens;
-              if (!(perEngineTokens > 0)) {
+              if (!(perEngineTokens > 0) || probeCost.source === "unpriced" || (probeCost as any).source === "disabled_by_admin") {
                 affordableCount = 0;
               } else {
                 const balanceCount = Math.floor(Math.max(0, Number((freshProfile as any)?.tokens_balance) || 0) / perEngineTokens);
@@ -116,6 +121,20 @@ export const Route = createFileRoute("/api/maaroof")({
           } else {
             const requested = requestedProbeEngines || [];
             selectedProbeEngines = requested.filter((engine) => eligible.includes(engine as any));
+          }
+
+          if (selectedProbeEngines?.length && hasEngineMeter) {
+            const probeCharge = await chargeTokens({
+              userId,
+              toolKey: "visibility.probe",
+              units: selectedProbeEngines.length,
+              unitTokens: policy.tokensPerEngine ?? undefined,
+              meta: { engines: selectedProbeEngines, source: "maaroof_engine_selection" },
+            });
+            if (!probeCharge.ok) {
+              const status = probeCharge.reason === "unpriced" ? 402 : probeCharge.reason === "balance" || probeCharge.reason === "daily_limit" || probeCharge.reason === "monthly_limit" ? 402 : 403;
+              return Response.json(chargeFailureBody(probeCharge.reason, (probeCharge as any).left), { status });
+            }
           }
 
           if (!selectedProbeEngines?.length) {
