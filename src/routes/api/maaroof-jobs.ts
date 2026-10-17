@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         }
         const now = new Date().toISOString();
         const { error } = await admin.from("maaroof_background_jobs").update({
-          status: "cancelled", error: "cancelled_by_user", finished_at: now, updated_at: now,
+          status: "cancelled", auth_token_ciphertext: null, error: "cancelled_by_user", finished_at: now, updated_at: now,
         }).eq("id", id).eq("user_id", userId).in("status", ["queued", "running"]);
         if (error) return Response.json({ error: "job_cancel_failed" }, { status: 500 });
         await admin.from("maaroof_background_job_events").insert({
