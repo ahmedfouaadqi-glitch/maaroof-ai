@@ -13,10 +13,10 @@ import { useCountry } from "@/lib/use-country";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MAAROOF Ai — GEO - SEO - AEO , Cited by ChatGPT & Gemini" },
-      { name: "description", content: "Score, optimize and publish content so 10 AI engines cite your brand in English, Arabic and Kurdish." },
-      { property: "og:title", content: "MAAROOF Ai — Get cited by ChatGPT, Gemini & Perplexity" },
-      { property: "og:description", content: "Analyze, score and publish GEO-ready content so AI answer engines cite your brand across MENA." },
+      { title: "MAAROOF Ai — AI Visibility and Goal-Driven Intelligence" },
+      { name: "description", content: "Plan research, analyze markets and improve brand visibility with a goal-driven AI workspace in Arabic, Kurdish and English." },
+      { property: "og:title", content: "MAAROOF Ai — From Business Goal to Actionable Intelligence" },
+      { property: "og:description", content: "Coordinate research, analysis and existing tools in one multilingual AI workspace for business and brand intelligence." },
       { property: "og:url", content: "https://maaroofai.com/" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/" }],
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
         operatingSystem: "Web",
         url: "https://maaroofai.com/",
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content optimized for 10 AI search engines.",
+        description: "A multilingual business intelligence workspace that coordinates research, analysis, and existing AI tools to help users move from goals to reviewable results.",
       }),
     }],
   }),
