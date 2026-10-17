@@ -81,42 +81,45 @@ const content = {
 <p class="text-sm text-muted-foreground">آخر مراجعة تحريرية: 17 أكتوبر 2026. يُنصح بمراجعة قانونية قبل اعتماد الشروط نهائياً.</p>
 `,
   en: `
-<p>By using <strong>MAAROOF Ai</strong> (part of the Marouf system), you agree to the following:</p>
+<p>These terms govern access to <strong>MAAROOF Ai</strong>, part of the Maaroof system, including workspaces, skills, tools and the AI Agent. By using the platform, you agree to these terms to the extent permitted by applicable law. Editorial review date: 17 October 2026.</p>
 <h2>1. Acceptable Use</h2>
 <ul>
 <li>Use the platform for lawful purposes only.</li>
 <li>Do not submit content that violates Iraqi law or others' rights.</li>
 <li>Do not attempt to exploit or abuse the AI interface or Smart Agent.</li>
-<li>Do not use tools or the Agent for spam or unauthorized personal data harvesting.</li>
+<li>Do not use tools or the Agent for spam, collecting personal data without an appropriate lawful basis or permission, or bypassing access controls and technical limits.</li>
+<li>Do not submit confidential or personal information that you are not authorized to process or share with providers required for the task.</li>
 </ul>
 <h2>2. Account & Subscription</h2>
 <ul>
-<li>You are responsible for keeping your credentials confidential. Accounts are bound to a device fingerprint to prevent abuse.</li>
+<li>You are responsible for protecting your credentials and activity performed through your account. Technical information and security logs may be processed to help prevent abuse.</li>
 <li>Paid subscriptions are activated via WhatsApp after payment confirmation.</li>
-<li>Subscriptions are non-refundable after activation unless our internal policy allows.</li>
+<li>Fees and refunds are subject to the plan terms, payment conditions and any mandatory applicable rules. Nothing in this clause removes rights that cannot legally be waived.</li>
 <li>The super admin may link specific tools or agent features to each plan and adjust monthly/daily quotas per tool.</li>
 </ul>
 <h2>3. Tools, Smart Agent & Usage</h2>
-<p>Each tool run or agent feature consumes units from your monthly allowance as follows:</p>
+<p>Runs of skills, tools and the Agent may consume units according to the price and limits shown or configured for your account. Cost may vary by tool, number of operations, models, live checks and plan policy. A pre-run estimate is indicative and may not represent the final all-inclusive cost.</p>
 <ul>
 <li>GEO Analysis, Post Generator, Competitor Compare, Company Outreach, Agent Command, AI Visibility — <strong>1×</strong> per run.</li>
 <li>Feasibility Study, BizDev, Smart Research, Run Targets — <strong>2×</strong> per run.</li>
 <li>Brand Boost — <strong>3×</strong> per run.</li>
 </ul>
-<p>Costs are shown on the "How it works" page and on each tool card. Daily and monthly usage is visible in the dashboard.</p>
+<p>Usage estimates and remaining limits are shown where the interface supports them. Server-side validation and charging remain authoritative at execution. A pre-run estimate cannot necessarily predict every internal tool call or external provider cost.</p>
 <h2>4. AI & Agent</h2>
-<p>Tools and the Agent are automated, not human chat. Results are advisory, not commercial or legal guarantees. The Agent may publish/analyze automatically based on targets you define; you are responsible for those targets and their content.</p>
-<h2>5. Progressive Web App (PWA)</h2>
+<p>Tools, skills and models are automated systems and may produce incomplete, inaccurate or outdated information. Outputs are advisory and are not commercial, financial, legal, medical or professional guarantees. Verify important information using appropriate sources. External publishing, sending or other actions must follow the permissions and confirmations available in the feature; you are responsible for reviewing inputs, outputs and actions you approve.</p>
+<h2>5. Models and third-party providers</h2>
+<p>The platform may use models and services provided by third parties. Availability, response time and outputs depend on provider conditions and policies and may change or stop. Displaying a provider name or mark does not imply partnership, endorsement or approval.</p>
+<h2>6. Progressive Web App (PWA)</h2>
 <p>The platform can be installed as an app on your device. Installation grants no extra permissions and collects no extra data beyond the website.</p>
-<h2>6. Intellectual Property</h2>
+<h2>7. Intellectual Property</h2>
 <p>Content you submit remains yours. Analysis and suggestion results are for your personal/commercial use.</p>
-<h2>7. Liability</h2>
+<h2>8. Liability</h2>
 <p>The platform is not liable for indirect damages from your use, including decisions made based on tool or agent output.</p>
-<h2>8. Updates</h2>
+<h2>9. Updates</h2>
 <p>We may update this policy. Continued use constitutes acceptance of the latest version.</p>
-<h2>9. Contact</h2>
+<h2>10. Contact</h2>
 <p>For inquiries: WhatsApp <strong>+9647733570130</strong>.</p>
-<p class="text-sm text-muted-foreground">Last updated: 2026</p>
+<p class="text-sm text-muted-foreground">Editorial review: 17 October 2026. Specialist legal review is recommended before final adoption.</p>
 `,
   ku: `
 <p>بە بەکارهێنانی <strong>MAAROOF Ai</strong> (بەشێک لە سیستەمی مەعروف) ڕەزامەندیت لەسەر ئەم مەرجانە:</p>
