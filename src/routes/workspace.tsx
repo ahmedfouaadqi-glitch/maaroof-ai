@@ -127,7 +127,11 @@ function WorkspacePage() {
     return () => { active = false; };
   }, [navigate]);
 
-  const recommendations = useMemo(() => recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(skill => policy.enabled_skills.includes(skill.key)).slice(0, 3), [goal, policy.enabled_skills]);
+  const recommendations = useMemo(() => {
+    const enabled = MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key));
+    const matched = recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(skill => policy.enabled_skills.includes(skill.key));
+    return (matched.length ? matched : enabled).slice(0, 3);
+  }, [goal, policy.enabled_skills]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
   const phaseEvents = events.filter((event) => event.type === "phase");
