@@ -113,7 +113,7 @@ function MaaroofPage() {
     getCostPreview({ data: { toolKey: "visibility.probe", units: 10 } }).then(setCostProbe).catch(() => {});
   }, [user?.id, executionMode]);
 
-  async function start(clarifications?: Record<string, string>, modeOverride?: "simulation" | "recommendation" | "execution", enginesOverride?: string[]) {
+  async function start(clarifications?: Record<string, string>, modeOverride?: "simulation" | "recommendation" | "execution", enginesOverride?: string[], autoSelectEngines = false) {
     if (!goal.trim() || running || !user) return;
     const mode = modeOverride || executionMode;
     setRunning(true); setEvents([]);
@@ -133,6 +133,7 @@ function MaaroofPage() {
           use_subagents: useSubagents,
           live_probe: liveProbe,
           probe_engines: enginesOverride,
+          auto_select_probe_engines: autoSelectEngines,
           clarifications,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
@@ -191,12 +192,8 @@ function MaaroofPage() {
           if (engineTimerRef.current) clearInterval(engineTimerRef.current);
           engineTimerRef.current = null;
           setEnginePickerOpen(false);
-          // Choose the largest affordable count from the current preview; server-side entitlement and charging remain authoritative.
-          const base = costRun?.metered ? Number(costRun.total) || 0 : 0;
-          const probe = costProbe?.metered ? Number(costProbe.total) || 0 : 0;
-          const affordable = probe > 0 && costRun?.metered ? Math.floor(Math.max(0, Number(costRun.balance) - base) / (probe / 10)) : ENGINE_KEYS.length;
-          const count = Math.max(1, Math.min(ENGINE_KEYS.length, affordable));
-          void start(undefined, undefined, ENGINE_KEYS.slice(0, count));
+          // The server chooses the largest affordable set from actual balance and admin policy.
+          void start(undefined, undefined, undefined, true);
           return 0;
         }
         return remaining - 1;
