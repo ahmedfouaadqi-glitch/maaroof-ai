@@ -49,6 +49,13 @@ export const Route = createFileRoute("/api/maaroof")({
         if (!hasMaaroofQueue()) {
           return Response.json({ error: "background_queue_not_configured" }, { status: 503 });
         }
+        const [{ error: jobsTableError }, { error: eventsTableError }] = await Promise.all([
+          admin.from("maaroof_background_jobs").select("id,auth_token_ciphertext").limit(1),
+          admin.from("maaroof_background_job_events").select("seq").limit(1),
+        ]);
+        if (jobsTableError || eventsTableError) {
+          return Response.json({ error: "background_jobs_migration_required" }, { status: 503 });
+        }
         if (executionMode && Array.isArray(uiPolicy?.allowed_modes) && !uiPolicy.allowed_modes.includes(executionMode)) {
           return Response.json({ error: "execution_mode_disabled" }, { status: 403 });
         }
