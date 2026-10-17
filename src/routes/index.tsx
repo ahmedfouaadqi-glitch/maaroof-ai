@@ -65,6 +65,7 @@ function Page() {
               stepDuration={0.2}
               center={false}
               className="font-semibold text-accent"
+              repeat={false}
             />
             <BlurText
               as="span"
@@ -74,6 +75,7 @@ function Page() {
               startDelay={180}
               center={false}
               className="text-muted-foreground"
+              repeat={false}
             />
             <span className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">
               {t("agent_banner_cta")} <ArrowRight className="size-3" />
@@ -85,12 +87,12 @@ function Page() {
         {/* HERO — 10 engines, concise */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 grid-bg opacity-40" />
-          <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[600px] max-w-5xl rounded-full bg-primary/15 blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
+          <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[600px] max-w-5xl rounded-full bg-primary/15 blur-3xl motion-safe:animate-pulse" style={{ animationDuration: "6s" }} />
           <div className="absolute end-1/4 top-40 -z-0 size-72 rounded-full bg-accent/20 blur-3xl" />
           <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-14 md:px-6 md:pb-16 md:pt-20">
             <div className="mx-auto max-w-3xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-                <Sparkles className="size-3.5 animate-pulse" /> {t("hero_badge")}
+                <Sparkles className="size-3.5 motion-safe:animate-pulse" /> {t("hero_badge")}
               </span>
 
               {country && (
@@ -112,6 +114,7 @@ function Page() {
                 stepDuration={0.28}
                 segmentClassName="text-gradient"
                 className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl"
+                repeat={false}
               />
               <BlurText
                 text={t("hero_sub")}
@@ -119,6 +122,7 @@ function Page() {
                 stepDuration={0.24}
                 startDelay={220}
                 className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg"
+                repeat={false}
               />
 
               {/* 10 engine chips */}
