@@ -1,0 +1,175 @@
+import { Link } from "@tanstack/react-router";
+import { useI18n } from "@/lib/i18n";
+import { SiteHeader } from "@/components/SiteHeader";
+import { ArrowRight, Sparkles, Globe2, Bot, Phone } from "lucide-react";
+import { EnginesOrbit } from "@/components/EnginesOrbit";
+import { BlurText } from "@/components/motion/BlurText";
+import { ENGINES } from "@/components/engine-logos";
+import { useCountry } from "@/lib/use-country";
+
+export function ClassicLanding() {
+  const { t, lang } = useI18n();
+  const { info: country } = useCountry();
+  const welcomeName = country
+    ? lang === "ar" ? country.name_ar : lang === "ku" ? country.name_ku : country.name_en
+    : "";
+
+  return (
+    <div className="min-h-screen">
+      <SiteHeader />
+      <main>
+        {/* Agent promo banner */}
+        <div className="border-b border-accent/30 bg-gradient-to-r from-accent/15 via-primary/10 to-accent/15">
+          <Link to="/pricing" className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-xs hover:bg-accent/10 md:text-sm">
+            <Bot className="size-4 text-accent" />
+            <BlurText
+              as="span"
+              text={t("agent_banner_title")}
+              delay={30}
+              stepDuration={0.2}
+              center={false}
+              className="font-semibold text-accent"
+            />
+            <BlurText
+              as="span"
+              text={`— ${t("agent_banner_desc")}`}
+              delay={18}
+              stepDuration={0.18}
+              startDelay={180}
+              center={false}
+              className="text-muted-foreground"
+            />
+            <span className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">
+              {t("agent_banner_cta")} <ArrowRight className="size-3" />
+            </span>
+          </Link>
+
+        </div>
+
+        {/* HERO — 10 engines, concise */}
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 grid-bg opacity-40" />
+          <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[600px] max-w-5xl rounded-full bg-primary/15 blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
+          <div className="absolute end-1/4 top-40 -z-0 size-72 rounded-full bg-accent/20 blur-3xl" />
+          <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-14 md:px-6 md:pb-16 md:pt-20">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
+                <Sparkles className="size-3.5 animate-pulse" /> {t("hero_badge")}
+              </span>
+
+              {country && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-xs text-foreground/80">
+                  <span className="text-base leading-none">{country.flag}</span>
+                  <span>
+                    {lang === "ar" ? `مرحباً بزوارنا من ${welcomeName}`
+                      : lang === "ku" ? `بەخێرهاتنی میوانانمان لە ${welcomeName}`
+                      : `Welcome, visitors from ${welcomeName}`}
+                  </span>
+                </div>
+              )}
+
+              <BlurText
+                as="h1"
+                text={t("hero_title")}
+                eager
+                delay={70}
+                stepDuration={0.28}
+                segmentClassName="text-gradient"
+                className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl"
+              />
+              <BlurText
+                text={t("hero_sub")}
+                delay={35}
+                stepDuration={0.24}
+                startDelay={220}
+                className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg"
+              />
+
+              {/* 10 engine chips */}
+              <div className="mx-auto mt-7 flex max-w-3xl flex-wrap items-center justify-center gap-2.5">
+                {ENGINES.map((e) => (
+                  <span key={e.name} className={`inline-flex items-center gap-2 rounded-full border border-border bg-gradient-to-br ${e.tint} px-3 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur transition hover:scale-105 hover:border-primary/50`}>
+                    <e.Logo size={14} />
+                    {e.name}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Sparkles className="size-3 text-primary" />{t("hero_chip_engines")}</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Globe2 className="size-3 text-primary" />{t("hero_chip_langs")}</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Bot className="size-3 text-accent" />{t("hero_chip_agent")}</span>
+              </div>
+
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
+                  {t("hero_cta_primary")} <ArrowRight className="size-4" />
+                </Link>
+                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
+                  {t("hero_cta_secondary")}
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-10">
+              <EnginesOrbit />
+            </div>
+          </div>
+        </section>
+
+<section className="mx-auto max-w-6xl px-4 pb-14 md:px-6" aria-labelledby="how-maaroof-works">
+          <h2 id="how-maaroof-works" className="text-center font-display text-2xl font-bold md:text-3xl">{t("home_steps_title")}</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">1</span><h3 className="mt-3 font-semibold">{t("home_step1_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step1_desc")}</p></div>
+            <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span><h3 className="mt-3 font-semibold">{t("home_step2_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step2_desc")}</p></div>
+            <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</span><h3 className="mt-3 font-semibold">{t("home_step3_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step3_desc")}</p></div>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-3"><Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:border-primary/50">{t("hero_cta_guide")}</Link><Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10">{t("hero_cta_secondary")}</Link></div>
+        </section>
+
+        {/* Crawlable, server-rendered summary so the homepage has substantive content for search engines */}
+        <section className="mx-auto max-w-4xl px-4 pb-16 md:px-6" aria-labelledby="about-maaroof">
+          <h2 id="about-maaroof" className="font-display text-2xl font-bold md:text-3xl">
+            What is MAAROOF Ai?
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            MAAROOF Ai is a Generative Engine Optimization (GEO) platform that helps brands, publishers and agencies become the source AI answer engines cite. It measures how your brand appears across ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi and Qwen, and gives clear, evidence-based steps to improve it in Arabic, Kurdish and English.
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card/40 p-4">
+              <h3 className="font-semibold">Analyze and score</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Check factual density, local relevance and citation readiness of any text before you publish.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card/40 p-4">
+              <h3 className="font-semibold">Verify on live engines</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Ask the engines directly whether they mention your brand, and keep the raw answers as evidence.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card/40 p-4">
+              <h3 className="font-semibold">Publish machine-readable identity</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Generate llms.txt and Schema.org JSON-LD so your brand identity stays consistent everywhere.</p>
+            </div>
+          </div>
+          <p className="mt-6 text-sm text-muted-foreground">
+            <Link to="/pricing" className="text-primary hover:underline">See plans and pricing</Link>
+            {" · "}
+            <Link to="/guide" className="text-primary hover:underline">Read the user guide</Link>
+          </p>
+        </section>
+      </main>
+
+
+      <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
+        <div>{t("footer")}</div>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          <Link to="/contact" className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-primary">
+            <Phone className="size-3.5" /> {t("nav_contact")}
+          </Link>
+          <Link to="/privacy" className="hover:text-primary">{t("footer_privacy")}</Link>
+          <Link to="/terms" className="hover:text-primary">{t("footer_terms")}</Link>
+          <Link to="/pricing" className="hover:text-primary">{t("footer_pricing")}</Link>
+          <Link to="/guide" className="hover:text-primary">{t("guide_title")}</Link>
+        </div>
+      </footer>
+    </div>
+  );
+}

@@ -1,3 +1,5 @@
+import { fetchInterfacePolicy } from "@/lib/use-interface-policy";
+import { postLoginTarget } from "@/lib/interface-policy";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
@@ -24,7 +26,7 @@ export const Route = createFileRoute("/auth")({
     // and absolute URLs (https://evil) to prevent open-redirect phishing.
     const safe = /^\/(?!\/)[^\s]*$/.test(raw) && !raw.toLowerCase().startsWith("/javascript")
       ? raw
-      : "/dashboard";
+      : "";
     return {
       mode: (s.mode as string) === "signup" ? "signup" : "signin",
       redirect: safe,
@@ -65,13 +67,14 @@ function AuthPage() {
       if (saved && /^\/(?!\/)[^\s]*$/.test(saved)) target = saved;
       sessionStorage.removeItem("auth_redirect");
     } catch { /* storage unavailable */ }
-    setTimeout(() => navigate({ to: target as any }), 0);
+    if (target) setTimeout(() => navigate({ to: target as any }), 0);
+    else fetchInterfacePolicy().then((p) => navigate({ to: postLoginTarget(p) }));
   }
 
   const oauthSignIn = async (provider: "google" | "microsoft" | "apple") => {
     setError(null);
     setInfo(null);
-    try { sessionStorage.setItem("auth_redirect", redirect || "/dashboard"); } catch { /* ignore */ }
+    try { if (redirect) sessionStorage.setItem("auth_redirect", redirect); } catch { /* ignore */ }
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: `${window.location.origin}/auth`,
     });
@@ -105,7 +108,8 @@ function AuthPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: redirect as any });
+        if (redirect) navigate({ to: redirect as any });
+        else fetchInterfacePolicy().then((p) => navigate({ to: postLoginTarget(p) }));
       }
     } catch (e: any) {
       setError(e.message || "Error");

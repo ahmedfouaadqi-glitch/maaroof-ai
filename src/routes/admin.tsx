@@ -26,6 +26,8 @@ import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
 import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
 import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenceCenter";
 import { AdminGuideTab } from "@/components/admin/AdminGuideTab";
+import { InterfacesAdminPanel } from "@/components/admin/InterfacesAdminPanel";
+import { JobsAdminPanel } from "@/components/admin/JobsAdminPanel";
 import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
 import { ADMIN_GROUPS, type L3 } from "@/components/admin/admin-guide-content";
 
@@ -158,6 +160,8 @@ function AdminPage() {
         {activeSub === "health" && <SystemHealthTab />}
         {activeSub === "maaroof" && <MaaroofAdminTab />}
         {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
+        {activeSub === "interfaces" && <InterfacesAdminPanel />}
+        {activeSub === "jobs" && <JobsAdminPanel />}
       </main>
     </div>
   );

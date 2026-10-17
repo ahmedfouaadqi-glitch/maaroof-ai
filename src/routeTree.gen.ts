@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ClassicRouteImport } from './routes/classic'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GuideRouteImport } from './routes/guide'
@@ -77,6 +78,11 @@ const AgentRoute = AgentRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClassicRoute = ClassicRouteImport.update({
+  id: '/classic',
+  path: '/classic',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
+  '/classic': typeof ClassicRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
+  '/classic': typeof ClassicRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
@@ -416,6 +424,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
+  '/classic': typeof ClassicRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/guide': typeof GuideRouteWithChildren
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agent'
     | '/auth'
+    | '/classic'
     | '/contact'
     | '/dashboard'
     | '/guide'
@@ -520,6 +530,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agent'
     | '/auth'
+    | '/classic'
     | '/contact'
     | '/dashboard'
     | '/guide'
@@ -571,6 +582,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agent'
     | '/auth'
+    | '/classic'
     | '/contact'
     | '/dashboard'
     | '/guide'
@@ -623,6 +635,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AgentRoute: typeof AgentRoute
   AuthRoute: typeof AuthRoute
+  ClassicRoute: typeof ClassicRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   GuideRoute: typeof GuideRouteWithChildren
@@ -694,6 +707,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/classic': {
+      id: '/classic'
+      path: '/classic'
+      fullPath: '/classic'
+      preLoaderRoute: typeof ClassicRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -1044,6 +1064,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AgentRoute: AgentRoute,
   AuthRoute: AuthRoute,
+  ClassicRoute: ClassicRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   GuideRoute: GuideRouteWithChildren,
