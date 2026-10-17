@@ -10,6 +10,16 @@ describe("MAAROOF user-facing skill catalog", () => {
     }
   });
 
+  it("covers every currently executable business tool in the skill layer", () => {
+    const mapped = new Set(MAAROOF_SKILLS.flatMap(skill => skill.tools));
+    const executableTools = [
+      "analyze", "suggest", "compare", "known", "feasibility", "bizdev", "research",
+      "visibility", "brand_boost", "company_email", "applied_ranking", "geo_strategist",
+      "competitor_monitor", "social_analysis", "what_if", "brand_authority", "geo_rewrite",
+    ];
+    for (const tool of executableTools) expect(mapped.has(tool as any)).toBe(true);
+  });
+
   it("recommends market intelligence for market opportunity goals", () => {
     const keys = recommendMaaroofSkills("حلل السوق العراقي واكتشف فرص النمو", 3).map(skill => skill.key);
     expect(keys).toContain("market-intelligence");
