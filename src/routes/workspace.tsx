@@ -468,6 +468,34 @@ function SkillCard({ skill, locale, selected, onToggle, labelAdd, labelAdded }: 
   skill: MaaroofSkill; locale: SkillLocale; selected: boolean; onToggle: () => void; labelAdd: string; labelAdded: string;
 }) {
   const Icon = SKILL_ICONS[skill.icon];
+  if (skill.salesContact) {
+    return (
+      <div className="flex h-full flex-col rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="size-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">{skill.label[locale]}</span>
+            <span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[locale]}</span>
+          </span>
+        </div>
+        <Link to="/contact" className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90">
+          {locale === "en" ? "Contact us for this service" : locale === "ku" ? "بۆ ئەم خزمەتگوزارییە پەیوەندیمان پێوە بکە" : "تواصل معنا لطلب هذه الخدمة"}
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <button type="button" onClick={onToggle} aria-pressed={selected} className={`group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
+      <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="size-5" /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{skill.label[locale]}</span>
+        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[locale]}</span>
+        <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${selected ? "text-primary" : "text-muted-foreground"}`}>{selected ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}{selected ? labelAdded : labelAdd}</span>
+      </span>
+    </button>
+  );
+}) {
+  const Icon = SKILL_ICONS[skill.icon];
   return (
     <button type="button" onClick={onToggle} aria-pressed={selected} className={`group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="size-5" /></span>
