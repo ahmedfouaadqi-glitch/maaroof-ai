@@ -313,8 +313,17 @@ export function InterviewPanel({
   useEffect(() => {
     if (session || targetTypeManuallySelected) return;
     const workspaceKind = workspaces.find((workspace) => workspace.id === workspaceId)?.kind;
-    setTargetType(defaultInterviewTargetType(profileInterviewPersona, profileEntityType, workspaceKind));
-  }, [profileInterviewPersona, profileEntityType, workspaceId, workspaces, session, targetTypeManuallySelected]);
+    setTargetType(
+      defaultInterviewTargetType(profileInterviewPersona, profileEntityType, workspaceKind),
+    );
+  }, [
+    profileInterviewPersona,
+    profileEntityType,
+    workspaceId,
+    workspaces,
+    session,
+    targetTypeManuallySelected,
+  ]);
 
   async function tokenOrThrow(): Promise<string> {
     const token = await getAccessToken();
