@@ -22,7 +22,7 @@ import {
   normalizeInterviewDomains,
 } from "@/lib/maaroof/interview-question-bank";
 
-type AdminDb = ReturnType<typeof createClient>;
+type AdminDb = ReturnType<typeof createClient<any>>;
 type AuthResult = { ok: true; admin: AdminDb; userId: string } | { ok: false; response: Response };
 
 const SUMMARY_FIELDS =
