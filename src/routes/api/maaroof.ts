@@ -1,4 +1,4 @@
-// Maaroof streaming endpoint (SSE). POST { goal, lang?, geo_scope? }
+// Maaroof job submission endpoint. Both interfaces reconnect through persisted job events.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
@@ -116,7 +116,7 @@ export const Route = createFileRoute("/api/maaroof")({
         }
 
         const authTokenCiphertext = await encryptJobToken(auth, srKey);
-          const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
+        const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
             user_id: userId,
             workspace_id: verifiedWorkspaceId,
             goal,
