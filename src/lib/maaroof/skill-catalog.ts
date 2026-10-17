@@ -8,6 +8,8 @@ export type MaaroofSkill = {
   tools: ToolKey[];
   capabilities: Capability[];
   keywords: string[];
+  /** Promote tailored/enterprise delivery through the sales contact route. */
+  salesContact?: boolean;
 };
 
 export const MAAROOF_SKILLS: MaaroofSkill[] = [
@@ -37,6 +39,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     tools: ["known", "compare", "competitor_monitor"],
     capabilities: ["competitor_analysis", "research", "monitoring"],
     keywords: ["منافس", "منافسين", "منافسون", "مقارنة", "بدائل", "competitor", "competitors", "compare", "rivals"],
+    salesContact: true,
   },
   {
     key: "brand-visibility",
@@ -46,6 +49,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     tools: ["visibility", "analyze", "known"],
     capabilities: ["visibility", "aeo", "geo_analysis", "brand_authority"],
     keywords: ["ظهور", "علامة", "استشهاد", "ذكاء اصطناعي", "GEO", "AEO", "brand", "visibility", "cited", "citation"],
+    salesContact: true,
   },
   {
     key: "content-creation",
@@ -64,6 +68,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     tools: ["social_analysis", "competitor_monitor"],
     capabilities: ["social_analysis", "visibility", "monitoring"],
     keywords: ["اجتماعي", "سوشيال", "منصات", "تواصل", "مراقبة", "social", "social media", "platform", "monitor", "audience"],
+    salesContact: true,
   },
   {
     key: "business-outreach",
