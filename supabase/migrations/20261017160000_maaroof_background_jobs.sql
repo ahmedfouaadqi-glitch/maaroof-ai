@@ -46,3 +46,7 @@ GRANT ALL ON public.maaroof_background_job_events TO service_role;
 DROP POLICY IF EXISTS "maaroof background events owner read" ON public.maaroof_background_job_events;
 CREATE POLICY "maaroof background events owner read" ON public.maaroof_background_job_events
   FOR SELECT TO authenticated USING (auth.uid() = user_id OR public.has_role(auth.uid(), 'admin'));
+
+-- Store only an authenticated, encrypted continuation token for queued execution.
+ALTER TABLE public.maaroof_background_jobs
+  ADD COLUMN IF NOT EXISTS auth_token_ciphertext text;
