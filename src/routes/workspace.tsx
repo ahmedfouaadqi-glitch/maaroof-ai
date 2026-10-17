@@ -155,8 +155,8 @@ function WorkspacePage() {
   }, [user?.id, mode, liveProbe, selectedModels.length]);
 
   const recommendations = useMemo(() => {
-    const enabled = MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key));
-    const matched = recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(skill => policy.enabled_skills.includes(skill.key));
+    const enabled = MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && !skill.salesContact);
+    const matched = recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(skill => policy.enabled_skills.includes(skill.key) && !skill.salesContact);
     return (matched.length ? matched : enabled).slice(0, 3);
   }, [goal, policy.enabled_skills]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
@@ -329,6 +329,7 @@ function WorkspacePage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
+                  {MAAROOF_SKILLS.filter(skill => skill.salesContact && policy.enabled_skills.includes(skill.key) && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {selectedSkills.map((key) => {
