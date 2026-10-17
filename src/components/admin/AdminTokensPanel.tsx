@@ -589,7 +589,7 @@ function ProbeOverrideBox({ value, onChange, lang }: { value: any; onChange: (p:
           <input type="number" min={0} value={value.probe_tokens_per_engine ?? ""} onChange={(e) => onChange({ probe_tokens_per_engine: e.target.value === "" ? undefined : Number(e.target.value) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
         </label>
         <label className="text-xs">{T.max}
-          <input type="number" min={1} max={ENGINE_KEYS.length} value={value.max_engines ?? ""} onChange={(e) => onChange({ max_engines: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+          <input type="number" min={0} max={ENGINE_KEYS.length} value={value.max_engines ?? ""} onChange={(e) => onChange({ max_engines: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
         </label>
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={value.notify_allowed !== false} onChange={(e) => onChange({ notify_allowed: e.target.checked ? undefined : false })} /> {T.notify}
@@ -629,7 +629,7 @@ function GlobalProbeBox({ lang }: { lang: string }) {
           <input type="number" min={0} value={v.probe_tokens_per_engine ?? ""} onChange={(e) => setV({ ...v, probe_tokens_per_engine: e.target.value === "" ? undefined : Number(e.target.value) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
         </label>
         <label className="text-xs">{T.max}
-          <input type="number" min={1} max={ENGINE_KEYS.length} value={v.probe_max_engines ?? ""} onChange={(e) => setV({ ...v, probe_max_engines: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+          <input type="number" min={0} max={ENGINE_KEYS.length} value={v.probe_max_engines ?? ""} onChange={(e) => setV({ ...v, probe_max_engines: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
         </label>
         {planNames.map((planName) => (
           <label key={planName} className="text-xs">{planName} · {lang === "ar" ? "حد المحركات" : lang === "ku" ? "سنووری بزوێنەر" : "engine cap"}
