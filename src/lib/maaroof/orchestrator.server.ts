@@ -133,6 +133,8 @@ export type RunContext = {
   useSubagents?: boolean;
   /** Allow live probes of the AI engines. Default true (current behaviour). */
   liveProbe?: boolean;
+  /** User-selected AI engines for the visibility probe; the endpoint enforces plan and budget limits. */
+  selectedProbeEngines?: string[];
   /** Answers to earlier clarify questions, e.g. { brand: "X" }. */
   clarifications?: Record<string, string>;
 };
@@ -984,8 +986,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         continue;
       }
       // Default: ask all ten engines live (entitlement/plan limits are enforced server-side).
-      if (step.tool === "visibility" && ctx.liveProbe !== false && !(Array.isArray((filled as any).probe_engines) && (filled as any).probe_engines.length)) {
-        try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
+      if (step.tool === "visibility" && ctx.liveProbe !== false) {
+        if (ctx.selectedProbeEngines?.length) {
+          (filled as any).probe_engines = [...ctx.selectedProbeEngines];
+        } else if (!(Array.isArray((filled as any).probe_engines) && (filled as any).probe_engines.length)) {
+          try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
+        }
       }
       if (missing.length) {
         const q = { index: i, tool: step.tool, field: missing[0], question: clarifyQuestion(missing[0], ctx.language) };
