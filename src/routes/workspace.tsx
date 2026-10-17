@@ -10,7 +10,7 @@ import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, type MaaroofSki
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
-  LoaderCircle, Paperclip, Plus, Search, Sparkles, Square, Target, TrendingUp,
+  LoaderCircle, Plus, Search, Sparkles, Square, Target, TrendingUp,
   Wrench, X,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ const COPY = {
     automatic: "دع معروف يختار المهارات المناسبة تلقائياً", skillsHint: "التوصيات الأولية مبنية على كلمات الطلب؛ الاختيار النهائي والتحقق من الأدوات يتمان في الخادم.",
     models: "النماذج", modelsHint: "اختياري — يمكنك طلب فحص مباشر للنماذج. قد يستهلك ذلك رصيداً إضافياً وفق خطتك.",
     liveProbe: "تشغيل فحص مباشر للنماذج المختارة", all: "تحديد الكل", clear: "مسح التحديد",
-    run: "ابدأ المهمة", stop: "إيقاف", working: "معروف يعمل على المهمة",
+    run: "ابدأ المهمة", stop: "إيقاف", working: "معروف يعمل على المهمة", mode: "طريقة العمل", execute: "تنفيذ فعلي", recommendMode: "خطة وتوصية", simulate: "محاكاة",
     plan: "خطة العمل", progress: "تقدم التنفيذ", result: "النتيجة", activity: "سجل العمل",
     ready: "جاهز", failed: "تعذر إكمال المهمة", empty: "اكتب هدفاً أو اختر مهارة للبدء.",
     selectedTools: "أدوات مرتبطة بالمهارات المختارة", noTools: "لم تختر مهارات؛ سيحدد معروف الأدوات وفق الهدف.",
@@ -55,7 +55,7 @@ const COPY = {
     automatic: "Let Maaroof choose suitable skills automatically", skillsHint: "Initial suggestions use goal keywords; final tool selection and authorization remain server-side.",
     models: "Models", modelsHint: "Optional — live model checks may consume additional balance according to your plan.",
     liveProbe: "Run a live check with selected models", all: "Select all", clear: "Clear selection",
-    run: "Start task", stop: "Stop", working: "Maaroof is working",
+    run: "Start task", stop: "Stop", working: "Maaroof is working", mode: "Work mode", execute: "Execute", recommendMode: "Plan & recommend", simulate: "Simulate",
     plan: "Work plan", progress: "Execution progress", result: "Result", activity: "Activity",
     ready: "Ready", failed: "The task could not be completed", empty: "Enter a goal or choose a skill to begin.",
     selectedTools: "Tools associated with selected skills", noTools: "No skills selected; Maaroof will choose tools from the goal.",
@@ -73,7 +73,7 @@ const COPY = {
     automatic: "با معروف بە شێوەی خۆکار شارەزاییەکان هەڵبژێرێت", skillsHint: "پێشنیارە سەرەتاییەکان بە وشەکانی ئامانجەکە دەستنیشان دەکرێن.",
     models: "مۆدێلەکان", modelsHint: "هەڵبژاردەیی — پشکنینی ڕاستەوخۆ ڕەنگە باڵانسی زیاتر بەکاربهێنێت.",
     liveProbe: "پشکنینی ڕاستەوخۆی مۆدێلە هەڵبژێردراوەکان", all: "هەمووی هەڵبژێرە", clear: "پاککردنەوە",
-    run: "دەستپێکردن", stop: "وەستاندن", working: "معروف لەسەر ئەرکەکە کار دەکات",
+    run: "دەستپێکردن", stop: "وەستاندن", working: "معروف لەسەر ئەرکەکە کار دەکات", mode: "شێوازی کار", execute: "جێبەجێکردن", recommendMode: "پلان و پێشنیار", simulate: "هاوشێوەکردن",
     plan: "پلانی کار", progress: "پێشکەوتن", result: "ئەنجام", activity: "تۆماری کار",
     ready: "ئامادەیە", failed: "ئەرکەکە تەواو نەبوو", empty: "ئامانج بنووسە یان شارەزاییەک هەڵبژێرە.",
     selectedTools: "ئامرازە پەیوەندیدارەکان", noTools: "هیچ شارەزاییەک هەڵنەبژێردرا؛ معروف ئامرازەکان هەڵدەبژێرێت.",
@@ -90,7 +90,7 @@ const SKILL_ICONS = {
 };
 
 function WorkspacePage() {
-  const { user, loading, session, isAdmin } = useAuth();
+  const { user, loading, session } = useAuth();
   const { lang } = useI18n();
   const navigate = useNavigate();
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
@@ -106,11 +106,25 @@ function WorkspacePage() {
   const [clarifyField, setClarifyField] = useState("");
   const [error, setError] = useState("");
   const [showActivity, setShowActivity] = useState(false);
+  const [mode, setMode] = useState<"execution" | "recommendation" | "simulation">("execution");
+  const [policy, setPolicy] = useState<{ enabled: boolean; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean }>({ enabled: true, show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true });
   const abortRef = useState<{ current: AbortController | null }>({ current: null })[0];
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/workspace" } });
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(({ data }) => {
+      if (!active || !data?.value || typeof data.value !== "object") return;
+      const value = data.value as any;
+      setPolicy(old => ({ ...old, ...value }));
+      if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
+      if (value.enabled === false) navigate({ to: "/maaroof", replace: true });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [navigate]);
 
   const recommendations = useMemo(() => recommendMaaroofSkills(goal, 3), [goal]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
@@ -151,7 +165,7 @@ function WorkspacePage() {
   }
 
   async function start(clarifications?: Record<string, string>) {
-    if (!goal.trim() || running || !user) return;
+    if (!goal.trim() || running || !user || !policy.allowed_modes.includes(mode)) return;
     if (liveProbe && selectedModels.length === 0) {
       setError(locale === "en" ? "Select at least one model or turn off live checking." : locale === "ku" ? "مۆدێلێک هەڵبژێرە یان پشکنینی ڕاستەوخۆ ناچالاک بکە." : "اختر نموذجاً واحداً على الأقل أو أوقف الفحص المباشر.");
       return;
@@ -170,7 +184,7 @@ function WorkspacePage() {
         body: JSON.stringify({
           goal: goal.trim(),
           lang: locale,
-          execution_mode: "execution",
+          execution_mode: mode,
           live_probe: liveProbe,
           use_subagents: true,
           probe_engines: liveProbe ? selectedModels : undefined,
@@ -248,7 +262,7 @@ function WorkspacePage() {
             <h1 className="mt-1 font-display text-2xl font-bold md:text-3xl">{c.title}</h1>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{c.subtitle}</p>
           </div>
-          {isAdmin && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
+          {policy.show_professional_link && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
         </header>
 
         {!finalEvent && events.length === 0 && (
@@ -259,7 +273,7 @@ function WorkspacePage() {
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
-                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || !policy.allowed_modes.includes(mode)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
