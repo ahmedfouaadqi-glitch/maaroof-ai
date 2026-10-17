@@ -79,10 +79,7 @@ describe("Maaroof interview engine", () => {
   });
 
   it("checks the saved cursor using the same focused or comprehensive mode", () => {
-    const questions = [
-      question({ id: "required" }),
-      question({ id: "optional", required: false }),
-    ];
+    const questions = [question({ id: "required" }), question({ id: "optional", required: false })];
     const state = answered(baseState(), questions, "required", "known");
 
     expect(isInterviewQuestionCursorConsistent(questions, state, null)).toBe(true);
