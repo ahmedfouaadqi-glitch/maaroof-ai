@@ -38,6 +38,9 @@ export const Route = createFileRoute("/api/maaroof")({
         const uiPolicy = (uiPolicyRow as any)?.value;
         const availableInterfaces: string[] = Array.isArray(uiPolicy?.available_interfaces) ? uiPolicy.available_interfaces : uiPolicy?.enabled === false ? ["professional"] : ["workbench", "professional"];
         const requestedInterfaceKey = interfaceMode === "workspace" ? "workbench" : "professional";
+        if (executionMode && Array.isArray(uiPolicy?.allowed_modes) && !uiPolicy.allowed_modes.includes(executionMode)) {
+          return Response.json({ error: "execution_mode_disabled" }, { status: 403 });
+        }
         let effectiveSkillKeys: string[] = [];
         if (!availableInterfaces.includes(requestedInterfaceKey)) return Response.json({ error: "interface_disabled" }, { status: 403 });
         if (interfaceMode === "workspace") {
