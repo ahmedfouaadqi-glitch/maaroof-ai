@@ -95,7 +95,7 @@ function AuthPage() {
     try {
       if (isSignup) {
         // Preserve the requested internal destination through email confirmation.
-        const safeRedirect = redirect && /^\\/(?!\\/)[^\\s]*$/.test(redirect) && !redirect.toLowerCase().startsWith("/javascript")
+        const safeRedirect = redirect && /^\/(?!\/)[^\s]*$/.test(redirect) && !redirect.toLowerCase().startsWith("/javascript")
           ? redirect
           : "/workspace";
         try { sessionStorage.setItem("auth_redirect", safeRedirect); } catch { /* storage unavailable */ }
