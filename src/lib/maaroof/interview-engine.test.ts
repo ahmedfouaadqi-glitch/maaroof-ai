@@ -5,6 +5,7 @@ import {
   getNextInterviewQuestion,
   isInterviewDataComplete,
   isInterviewQuestionApplicable,
+  isInterviewQuestionCursorConsistent,
   isInterviewTraversalComplete,
   recordInterviewResponse,
   validateInterviewQuestionSet,
@@ -63,6 +64,36 @@ describe("Maaroof interview engine", () => {
     ];
     expect(getNextInterviewQuestion(questions, baseState())?.id).toBe("agency_only");
     expect(isInterviewQuestionApplicable(questions[1], baseState())).toBe(false);
+  });
+
+  it("detects a stale question cursor after saved answers advance the interview", () => {
+    const questions = [question({ id: "first" }), question({ id: "second" })];
+    const state = baseState();
+
+    expect(isInterviewQuestionCursorConsistent(questions, state, "first")).toBe(true);
+    expect(isInterviewQuestionCursorConsistent(questions, state, "second")).toBe(false);
+
+    const nextState = answered(state, questions, "first", "known");
+    expect(isInterviewQuestionCursorConsistent(questions, nextState, "second")).toBe(true);
+    expect(isInterviewQuestionCursorConsistent(questions, nextState, "first")).toBe(false);
+  });
+
+  it("checks the saved cursor using the same focused or comprehensive mode", () => {
+    const questions = [
+      question({ id: "required" }),
+      question({ id: "optional", required: false }),
+    ];
+    const state = answered(baseState(), questions, "required", "known");
+
+    expect(isInterviewQuestionCursorConsistent(questions, state, null)).toBe(true);
+    expect(
+      isInterviewQuestionCursorConsistent(questions, state, "optional", {
+        includeOptional: true,
+      }),
+    ).toBe(true);
+    expect(
+      isInterviewQuestionCursorConsistent(questions, state, null, { includeOptional: true }),
+    ).toBe(false);
   });
 
   it("unlocks conditional questions after the controlling answer", () => {
