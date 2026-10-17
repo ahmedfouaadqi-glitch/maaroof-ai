@@ -7,7 +7,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills } from "@/lib/maaroof/skill-catalog";
 import { ENGINE_KEYS } from "@/lib/ai-engines";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, BarChart3, Check, Compass, FileSearch, LoaderCircle, Search, Sparkles, Target, TrendingUp, X, ShieldCheck } from "lucide-react";
+import { ArrowRight, BarChart3, Check, Compass, LoaderCircle, Search, Sparkles, Target, TrendingUp, X, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/workbench")({
   head: () => ({ meta: [
