@@ -186,7 +186,7 @@ export const Route = createFileRoute("/api/visibility")({
             const ent = await enginesAllowedForUser(admin, userId);
             const policy = await resolveProbePolicy(userId);
             let picked = applyEntitlement(body.probe_engines, ent);
-            if (policy.maxEngines) picked = picked.slice(0, policy.maxEngines);
+            if (policy.maxEngines != null) picked = picked.slice(0, Math.max(0, policy.maxEngines));
             const { engines } = await excludeUnhealthyEngines(picked);
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
             const pRun = crypto.randomUUID();
