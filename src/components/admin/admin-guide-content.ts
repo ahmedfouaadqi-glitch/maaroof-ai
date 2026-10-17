@@ -80,7 +80,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         key: "access",
         label: { ar: "الوصول والظهور", en: "Access & Visibility", ku: "دەستگەیشتن و دەرکەوتن" },
         purpose: { ar: "التحكم بظهور الصفحات والأدوات لكل خطة.", en: "Control page and tool visibility per plan.", ku: "کۆنترۆڵی دەرکەوتنی پەڕە و ئامرازەکان بۆ هەر پلانێک." },
-        usage: { ar: "أخفِ أو أظهر صفحة/ميزة، ويسري التغيير مباشرة.", en: "Hide or show a page/feature; the change applies immediately.", ku: "پەڕە/تایبەتمەندی بشارەوە یان پیشان بدە؛ یەکسەر جێبەجێ دەبێت." },
+        usage: { ar: "من سياسة الواجهات، حدّد الواجهة الافتراضية والمتاحة، ثم اختر لكل مهارة: ترخيص للاستخدام المباشر، أو يتطلب الاتصال بنا، أو غير متاحة. راجع أسعار الأدوات وصلاحياتها بصورة مستقلة؛ سياسة المهارات لا تغيّر الرصيد أو الأسعار.", en: "In Interface Policy, choose the default and available interfaces, then set each skill to self-service, contact required, or unavailable. Review tool prices and permissions separately; skill policy does not change balances or prices.", ku: "لە سیاسەتی ڕووکار، ڕووکاری بنەڕەتی و بەردەست دیاری بکە و بۆ هەر شارەزاییەک بەکارهێنانی ڕاستەوخۆ، پەیوەندی پێویست، یان بەردەست نییە هەڵبژێرە. نرخ و دەسەڵاتی ئامرازەکان جیاواز بپشکنە؛ سیاسەتی شارەزایی باڵانس و نرخ ناگۆڕێت." },
       },
       {
         key: "finance",
