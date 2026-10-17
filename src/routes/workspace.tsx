@@ -329,8 +329,8 @@ function WorkspacePage() {
                   <Sparkles className="size-5 text-primary" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
-                  {MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "contact" && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
+                  {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
+                  {MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "contact" && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {selectedSkills.map((key) => {
@@ -465,11 +465,11 @@ function WorkspacePage() {
   );
 }
 
-function SkillCard({ skill, locale, selected, onToggle, labelAdd, labelAdded }: {
-  skill: MaaroofSkill; locale: SkillLocale; selected: boolean; onToggle: () => void; labelAdd: string; labelAdded: string;
+function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, labelAdded }: {
+  skill: MaaroofSkill; accessMode: "self_service" | "contact" | "disabled"; locale: SkillLocale; selected: boolean; onToggle: () => void; labelAdd: string; labelAdded: string;
 }) {
   const Icon = SKILL_ICONS[skill.icon];
-  if (skill.salesContact) {
+  if (accessMode === "contact") {
     return (
       <div className="flex h-full flex-col rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
         <div className="flex items-start gap-3">
