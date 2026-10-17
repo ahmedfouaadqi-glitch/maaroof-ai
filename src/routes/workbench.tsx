@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -38,6 +38,7 @@ const COPY = {
 function WorkbenchPage() {
   const { user, loading } = useAuth();
   const { lang } = useI18n();
+  const navigate = useNavigate();
   const language = (lang === "en" || lang === "ku" ? lang : "ar") as keyof typeof COPY;
   const t = COPY[language];
   const [goal, setGoal] = useState("");
@@ -49,8 +50,19 @@ function WorkbenchPage() {
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [policy, setPolicy] = useState<{ enabled: boolean; show_professional_link: boolean; allowed_modes: string[]; show_live_engine_picker: boolean }>({ enabled: true, show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true });
   const abortRef = useRef<AbortController | null>(null);
   const suggestions = useMemo(() => recommendMaaroofSkills(goal, 3), [goal]);
+  useEffect(() => {
+    let active = true;
+    supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(({ data }) => {
+      if (!active || !data?.value || typeof data.value !== "object") return;
+      const value = data.value as any;
+      setPolicy(old => ({ ...old, ...value }));
+      if (value.enabled === false) navigate({ to: "/maaroof", replace: true });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [navigate]);
   const skillLabels = (skill: typeof MAAROOF_SKILLS[number]) => skill.label[language];
   const toolKeys = toolsForSkills(chosenSkills ?? suggestions.map(s => s.key));
   const final = [...events].reverse().find(e => e.type === "final")?.data?.text;
@@ -116,7 +128,7 @@ function WorkbenchPage() {
             <h1 className="font-display text-3xl font-bold tracking-tight md:text-5xl">{t.title}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">{t.subtitle}</p>
           </div>
-          <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary/50"><ShieldCheck className="size-4" />{t.professional}<ArrowRight className="size-4" /></Link>
+          {policy.show_professional_link && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary/50"><ShieldCheck className="size-4" />{t.professional}<ArrowRight className="size-4" /></Link>}
         </div>
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
@@ -145,10 +157,10 @@ function WorkbenchPage() {
             <div className="rounded-2xl border border-border bg-card p-4 md:p-6">
               <h2 className="mb-3 font-semibold">{t.modes}</h2>
               <div className="grid gap-2 sm:grid-cols-3">
-                {([{key:"execution",label:t.execute},{key:"recommendation",label:t.recommend},{key:"simulation",label:t.simulate}] as const).map(item => <button key={item.key} type="button" disabled={running} onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-3 text-sm font-medium transition ${mode===item.key?"border-primary bg-primary/10 text-primary":"border-border hover:bg-muted/60"}`}>{item.label}</button>)}
+                {([{key:"execution",label:t.execute},{key:"recommendation",label:t.recommend},{key:"simulation",label:t.simulate}] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => <button key={item.key} type="button" disabled={running} onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-3 text-sm font-medium transition ${mode===item.key?"border-primary bg-primary/10 text-primary":"border-border hover:bg-muted/60"}`}>{item.label}</button>)}
               </div>
               <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3"><input type="checkbox" checked={world} onChange={e=>setWorld(e.target.checked)} disabled={running} className="size-4 accent-primary" /><span><span className="block text-sm font-medium">{t.scope}</span><span className="text-xs text-muted-foreground">{world?t.world:t.auto}</span></span></label>
-              <div className="mt-4 rounded-xl border border-border p-3">
+              {policy.show_live_engine_picker && <div className="mt-4 rounded-xl border border-border p-3">
                 <label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={live} onChange={e=>setLive(e.target.checked)} disabled={running} className="mt-1 size-4 accent-primary" /><span><span className="block text-sm font-medium">{t.engines}</span><span className="text-xs leading-5 text-muted-foreground">{t.enginesHint}</span></span></label>
                 {live && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{ENGINE_KEYS.map(key=><label key={key} className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-2 text-xs"><input type="checkbox" checked={engines.includes(key)} onChange={e=>setEngines(old=>e.target.checked?[...old,key]:old.filter(x=>x!==key))} disabled={running} className="accent-primary" />{key==="chatgpt"?"ChatGPT":key.charAt(0).toUpperCase()+key.slice(1)}</label>)}</div>}
               </div>
@@ -173,7 +185,7 @@ function WorkbenchPage() {
                 })}
                 {final && <div className="rounded-xl border border-primary/30 bg-primary/5 p-4"><h3 className="mb-2 font-semibold">{t.result}</h3><div className="prose prose-sm max-w-none whitespace-pre-wrap break-words text-sm leading-7 dark:prose-invert">{final}</div></div>}
               </div>
-              <div className="border-t border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground"><Link to="/" className="hover:text-primary">{t.home}</Link><span className="mx-2">·</span><Link to="/profile" className="hover:text-primary">الملف الشخصي</Link><span className="mx-2">·</span><Link to="/maaroof" className="hover:text-primary">{t.professional}</Link></div>
+              <div className="border-t border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground"><Link to="/" className="hover:text-primary">{t.home}</Link><span className="mx-2">·</span><Link to="/profile" className="hover:text-primary">الملف الشخصي</Link><span className="mx-2">·</span>{policy.show_professional_link && <Link to="/maaroof" className="hover:text-primary">{t.professional}</Link>}</div>
             </div>
           </aside>
         </div>
