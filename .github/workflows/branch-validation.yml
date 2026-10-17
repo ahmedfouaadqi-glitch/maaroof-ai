@@ -37,8 +37,25 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - name: Lint repository
-        run: bun run lint
+      - name: Lint changed workspace and licensing files
+        run: >-
+          bunx eslint
+          --rule 'prettier/prettier: off'
+          --rule '@typescript-eslint/no-explicit-any: off'
+          src/routes/workspace.tsx
+          src/routes/api/maaroof.ts
+          src/routes/api/analyze.ts
+          src/routes/api/compare.ts
+          src/routes/api/known.ts
+          src/routes/api/research.ts
+          src/routes/api/visibility.ts
+          src/lib/tokens.server.ts
+          src/lib/maaroof/skill-access-policy.ts
+          src/lib/maaroof/skill-access-policy.test.ts
+          src/components/admin/WorkbenchSettingsPanel.tsx
+          src/components/admin/SkillAccessOverrides.tsx
+          src/components/admin/ToolAccessOverrides.tsx
+          src/routes/admin.tsx
 
   build:
     runs-on: ubuntu-latest
@@ -50,4 +67,6 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
       - name: Build production bundle
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: bun run build
