@@ -19,9 +19,12 @@ describe("default interview target from saved identity", () => {
     ["agency", "individual", "agency"],
     ["company", "person", "company"],
     ["creator", "organization", "creator"],
-  ])("lets workspace kind %s provide a more specific default", (workspaceKind, profileEntityType, expected) => {
-    expect(defaultInterviewTargetType(profileEntityType, workspaceKind)).toBe(expected);
-  });
+  ])(
+    "lets workspace kind %s provide a more specific default",
+    (workspaceKind, profileEntityType, expected) => {
+      expect(defaultInterviewTargetType(profileEntityType, workspaceKind)).toBe(expected);
+    },
+  );
 
   it("does not infer agency from organization alone", () => {
     expect(defaultInterviewTargetType("organization")).toBe("company");
