@@ -209,11 +209,20 @@ function MaaroofPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("auth_required");
-      await fetch("/api/maaroof-jobs", {
+      const response = await fetch("/api/maaroof-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
         body: JSON.stringify({ job_id: jobId }),
       });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body?.error || "job_cancel_failed"));
+      if (body?.status === "cancelled") {
+        watcherRef.current += 1;
+        setRunning(false);
+        setEvents(current => [...current, { type: "phase", data: { phase: lang === "en" ? "Task cancelled" : lang === "ku" ? "ئەرکەکە هەڵوەشایەوە" : "تم إلغاء المهمة" }, t: Date.now() }]);
+      } else {
+        setEvents(current => [...current, { type: "error", data: { message: lang === "en" ? "The task is still being submitted or has already changed state. Try stopping it again shortly." : lang === "ku" ? "ئەرکەکە هێشتا لە ناردندایە یان دۆخی گۆڕاوە؛ دوایەکەی هەوڵ بدەرەوە." : "المهمة ما زالت قيد الإرسال أو تغيّرت حالتها؛ أعد محاولة الإيقاف بعد لحظات." }, t: Date.now() }]);
+      }
     } catch (e: any) {
       setEvents(current => [...current, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]);
     }
