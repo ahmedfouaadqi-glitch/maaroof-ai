@@ -46,6 +46,7 @@ export const Route = createFileRoute("/api/maaroof")({
         const requestedProbeEngines = Array.isArray(body?.probe_engines)
           ? [...new Set(body.probe_engines.filter((v: unknown): v is string => typeof v === "string" && (ENGINE_KEYS as readonly string[]).includes(v)))]
           : undefined;
+        let selectedProbeEngines = requestedProbeEngines;
         const clarifications: Record<string, string> = {};
         if (body?.clarifications && typeof body.clarifications === "object") {
           for (const [k, v] of Object.entries(body.clarifications).slice(0, 10)) if (typeof v === "string") clarifications[String(k).slice(0, 40)] = v.slice(0, 200);
@@ -80,6 +81,45 @@ export const Route = createFileRoute("/api/maaroof")({
           }
         }
 
+        // Server-authoritative automatic selection: use actual post-session-charge balance,
+        // entitlement, plan cap and per-user override rather than UI cost estimates.
+        if (body?.auto_select_probe_engines === true && body?.live_probe !== false) {
+          const { enginesAllowedForUser } = await import("@/lib/ai-engines.server");
+          const { resolveProbePolicy } = await import("@/lib/tokens.server");
+          const entitlement = await enginesAllowedForUser(admin, userId);
+          const policy = await resolveProbePolicy(userId);
+          const maxByPolicy = policy.maxEngines == null ? entitlement.limit : Math.min(entitlement.limit, policy.maxEngines);
+          const { data: freshProfile } = await admin.from("profiles")
+            .select("tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month")
+            .eq("id", userId).maybeSingle();
+          const hasFreshMeter = Number((freshProfile as any)?.tokens_balance) > 0 ||
+            (freshProfile as any)?.tokens_daily_limit != null || (freshProfile as any)?.tokens_monthly_limit != null;
+          let affordableCount = Math.max(0, maxByPolicy);
+          if (hasFreshMeter) {
+            const probeCost = await resolveToolCost(userId, "visibility.probe");
+            const perEngineTokens = policy.tokensPerEngine ?? probeCost.tokens;
+            if (perEngineTokens > 0) {
+              const balanceCount = Math.floor(Math.max(0, Number((freshProfile as any)?.tokens_balance) || 0) / perEngineTokens);
+              const dailyLimit = (freshProfile as any)?.tokens_daily_limit;
+              const monthlyLimit = (freshProfile as any)?.tokens_monthly_limit;
+              const dailyLeft = dailyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(dailyLimit) - Number((freshProfile as any)?.tokens_used_today || 0));
+              const monthlyLeft = monthlyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(monthlyLimit) - Number((freshProfile as any)?.tokens_used_month || 0));
+              affordableCount = Math.min(affordableCount, balanceCount, Math.floor(dailyLeft / perEngineTokens), Math.floor(monthlyLeft / perEngineTokens));
+            }
+          }
+          selectedProbeEngines = entitlement.allowed.slice(0, Math.max(0, Math.min(affordableCount, ENGINE_KEYS.length)));
+          if (selectedProbeEngines.length === 0) {
+            return Response.json({
+              error: "probe_balance_insufficient",
+              message: {
+                ar: "الرصيد أو حدود الاستخدام لا تكفي لتشغيل أي محرك ضمن الخطة الحالية.",
+                en: "Your balance or usage limits cannot cover any engine under the current plan.",
+                ku: "بەڵانس یان سنووری بەکارهێنان بۆ کارپێکردنی هیچ بزوێنەرێک بەس نییە.",
+              },
+            }, { status: 402 });
+          }
+        }
+
         const encoder = new TextEncoder();
         const abortCtl = new AbortController();
         request.signal.addEventListener("abort", () => abortCtl.abort());
@@ -92,7 +132,7 @@ export const Route = createFileRoute("/api/maaroof")({
             try {
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, selectedProbeEngines: requestedProbeEngines, clarifications,
+                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, selectedProbeEngines, clarifications,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
