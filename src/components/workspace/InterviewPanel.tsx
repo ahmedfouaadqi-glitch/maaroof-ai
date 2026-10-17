@@ -26,6 +26,7 @@ import {
 } from "@/lib/maaroof/interview-engine";
 
 type Locale = "ar" | "en" | "ku";
+type InterviewDepth = "focused" | "comprehensive";
 type WorkspaceOption = { id: string; name: string; kind: string };
 type InterviewSummary = {
   id: string;
@@ -46,6 +47,7 @@ type InterviewSession = InterviewSummary & {
   current_question_id: string | null;
   completed_at: string | null;
   created_at: string;
+  context_snapshot?: { interview_depth?: InterviewDepth; [key: string]: unknown } | null;
 };
 type InterviewApiResponse = {
   interview?: InterviewSession;
@@ -86,6 +88,12 @@ const COPY: Record<Locale, Record<string, string>> = {
     chooseTargetType: "اختر طبيعة الجهة أولاً",
     targetHint: "اختر ما نريد جمع سياقه، لا نوع حسابك. تتغير الأسئلة حسب نوع الجهة ومجالات العمل المختارة.",
     targetTypeRequired: "اختر طبيعة الجهة أو المشروع قبل بدء المقابلة.",
+    depth: "عمق المقابلة",
+    focused: "مركزة",
+    comprehensive: "شاملة",
+    focusedHint: "الأسئلة المطلوبة المرتبطة بطبيعة الجهة ومجالاتها؛ مناسبة للبدء السريع.",
+    comprehensiveHint: "تضيف الأسئلة الاختيارية الملائمة للجهة والمجالات المختارة لبناء ملف سياق أغنى.",
+    optionalRemaining: "سؤال اختياري متبقٍ",
     targetName: "اسم الجهة أو العلامة أو المشروع",
     targetNameHint: "مثال: شركة معروف أو عميل الوكالة",
     workspace: "مساحة العمل (اختياري)",
@@ -136,6 +144,12 @@ const COPY: Record<Locale, Record<string, string>> = {
     chooseTargetType: "Choose an entity type first",
     targetHint: "Choose the entity to profile, not your account role. Questions adapt to the entity type and selected workstreams.",
     targetTypeRequired: "Choose an entity or project type before starting.",
+    depth: "Interview depth",
+    focused: "Focused",
+    comprehensive: "Comprehensive",
+    focusedHint: "Asks the required questions for the selected entity and workstreams, keeping setup concise.",
+    comprehensiveHint: "Also asks applicable optional questions for a richer saved context profile.",
+    optionalRemaining: "optional remaining",
     targetName: "Entity, brand, or project name",
     targetNameHint: "Example: Maaroof company or an agency client",
     workspace: "Workspace (optional)",
@@ -188,6 +202,12 @@ const COPY: Record<Locale, Record<string, string>> = {
     chooseTargetType: "سەرەتا جۆری لایەن هەڵبژێرە",
     targetHint: "ئەو لایەنە هەڵبژێرە کە دەتەوێت کۆنتێکستی بۆ دروست بکرێت، نەک جۆری هەژمارەکەت. پرسیارەکان بەپێی لایەن و بوارەکان دەگۆڕێن.",
     targetTypeRequired: "پێش دەستپێکردن جۆری لایەن یان پڕۆژە هەڵبژێرە.",
+    depth: "قووڵایی چاوپێکەوتن",
+    focused: "کورت و چڕ",
+    comprehensive: "ورد و فراوان",
+    focusedHint: "پرسیارە پێویستەکان بەپێی جۆری لایەن و بوارەکان دەپرسرێن.",
+    comprehensiveHint: "هەروەها پرسیارە هەڵبژاردەییە گونجاوەکان دەپرسرێن بۆ دروستکردنی کۆنتێکستی زیاتر.",
+    optionalRemaining: "پرسیاری هەڵبژاردەیی ماوە",
     targetName: "ناوی لایەن یان پڕۆژە",
     targetNameHint: "نموونە: کۆمپانیای معروف یان کڕیاری ئاژانس",
     workspace: "شوێنی کار (ئارەزوومەندانە)",
@@ -265,6 +285,7 @@ export function InterviewPanel({
   const [sessions, setSessions] = useState<InterviewSummary[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [targetType, setTargetType] = useState<InterviewTargetType | "">("");
+  const [interviewDepth, setInterviewDepth] = useState<InterviewDepth>("focused");
   const [targetName, setTargetName] = useState("");
   const [workspaceId, setWorkspaceId] = useState("");
   const [domains, setDomains] = useState<InterviewDomain[]>(["general"]);
@@ -365,6 +386,7 @@ export function InterviewPanel({
           target_name: targetName.trim(),
           domains,
           locale,
+          interview_depth: interviewDepth,
           goal: initialGoal.trim() || undefined,
           workspace_id: workspaceId || null,
         }),
@@ -372,6 +394,7 @@ export function InterviewPanel({
       const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_create_failed");
       setSession(body.interview);
+      setInterviewDepth(body.interview.context_snapshot?.interview_depth === "comprehensive" ? "comprehensive" : "focused");
       setNextQuestion(body.next_question || null);
       setProgress(body.progress || null);
       setDataComplete(false);
@@ -417,6 +440,7 @@ export function InterviewPanel({
 
       if (!body.interview) throw new Error("interview_lookup_failed");
       setSession(body.interview);
+      setInterviewDepth(body.interview.context_snapshot?.interview_depth === "comprehensive" ? "comprehensive" : "focused");
       setNextQuestion(body.next_question || null);
       setProgress(body.progress || null);
       setDataComplete(body.data_complete === true);
@@ -616,6 +640,32 @@ export function InterviewPanel({
 
               <div className="space-y-3">
                 <div>
+                  <p className="mb-1.5 text-sm font-medium">{c("depth")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={interviewDepth === "focused"}
+                      onClick={() => setInterviewDepth("focused")}
+                      disabled={busy}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${interviewDepth === "focused" ? "border-primary/40 bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}
+                    >
+                      {c("focused")}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={interviewDepth === "comprehensive"}
+                      onClick={() => setInterviewDepth("comprehensive")}
+                      disabled={busy}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${interviewDepth === "comprehensive" ? "border-primary/40 bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}
+                    >
+                      {c("comprehensive")}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {interviewDepth === "comprehensive" ? c("comprehensiveHint") : c("focusedHint")}
+                  </p>
+                </div>
+                <div>
                   <p className="mb-1.5 text-sm font-medium">{c("domains")}</p>
                   <p className="mb-3 text-xs text-muted-foreground">{c("domainHint")}</p>
                   <div className="flex flex-wrap gap-2">
@@ -696,6 +746,7 @@ export function InterviewPanel({
                     onClick={() => {
                       setSession(null);
                       setTargetType("");
+                      setInterviewDepth("focused");
                       setTargetName("");
                       setDomains(["general"]);
                       setNextQuestion(null);
@@ -717,6 +768,9 @@ export function InterviewPanel({
                     <span>{c("progress")}</span>
                     <span>
                       {progress.requiredAnswered}/{progress.requiredTotal}
+                      {progress.optionalRemaining > 0
+                        ? ` · ${progress.optionalRemaining} ${c("optionalRemaining")}`
+                        : ""}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
