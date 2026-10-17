@@ -58,6 +58,10 @@ jobs:
           src/components/admin/SkillAccessOverrides.tsx
           src/components/admin/ToolAccessOverrides.tsx
           src/routes/admin.tsx
+          src/routes/api/maaroof-jobs.ts
+          src/lib/maaroof/background-jobs.server.ts
+          src/lib/request-ctx.server.ts
+          src/server.ts
 
   build:
     runs-on: ubuntu-latest
