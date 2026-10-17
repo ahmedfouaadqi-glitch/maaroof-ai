@@ -7,6 +7,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { supabase } from "@/integrations/supabase/client";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
+import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
@@ -120,17 +121,30 @@ function WorkspacePage() {
 
   useEffect(() => {
     let active = true;
-    supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(({ data }) => {
-      if (!active || !data?.value || typeof data.value !== "object") return;
-      const value = data.value as any;
-      setPolicy(old => ({ ...old, ...value, available_interfaces: Array.isArray(value.available_interfaces) ? value.available_interfaces : value.enabled === false ? ["professional"] : ["workbench", "professional"] }));
+    Promise.all([
+      supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle(),
+      user?.id ? supabase.from("profiles").select("subscription_tier,is_subscribed,subscription_expires_at").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    ]).then(([settingsResult, profileResult]) => {
+      if (!active) return;
+      const value = settingsResult.data?.value && typeof settingsResult.data.value === "object" ? settingsResult.data.value as any : {};
+      const profile = profileResult.data as any;
+      const activeSubscription = !!profile?.is_subscribed && (!profile.subscription_expires_at || new Date(profile.subscription_expires_at).getTime() > Date.now());
+      const planKey = activeSubscription ? normalizePlanAccessKey(profile?.subscription_tier) : "";
+      const effectiveSkillAccess = resolveSkillAccessPolicy({
+        globalPolicy: value.skill_access && typeof value.skill_access === "object" ? value.skill_access : {},
+        byPlan: value.skill_access_by_plan && typeof value.skill_access_by_plan === "object" ? value.skill_access_by_plan : {},
+        byUser: value.skill_access_by_user && typeof value.skill_access_by_user === "object" ? value.skill_access_by_user : {},
+        planKey,
+        userId: user?.id,
+      });
       const availableInterfaces = Array.isArray(value.available_interfaces) ? value.available_interfaces : value.enabled === false ? ["professional"] : ["workbench", "professional"];
+      setPolicy(old => ({ ...old, ...value, skill_access: effectiveSkillAccess, available_interfaces: availableInterfaces }));
       if (!availableInterfaces.includes("workbench")) navigate({ to: availableInterfaces.includes("professional") ? "/maaroof" : "/", replace: true });
-      if (Array.isArray(value.enabled_skills)) setSelectedSkills(current => current.filter(key => value.enabled_skills.includes(key)));
+      if (Array.isArray(value.enabled_skills)) setSelectedSkills(current => current.filter(key => value.enabled_skills.includes(key) && getSkillAccessMode(MAAROOF_SKILLS.find(skill => skill.key === key)!, effectiveSkillAccess) === "self_service"));
       if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
     }).catch(() => {});
     return () => { active = false; };
-  }, [navigate]);
+  }, [navigate, user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -159,7 +173,7 @@ function WorkspacePage() {
     const enabled = MAAROOF_SKILLS.filter(isSelfService);
     const matched = recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(isSelfService);
     return (matched.length ? matched : enabled).slice(0, 3);
-  }, [goal, policy.enabled_skills]);
+  }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
   const phaseEvents = events.filter((event) => event.type === "phase");
