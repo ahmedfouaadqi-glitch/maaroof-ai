@@ -115,8 +115,7 @@ export const Route = createFileRoute("/api/maaroof")({
           }
         }
 
-        if (interfaceMode === "workspace") {
-          const authTokenCiphertext = await encryptJobToken(auth, srKey);
+        const authTokenCiphertext = await encryptJobToken(auth, srKey);
           const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
             user_id: userId,
             workspace_id: verifiedWorkspaceId,
@@ -154,7 +153,6 @@ export const Route = createFileRoute("/api/maaroof")({
             });
             return Response.json({ error: "background_enqueue_failed", job_id: jobId }, { status: 503 });
           }
-          return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
           return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
 
       },
