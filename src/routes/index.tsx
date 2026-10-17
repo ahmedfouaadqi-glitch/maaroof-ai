@@ -13,10 +13,10 @@ import { useCountry } from "@/lib/use-country";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MAAROOF Ai — GEO - SEO - AEO , Cited by ChatGPT & Gemini" },
-      { name: "description", content: "Score, optimize and publish content so 10 AI engines cite your brand in English, Arabic and Kurdish." },
-      { property: "og:title", content: "MAAROOF Ai — Get cited by ChatGPT, Gemini & Perplexity" },
-      { property: "og:description", content: "Analyze, score and publish GEO-ready content so AI answer engines cite your brand across MENA." },
+      { title: "MAAROOF Ai — AI Visibility & Generative Engine Optimization" },
+      { name: "description", content: "Analyze your brand visibility across AI answer engines, improve content readiness, and explore GEO tools in Arabic, Kurdish and English." },
+      { property: "og:title", content: "MAAROOF Ai — AI Visibility & GEO Tools" },
+      { property: "og:description", content: "Explore tools to analyze brand visibility, improve content readiness and build a consistent machine-readable brand identity." },
       { property: "og:url", content: "https://maaroofai.com/" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/" }],
@@ -29,7 +29,6 @@ export const Route = createFileRoute("/")({
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         url: "https://maaroofai.com/",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content optimized for 10 AI search engines.",
       }),
     }],
@@ -138,10 +137,10 @@ function Page() {
               </div>
 
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
+                <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
                   {t("hero_cta_primary")} <ArrowRight className="size-4" />
                 </Link>
-                <Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
+                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
                   {t("hero_cta_secondary")}
                 </Link>
               </div>
@@ -151,6 +150,16 @@ function Page() {
               <EnginesOrbit />
             </div>
           </div>
+        </section>
+
+<section className="mx-auto max-w-6xl px-4 pb-14 md:px-6" aria-labelledby="how-maaroof-works">
+          <h2 id="how-maaroof-works" className="text-center font-display text-2xl font-bold md:text-3xl">{t("home_steps_title")}</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">1</span><h3 className="mt-3 font-semibold">{t("home_step1_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step1_desc")}</p></div>
+            <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span><h3 className="mt-3 font-semibold">{t("home_step2_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step2_desc")}</p></div>
+            <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</span><h3 className="mt-3 font-semibold">{t("home_step3_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step3_desc")}</p></div>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-3"><Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:border-primary/50">{t("hero_cta_guide")}</Link><Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10">{t("hero_cta_secondary")}</Link></div>
         </section>
 
         {/* Crawlable, server-rendered summary so the homepage has substantive content for search engines */}
