@@ -373,7 +373,7 @@ function WorkspacePage() {
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-2"><span className="font-medium">{c.balance}</span><span className="tabular-nums">{costRun.balance} {c.tokens}</span></div>
                   {costRun.metered && !estimateFitsQuota && <p role="alert" className="text-xs text-destructive">{locale === "en" ? "The estimated session and live-check cost exceeds your current balance or remaining quota." : locale === "ku" ? "تێچووی خەمڵێنراو لە باڵانس یان سنووری ماوە زیاترە." : "التكلفة التقديرية للجلسة والفحص تتجاوز الرصيد أو الحصة المتبقية."}</p>}
                   {costRun.dailyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Daily quota remaining" : locale === "ku" ? "سنووری ڕۆژانەی ماوە" : "المتبقي من الحصة اليومية"}: {costRun.dailyRemaining} {c.tokens}</p>}
-                  {costRun.monthlyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Monthly quota remaining" : locale === "ku" ? "سنووری مانگانەی ماوە" : "المتبقي من الحصة الشهرية"}: {costRun.monthlyRemaining} {c.tokens}</p>
+                  {costRun.monthlyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Monthly quota remaining" : locale === "ku" ? "سنووری مانگانەی ماوە" : "المتبقي من الحصة الشهرية"}: {costRun.monthlyRemaining} {c.tokens}</p>}
                   <p className="text-xs leading-5 text-muted-foreground">{c.toolCostNote}</p>
                 </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
               </div>
