@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { supabase } from "@/integrations/supabase/client";
 import { ENGINE_LIST } from "@/lib/ai-engines";
-import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
@@ -111,7 +111,7 @@ function WorkspacePage() {
   const [costRun, setCostRun] = useState<CostPreview | null>(null);
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [costLoading, setCostLoading] = useState(false);
-  const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[] }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key) });
+  const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const abortRef = useState<{ current: AbortController | null }>({ current: null })[0];
 
   useEffect(() => {
@@ -155,8 +155,9 @@ function WorkspacePage() {
   }, [user?.id, mode, liveProbe, selectedModels.length]);
 
   const recommendations = useMemo(() => {
-    const enabled = MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && !skill.salesContact);
-    const matched = recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(skill => policy.enabled_skills.includes(skill.key) && !skill.salesContact);
+    const isSelfService = (skill: MaaroofSkill) => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "self_service";
+    const enabled = MAAROOF_SKILLS.filter(isSelfService);
+    const matched = recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(isSelfService);
     return (matched.length ? matched : enabled).slice(0, 3);
   }, [goal, policy.enabled_skills]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
@@ -329,7 +330,7 @@ function WorkspacePage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
-                  {MAAROOF_SKILLS.filter(skill => skill.salesContact && policy.enabled_skills.includes(skill.key) && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
+                  {MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "contact" && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {selectedSkills.map((key) => {
