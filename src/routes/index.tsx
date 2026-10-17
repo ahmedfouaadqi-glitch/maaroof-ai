@@ -165,7 +165,7 @@ function Page() {
                 <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">العربية والكردية والإنكليزية</span>
               </div>
             </div>
-            <Link to="/workbench" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">افتح مساحة العمل <ArrowRight className="size-4" /></Link>
+            <Link to="/workspace" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">افتح مساحة العمل <ArrowRight className="size-4" /></Link>
           </div>
         </section>
 
