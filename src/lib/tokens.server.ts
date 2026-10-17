@@ -10,6 +10,7 @@
 // it is never auto-applied to a user's run.
 import { createClient } from "@supabase/supabase-js";
 import { resolveScopedAccessMode } from "@/lib/maaroof/skill-access-policy";
+import { MAAROOF_SKILLS, defaultSkillAccessPolicy } from "@/lib/maaroof/skill-catalog";
 
 export type ResolvedCost = { tokens: number; usd: number; source: "user_override" | "plan" | "unpriced" };
 export type ChargeResult =
@@ -47,6 +48,12 @@ async function resolveToolAccessMode(userId: string, toolKey: string): Promise<A
   const globalPolicy = value.tool_access && typeof value.tool_access === "object" ? value.tool_access : {};
   const byPlan = value.tool_access_by_plan && typeof value.tool_access_by_plan === "object" ? value.tool_access_by_plan : {};
   const byUser = value.tool_access_by_user && typeof value.tool_access_by_user === "object" ? value.tool_access_by_user : {};
+  const globalSkillPolicy = value.skill_access && typeof value.skill_access === "object" ? value.skill_access : defaultSkillAccessPolicy();
+  const planSkillPolicy = value.skill_access_by_plan && typeof value.skill_access_by_plan === "object" ? value.skill_access_by_plan : {};
+  const userSkillPolicy = value.skill_access_by_user && typeof value.skill_access_by_user === "object" ? value.skill_access_by_user : {};
+  const skillMode = (skillKey: string) => resolveScopedAccessMode({
+    key: skillKey, globalPolicy: globalSkillPolicy, byPlan: planSkillPolicy, byUser: userSkillPolicy, planKey, userId,
+  });
   const explicit = (key: string): AccessMode | undefined => {
     const candidates = [byUser?.[userId]?.[key], planKey ? byPlan?.[planKey]?.[key] : undefined, globalPolicy?.[key]];
     return candidates.find(validAccessMode);
@@ -57,7 +64,17 @@ async function resolveToolAccessMode(userId: string, toolKey: string): Promise<A
     const parent = explicit(toolKey.split(".")[0]);
     if (parent) return parent;
   }
-  return resolveScopedAccessMode({ key: toolKey, globalPolicy, byPlan, byUser, planKey, userId });
+  const configuredToolMode = resolveScopedAccessMode({ key: toolKey, globalPolicy, byPlan, byUser, planKey, userId });
+  if (configuredToolMode !== "self_service") return configuredToolMode;
+  // If no explicit tool override exists, inherit a gate only when every skill mapped
+  // to this tool is gated. Shared tools remain available through a self-service skill.
+  const mappedSkills = MAAROOF_SKILLS.filter(skill => skill.tools.includes(toolKey as any));
+  if (mappedSkills.length) {
+    const modes = mappedSkills.map(skill => skillMode(skill.key));
+    if (modes.every(mode => mode === "disabled")) return "disabled";
+    if (modes.every(mode => mode === "contact" || mode === "disabled")) return "contact";
+  }
+  return "self_service";
 }
 
 export async function resolveToolCost(userId: string, toolKey: string): Promise<ResolvedCost> {
