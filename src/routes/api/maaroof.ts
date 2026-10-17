@@ -33,6 +33,20 @@ export const Route = createFileRoute("/api/maaroof")({
         const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
         const executionMode = (["simulation","recommendation","execution"] as const).includes(body?.execution_mode) ? body.execution_mode as "simulation"|"recommendation"|"execution" : undefined;
 
+        // Workspace-only UI policy: the professional route retains its existing
+        // behavior, while the new user-facing workspace respects admin settings.
+        if (body?.interface_mode === "workspace") {
+          const { data: uiPolicyRow } = await admin.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle();
+          const uiPolicy = (uiPolicyRow as any)?.value;
+          if (uiPolicy?.enabled === false) {
+            return Response.json({ error: "workspace_disabled", message: { ar: "مساحة العمل الجديدة غير متاحة حالياً.", en: "The new workspace is currently unavailable.", ku: "شوێنی کاری نوێ بۆ ئێستا بەردەست نییە." } }, { status: 403 });
+          }
+          const allowedModes = Array.isArray(uiPolicy?.allowed_modes) ? uiPolicy.allowed_modes : ["execution", "recommendation", "simulation"];
+          if (!allowedModes.includes(executionMode || "execution")) {
+            return Response.json({ error: "work_mode_disabled", message: { ar: "وضع العمل هذا غير متاح لحسابك حالياً.", en: "This work mode is currently unavailable.", ku: "ئەم شێوازی کارە بۆ ئێستا بەردەست نییە." } }, { status: 403 });
+          }
+        }
+
         // Verify workspace ownership if provided.
         let verifiedWorkspaceId: string | null = null;
         if (workspaceId) {
