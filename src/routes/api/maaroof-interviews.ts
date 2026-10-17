@@ -151,6 +151,40 @@ function includeOptionalInterviewQuestions(contextSnapshot: unknown): boolean {
   return isPlainRecord(contextSnapshot) && contextSnapshot.interview_depth === "comprehensive";
 }
 
+function isStoredInterviewContextConsistent(
+  interview: {
+    target_type: unknown;
+    target_name: unknown;
+    workspace_id: unknown;
+    domains: unknown;
+    locale: unknown;
+    context_snapshot: unknown;
+  },
+  state: InterviewState,
+): boolean {
+  const snapshot = interview.context_snapshot;
+  if (!isPlainRecord(snapshot)) return false;
+
+  if (
+    state.context.targetType !== interview.target_type ||
+    state.context.locale !== interview.locale ||
+    JSON.stringify(state.context.domains) !== JSON.stringify(interview.domains) ||
+    snapshot.target_type !== interview.target_type ||
+    snapshot.target_name !== interview.target_name ||
+    snapshot.workspace_id !== interview.workspace_id ||
+    snapshot.locale !== interview.locale ||
+    JSON.stringify(snapshot.domains) !== JSON.stringify(interview.domains)
+  ) {
+    return false;
+  }
+
+  return (
+    snapshot.interview_depth === undefined ||
+    snapshot.interview_depth === "focused" ||
+    snapshot.interview_depth === "comprehensive"
+  );
+}
+
 async function handleGet(request: Request): Promise<Response> {
   const auth = await authenticate(request);
   if (!auth.ok) return auth.response;
@@ -175,6 +209,10 @@ async function handleGet(request: Request): Promise<Response> {
     if (!questionSet.ok || !isStoredInterviewState(interview.state)) {
       return errorResponse("stored_interview_invalid", 500);
     }
+    if (!isStoredInterviewContextConsistent(interview, interview.state)) {
+      return errorResponse("stored_interview_context_mismatch", 500);
+    }
+    const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
     if (
       !isInterviewQuestionCursorConsistent(
         questionSet.questions,
@@ -393,11 +431,7 @@ async function handleUpdate(request: Request): Promise<Response> {
     return errorResponse("stored_interview_invalid", 500);
   }
   const state = interview.state;
-  if (
-    state.context.targetType !== interview.target_type ||
-    state.context.locale !== interview.locale ||
-    JSON.stringify(state.context.domains) !== JSON.stringify(interview.domains)
-  ) {
+  if (!isStoredInterviewContextConsistent(interview, state)) {
     return errorResponse("stored_interview_context_mismatch", 500);
   }
 
