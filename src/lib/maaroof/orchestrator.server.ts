@@ -985,6 +985,21 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
         continue;
       }
+      if (step.tool === "visibility" && ctx.liveProbe !== false && ctx.selectedProbeEngines !== undefined && ctx.selectedProbeEngines.length === 0) {
+        const skip = {
+          skipped: "no_affordable_or_permitted_engines",
+          message: {
+            ar: "لم يُشغَّل فحص المحركات الحي لأن الرصيد أو حدود الخطة لا تسمح بتشغيل أي محرك. تستمر الجلسة من دون هذا الفحص.",
+            en: "The live engine probe was skipped because the current balance or plan limits do not allow any engine. The session will continue without the probe.",
+            ku: "پشکنینی زیندوو نەکرا چونکە بەڵانس یان سنووری پلان هیچ بزوێنەرێک ڕێگە نادات؛ دانیشتنەکە بەبێ ئەم پشکنینە بەردەوام دەبێت.",
+          },
+          engines: [],
+        };
+        results.push({ tool: step.tool, ok: false, output: skip });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+        await logMsg("tool_result", { tool: step.tool, output: skip });
+        continue;
+      }
       // Respect an explicit server-selected engine list, including an empty list.
       // Only use the legacy all-engine default when no selection override was supplied.
       if (step.tool === "visibility" && ctx.liveProbe !== false) {
