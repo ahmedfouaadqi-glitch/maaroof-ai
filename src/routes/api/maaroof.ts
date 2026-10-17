@@ -104,20 +104,20 @@ export const Route = createFileRoute("/api/maaroof")({
               .eq("id", userId).maybeSingle();
             const hasFreshMeter = Number((freshProfile as any)?.tokens_balance) > 0 ||
               (freshProfile as any)?.tokens_daily_limit != null || (freshProfile as any)?.tokens_monthly_limit != null;
-            let affordableCount = eligible.length;
-            if (hasFreshMeter) {
-              if (!(perEngineTokens > 0) || probeCost.source === "unpriced" || (probeCost as any).source === "disabled_by_admin") {
-                affordableCount = 0;
-              } else {
-                const balanceCount = Math.floor(Math.max(0, Number((freshProfile as any)?.tokens_balance) || 0) / perEngineTokens);
-                const dailyLimit = (freshProfile as any)?.tokens_daily_limit;
-                const monthlyLimit = (freshProfile as any)?.tokens_monthly_limit;
-                const dailyLeft = dailyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(dailyLimit) - Number((freshProfile as any)?.tokens_used_today || 0));
-                const monthlyLeft = monthlyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(monthlyLimit) - Number((freshProfile as any)?.tokens_used_month || 0));
-                affordableCount = Math.min(affordableCount, balanceCount, Math.floor(dailyLeft / perEngineTokens), Math.floor(monthlyLeft / perEngineTokens));
-              }
-            }
-            selectedProbeEngines = eligible.slice(0, Math.max(0, Math.min(affordableCount, ENGINE_KEYS.length)));
+            const { affordableProbeEngineCount } = await import("@/lib/maaroof/probe-selection");
+            const affordableCount = affordableProbeEngineCount({
+              eligibleCount: eligible.length,
+              hasMeter: hasFreshMeter,
+              balance: (freshProfile as any)?.tokens_balance,
+              dailyLimit: (freshProfile as any)?.tokens_daily_limit,
+              monthlyLimit: (freshProfile as any)?.tokens_monthly_limit,
+              usedToday: (freshProfile as any)?.tokens_used_today,
+              usedMonth: (freshProfile as any)?.tokens_used_month,
+              tokensPerEngine: perEngineTokens,
+              priced: probeCost.source !== "unpriced",
+              disabled: (probeCost as any).source === "disabled_by_admin",
+            });
+            selectedProbeEngines = eligible.slice(0, affordableCount);
           } else {
             const requested = requestedProbeEngines || [];
             selectedProbeEngines = requested.filter((engine) => eligible.includes(engine as any));
