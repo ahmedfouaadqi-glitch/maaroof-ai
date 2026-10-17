@@ -62,3 +62,27 @@ Do not create a parallel proposal/experiment system or let a skill rewrite produ
 - Repository metadata currently shows no GitHub Actions workflow files and no check runs for the current branch head.
 - The GitHub repository connector does not provide a local dependency install/build/test runtime here, so the new code has not been reported as build- or test-passing. Run `npm test`, `npm run lint`, and `npm run build` in the project environment before merging.
 - Changes remain on `feat/maaroof-engine-selection-countdown`; no merge, deployment, or production configuration change was performed.
+
+
+## Interface availability and account preferences
+
+The admin policy now supports:
+- Both interfaces enabled, with an admin-selected default.
+- Workspace only.
+- Professional interface only.
+- Optional per-account interface choice when both are enabled.
+
+The user's preference is stored in Supabase Auth `user_metadata.preferred_interface`, so it follows the account rather than only one browser. If the preferred interface is disabled by admin, navigation falls back to the configured default/available interface. Existing profiles and token balances are not modified by this feature. The API validates requested interface availability, so hiding a navigation link is not the only control.
+
+## Balance and charging audit
+
+- The account's authoritative balance remains `profiles.tokens_balance`; daily/monthly counters and limits remain in the existing profile fields.
+- `getCostPreview` resolves the existing per-user override/plan pricing and now exposes remaining daily and monthly quota alongside the current balance.
+- The workspace shows the base Maaroof run estimate and, when requested, a separate live-probe estimate. It checks the combined estimate against the visible balance and quota before enabling the button.
+- This estimate is not a reservation. The authoritative run charge still occurs in `/api/maaroof` through `chargeTokens` and the atomic `charge_tokens` database function. The live probe is charged by the existing visibility endpoint immediately before provider calls. Tool executions may have their own charges.
+- Because a session can invoke a variable number of tools, the UI cannot know the exact total tool cost in advance. It states this and must not present the base-run estimate as a guaranteed all-in price. Atomic server-side checks remain authoritative if balance or quota changes between preview and execution.
+- No pricing table, balance, token counter, plan, or existing account record was reset or migrated by these changes.
+
+## Landing page
+
+The homepage hero is now goal-first: primary task CTA, account-creation CTA, concise value proposition, and a visual three-step journey (describe goal → coordinate skills/tools → review results). The existing SEO content, pricing, guide, and contact routes remain below the hero. Metadata was aligned with the broader goal-driven intelligence positioning rather than promising only AI citation outcomes.
