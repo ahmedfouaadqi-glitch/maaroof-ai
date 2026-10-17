@@ -57,6 +57,18 @@ export const Route = createFileRoute("/api/maaroof")({
           if (requestedSkills.some((key: string) => !allowedSkills.includes(key))) {
             return Response.json({ error: "skill_disabled", message: { ar: "إحدى المهارات المختارة غير متاحة حالياً.", en: "One of the selected skills is currently unavailable.", ku: "یەکێک لە شارەزاییە هەڵبژێردراوەکان بەردەست نییە." } }, { status: 403 });
           }
+          const contactRequired = requestedSkills.filter((key: string) => MAAROOF_SKILLS.some((skill) => skill.key === key && skill.salesContact));
+          if (contactRequired.length) {
+            return Response.json({
+              error: "sales_contact_required",
+              contact_url: "/contact",
+              message: {
+                ar: "هذه الخدمة المتخصصة تتطلب التواصل مع فريق معروف لتحديد النطاق والتكلفة المناسبين.",
+                en: "This specialized service requires contacting MAAROOF to scope the work and confirm pricing.",
+                ku: "ئەم خزمەتگوزارییە تایبەتە پێویستی بە پەیوەندی لەگەڵ تیمی ماعروف هەیە بۆ دیاریکردنی سنوور و نرخ.",
+              },
+            }, { status: 403 });
+          }
           const validKeys = new Set(MAAROOF_SKILLS.map((skill) => skill.key));
           effectiveSkillKeys = requestedSkills.length
             ? requestedSkills.filter((key) => validKeys.has(key))
