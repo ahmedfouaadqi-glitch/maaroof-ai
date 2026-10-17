@@ -81,40 +81,50 @@ export const Route = createFileRoute("/api/maaroof")({
           }
         }
 
-        // Server-authoritative automatic selection: use actual post-session-charge balance,
-        // entitlement, plan cap and per-user override rather than UI cost estimates.
-        if (body?.auto_select_probe_engines === true && body?.live_probe !== false) {
+        // Server-authoritative engine selection. Both manual and automatic choices
+        // are constrained by admin policy and the user's current plan/override.
+        if (body?.live_probe !== false && (body?.auto_select_probe_engines === true || Array.isArray(body?.probe_engines))) {
           const { enginesAllowedForUser } = await import("@/lib/ai-engines.server");
           const { resolveProbePolicy } = await import("@/lib/tokens.server");
           const entitlement = await enginesAllowedForUser(admin, userId);
           const policy = await resolveProbePolicy(userId);
           const maxByPolicy = policy.maxEngines == null ? entitlement.limit : Math.min(entitlement.limit, policy.maxEngines);
-          const { data: freshProfile } = await admin.from("profiles")
-            .select("tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month")
-            .eq("id", userId).maybeSingle();
-          const hasFreshMeter = Number((freshProfile as any)?.tokens_balance) > 0 ||
-            (freshProfile as any)?.tokens_daily_limit != null || (freshProfile as any)?.tokens_monthly_limit != null;
-          let affordableCount = Math.max(0, maxByPolicy);
-          if (hasFreshMeter) {
-            const probeCost = await resolveToolCost(userId, "visibility.probe");
-            const perEngineTokens = policy.tokensPerEngine ?? probeCost.tokens;
-            if (perEngineTokens > 0) {
-              const balanceCount = Math.floor(Math.max(0, Number((freshProfile as any)?.tokens_balance) || 0) / perEngineTokens);
-              const dailyLimit = (freshProfile as any)?.tokens_daily_limit;
-              const monthlyLimit = (freshProfile as any)?.tokens_monthly_limit;
-              const dailyLeft = dailyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(dailyLimit) - Number((freshProfile as any)?.tokens_used_today || 0));
-              const monthlyLeft = monthlyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(monthlyLimit) - Number((freshProfile as any)?.tokens_used_month || 0));
-              affordableCount = Math.min(affordableCount, balanceCount, Math.floor(dailyLeft / perEngineTokens), Math.floor(monthlyLeft / perEngineTokens));
+          const eligible = entitlement.allowed.slice(0, Math.max(0, maxByPolicy));
+
+          if (body?.auto_select_probe_engines === true) {
+            const { data: freshProfile } = await admin.from("profiles")
+              .select("tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month")
+              .eq("id", userId).maybeSingle();
+            const hasFreshMeter = Number((freshProfile as any)?.tokens_balance) > 0 ||
+              (freshProfile as any)?.tokens_daily_limit != null || (freshProfile as any)?.tokens_monthly_limit != null;
+            let affordableCount = eligible.length;
+            if (hasFreshMeter) {
+              const probeCost = await resolveToolCost(userId, "visibility.probe");
+              const perEngineTokens = policy.tokensPerEngine ?? probeCost.tokens;
+              if (!(perEngineTokens > 0)) {
+                affordableCount = 0;
+              } else {
+                const balanceCount = Math.floor(Math.max(0, Number((freshProfile as any)?.tokens_balance) || 0) / perEngineTokens);
+                const dailyLimit = (freshProfile as any)?.tokens_daily_limit;
+                const monthlyLimit = (freshProfile as any)?.tokens_monthly_limit;
+                const dailyLeft = dailyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(dailyLimit) - Number((freshProfile as any)?.tokens_used_today || 0));
+                const monthlyLeft = monthlyLimit == null ? Number.POSITIVE_INFINITY : Math.max(0, Number(monthlyLimit) - Number((freshProfile as any)?.tokens_used_month || 0));
+                affordableCount = Math.min(affordableCount, balanceCount, Math.floor(dailyLeft / perEngineTokens), Math.floor(monthlyLeft / perEngineTokens));
+              }
             }
+            selectedProbeEngines = eligible.slice(0, Math.max(0, Math.min(affordableCount, ENGINE_KEYS.length)));
+          } else {
+            const requested = requestedProbeEngines || [];
+            selectedProbeEngines = requested.filter((engine) => eligible.includes(engine as any));
           }
-          selectedProbeEngines = entitlement.allowed.slice(0, Math.max(0, Math.min(affordableCount, ENGINE_KEYS.length)));
-          if (selectedProbeEngines.length === 0) {
+
+          if (!selectedProbeEngines?.length) {
             return Response.json({
-              error: "probe_balance_insufficient",
+              error: "probe_balance_or_entitlement_insufficient",
               message: {
-                ar: "الرصيد أو حدود الاستخدام لا تكفي لتشغيل أي محرك ضمن الخطة الحالية.",
-                en: "Your balance or usage limits cannot cover any engine under the current plan.",
-                ku: "بەڵانس یان سنووری بەکارهێنان بۆ کارپێکردنی هیچ بزوێنەرێک بەس نییە.",
+                ar: "لا توجد محركات مسموحة ومغطاة بالرصيد وحدود الاستخدام لهذه الخطة. راجع إعدادات الاشتراك أو الرصيد.",
+                en: "No engines are allowed and covered by the current plan, balance, and usage limits.",
+                ku: "هیچ بزوێنەرێک لە پلانی ئێستا و بەڵانس و سنوورەکاندا بەردەست نییە.",
               },
             }, { status: 402 });
           }
