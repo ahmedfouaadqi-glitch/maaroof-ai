@@ -81,18 +81,21 @@ const DOMAIN_LABELS: Record<InterviewDomain, Record<Locale, string>> = {
 const COPY: Record<Locale, Record<string, string>> = {
   ar: {
     title: "مقابلة بناء السياق المحفوظ",
-    subtitle: "تبني ملف سياق محفوظاً حسب طبيعة الجهة ومجالات العمل. تبقى أسئلة التوضيح أثناء تنفيذ المهمة منفصلة وتتغير حسب الطلب.",
+    subtitle:
+      "تبني ملف سياق محفوظاً حسب طبيعة الجهة ومجالات العمل. تبقى أسئلة التوضيح أثناء تنفيذ المهمة منفصلة وتتغير حسب الطلب.",
     open: "فتح المقابلات",
     close: "إخفاء المقابلات",
     target: "طبيعة الجهة التي سنبني ملف سياقها",
     chooseTargetType: "اختر طبيعة الجهة أولاً",
-    targetHint: "اختر ما نريد جمع سياقه، لا نوع حسابك. تتغير الأسئلة حسب نوع الجهة ومجالات العمل المختارة.",
+    targetHint:
+      "اختر ما نريد جمع سياقه، لا نوع حسابك. تتغير الأسئلة حسب نوع الجهة ومجالات العمل المختارة.",
     targetTypeRequired: "اختر طبيعة الجهة أو المشروع قبل بدء المقابلة.",
     depth: "عمق المقابلة",
     focused: "مركزة",
     comprehensive: "شاملة",
     focusedHint: "الأسئلة المطلوبة المرتبطة بطبيعة الجهة ومجالاتها؛ مناسبة للبدء السريع.",
-    comprehensiveHint: "تضيف الأسئلة الاختيارية الملائمة للجهة والمجالات المختارة لبناء ملف سياق أغنى.",
+    comprehensiveHint:
+      "تضيف الأسئلة الاختيارية الملائمة للجهة والمجالات المختارة لبناء ملف سياق أغنى.",
     optionalRemaining: "سؤال اختياري متبقٍ",
     targetName: "اسم الجهة أو العلامة أو المشروع",
     targetNameHint: "مثال: شركة معروف أو عميل الوكالة",
@@ -137,18 +140,22 @@ const COPY: Record<Locale, Record<string, string>> = {
   },
   en: {
     title: "Saved context interview",
-    subtitle: "Builds a saved context profile for the selected entity and workstreams. Task-specific clarification during execution remains separate and adapts to each request.",
+    subtitle:
+      "Builds a saved context profile for the selected entity and workstreams. Task-specific clarification during execution remains separate and adapts to each request.",
     open: "Open interviews",
     close: "Hide interviews",
     target: "What are we building context for?",
     chooseTargetType: "Choose an entity type first",
-    targetHint: "Choose the entity to profile, not your account role. Questions adapt to the entity type and selected workstreams.",
+    targetHint:
+      "Choose the entity to profile, not your account role. Questions adapt to the entity type and selected workstreams.",
     targetTypeRequired: "Choose an entity or project type before starting.",
     depth: "Interview depth",
     focused: "Focused",
     comprehensive: "Comprehensive",
-    focusedHint: "Asks the required questions for the selected entity and workstreams, keeping setup concise.",
-    comprehensiveHint: "Also asks applicable optional questions for a richer saved context profile.",
+    focusedHint:
+      "Asks the required questions for the selected entity and workstreams, keeping setup concise.",
+    comprehensiveHint:
+      "Also asks applicable optional questions for a richer saved context profile.",
     optionalRemaining: "optional remaining",
     targetName: "Entity, brand, or project name",
     targetNameHint: "Example: Maaroof company or an agency client",
@@ -200,13 +207,15 @@ const COPY: Record<Locale, Record<string, string>> = {
     close: "شاردنەوەی چاوپێکەوتنەکان",
     target: "جۆری لایەن بۆ دروستکردنی کۆنتێکست",
     chooseTargetType: "سەرەتا جۆری لایەن هەڵبژێرە",
-    targetHint: "ئەو لایەنە هەڵبژێرە کە دەتەوێت کۆنتێکستی بۆ دروست بکرێت، نەک جۆری هەژمارەکەت. پرسیارەکان بەپێی لایەن و بوارەکان دەگۆڕێن.",
+    targetHint:
+      "ئەو لایەنە هەڵبژێرە کە دەتەوێت کۆنتێکستی بۆ دروست بکرێت، نەک جۆری هەژمارەکەت. پرسیارەکان بەپێی لایەن و بوارەکان دەگۆڕێن.",
     targetTypeRequired: "پێش دەستپێکردن جۆری لایەن یان پڕۆژە هەڵبژێرە.",
     depth: "قووڵایی چاوپێکەوتن",
     focused: "کورت و چڕ",
     comprehensive: "ورد و فراوان",
     focusedHint: "پرسیارە پێویستەکان بەپێی جۆری لایەن و بوارەکان دەپرسرێن.",
-    comprehensiveHint: "هەروەها پرسیارە هەڵبژاردەییە گونجاوەکان دەپرسرێن بۆ دروستکردنی کۆنتێکستی زیاتر.",
+    comprehensiveHint:
+      "هەروەها پرسیارە هەڵبژاردەییە گونجاوەکان دەپرسرێن بۆ دروستکردنی کۆنتێکستی زیاتر.",
     optionalRemaining: "پرسیاری هەڵبژاردەیی ماوە",
     targetName: "ناوی لایەن یان پڕۆژە",
     targetNameHint: "نموونە: کۆمپانیای معروف یان کڕیاری ئاژانس",
@@ -394,7 +403,11 @@ export function InterviewPanel({
       const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_create_failed");
       setSession(body.interview);
-      setInterviewDepth(body.interview.context_snapshot?.interview_depth === "comprehensive" ? "comprehensive" : "focused");
+      setInterviewDepth(
+        body.interview.context_snapshot?.interview_depth === "comprehensive"
+          ? "comprehensive"
+          : "focused",
+      );
       setNextQuestion(body.next_question || null);
       setProgress(body.progress || null);
       setDataComplete(false);
