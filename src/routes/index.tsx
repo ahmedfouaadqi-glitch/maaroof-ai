@@ -15,9 +15,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "MAAROOF Ai — AI Visibility and Goal-Driven Intelligence" },
-      { name: "description", content: "Plan research, analyze markets and improve brand visibility with a goal-driven AI workspace in Arabic, Kurdish and English." },
+      { name: "description", content: "MAAROOF Ai coordinates business research, AI visibility and skills across ten AI ecosystems in one multilingual workspace for Arabic, Kurdish and English." },
       { property: "og:title", content: "MAAROOF Ai — From Business Goal to Actionable Intelligence" },
-      { property: "og:description", content: "Coordinate research, analysis and existing tools in one multilingual AI workspace for business and brand intelligence." },
+      { property: "og:description", content: "Coordinate research, analysis, business skills and AI visibility across ten AI ecosystems in one multilingual workspace." },
       { property: "og:url", content: "https://maaroofai.com/" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/" }],
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/")({
         operatingSystem: "Web",
         url: "https://maaroofai.com/",
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        description: "A multilingual business intelligence workspace that coordinates research, analysis, and existing AI tools to help users move from goals to reviewable results.",
+        description: "A multilingual AI business workspace for research, analysis, brand visibility and coordinated skills across ten AI model ecosystems, helping users move from goals to reviewable results.",
       }),
     }],
   }),
