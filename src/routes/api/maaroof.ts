@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
-import { MAAROOF_SKILLS, recommendMaaroofSkills, defaultSkillAccessPolicy, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
+import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -34,8 +35,14 @@ export const Route = createFileRoute("/api/maaroof")({
         const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
         const executionMode = (["simulation","recommendation","execution"] as const).includes(body?.execution_mode) ? body.execution_mode as "simulation"|"recommendation"|"execution" : undefined;
         const interfaceMode = body?.interface_mode === "workspace" ? "workspace" : "professional";
-        const { data: uiPolicyRow } = await admin.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle();
-        const uiPolicy = (uiPolicyRow as any)?.value;
+        const [{ data: uiPolicyRow }, { data: userProfile }] = await Promise.all([
+          admin.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle(),
+          admin.from("profiles").select("subscription_tier,is_subscribed,subscription_expires_at").eq("id", userId).maybeSingle(),
+        ]);
+        const uiPolicy = (uiPolicyRow as any)?.value || {};
+        const activeSubscription = !!(userProfile as any)?.is_subscribed &&
+          (!(userProfile as any)?.subscription_expires_at || new Date((userProfile as any).subscription_expires_at).getTime() > Date.now());
+        const planKey = activeSubscription ? normalizePlanAccessKey((userProfile as any)?.subscription_tier) : "";
         const availableInterfaces: string[] = Array.isArray(uiPolicy?.available_interfaces) ? uiPolicy.available_interfaces : uiPolicy?.enabled === false ? ["professional"] : ["workbench", "professional"];
         const requestedInterfaceKey = interfaceMode === "workspace" ? "workbench" : "professional";
         if (executionMode && Array.isArray(uiPolicy?.allowed_modes) && !uiPolicy.allowed_modes.includes(executionMode)) {
@@ -45,7 +52,13 @@ export const Route = createFileRoute("/api/maaroof")({
         if (!availableInterfaces.includes(requestedInterfaceKey)) return Response.json({ error: "interface_disabled" }, { status: 403 });
         if (interfaceMode === "workspace") {
           const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : MAAROOF_SKILLS.map((skill) => skill.key);
-          const accessPolicy = { ...defaultSkillAccessPolicy(), ...(uiPolicy?.skill_access && typeof uiPolicy.skill_access === "object" ? uiPolicy.skill_access : {}) };
+          const accessPolicy = resolveSkillAccessPolicy({
+            globalPolicy: uiPolicy?.skill_access && typeof uiPolicy.skill_access === "object" ? uiPolicy.skill_access : {},
+            byPlan: uiPolicy?.skill_access_by_plan && typeof uiPolicy.skill_access_by_plan === "object" ? uiPolicy.skill_access_by_plan : {},
+            byUser: uiPolicy?.skill_access_by_user && typeof uiPolicy.skill_access_by_user === "object" ? uiPolicy.skill_access_by_user : {},
+            planKey,
+            userId,
+          });
           const requestedSkills = Array.isArray(body?.selected_skills) ? [...new Set(body.selected_skills.filter((key: unknown): key is string => typeof key === "string"))] : [];
           const requestedMode = requestedSkills.map((key) => MAAROOF_SKILLS.find((skill) => skill.key === key)).filter(Boolean);
           if (requestedSkills.some((key: string) => !allowedSkills.includes(key) || !MAAROOF_SKILLS.some((skill) => skill.key === key) || getSkillAccessMode(MAAROOF_SKILLS.find((skill) => skill.key === key)!, accessPolicy) === "disabled")) return Response.json({ error: "skill_disabled" }, { status: 403 });
