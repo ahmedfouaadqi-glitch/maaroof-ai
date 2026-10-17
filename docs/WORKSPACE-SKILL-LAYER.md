@@ -36,7 +36,7 @@ Stored in the existing `app_settings` table under `user_interface_policy`; no mi
 - Allow or disallow execution, recommendation, and simulation modes.
 - Enable or disable each user-facing skill.
 
-The workspace applies these settings to the UI, and `/api/maaroof` checks the workspace mode, selected skills, and live-check availability for requests that declare `interface_mode: "workspace"`. Existing requests from the professional interface do not include that marker and retain their current behavior. Existing server-side tool access, pricing, entitlements, and balance checks remain authoritative.
+The workspace applies these settings to the UI, and `/api/maaroof` validates interface availability for both workspace and professional requests. Requests without an explicit interface marker are treated as professional requests for compatibility with existing clients. Workspace requests additionally validate selected skills and live-check availability. Existing server-side tool access, pricing, entitlements, and balance checks remain authoritative.
 
 ## Profile and professional interface
 
