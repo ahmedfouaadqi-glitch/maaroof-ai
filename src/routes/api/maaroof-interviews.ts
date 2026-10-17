@@ -415,7 +415,10 @@ async function handleUpdate(request: Request): Promise<Response> {
     if (typeof body.status !== "string" || !allowedStatuses.includes(body.status)) {
       return errorResponse("invalid_interview_status", 400);
     }
-    if (body.status === "completed" && !isInterviewTraversalComplete(questionSet.questions, state)) {
+    if (
+      body.status === "completed" &&
+      !isInterviewTraversalComplete(questionSet.questions, state)
+    ) {
       return errorResponse("required_questions_unhandled", 409, {
         progress: getInterviewProgress(questionSet.questions, state),
       });
