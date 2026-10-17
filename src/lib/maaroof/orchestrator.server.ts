@@ -985,9 +985,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
         continue;
       }
-      // Default: ask all ten engines live (entitlement/plan limits are enforced server-side).
+      // Respect an explicit server-selected engine list, including an empty list.
+      // Only use the legacy all-engine default when no selection override was supplied.
       if (step.tool === "visibility" && ctx.liveProbe !== false) {
-        if (ctx.selectedProbeEngines?.length) {
+        if (ctx.selectedProbeEngines !== undefined) {
           (filled as any).probe_engines = [...ctx.selectedProbeEngines];
         } else if (!(Array.isArray((filled as any).probe_engines) && (filled as any).probe_engines.length)) {
           try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
