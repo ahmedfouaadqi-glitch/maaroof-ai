@@ -1,0 +1,62 @@
+name: Temporary formatter for interview UI
+
+on:
+  push:
+    branches:
+      - feat/maaroof-interview-foundation-no-cloudflare
+    paths:
+      - "src/components/workspace/InterviewPanel.tsx"
+      - "src/lib/maaroof/interview-engine.ts"
+      - "src/lib/maaroof/interview-engine.test.ts"
+      - "src/lib/maaroof/interview-question-bank.ts"
+      - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/routes/api/maaroof-interviews.ts"
+      - ".github/workflows/format-interview-feature.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  format-feature:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply repository formatting
+        run: |
+          bunx eslint --fix \
+            src/lib/maaroof/interview-engine.ts \
+            src/lib/maaroof/interview-engine.test.ts \
+            src/lib/maaroof/interview-question-bank.ts \
+            src/lib/maaroof/interview-question-bank.test.ts \
+            src/routes/api/maaroof-interviews.ts \
+            src/components/workspace/InterviewPanel.tsx
+
+      - name: Commit formatting if needed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/lib/maaroof/interview-engine.ts \
+            src/lib/maaroof/interview-engine.test.ts \
+            src/lib/maaroof/interview-question-bank.ts \
+            src/lib/maaroof/interview-question-bank.test.ts \
+            src/routes/api/maaroof-interviews.ts \
+            src/components/workspace/InterviewPanel.tsx
+          if git diff --cached --quiet; then
+            echo "No formatting changes needed."
+          else
+            git commit -m "style: format context-aware interview UI"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi

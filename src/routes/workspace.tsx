@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { InterviewPanel } from "@/components/workspace/InterviewPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
@@ -97,6 +98,11 @@ function WorkspacePage() {
   const navigate = useNavigate();
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[locale];
+  const getInterviewAccessToken = useCallback(async () => {
+    if (session?.access_token) return session.access_token;
+    const result = await supabase.auth.getSession();
+    return result.data.session?.access_token ?? null;
+  }, [session?.access_token]);
   const [goal, setGoal] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -394,6 +400,13 @@ function WorkspacePage() {
           </div>
           {policy.show_professional_link && policy.available_interfaces.includes("professional") && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
         </header>
+
+        <InterviewPanel
+          locale={locale}
+          userId={user.id}
+          initialGoal={goal}
+          getAccessToken={getInterviewAccessToken}
+        />
 
         {!finalEvent && events.length === 0 && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">

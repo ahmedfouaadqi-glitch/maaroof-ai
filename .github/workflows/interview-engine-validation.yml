@@ -8,6 +8,8 @@ on:
       - "src/lib/maaroof/interview-engine.test.ts"
       - "src/lib/maaroof/interview-question-bank.ts"
       - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/components/workspace/InterviewPanel.tsx"
+      - "src/routes/workspace.tsx"
       - "src/routes/api/maaroof-interviews.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
@@ -21,6 +23,8 @@ on:
       - "src/lib/maaroof/interview-engine.test.ts"
       - "src/lib/maaroof/interview-question-bank.ts"
       - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/components/workspace/InterviewPanel.tsx"
+      - "src/routes/workspace.tsx"
       - "src/routes/api/maaroof-interviews.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
@@ -48,7 +52,7 @@ jobs:
         run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.test.ts
 
       - name: Lint interview engine
-        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/components/workspace/InterviewPanel.tsx
 
       - name: Type-check project
         run: bunx tsc --noEmit
