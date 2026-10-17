@@ -736,7 +736,8 @@ export function InterviewPanel({
                   <p className="font-semibold">{session.target_name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {TARGET_LABELS[session.target_type]?.[locale] || session.target_type} ·{" "}
-                    {session.domains.map((domain) => DOMAIN_LABELS[domain][locale]).join(" · ")}
+                    {session.domains.map((domain) => DOMAIN_LABELS[domain][locale]).join(" · ")} ·{" "}
+                    {c(interviewDepth)}
                   </p>
                   {session.workspace_id && (
                     <p className="mt-1 text-xs text-muted-foreground">
