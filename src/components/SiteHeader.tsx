@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { LogOut, Menu, X, Volume2, VolumeX, Phone } from "lucide-react";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
 import { HexBadge } from "@/components/HexBadge";
@@ -13,6 +13,7 @@ import { Widget } from "@/lib/visibility";
 import { useHeaderConfig, type ExtraLink, type ExtraPhone } from "@/lib/content";
 
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
+import { supabase } from "@/integrations/supabase/client";
 
 function linkLabel(l: ExtraLink, lang: Lang): string {
   return (l as any)[`label_${lang}`] || l.label_en || l.label_ar || l.label_ku || l.href;
@@ -23,10 +24,29 @@ function phoneDesc(p: ExtraPhone, lang: Lang): string {
 
 export function SiteHeader() {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [sound, setSound] = useState(true);
+  const [workbenchPath, setWorkbenchPath] = useState<"/workspace" | "/maaroof">("/workspace");
+  const [interfacePolicy, setInterfacePolicy] = useState<{ available_interfaces: string[]; allow_user_interface_choice: boolean; show_professional_link: boolean; default_ui: "workbench" | "professional" }>({ available_interfaces: ["workbench", "professional"], allow_user_interface_choice: true, show_professional_link: true, default_ui: "workbench" });
   const hdr = useHeaderConfig();
   useEffect(() => { setSound(isSoundEnabled()); }, []);
+  useEffect(() => {
+    let active = true;
+    supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(async ({ data }) => {
+      if (!active) return;
+      const policy = data?.value as any;
+      const available = Array.isArray(policy?.available_interfaces) ? policy.available_interfaces : policy?.enabled === false ? ["professional"] : ["workbench", "professional"];
+      const nextPolicy = { available_interfaces: available, allow_user_interface_choice: policy?.allow_user_interface_choice === true && available.length > 1, show_professional_link: policy?.show_professional_link !== false, default_ui: (policy?.default_ui === "professional" ? "professional" : "workbench") as "workbench" | "professional" };
+      setInterfacePolicy(nextPolicy);
+      const { data: { user } } = await supabase.auth.getUser();
+      const saved = (user as any)?.user_metadata?.preferred_interface;
+      const preferred = nextPolicy.allow_user_interface_choice && available.includes(saved) ? saved : nextPolicy.default_ui;
+      const route = preferred === "professional" ? "/maaroof" : "/workspace";
+      setWorkbenchPath(available.includes(preferred) ? route : available.includes("workbench") ? "/workspace" : "/maaroof");
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch { /* not in provider */ }
 
@@ -59,7 +79,8 @@ export function SiteHeader() {
           
           {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
           {auth?.user && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
-          {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" className="font-semibold text-primary hover:text-foreground">{t("auto.maaroof")}</Link>}
+          {auth?.user && (hdr.show_maaroof || hdr.show_agent) && interfacePolicy.available_interfaces.length > 0 && <Link to={workbenchPath} className="font-semibold text-primary hover:text-foreground">{lang === "en" ? (workbenchPath === "/workspace" ? "Workspace" : "Professional") : lang === "ku" ? (workbenchPath === "/workspace" ? "شوێنی کار" : "پسپۆڕان") : (workbenchPath === "/workspace" ? "مساحة العمل" : "واجهة المحترفين")}</Link>}
+          {auth?.user && interfacePolicy.allow_user_interface_choice && interfacePolicy.available_interfaces.length > 1 && (interfacePolicy.show_professional_link || workbenchPath === "/maaroof") && <button type="button" onClick={async () => { const next = workbenchPath === "/workspace" ? "professional" : "workbench"; const { error } = await supabase.auth.updateUser({ data: { preferred_interface: next } }); if (!error) { const path = next === "professional" ? "/maaroof" : "/workspace"; setWorkbenchPath(path); navigate({ to: path }); } }} className="rounded-full border border-border px-3 py-1.5 text-xs hover:border-primary/50">{lang === "en" ? (workbenchPath === "/workspace" ? "Switch to Pro" : "Switch to Workspace") : lang === "ku" ? (workbenchPath === "/workspace" ? "بگۆڕە بۆ پسپۆڕان" : "بگۆڕە بۆ شوێنی کار") : (workbenchPath === "/workspace" ? "واجهة المحترفين" : "مساحة العمل")}</button>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
           <Link to="/markets" className="hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
@@ -100,7 +121,7 @@ export function SiteHeader() {
               <LogOut className="size-3" /> {t("nav_signout")}
             </button>
           ) : (
-            <Link to="/auth" search={{ mode: "signin", redirect: "/workspace" }}
+            <Link to="/auth" search={{ mode: "signin", redirect: "/dashboard" }}
               className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-[var(--shadow-glow)] sm:px-4 sm:py-2 sm:text-xs">
               {t("nav_signin")}
             </Link>
@@ -121,7 +142,8 @@ export function SiteHeader() {
             
             {hdr.show_pricing && <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>}
             {auth?.user && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
-            {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{t("auto.maaroof")}</Link>}
+            {auth?.user && (hdr.show_maaroof || hdr.show_agent) && interfacePolicy.available_interfaces.length > 0 && <Link to={workbenchPath} onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{lang === "en" ? (workbenchPath === "/workspace" ? "Workspace" : "Professional") : lang === "ku" ? (workbenchPath === "/workspace" ? "شوێنی کار" : "پسپۆڕان") : (workbenchPath === "/workspace" ? "مساحة العمل" : "واجهة المحترفين")}</Link>}
+            {auth?.user && interfacePolicy.allow_user_interface_choice && interfacePolicy.available_interfaces.length > 1 && <button type="button" onClick={async () => { const next = workbenchPath === "/workspace" ? "professional" : "workbench"; const { error } = await supabase.auth.updateUser({ data: { preferred_interface: next } }); if (!error) { const path = next === "professional" ? "/maaroof" : "/workspace"; setWorkbenchPath(path); navigate({ to: path }); close(); } }} className="rounded-md px-2 py-2 text-start text-xs text-muted-foreground hover:bg-muted/40">{lang === "en" ? (workbenchPath === "/workspace" ? "Switch to Pro interface" : "Switch to Workspace") : lang === "ku" ? (workbenchPath === "/workspace" ? "ڕووکاری پسپۆڕان" : "شوێنی کار") : (workbenchPath === "/workspace" ? "التبديل إلى واجهة المحترفين" : "التبديل إلى مساحة العمل")}</button>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
             <Link to="/markets" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
