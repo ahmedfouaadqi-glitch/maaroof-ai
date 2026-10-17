@@ -146,7 +146,7 @@ export const Route = createFileRoute("/api/maaroof")({
           } catch (error) {
             const message = String((error as any)?.message || "background_enqueue_failed");
             await admin.from("maaroof_background_jobs").update({
-              status: "failed", error: message, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+              status: "failed", auth_token_ciphertext: null, error: message, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
             }).eq("id", jobId).eq("user_id", userId);
             await admin.from("maaroof_background_job_events").insert({
               job_id: jobId, user_id: userId, event_type: "error", payload: { message },
