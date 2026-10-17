@@ -13,11 +13,11 @@ This is deliberately lighter than importing the full React Bits Fade Content com
 
 ## Background-job architecture
 
-Workspace runs are persisted in:
+Runs from both the goal-first workspace and professional interface are persisted in:
 - `maaroof_background_jobs`: owner, goal, mode, state, request metadata, final status and timestamps.
 - `maaroof_background_job_events`: ordered event history for reconnection and progress rendering.
 
-The workspace submits once to `POST /api/maaroof`, receives a `job_id`, then polls `GET /api/maaroof-jobs?id=...&after=...`. Reopening or reloading the workspace discovers the latest active job and reconnects to its saved event history. Stopping a task marks it cancelled; the worker observes that state at the next event boundary.
+Both interfaces submit once to `POST /api/maaroof`, receive a `job_id`, then poll `GET /api/maaroof-jobs?id=...&after=...`. Reopening or reloading either interface discovers the latest active job and reconnects to its saved event history. Stopping a task marks it cancelled; the worker observes that state at the next event boundary.
 
 The user access token is encrypted with AES-GCM using a key derived from the server-only Supabase service-role secret before it is stored for queued execution. The raw token is not stored in the job row or queue message.
 
@@ -34,7 +34,7 @@ npx wrangler queues create maaroof-background-jobs-dlq
 
 Then deploy the migration `supabase/migrations/20261017160000_maaroof_background_jobs.sql` to the intended Supabase project, and deploy this branch through the project's approved release process. Do not deploy this branch automatically as part of review.
 
-Until the queue binding is provisioned and available to the Worker, the goal-first workspace intentionally returns `background_queue_not_configured` rather than pretending a short-lived `waitUntil` task is durable. The professional interface keeps its existing SSE behavior.
+Until the queue binding is provisioned and available to the Worker, both interfaces intentionally return `background_queue_not_configured` rather than pretending a short-lived `waitUntil` task is durable.
 
 ## Acceptance checks before release
 
