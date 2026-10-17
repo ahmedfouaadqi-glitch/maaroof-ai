@@ -14,7 +14,7 @@ on:
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
       - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
-      - ".github/workflows/interview-engine-validation.yml"
+      - ".github/workflows/**"
   push:
     branches:
       - feat/maaroof-interview-foundation-no-cloudflare
@@ -29,7 +29,7 @@ on:
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
       - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
-      - ".github/workflows/interview-engine-validation.yml"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -56,3 +56,6 @@ jobs:
 
       - name: Type-check project
         run: bunx tsc --noEmit
+
+      - name: Build application
+        run: bun run build
