@@ -237,11 +237,29 @@ export async function enginesAllowedForUser(
     isAdmin = !!role;
   } catch {}
 
-  const allowed = enginesForPlan(plan, isAdmin);
+  let limit = engineLimitForPlan(plan, isAdmin);
+  try {
+    const { data: settingsRow } = await admin.from("app_settings").select("value").eq("key", "tool_run_modes").maybeSingle();
+    const runModes = (settingsRow as any)?.value || {};
+    const planCaps = runModes.probe_plan_max_engines && typeof runModes.probe_plan_max_engines === "object"
+      ? runModes.probe_plan_max_engines as Record<string, unknown>
+      : {};
+    const configuredPlanCap = Number(plan ? planCaps[plan] : planCaps.default);
+    if (!isAdmin && Number.isFinite(configuredPlanCap) && configuredPlanCap >= 0) {
+      limit = Math.min(limit, Math.max(0, Math.min(ENGINE_KEYS.length, Math.floor(configuredPlanCap))));
+    }
+    const { data: profile } = await admin.from("profiles").select("per_user_tool_overrides").eq("id", userId).maybeSingle();
+    const userCapRaw = (profile as any)?.per_user_tool_overrides?.visibility?.max_engines;
+    const userCap = Number(userCapRaw);
+    if (!isAdmin && userCapRaw != null && Number.isFinite(userCap) && userCap >= 0) {
+      limit = Math.min(limit, Math.max(0, Math.min(ENGINE_KEYS.length, Math.floor(userCap))));
+    }
+  } catch {}
+  const allowed = enginesForPlan(plan, isAdmin).slice(0, limit);
   return {
     plan,
     isAdmin,
-    limit: engineLimitForPlan(plan, isAdmin),
+    limit,
     allowed,
     locked: ENGINE_KEYS.filter((k) => !allowed.includes(k)),
   };
