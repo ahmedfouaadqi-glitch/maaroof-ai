@@ -118,7 +118,9 @@ export function hasMeaningfulInterviewValue(value: InterviewValue | null | undef
 
 function comparable(value: InterviewValue | null | undefined): string | number | boolean | null {
   if (value == null) return null;
-  if (Array.isArray(value)) return value.map((part) => part.trim().toLocaleLowerCase()).join("\u0000");
+  if (Array.isArray(value)) {
+    return value.map((part) => part.trim().toLocaleLowerCase()).join("\u0000");
+  }
   return typeof value === "string" ? value.trim().toLocaleLowerCase() : value;
 }
 
@@ -134,8 +136,12 @@ function conditionMatches(condition: InterviewCondition, state: InterviewState):
   }
 
   const actual = answer.value;
-  if (condition.operator === "equals") return comparable(actual) === comparable(condition.value);
-  if (condition.operator === "not_equals") return comparable(actual) !== comparable(condition.value);
+  if (condition.operator === "equals") {
+    return comparable(actual) === comparable(condition.value);
+  }
+  if (condition.operator === "not_equals") {
+    return comparable(actual) !== comparable(condition.value);
+  }
 
   const needle = condition.value.trim().toLocaleLowerCase();
   if (!Array.isArray(actual) && typeof actual !== "string") return false;
@@ -210,7 +216,7 @@ export function recordInterviewResponse(
       ? input.value.map((part) => part.trim()).filter(Boolean)
       : typeof input.value === "string"
         ? input.value.trim()
-        : input.value as number | boolean;
+        : (input.value as number | boolean);
   } else if (input.status === "skipped") {
     if (question.canSkip === false) return { ok: false, error: "skip_not_allowed" };
   } else if (question.allowUnknown === false) {
@@ -246,10 +252,16 @@ export function getInterviewProgress(
     return answer?.status === "answered" && hasMeaningfulInterviewValue(answer.value);
   }).length;
 
-  const requiredSkipped = required.filter((question) => state.answers[question.id]?.status === "skipped").length;
-  const requiredUnknown = required.filter((question) => state.answers[question.id]?.status === "unknown").length;
+  const requiredSkipped = required.filter(
+    (question) => state.answers[question.id]?.status === "skipped",
+  ).length;
+  const requiredUnknown = required.filter(
+    (question) => state.answers[question.id]?.status === "unknown",
+  ).length;
   const requiredNotYetAsked = required.filter((question) => !state.answers[question.id]).length;
-  const optionalRemaining = applicable.filter((question) => !question.required && !state.answers[question.id]).length;
+  const optionalRemaining = applicable.filter(
+    (question) => !question.required && !state.answers[question.id],
+  ).length;
 
   return {
     requiredTotal: required.length,
@@ -259,7 +271,8 @@ export function getInterviewProgress(
     requiredUnknown,
     requiredNotYetAsked,
     optionalRemaining,
-    completionPercent: required.length === 0 ? 100 : Math.round((requiredAnswered / required.length) * 100),
+    completionPercent:
+      required.length === 0 ? 100 : Math.round((requiredAnswered / required.length) * 100),
   };
 }
 

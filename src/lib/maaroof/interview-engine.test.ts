@@ -13,12 +13,24 @@ import {
 
 const prompts = { ar: "سؤال", en: "Question", ku: "پرسیار" };
 
-function question(overrides: Partial<InterviewQuestion> & Pick<InterviewQuestion, "id">): InterviewQuestion {
+function question(
+  overrides: Partial<InterviewQuestion> & Pick<InterviewQuestion, "id">,
+): InterviewQuestion {
   return { prompt: prompts, required: true, ...overrides };
 }
 
-function answered(state: InterviewState, questions: InterviewQuestion[], questionId: string, value: string) {
-  const result = recordInterviewResponse(state, questions, { questionId, status: "answered", value }, "2026-10-17T00:00:00.000Z");
+function answered(
+  state: InterviewState,
+  questions: InterviewQuestion[],
+  questionId: string,
+  value: string,
+) {
+  const result = recordInterviewResponse(
+    state,
+    questions,
+    { questionId, status: "answered", value },
+    "2026-10-17T00:00:00.000Z",
+  );
   expect(result.ok).toBe(true);
   if (!result.ok) throw new Error(result.error);
   return result.state;
@@ -38,7 +50,9 @@ describe("Maaroof interview engine", () => {
     expect(getNextInterviewQuestion(questions, state)?.id).toBe("required");
     const withAnswer = answered(state, questions, "required", "نمو");
     expect(getNextInterviewQuestion(questions, withAnswer)).toBeNull();
-    expect(getNextInterviewQuestion(questions, withAnswer, { includeOptional: true })?.id).toBe("optional");
+    expect(getNextInterviewQuestion(questions, withAnswer, { includeOptional: true })?.id).toBe(
+      "optional",
+    );
   });
 
   it("filters questions by target type", () => {
@@ -80,7 +94,10 @@ describe("Maaroof interview engine", () => {
   it("does not repeat a skipped question but still reports the missing required answer", () => {
     const questions = [question({ id: "critical", canSkip: true }), question({ id: "next" })];
     let state = baseState();
-    const skipped = recordInterviewResponse(state, questions, { questionId: "critical", status: "skipped" });
+    const skipped = recordInterviewResponse(state, questions, {
+      questionId: "critical",
+      status: "skipped",
+    });
     expect(skipped.ok).toBe(true);
     if (!skipped.ok) throw new Error(skipped.error);
     state = skipped.state;
@@ -93,7 +110,10 @@ describe("Maaroof interview engine", () => {
 
   it("records unknown answers without asking the same question forever", () => {
     const questions = [question({ id: "unknown", allowUnknown: true }), question({ id: "next" })];
-    const result = recordInterviewResponse(baseState(), questions, { questionId: "unknown", status: "unknown" });
+    const result = recordInterviewResponse(baseState(), questions, {
+      questionId: "unknown",
+      status: "unknown",
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.error);
     expect(getNextInterviewQuestion(questions, result.state)?.id).toBe("next");
@@ -111,10 +131,14 @@ describe("Maaroof interview engine", () => {
   });
 
   it("respects a non-skippable question", () => {
-    const result = recordInterviewResponse(baseState(), [question({ id: "critical", canSkip: false })], {
-      questionId: "critical",
-      status: "skipped",
-    });
+    const result = recordInterviewResponse(
+      baseState(),
+      [question({ id: "critical", canSkip: false })],
+      {
+        questionId: "critical",
+        status: "skipped",
+      },
+    );
     expect(result).toEqual({ ok: false, error: "skip_not_allowed" });
   });
 
