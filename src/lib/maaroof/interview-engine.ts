@@ -124,19 +124,25 @@ function comparable(value: InterviewValue | null | undefined): string | number |
 
 function conditionMatches(condition: InterviewCondition, state: InterviewState): boolean {
   const answer = state.answers[condition.questionId];
-  const hasAnswer = answer?.status === "answered" && hasMeaningfulInterviewValue(answer.value);
+  const hasAnswer = Boolean(
+    answer && answer.status === "answered" && hasMeaningfulInterviewValue(answer.value),
+  );
 
-  if (condition.operator === "answered") return Boolean(hasAnswer);
-  if (!hasAnswer) return false;
+  if (condition.operator === "answered") return hasAnswer;
+  if (!answer || answer.status !== "answered" || !hasMeaningfulInterviewValue(answer.value)) {
+    return false;
+  }
 
   const actual = answer.value;
   if (condition.operator === "equals") return comparable(actual) === comparable(condition.value);
   if (condition.operator === "not_equals") return comparable(actual) !== comparable(condition.value);
 
   const needle = condition.value.trim().toLocaleLowerCase();
+  if (!Array.isArray(actual) && typeof actual !== "string") return false;
+
   const found = Array.isArray(actual)
     ? actual.some((part) => part.trim().toLocaleLowerCase() === needle)
-    : typeof actual === "string" && actual.toLocaleLowerCase().includes(needle);
+    : actual.toLocaleLowerCase().includes(needle);
 
   return condition.operator === "contains" ? found : !found;
 }
