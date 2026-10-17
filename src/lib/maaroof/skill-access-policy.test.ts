@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveSkillAccessPolicy } from "./skill-access-policy";
+import { resolveScopedAccessMode, resolveSkillAccessPolicy } from "./skill-access-policy";
 
 describe("scoped skill access policy", () => {
   it("uses the global policy when no scoped override exists", () => {
@@ -35,5 +35,37 @@ describe("scoped skill access policy", () => {
     });
     expect(policy["brand-visibility"]).toBe("contact");
     expect(policy["deep-research"]).toBe("self_service");
+  });
+});
+
+
+describe("scoped access mode resolution", () => {
+  it("uses explicit self-service user overrides over plan and global gates", () => {
+    expect(resolveScopedAccessMode({
+      key: "analyze",
+      globalPolicy: { analyze: "disabled" },
+      byPlan: { pro: { analyze: "contact" } },
+      byUser: { "user-123": { analyze: "self_service" } },
+      planKey: "PRO",
+      userId: "user-123",
+    })).toBe("self_service");
+  });
+
+  it("falls back from user to plan and then global when a scope has no key", () => {
+    expect(resolveScopedAccessMode({
+      key: "analyze",
+      globalPolicy: { analyze: "self_service" },
+      byPlan: { pro: { analyze: "contact" } },
+      byUser: { "user-123": { other_tool: "disabled" } },
+      planKey: "pro",
+      userId: "user-123",
+    })).toBe("contact");
+  });
+
+  it("defaults unknown modes to self-service instead of applying malformed policy data", () => {
+    expect(resolveScopedAccessMode({
+      key: "analyze",
+      globalPolicy: { analyze: "unexpected-value" as any },
+    })).toBe("self_service");
   });
 });
