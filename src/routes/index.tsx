@@ -138,7 +138,7 @@ function Page() {
               </div>
 
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
+                <Link to="/workbench" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
                   {t("hero_cta_primary")} <ArrowRight className="size-4" />
                 </Link>
                 <Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
@@ -150,6 +150,22 @@ function Page() {
             <div className="mt-10">
               <EnginesOrbit />
             </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 pb-10 md:px-6" aria-labelledby="workbench-intro">
+          <div className="grid gap-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-card/80 to-accent/8 p-6 md:grid-cols-[1fr_auto] md:items-center md:p-8">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-primary">MAAROOF WORKBENCH</div>
+              <h2 id="workbench-intro" className="mt-2 font-display text-2xl font-bold md:text-3xl">ابدأ من هدفك، لا من قائمة الأدوات</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">اكتب ما تريد إنجازه، واختر المهارات المناسبة، ثم تابع مراحل العمل والنتائج الفعلية. تبقى الأدوات الحالية ومحركات الذكاء والصلاحيات والرصيد هي أساس التنفيذ.</p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">مهارات مرتبطة بالأدوات الحالية</span>
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">تتبّع واضح للتنفيذ</span>
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">العربية والكردية والإنكليزية</span>
+              </div>
+            </div>
+            <Link to="/workbench" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">افتح مساحة العمل <ArrowRight className="size-4" /></Link>
           </div>
         </section>
 
