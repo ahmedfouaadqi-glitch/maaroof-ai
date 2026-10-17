@@ -161,6 +161,18 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         usage: { ar: "راقب جودة القرارات ونسب التحقق قبل التوسّع.", en: "Watch decision quality and verification rates before scaling.", ku: "جۆری بڕیارەکان و ڕێژەی پشتڕاستکردنەوە چاودێری بکە." },
       },
       {
+        key: "interfaces",
+        label: { ar: "الواجهات", en: "Interfaces", ku: "ڕووکارەکان" },
+        purpose: { ar: "تحديد الواجهة المتاحة للمستخدمين وصفحة الهبوط.", en: "Choose which interface users get and the landing page.", ku: "دیاریکردنی ڕووکاری بەکارهێنەران و پەڕەی سەرەکی." },
+        usage: { ar: "اختر الجديدة أو المحترفين أو كلتيهما، ثم احفظ.", en: "Pick new, professional or both, then save.", ku: "نوێ یان پسپۆڕان یان هەردووکیان هەڵبژێرە." },
+      },
+      {
+        key: "jobs",
+        label: { ar: "المهام الخلفية", en: "Background tasks", ku: "ئەرکە پاشبنەماکان" },
+        purpose: { ar: "عرض مهام مساحة العمل وحالاتها وسجل أحداثها.", en: "View workspace tasks, their status and event log.", ku: "بینینی ئەرکەکان و دۆخ و تۆماریان." },
+        usage: { ar: "اضغط على مهمة لعرض سجلها. للقراءة فقط.", en: "Click a task to view its log. Read-only.", ku: "کرتە لە ئەرکێک بکە بۆ بینینی تۆمار." },
+      },
+      {
         key: "insights",
         label: { ar: "رؤى الإدراك", en: "Cognitive Insights", ku: "تێگەیشتنە مێشکییەکان" },
         purpose: { ar: "أنماط الاستخدام المجمّعة التي تتعلمها المنصة.", en: "Aggregated usage patterns the platform learns.", ku: "شێوازە کۆکراوەکانی بەکارهێنان." },
