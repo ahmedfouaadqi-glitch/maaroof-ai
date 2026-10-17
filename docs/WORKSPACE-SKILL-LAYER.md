@@ -34,9 +34,12 @@ Stored in the existing `app_settings` table under `user_interface_policy`; no mi
 - Show or hide the professional-interface link.
 - Enable or disable the live engine picker.
 - Allow or disallow execution, recommendation, and simulation modes.
-- Enable or disable each user-facing skill.
+- Set each skill to self-service, contact-required, or disabled.
+- Apply skill overrides by active subscription plan and by individual user (user overrides win over plan, then global defaults).
+- Apply the same licensing modes to individual tools, with global, plan-specific, and user-specific overrides.
+- Enforce tool licensing in the shared token-charging path before metering, including direct endpoint calls; a gated tool returns a localized contact-required response with `/contact`.
 
-The workspace applies these settings to the UI, and `/api/maaroof` validates interface availability for both workspace and professional requests. Requests without an explicit interface marker are treated as professional requests for compatibility with existing clients. Workspace requests additionally validate selected skills and live-check availability. Existing server-side tool access, pricing, entitlements, and balance checks remain authoritative.
+The workspace applies these settings to the UI, and `/api/maaroof` validates interface availability for both workspace and professional requests. Requests without an explicit interface marker are treated as professional requests for compatibility with existing clients. Workspace requests additionally validate selected skills and live-check availability. Existing server-side pricing, model entitlements, and balance checks remain authoritative. Tool access licensing is additive and does not change any configured price or balance.
 
 ## Profile and professional interface
 
@@ -59,9 +62,9 @@ Do not create a parallel proposal/experiment system or let a skill rewrite produ
 ## Validation status
 
 - Added focused unit tests for skill recommendations and tool mappings.
-- Repository metadata currently shows no GitHub Actions workflow files and no check runs for the current branch head.
+- Repository metadata currently shows no GitHub Actions workflow runs or check results for the current branch head.
 - The GitHub repository connector does not provide a local dependency install/build/test runtime here, so the new code has not been reported as build- or test-passing. Run `npm test`, `npm run lint`, and `npm run build` in the project environment before merging.
-- Changes remain on `feat/maaroof-engine-selection-countdown`; no merge, deployment, or production configuration change was performed.
+- Changes remain on `feat/maaroof-skills-workspace-clean`, currently ahead of `main`; no merge, deployment, or production configuration change was performed.
 
 
 ## Interface availability and account preferences
@@ -72,7 +75,7 @@ The admin policy now supports:
 - Professional interface only.
 - Optional per-account interface choice when both are enabled.
 
-The user's preference is stored in Supabase Auth `user_metadata.preferred_interface`, so it follows the account rather than only one browser. If the preferred interface is disabled by admin, navigation falls back to the configured default/available interface. Existing profiles and token balances are not modified by this feature. The API validates requested interface availability, so hiding a navigation link is not the only control.
+The user's preference is stored in Supabase Auth `user_metadata.preferred_interface`, so it follows the account rather than only one browser. If the preferred interface is disabled by admin, navigation falls back to the configured default/available interface. Existing profiles and token balances are not modified by this feature. The API validates requested interface availability, so hiding a navigation link is not the only control. The admin panel also exposes per-skill and per-tool licensing overrides at global, plan, and user scope.
 
 ## Balance and charging audit
 
