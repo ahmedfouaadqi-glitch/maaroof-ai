@@ -94,10 +94,28 @@ describe("Maaroof interview question bank", () => {
     expect(audience.ok).toBe(true);
     if (!audience.ok) throw new Error(audience.error);
 
-    expect(getNextInterviewQuestion(individualQuestions, audience.state)).toBeNull();
+    expect(getNextInterviewQuestion(individualQuestions, audience.state)?.id).toBe(
+      "individual_context",
+    );
+    const personalContext = recordInterviewResponse(
+      audience.state,
+      individualQuestions,
+      {
+        questionId: "individual_context",
+        status: "answered",
+        value: "Working on a personal project",
+      },
+      "2026-10-17T00:02:00.000Z",
+    );
+    expect(personalContext.ok).toBe(true);
+    if (!personalContext.ok) throw new Error(personalContext.error);
+
+    expect(getNextInterviewQuestion(individualQuestions, personalContext.state)).toBeNull();
     expect(
-      getNextInterviewQuestion(individualQuestions, audience.state, { includeOptional: true })?.id,
-    ).toBe("individual_context");
+      getNextInterviewQuestion(individualQuestions, personalContext.state, {
+        includeOptional: true,
+      })?.id,
+    ).toBe("success_measure");
     expect(
       individualQuestions.some(
         (question) => question.id === "success_measure" && !question.required,
