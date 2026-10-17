@@ -63,10 +63,22 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           return Response.json({ job_id: id, status: job.status });
         }
         const now = new Date().toISOString();
-        const { error } = await admin.from("maaroof_background_jobs").update({
+        const { data: cancelled, error } = await admin.from("maaroof_background_jobs").update({
           status: "cancelled", auth_token_ciphertext: null, error: "cancelled_by_user", finished_at: now, updated_at: now,
-        }).eq("id", id).eq("user_id", userId).in("status", ["queued", "running"]);
+        }).eq("id", id).eq("user_id", userId).in("status", ["dispatching", "queued", "running"])
+          .select("id,status").maybeSingle();
         if (error) return Response.json({ error: "job_cancel_failed" }, { status: 500 });
+
+        // The status predicate makes cancellation race-safe against worker claims and
+        // concurrent stop requests. If another transition won, return the persisted state.
+        if (!cancelled) {
+          const { data: latest, error: latestError } = await admin.from("maaroof_background_jobs")
+            .select("id,status").eq("id", id).eq("user_id", userId).maybeSingle();
+          if (latestError) return Response.json({ error: "job_lookup_failed" }, { status: 500 });
+          if (!latest) return Response.json({ error: "job_not_found" }, { status: 404 });
+          return Response.json({ job_id: id, status: latest.status });
+        }
+
         await admin.from("maaroof_background_job_events").insert({
           job_id: id, user_id: userId, event_type: "cancelled", payload: { status: "cancelled" },
         });
