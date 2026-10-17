@@ -7,7 +7,6 @@ import {
   getInterviewProgress,
   getNextInterviewQuestion,
   isInterviewDataComplete,
-  isInterviewTraversalComplete,
   recordInterviewResponse,
   validateInterviewQuestionSet,
   type InterviewAnswerStatus,
@@ -147,6 +146,10 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown> |
   return isPlainRecord(body) ? body : null;
 }
 
+function includeOptionalInterviewQuestions(contextSnapshot: unknown): boolean {
+  return isPlainRecord(contextSnapshot) && contextSnapshot.interview_depth === "comprehensive";
+}
+
 async function handleGet(request: Request): Promise<Response> {
   const auth = await authenticate(request);
   if (!auth.ok) return auth.response;
@@ -171,10 +174,11 @@ async function handleGet(request: Request): Promise<Response> {
     if (!questionSet.ok || !isStoredInterviewState(interview.state)) {
       return errorResponse("stored_interview_invalid", 500);
     }
+    const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
     return Response.json({
       interview,
       progress: getInterviewProgress(questionSet.questions, interview.state),
-      next_question: getNextInterviewQuestion(questionSet.questions, interview.state),
+      next_question: getNextInterviewQuestion(questionSet.questions, interview.state, { includeOptional }),
       data_complete: isInterviewDataComplete(questionSet.questions, interview.state),
     });
   }
@@ -253,6 +257,12 @@ async function handleCreate(request: Request): Promise<Response> {
   }
   const selectedLocale = locale as InterviewContext["locale"];
 
+  const interviewDepth = body.interview_depth === undefined ? "focused" : body.interview_depth;
+  if (interviewDepth !== "focused" && interviewDepth !== "comprehensive") {
+    return errorResponse("invalid_interview_depth", 400);
+  }
+  const includeOptional = interviewDepth === "comprehensive";
+
   let workspaceId: string | null = null;
   if (body.workspace_id !== undefined && body.workspace_id !== null) {
     if (!isUuid(body.workspace_id)) return errorResponse("invalid_workspace_id", 400);
@@ -288,7 +298,7 @@ async function handleCreate(request: Request): Promise<Response> {
     state = initial.state;
   }
 
-  const currentQuestion = getNextInterviewQuestion(validation.questions, state);
+  const currentQuestion = getNextInterviewQuestion(validation.questions, state, { includeOptional });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = auth.admin as any;
   const { data: interview, error } = await db
@@ -310,6 +320,7 @@ async function handleCreate(request: Request): Promise<Response> {
         workspace_id: workspaceId,
         domains,
         locale: selectedLocale,
+        interview_depth: interviewDepth,
       },
       status: "in_progress",
       current_question_id: currentQuestion?.id || null,
@@ -425,11 +436,12 @@ async function handleUpdate(request: Request): Promise<Response> {
     if (typeof body.status !== "string" || !allowedStatuses.includes(body.status)) {
       return errorResponse("invalid_interview_status", 400);
     }
+    const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
     if (
       body.status === "completed" &&
-      !isInterviewTraversalComplete(questionSet.questions, state)
+      getNextInterviewQuestion(questionSet.questions, state, { includeOptional }) !== null
     ) {
-      return errorResponse("required_questions_unhandled", 409, {
+      return errorResponse("interview_questions_unhandled", 409, {
         progress: getInterviewProgress(questionSet.questions, state),
       });
     }
@@ -439,7 +451,8 @@ async function handleUpdate(request: Request): Promise<Response> {
     return errorResponse("invalid_interview_action", 400);
   }
 
-  const currentQuestion = getNextInterviewQuestion(questionSet.questions, nextState);
+  const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
+  const currentQuestion = getNextInterviewQuestion(questionSet.questions, nextState, { includeOptional });
   const expectedVersion = body.expected_version;
   const { data: updated, error: updateError } = await db
     .from("maaroof_interviews")
