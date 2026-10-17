@@ -104,6 +104,7 @@ async function workspaceAccess(
   userId: string,
   write: boolean,
 ): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = admin as any;
   const { data: workspace, error: workspaceError } = await db
     .from("workspaces")
@@ -144,6 +145,7 @@ async function handleGet(request: Request): Promise<Response> {
   const auth = await authenticate(request);
   if (!auth.ok) return auth.response;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = auth.admin as any;
   const id = new URL(request.url).searchParams.get("id");
 
@@ -185,6 +187,7 @@ async function handleGet(request: Request): Promise<Response> {
     ...((membershipsResult.data || []).map((row: { workspace_id: string }) => row.workspace_id)),
   ])].filter(isUuid);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let workspaceRows: Array<Record<string, any>> = [];
   if (workspaceIds.length) {
     const { data, error } = await db.from("maaroof_interviews")
@@ -195,6 +198,7 @@ async function handleGet(request: Request): Promise<Response> {
     workspaceRows = data || [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const merged = new Map<string, Record<string, any>>();
   for (const row of [...(ownResult.data || []), ...workspaceRows]) merged.set(row.id, row);
   const interviews = [...merged.values()]
@@ -267,6 +271,7 @@ async function handleCreate(request: Request): Promise<Response> {
   }
 
   const currentQuestion = getNextInterviewQuestion(validation.questions, state);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = auth.admin as any;
   const { data: interview, error } = await db
     .from("maaroof_interviews")
@@ -313,6 +318,7 @@ async function handleUpdate(request: Request): Promise<Response> {
     return errorResponse("invalid_expected_version", 400);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = auth.admin as any;
   const { data: interview, error: fetchError } = await db
     .from("maaroof_interviews").select("*").eq("id", body.id).maybeSingle();
