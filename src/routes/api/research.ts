@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { chargeTokens, chargeFailureBody, resolveToolAccessMode } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 
@@ -38,6 +38,8 @@ export const Route = createFileRoute("/api/research")({
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const accessMode = await resolveToolAccessMode(userId, "research");
+          if (accessMode !== "self_service") return Response.json(chargeFailureBody(accessMode === "contact" ? "sales_contact_required" : "tool_disabled"), { status: 403 });
           const _mci = await mciReuse(admin as any, "research", userId, [limited, lang, scope, mode], !!(reqBody as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
