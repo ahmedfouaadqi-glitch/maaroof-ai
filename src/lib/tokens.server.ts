@@ -205,6 +205,11 @@ export function chargeFailureBody(reason: ChargeResult extends { ok: false; reas
       en: "This tool has been disabled for your account by the admin.",
       ku: "ئەم ئامرازە لە لایەن بەڕێوەبەرەوە بۆ هەژمارەکەت لە کار خراوە.",
     },
+    sales_contact_required: {
+      ar: "هذه الميزة تتطلب ترخيصاً مخصصاً. تواصل معنا لمعرفة خيارات التفعيل.",
+      en: "This feature requires a dedicated license. Contact us to discuss activation.",
+      ku: "ئەم تایبەتمەندییە پێویستی بە مۆڵەتی تایبەت هەیە؛ پەیوەندیمان پێوە بکە.",
+    },
     unpriced: {
       ar: "لم يقم المسؤول بتسعير هذه الأداة لحسابك بعد.",
       en: "This tool has not been priced for your account yet.",
