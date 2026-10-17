@@ -2091,4 +2091,13 @@ export const ku: Dict = {
   maaroof_tool_failed_internal: "هەڵەیەکی کاتی لە ئامراز. ماعروف بەردەوام بوو.",
   "auto.execution_inspector": "پشکنەری جێبەجێکردن",
   "auto.all_states": "هەموو دۆخەکان",
+
+  home_about_title: "MAAROOF Ai چییە؟",
+  home_about_intro: "MAAROOF Ai پلاتفۆرمێکە بۆ باشترکردنی دەرکەوتن لە وەڵامەکانی AI (GEO)، یارمەتی براند و بڵاوکەرەوە و ئاژانسەکان دەدات ببنە سەرچاوەیەک کە وەڵامدەرەوەکانی AI ئاماژەی پێ دەکەن. دەرکەوتنی براند لە ChatGPT و Gemini و Claude و Perplexity و Copilot و Grok و Mistral و DeepSeek و Kimi و Qwen پێوانە دەکات و هەنگاوی پشتگیریکراو بە بەڵگە بۆ باشترکردنی بە کوردی و عەرەبی و ئینگلیزی پێشنیار دەکات.",
+  home_analyze_title: "ناوەڕۆک شیکاری و هەڵسەنگێنە",
+  home_analyze_desc: "پێش بڵاوکردنەوە ڕاستییەکان، گونجانی ناوخۆیی و ئامادەبوون بۆ ئاماژەپێدان بپشکنە.",
+  home_verify_title: "دەرکەوتن لە AI پشتڕاست بکەرەوە",
+  home_verify_desc: "بپشکنە ئایا وەڵامدەرەوەکانی AI براندەکەت ناودەبەن و وەڵامە بەردەستەکان وەک بەڵگە هەڵبگرە.",
+  home_publish_title: "ناسنامەیەکی خوێندراو بۆ ئامێرەکان بڵاو بکەرەوە",
+  home_publish_desc: "llms.txt و Schema.org JSON-LD دروست بکە بۆ یەکگرتوویی ناسنامەی براندەکەت.",
 };
