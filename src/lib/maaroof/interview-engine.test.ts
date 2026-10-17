@@ -7,6 +7,7 @@ import {
   isInterviewQuestionApplicable,
   isInterviewTraversalComplete,
   recordInterviewResponse,
+  validateInterviewQuestionSet,
   type InterviewQuestion,
   type InterviewState,
 } from "./interview-engine";
@@ -178,6 +179,63 @@ describe("Maaroof interview engine", () => {
     expect(response.ok).toBe(true);
     if (!response.ok) throw new Error(response.error);
     expect(getNextInterviewQuestion(questions, response.state)).toBeNull();
+  });
+
+  it("validates and normalizes a safe versioned question snapshot", () => {
+    const result = validateInterviewQuestionSet([
+      {
+        id: "audience",
+        prompt: { ar: "الجمهور", en: "Audience", ku: "جەماوەر" },
+        required: true,
+        domains: ["geo"],
+      },
+      {
+        id: "followup",
+        prompt: { ar: "متابعة", en: "Follow-up", ku: "پرسیاری بەدواداچوون" },
+        required: false,
+        when: [{ questionId: "audience", operator: "answered" }],
+      },
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.questions[0].prompt.ar).toBe("الجمهور");
+    expect(result.questions[1].when?.[0].questionId).toBe("audience");
+  });
+
+  it("rejects duplicate ids and unknown dependencies in question snapshots", () => {
+    const duplicate = validateInterviewQuestionSet([
+      { id: "q", prompt: prompts, required: true },
+      { id: "q", prompt: prompts, required: false },
+    ]);
+    expect(duplicate).toEqual({ ok: false, error: "invalid_or_duplicate_question_id" });
+
+    const missingDependency = validateInterviewQuestionSet([
+      {
+        id: "q",
+        prompt: prompts,
+        required: true,
+        when: [{ questionId: "missing", operator: "answered" }],
+      },
+    ]);
+    expect(missingDependency).toEqual({ ok: false, error: "invalid_question_dependency" });
+  });
+
+  it("rejects cyclic question dependencies that could prevent an interview from starting", () => {
+    const result = validateInterviewQuestionSet([
+      {
+        id: "one",
+        prompt: prompts,
+        required: true,
+        when: [{ questionId: "two", operator: "answered" }],
+      },
+      {
+        id: "two",
+        prompt: prompts,
+        required: true,
+        when: [{ questionId: "one", operator: "answered" }],
+      },
+    ]);
+    expect(result).toEqual({ ok: false, error: "question_dependency_cycle" });
   });
 
   it("supports array-valued answers and contains conditions", () => {

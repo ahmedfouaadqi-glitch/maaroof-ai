@@ -40,6 +40,7 @@ import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
 import { Route as ApiKnownRouteImport } from './routes/api/known'
 import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
+import { Route as ApiMaaroofInterviewsRouteImport } from './routes/api/maaroof-interviews'
 import { Route as ApiMaaroofJobsRouteImport } from './routes/api/maaroof-jobs'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
@@ -215,6 +216,11 @@ const ApiMaaroofRoute = ApiMaaroofRouteImport.update({
   path: '/api/maaroof',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMaaroofInterviewsRoute = ApiMaaroofInterviewsRouteImport.update({
+  id: '/api/maaroof-interviews',
+  path: '/api/maaroof-interviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMaaroofJobsRoute = ApiMaaroofJobsRouteImport.update({
   id: '/api/maaroof-jobs',
   path: '/api/maaroof-jobs',
@@ -346,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
+  '/api/maaroof-interviews': typeof ApiMaaroofInterviewsRoute
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
+  '/api/maaroof-interviews': typeof ApiMaaroofInterviewsRoute
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
@@ -451,6 +459,7 @@ export interface FileRoutesById {
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
+  '/api/maaroof-interviews': typeof ApiMaaroofInterviewsRoute
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
@@ -505,6 +514,7 @@ export interface FileRouteTypes {
     | '/api/geo-strategist'
     | '/api/known'
     | '/api/maaroof'
+    | '/api/maaroof-interviews'
     | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/social-analysis'
@@ -557,6 +567,7 @@ export interface FileRouteTypes {
     | '/api/geo-strategist'
     | '/api/known'
     | '/api/maaroof'
+    | '/api/maaroof-interviews'
     | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/social-analysis'
@@ -609,6 +620,7 @@ export interface FileRouteTypes {
     | '/api/geo-strategist'
     | '/api/known'
     | '/api/maaroof'
+    | '/api/maaroof-interviews'
     | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/social-analysis'
@@ -662,6 +674,7 @@ export interface RootRouteChildren {
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
   ApiKnownRoute: typeof ApiKnownRoute
   ApiMaaroofRoute: typeof ApiMaaroofRoute
+  ApiMaaroofInterviewsRoute: typeof ApiMaaroofInterviewsRoute
   ApiMaaroofJobsRoute: typeof ApiMaaroofJobsRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
@@ -898,6 +911,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMaaroofRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/maaroof-interviews': {
+      id: '/api/maaroof-interviews'
+      path: '/api/maaroof-interviews'
+      fullPath: '/api/maaroof-interviews'
+      preLoaderRoute: typeof ApiMaaroofInterviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/maaroof-jobs': {
       id: '/api/maaroof-jobs'
       path: '/api/maaroof-jobs'
@@ -1091,6 +1111,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
   ApiKnownRoute: ApiKnownRoute,
   ApiMaaroofRoute: ApiMaaroofRoute,
+  ApiMaaroofInterviewsRoute: ApiMaaroofInterviewsRoute,
   ApiMaaroofJobsRoute: ApiMaaroofJobsRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,

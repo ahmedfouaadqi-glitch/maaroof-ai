@@ -6,6 +6,11 @@ on:
     paths:
       - "src/lib/maaroof/interview-engine.ts"
       - "src/lib/maaroof/interview-engine.test.ts"
+      - "src/lib/maaroof/interview-question-bank.ts"
+      - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/routes/api/maaroof-interviews.ts"
+      - "src/routeTree.gen.ts"
+      - "supabase/migrations/**"
       - ".github/workflows/interview-engine-validation.yml"
   push:
     branches:
@@ -13,6 +18,11 @@ on:
     paths:
       - "src/lib/maaroof/interview-engine.ts"
       - "src/lib/maaroof/interview-engine.test.ts"
+      - "src/lib/maaroof/interview-question-bank.ts"
+      - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/routes/api/maaroof-interviews.ts"
+      - "src/routeTree.gen.ts"
+      - "supabase/migrations/**"
       - ".github/workflows/interview-engine-validation.yml"
 
 permissions:
@@ -33,10 +43,10 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run interview engine unit tests
-        run: bun run test -- src/lib/maaroof/interview-engine.test.ts
+        run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.test.ts
 
       - name: Lint interview engine
-        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts
 
       - name: Type-check project
         run: bunx tsc --noEmit

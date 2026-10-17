@@ -106,6 +106,185 @@ export type InterviewProgress = {
   completionPercent: number;
 };
 
+export type InterviewQuestionSetValidation =
+  | { ok: true; questions: InterviewQuestion[] }
+  | { ok: false; error: string };
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isPrimitiveConditionValue(value: unknown): value is string | number | boolean {
+  return (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  );
+}
+
+/** Validate a question snapshot before it is stored for later resume. */
+export function validateInterviewQuestionSet(input: unknown): InterviewQuestionSetValidation {
+  if (!Array.isArray(input) || input.length === 0 || input.length > 80) {
+    return { ok: false, error: "question_set_size" };
+  }
+
+  const questions: InterviewQuestion[] = [];
+  const ids = new Set<string>();
+  const idPattern = /^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,79}$/;
+
+  for (const item of input) {
+    if (!isPlainRecord(item)) return { ok: false, error: "invalid_question" };
+
+    const id = item.id;
+    const prompt = item.prompt;
+    if (typeof id !== "string" || !idPattern.test(id) || ids.has(id)) {
+      return { ok: false, error: "invalid_or_duplicate_question_id" };
+    }
+    if (!isPlainRecord(prompt)) return { ok: false, error: "invalid_question_prompt" };
+
+    const localizedPrompt = {} as Record<InterviewLocale, string>;
+    for (const locale of INTERVIEW_LOCALES) {
+      const localized = prompt[locale];
+      if (typeof localized !== "string" || localized.trim().length === 0 || localized.length > 1200) {
+        return { ok: false, error: "invalid_question_prompt" };
+      }
+      localizedPrompt[locale] = localized.trim();
+    }
+
+    if (typeof item.required !== "boolean") {
+      return { ok: false, error: "invalid_question_required" };
+    }
+    if (item.canSkip !== undefined && typeof item.canSkip !== "boolean") {
+      return { ok: false, error: "invalid_question_skip_policy" };
+    }
+    if (item.allowUnknown !== undefined && typeof item.allowUnknown !== "boolean") {
+      return { ok: false, error: "invalid_question_unknown_policy" };
+    }
+    if (
+      item.priority !== undefined &&
+      (typeof item.priority !== "number" || !Number.isFinite(item.priority) || item.priority < 0 || item.priority > 10000)
+    ) {
+      return { ok: false, error: "invalid_question_priority" };
+    }
+
+    let targetTypes: InterviewTargetType[] | undefined;
+    if (item.targetTypes !== undefined) {
+      if (
+        !Array.isArray(item.targetTypes) ||
+        item.targetTypes.some(
+          (value) => typeof value !== "string" || !(INTERVIEW_TARGET_TYPES as readonly string[]).includes(value),
+        )
+      ) {
+        return { ok: false, error: "invalid_question_target_types" };
+      }
+      targetTypes = [...new Set(item.targetTypes as InterviewTargetType[])];
+    }
+
+    let domains: InterviewDomain[] | undefined;
+    if (item.domains !== undefined) {
+      if (
+        !Array.isArray(item.domains) ||
+        item.domains.some(
+          (value) => typeof value !== "string" || !(INTERVIEW_DOMAINS as readonly string[]).includes(value),
+        )
+      ) {
+        return { ok: false, error: "invalid_question_domains" };
+      }
+      domains = [...new Set(item.domains as InterviewDomain[])];
+    }
+
+    let when: InterviewCondition[] | undefined;
+    if (item.when !== undefined) {
+      if (!Array.isArray(item.when) || item.when.length > 10) {
+        return { ok: false, error: "invalid_question_conditions" };
+      }
+      const conditions: InterviewCondition[] = [];
+      for (const rawCondition of item.when) {
+        if (!isPlainRecord(rawCondition) || typeof rawCondition.questionId !== "string") {
+          return { ok: false, error: "invalid_question_condition" };
+        }
+        const questionId = rawCondition.questionId;
+        if (!idPattern.test(questionId)) return { ok: false, error: "invalid_question_condition" };
+
+        switch (rawCondition.operator) {
+          case "answered":
+            if ("value" in rawCondition) return { ok: false, error: "invalid_question_condition" };
+            conditions.push({ questionId, operator: "answered" });
+            break;
+          case "equals":
+          case "not_equals":
+            if (!isPrimitiveConditionValue(rawCondition.value)) {
+              return { ok: false, error: "invalid_question_condition" };
+            }
+            conditions.push({
+              questionId,
+              operator: rawCondition.operator,
+              value: rawCondition.value,
+            });
+            break;
+          case "contains":
+          case "not_contains":
+            if (typeof rawCondition.value !== "string" || rawCondition.value.trim().length === 0) {
+              return { ok: false, error: "invalid_question_condition" };
+            }
+            conditions.push({
+              questionId,
+              operator: rawCondition.operator,
+              value: rawCondition.value.trim(),
+            });
+            break;
+          default:
+            return { ok: false, error: "invalid_question_condition" };
+        }
+      }
+      when = conditions;
+    }
+
+    ids.add(id);
+    questions.push({
+      id,
+      prompt: localizedPrompt,
+      required: item.required,
+      ...(targetTypes ? { targetTypes } : {}),
+      ...(domains ? { domains } : {}),
+      ...(item.canSkip !== undefined ? { canSkip: item.canSkip } : {}),
+      ...(item.allowUnknown !== undefined ? { allowUnknown: item.allowUnknown } : {}),
+      ...(item.priority !== undefined ? { priority: item.priority as number } : {}),
+      ...(when ? { when } : {}),
+    });
+  }
+
+  for (const question of questions) {
+    for (const condition of question.when || []) {
+      if (!ids.has(condition.questionId) || condition.questionId === question.id) {
+        return { ok: false, error: "invalid_question_dependency" };
+      }
+    }
+  }
+
+  const byId = new Map(questions.map((question) => [question.id, question]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+
+  function hasCycle(id: string): boolean {
+    if (visiting.has(id)) return true;
+    if (visited.has(id)) return false;
+    visiting.add(id);
+    for (const condition of byId.get(id)?.when || []) {
+      if (hasCycle(condition.questionId)) return true;
+    }
+    visiting.delete(id);
+    visited.add(id);
+    return false;
+  }
+
+  if (questions.some((question) => hasCycle(question.id))) {
+    return { ok: false, error: "question_dependency_cycle" };
+  }
+
+  return { ok: true, questions };
+}
+
 export function createInterviewState(context: InterviewContext): InterviewState {
   return { context: { ...context, domains: [...context.domains] }, answers: {} };
 }
