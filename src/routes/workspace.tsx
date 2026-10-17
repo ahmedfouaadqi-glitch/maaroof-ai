@@ -329,7 +329,10 @@ function WorkspacePage() {
       await watchJob(String(body.job_id), 0, token);
     } catch (e: any) {
       setRunning(false);
-      if (e?.name !== "AbortError") setError(String(e?.message || c.failed));
+      const message = String(e?.message || c.failed);
+      setError(message === "background_queue_not_configured"
+        ? (locale === "en" ? "Background processing is not configured yet. Ask the administrator to provision the job queue." : locale === "ku" ? "سیستەمی کاری پشتەوە هێشتا ڕێکنەخراوە؛ پەیوەندی بە ئەدمینەوە بکە." : "لم يتم إعداد طابور المهام الخلفية بعد. يرجى إبلاغ الإدارة بإعداده.")
+        : message);
     }
   }
 
