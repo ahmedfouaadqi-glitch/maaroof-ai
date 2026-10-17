@@ -148,6 +148,13 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     },
     subs: [
       {
+        key: "workbench",
+        label: { ar: "واجهة المستخدم الجديدة", en: "New User Interface", ku: "ڕووکاری نوێی بەکارهێنەر" },
+        purpose: { ar: "تحديد الواجهة الافتراضية وإتاحة واجهة المحترفين وأوضاع العمل.", en: "Choose the default interface, professional interface availability, and work modes.", ku: "دیاریکردنی ڕووکاری بنەڕەتی و شێوازەکانی کار." },
+        usage: { ar: "فعّل مساحة العمل الجديدة أو أوقفها، واختر الواجهة الافتراضية، وتحكم في رابط المحترفين والفحص المباشر.", en: "Enable the new workbench, choose the default interface, and control the professional link and live checks.", ku: "شوێنی کاری نوێ چالاک بکە و ڕووکاری بنەڕەتی دیاری بکە." },
+        warning: { ar: "هذه الإعدادات لا تتجاوز صلاحيات الأدوات أو تسعيرها أو الرصيد.", en: "These settings do not override tool permissions, pricing, or balance.", ku: "ئەم ڕێکخستنانە مۆڵەت و نرخ ناگۆڕن." },
+      },
+      {
         key: "maaroof",
         label: { ar: "إعدادات معروف", en: "Maaroof Settings", ku: "ڕێکخستنی مەعروف" },
         purpose: { ar: "ضبط سلوك الوكيل: النماذج، الحدود، وأوضاع التنفيذ.", en: "Tune agent behaviour: models, limits and execution modes.", ku: "ڕێکخستنی ڕەفتاری بریکار: مۆدێل، سنوور و شێوازەکان." },
