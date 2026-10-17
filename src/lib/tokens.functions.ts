@@ -11,6 +11,8 @@ export type CostPreview = {
   total: number;
   source: string;
   enough: boolean;
+  dailyRemaining: number | null;
+  monthlyRemaining: number | null;
   maxEngines: number | null;
   notifyAllowed: boolean;
   backgroundAllowed: boolean;
@@ -26,23 +28,31 @@ export const getCostPreview = createServerFn({ method: "POST" })
     const { resolveToolCost, resolveProbePolicy } = await import("@/lib/tokens.server");
     const { data: prof } = await context.supabase
       .from("profiles")
-      .select("tokens_balance, tokens_daily_limit, tokens_monthly_limit")
+      .select("tokens_balance, tokens_daily_limit, tokens_monthly_limit, tokens_used_today, tokens_used_month")
       .eq("id", context.userId)
       .maybeSingle();
     const balance = Number((prof as any)?.tokens_balance) || 0;
     const metered = balance > 0 || (prof as any)?.tokens_daily_limit != null || (prof as any)?.tokens_monthly_limit != null;
     const cost = await resolveToolCost(context.userId, data.toolKey);
     const policy = data.toolKey === "visibility.probe" ? await resolveProbePolicy(context.userId) : null;
+    const units = policy?.maxEngines != null ? Math.min(data.units, policy.maxEngines) : data.units;
     const perUnit = policy?.tokensPerEngine ?? cost.tokens;
-    const total = perUnit * data.units;
+    const total = perUnit * units;
+    const dailyRemaining = (prof as any)?.tokens_daily_limit == null ? null : Math.max(0, Number((prof as any).tokens_daily_limit) - (Number((prof as any).tokens_used_today) || 0));
+    const monthlyRemaining = (prof as any)?.tokens_monthly_limit == null ? null : Math.max(0, Number((prof as any).tokens_monthly_limit) - (Number((prof as any).tokens_used_month) || 0));
+    const pricedOrLegacyFree = !metered || cost.source !== "unpriced";
+    const enabled = (cost.source as string) !== "disabled_by_admin";
+    const enough = enabled && pricedOrLegacyFree && (!metered || (balance >= total && (dailyRemaining == null || dailyRemaining >= total) && (monthlyRemaining == null || monthlyRemaining >= total)));
     return {
       metered,
       balance,
       perUnit,
-      units: data.units,
+      units,
       total,
       source: String(cost.source),
-      enough: !metered || balance >= total,
+      enough,
+      dailyRemaining,
+      monthlyRemaining,
       maxEngines: policy?.maxEngines ?? null,
       notifyAllowed: policy?.notifyAllowed ?? true,
       backgroundAllowed: policy?.backgroundAllowed ?? true,
