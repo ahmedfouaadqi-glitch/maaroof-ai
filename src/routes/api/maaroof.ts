@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
+import { MAAROOF_SKILLS, recommendMaaroofSkills } from "@/lib/maaroof/skill-catalog";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -32,6 +33,21 @@ export const Route = createFileRoute("/api/maaroof")({
         const geoScope = (body?.geo_scope as GeoScope) || undefined;
         const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
         const executionMode = (["simulation","recommendation","execution"] as const).includes(body?.execution_mode) ? body.execution_mode as "simulation"|"recommendation"|"execution" : undefined;
+        const interfaceMode = body?.interface_mode === "workspace" ? "workspace" : "professional";
+        const { data: uiPolicyRow } = await admin.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle();
+        const uiPolicy = (uiPolicyRow as any)?.value;
+        const availableInterfaces: string[] = Array.isArray(uiPolicy?.available_interfaces) ? uiPolicy.available_interfaces : uiPolicy?.enabled === false ? ["professional"] : ["workbench", "professional"];
+        const requestedInterfaceKey = interfaceMode === "workspace" ? "workbench" : "professional";
+        let effectiveSkillKeys: string[] = [];
+        if (!availableInterfaces.includes(requestedInterfaceKey)) return Response.json({ error: "interface_disabled" }, { status: 403 });
+        if (interfaceMode === "workspace") {
+          const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : MAAROOF_SKILLS.map((skill) => skill.key);
+          const requestedSkills = Array.isArray(body?.selected_skills) ? [...new Set(body.selected_skills.filter((key: unknown): key is string => typeof key === "string"))] : [];
+          if (requestedSkills.some((key: string) => !allowedSkills.includes(key))) return Response.json({ error: "skill_disabled" }, { status: 403 });
+          if (requestedSkills.some((key: string) => MAAROOF_SKILLS.some((skill) => skill.key === key && skill.salesContact))) return Response.json({ error: "sales_contact_required", contact_url: "/contact" }, { status: 403 });
+          const validKeys = new Set(MAAROOF_SKILLS.map((skill) => skill.key));
+          effectiveSkillKeys = requestedSkills.length ? requestedSkills.filter((key) => validKeys.has(key)) : recommendMaaroofSkills(goal, 3).map((skill) => skill.key).filter((key) => allowedSkills.includes(key) && !MAAROOF_SKILLS.some((skill) => skill.key === key && skill.salesContact));
+        }
 
         // Verify workspace ownership if provided.
         let verifiedWorkspaceId: string | null = null;
@@ -89,6 +105,7 @@ export const Route = createFileRoute("/api/maaroof")({
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
                 authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, clarifications,
+                selectedSkills: interfaceMode === "workspace" ? effectiveSkillKeys : undefined,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
