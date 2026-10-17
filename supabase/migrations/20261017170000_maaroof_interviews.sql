@@ -53,7 +53,7 @@ CREATE POLICY "maaroof_interviews_read_owner_or_workspace"
     OR (
       workspace_id IS NOT NULL
       AND (
-        public.is_workspace_member(workspace_id, auth.uid())
+        public.is_workspace_member(_user_id => auth.uid(), _workspace_id => workspace_id)
         OR EXISTS (
           SELECT 1 FROM public.workspaces w
           WHERE w.id = workspace_id AND w.owner_id = auth.uid()
