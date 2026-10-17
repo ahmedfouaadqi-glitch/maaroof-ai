@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -24,6 +24,7 @@ import {
   type InterviewState,
   type InterviewTargetType,
 } from "@/lib/maaroof/interview-engine";
+import { defaultInterviewTargetType } from "@/lib/maaroof/interview-context";
 
 type Locale = "ar" | "en" | "ku";
 type InterviewDepth = "focused" | "comprehensive";
@@ -88,7 +89,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     target: "طبيعة الجهة التي سنبني ملف سياقها",
     chooseTargetType: "اختر طبيعة الجهة أولاً",
     targetHint:
-      "اختر ما نريد جمع سياقه، لا نوع حسابك. تتغير الأسئلة حسب نوع الجهة ومجالات العمل المختارة.",
+      "يُحدد الاختيار الأولي من نوع الكيان المحفوظ في ملفك أو مساحة العمل المختارة. غيّره عند جمع سياق عميل أو علامة أو مشروع مختلف.",
     targetTypeRequired: "اختر طبيعة الجهة أو المشروع قبل بدء المقابلة.",
     depth: "عمق المقابلة",
     focused: "مركزة",
@@ -147,7 +148,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     target: "What are we building context for?",
     chooseTargetType: "Choose an entity type first",
     targetHint:
-      "Choose the entity to profile, not your account role. Questions adapt to the entity type and selected workstreams.",
+      "The initial choice comes from your saved profile identity or selected workspace. Change it when profiling a different client, brand, or project.",
     targetTypeRequired: "Choose an entity or project type before starting.",
     depth: "Interview depth",
     focused: "Focused",
@@ -208,7 +209,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     target: "جۆری لایەن بۆ دروستکردنی کۆنتێکست",
     chooseTargetType: "سەرەتا جۆری لایەن هەڵبژێرە",
     targetHint:
-      "ئەو لایەنە هەڵبژێرە کە دەتەوێت کۆنتێکستی بۆ دروست بکرێت، نەک جۆری هەژمارەکەت. پرسیارەکان بەپێی لایەن و بوارەکان دەگۆڕێن.",
+      "جۆری سەرەتایی لە ناسنامەی پاشەکەوتکراوی پرۆفایل یان شوێنی کاری هەڵبژێردراوەوە دێت. ئەگەر کۆنتێکستی کڕیار، براند یان پڕۆژەیەکی تر دەوێت، بیگۆڕە.",
     targetTypeRequired: "پێش دەستپێکردن جۆری لایەن یان پڕۆژە هەڵبژێرە.",
     depth: "قووڵایی چاوپێکەوتن",
     focused: "کورت و چڕ",
@@ -277,11 +278,13 @@ function apiError(locale: Locale, code: string | undefined): string {
 export function InterviewPanel({
   locale,
   userId,
+  profileEntityType,
   initialGoal,
   getAccessToken,
 }: {
   locale: Locale;
   userId: string;
+  profileEntityType?: string | null;
   initialGoal: string;
   getAccessToken: () => Promise<string | null>;
 }) {
@@ -294,6 +297,7 @@ export function InterviewPanel({
   const [sessions, setSessions] = useState<InterviewSummary[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [targetType, setTargetType] = useState<InterviewTargetType | "">("");
+  const [targetTypeManuallySelected, setTargetTypeManuallySelected] = useState(false);
   const [interviewDepth, setInterviewDepth] = useState<InterviewDepth>("focused");
   const [targetName, setTargetName] = useState("");
   const [workspaceId, setWorkspaceId] = useState("");
@@ -303,6 +307,12 @@ export function InterviewPanel({
   const [progress, setProgress] = useState<InterviewProgress | null>(null);
   const [dataComplete, setDataComplete] = useState(false);
   const [answer, setAnswer] = useState("");
+
+  useEffect(() => {
+    if (session || targetTypeManuallySelected) return;
+    const workspaceKind = workspaces.find((workspace) => workspace.id === workspaceId)?.kind;
+    setTargetType(defaultInterviewTargetType(profileEntityType, workspaceKind));
+  }, [profileEntityType, workspaceId, workspaces, session, targetTypeManuallySelected]);
 
   async function tokenOrThrow(): Promise<string> {
     const token = await getAccessToken();
@@ -403,6 +413,8 @@ export function InterviewPanel({
       const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_create_failed");
       setSession(body.interview);
+      setTargetType(body.interview.target_type);
+      setTargetTypeManuallySelected(true);
       setInterviewDepth(
         body.interview.context_snapshot?.interview_depth === "comprehensive"
           ? "comprehensive"
@@ -453,6 +465,8 @@ export function InterviewPanel({
 
       if (!body.interview) throw new Error("interview_lookup_failed");
       setSession(body.interview);
+      setTargetType(body.interview.target_type);
+      setTargetTypeManuallySelected(true);
       setInterviewDepth(
         body.interview.context_snapshot?.interview_depth === "comprehensive"
           ? "comprehensive"
@@ -610,9 +624,10 @@ export function InterviewPanel({
                   <label className="mb-1.5 block text-sm font-medium">{c("target")}</label>
                   <select
                     value={targetType}
-                    onChange={(event) =>
-                      setTargetType(event.target.value as InterviewTargetType | "")
-                    }
+                    onChange={(event) => {
+                      setTargetType(event.target.value as InterviewTargetType | "");
+                      setTargetTypeManuallySelected(true);
+                    }}
                     disabled={busy}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
                   >
@@ -763,7 +778,13 @@ export function InterviewPanel({
                     disabled={busy}
                     onClick={() => {
                       setSession(null);
-                      setTargetType("");
+                      setTargetTypeManuallySelected(false);
+                      setTargetType(
+                        defaultInterviewTargetType(
+                          profileEntityType,
+                          workspaces.find((workspace) => workspace.id === workspaceId)?.kind,
+                        ),
+                      );
                       setInterviewDepth("focused");
                       setTargetName("");
                       setDomains(["general"]);
