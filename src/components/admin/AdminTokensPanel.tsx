@@ -626,6 +626,14 @@ function GlobalProbeBox({ lang }: { lang: string }) {
         <label className="text-xs">{T.max}
           <input type="number" min={1} max={ENGINE_KEYS.length} value={v.probe_max_engines ?? ""} onChange={(e) => setV({ ...v, probe_max_engines: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
         </label>
+        {(["MARK 1", "MARK 2", "MARK 3"] as const).map((planName) => (
+          <label key={planName} className="text-xs">{planName} · {lang === "ar" ? "حد المحركات" : lang === "ku" ? "سنووری بزوێنەر" : "engine cap"}
+            <input type="number" min={0} max={ENGINE_KEYS.length}
+              value={v.probe_plan_max_engines?.[planName] ?? ""}
+              onChange={(e) => setV({ ...v, probe_plan_max_engines: { ...(v.probe_plan_max_engines || {}), [planName]: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Math.max(0, Number(e.target.value))) } })}
+              className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
+          </label>
+        ))}
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={v.notify_allowed !== false} onChange={(e) => setV({ ...v, notify_allowed: e.target.checked })} /> {T.notify}
         </label>
