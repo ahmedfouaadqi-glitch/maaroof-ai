@@ -71,11 +71,29 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
-      const response = await requestCtx.run(ctx as any, () => handler.fetch(request, env, ctx));
+      const context = {
+        env: env as { MAAROOF_JOBS?: { send: (message: unknown) => Promise<unknown> } },
+        waitUntil: (promise: Promise<unknown>) => (ctx as any).waitUntil(promise),
+      };
+      const response = await requestCtx.run(context, () => handler.fetch(request, env, ctx));
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);
       return brandedErrorResponse();
+    }
+  },
+  async queue(batch: any) {
+    const { processMaaroofBackgroundJob } = await import("./lib/maaroof/background-jobs.server");
+    for (const message of batch.messages || []) {
+      try {
+        const jobId = String(message?.body?.job_id || "");
+        if (!jobId) { message.ack(); continue; }
+        await processMaaroofBackgroundJob(jobId);
+        message.ack();
+      } catch (error) {
+        console.error("[maaroof-queue] job failed", error);
+        message.retry();
+      }
     }
   },
 };
