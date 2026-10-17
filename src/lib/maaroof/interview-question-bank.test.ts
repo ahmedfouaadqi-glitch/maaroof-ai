@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInterviewState,
   getNextInterviewQuestion,
+  recordInterviewResponse,
   validateInterviewQuestionSet,
   type InterviewDomain,
   type InterviewTargetType,
@@ -67,12 +68,32 @@ describe("Maaroof interview question bank", () => {
       domains: ["general"],
       locale: "ar",
     });
-    const current = getNextInterviewQuestion(individualQuestions, state);
-    expect(current?.id).toBe("objective");
-    expect(current?.required).toBe(true);
+    expect(getNextInterviewQuestion(individualQuestions, state)?.id).toBe("objective");
+    expect(getNextInterviewQuestion(individualQuestions, state, { includeOptional: true })?.id).toBe(
+      "objective",
+    );
+
+    const objective = recordInterviewResponse(
+      state,
+      individualQuestions,
+      { questionId: "objective", status: "answered", value: "Build a clear profile" },
+      "2026-10-17T00:00:00.000Z",
+    );
+    expect(objective.ok).toBe(true);
+    if (!objective.ok) throw new Error(objective.error);
+    const audience = recordInterviewResponse(
+      objective.state,
+      individualQuestions,
+      { questionId: "audience", status: "answered", value: "Potential customers" },
+      "2026-10-17T00:01:00.000Z",
+    );
+    expect(audience.ok).toBe(true);
+    if (!audience.ok) throw new Error(audience.error);
+
+    expect(getNextInterviewQuestion(individualQuestions, audience.state)).toBeNull();
     expect(
-      getNextInterviewQuestion(individualQuestions, state, { includeOptional: true })?.id,
-    ).toBe("objective");
+      getNextInterviewQuestion(individualQuestions, audience.state, { includeOptional: true })?.id,
+    ).toBe("individual_context");
     expect(
       individualQuestions.some((question) => question.id === "success_measure" && !question.required),
     ).toBe(true);
