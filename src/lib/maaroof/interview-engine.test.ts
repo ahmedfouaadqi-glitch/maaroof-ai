@@ -109,6 +109,24 @@ describe("Maaroof interview engine", () => {
     expect(isInterviewDataComplete(questions, state)).toBe(false);
   });
 
+  it("allows a required question to be skipped while preserving the incomplete-data signal", () => {
+    const questions = [
+      question({ id: "required_one", canSkip: false }),
+      question({ id: "required_two", canSkip: true, allowUnknown: true }),
+    ];
+    let state = answered(baseState(), questions, "required_one", "known");
+    const skipped = recordInterviewResponse(state, questions, {
+      questionId: "required_two",
+      status: "skipped",
+    });
+    expect(skipped.ok).toBe(true);
+    if (!skipped.ok) throw new Error(skipped.error);
+    state = skipped.state;
+    expect(isInterviewTraversalComplete(questions, state)).toBe(true);
+    expect(isInterviewDataComplete(questions, state)).toBe(false);
+    expect(getInterviewProgress(questions, state).requiredSkipped).toBe(1);
+  });
+
   it("records unknown answers without asking the same question forever", () => {
     const questions = [question({ id: "unknown", allowUnknown: true }), question({ id: "next" })];
     const result = recordInterviewResponse(baseState(), questions, {

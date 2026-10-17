@@ -11,6 +11,7 @@ on:
       - "src/routes/api/maaroof-interviews.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
+      - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
       - ".github/workflows/interview-engine-validation.yml"
   push:
     branches:
@@ -23,6 +24,7 @@ on:
       - "src/routes/api/maaroof-interviews.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
+      - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
       - ".github/workflows/interview-engine-validation.yml"
 
 permissions:

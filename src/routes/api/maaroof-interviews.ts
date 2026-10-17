@@ -6,6 +6,7 @@ import {
   getInterviewProgress,
   getNextInterviewQuestion,
   isInterviewDataComplete,
+  isInterviewTraversalComplete,
   recordInterviewResponse,
   validateInterviewQuestionSet,
   type InterviewAnswerStatus,
@@ -382,6 +383,11 @@ async function handleUpdate(request: Request): Promise<Response> {
     ) {
       return errorResponse("invalid_answer", 400);
     }
+    if (answer.questionId !== interview.current_question_id) {
+      return errorResponse("unexpected_question", 409, {
+        current_question_id: interview.current_question_id,
+      });
+    }
     if (answer.status === "answered" && !isInterviewValue(answer.value)) {
       return errorResponse("invalid_answer_value", 400);
     }
@@ -409,8 +415,8 @@ async function handleUpdate(request: Request): Promise<Response> {
     if (typeof body.status !== "string" || !allowedStatuses.includes(body.status)) {
       return errorResponse("invalid_interview_status", 400);
     }
-    if (body.status === "completed" && !isInterviewDataComplete(questionSet.questions, state)) {
-      return errorResponse("required_answers_missing", 409, {
+    if (body.status === "completed" && !isInterviewTraversalComplete(questionSet.questions, state)) {
+      return errorResponse("required_questions_unhandled", 409, {
         progress: getInterviewProgress(questionSet.questions, state),
       });
     }
