@@ -60,12 +60,8 @@ CREATE POLICY "maaroof_interviews_read_owner_or_workspace"
         )
       )
     )
-    OR public.has_role(auth.uid(), 'admin'::app_role)
   );
 
-CREATE TRIGGER maaroof_interviews_touch
-  BEFORE UPDATE ON public.maaroof_interviews
-  FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 COMMENT ON TABLE public.maaroof_interviews IS
   'Cross-workflow interviews. Writes use the authenticated server API with role checks and optimistic version control.';

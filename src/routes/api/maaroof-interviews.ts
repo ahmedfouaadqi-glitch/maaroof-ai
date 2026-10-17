@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import {
   INTERVIEW_LOCALES,
   createInterviewState,
@@ -22,7 +23,7 @@ import {
   normalizeInterviewDomains,
 } from "@/lib/maaroof/interview-question-bank";
 
-type AdminDb = ReturnType<typeof createClient<any>>;
+type AdminDb = ReturnType<typeof createClient<Database>>;
 type AuthResult = { ok: true; admin: AdminDb; userId: string } | { ok: false; response: Response };
 
 const SUMMARY_FIELDS =
@@ -91,7 +92,7 @@ async function authenticate(request: Request): Promise<AuthResult> {
   }
 
   try {
-    const admin = createClient(url, key, { auth: { persistSession: false } });
+    const admin = createClient<Database>(url, key, { auth: { persistSession: false } });
     const { data, error } = await admin.auth.getUser(authorization.slice(7));
     if (error || !data.user?.id) {
       return { ok: false, response: errorResponse("auth_required", 401) };
@@ -303,6 +304,13 @@ async function handleCreate(request: Request): Promise<Response> {
       question_set_version: INTERVIEW_QUESTION_SET_VERSION,
       questions_snapshot: validation.questions,
       state,
+      context_snapshot: {
+        target_type: targetType,
+        target_name: targetName,
+        workspace_id: workspaceId,
+        domains,
+        locale: selectedLocale,
+      },
       status: "in_progress",
       current_question_id: currentQuestion?.id || null,
       version: 1,
