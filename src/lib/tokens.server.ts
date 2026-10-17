@@ -9,6 +9,7 @@
 // The tool_pricing_catalog table is only a *suggestion library* for admins;
 // it is never auto-applied to a user's run.
 import { createClient } from "@supabase/supabase-js";
+import { resolveScopedAccessMode } from "@/lib/maaroof/skill-access-policy";
 
 export type ResolvedCost = { tokens: number; usd: number; source: "user_override" | "plan" | "unpriced" };
 export type ChargeResult =
@@ -22,6 +23,41 @@ function admin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   _admin = createClient(url, key, { auth: { persistSession: false } });
   return _admin;
+}
+
+
+type AccessMode = "self_service" | "contact" | "disabled";
+function validAccessMode(value: unknown): value is AccessMode {
+  return value === "self_service" || value === "contact" || value === "disabled";
+}
+
+/** Tool licensing is checked before metering, so a no-token-meter account cannot bypass sales gates. */
+async function resolveToolAccessMode(userId: string, toolKey: string): Promise<AccessMode> {
+  const db = admin();
+  const [{ data: settingsRow, error: settingsError }, { data: profile, error: profileError }] = await Promise.all([
+    db.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle(),
+    db.from("profiles").select("subscription_tier,is_subscribed,subscription_expires_at").eq("id", userId).maybeSingle(),
+  ]);
+  // If policy lookup fails, fail closed rather than bypassing licensing.
+  if (settingsError || profileError) return "disabled";
+  const value = (settingsRow as any)?.value || {};
+  const planActive = !!(profile as any)?.is_subscribed &&
+    (!(profile as any)?.subscription_expires_at || new Date((profile as any).subscription_expires_at).getTime() > Date.now());
+  const planKey = planActive ? String((profile as any)?.subscription_tier || "").trim().toLocaleLowerCase() : "";
+  const globalPolicy = value.tool_access && typeof value.tool_access === "object" ? value.tool_access : {};
+  const byPlan = value.tool_access_by_plan && typeof value.tool_access_by_plan === "object" ? value.tool_access_by_plan : {};
+  const byUser = value.tool_access_by_user && typeof value.tool_access_by_user === "object" ? value.tool_access_by_user : {};
+  const explicit = (key: string): AccessMode | undefined => {
+    const candidates = [byUser?.[userId]?.[key], planKey ? byPlan?.[planKey]?.[key] : undefined, globalPolicy?.[key]];
+    return candidates.find(validAccessMode);
+  };
+  const exact = explicit(toolKey);
+  if (exact) return exact;
+  if (toolKey.includes(".")) {
+    const parent = explicit(toolKey.split(".")[0]);
+    if (parent) return parent;
+  }
+  return resolveScopedAccessMode({ key: toolKey, globalPolicy, byPlan, byUser, planKey, userId });
 }
 
 export async function resolveToolCost(userId: string, toolKey: string): Promise<ResolvedCost> {
@@ -104,6 +140,9 @@ export async function chargeTokens(opts: {
   unitTokens?: number;
 }): Promise<ChargeResult> {
   const db = admin();
+  const accessMode = await resolveToolAccessMode(opts.userId, opts.toolKey);
+  if (accessMode === "contact") return { ok: false, reason: "sales_contact_required" };
+  if (accessMode === "disabled") return { ok: false, reason: "tool_disabled" };
   const { data: prof } = await db
     .from("profiles")
     .select("tokens_balance, tokens_daily_limit, tokens_monthly_limit")
