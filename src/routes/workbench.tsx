@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -163,7 +163,7 @@ function WorkbenchPage() {
               {policy.show_live_engine_picker && <div className="mt-4 rounded-xl border border-border p-3">
                 <label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={live} onChange={e=>setLive(e.target.checked)} disabled={running} className="mt-1 size-4 accent-primary" /><span><span className="block text-sm font-medium">{t.engines}</span><span className="text-xs leading-5 text-muted-foreground">{t.enginesHint}</span></span></label>
                 {live && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{ENGINE_KEYS.map(key=><label key={key} className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-2 text-xs"><input type="checkbox" checked={engines.includes(key)} onChange={e=>setEngines(old=>e.target.checked?[...old,key]:old.filter(x=>x!==key))} disabled={running} className="accent-primary" />{key==="chatgpt"?"ChatGPT":key.charAt(0).toUpperCase()+key.slice(1)}</label>)}</div>}
-              </div>
+              </div>}
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="max-w-lg text-xs leading-5 text-muted-foreground">{t.sources}</p>
                 <button type="button" onClick={run} disabled={running||!goal.trim()||(live&&engines.length===0)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{running?<LoaderCircle className="size-4 animate-spin"/>:<Sparkles className="size-4"/>}{running?t.running:t.run}</button>
