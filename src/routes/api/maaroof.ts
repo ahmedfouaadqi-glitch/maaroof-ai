@@ -96,72 +96,104 @@ export const Route = createFileRoute("/api/maaroof")({
         const detectedGeo = detectGeoFromRequest(request);
         const origin = new URL(request.url).origin;
 
-        // Plan/token gate — treats Maaroof as a regular tool.
+        // Validate entitlement and quota first. Dispatch the durable queue message before charging.
         const { chargeTokens, chargeFailureBody, resolveToolCost } = await import("@/lib/tokens.server");
-        const priceKey = executionMode === "recommendation" || executionMode === "simulation" ? `maaroof.${executionMode}` : "maaroof";
+        const priceKey = executionMode === "recommendation" || executionMode === "simulation" ? "maaroof." + executionMode : "maaroof";
         const cost = await resolveToolCost(userId, priceKey);
         const { data: prof } = await admin.from("profiles").select("is_subscribed, tokens_balance, tokens_daily_limit, tokens_monthly_limit").eq("id", userId).maybeSingle();
         const hasMeter = Number((prof as any)?.tokens_balance) > 0 || (prof as any)?.tokens_daily_limit != null || (prof as any)?.tokens_monthly_limit != null;
+        if ((cost.source as any) === "disabled_by_admin") return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
 
-        if ((cost.source as any) === "disabled_by_admin") {
-          return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
+        if (!hasMeter) {
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
+          const [{ count: runsCount }, { count: activeJobsCount }] = await Promise.all([
+            admin.from("maaroof_runs").select("id", { count: "exact", head: true })
+              .eq("user_id", userId).gte("started_at", today.toISOString()),
+            admin.from("maaroof_background_jobs").select("id", { count: "exact", head: true })
+              .eq("user_id", userId).in("status", ["dispatching", "queued", "running"]).gte("created_at", today.toISOString()),
+          ]);
+          const paid = !!(prof as any)?.is_subscribed;
+          if (!paid && (Number(runsCount) || 0) + (Number(activeJobsCount) || 0) >= settings.trial_daily_cap) {
+            return Response.json({ error: "trial_limit", message: { ar: "تجاوزت " + settings.trial_daily_cap + " جلسات يومياً للتجربة. اشترك للمزيد.", en: "Daily trial limit (" + settings.trial_daily_cap + ") reached. Upgrade for more.", ku: "سنووری ڕۆژانە تەواو بووە." } }, { status: 402 });
+          }
         }
+
+        const requestPayload = {
+          geo_scope: geoScope || null,
+          detected_geo: detectedGeo || null,
+          origin,
+          selected_skills: interfaceMode === "workspace" ? effectiveSkillKeys : null,
+          live_probe: liveProbe !== false,
+          use_subagents: useSubagents !== false,
+          clarifications,
+          interface_mode: interfaceMode,
+          charge_confirmed: false,
+        };
+        const authTokenCiphertext = await encryptJobToken(auth, srKey);
+        const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
+          user_id: userId,
+          workspace_id: verifiedWorkspaceId,
+          goal,
+          language: lang,
+          mode: executionMode || "execution",
+          status: "dispatching",
+          auth_token_ciphertext: authTokenCiphertext,
+          request_payload: requestPayload,
+        }).select("id").single();
+        if (jobError || !job?.id) return Response.json({ error: "job_persist_failed" }, { status: 500 });
+
+        const jobId = String(job.id);
+        await admin.from("maaroof_background_job_events").insert({
+          job_id: jobId, user_id: userId, event_type: "dispatching", payload: { goal, status: "dispatching" },
+        });
+        try {
+          const enqueued = await enqueueMaaroofJob(jobId, 5);
+          if (!enqueued) throw new Error("background_queue_not_configured");
+        } catch (error) {
+          const message = String((error as any)?.message || "background_enqueue_failed");
+          await admin.from("maaroof_background_jobs").update({
+            status: "failed", auth_token_ciphertext: null, error: message,
+            finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq("id", jobId).eq("user_id", userId);
+          await admin.from("maaroof_background_job_events").insert({
+            job_id: jobId, user_id: userId, event_type: "error", payload: { message },
+          });
+          return Response.json({ error: "background_enqueue_failed", job_id: jobId }, { status: 503 });
+        }
+
         if (hasMeter) {
           const charge = await chargeTokens({ userId, toolKey: priceKey, meta: { goal: goal.slice(0, 200), mode: executionMode || "execution" } });
           if (!charge.ok) {
-            const status = charge.reason === "unpriced" ? 402 : charge.reason === "balance" || charge.reason === "daily_limit" || charge.reason === "monthly_limit" ? 402 : 403;
-            return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status });
-          }
-        } else {
-          // Free-tier trial path: enforce daily session cap from admin settings
-          const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-          const { count } = await admin.from("maaroof_runs").select("id", { count: "exact", head: true })
-            .eq("user_id", userId).gte("started_at", today.toISOString());
-          const paid = !!(prof as any)?.is_subscribed;
-          if (!paid && (count || 0) >= settings.trial_daily_cap) {
-            return Response.json({ error: "trial_limit", message: { ar: `تجاوزت ${settings.trial_daily_cap} جلسات يومياً للتجربة. اشترك للمزيد.`, en: `Daily trial limit (${settings.trial_daily_cap}) reached. Upgrade for more.`, ku: "سنووری ڕۆژانە تەواو بووە." } }, { status: 402 });
+            const status = charge.reason === "unpriced" || charge.reason === "balance" || charge.reason === "daily_limit" || charge.reason === "monthly_limit" ? 402 : 403;
+            const message = chargeFailureBody(charge.reason, (charge as any).left);
+            await admin.from("maaroof_background_jobs").update({
+              status: "failed", auth_token_ciphertext: null, error: String(charge.reason),
+              finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            }).eq("id", jobId).eq("user_id", userId);
+            await admin.from("maaroof_background_job_events").insert({
+              job_id: jobId, user_id: userId, event_type: "error", payload: { message: String(charge.reason) },
+            });
+            return Response.json(message, { status });
           }
         }
 
-        const authTokenCiphertext = await encryptJobToken(auth, srKey);
-        const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
-            user_id: userId,
-            workspace_id: verifiedWorkspaceId,
-            goal,
-            language: lang,
-            mode: executionMode || "execution",
-            status: "queued",
-            auth_token_ciphertext: authTokenCiphertext,
-            request_payload: {
-              geo_scope: geoScope || null,
-              detected_geo: detectedGeo || null,
-              origin,
-              selected_skills: interfaceMode === "workspace" ? effectiveSkillKeys : null,
-              live_probe: liveProbe !== false,
-              use_subagents: useSubagents !== false,
-              clarifications,
-              interface_mode: interfaceMode,
-            },
-          }).select("id").single();
-          if (jobError || !job?.id) return Response.json({ error: "job_persist_failed" }, { status: 500 });
-          const jobId = String(job.id);
-          await admin.from("maaroof_background_job_events").insert({
-            job_id: jobId, user_id: userId, event_type: "queued", payload: { goal, status: "queued" },
-          });
-          try {
-            const enqueued = await enqueueMaaroofJob(jobId);
-            if (!enqueued) throw new Error("background_queue_not_configured");
-          } catch (error) {
-            const message = String((error as any)?.message || "background_enqueue_failed");
-            await admin.from("maaroof_background_jobs").update({
-              status: "failed", auth_token_ciphertext: null, error: message, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-            }).eq("id", jobId).eq("user_id", userId);
-            await admin.from("maaroof_background_job_events").insert({
-              job_id: jobId, user_id: userId, event_type: "error", payload: { message },
-            });
-            return Response.json({ error: "background_enqueue_failed", job_id: jobId }, { status: 503 });
-          }
-          return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
+        const { error: finalizeError } = await admin.from("maaroof_background_jobs").update({
+          status: "queued",
+          request_payload: { ...requestPayload, charge_confirmed: true },
+          updated_at: new Date().toISOString(),
+        }).eq("id", jobId).eq("user_id", userId).eq("status", "dispatching");
+        if (finalizeError) {
+          await admin.from("maaroof_background_jobs").update({
+            status: "failed", auth_token_ciphertext: null, error: "job_finalize_failed",
+            finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq("id", jobId).eq("user_id", userId);
+          return Response.json({ error: "job_finalize_failed", job_id: jobId }, { status: 500 });
+        }
+        await admin.from("maaroof_background_job_events").insert({
+          job_id: jobId, user_id: userId, event_type: "queued", payload: { goal, status: "queued" },
+        });
+        return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
 
       },
     },
