@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
+import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { enqueueMaaroofJob, hasMaaroofQueue } from "@/lib/request-ctx.server";
