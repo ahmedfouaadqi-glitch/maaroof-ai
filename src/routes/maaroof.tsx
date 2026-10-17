@@ -1,5 +1,5 @@
 import { ProgressLine } from "@/components/TrinityPanel";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -58,6 +58,7 @@ function MaaroofPage() {
   const { user, loading } = useAuth();
   const { t, lang } = useI18n();
   const { tab } = Route.useSearch();
+  const navigate = useNavigate();
   const [goal, setGoal] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [running, setRunning] = useState(false);
@@ -88,6 +89,17 @@ function MaaroofPage() {
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [events]);
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(({ data }) => {
+      if (!active) return;
+      const value = data?.value as any;
+      const available = Array.isArray(value?.available_interfaces) ? value.available_interfaces : value?.enabled === false ? ["professional"] : ["workbench", "professional"];
+      if (!available.includes("professional")) navigate({ to: available.includes("workbench") ? "/workspace" : "/", replace: true });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [navigate]);
   useEffect(() => () => { if (engineTimerRef.current) clearInterval(engineTimerRef.current); }, []);
 
   function onGoalChange(v: string) {
@@ -131,6 +143,7 @@ function MaaroofPage() {
           lang,
           workspace_id: activeWs?.id,
           execution_mode: mode,
+          interface_mode: "professional",
           use_subagents: useSubagents,
           live_probe: liveProbe,
           probe_engines: enginesOverride,
