@@ -25,6 +25,7 @@ import { AdminFinanceTab } from "@/components/admin/AdminFinanceTab";
 import { SystemHealthTab } from "@/components/admin/SystemHealthTab";
 import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
 import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenceCenter";
+import { WorkbenchSettingsPanel } from "@/components/admin/WorkbenchSettingsPanel";
 import { AdminGuideTab } from "@/components/admin/AdminGuideTab";
 import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
 import { ADMIN_GROUPS, type L3 } from "@/components/admin/admin-guide-content";
@@ -156,6 +157,7 @@ function AdminPage() {
         {activeSub === "insights" && <CognitiveInsightsTab />}
         {activeSub === "firecrawl" && <FirecrawlMonitorTab />}
         {activeSub === "health" && <SystemHealthTab />}
+        {activeSub === "workbench" && <WorkbenchSettingsPanel />}
         {activeSub === "maaroof" && <MaaroofAdminTab />}
         {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
       </main>
