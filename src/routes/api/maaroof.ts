@@ -85,7 +85,7 @@ export const Route = createFileRoute("/api/maaroof")({
         // are constrained by admin policy and the user's current plan/override.
         if (body?.live_probe !== false && (body?.auto_select_probe_engines === true || Array.isArray(body?.probe_engines))) {
           const { enginesAllowedForUser } = await import("@/lib/ai-engines.server");
-          const { resolveProbePolicy, chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
+          const { resolveProbePolicy } = await import("@/lib/tokens.server");
           const entitlement = await enginesAllowedForUser(admin, userId);
           const policy = await resolveProbePolicy(userId);
           const maxByPolicy = policy.maxEngines == null ? entitlement.limit : Math.min(entitlement.limit, policy.maxEngines);
@@ -123,20 +123,9 @@ export const Route = createFileRoute("/api/maaroof")({
             selectedProbeEngines = requested.filter((engine) => eligible.includes(engine as any));
           }
 
-          if (selectedProbeEngines?.length && hasEngineMeter) {
-            const probeCharge = await chargeTokens({
-              userId,
-              toolKey: "visibility.probe",
-              units: selectedProbeEngines.length,
-              unitTokens: policy.tokensPerEngine ?? undefined,
-              meta: { engines: selectedProbeEngines, source: "maaroof_engine_selection" },
-            });
-            if (!probeCharge.ok) {
-              const status = probeCharge.reason === "unpriced" ? 402 : probeCharge.reason === "balance" || probeCharge.reason === "daily_limit" || probeCharge.reason === "monthly_limit" ? 402 : 403;
-              return Response.json(chargeFailureBody(probeCharge.reason, (probeCharge as any).left), { status });
-            }
-          }
-
+          // Do not charge the probe here: the existing /api/visibility endpoint
+          // performs the authoritative atomic charge immediately before provider calls.
+          // This endpoint only selects the eligible engine count.
           if (!selectedProbeEngines?.length) {
             return Response.json({
               error: "probe_balance_or_entitlement_insufficient",
