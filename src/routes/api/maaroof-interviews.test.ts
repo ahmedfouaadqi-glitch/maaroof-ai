@@ -7,6 +7,7 @@ const {
   mockStoredInterview,
   mockWorkspace,
   mockWorkspaceMember,
+  mockForceVersionConflictOnWrite,
 } = vi.hoisted(() => ({
   mockCreateClient: vi.fn(),
   mockGetUser: vi.fn(),
@@ -14,6 +15,7 @@ const {
   mockStoredInterview: { value: null as unknown },
   mockWorkspace: { value: null as unknown },
   mockWorkspaceMember: { value: null as unknown },
+  mockForceVersionConflictOnWrite: { value: false },
 }));
 
 vi.mock("@supabase/supabase-js", () => ({
@@ -98,6 +100,7 @@ beforeEach(() => {
   mockStoredInterview.value = null;
   mockWorkspace.value = null;
   mockWorkspaceMember.value = null;
+  mockForceVersionConflictOnWrite.value = false;
   mockFrom.mockImplementation((table: string) => {
     type Query = {
       select: (...args: unknown[]) => Query;
@@ -110,9 +113,13 @@ beforeEach(() => {
       limit: (...args: unknown[]) => Query;
     };
     const query = {} as Query;
+    const eqFilters: Record<string, unknown> = {};
     let updatePayload: Record<string, unknown> | null = null;
     query.select = vi.fn(() => query);
-    query.eq = vi.fn(() => query);
+    query.eq = vi.fn((column: string, value: unknown) => {
+      eqFilters[column] = value;
+      return query;
+    });
     query.in = vi.fn(() => query);
     query.is = vi.fn(() => query);
     query.order = vi.fn(() => query);
@@ -130,8 +137,20 @@ beforeEach(() => {
             : table === "workspace_members"
               ? mockWorkspaceMember.value
               : null;
-      if (updatePayload && stored && table === "maaroof_interviews") {
-        return { data: { ...(stored as Record<string, unknown>), ...updatePayload }, error: null };
+      if (stored && table === "maaroof_interviews") {
+        const storedRow = stored as Record<string, unknown>;
+        if (Object.entries(eqFilters).some(([column, expected]) => storedRow[column] !== expected)) {
+          return { data: null, error: null };
+        }
+        if (updatePayload) {
+          // Simulate a concurrent write between the initial read and the conditional update.
+          if (mockForceVersionConflictOnWrite.value) {
+            mockForceVersionConflictOnWrite.value = false;
+            return { data: null, error: null };
+          }
+          if (eqFilters.version !== storedRow.version) return { data: null, error: null };
+          return { data: { ...storedRow, ...updatePayload }, error: null };
+        }
       }
       return { data: stored, error: null };
     });
@@ -304,6 +323,44 @@ describe("Maaroof interviews access isolation", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.interview.status).toBe("paused");
+  });
+});
+
+describe("Maaroof interviews optimistic concurrency", () => {
+  it("rejects an update when the caller's expected version is stale", async () => {
+    mockStoredInterview.value = { ...makeStoredInterview(), version: 2 };
+
+    const response = await handlers.PATCH({
+      request: makeRequest("PATCH", "Bearer valid-token", {
+        id: INTERVIEW_ID,
+        expected_version: 1,
+        action: "status",
+        status: "paused",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "interview_version_conflict",
+      current_version: 2,
+    });
+  });
+
+  it("rejects a write if another update wins after the initial read", async () => {
+    mockStoredInterview.value = makeStoredInterview();
+    mockForceVersionConflictOnWrite.value = true;
+
+    const response = await handlers.PATCH({
+      request: makeRequest("PATCH", "Bearer valid-token", {
+        id: INTERVIEW_ID,
+        expected_version: 1,
+        action: "status",
+        status: "paused",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ error: "interview_version_conflict" });
   });
 });
 
