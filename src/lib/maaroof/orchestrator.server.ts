@@ -8,7 +8,7 @@ import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
 import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
-import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
+import { MAAROOF_SKILLS, toolsForSkills } from "@/lib/maaroof/skill-catalog";
 import { loadCapabilityScores, buildCapabilityGraph, chooseImplementation, buildEvidenceGraph } from "./capability.server";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
@@ -418,8 +418,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
 
     const skillKeys = new Set((ctx.selectedSkills || []).filter((key) => MAAROOF_SKILLS.some((skill) => skill.key === key)));
+    // Workspace selection is an authorization boundary; professional mode keeps existing behavior.
+    const skillToolAllowlist = ctx.selectedSkills !== undefined ? new Set(toolsForSkills([...skillKeys])) : null;
     const skillGuidance = MAAROOF_SKILLS.filter((skill) => skillKeys.has(skill.key)).map((skill) => `- ${skill.label[ctx.language]}: ${skill.description[ctx.language]}. Relevant capabilities: ${skill.capabilities.join(", ")}. Prefer its associated tools when useful.`).join("\n");
-    const skillBlock = skillGuidance ? `\n\n[Selected skill guidance — planning preference, not permission bypass]\n${skillGuidance}\nOnly use available tools and obey server-side access, pricing, safety and admin policies.` : "";
+    const skillBlock = skillGuidance ? `\n\n[Selected skill guidance]\n${skillGuidance}\nIn workspace mode, only tools mapped to selected authorized skills are available. Obey server-side access, pricing, safety and admin policies.` : ctx.selectedSkills !== undefined ? "\n\n[Workspace authorization] No authorized skills were selected; do not execute tools." : "";
     const systemPrompt = `${baseSystemPrompt}${learnedBlock}${skillBlock}` + (settings.system_prompt_extra ? `\n\n[Admin guidance]\n${settings.system_prompt_extra}` : "");
 
 
@@ -499,12 +501,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
     // User-edited tool list (from the pre-execution catalog card) wins over the planner.
-    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k]);
+    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && (skillToolAllowlist === null || skillToolAllowlist.has(k as any)));
     if (userTools.length) {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
       steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
     }
+    if (skillToolAllowlist !== null) steps = steps.filter((step) => skillToolAllowlist.has(step.tool as any));
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
@@ -512,7 +515,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // Full tool catalog with per-user cost (no charge) so the user can add/remove tools before running.
     try {
       const { resolveToolCost } = await import("@/lib/tokens.server");
-      const keys = Object.keys(TOOL_OPTIONS);
+      const keys = Object.keys(TOOL_OPTIONS).filter((key) => skillToolAllowlist === null || skillToolAllowlist.has(key as any));
       const costs = await Promise.all(keys.map(async (k) => { try { return (await resolveToolCost(ctx.userId, k)).tokens || 0; } catch { return 0; } }));
       const { data: bal } = await db().from("profiles").select("tokens_balance").eq("id", ctx.userId).maybeSingle();
       await ctx.emit("tool_catalog", {
@@ -959,7 +962,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await logMsg("tool_call", step);
 
       const path = toolPath(step.tool);
-      if (!path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
+      if ((skillToolAllowlist !== null && !skillToolAllowlist.has(step.tool as any)) || !path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
         const err = { error: path ? "tool_disabled" : "unknown_tool", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
