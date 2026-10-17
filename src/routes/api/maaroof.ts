@@ -76,6 +76,54 @@ export const Route = createFileRoute("/api/maaroof")({
           }
         }
 
+        if (body?.interface_mode === "workspace") {
+          const db = admin as any;
+          const probeEngines = Array.isArray(body?.probe_engines) ? body.probe_engines.filter((x: unknown) => typeof x === "string").slice(0, 10) : undefined;
+          const selectedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 10) : [];
+          if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
+          const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
+            user_id: userId, goal, mode: executionMode || "execution", status: "running",
+            request_payload: { selected_skills: selectedSkills, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
+          }).select("id").single();
+          if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
+          const jobId = job.id as string;
+          const { createSeqCounter } = await import("@/lib/maaroof/jobs");
+          const next = createSeqCounter();
+          const ctl = new AbortController();
+          let chain: Promise<unknown> = Promise.resolve();
+          const emit = async (event: string, data: any) => {
+            const seq = next();
+            chain = chain.then(() => db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq, event_type: event, payload: data ?? {} })).catch(() => {});
+            if (seq % 5 === 0) {
+              const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
+              if (j?.status === "cancelled") ctl.abort();
+              else await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
+            }
+            await chain;
+          };
+          const work = (async () => {
+            let status = "completed"; let err: string | null = null;
+            try {
+              await runMaaroof({
+                userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
+                authBearer: auth, origin, emit, signal: ctl.signal, executionMode, useSubagents, liveProbe, clarifications,
+              });
+            } catch (e: any) {
+              status = "failed"; err = String(e?.message || e).slice(0, 500);
+              await emit("error", { message: err });
+            }
+            await chain;
+            const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
+            if (j?.status !== "cancelled") {
+              const now = new Date().toISOString();
+              await db.from("maaroof_jobs").update({ status, error: err, finished_at: now, updated_at: now }).eq("id", jobId);
+            }
+          })();
+          const { runAfterResponse } = await import("@/lib/request-ctx.server");
+          if (!runAfterResponse(work)) await work;
+          return Response.json({ job_id: jobId });
+        }
+
         const encoder = new TextEncoder();
         const abortCtl = new AbortController();
         request.signal.addEventListener("abort", () => abortCtl.abort());

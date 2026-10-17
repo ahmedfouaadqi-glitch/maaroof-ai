@@ -2952,6 +2952,83 @@ export type Database = {
         }
         Relationships: []
       }
+      maaroof_job_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          job_id: string
+          payload: Json
+          seq: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          job_id: string
+          payload?: Json
+          seq: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          job_id?: string
+          payload?: Json
+          seq?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "maaroof_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maaroof_jobs: {
+        Row: {
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          goal: string
+          id: string
+          mode: string
+          request_payload: Json
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          goal?: string
+          id?: string
+          mode?: string
+          request_payload?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          goal?: string
+          id?: string
+          mode?: string
+          request_payload?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       maaroof_memory: {
         Row: {
           capability: string | null
