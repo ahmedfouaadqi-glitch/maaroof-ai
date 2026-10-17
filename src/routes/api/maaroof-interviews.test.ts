@@ -116,7 +116,12 @@ describe("Maaroof interviews API request validation", () => {
 
   it("rejects malformed interview identifiers before querying storage", async () => {
     const response = await handlers.GET({
-      request: makeRequest("GET", "Bearer valid-token", {}, "http://localhost/api/maaroof-interviews?id=not-a-uuid"),
+      request: makeRequest(
+        "GET",
+        "Bearer valid-token",
+        {},
+        "http://localhost/api/maaroof-interviews?id=not-a-uuid",
+      ),
     });
 
     expect(response.status).toBe(400);
