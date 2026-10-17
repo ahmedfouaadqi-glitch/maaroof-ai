@@ -571,3 +571,30 @@ export const adminSetUserMonitorOverride = createServerFn({ method: "POST" })
     if (error) throw new Response(error.message, { status: 400 });
     return { ok: true };
   });
+
+// ============ background jobs (read-only admin view) ============
+export const adminListMaaroofJobs = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((d: { jobId?: string } | undefined) =>
+    z.object({ jobId: uuid.optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = context as any;
+    if (data.jobId) {
+      const { data: events, error } = await supabaseAdmin
+        .from("maaroof_job_events")
+        .select("*")
+        .eq("job_id", data.jobId)
+        .order("created_at", { ascending: true })
+        .limit(300);
+      if (error) throw new Response(error.message, { status: 400 });
+      return { jobs: [], events: events ?? [] };
+    }
+    const { data: jobs, error } = await supabaseAdmin
+      .from("maaroof_jobs")
+      .select("id,user_id,goal,mode,status,error,created_at,updated_at,finished_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Response(error.message, { status: 400 });
+    return { jobs: jobs ?? [], events: [] };
+  });
