@@ -34,7 +34,7 @@ export function WorkbenchSettingsPanel() {
   const toggleInterface = (name: Policy["available_interfaces"][number], checked: boolean) => setPolicy(old => { const available = checked ? [...new Set([...old.available_interfaces, name])] : old.available_interfaces.filter(item => item !== name); const default_ui = available.includes(old.default_ui) ? old.default_ui : (available[0] || old.default_ui); return { ...old, available_interfaces: available, enabled: available.includes("workbench"), default_ui, show_professional_link: available.includes("professional") && old.show_professional_link, allow_user_interface_choice: available.length > 1 && old.allow_user_interface_choice }; });
   const setSkillAccess = (key: string, access: SkillAccessMode) => setPolicy(old => ({
     ...old,
-    enabled_skills: access === "disabled" ? old.enabled_skills.filter(item => item !== key) : [...new Set([...old.enabled_skills, key])],
+    enabled_skills: [...new Set([...old.enabled_skills, key])],
     skill_access: { ...defaultSkillAccessPolicy(), ...(old.skill_access || {}), [key]: access },
   }));
   const toggleMode = (mode: Policy["allowed_modes"][number], checked: boolean) => setPolicy(old => ({
