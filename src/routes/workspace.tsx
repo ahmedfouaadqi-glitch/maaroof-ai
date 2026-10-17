@@ -128,7 +128,6 @@ function WorkspacePage() {
       if (!availableInterfaces.includes("workbench")) navigate({ to: availableInterfaces.includes("professional") ? "/maaroof" : "/", replace: true });
       if (Array.isArray(value.enabled_skills)) setSelectedSkills(current => current.filter(key => value.enabled_skills.includes(key)));
       if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
-      if (value.enabled === false && !availableInterfaces.includes("workbench")) navigate({ to: availableInterfaces.includes("professional") ? "/maaroof" : "/", replace: true });
     }).catch(() => {});
     return () => { active = false; };
   }, [navigate]);
