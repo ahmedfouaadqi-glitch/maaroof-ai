@@ -149,7 +149,7 @@ function MaaroofPage() {
       const body = await response.json();
       const jobs = Array.isArray(body?.jobs) ? body.jobs : [];
       const now = Date.now();
-      const recent = jobs.find((job: any) => job.status === "queued" || job.status === "running")
+      const recent = jobs.find((job: any) => job.status === "dispatching" || job.status === "queued" || job.status === "running")
         || jobs.find((job: any) => now - new Date(job.created_at).getTime() < 24 * 60 * 60 * 1000);
       if (!recent || !active) return;
       setJobId(String(recent.id));
@@ -157,7 +157,7 @@ function MaaroofPage() {
       setExecutionMode(["execution", "recommendation", "simulation"].includes(recent.mode) ? recent.mode : "execution");
       const payload = recent.request_payload || {};
       if (payload.detected_geo) setDetected({ country: payload.detected_geo.country, city: payload.detected_geo.city });
-      setRunning(recent.status === "queued" || recent.status === "running");
+      setRunning(recent.status === "dispatching" || recent.status === "queued" || recent.status === "running");
       try { await watchJob(String(recent.id), 0, token); } catch (e: any) { if (active) { setRunning(false); setEvents(current => [...current, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]); } }
     })().catch(() => {});
     return () => { active = false; watcherRef.current += 1; };
