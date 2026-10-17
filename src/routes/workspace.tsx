@@ -93,7 +93,7 @@ const SKILL_ICONS = {
 };
 
 function WorkspacePage() {
-  const { user, loading, session } = useAuth();
+  const { user, loading, session, profile } = useAuth();
   const { lang } = useI18n();
   const navigate = useNavigate();
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
@@ -404,6 +404,7 @@ function WorkspacePage() {
         <InterviewPanel
           locale={locale}
           userId={user.id}
+          profileEntityType={(profile as any)?.entity_type ?? null}
           initialGoal={goal}
           getAccessToken={getInterviewAccessToken}
         />
