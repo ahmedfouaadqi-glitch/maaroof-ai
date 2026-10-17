@@ -24,7 +24,7 @@ export const Route = createFileRoute("/auth")({
     // and absolute URLs (https://evil) to prevent open-redirect phishing.
     const safe = /^\/(?!\/)[^\s]*$/.test(raw) && !raw.toLowerCase().startsWith("/javascript")
       ? raw
-      : "/dashboard";
+      : "/workspace";
     return {
       mode: (s.mode as string) === "signup" ? "signup" : "signin",
       redirect: safe,
@@ -71,7 +71,7 @@ function AuthPage() {
   const oauthSignIn = async (provider: "google" | "microsoft" | "apple") => {
     setError(null);
     setInfo(null);
-    try { sessionStorage.setItem("auth_redirect", redirect || "/dashboard"); } catch { /* ignore */ }
+    try { sessionStorage.setItem("auth_redirect", redirect || "/workspace"); } catch { /* ignore */ }
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: `${window.location.origin}/auth`,
     });
@@ -94,7 +94,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (isSignup) {
-        const redirectUrl = `${window.location.origin}/dashboard`;
+        const redirectUrl = `${window.location.origin}/workspace`;
         const { error } = await supabase.auth.signUp({
           email,
           password,
