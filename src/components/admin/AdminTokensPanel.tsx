@@ -607,8 +607,13 @@ function GlobalProbeBox({ lang }: { lang: string }) {
   const T = { ...PROBE_TX[L3], t: { ar: "الإعداد العام: الفحص المصغّر وأنماط التشغيل (لكل المستخدمين)", en: "Global: micro-probe & run modes (all users)", ku: "گشتی: پشکنینی بچووک" }[L3], save: { ar: "حفظ", en: "Save", ku: "پاشەکەوت" }[L3] };
   const [v, setV] = useState<any>({});
   const [saved, setSaved] = useState(false);
+  const [planNames, setPlanNames] = useState<string[]>(["MARK 1", "MARK 2", "MARK 3"]);
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "tool_run_modes").maybeSingle().then(({ data }) => setV((data as any)?.value || {}));
+    supabase.from("subscription_plans").select("name").eq("active", true).order("sort_order").then(({ data }) => {
+      const names = [...new Set(((data || []) as any[]).map((row) => String(row.name || "").trim()).filter(Boolean))];
+      setPlanNames(names.length ? names : ["MARK 1", "MARK 2", "MARK 3"]);
+    });
   }, []);
   async function save() {
     const { adminSetAppSetting } = await import("@/lib/admin.functions");
@@ -626,7 +631,7 @@ function GlobalProbeBox({ lang }: { lang: string }) {
         <label className="text-xs">{T.max}
           <input type="number" min={1} max={ENGINE_KEYS.length} value={v.probe_max_engines ?? ""} onChange={(e) => setV({ ...v, probe_max_engines: e.target.value === "" ? undefined : Math.min(ENGINE_KEYS.length, Number(e.target.value)) })} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs" />
         </label>
-        {(["MARK 1", "MARK 2", "MARK 3"] as const).map((planName) => (
+        {planNames.map((planName) => (
           <label key={planName} className="text-xs">{planName} · {lang === "ar" ? "حد المحركات" : lang === "ku" ? "سنووری بزوێنەر" : "engine cap"}
             <input type="number" min={0} max={ENGINE_KEYS.length}
               value={v.probe_plan_max_engines?.[planName] ?? ""}
