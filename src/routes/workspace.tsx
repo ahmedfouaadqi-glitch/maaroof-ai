@@ -104,7 +104,6 @@ function WorkspacePage() {
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [lastEventSeq, setLastEventSeq] = useState(0);
   const [events, setEvents] = useState<WorkspaceEvent[]>([]);
   const [clarification, setClarification] = useState("");
   const [clarifyField, setClarifyField] = useState("");
@@ -243,7 +242,6 @@ function WorkspacePage() {
         } as WorkspaceEvent));
         setEvents(current => [...current, ...mapped]);
         cursor = Math.max(cursor, ...incoming.map((item: any) => Number(item.seq) || 0));
-        setLastEventSeq(cursor);
         for (const event of mapped) {
           if (event.type === "clarify") {
             setClarifyField(String(event.data?.field || ""));
@@ -300,7 +298,6 @@ function WorkspacePage() {
     setRunning(true);
     setError("");
     setEvents([]);
-    setLastEventSeq(0);
     setJobId(null);
     try {
       const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
@@ -381,7 +378,7 @@ function WorkspacePage() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
-        <header className="mb-7 flex flex-wrap items-center gap-3">
+        <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
           <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <BrainCircuit className="size-6" />
           </div>
@@ -394,7 +391,7 @@ function WorkspacePage() {
         </header>
 
         {!finalEvent && events.length === 0 && (
-          <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
             <div className="space-y-4">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
@@ -504,11 +501,11 @@ function WorkspacePage() {
         )}
 
         {(running || events.length > 0 || error) && (
-          <section className="space-y-4">
+          <section className="rb-workspace-fade space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${running ? "animate-pulse bg-primary" : error ? "bg-destructive" : "bg-emerald-500"}`} /><span className="font-semibold">{running ? c.working : error ? c.failed : c.ready}</span></div>
               {running && <button type="button" onClick={stop} className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-xs text-destructive"><Square className="size-3" />{c.stop}</button>}
-              {!running && <button type="button" onClick={() => { setEvents([]); setError(""); setGoal(""); setSelectedSkills([]); }} className="rounded-lg border px-3 py-2 text-xs">{c.runAgain}</button>}
+              {!running && <button type="button" onClick={() => { setEvents([]); setError(""); setGoal(""); setSelectedSkills([]); setJobId(null); }} className="rounded-lg border px-3 py-2 text-xs">{c.runAgain}</button>}
             </div>
 
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
@@ -558,7 +555,7 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
   const Icon = SKILL_ICONS[skill.icon];
   if (accessMode === "contact") {
     return (
-      <div className="flex h-full flex-col rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
+      <div className="rb-workspace-skill flex h-full flex-col rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="size-5" /></span>
           <span className="min-w-0 flex-1">
@@ -573,7 +570,7 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
     );
   }
   return (
-    <button type="button" onClick={onToggle} aria-pressed={selected} className={`group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
+    <button type="button" onClick={onToggle} aria-pressed={selected} className={`rb-workspace-skill group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="size-5" /></span>
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{skill.label[locale]}</span>
