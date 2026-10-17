@@ -4,4 +4,12 @@
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+  "queues": {
+    "producers": [
+      { "binding": "MAAROOF_JOBS", "queue": "maaroof-background-jobs" }
+    ],
+    "consumers": [
+      { "queue": "maaroof-background-jobs", "max_batch_size": 1, "max_retries": 3, "dead_letter_queue": "maaroof-background-jobs-dlq" }
+    ]
+  },
 }
