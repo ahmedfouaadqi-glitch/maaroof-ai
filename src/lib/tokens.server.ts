@@ -255,7 +255,7 @@ export function chargeFailureBody(reason: ChargeResult extends { ok: false; reas
     },
   };
   const base = map[String(reason)] || { ar: String(reason), en: String(reason), ku: String(reason) };
-  return { ok: false, reason, left, message: base };
+  return { ok: false, reason, left, message: base, ...(String(reason) === "sales_contact_required" ? { contact_url: "/contact" } : {}) };
 }
 
 export type ProbePolicy = { tokensPerEngine: number | null; maxEngines: number | null; notifyAllowed: boolean; backgroundAllowed: boolean };
