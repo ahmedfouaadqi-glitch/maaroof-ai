@@ -214,10 +214,11 @@ export async function resolveProbePolicy(userId: string): Promise<ProbePolicy> {
     const { data } = await db.from("profiles").select("per_user_tool_overrides").eq("id", userId).maybeSingle();
     ov = (data as any)?.per_user_tool_overrides?.visibility || {};
   } catch {}
-  const num = (v: any) => (Number(v) > 0 ? Number(v) : null);
+  const positive = (v: any) => (v != null && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
+  const nonNegative = (v: any) => (v != null && Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.min(10, Math.floor(Number(v))) : null);
   return {
-    tokensPerEngine: num(ov.probe_tokens_per_engine) ?? num(global.probe_tokens_per_engine),
-    maxEngines: num(ov.max_engines) ?? num(global.probe_max_engines),
+    tokensPerEngine: positive(ov.probe_tokens_per_engine) ?? positive(global.probe_tokens_per_engine),
+    maxEngines: nonNegative(ov.max_engines) ?? nonNegative(global.probe_max_engines),
     notifyAllowed: ov.notify_allowed === false ? false : global.notify_allowed !== false,
     backgroundAllowed: ov.background_allowed === false ? false : global.background_allowed !== false,
   };
