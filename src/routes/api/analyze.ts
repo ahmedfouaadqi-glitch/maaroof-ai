@@ -3,7 +3,7 @@ import { entityContextLine } from "@/lib/entity-consistency";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { chargeTokens, chargeFailureBody, resolveToolAccessMode } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
 
@@ -102,6 +102,8 @@ export const Route = createFileRoute("/api/analyze")({
             userId = data.user?.id || null;
           }
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const accessMode = await resolveToolAccessMode(userId, "analyze");
+          if (accessMode !== "self_service") return Response.json(chargeFailureBody(accessMode === "contact" ? "sales_contact_required" : "tool_disabled"), { status: 403 });
           const runId = crypto.randomUUID();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
