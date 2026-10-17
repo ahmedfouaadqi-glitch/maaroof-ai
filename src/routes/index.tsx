@@ -13,10 +13,10 @@ import { useCountry } from "@/lib/use-country";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MAAROOF Ai — GEO - SEO - AEO , Cited by ChatGPT & Gemini" },
-      { name: "description", content: "Score, optimize and publish content so 10 AI engines cite your brand in English, Arabic and Kurdish." },
-      { property: "og:title", content: "MAAROOF Ai — Get cited by ChatGPT, Gemini & Perplexity" },
-      { property: "og:description", content: "Analyze, score and publish GEO-ready content so AI answer engines cite your brand across MENA." },
+      { title: "MAAROOF Ai — AI Visibility & Generative Engine Optimization" },
+      { name: "description", content: "Analyze your brand visibility across AI answer engines, improve content readiness, and explore GEO tools in Arabic, Kurdish and English." },
+      { property: "og:title", content: "MAAROOF Ai — AI Visibility & GEO Tools" },
+      { property: "og:description", content: "Explore tools to analyze brand visibility, improve content readiness and build a consistent machine-readable brand identity." },
       { property: "og:url", content: "https://maaroofai.com/" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/" }],
@@ -29,8 +29,7 @@ export const Route = createFileRoute("/")({
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         url: "https://maaroofai.com/",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content optimized for 10 AI search engines.",
+        description: "Generative Engine Optimization toolkit — analyze, score, generate and publish content for AI answer-engine visibility across Arabic, Kurdish and English.",
       }),
     }],
   }),
@@ -56,7 +55,7 @@ function Page() {
       <main>
         {/* Agent promo banner */}
         <div className="border-b border-accent/30 bg-gradient-to-r from-accent/15 via-primary/10 to-accent/15">
-          <Link to="/pricing" className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-xs hover:bg-accent/10 md:text-sm">
+          <Link to="/pricing" aria-label={t("hero_cta_secondary")} className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2.5 text-center text-xs hover:bg-accent/10 md:text-sm">
             <Bot className="size-4 text-accent" />
             <BlurText
               as="span"
@@ -142,10 +141,10 @@ function Page() {
               </div>
 
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
+                <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
                   {t("hero_cta_primary")} <ArrowRight className="size-4" />
                 </Link>
-                <Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
+                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
                   {t("hero_cta_secondary")}
                 </Link>
               </div>
