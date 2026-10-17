@@ -479,7 +479,7 @@ function WorkspacePage() {
   );
 }
 
-function SkillCard({ skill, accessMode, locale, accessMode, selected, onToggle, labelAdd, labelAdded }: {
+function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, labelAdded }: {
   skill: MaaroofSkill; accessMode: "self_service" | "contact" | "disabled"; locale: SkillLocale; selected: boolean; onToggle: () => void; labelAdd: string; labelAdded: string;
 }) {
   const Icon = SKILL_ICONS[skill.icon];
