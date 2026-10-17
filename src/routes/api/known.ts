@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { chargeTokens, chargeFailureBody, resolveToolAccessMode } from "@/lib/tokens.server";
 import { resolveToolModel, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
 import { ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
 import { detectGeoFromRequest } from "@/lib/maaroof/geo.server";
@@ -173,6 +173,9 @@ export const Route = createFileRoute("/api/known")({
         }
         const place = scope.scope === "world" ? "" : [scope.city, scope.region, scope.country].filter(Boolean).join(", ");
         if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });
+
+        const accessMode = await resolveToolAccessMode(userId, "known");
+        if (accessMode !== "self_service") return Response.json(chargeFailureBody(accessMode === "contact" ? "sales_contact_required" : "tool_disabled"), { status: 403 });
 
         // MCI: reuse a fresh identical result before spending any AI/web call.
         const force = body.force === true;
