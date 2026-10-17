@@ -33,7 +33,7 @@ function validAccessMode(value: unknown): value is AccessMode {
 }
 
 /** Tool licensing is checked before metering, so a no-token-meter account cannot bypass sales gates. */
-async function resolveToolAccessMode(userId: string, toolKey: string): Promise<AccessMode> {
+export async function resolveToolAccessMode(userId: string, toolKey: string): Promise<AccessMode> {
   const db = admin();
   const [{ data: settingsRow, error: settingsError }, { data: profile, error: profileError }] = await Promise.all([
     db.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle(),
