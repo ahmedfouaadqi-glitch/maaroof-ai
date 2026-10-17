@@ -195,15 +195,14 @@ export const Route = createFileRoute("/api/visibility")({
             // spends tokens concurrently. The atomic charge is authoritative: on a
             // budget-only rejection, retry with one fewer engine until a charge succeeds.
             // Failed atomic charges do not authorize provider calls.
+            const requestedEngineCount = engines.length;
             let pChg: Awaited<ReturnType<typeof chargeTokens>> | null = null;
-            let lastChargeRunId = "";
             for (let count = engines.length; count >= 1; count--) {
               const attemptEngines = engines.slice(0, count);
-              lastChargeRunId = crypto.randomUUID();
               pChg = await chargeTokens({
                 userId,
                 toolKey: "visibility.probe",
-                runId: lastChargeRunId,
+                runId: crypto.randomUUID(),
                 units: attemptEngines.length,
                 unitTokens: policy.tokensPerEngine ?? undefined,
                 meta: { engines: attemptEngines, endpoint: "/api/visibility#probe", budget_retry: count !== engines.length },
@@ -261,7 +260,7 @@ export const Route = createFileRoute("/api/visibility")({
                 scheduled = runAfterResponse(work);
               } catch {}
               if (!scheduled) await work; // fallback: same as notify mode
-              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
+              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, requested_count: requestedEngineCount, reduced_due_to_budget: engines.length < requestedEngineCount, answers: scheduled ? [] : answers, charged: pChg.tokens } });
             }
             await askAll();
             if (body.notify) {
@@ -275,7 +274,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
+            return Response.json({ ok: true, probe: { query: q, asked: engines, requested_count: requestedEngineCount, reduced_due_to_budget: engines.length < requestedEngineCount, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
