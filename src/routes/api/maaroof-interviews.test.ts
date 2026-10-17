@@ -122,13 +122,14 @@ beforeEach(() => {
       return query;
     });
     query.maybeSingle = vi.fn(async () => {
-      const stored = table === "maaroof_interviews"
-        ? mockStoredInterview.value
-        : table === "workspaces"
-          ? mockWorkspace.value
-          : table === "workspace_members"
-            ? mockWorkspaceMember.value
-            : null;
+      const stored =
+        table === "maaroof_interviews"
+          ? mockStoredInterview.value
+          : table === "workspaces"
+            ? mockWorkspace.value
+            : table === "workspace_members"
+              ? mockWorkspaceMember.value
+              : null;
       if (updatePayload && stored && table === "maaroof_interviews") {
         return { data: { ...(stored as Record<string, unknown>), ...updatePayload }, error: null };
       }
