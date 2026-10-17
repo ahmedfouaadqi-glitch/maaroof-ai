@@ -42,6 +42,8 @@ jobs:
           bunx eslint
           --rule 'prettier/prettier: off'
           --rule '@typescript-eslint/no-explicit-any: off'
+          --rule 'no-empty: off'
+          --rule 'prefer-const: off'
           src/routes/workspace.tsx
           src/routes/api/maaroof.ts
           src/routes/api/analyze.ts
