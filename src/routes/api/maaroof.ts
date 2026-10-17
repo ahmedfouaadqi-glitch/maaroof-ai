@@ -42,6 +42,10 @@ export const Route = createFileRoute("/api/maaroof")({
 
         const useSubagents = body?.use_subagents === false ? false : undefined;
         const liveProbe = body?.live_probe === false ? false : undefined;
+        const { ENGINE_KEYS } = await import("@/lib/ai-engines");
+        const requestedProbeEngines = Array.isArray(body?.probe_engines)
+          ? [...new Set(body.probe_engines.filter((v: unknown): v is string => typeof v === "string" && (ENGINE_KEYS as readonly string[]).includes(v)))]
+          : undefined;
         const clarifications: Record<string, string> = {};
         if (body?.clarifications && typeof body.clarifications === "object") {
           for (const [k, v] of Object.entries(body.clarifications).slice(0, 10)) if (typeof v === "string") clarifications[String(k).slice(0, 40)] = v.slice(0, 200);
@@ -88,7 +92,7 @@ export const Route = createFileRoute("/api/maaroof")({
             try {
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, clarifications,
+                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, selectedProbeEngines: requestedProbeEngines, clarifications,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
