@@ -6,6 +6,12 @@ type Ctx = { waitUntil?: (p: Promise<unknown>) => void; env?: { MAAROOF_JOBS?: Q
 const g = globalThis as any;
 export const requestCtx: AsyncLocalStorage<Ctx> = g.__reqCtxAls ?? (g.__reqCtxAls = new AsyncLocalStorage<Ctx>());
 
+/** Check queue availability before charging the user for a task. */
+export function hasMaaroofQueue(): boolean {
+  const queue = requestCtx.getStore()?.env?.MAAROOF_JOBS;
+  return !!queue && typeof queue.send === "function";
+}
+
 /** Send durable work to Cloudflare Queues when the binding is provisioned. */
 export async function enqueueMaaroofJob(jobId: string): Promise<boolean> {
   const queue = requestCtx.getStore()?.env?.MAAROOF_JOBS;
