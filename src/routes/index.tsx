@@ -82,90 +82,60 @@ function Page() {
 
         </div>
 
-        {/* HERO — 10 engines, concise */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 grid-bg opacity-40" />
-          <div className="absolute inset-x-0 -top-32 -z-0 mx-auto h-[600px] max-w-5xl rounded-full bg-primary/15 blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
-          <div className="absolute end-1/4 top-40 -z-0 size-72 rounded-full bg-accent/20 blur-3xl" />
-          <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-14 md:px-6 md:pb-16 md:pt-20">
-            <div className="mx-auto max-w-3xl text-center">
+        {/* Redesigned goal-first landing hero */}
+        <section className="relative isolate overflow-hidden">
+          <div className="absolute inset-0 -z-10 grid-bg opacity-30" />
+          <div className="absolute -top-36 start-1/4 -z-10 size-[32rem] rounded-full bg-primary/15 blur-3xl" />
+          <div className="absolute -bottom-24 end-0 -z-10 size-80 rounded-full bg-accent/10 blur-3xl" />
+          <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 pb-12 pt-12 md:px-6 md:pb-20 md:pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+            <div className="text-center lg:text-start">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-                <Sparkles className="size-3.5 animate-pulse" /> {t("hero_badge")}
+                <Sparkles className="size-3.5" /> {t("hero_badge")}
               </span>
+              {country && <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-xs text-foreground/80">
+                <span className="text-base leading-none">{country.flag}</span>
+                <span>{lang === "ar" ? `مرحباً بزوارنا من ${welcomeName}` : lang === "ku" ? `بەخێرهاتنی میوانانمان لە ${welcomeName}` : `Welcome, visitors from ${welcomeName}`}</span>
+              </div>}
+              <BlurText as="h1" text={t("hero_title")} eager delay={60} stepDuration={0.26} segmentClassName="text-gradient" className="mt-5 font-display text-4xl font-bold leading-[1.08] md:text-5xl lg:text-6xl" />
+              <BlurText text={t("hero_sub")} delay={25} stepDuration={0.22} startDelay={180} className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted-foreground md:text-lg lg:mx-0" />
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-foreground/85 lg:mx-0">
+                {lang === "en" ? "Start with the outcome you need. Maaroof coordinates research, analysis and existing tools, and shows the steps and results you can review." : lang === "ku" ? "لە ئەنجامەکەی کە دەتەوێت دەست پێ بکە. مەعروف توێژینەوە و شیکاری و ئامرازەکانی هەنووکە ڕێکدەخات و هەنگاو و ئەنجامەکانت پیشان دەدات." : "ابدأ بالنتيجة التي تريدها. ينسّق معروف البحث والتحليل والأدوات الحالية، ويعرض لك خطوات العمل والنتائج التي يمكنك مراجعتها."}
+              </p>
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                <Link to="/workspace" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:-translate-y-0.5">
+                  {lang === "en" ? "Start a task" : lang === "ku" ? "دەستپێکردنی ئەرک" : "ابدأ مهمة"} <ArrowRight className="size-4" />
+                </Link>
+                <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-6 py-3.5 text-sm font-semibold transition hover:border-primary/50">
+                  {lang === "en" ? "Create an account" : lang === "ku" ? "دروستکردنی هەژمار" : "إنشاء حساب"}
+                </Link>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground lg:justify-start">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1.5"><Globe2 className="size-3.5 text-primary" />{t("hero_chip_langs")}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1.5"><Bot className="size-3.5 text-accent" />{t("hero_chip_agent")}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1.5"><Sparkles className="size-3.5 text-primary" />{t("hero_chip_engines")}</span>
+              </div>
+            </div>
 
-              {country && (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-xs text-foreground/80">
-                  <span className="text-base leading-none">{country.flag}</span>
-                  <span>
-                    {lang === "ar" ? `مرحباً بزوارنا من ${welcomeName}`
-                      : lang === "ku" ? `بەخێرهاتنی میوانانمان لە ${welcomeName}`
-                      : `Welcome, visitors from ${welcomeName}`}
-                  </span>
+            <div className="relative mx-auto w-full max-w-xl">
+              <div className="absolute inset-8 rounded-full bg-primary/10 blur-3xl" />
+              <div className="relative overflow-hidden rounded-[2rem] border border-border/80 bg-card/70 p-3 shadow-2xl backdrop-blur-xl md:p-5">
+                <div className="flex items-center justify-between gap-3 border-b border-border/70 px-2 pb-4">
+                  <div><div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">MAAROOF WORKSPACE</div><div className="mt-1 text-sm font-semibold">{lang === "en" ? "From goal to outcome" : lang === "ku" ? "لە ئامانجەوە بۆ ئەنجام" : "من الهدف إلى النتيجة"}</div></div>
+                  <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] text-primary">{lang === "en" ? "Goal-first AI" : lang === "ku" ? "AI بە ئامانج" : "ذكاء اصطناعي موجّه بالهدف"}</span>
                 </div>
-              )}
-
-              <BlurText
-                as="h1"
-                text={t("hero_title")}
-                eager
-                delay={70}
-                stepDuration={0.28}
-                segmentClassName="text-gradient"
-                className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-6xl lg:text-7xl"
-              />
-              <BlurText
-                text={t("hero_sub")}
-                delay={35}
-                stepDuration={0.24}
-                startDelay={220}
-                className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg"
-              />
-
-              {/* 10 engine chips */}
-              <div className="mx-auto mt-7 flex max-w-3xl flex-wrap items-center justify-center gap-2.5">
-                {ENGINES.map((e) => (
-                  <span key={e.name} className={`inline-flex items-center gap-2 rounded-full border border-border bg-gradient-to-br ${e.tint} px-3 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur transition hover:scale-105 hover:border-primary/50`}>
-                    <e.Logo size={14} />
-                    {e.name}
-                  </span>
-                ))}
+                <div className="py-3"><EnginesOrbit /></div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[
+                    { n: "01", title: lang === "en" ? "Describe" : lang === "ku" ? "ڕوونکردنەوە" : "حدّد الهدف", desc: lang === "en" ? "Explain the outcome" : lang === "ku" ? "ئەنجامەکە ڕوون بکەرەوە" : "اشرح ما تريد إنجازه" },
+                    { n: "02", title: lang === "en" ? "Coordinate" : lang === "ku" ? "ڕێکخستن" : "نسّق العمل", desc: lang === "en" ? "Skills and tools" : lang === "ku" ? "شارەزایی و ئامراز" : "مهارات وأدوات" },
+                    { n: "03", title: lang === "en" ? "Review" : lang === "ku" ? "پێداچوونەوە" : "راجع النتيجة", desc: lang === "en" ? "Steps and evidence" : lang === "ku" ? "هەنگاو و بەڵگە" : "خطوات ونتائج" },
+                  ].map(step => <div key={step.n} className="rounded-xl border border-border/70 bg-background/70 p-3"><div className="text-[10px] font-semibold tracking-widest text-primary">{step.n}</div><div className="mt-1 text-sm font-semibold">{step.title}</div><div className="mt-1 text-xs leading-5 text-muted-foreground">{step.desc}</div></div>)}
+                </div>
               </div>
-
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Sparkles className="size-3 text-primary" />{t("hero_chip_engines")}</span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Globe2 className="size-3 text-primary" />{t("hero_chip_langs")}</span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/40 px-2.5 py-1"><Bot className="size-3 text-accent" />{t("hero_chip_agent")}</span>
-              </div>
-
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                <Link to="/workspace" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
-                  {t("hero_cta_primary")} <ArrowRight className="size-4" />
-                </Link>
-                <Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
-                  {t("hero_cta_secondary")}
-                </Link>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {ENGINES.map(engine => <span key={engine.name} className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 px-2.5 py-1.5 text-[10px] font-medium text-foreground/80 ${engine.tint}`}><engine.Logo size={12} />{engine.name}</span>)}
               </div>
             </div>
-
-            <div className="mt-10">
-              <EnginesOrbit />
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 pb-10 md:px-6" aria-labelledby="workbench-intro">
-          <div className="grid gap-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-card/80 to-accent/8 p-6 md:grid-cols-[1fr_auto] md:items-center md:p-8">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-widest text-primary">MAAROOF WORKBENCH</div>
-              <h2 id="workbench-intro" className="mt-2 font-display text-2xl font-bold md:text-3xl">{lang === "en" ? "Start with your goal, not a tool list" : lang === "ku" ? "لە ئامانجەکەتەوە دەست پێ بکە، نەک لیستی ئامرازەکان" : "ابدأ من هدفك، لا من قائمة الأدوات"}</h2>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{lang === "en" ? "Describe what you want to accomplish, choose relevant skills, and follow the workflow and actual results. Existing tools, AI engines, permissions, and balance remain the execution foundation." : lang === "ku" ? "ئەوەی دەتەوێت ئەنجامی بدەیت ڕوون بکەرەوە، شارەزایی گونجاو هەڵبژێرە و ڕەوتی کار و ئەنجامی ڕاستەقینە ببینە. ئامراز و مۆدێل و مۆڵەتەکانی هەنووکە بنەمای جێبەجێکردن دەمێننەوە." : "اكتب ما تريد إنجازه، واختر المهارات المناسبة، ثم تابع مراحل العمل والنتائج الفعلية. تبقى الأدوات الحالية ومحركات الذكاء والصلاحيات والرصيد هي أساس التنفيذ."}</p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">{lang === "en" ? "Skills built on existing tools" : lang === "ku" ? "شارەزایی پەیوەست بە ئامرازەکانی هەنووکە" : "مهارات مرتبطة بالأدوات الحالية"}</span>
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">{lang === "en" ? "Clear execution tracking" : lang === "ku" ? "بەدواداچوونی ڕوونی جێبەجێکردن" : "تتبّع واضح للتنفيذ"}</span>
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">{lang === "en" ? "Arabic, Kurdish, and English" : lang === "ku" ? "عەرەبی، کوردی و ئینگلیزی" : "العربية والكردية والإنكليزية"}</span>
-              </div>
-            </div>
-            <Link to="/workspace" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">{lang === "en" ? "Open workspace" : lang === "ku" ? "کردنەوەی شوێنی کار" : "افتح مساحة العمل"} <ArrowRight className="size-4" /></Link>
           </div>
         </section>
 
