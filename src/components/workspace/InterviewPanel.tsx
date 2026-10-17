@@ -279,12 +279,14 @@ export function InterviewPanel({
   locale,
   userId,
   profileEntityType,
+  profileInterviewPersona,
   initialGoal,
   getAccessToken,
 }: {
   locale: Locale;
   userId: string;
   profileEntityType?: string | null;
+  profileInterviewPersona?: string | null;
   initialGoal: string;
   getAccessToken: () => Promise<string | null>;
 }) {
@@ -311,8 +313,8 @@ export function InterviewPanel({
   useEffect(() => {
     if (session || targetTypeManuallySelected) return;
     const workspaceKind = workspaces.find((workspace) => workspace.id === workspaceId)?.kind;
-    setTargetType(defaultInterviewTargetType(profileEntityType, workspaceKind));
-  }, [profileEntityType, workspaceId, workspaces, session, targetTypeManuallySelected]);
+    setTargetType(defaultInterviewTargetType(profileInterviewPersona, profileEntityType, workspaceKind));
+  }, [profileInterviewPersona, profileEntityType, workspaceId, workspaces, session, targetTypeManuallySelected]);
 
   async function tokenOrThrow(): Promise<string> {
     const token = await getAccessToken();
@@ -781,6 +783,7 @@ export function InterviewPanel({
                       setTargetTypeManuallySelected(false);
                       setTargetType(
                         defaultInterviewTargetType(
+                          profileInterviewPersona,
                           profileEntityType,
                           workspaces.find((workspace) => workspace.id === workspaceId)?.kind,
                         ),
