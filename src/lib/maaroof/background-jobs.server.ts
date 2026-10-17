@@ -52,6 +52,7 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
     .select("id,user_id,workspace_id,goal,language,mode,status,request_payload,auth_token_ciphertext")
     .eq("id", jobId).maybeSingle();
   if (error) throw new Error("job_lookup_failed");
+  if (job?.status === "dispatching") throw new Error("job_not_ready_for_processing");
   if (!job || job.status !== "queued") return;
 
   const now = new Date().toISOString();
