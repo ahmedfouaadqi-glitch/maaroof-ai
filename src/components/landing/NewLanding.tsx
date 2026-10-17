@@ -48,7 +48,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { user } = useAuth();
   const c = COPY[(lang === "en" || lang === "ku" ? lang : "ar") as keyof typeof COPY];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
-  const skillName = (s: any) => s.name?.[lang] ?? s.name?.ar ?? s.title?.[lang] ?? s.key;
+  const skillName = (s: (typeof MAAROOF_SKILLS)[number]) => s.label[(lang === "en" || lang === "ku" ? lang : "ar")];
 
   return (
     <div className="min-h-screen">
@@ -105,7 +105,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-2xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {MAAROOF_SKILLS.map((s) => (
-              <div key={s.key} className="rounded-xl border border-border bg-card/40 p-4 text-sm font-medium">{skillName(s)}</div>
+              <div key={s.key} className="rounded-xl border border-border bg-card/40 p-4"><div className="text-sm font-semibold">{skillName(s)}</div><p className="mt-1 text-xs text-muted-foreground">{s.description[(lang === "en" || lang === "ku" ? lang : "ar")]}</p></div>
             ))}
           </div>
           <div className="mt-8 text-center text-xs">
