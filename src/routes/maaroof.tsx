@@ -197,7 +197,9 @@ function MaaroofPage() {
       const raw = String(e?.message || e);
       const message = raw === "background_queue_not_configured"
         ? (lang === "en" ? "Background processing is not configured yet. Ask the administrator to provision the job queue." : lang === "ku" ? "سیستەمی کاری پشتەوە هێشتا ڕێکنەخراوە؛ پەیوەندی بە ئەدمینەوە بکە." : "لم يتم إعداد طابور المهام الخلفية بعد. يرجى إبلاغ الإدارة بإعداده.")
-        : raw;
+        : raw === "background_jobs_migration_required"
+          ? (lang === "en" ? "Background-job database migration is required before tasks can run." : lang === "ku" ? "پێویستە مایگرەیشنی بنکەدراوەی ئەرکەکان جێبەجێ بکرێت." : "يلزم تطبيق ترحيل قاعدة بيانات المهام الخلفية قبل التشغيل.")
+          : raw;
       setEvents(current => [...current, { type: "error", data: { message }, t: Date.now() }]);
     }
   }
