@@ -422,7 +422,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const skillKeys = new Set((ctx.selectedSkills || []).filter((key) => MAAROOF_SKILLS.some((skill) => skill.key === key)));
     const skillGuidance = MAAROOF_SKILLS
       .filter((skill) => skillKeys.has(skill.key))
-      .map((skill) => `- ${skill.label.en}: ${skill.description.en}. Relevant capabilities: ${skill.capabilities.join(", ")}. Prefer its associated tools when they materially help the user's goal.`)
+      .map((skill) => `- ${skill.label[ctx.language]}: ${skill.description[ctx.language]}. Relevant capabilities: ${skill.capabilities.join(", ")}. Prefer its associated tools when they materially help the user's goal.`)
       .join("\n");
     const skillBlock = skillGuidance
       ? `\n\n[Selected skill guidance — planning preference, not permission bypass]\n${skillGuidance}\nOnly use available tools and obey all server-side access, pricing, safety and admin policies.`
