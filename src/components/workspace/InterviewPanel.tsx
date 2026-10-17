@@ -402,6 +402,7 @@ export function InterviewPanel({
         body = resumedBody;
       }
 
+      if (!body.interview) throw new Error("interview_lookup_failed");
       setSession(body.interview);
       setNextQuestion(body.next_question || null);
       setProgress(body.progress || null);
