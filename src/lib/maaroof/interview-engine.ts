@@ -144,11 +144,15 @@ function conditionMatches(condition: InterviewCondition, state: InterviewState):
   }
 
   const needle = condition.value.trim().toLocaleLowerCase();
-  if (!Array.isArray(actual) && typeof actual !== "string") return false;
+  let found: boolean;
 
-  const found = Array.isArray(actual)
-    ? actual.some((part) => part.trim().toLocaleLowerCase() === needle)
-    : actual.toLocaleLowerCase().includes(needle);
+  if (Array.isArray(actual)) {
+    found = actual.some((part) => part.trim().toLocaleLowerCase() === needle);
+  } else if (typeof actual === "string") {
+    found = actual.toLocaleLowerCase().includes(needle);
+  } else {
+    return false;
+  }
 
   return condition.operator === "contains" ? found : !found;
 }

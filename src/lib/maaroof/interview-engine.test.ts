@@ -162,6 +162,24 @@ describe("Maaroof interview engine", () => {
     expect(getInterviewProgress(questions, state).completionPercent).toBe(100);
   });
 
+  it("does not apply text contains conditions to numeric answers", () => {
+    const questions = [
+      question({ id: "client_count" }),
+      question({
+        id: "text_followup",
+        when: [{ questionId: "client_count", operator: "not_contains", value: "agency" }],
+      }),
+    ];
+    const response = recordInterviewResponse(baseState(), questions, {
+      questionId: "client_count",
+      status: "answered",
+      value: 42,
+    });
+    expect(response.ok).toBe(true);
+    if (!response.ok) throw new Error(response.error);
+    expect(getNextInterviewQuestion(questions, response.state)).toBeNull();
+  });
+
   it("supports array-valued answers and contains conditions", () => {
     const questions = [
       question({ id: "channels" }),
