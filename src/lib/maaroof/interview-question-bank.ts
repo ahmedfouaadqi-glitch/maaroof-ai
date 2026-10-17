@@ -75,6 +75,9 @@ const QUESTION_BANK: InterviewQuestion[] = [
     "کام ڕۆڵ یان بارودۆخی کەسی پەیوەندی بە ئامانجەکەوە هەیە؟",
     {
       targetTypes: ["individual"],
+      required: true,
+      canSkip: true,
+      allowUnknown: true,
       domains: ["general"],
       priority: 10,
     },
