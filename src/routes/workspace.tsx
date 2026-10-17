@@ -111,7 +111,7 @@ function WorkspacePage() {
   const [costRun, setCostRun] = useState<CostPreview | null>(null);
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [costLoading, setCostLoading] = useState(false);
-  const [policy, setPolicy] = useState<{ enabled: boolean; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[] }>({ enabled: true, show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key) });
+  const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[] }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key) });
   const abortRef = useState<{ current: AbortController | null }>({ current: null })[0];
 
   useEffect(() => {
@@ -123,10 +123,12 @@ function WorkspacePage() {
     supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(({ data }) => {
       if (!active || !data?.value || typeof data.value !== "object") return;
       const value = data.value as any;
-      setPolicy(old => ({ ...old, ...value }));
+      setPolicy(old => ({ ...old, ...value, available_interfaces: Array.isArray(value.available_interfaces) ? value.available_interfaces : value.enabled === false ? ["professional"] : ["workbench", "professional"] }));
+      const availableInterfaces = Array.isArray(value.available_interfaces) ? value.available_interfaces : value.enabled === false ? ["professional"] : ["workbench", "professional"];
+      if (!availableInterfaces.includes("workbench")) navigate({ to: availableInterfaces.includes("professional") ? "/maaroof" : "/", replace: true });
       if (Array.isArray(value.enabled_skills)) setSelectedSkills(current => current.filter(key => value.enabled_skills.includes(key)));
       if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
-      if (value.enabled === false) navigate({ to: "/maaroof", replace: true });
+      if (value.enabled === false && !availableInterfaces.includes("workbench")) navigate({ to: availableInterfaces.includes("professional") ? "/maaroof" : "/", replace: true });
     }).catch(() => {});
     return () => { active = false; };
   }, [navigate]);
