@@ -194,7 +194,11 @@ function MaaroofPage() {
       await watchJob(String(body.job_id), 0, token);
     } catch (e: any) {
       setRunning(false);
-      setEvents(current => [...current, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]);
+      const raw = String(e?.message || e);
+      const message = raw === "background_queue_not_configured"
+        ? (lang === "en" ? "Background processing is not configured yet. Ask the administrator to provision the job queue." : lang === "ku" ? "سیستەمی کاری پشتەوە هێشتا ڕێکنەخراوە؛ پەیوەندی بە ئەدمینەوە بکە." : "لم يتم إعداد طابور المهام الخلفية بعد. يرجى إبلاغ الإدارة بإعداده.")
+        : raw;
+      setEvents(current => [...current, { type: "error", data: { message }, t: Date.now() }]);
     }
   }
 
