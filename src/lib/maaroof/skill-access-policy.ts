@@ -22,3 +22,23 @@ export function resolveSkillAccessPolicy(args: {
     ...(args.userId ? args.byUser?.[args.userId] || {} : {}),
   };
 }
+
+/** Resolve one skill or tool access mode with user > plan > global precedence. */
+export function resolveScopedAccessMode(args: {
+  key: string;
+  globalPolicy?: Partial<SkillAccessPolicy> | null;
+  byPlan?: SkillAccessOverrideMap | null;
+  byUser?: SkillAccessOverrideMap | null;
+  planKey?: string | null;
+  userId?: string | null;
+}): "self_service" | "contact" | "disabled" {
+  const planKey = normalizePlanAccessKey(args.planKey);
+  const candidates = [
+    args.userId ? args.byUser?.[args.userId]?.[args.key] : undefined,
+    planKey ? args.byPlan?.[planKey]?.[args.key] : undefined,
+    args.globalPolicy?.[args.key],
+  ];
+  return candidates.find((mode): mode is "self_service" | "contact" | "disabled" =>
+    mode === "self_service" || mode === "contact" || mode === "disabled"
+  ) || "self_service";
+}
