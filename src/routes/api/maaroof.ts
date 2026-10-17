@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
-import { MAAROOF_SKILLS, recommendMaaroofSkills } from "@/lib/maaroof/skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, defaultSkillAccessPolicy, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -42,11 +42,15 @@ export const Route = createFileRoute("/api/maaroof")({
         if (!availableInterfaces.includes(requestedInterfaceKey)) return Response.json({ error: "interface_disabled" }, { status: 403 });
         if (interfaceMode === "workspace") {
           const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : MAAROOF_SKILLS.map((skill) => skill.key);
+          const accessPolicy = { ...defaultSkillAccessPolicy(), ...(uiPolicy?.skill_access && typeof uiPolicy.skill_access === "object" ? uiPolicy.skill_access : {}) };
           const requestedSkills = Array.isArray(body?.selected_skills) ? [...new Set(body.selected_skills.filter((key: unknown): key is string => typeof key === "string"))] : [];
-          if (requestedSkills.some((key: string) => !allowedSkills.includes(key))) return Response.json({ error: "skill_disabled" }, { status: 403 });
-          if (requestedSkills.some((key: string) => MAAROOF_SKILLS.some((skill) => skill.key === key && skill.salesContact))) return Response.json({ error: "sales_contact_required", contact_url: "/contact" }, { status: 403 });
+          const requestedMode = requestedSkills.map((key) => MAAROOF_SKILLS.find((skill) => skill.key === key)).filter(Boolean);
+          if (requestedSkills.some((key: string) => !allowedSkills.includes(key) || !MAAROOF_SKILLS.some((skill) => skill.key === key) || getSkillAccessMode(MAAROOF_SKILLS.find((skill) => skill.key === key)!, accessPolicy) === "disabled")) return Response.json({ error: "skill_disabled" }, { status: 403 });
+          if (requestedMode.some((skill) => skill && getSkillAccessMode(skill, accessPolicy) === "contact")) return Response.json({ error: "sales_contact_required", contact_url: "/contact" }, { status: 403 });
           const validKeys = new Set(MAAROOF_SKILLS.map((skill) => skill.key));
-          effectiveSkillKeys = requestedSkills.length ? requestedSkills.filter((key) => validKeys.has(key)) : recommendMaaroofSkills(goal, 3).map((skill) => skill.key).filter((key) => allowedSkills.includes(key) && !MAAROOF_SKILLS.some((skill) => skill.key === key && skill.salesContact));
+          effectiveSkillKeys = requestedSkills.length
+            ? requestedSkills.filter((key) => validKeys.has(key))
+            : recommendMaaroofSkills(goal, 3).map((skill) => skill.key).filter((key) => allowedSkills.includes(key) && getSkillAccessMode(MAAROOF_SKILLS.find((skill) => skill.key === key)!, accessPolicy) === "self_service");
         }
 
         // Verify workspace ownership if provided.
