@@ -54,6 +54,7 @@ export const Route = createFileRoute("/api/maaroof")({
         }
         let effectiveSkillKeys: string[] = [];
         if (!availableInterfaces.includes(requestedInterfaceKey)) return Response.json({ error: "interface_disabled" }, { status: 403 });
+        if (interfaceMode === "workspace") {
           const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : MAAROOF_SKILLS.map((skill) => skill.key);
           const accessPolicy = resolveSkillAccessPolicy({
             globalPolicy: uiPolicy?.skill_access && typeof uiPolicy.skill_access === "object" ? uiPolicy.skill_access : {},
