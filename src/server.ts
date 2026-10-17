@@ -72,7 +72,7 @@ export default {
     try {
       const handler = await getServerEntry();
       const context = {
-        env: env as { MAAROOF_JOBS?: { send: (message: unknown) => Promise<unknown> } },
+        env: env as { MAAROOF_JOBS?: { send: (message: unknown, options?: { delaySeconds?: number }) => Promise<unknown> } },
       };
       const response = await requestCtx.run(context, () => handler.fetch(request, env, ctx));
       return await normalizeCatastrophicSsrResponse(response);
