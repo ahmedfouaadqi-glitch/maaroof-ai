@@ -344,11 +344,20 @@ function WorkspacePage() {
     try {
       const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
       if (!token) throw new Error("auth_required");
-      await fetch("/api/maaroof-jobs", {
+      const response = await fetch("/api/maaroof-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ job_id: id }),
       });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(String(body?.error || c.failed));
+      if (body?.status === "cancelled") {
+        watcherRef.current += 1;
+        setRunning(false);
+        setEvents(current => [...current, { type: "phase", data: { phase: locale === "en" ? "Task cancelled" : locale === "ku" ? "ئەرکەکە هەڵوەشایەوە" : "تم إلغاء المهمة" }, at: Date.now() }]);
+      } else {
+        setError(locale === "en" ? "The task is still being submitted or has already changed state. Try stopping it again shortly." : locale === "ku" ? "ئەرکەکە هێشتا لە ناردندایە یان دۆخی گۆڕاوە؛ دوایەکەی هەوڵ بدەرەوە." : "المهمة ما زالت قيد الإرسال أو تغيّرت حالتها؛ أعد محاولة الإيقاف بعد لحظات.");
+      }
     } catch (e: any) {
       setError(String(e?.message || c.failed));
     }
