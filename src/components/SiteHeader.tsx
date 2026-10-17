@@ -100,7 +100,7 @@ export function SiteHeader() {
               <LogOut className="size-3" /> {t("nav_signout")}
             </button>
           ) : (
-            <Link to="/auth" search={{ mode: "signin", redirect: "/dashboard" }}
+            <Link to="/auth" search={{ mode: "signin", redirect: "/workspace" }}
               className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-[var(--shadow-glow)] sm:px-4 sm:py-2 sm:text-xs">
               {t("nav_signin")}
             </Link>
