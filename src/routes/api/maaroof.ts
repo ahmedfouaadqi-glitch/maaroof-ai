@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
+import { MAAROOF_SKILLS, recommendMaaroofSkills } from "@/lib/maaroof/skill-catalog";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/api/maaroof")({
           ? uiPolicy.available_interfaces
           : uiPolicy?.enabled === false ? ["professional"] : ["workbench", "professional"];
         const requestedInterfaceKey = interfaceMode === "workspace" ? "workbench" : "professional";
+        let effectiveSkillKeys: string[] = [];
         if (!availableInterfaces.includes(requestedInterfaceKey)) {
           return Response.json({ error: "interface_disabled", message: { ar: "هذه الواجهة غير متاحة حالياً وفق إعدادات الإدارة.", en: "This interface is currently unavailable under admin policy.", ku: "ئەم ڕووکارە بەپێی ڕێکخستنی ئەدمین بەردەست نییە." } }, { status: 403 });
         }
@@ -50,11 +52,15 @@ export const Route = createFileRoute("/api/maaroof")({
           if (uiPolicy?.show_live_engine_picker === false && body?.live_probe !== false) {
             return Response.json({ error: "live_probe_disabled", message: { ar: "الفحص المباشر غير متاح في مساحة العمل حالياً.", en: "Live engine checks are disabled in the workspace.", ku: "پشکنینی ڕاستەوخۆ لە شوێنی کار ناچالاکە." } }, { status: 403 });
           }
-          const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : undefined;
-          const requestedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((key: unknown): key is string => typeof key === "string") : [];
-          if (allowedSkills && requestedSkills.some((key: string) => !allowedSkills.includes(key))) {
+          const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : MAAROOF_SKILLS.map((skill) => skill.key);
+          const requestedSkills = Array.isArray(body?.selected_skills) ? [...new Set(body.selected_skills.filter((key: unknown): key is string => typeof key === "string"))] : [];
+          if (requestedSkills.some((key: string) => !allowedSkills.includes(key))) {
             return Response.json({ error: "skill_disabled", message: { ar: "إحدى المهارات المختارة غير متاحة حالياً.", en: "One of the selected skills is currently unavailable.", ku: "یەکێک لە شارەزاییە هەڵبژێردراوەکان بەردەست نییە." } }, { status: 403 });
           }
+          const validKeys = new Set(MAAROOF_SKILLS.map((skill) => skill.key));
+          effectiveSkillKeys = requestedSkills.length
+            ? requestedSkills.filter((key) => validKeys.has(key))
+            : recommendMaaroofSkills(goal, 3).map((skill) => skill.key).filter((key) => allowedSkills.includes(key));
         }
         const allowedModes = Array.isArray(uiPolicy?.allowed_modes) ? uiPolicy.allowed_modes : ["execution", "recommendation", "simulation"];
         if (!allowedModes.includes(executionMode || "execution")) {
@@ -169,6 +175,7 @@ export const Route = createFileRoute("/api/maaroof")({
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
                 authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe, selectedProbeEngines, clarifications,
+                selectedSkills: interfaceMode === "workspace" ? effectiveSkillKeys : undefined,
               });
             } catch (e: any) {
               await emit("error", { message: String(e?.message || e) });
