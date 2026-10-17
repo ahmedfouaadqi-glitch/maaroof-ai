@@ -107,7 +107,7 @@ function WorkspacePage() {
   const [error, setError] = useState("");
   const [showActivity, setShowActivity] = useState(false);
   const [mode, setMode] = useState<"execution" | "recommendation" | "simulation">("execution");
-  const [policy, setPolicy] = useState<{ enabled: boolean; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean }>({ enabled: true, show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true });
+  const [policy, setPolicy] = useState<{ enabled: boolean; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[] }>({ enabled: true, show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key) });
   const abortRef = useState<{ current: AbortController | null }>({ current: null })[0];
 
   useEffect(() => {
@@ -120,13 +120,14 @@ function WorkspacePage() {
       if (!active || !data?.value || typeof data.value !== "object") return;
       const value = data.value as any;
       setPolicy(old => ({ ...old, ...value }));
+      if (Array.isArray(value.enabled_skills)) setSelectedSkills(current => current.filter(key => value.enabled_skills.includes(key)));
       if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
       if (value.enabled === false) navigate({ to: "/maaroof", replace: true });
     }).catch(() => {});
     return () => { active = false; };
   }, [navigate]);
 
-  const recommendations = useMemo(() => recommendMaaroofSkills(goal, 3), [goal]);
+  const recommendations = useMemo(() => recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).filter(skill => policy.enabled_skills.includes(skill.key)).slice(0, 3), [goal, policy.enabled_skills]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
   const phaseEvents = events.filter((event) => event.type === "phase");
@@ -193,6 +194,7 @@ function WorkspacePage() {
             ...(clarifications || {}),
           },
           interface_mode: "workspace",
+          selected_skills: selectedSkills,
         }),
         signal: controller.signal,
       });
