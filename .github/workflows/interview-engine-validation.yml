@@ -1,0 +1,42 @@
+name: Interview Engine Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/lib/maaroof/interview-engine.ts"
+      - "src/lib/maaroof/interview-engine.test.ts"
+      - ".github/workflows/interview-engine-validation.yml"
+  push:
+    branches:
+      - feat/maaroof-interview-foundation-no-cloudflare
+    paths:
+      - "src/lib/maaroof/interview-engine.ts"
+      - "src/lib/maaroof/interview-engine.test.ts"
+      - ".github/workflows/interview-engine-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-interview-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run interview engine unit tests
+        run: bun run test -- src/lib/maaroof/interview-engine.test.ts
+
+      - name: Lint interview engine
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts
+
+      - name: Type-check project
+        run: bunx tsc --noEmit
