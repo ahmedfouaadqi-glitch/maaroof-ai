@@ -75,10 +75,14 @@ export function BlurText({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setReduced(true);
-      setInView(true);
-    }
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const applyPreference = () => {
+      setReduced(media.matches);
+      if (media.matches) setInView(true);
+    };
+    applyPreference();
+    media.addEventListener("change", applyPreference);
+    return () => media.removeEventListener("change", applyPreference);
   }, []);
 
   useEffect(() => {
@@ -193,7 +197,7 @@ export function BlurText({
         };
         return (
           <MotionSpan
-            className={`inline-block will-change-[transform,filter,opacity] ${segmentClassName}`}
+            className={`inline-block ${segmentClassName}`}
             key={`${text}-${index}`}
             initial={initialSnapshot}
             animate={inView ? animateKeyframes : initialSnapshot}
