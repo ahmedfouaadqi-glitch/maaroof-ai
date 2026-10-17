@@ -62,7 +62,11 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
   if (!claimed) return;
 
   const payload = (job.request_payload || {}) as Record<string, any>;
+  const controller = new AbortController();
   const emit = async (eventType: string, eventData: any) => {
+    const { data: current } = await admin.from("maaroof_background_jobs").select("status")
+      .eq("id", jobId).eq("user_id", job.user_id).maybeSingle();
+    if (current?.status === "cancelled") controller.abort();
     await admin.from("maaroof_background_job_events").insert({
       job_id: jobId, user_id: job.user_id, event_type: eventType, payload: eventData || {},
     });
@@ -75,7 +79,6 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
   try {
     if (!job.auth_token_ciphertext) throw new Error("job_auth_token_missing");
     const authBearer = await decryptJobToken(job.auth_token_ciphertext, serviceKey);
-    const controller = new AbortController();
     await runMaaroof({
       userId: job.user_id,
       goal: job.goal,
