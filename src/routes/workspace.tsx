@@ -303,7 +303,7 @@ function WorkspacePage() {
             <h1 className="mt-1 font-display text-2xl font-bold md:text-3xl">{c.title}</h1>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{c.subtitle}</p>
           </div>
-          {policy.show_professional_link && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
+          {policy.show_professional_link && policy.available_interfaces.includes("professional") && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
         </header>
 
         {!finalEvent && events.length === 0 && (
