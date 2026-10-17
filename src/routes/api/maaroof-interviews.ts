@@ -382,7 +382,9 @@ async function handleUpdate(request: Request): Promise<Response> {
   let completedAt: string | null = interview.completed_at || null;
 
   if (body.action === "answer") {
-    if (interview.status === "abandoned") return errorResponse("resume_interview_first", 409);
+    if (interview.status !== "in_progress") {
+      return errorResponse("resume_interview_first", 409, { status: interview.status });
+    }
     if (!isPlainRecord(body.answer)) return errorResponse("invalid_answer", 400);
     const answer = body.answer;
     if (
