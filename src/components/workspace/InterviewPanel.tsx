@@ -453,7 +453,11 @@ export function InterviewPanel({
 
       if (!body.interview) throw new Error("interview_lookup_failed");
       setSession(body.interview);
-      setInterviewDepth(body.interview.context_snapshot?.interview_depth === "comprehensive" ? "comprehensive" : "focused");
+      setInterviewDepth(
+        body.interview.context_snapshot?.interview_depth === "comprehensive"
+          ? "comprehensive"
+          : "focused",
+      );
       setNextQuestion(body.next_question || null);
       setProgress(body.progress || null);
       setDataComplete(body.data_complete === true);
