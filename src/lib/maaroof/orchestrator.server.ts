@@ -423,9 +423,9 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const skillGuidance = MAAROOF_SKILLS
       .filter((skill) => skillKeys.has(skill.key))
       .map((skill) => `- ${skill.label.en}: ${skill.description.en}. Relevant capabilities: ${skill.capabilities.join(", ")}. Prefer its associated tools when they materially help the user's goal.`)
-      .join("\\n");
+      .join("\n");
     const skillBlock = skillGuidance
-      ? `\\n\\n[Selected skill guidance — planning preference, not permission bypass]\\n${skillGuidance}\\nOnly use available tools and obey all server-side access, pricing, safety and admin policies.`
+      ? `\n\n[Selected skill guidance — planning preference, not permission bypass]\n${skillGuidance}\nOnly use available tools and obey all server-side access, pricing, safety and admin policies.`
       : "";
 
     const systemPrompt = `${baseSystemPrompt}${learnedBlock}${skillBlock}` + (settings.system_prompt_extra ? `\n\n[Admin guidance]\n${settings.system_prompt_extra}` : "");
