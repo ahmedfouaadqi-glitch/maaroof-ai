@@ -236,7 +236,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
     // Clean: drop empty overrides, but KEEP entries that only disable the tool
     const clean: Record<string, any> = {};
     for (const [k, v] of Object.entries(overrides)) {
-      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0 || Number(v?.probe_tokens_per_engine) > 0 || Number(v?.max_engines) > 0 || v?.notify_allowed === false || v?.background_allowed === false;
+      const hasPrice = Number(v?.tokens_per_use) > 0 || Number(v?.usd_per_use) > 0 || Number(v?.daily) > 0 || Number(v?.monthly) > 0 || Number(v?.probe_tokens_per_engine) > 0 || (v?.max_engines != null && Number.isFinite(Number(v.max_engines)) && Number(v.max_engines) >= 0) || v?.notify_allowed === false || v?.background_allowed === false;
       const isDisabled = v?.enabled === false;
       if (hasPrice || isDisabled) clean[k] = v;
     }
