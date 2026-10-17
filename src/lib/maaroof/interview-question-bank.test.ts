@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  createInterviewState,
+  getNextInterviewQuestion,
   validateInterviewQuestionSet,
   type InterviewDomain,
   type InterviewTargetType,
@@ -45,6 +47,35 @@ describe("Maaroof interview question bank", () => {
     const agencyQuestions = buildInterviewQuestionSet("agency", ["general"]);
     expect(agencyQuestions.some((question) => question.id === "agency_services")).toBe(true);
     expect(agencyQuestions.some((question) => question.id === "company_offering")).toBe(false);
+  });
+
+  it("selects questions by entity nature and only exposes deeper optional questions when requested", () => {
+    const individualQuestions = buildInterviewQuestionSet("individual", ["general"]);
+    const companyQuestions = buildInterviewQuestionSet("company", ["general"]);
+    const creatorQuestions = buildInterviewQuestionSet("creator", ["general"]);
+    const agencyQuestions = buildInterviewQuestionSet("agency", ["general"]);
+
+    expect(individualQuestions.some((question) => question.id === "individual_context")).toBe(true);
+    expect(individualQuestions.some((question) => question.id === "company_offering")).toBe(false);
+    expect(companyQuestions.some((question) => question.id === "company_offering")).toBe(true);
+    expect(companyQuestions.some((question) => question.id === "creator_channels")).toBe(false);
+    expect(creatorQuestions.some((question) => question.id === "creator_channels")).toBe(true);
+    expect(agencyQuestions.some((question) => question.id === "agency_services")).toBe(true);
+
+    const state = createInterviewState({
+      targetType: "individual",
+      domains: ["general"],
+      locale: "ar",
+    });
+    const current = getNextInterviewQuestion(individualQuestions, state);
+    expect(current?.id).toBe("objective");
+    expect(current?.required).toBe(true);
+    expect(
+      getNextInterviewQuestion(individualQuestions, state, { includeOptional: true })?.id,
+    ).toBe("objective");
+    expect(
+      individualQuestions.some((question) => question.id === "success_measure" && !question.required),
+    ).toBe(true);
   });
 
   it("adds selected domain questions without losing general questions", () => {
