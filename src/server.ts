@@ -90,6 +90,10 @@ export default {
         await processMaaroofBackgroundJob(jobId);
         message.ack();
       } catch (error) {
+        if (String((error as any)?.message || error) === "job_not_ready_for_processing") {
+          message.retry({ delaySeconds: 10 });
+          continue;
+        }
         console.error("[maaroof-queue] job failed", error);
         message.retry();
       }
