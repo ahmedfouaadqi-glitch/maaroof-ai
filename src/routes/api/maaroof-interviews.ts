@@ -6,6 +6,7 @@ import {
   createInterviewState,
   getInterviewProgress,
   getNextInterviewQuestion,
+  isInterviewQuestionCursorConsistent,
   isInterviewDataComplete,
   recordInterviewResponse,
   validateInterviewQuestionSet,
@@ -174,7 +175,16 @@ async function handleGet(request: Request): Promise<Response> {
     if (!questionSet.ok || !isStoredInterviewState(interview.state)) {
       return errorResponse("stored_interview_invalid", 500);
     }
-    const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
+    if (
+      !isInterviewQuestionCursorConsistent(
+        questionSet.questions,
+        interview.state,
+        interview.current_question_id,
+        { includeOptional },
+      )
+    ) {
+      return errorResponse("stored_interview_cursor_mismatch", 500);
+    }
     return Response.json({
       interview,
       progress: getInterviewProgress(questionSet.questions, interview.state),
@@ -391,6 +401,18 @@ async function handleUpdate(request: Request): Promise<Response> {
     return errorResponse("stored_interview_context_mismatch", 500);
   }
 
+  const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
+  if (
+    !isInterviewQuestionCursorConsistent(
+      questionSet.questions,
+      state,
+      interview.current_question_id,
+      { includeOptional },
+    )
+  ) {
+    return errorResponse("stored_interview_cursor_mismatch", 500);
+  }
+
   const now = new Date().toISOString();
   let nextState = state;
   let nextStatus = String(interview.status);
@@ -455,7 +477,6 @@ async function handleUpdate(request: Request): Promise<Response> {
     return errorResponse("invalid_interview_action", 400);
   }
 
-  const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
   const currentQuestion = getNextInterviewQuestion(questionSet.questions, nextState, {
     includeOptional,
   });
