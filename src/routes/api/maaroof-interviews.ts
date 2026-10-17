@@ -178,7 +178,9 @@ async function handleGet(request: Request): Promise<Response> {
     return Response.json({
       interview,
       progress: getInterviewProgress(questionSet.questions, interview.state),
-      next_question: getNextInterviewQuestion(questionSet.questions, interview.state, { includeOptional }),
+      next_question: getNextInterviewQuestion(questionSet.questions, interview.state, {
+        includeOptional,
+      }),
       data_complete: isInterviewDataComplete(questionSet.questions, interview.state),
     });
   }
@@ -298,7 +300,9 @@ async function handleCreate(request: Request): Promise<Response> {
     state = initial.state;
   }
 
-  const currentQuestion = getNextInterviewQuestion(validation.questions, state, { includeOptional });
+  const currentQuestion = getNextInterviewQuestion(validation.questions, state, {
+    includeOptional,
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = auth.admin as any;
   const { data: interview, error } = await db
@@ -452,7 +456,9 @@ async function handleUpdate(request: Request): Promise<Response> {
   }
 
   const includeOptional = includeOptionalInterviewQuestions(interview.context_snapshot);
-  const currentQuestion = getNextInterviewQuestion(questionSet.questions, nextState, { includeOptional });
+  const currentQuestion = getNextInterviewQuestion(questionSet.questions, nextState, {
+    includeOptional,
+  });
   const expectedVersion = body.expected_version;
   const { data: updated, error: updateError } = await db
     .from("maaroof_interviews")
