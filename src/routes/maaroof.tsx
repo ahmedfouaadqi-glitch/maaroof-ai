@@ -60,6 +60,7 @@ function MaaroofPage() {
   const [goal, setGoal] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [running, setRunning] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [detected, setDetected] = useState<{ country?: string; city?: string } | null>(null);
   const [geoMode, setGeoMode] = useState<"auto" | "country" | "world">("auto");
   const [country, setCountry] = useState<string>("");
@@ -77,7 +78,7 @@ function MaaroofPage() {
   const [techOn, setTechOn] = useState(false);
   const [exportLang, setExportLang] = useState<string>("");
   const [toolPick, setToolPick] = useState<string[] | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const watcherRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -103,22 +104,76 @@ function MaaroofPage() {
 
   useEffect(() => {
     if (!user) return;
-    getCostPreview({ data: { toolKey: executionMode === "execution" ? "maaroof" : `maaroof.${executionMode}` } }).then(setCostRun).catch(() => {});
+    getCostPreview({ data: { toolKey: executionMode === "execution" ? "maaroof" : "maaroof." + executionMode } }).then(setCostRun).catch(() => {});
     getCostPreview({ data: { toolKey: "visibility.probe", units: 10 } }).then(setCostProbe).catch(() => {});
   }, [user?.id, executionMode]);
+
+  async function watchJob(id: string, after: number, token: string) {
+    watcherRef.current += 1;
+    const watcherId = watcherRef.current;
+    let cursor = after;
+    while (watcherRef.current === watcherId) {
+      const response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
+        headers: { Authorization: "Bearer " + token }, cache: "no-store",
+      });
+      if (!response.ok) throw new Error(String((await response.json().catch(() => ({})))?.error || "job_lookup_failed"));
+      const body = await response.json();
+      const incoming = Array.isArray(body?.events) ? body.events : [];
+      if (incoming.length) {
+        const mapped = incoming.map((item: any) => ({ type: String(item.event_type || "phase"), data: item.payload || {}, t: item.created_at ? new Date(item.created_at).getTime() : Date.now() }));
+        setEvents(current => [...current, ...mapped]);
+        cursor = Math.max(cursor, ...incoming.map((item: any) => Number(item.seq) || 0));
+        for (const event of mapped) if (event.type === "run" && event.data?.geo) setDetected({ country: event.data.geo.country, city: event.data.geo.city });
+      }
+      const status = String(body?.job?.status || "running");
+      if (status === "completed" || status === "failed" || status === "cancelled") {
+        if (status === "failed" || status === "cancelled") setEvents(current => current.some(event => event.type === "error") ? current : [...current, { type: "error", data: { message: status === "failed" ? body?.job?.error || "job_failed" : "cancelled" }, t: Date.now() }]);
+        setRunning(false);
+        setJobId(id);
+        return;
+      }
+      setRunning(true);
+      await new Promise(resolve => setTimeout(resolve, 1800));
+    }
+  }
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token || !active) return;
+      const response = await fetch("/api/maaroof-jobs", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+      if (!response.ok || !active) return;
+      const body = await response.json();
+      const jobs = Array.isArray(body?.jobs) ? body.jobs : [];
+      const now = Date.now();
+      const recent = jobs.find((job: any) => job.status === "queued" || job.status === "running")
+        || jobs.find((job: any) => now - new Date(job.created_at).getTime() < 24 * 60 * 60 * 1000);
+      if (!recent || !active) return;
+      setJobId(String(recent.id));
+      setGoal(String(recent.goal || ""));
+      setExecutionMode(["execution", "recommendation", "simulation"].includes(recent.mode) ? recent.mode : "execution");
+      const payload = recent.request_payload || {};
+      if (payload.detected_geo) setDetected({ country: payload.detected_geo.country, city: payload.detected_geo.city });
+      setRunning(recent.status === "queued" || recent.status === "running");
+      try { await watchJob(String(recent.id), 0, token); } catch (e: any) { if (active) { setRunning(false); setEvents(current => [...current, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]); } }
+    })().catch(() => {});
+    return () => { active = false; watcherRef.current += 1; };
+  }, [user?.id]);
 
   async function start(clarifications?: Record<string, string>, modeOverride?: "simulation" | "recommendation" | "execution") {
     if (!goal.trim() || running || !user) return;
     const mode = modeOverride || executionMode;
-    setRunning(true); setEvents([]);
+    setRunning(true); setEvents([]); setJobId(null);
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
     if (!token) { setRunning(false); return; }
-    const ctl = new AbortController(); abortRef.current = ctl;
     try {
       const resp = await fetch("/api/maaroof", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({
           goal: goal.trim(),
           lang,
@@ -129,48 +184,34 @@ function MaaroofPage() {
           clarifications,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
-        signal: ctl.signal,
       });
-      if (!resp.ok || !resp.body) {
-        const j: any = await resp.json().catch(() => ({}));
-        // Server returns a trilingual message object — show plain readable text,
-        // never the raw JSON envelope.
-        const readable =
-          (j?.message && (j.message[lang] || j.message.ar || j.message.en)) ||
-          j?.error ||
-          (lang === "en" ? "The request could not be completed." : lang === "ku" ? "داواکاری تەواو نەبوو." : "تعذّر تنفيذ الطلب.");
-        setEvents((e) => [...e, { type: "error", data: { message: readable, reason: j?.reason }, t: Date.now() }]);
-        setRunning(false); return;
+      const body = await resp.json().catch(() => ({}));
+      if (!resp.ok || !body?.job_id) {
+        const readable = body?.message?.[lang] || body?.message?.ar || body?.error || (lang === "en" ? "The request could not be completed." : lang === "ku" ? "داواکاری تەواو نەبوو." : "تعذّر تنفيذ الطلب.");
+        throw new Error(String(readable));
       }
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split("\n\n"); buf = parts.pop() || "";
-        for (const p of parts) {
-          const lines = p.split("\n");
-          let evt = "message"; let data = "";
-          for (const ln of lines) {
-            if (ln.startsWith("event: ")) evt = ln.slice(7).trim();
-            else if (ln.startsWith("data: ")) data += ln.slice(6);
-          }
-          if (!data) continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (evt === "run" && parsed?.geo) setDetected({ country: parsed.geo.country, city: parsed.geo.city });
-            setEvents((e) => [...e, { type: evt, data: parsed, t: Date.now() }]);
-          } catch {}
-        }
-      }
+      setJobId(String(body.job_id));
+      await watchJob(String(body.job_id), 0, token);
     } catch (e: any) {
-      if (e?.name !== "AbortError") setEvents((ev) => [...ev, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]);
-    } finally { setRunning(false); abortRef.current = null; }
+      setRunning(false);
+      setEvents(current => [...current, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]);
+    }
   }
 
-  function stop() { abortRef.current?.abort(); setRunning(false); }
+  async function stop() {
+    if (!jobId) { setRunning(false); return; }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("auth_required");
+      await fetch("/api/maaroof-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify({ job_id: jobId }),
+      });
+    } catch (e: any) {
+      setEvents(current => [...current, { type: "error", data: { message: String(e?.message || e) }, t: Date.now() }]);
+    }
+  }
 
   async function loadRun(runId: string) {
     if (running) return;
