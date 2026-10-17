@@ -332,7 +332,9 @@ function WorkspacePage() {
       const message = String(e?.message || c.failed);
       setError(message === "background_queue_not_configured"
         ? (locale === "en" ? "Background processing is not configured yet. Ask the administrator to provision the job queue." : locale === "ku" ? "سیستەمی کاری پشتەوە هێشتا ڕێکنەخراوە؛ پەیوەندی بە ئەدمینەوە بکە." : "لم يتم إعداد طابور المهام الخلفية بعد. يرجى إبلاغ الإدارة بإعداده.")
-        : message);
+        : message === "background_jobs_migration_required"
+          ? (locale === "en" ? "Background-job database migration is required before tasks can run." : locale === "ku" ? "پێویستە مایگرەیشنی بنکەدراوەی ئەرکەکان جێبەجێ بکرێت." : "يلزم تطبيق ترحيل قاعدة بيانات المهام الخلفية قبل التشغيل.")
+          : message);
     }
   }
 
