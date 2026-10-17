@@ -55,6 +55,28 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
   if (job?.status === "dispatching") throw new Error("job_not_ready_for_processing");
   if (!job || job.status !== "queued") return;
 
+  // A queue delivery can race with the request handler that charges and finalizes
+  // the job. Never execute a job whose billing/finalization confirmation is absent.
+  const payload = (job.request_payload || {}) as Record<string, any>;
+  if (payload.charge_confirmed !== true) {
+    const message = "job_charge_not_confirmed";
+    const now = new Date().toISOString();
+    await admin.from("maaroof_background_jobs").update({
+      status: "failed",
+      auth_token_ciphertext: null,
+      error: message,
+      finished_at: now,
+      updated_at: now,
+    }).eq("id", jobId).eq("user_id", job.user_id).eq("status", "queued");
+    await admin.from("maaroof_background_job_events").insert({
+      job_id: jobId,
+      user_id: job.user_id,
+      event_type: "error",
+      payload: { message },
+    });
+    return;
+  }
+
   const now = new Date().toISOString();
   const { data: claimed, error: claimError } = await admin.from("maaroof_background_jobs")
     .update({ status: "running", started_at: now, updated_at: now })
@@ -62,7 +84,6 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
   if (claimError) throw new Error("job_claim_failed");
   if (!claimed) return;
 
-  const payload = (job.request_payload || {}) as Record<string, any>;
   const controller = new AbortController();
   const emit = async (eventType: string, eventData: any) => {
     const { data: current } = await admin.from("maaroof_background_jobs").select("status")
