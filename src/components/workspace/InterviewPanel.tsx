@@ -97,8 +97,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     comprehensiveHint:
       "تضيف الأسئلة الاختيارية الملائمة للجهة والمجالات المختارة لبناء ملف سياق أغنى.",
     optionalRemaining: "سؤال اختياري متبقٍ",
-    targetName: "اسم الجهة أو العلامة أو المشروع",
-    targetNameHint: "مثال: شركة معروف أو عميل الوكالة",
+    targetName: "اسم الشخص أو الجهة أو العلامة أو المشروع",
+    targetNameHint: "مثال: أحمد معروف أو شركة معروف أو عميل الوكالة",
     workspace: "مساحة العمل (اختياري)",
     personalWorkspace: "مقابلة شخصية",
     domains: "مجالات العمل",
@@ -157,8 +157,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     comprehensiveHint:
       "Also asks applicable optional questions for a richer saved context profile.",
     optionalRemaining: "optional remaining",
-    targetName: "Entity, brand, or project name",
-    targetNameHint: "Example: Maaroof company or an agency client",
+    targetName: "Person, entity, brand, or project name",
+    targetNameHint: "Example: a person, Maaroof company, or an agency client",
     workspace: "Workspace (optional)",
     personalWorkspace: "Personal interview",
     domains: "Workstreams",
@@ -217,8 +217,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     comprehensiveHint:
       "هەروەها پرسیارە هەڵبژاردەییە گونجاوەکان دەپرسرێن بۆ دروستکردنی کۆنتێکستی زیاتر.",
     optionalRemaining: "پرسیاری هەڵبژاردەیی ماوە",
-    targetName: "ناوی لایەن یان پڕۆژە",
-    targetNameHint: "نموونە: کۆمپانیای معروف یان کڕیاری ئاژانس",
+    targetName: "ناوی کەس یان لایەن یان پڕۆژە",
+    targetNameHint: "نموونە: کەسێک، کۆمپانیای معروف یان کڕیاری ئاژانس",
     workspace: "شوێنی کار (ئارەزوومەندانە)",
     personalWorkspace: "چاوپێکەوتنی کەسی",
     domains: "بوارەکانی کار",
