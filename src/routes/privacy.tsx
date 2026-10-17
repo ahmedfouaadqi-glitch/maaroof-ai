@@ -74,34 +74,38 @@ const content = {
 <p class="text-sm text-muted-foreground">آخر مراجعة تحريرية: 17 أكتوبر 2026. هذه الصياغة لا تحل محل مراجعة قانونية متخصصة ولا تؤكد وحدها أن جميع الممارسات التقنية قد تم التحقق منها.</p>
 `,
   en: `
-<p><strong>MAAROOF Ai</strong> (part of the Marouf system) respects your privacy and is committed to protecting your data.</p>
+<p><strong>MAAROOF Ai</strong>, part of the Maaroof system, respects your privacy. This policy describes data that may be processed when you use the website, workspace, skills, tools and AI Agent. Editorial review date: 17 October 2026.</p>
 <h2>Data we collect</h2>
 <ul>
 <li>Account data: email, name.</li>
 <li>Content you submit to tools or the Agent (text, URLs, targets).</li>
 <li>Usage history for each tool and the Agent (daily/monthly run counts, type, timestamps).</li>
-<li>Technical device fingerprint (User-Agent, language, screen, timezone) to bind your account to a device and prevent abuse.</li>
+<li>Technical and security information, such as browser/device details, language, timezone and network information where available, to operate the service, diagnose issues and prevent abuse. These signals alone do not establish a person’s identity.</li>
+<li>Profile, organization or brand details, keywords and preferences you choose to save.</li>
+<li>Balance, plan, quota and charging records needed to operate your account and account for usage.</li>
 </ul>
 <h2>How we use your data</h2>
 <ul>
 <li>Run tools and the Smart Agent according to targets you define.</li>
 <li>Count usage against your plan and display it transparently.</li>
-<li>Improve scoring accuracy in aggregate, anonymized form.</li>
+<li>Improve service quality and analyze performance. This does not mean every record is automatically anonymized.</li>
 <li>Manage your subscription, quotas, and tool-to-plan access.</li>
 </ul>
 <h2>Smart Agent</h2>
-<p>When the Agent runs (manually or scheduled) we log: the command/target, timestamp, execution result, and units consumed. The Agent has no access to data or accounts beyond what you explicitly grant.</p>
+<p>When the Agent or a skill runs, its goal, instructions, inputs, outputs, execution records and usage cost may be processed. After you save your profile, the system may use available account and profile context to personalize the service, subject to account permissions and enabled features. Do not submit passwords, secret keys or unnecessary personal data.</p>
 <h2>Data sharing</h2>
-<p>We do not sell your data. We use trusted service providers (hosting, AI, web search) under confidentiality agreements to power tools and the Agent.</p>
+<p>We do not sell your data. Inputs needed for a task may be sent to infrastructure, AI, search or external tool providers used by the feature you request or that execution requires. Those providers may process data under their own terms and policies. We cannot guarantee that every external provider handles data identically; avoid submitting highly sensitive data unless necessary and authorized.</p>
 <h2>Caching</h2>
-<p>We may store a hash of analyzed text to accelerate repeat analyses and reduce cost, without linking it to personal identifiers.</p>
+<p>The platform may use caching and execution logs to reduce latency and cost, depending on the feature. Converting text to a hash alone does not guarantee that all data is anonymous or impossible to associate with other context.</p>
 <h2>Progressive Web App (PWA)</h2>
 <p>Installing the platform as an app collects no additional data — it only uses the standard <code>manifest.webmanifest</code>.</p>
 <h2>Your rights</h2>
-<p>You can request deletion of your account, data and usage history at any time via WhatsApp: <strong>+9647733570130</strong>.</p>
+<p>You may request access, correction or deletion of your account and data through the channels on our <a href="/contact">Contact page</a>. Some records may be retained as needed for security, accounting or legal obligations where applicable. This policy does not promise immediate removal from backups or external providers’ records.</p>
 <h2>Cookies</h2>
-<p>We use local storage only for session and language preference.</p>
-<p class="text-sm text-muted-foreground">Last updated: 2026</p>
+<p>The platform uses local storage or cookies for session management and interface preferences, and may use caching or other technical storage depending on enabled features. Browser controls can manage storage, although disabling necessary storage may affect service functionality.</p>
+<h2>Policy updates and contact</h2>
+<p>This policy may change as features, service providers or operational requirements change. The revised version will be published on this page with an updated review date. For privacy questions or data requests, use the channels listed on the Contact page.</p>
+<p class="text-sm text-muted-foreground">Editorial review: 17 October 2026. This wording does not replace specialist legal review or independently verify every technical practice.</p>
 `,
   ku: `
 <p>پلاتفۆڕمی <strong>MAAROOF Ai</strong> (بەشێک لە سیستەمی مەعروف) ڕێز لە نهێنیپارێزیت دەگرێت.</p>
