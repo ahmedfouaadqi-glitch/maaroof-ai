@@ -8,6 +8,7 @@ import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
 import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
+import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { loadCapabilityScores, buildCapabilityGraph, chooseImplementation, buildEvidenceGraph } from "./capability.server";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
@@ -135,6 +136,8 @@ export type RunContext = {
   liveProbe?: boolean;
   /** User-selected AI engines for the visibility probe; the endpoint enforces plan and budget limits. */
   selectedProbeEngines?: string[];
+  /** Server-validated skill keys that guide planning; not tool authorization. */
+  selectedSkills?: string[];
   /** Answers to earlier clarify questions, e.g. { brand: "X" }. */
   clarifications?: Record<string, string>;
 };
@@ -416,7 +419,16 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
 
 
-    const systemPrompt = `${baseSystemPrompt}${learnedBlock}` + (settings.system_prompt_extra ? `\n\n[Admin guidance]\n${settings.system_prompt_extra}` : "");
+    const skillKeys = new Set((ctx.selectedSkills || []).filter((key) => MAAROOF_SKILLS.some((skill) => skill.key === key)));
+    const skillGuidance = MAAROOF_SKILLS
+      .filter((skill) => skillKeys.has(skill.key))
+      .map((skill) => `- ${skill.label.en}: ${skill.description.en}. Relevant capabilities: ${skill.capabilities.join(", ")}. Prefer its associated tools when they materially help the user's goal.`)
+      .join("\\n");
+    const skillBlock = skillGuidance
+      ? `\\n\\n[Selected skill guidance — planning preference, not permission bypass]\\n${skillGuidance}\\nOnly use available tools and obey all server-side access, pricing, safety and admin policies.`
+      : "";
+
+    const systemPrompt = `${baseSystemPrompt}${learnedBlock}${skillBlock}` + (settings.system_prompt_extra ? `\n\n[Admin guidance]\n${settings.system_prompt_extra}` : "");
 
 
     // 2.5) ENVISION — Future-Driven step (Part 2). Derive a future_goal and
