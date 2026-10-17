@@ -11,6 +11,7 @@ on:
       - "src/components/workspace/InterviewPanel.tsx"
       - "src/routes/workspace.tsx"
       - "src/routes/api/maaroof-interviews.ts"
+      - "src/routes/api/maaroof-interviews.test.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
       - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
@@ -26,6 +27,7 @@ on:
       - "src/components/workspace/InterviewPanel.tsx"
       - "src/routes/workspace.tsx"
       - "src/routes/api/maaroof-interviews.ts"
+      - "src/routes/api/maaroof-interviews.test.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
       - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
@@ -48,11 +50,11 @@ jobs:
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run interview engine unit tests
-        run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.test.ts
+      - name: Run interview and API tests
+        run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.test.ts
 
       - name: Lint interview engine
-        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/components/workspace/InterviewPanel.tsx
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/components/workspace/InterviewPanel.tsx
 
       - name: Type-check project
         run: bunx tsc --noEmit
