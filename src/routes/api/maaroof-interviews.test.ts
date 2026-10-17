@@ -106,6 +106,8 @@ beforeEach(() => {
       select: (...args: unknown[]) => Query;
       eq: (column: string, value: unknown) => Query;
       maybeSingle: () => Promise<{ data: unknown; error: null }>;
+      single: () => Promise<{ data: unknown; error: null }>;
+      insert: (payload: Record<string, unknown>) => Query;
       update: (payload: Record<string, unknown>) => Query;
       in: (...args: unknown[]) => Query;
       is: (...args: unknown[]) => Query;
@@ -114,8 +116,18 @@ beforeEach(() => {
     };
     const query = {} as Query;
     const eqFilters: Record<string, unknown> = {};
+    let insertPayload: Record<string, unknown> | null = null;
     let updatePayload: Record<string, unknown> | null = null;
     query.select = vi.fn(() => query);
+    query.insert = vi.fn((payload: Record<string, unknown>) => {
+      insertPayload = payload;
+      return query;
+    });
+    query.single = vi.fn(async () => {
+      const inserted = { id: INTERVIEW_ID, ...(insertPayload || {}) };
+      mockStoredInterview.value = inserted;
+      return { data: inserted, error: null };
+    });
     query.eq = vi.fn((column: string, value: unknown) => {
       eqFilters[column] = value;
       return query;
@@ -460,6 +472,97 @@ describe("Maaroof interviews stored-data integrity", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "stored_interview_context_mismatch" });
+  });
+});
+
+describe("Maaroof interviews lifecycle", () => {
+  it("creates a valid interview with a saved context snapshot", async () => {
+    const response = await handlers.POST({
+      request: makeRequest("POST", "Bearer valid-token", {
+        target_type: "company",
+        target_name: "Example Company",
+        domains: ["general", "seo"],
+        locale: "ar",
+        interview_depth: "comprehensive",
+        goal: "Improve qualified organic traffic",
+      }),
+    });
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body.interview.user_id).toBe(USER_ID);
+    expect(body.interview.target_name).toBe("Example Company");
+    expect(body.interview.context_snapshot).toMatchObject({
+      target_type: "company",
+      target_name: "Example Company",
+      domains: ["general", "seo"],
+      locale: "ar",
+      interview_depth: "comprehensive",
+    });
+    expect(body.interview.state.answers.objective).toMatchObject({
+      status: "answered",
+      source: "user",
+      value: "Improve qualified organic traffic",
+    });
+    expect(body.next_question).not.toBeNull();
+  });
+
+  it("does not create a workspace interview for a viewer", async () => {
+    mockWorkspace.value = { id: WORKSPACE_ID, owner_id: OTHER_USER_ID };
+    mockWorkspaceMember.value = { role: "viewer" };
+
+    const response = await handlers.POST({
+      request: makeRequest("POST", "Bearer valid-token", {
+        target_type: "company",
+        target_name: "Example Company",
+        workspace_id: WORKSPACE_ID,
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "workspace_access_denied" });
+    expect(mockFrom).not.toHaveBeenCalledWith("maaroof_interviews");
+  });
+
+  it("requires a paused interview to be resumed before answering", async () => {
+    mockStoredInterview.value = { ...makeStoredInterview(), status: "paused" };
+
+    const response = await handlers.PATCH({
+      request: makeRequest("PATCH", "Bearer valid-token", {
+        id: INTERVIEW_ID,
+        expected_version: 1,
+        action: "answer",
+        answer: {
+          questionId: "objective",
+          status: "answered",
+          value: "Continue",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "resume_interview_first",
+      status: "paused",
+    });
+  });
+
+  it("does not complete an interview with required questions still unanswered", async () => {
+    mockStoredInterview.value = makeStoredInterview();
+
+    const response = await handlers.PATCH({
+      request: makeRequest("PATCH", "Bearer valid-token", {
+        id: INTERVIEW_ID,
+        expected_version: 1,
+        action: "status",
+        status: "completed",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error).toBe("interview_questions_unhandled");
+    expect(body.progress).toBeDefined();
   });
 });
 
