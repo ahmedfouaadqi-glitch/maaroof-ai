@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills } from "./skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, defaultSkillAccessPolicy, getSkillAccessMode } from "./skill-catalog";
 
 describe("MAAROOF user-facing skill catalog", () => {
   it("maps each skill to existing tool keys", () => {
@@ -46,5 +46,17 @@ describe("MAAROOF user-facing skill catalog", () => {
 
   it("returns no tools for an unknown skill key", () => {
     expect(toolsForSkills(["not-a-skill"])).toEqual([]);
+  });
+  it("defaults explicitly designated premium skills to contact and ordinary skills to self-service", () => {
+    const policy = defaultSkillAccessPolicy();
+    expect(getSkillAccessMode(MAAROOF_SKILLS.find(skill => skill.key === "brand-visibility")!, policy)).toBe("contact");
+    expect(getSkillAccessMode(MAAROOF_SKILLS.find(skill => skill.key === "deep-research")!, policy)).toBe("self_service");
+  });
+
+  it("allows admin policy to change a skill between self-service, contact, and disabled", () => {
+    const skill = MAAROOF_SKILLS.find(item => item.key === "deep-research")!;
+    expect(getSkillAccessMode(skill, { "deep-research": "contact" })).toBe("contact");
+    expect(getSkillAccessMode(skill, { "deep-research": "disabled" })).toBe("disabled");
+    expect(getSkillAccessMode(skill, { "deep-research": "self_service" })).toBe("self_service");
   });
 });
