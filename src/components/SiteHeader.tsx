@@ -13,6 +13,7 @@ import { Widget } from "@/lib/visibility";
 import { useHeaderConfig, type ExtraLink, type ExtraPhone } from "@/lib/content";
 
 import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
+import { supabase } from "@/integrations/supabase/client";
 
 function linkLabel(l: ExtraLink, lang: Lang): string {
   return (l as any)[`label_${lang}`] || l.label_en || l.label_ar || l.label_ku || l.href;
@@ -25,8 +26,19 @@ export function SiteHeader() {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const [sound, setSound] = useState(true);
+  const [workbenchPath, setWorkbenchPath] = useState<"/workbench" | "/maaroof">("/workbench");
   const hdr = useHeaderConfig();
   useEffect(() => { setSound(isSoundEnabled()); }, []);
+  useEffect(() => {
+    let active = true;
+    supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(({ data }) => {
+      if (!active) return;
+      const policy = data?.value as any;
+      if (policy && (policy.enabled === false || policy.default_ui === "professional")) setWorkbenchPath("/maaroof");
+      else setWorkbenchPath("/workbench");
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch { /* not in provider */ }
 
@@ -59,7 +71,7 @@ export function SiteHeader() {
           
           {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
           {auth?.user && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
-          {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/workbench" className="font-semibold text-primary hover:text-foreground">{lang === "en" ? "Workbench" : lang === "ku" ? "شوێنی کار" : "مساحة العمل"}</Link>}
+          {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to={workbenchPath} className="font-semibold text-primary hover:text-foreground">{lang === "en" ? "Workbench" : lang === "ku" ? "شوێنی کار" : "مساحة العمل"}</Link>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
           <Link to="/markets" className="hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
@@ -121,7 +133,7 @@ export function SiteHeader() {
             
             {hdr.show_pricing && <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>}
             {auth?.user && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
-            {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/workbench" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{lang === "en" ? "Workbench" : lang === "ku" ? "شوێنی کار" : "مساحة العمل"}</Link>}
+            {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to={workbenchPath} onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{lang === "en" ? "Workbench" : lang === "ku" ? "شوێنی کار" : "مساحة العمل"}</Link>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
             <Link to="/markets" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
