@@ -2,10 +2,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
-import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
-import { runAfterResponseTask } from "@/lib/request-ctx.server";
+import { enqueueMaaroofJob, hasMaaroofQueue } from "@/lib/request-ctx.server";
+import { encryptJobToken } from "@/lib/maaroof/background-jobs.server";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -46,6 +46,9 @@ export const Route = createFileRoute("/api/maaroof")({
         const planKey = activeSubscription ? normalizePlanAccessKey((userProfile as any)?.subscription_tier) : "";
         const availableInterfaces: string[] = Array.isArray(uiPolicy?.available_interfaces) ? uiPolicy.available_interfaces : uiPolicy?.enabled === false ? ["professional"] : ["workbench", "professional"];
         const requestedInterfaceKey = interfaceMode === "workspace" ? "workbench" : "professional";
+        if (interfaceMode === "workspace" && !hasMaaroofQueue()) {
+          return Response.json({ error: "background_queue_not_configured" }, { status: 503 });
+        }
         if (executionMode && Array.isArray(uiPolicy?.allowed_modes) && !uiPolicy.allowed_modes.includes(executionMode)) {
           return Response.json({ error: "execution_mode_disabled" }, { status: 403 });
         }
@@ -113,99 +116,74 @@ export const Route = createFileRoute("/api/maaroof")({
           }
         }
 
-        const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
-          user_id: userId,
-          workspace_id: verifiedWorkspaceId,
-          goal,
-          language: lang,
-          mode: executionMode || "execution",
-          status: "queued",
-          request_payload: {
-            geo_scope: geoScope || null,
-            selected_skills: interfaceMode === "workspace" ? effectiveSkillKeys : null,
-            live_probe: liveProbe !== false,
-            use_subagents: useSubagents !== false,
-            clarifications,
-            interface_mode: interfaceMode,
-          },
-        }).select("id").single();
-        if (jobError || !job?.id) {
-          return Response.json({ error: "job_persist_failed" }, { status: 500 });
-        }
-        const jobId = String(job.id);
-        await admin.from("maaroof_background_job_events").insert({
-          job_id: jobId, user_id: userId, event_type: "queued",
-          payload: { goal, status: "queued" },
-        });
-
-        const scheduled = runAfterResponseTask(async () => {
-          const { error: startError } = await admin.from("maaroof_background_jobs")
-            .update({ status: "running", started_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-            .eq("id", jobId).eq("user_id", userId).eq("status", "queued");
-          if (startError) {
-            await admin.from("maaroof_background_jobs").update({
-              status: "failed", error: "job_start_failed", finished_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }).eq("id", jobId).eq("user_id", userId);
-            return;
-          }
-          const controller = new AbortController();
-          let terminalEvent: { type: string; data: any } | null = null;
-          const emit = async (event: string, data: any) => {
-            try {
-              const { data: current } = await admin.from("maaroof_background_jobs")
-                .select("status").eq("id", jobId).eq("user_id", userId).maybeSingle();
-              if (current?.status === "cancelled") controller.abort();
-              await admin.from("maaroof_background_job_events").insert({
-                job_id: jobId, user_id: userId, event_type: event, payload: data || {},
-              });
-              const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-              if (event === "phase") patch.current_stage = String(data?.phase || "").slice(0, 100);
-              if (event === "final" || event === "done") terminalEvent = { type: event, data };
-              await admin.from("maaroof_background_jobs").update(patch)
-                .eq("id", jobId).eq("user_id", userId).eq("status", "running");
-            } catch (eventError) {
-              console.error("[maaroof-background-job] event persistence failed", jobId, eventError);
-            }
-          };
+        if (interfaceMode === "workspace") {
+          const authTokenCiphertext = await encryptJobToken(auth, srKey);
+          const { data: job, error: jobError } = await admin.from("maaroof_background_jobs").insert({
+            user_id: userId,
+            workspace_id: verifiedWorkspaceId,
+            goal,
+            language: lang,
+            mode: executionMode || "execution",
+            status: "queued",
+            auth_token_ciphertext: authTokenCiphertext,
+            request_payload: {
+              geo_scope: geoScope || null,
+              detected_geo: detectedGeo || null,
+              origin,
+              selected_skills: effectiveSkillKeys,
+              live_probe: liveProbe !== false,
+              use_subagents: useSubagents !== false,
+              clarifications,
+              interface_mode: interfaceMode,
+            },
+          }).select("id").single();
+          if (jobError || !job?.id) return Response.json({ error: "job_persist_failed" }, { status: 500 });
+          const jobId = String(job.id);
+          await admin.from("maaroof_background_job_events").insert({
+            job_id: jobId, user_id: userId, event_type: "queued", payload: { goal, status: "queued" },
+          });
           try {
-            await runMaaroof({
-              userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-              authBearer: auth, origin, emit, signal: controller.signal, executionMode, useSubagents, liveProbe,
-              clarifications, selectedSkills: interfaceMode === "workspace" ? effectiveSkillKeys : undefined,
-            });
-            const { data: latest } = await admin.from("maaroof_background_jobs").select("status")
-              .eq("id", jobId).eq("user_id", userId).maybeSingle();
-            if (latest?.status === "cancelled") return;
+            const enqueued = await enqueueMaaroofJob(jobId);
+            if (!enqueued) throw new Error("background_queue_not_configured");
+          } catch (error) {
+            const message = String((error as any)?.message || "background_enqueue_failed");
             await admin.from("maaroof_background_jobs").update({
-              status: "completed", result: terminalEvent ? { type: terminalEvent.type, data: terminalEvent.data } : null,
-              finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-            }).eq("id", jobId).eq("user_id", userId).eq("status", "running");
-          } catch (e: any) {
-            const message = String(e?.message || e || "job_failed").slice(0, 500);
+              status: "failed", error: message, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            }).eq("id", jobId).eq("user_id", userId);
             await admin.from("maaroof_background_job_events").insert({
               job_id: jobId, user_id: userId, event_type: "error", payload: { message },
             });
-            await admin.from("maaroof_background_jobs").update({
-              status: "failed", error: message, finished_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }).eq("id", jobId).eq("user_id", userId).eq("status", "running");
+            return Response.json({ error: "background_enqueue_failed", job_id: jobId }, { status: 503 });
           }
-        });
-
-        if (!scheduled) {
-          await admin.from("maaroof_background_jobs").update({
-            status: "failed", error: "background_execution_unavailable",
-            finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-          }).eq("id", jobId).eq("user_id", userId);
-          await admin.from("maaroof_background_job_events").insert({
-            job_id: jobId, user_id: userId, event_type: "error",
-            payload: { message: "Background execution is unavailable in this runtime." },
-          });
-          return Response.json({ error: "background_execution_unavailable", job_id: jobId }, { status: 503 });
+          return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
         }
 
-        return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
+        // Preserve the existing professional interface's live SSE contract.
+        const encoder = new TextEncoder();
+        const abortCtl = new AbortController();
+        request.signal.addEventListener("abort", () => abortCtl.abort());
+        const stream = new ReadableStream({
+          async start(controller) {
+            const emit = async (event: string, data: any) => {
+              try { controller.enqueue(encoder.encode("event: " + event + "\ndata: " + JSON.stringify(data) + "\n\n")); } catch {}
+            };
+            try {
+              await runMaaroof({
+                userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
+                authBearer: auth, origin, emit, signal: abortCtl.signal, executionMode, useSubagents, liveProbe,
+                clarifications, selectedSkills: undefined,
+              });
+            } catch (e: any) {
+              await emit("error", { message: String(e?.message || e) });
+            } finally {
+              try { controller.close(); } catch {}
+            }
+          },
+          cancel() { abortCtl.abort(); },
+        });
+        return new Response(stream, {
+          headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
+        });
 
       },
     },
