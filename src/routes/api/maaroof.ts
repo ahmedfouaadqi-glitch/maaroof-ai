@@ -41,6 +41,9 @@ export const Route = createFileRoute("/api/maaroof")({
           if (uiPolicy?.enabled === false) {
             return Response.json({ error: "workspace_disabled", message: { ar: "مساحة العمل الجديدة غير متاحة حالياً.", en: "The new workspace is currently unavailable.", ku: "شوێنی کاری نوێ بۆ ئێستا بەردەست نییە." } }, { status: 403 });
           }
+          if (uiPolicy?.show_live_engine_picker === false && body?.live_probe !== false) {
+            return Response.json({ error: "live_probe_disabled", message: { ar: "الفحص المباشر غير متاح في مساحة العمل حالياً.", en: "Live engine checks are disabled in the workspace.", ku: "پشکنینی ڕاستەوخۆ لە شوێنی کار ناچالاکە." } }, { status: 403 });
+          }
           const allowedModes = Array.isArray(uiPolicy?.allowed_modes) ? uiPolicy.allowed_modes : ["execution", "recommendation", "simulation"];
           if (!allowedModes.includes(executionMode || "execution")) {
             return Response.json({ error: "work_mode_disabled", message: { ar: "وضع العمل هذا غير متاح لحسابك حالياً.", en: "This work mode is currently unavailable.", ku: "ئەم شێوازی کارە بۆ ئێستا بەردەست نییە." } }, { status: 403 });
