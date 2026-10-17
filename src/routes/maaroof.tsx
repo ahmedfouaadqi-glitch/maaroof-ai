@@ -75,6 +75,7 @@ function MaaroofPage() {
   const [engineCountdown, setEngineCountdown] = useState(15);
   const [selectedEngines, setSelectedEngines] = useState<string[]>([...ENGINE_KEYS]);
   const engineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const engineCountdownRef = useRef(15);
   const [costRun, setCostRun] = useState<CostPreview | null>(null);
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -184,20 +185,19 @@ function MaaroofPage() {
     if (!liveProbe) { void start(); return; }
     if (engineTimerRef.current) clearInterval(engineTimerRef.current);
     setSelectedEngines([...ENGINE_KEYS]);
+    engineCountdownRef.current = 15;
     setEngineCountdown(15);
     setEnginePickerOpen(true);
     engineTimerRef.current = setInterval(() => {
-      setEngineCountdown((remaining) => {
-        if (remaining <= 1) {
-          if (engineTimerRef.current) clearInterval(engineTimerRef.current);
-          engineTimerRef.current = null;
-          setEnginePickerOpen(false);
-          // The server chooses the largest affordable set from actual balance and admin policy.
-          void start(undefined, undefined, undefined, true);
-          return 0;
-        }
-        return remaining - 1;
-      });
+      engineCountdownRef.current -= 1;
+      setEngineCountdown(Math.max(0, engineCountdownRef.current));
+      if (engineCountdownRef.current <= 0) {
+        if (engineTimerRef.current) clearInterval(engineTimerRef.current);
+        engineTimerRef.current = null;
+        setEnginePickerOpen(false);
+        // The server chooses the largest affordable set from actual balance and admin policy.
+        void start(undefined, undefined, undefined, true);
+      }
     }, 1000);
   }
 
@@ -437,7 +437,7 @@ function MaaroofPage() {
                     <h3 className="font-semibold">{lang === "en" ? "Choose AI engines" : lang === "ku" ? "مۆدێلەکانی AI هەڵبژێرە" : "اختر محركات الذكاء الاصطناعي"}</h3>
                     <span className="text-sm tabular-nums">{lang === "en" ? "Auto-select in" : "الاختيار التلقائي خلال"} {engineCountdown}s</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{lang === "en" ? "Select the engines you want. If time runs out, Maaroof will automatically choose a count based on the estimated remaining balance; server-side plan and balance checks still apply." : lang === "ku" ? "مۆدێلەکان هەڵبژێرە؛ کات تەواو بوو، ژمارەکە بە پێی باڵانسی خەمڵێنراو دیاری دەکرێت." : "حدد المحركات المطلوبة. عند انتهاء الوقت، يختار معروف تلقائياً عدداً وفق الرصيد المتبقي التقديري، مع بقاء فحص الخطة والرصيد الفعلي على الخادم."}</p>
+                  <p className="text-xs text-muted-foreground">{lang === "en" ? "Select the engines you want. If time runs out, the server automatically selects the largest number permitted by your plan, your individual admin limit, and your actual available balance." : lang === "ku" ? "مۆدێلەکان هەڵبژێرە؛ کات تەواو بوو، ژمارەکە بە پێی باڵانسی خەمڵێنراو دیاری دەکرێت." : "حدد المحركات المطلوبة. عند انتهاء الوقت، يختار الخادم أكبر عدد تسمح به خطتك والحد الخاص بحسابك والرصيد الفعلي المتاح."}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ENGINE_KEYS.map((engine) => (
                       <label key={engine} className="flex items-center gap-2 rounded border p-2 text-sm">
