@@ -58,11 +58,7 @@ const content = {
 </ul>
 <h2>3. الأدوات والوكيل الذكي والاستهلاك</h2>
 <p>قد يستهلك تشغيل المهارات والأدوات والوكيل وحدات من رصيد الحساب وفق السعر والحدود المعروضة أو المحددة لحسابك. قد تختلف الكلفة بحسب الأداة وعدد العمليات والنماذج والفحص المباشر وسياسة الخطة. التقدير السابق للتشغيل إرشادي وليس بالضرورة التكلفة النهائية الشاملة.</p>
-<ul>
-<li>تحليل GEO، مولّد المنشورات، مقارنة المنافسين، إيميل شركات، أمر مباشر للوكيل، فحص الظهور في AI — <strong>1×</strong> لكل تشغيل.</li>
-<li>دراسة جدوى، تطوير الأعمال، بحث ذكي، تشغيل الأهداف تلقائياً — <strong>2×</strong> لكل تشغيل.</li>
-<li>تعزيز العلامة — <strong>3×</strong> لكل تشغيل.</li>
-</ul>
+<p>لا تعتمد على جدول ثابت عام للاستهلاك؛ راجع السعر والحدود المعروضة داخل حسابك قبل التنفيذ. قد تختلف آلية الاحتساب عند استخدام مهارات متعددة أو فحص مباشر أو مزود خارجي.</p>
 <p>تُعرض تقديرات الاستهلاك والحدود المتاحة في الواجهة حيثما تدعمها الميزة، وتظل عملية التحقق والتحصيل على الخادم هي المرجع عند التنفيذ. لا تضمن المنصة أن كل تقدير مسبق يتنبأ بكل استدعاء داخلي أو تكلفة مزود خارجي.</p>
 <h2>4. الذكاء الاصطناعي والوكيل</h2>
 <p>الأدوات والمهارات والنماذج أنظمة آلية وقد تنتج معلومات ناقصة أو غير دقيقة أو قديمة. النتائج مساعدة وليست ضماناً تجارياً أو مالياً أو قانونياً أو طبياً أو مهنياً. تحقّق من المعلومات المهمة من مصادر مناسبة قبل الاعتماد عليها. أي نشر أو إرسال أو إجراء خارجي يجب أن يخضع للصلاحيات والتأكيدات المتاحة في الميزة؛ وأنت مسؤول عن مراجعة المدخلات والنتائج والإجراءات التي تعتمدها.</p>
@@ -99,11 +95,7 @@ const content = {
 </ul>
 <h2>3. Tools, Smart Agent & Usage</h2>
 <p>Runs of skills, tools and the Agent may consume units according to the price and limits shown or configured for your account. Cost may vary by tool, number of operations, models, live checks and plan policy. A pre-run estimate is indicative and may not represent the final all-inclusive cost.</p>
-<ul>
-<li>GEO Analysis, Post Generator, Competitor Compare, Company Outreach, Agent Command, AI Visibility — <strong>1×</strong> per run.</li>
-<li>Feasibility Study, BizDev, Smart Research, Run Targets — <strong>2×</strong> per run.</li>
-<li>Brand Boost — <strong>3×</strong> per run.</li>
-</ul>
+<p>Do not rely on a universal fixed usage table; review the price and limits shown in your account before execution. Charging may differ when multiple skills, live checks or external providers are involved.</p>
 <p>Usage estimates and remaining limits are shown where the interface supports them. Server-side validation and charging remain authoritative at execution. A pre-run estimate cannot necessarily predict every internal tool call or external provider cost.</p>
 <h2>4. AI & Agent</h2>
 <p>Tools, skills and models are automated systems and may produce incomplete, inaccurate or outdated information. Outputs are advisory and are not commercial, financial, legal, medical or professional guarantees. Verify important information using appropriate sources. External publishing, sending or other actions must follow the permissions and confirmations available in the feature; you are responsible for reviewing inputs, outputs and actions you approve.</p>
@@ -138,11 +130,7 @@ const content = {
 </ul>
 <h2>3. ئامرازەکان، وەکیلی زیرەک و بەکارهێنان</h2>
 <p>جێبەجێکردنی شارەزایی، ئامراز یان وەکیل لەوانەیە یەکە لە باڵانسی هەژمارەکەت بەکاربهێنێت، بە پێی نرخ و سنووری دیاریکراو بۆ هەژمارەکەت. تێچوو بە پێی ئامراز، ژمارەی کردار، مۆدێل، پشکنینی ڕاستەوخۆ و پلانی بەکارهێنان دەگۆڕێت. خەملاندنی پێش جێبەجێکردن ڕێنماییە و هەمیشە تێچووی کۆتایی ناگرێتەوە.</p>
-<ul>
-<li>شیکاری GEO، دروستکەری پۆست، بەراوردکردنی ڕکابەران، ئیمەیڵی کۆمپانیا، فەرمانی وەکیل، پشکنینی دەرکەوتن — <strong>1×</strong>.</li>
-<li>لێکۆڵینەوەی شیاو، گەشەپێدانی کار، گەڕانی زیرەک، جێبەجێکردنی ئامانجەکان — <strong>2×</strong>.</li>
-<li>بەهێزکردنی براند — <strong>3×</strong>.</li>
-</ul>
+<p>پشت بە خشتەیەکی گشتی و جێگیر مەبەستە؛ پێش جێبەجێکردن نرخ و سنووری پیشاندراو لە هەژمارەکەت بپشکنە. پارەدان لە کاتی بەکارهێنانی چەند شارەزایی، پشکنینی ڕاستەوخۆ یان دابینکەری دەرەکی دەکرێت جیاواز بێت.</p>
 <p>خەملاندنی بەکارهێنان و سنوورە ماوەکان لەو شوێنانەدا پیشان دەدرێن کە پشتیوانییان دەکرێت. پشکنین و پارەدان لە کاتی جێبەجێکردندا لەلایەن سێرڤەری پلاتفۆڕمەوە پشتڕاست دەکرێنەوە. خەملاندنی پێشەکی لەوانەیە هەموو بانگکردنە ناوخۆییەکان یان تێچووی دابینکەرانی دەرەکی پێشبینی نەکات.</p>
 <h2>4. AI و وەکیل</h2>
 <p>ئامراز، شارەزایی و مۆدێل سیستەمی ئۆتۆماتیکن و لەوانەیە زانیاری ناتەواو، هەڵە یان کۆن بەرهەمبهێنن. ئەنجامەکان ڕاسپاردەن و بەڵێنی بازرگانی، دارایی، یاسایی، پزیشکی یان پیشەیی نین. پێش بڕیاری گرنگ، زانیارییەکان لە سەرچاوەی گونجاو پشتڕاست بکەرەوە. هەر بڵاوکردنەوە، ناردن یان کردارێکی دەرەکی دەبێت پابەندی دەسەڵات و پشتڕاستکردنەوەی پێویست بێت؛ تۆ بەرپرسیاریت لە پێداچوونەوە بە داتا و ئەنجام و کردارە پەسەندکراوەکان.</p>
