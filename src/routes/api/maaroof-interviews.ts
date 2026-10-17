@@ -55,7 +55,10 @@ function isInterviewValue(value: unknown): value is InterviewValue {
   );
 }
 
-function isStoredInterviewState(value: unknown): value is InterviewState {
+function isStoredInterviewState(
+  value: unknown,
+  validQuestionIds: ReadonlySet<string>,
+): value is InterviewState {
   if (!isPlainRecord(value) || !isPlainRecord(value.context) || !isPlainRecord(value.answers))
     return false;
   const context = value.context;
@@ -69,6 +72,7 @@ function isStoredInterviewState(value: unknown): value is InterviewState {
   }
 
   return Object.entries(value.answers).every(([questionId, rawAnswer]) => {
+    if (!validQuestionIds.has(questionId)) return false;
     if (!isPlainRecord(rawAnswer)) return false;
     if (rawAnswer.questionId !== questionId) return false;
     if (!["answered", "skipped", "unknown"].includes(String(rawAnswer.status))) return false;
@@ -206,7 +210,9 @@ async function handleGet(request: Request): Promise<Response> {
       return errorResponse("interview_not_found", 404);
     }
     const questionSet = validateInterviewQuestionSet(interview.questions_snapshot);
-    if (!questionSet.ok || !isStoredInterviewState(interview.state)) {
+    if (!questionSet.ok) return errorResponse("stored_interview_invalid", 500);
+    const validQuestionIds = new Set(questionSet.questions.map((question) => question.id));
+    if (!isStoredInterviewState(interview.state, validQuestionIds)) {
       return errorResponse("stored_interview_invalid", 500);
     }
     if (!isStoredInterviewContextConsistent(interview, interview.state)) {
@@ -427,7 +433,9 @@ async function handleUpdate(request: Request): Promise<Response> {
   if (interview.status === "completed") return errorResponse("interview_already_completed", 409);
 
   const questionSet = validateInterviewQuestionSet(interview.questions_snapshot);
-  if (!questionSet.ok || !isStoredInterviewState(interview.state)) {
+  if (!questionSet.ok) return errorResponse("stored_interview_invalid", 500);
+  const validQuestionIds = new Set(questionSet.questions.map((question) => question.id));
+  if (!isStoredInterviewState(interview.state, validQuestionIds)) {
     return errorResponse("stored_interview_invalid", 500);
   }
   const state = interview.state;
