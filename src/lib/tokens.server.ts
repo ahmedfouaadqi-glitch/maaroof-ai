@@ -69,7 +69,13 @@ async function resolveToolAccessMode(userId: string, toolKey: string): Promise<A
   const baseToolKey = toolKey.includes(".") ? toolKey.split(".")[0] : toolKey;
   const mappedSkills = MAAROOF_SKILLS.filter(skill => skill.tools.includes(baseToolKey as any));
   if (mappedSkills.length) {
-    const modes = mappedSkills.map(skill => skillMode(skill.key));
+    const enabledSkillKeys = Array.isArray(value.enabled_skills)
+      ? value.enabled_skills
+      : MAAROOF_SKILLS.map(skill => skill.key);
+    const activeMappedSkills = mappedSkills.filter(skill => enabledSkillKeys.includes(skill.key));
+    // The global enabled-skills list is a hard allow-list for direct tool calls.
+    if (activeMappedSkills.length === 0) return "disabled";
+    const modes = activeMappedSkills.map(skill => skillMode(skill.key));
     if (modes.every(mode => mode === "disabled")) return "disabled";
     if (modes.every(mode => mode === "contact" || mode === "disabled")) return "contact";
   }
