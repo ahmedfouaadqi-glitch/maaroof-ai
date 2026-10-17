@@ -21,6 +21,7 @@ import { AgentOps } from "@/components/maaroof/tabs/AgentOps";
 import { liveExample } from "@/lib/maaroof/mode-report";
 import { ApprovalQueue } from "@/components/ApprovalQueue";
 import { KnowledgeSpaces } from "@/components/agent/KnowledgeSpaces";
+import { ENGINE_KEYS } from "@/lib/ai-engines";
 
 const MODE_HELP = {
   simulation: { ar: "محاكاة: يرسم الوكيل الخطة ويستشير الخبراء ويقدّر النتيجة دون تشغيل أي أداة. مثال: «ماذا يحدث لو نشرت 3 مقالات شهرياً؟». تُخصم كلفة تفكير النماذج من رصيدك.", en: "Simulation: the agent plans, consults experts and estimates the outcome without running tools. Example: “What if I publish 3 articles a month?”. Model reasoning is charged to your balance.", ku: "هاوشێوەکردن: پلان و ڕای پسپۆڕان و خەمڵاندن بەبێ کارپێکردنی ئامراز. تێچووی بیرکردنەوە لە باڵانس دەبڕدرێت." },
@@ -70,6 +71,10 @@ function MaaroofPage() {
   const [typing, setTyping] = useState(false);
   const [useSubagents, setUseSubagents] = useState(true);
   const [liveProbe, setLiveProbe] = useState(true);
+  const [enginePickerOpen, setEnginePickerOpen] = useState(false);
+  const [engineCountdown, setEngineCountdown] = useState(15);
+  const [selectedEngines, setSelectedEngines] = useState<string[]>([...ENGINE_KEYS]);
+  const engineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [costRun, setCostRun] = useState<CostPreview | null>(null);
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -82,6 +87,7 @@ function MaaroofPage() {
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [events]);
+  useEffect(() => () => { if (engineTimerRef.current) clearInterval(engineTimerRef.current); }, []);
 
   function onGoalChange(v: string) {
     setGoal(v);
@@ -107,7 +113,7 @@ function MaaroofPage() {
     getCostPreview({ data: { toolKey: "visibility.probe", units: 10 } }).then(setCostProbe).catch(() => {});
   }, [user?.id, executionMode]);
 
-  async function start(clarifications?: Record<string, string>, modeOverride?: "simulation" | "recommendation" | "execution") {
+  async function start(clarifications?: Record<string, string>, modeOverride?: "simulation" | "recommendation" | "execution", enginesOverride?: string[]) {
     if (!goal.trim() || running || !user) return;
     const mode = modeOverride || executionMode;
     setRunning(true); setEvents([]);
@@ -126,6 +132,7 @@ function MaaroofPage() {
           execution_mode: mode,
           use_subagents: useSubagents,
           live_probe: liveProbe,
+          probe_engines: enginesOverride,
           clarifications,
           geo_scope: geoMode === "auto" ? { mode: "auto" } : geoMode === "world" ? { mode: "world" } : { mode: city ? "city" : "country", country, city: city || undefined },
         }),
@@ -171,6 +178,38 @@ function MaaroofPage() {
   }
 
   function stop() { abortRef.current?.abort(); setRunning(false); }
+
+  function openEnginePicker() {
+    if (!liveProbe) { void start(); return; }
+    if (engineTimerRef.current) clearInterval(engineTimerRef.current);
+    setSelectedEngines([...ENGINE_KEYS]);
+    setEngineCountdown(15);
+    setEnginePickerOpen(true);
+    engineTimerRef.current = setInterval(() => {
+      setEngineCountdown((remaining) => {
+        if (remaining <= 1) {
+          if (engineTimerRef.current) clearInterval(engineTimerRef.current);
+          engineTimerRef.current = null;
+          setEnginePickerOpen(false);
+          // Choose the largest affordable count from the current preview; server-side entitlement and charging remain authoritative.
+          const base = costRun?.metered ? Number(costRun.total) || 0 : 0;
+          const probe = costProbe?.metered ? Number(costProbe.total) || 0 : 0;
+          const affordable = probe > 0 && costRun?.metered ? Math.floor(Math.max(0, Number(costRun.balance) - base) / (probe / 10)) : ENGINE_KEYS.length;
+          const count = Math.max(1, Math.min(ENGINE_KEYS.length, affordable));
+          void start(undefined, undefined, ENGINE_KEYS.slice(0, count));
+          return 0;
+        }
+        return remaining - 1;
+      });
+    }, 1000);
+  }
+
+  function confirmEngineSelection() {
+    if (engineTimerRef.current) clearInterval(engineTimerRef.current);
+    engineTimerRef.current = null;
+    setEnginePickerOpen(false);
+    if (selectedEngines.length) void start(undefined, undefined, selectedEngines);
+  }
 
   async function loadRun(runId: string) {
     if (running) return;
@@ -389,11 +428,35 @@ function MaaroofPage() {
                     {running ? (
                       <button onClick={stop} className="px-4 py-2 rounded bg-destructive text-destructive-foreground flex items-center gap-2"><StopCircle className="w-4 h-4" /> {t("mrf_stop")}</button>
                     ) : (
-                      <button onClick={() => start()} disabled={!goal.trim()} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"><Send className="w-4 h-4" /> {t("mrf_start")}</button>
+                      <button onClick={openEnginePicker} disabled={!goal.trim()} className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"><Send className="w-4 h-4" /> {t("mrf_start")}</button>
                     )}
                   </div>
                 </div>
               </div>
+
+              {enginePickerOpen && liveProbe && (
+                <div className="rounded-lg border bg-card p-4 space-y-3" role="dialog" aria-modal="true" aria-label={lang === "en" ? "Choose AI engines" : "اختيار محركات الذكاء الاصطناعي"}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold">{lang === "en" ? "Choose AI engines" : lang === "ku" ? "مۆدێلەکانی AI هەڵبژێرە" : "اختر محركات الذكاء الاصطناعي"}</h3>
+                    <span className="text-sm tabular-nums">{lang === "en" ? "Auto-select in" : "الاختيار التلقائي خلال"} {engineCountdown}s</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{lang === "en" ? "Select the engines you want. If time runs out, Maaroof will automatically choose a count based on the estimated remaining balance; server-side plan and balance checks still apply." : lang === "ku" ? "مۆدێلەکان هەڵبژێرە؛ کات تەواو بوو، ژمارەکە بە پێی باڵانسی خەمڵێنراو دیاری دەکرێت." : "حدد المحركات المطلوبة. عند انتهاء الوقت، يختار معروف تلقائياً عدداً وفق الرصيد المتبقي التقديري، مع بقاء فحص الخطة والرصيد الفعلي على الخادم."}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {ENGINE_KEYS.map((engine) => (
+                      <label key={engine} className="flex items-center gap-2 rounded border p-2 text-sm">
+                        <input type="checkbox" checked={selectedEngines.includes(engine)} onChange={(e) => setSelectedEngines((old) => e.target.checked ? [...old, engine] : old.filter((x) => x !== engine))} />
+                        <span>{engine}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setSelectedEngines([...ENGINE_KEYS])} className="rounded border px-3 py-1.5 text-sm">{lang === "en" ? "Select all" : "تحديد الكل"}</button>
+                    <button type="button" onClick={() => setSelectedEngines([])} className="rounded border px-3 py-1.5 text-sm">{lang === "en" ? "Clear" : "إلغاء التحديد"}</button>
+                    <button type="button" disabled={!selectedEngines.length} onClick={confirmEngineSelection} className="rounded bg-primary text-primary-foreground px-3 py-1.5 text-sm disabled:opacity-50">{lang === "en" ? "Run selected engines" : "تشغيل المحركات المحددة"}</button>
+                    <button type="button" onClick={() => { if (engineTimerRef.current) clearInterval(engineTimerRef.current); engineTimerRef.current = null; setEnginePickerOpen(false); }} className="rounded border px-3 py-1.5 text-sm">{lang === "en" ? "Cancel" : "إلغاء"}</button>
+                  </div>
+                </div>
+              )}
 
               {/* Visual Stage */}
               <MaaroofStage
