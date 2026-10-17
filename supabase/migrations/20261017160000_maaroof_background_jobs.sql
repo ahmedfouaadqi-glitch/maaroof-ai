@@ -50,3 +50,10 @@ CREATE POLICY "maaroof background events owner read" ON public.maaroof_backgroun
 -- Store only an authenticated, encrypted continuation token for queued execution.
 ALTER TABLE public.maaroof_background_jobs
   ADD COLUMN IF NOT EXISTS auth_token_ciphertext text;
+
+-- Queue dispatch is persisted before billing so a failed queue send cannot charge a run.
+ALTER TABLE public.maaroof_background_jobs
+  DROP CONSTRAINT IF EXISTS maaroof_background_jobs_status_check;
+ALTER TABLE public.maaroof_background_jobs
+  ADD CONSTRAINT maaroof_background_jobs_status_check
+  CHECK (status IN ('dispatching','queued','running','completed','failed','cancelled'));
