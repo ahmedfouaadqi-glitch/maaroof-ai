@@ -26,7 +26,7 @@ export function SiteHeader() {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const [sound, setSound] = useState(true);
-  const [workbenchPath, setWorkbenchPath] = useState<"/workbench" | "/maaroof">("/workbench");
+  const [workbenchPath, setWorkbenchPath] = useState<"/workspace" | "/maaroof">("/workspace");
   const hdr = useHeaderConfig();
   useEffect(() => { setSound(isSoundEnabled()); }, []);
   useEffect(() => {
@@ -35,7 +35,7 @@ export function SiteHeader() {
       if (!active) return;
       const policy = data?.value as any;
       if (policy && (policy.enabled === false || policy.default_ui === "professional")) setWorkbenchPath("/maaroof");
-      else setWorkbenchPath("/workbench");
+      else setWorkbenchPath("/workspace");
     }).catch(() => {});
     return () => { active = false; };
   }, []);
