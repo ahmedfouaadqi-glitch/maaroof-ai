@@ -393,6 +393,19 @@ export function getNextInterviewQuestion(
   return null;
 }
 
+/**
+ * Detects a stale persisted pointer before the UI renders a question the API
+ * would reject. Optional-question behavior must use the same depth at read and write time.
+ */
+export function isInterviewQuestionCursorConsistent(
+  questions: InterviewQuestion[],
+  state: InterviewState,
+  currentQuestionId: string | null,
+  options: { includeOptional?: boolean } = {},
+): boolean {
+  return (getNextInterviewQuestion(questions, state, options)?.id ?? null) === currentQuestionId;
+}
+
 export function recordInterviewResponse(
   state: InterviewState,
   questions: InterviewQuestion[],
