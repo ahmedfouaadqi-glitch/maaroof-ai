@@ -24,7 +24,7 @@ export const Route = createFileRoute("/auth")({
     // and absolute URLs (https://evil) to prevent open-redirect phishing.
     const safe = /^\/(?!\/)[^\s]*$/.test(raw) && !raw.toLowerCase().startsWith("/javascript")
       ? raw
-      : "/dashboard";
+      : "/workspace";
     return {
       mode: (s.mode as string) === "signup" ? "signup" : "signin",
       redirect: safe,
@@ -94,7 +94,12 @@ function AuthPage() {
     setLoading(true);
     try {
       if (isSignup) {
-        const redirectUrl = `${window.location.origin}/dashboard`;
+        // Preserve the requested internal destination through email confirmation.
+        const safeRedirect = redirect && /^\\/(?!\\/)[^\\s]*$/.test(redirect) && !redirect.toLowerCase().startsWith("/javascript")
+          ? redirect
+          : "/workspace";
+        try { sessionStorage.setItem("auth_redirect", safeRedirect); } catch { /* storage unavailable */ }
+        const redirectUrl = `${window.location.origin}${safeRedirect}`;
         const { error } = await supabase.auth.signUp({
           email,
           password,
