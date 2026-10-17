@@ -160,29 +160,29 @@ function Page() {
         {/* Crawlable, server-rendered summary so the homepage has substantive content for search engines */}
         <section className="mx-auto max-w-4xl px-4 pb-16 md:px-6" aria-labelledby="about-maaroof">
           <h2 id="about-maaroof" className="font-display text-2xl font-bold md:text-3xl">
-            What is MAAROOF Ai?
+            {t("home_about_title")}
           </h2>
           <p className="mt-3 text-muted-foreground">
-            MAAROOF Ai is a Generative Engine Optimization (GEO) platform that helps brands, publishers and agencies become the source AI answer engines cite. It measures how your brand appears across ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi and Qwen, and gives clear, evidence-based steps to improve it in Arabic, Kurdish and English.
+            {t("home_about_intro")}
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-border bg-card/40 p-4">
-              <h3 className="font-semibold">Analyze and score</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Check factual density, local relevance and citation readiness of any text before you publish.</p>
+              <h3 className="font-semibold">{t("home_analyze_title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("home_analyze_desc")}</p>
             </div>
             <div className="rounded-xl border border-border bg-card/40 p-4">
-              <h3 className="font-semibold">Verify on live engines</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Ask the engines directly whether they mention your brand, and keep the raw answers as evidence.</p>
+              <h3 className="font-semibold">{t("home_verify_title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("home_verify_desc")}</p>
             </div>
             <div className="rounded-xl border border-border bg-card/40 p-4">
-              <h3 className="font-semibold">Publish machine-readable identity</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Generate llms.txt and Schema.org JSON-LD so your brand identity stays consistent everywhere.</p>
+              <h3 className="font-semibold">{t("home_publish_title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("home_publish_desc")}</p>
             </div>
           </div>
           <p className="mt-6 text-sm text-muted-foreground">
-            <Link to="/pricing" className="text-primary hover:underline">See plans and pricing</Link>
+            <Link to="/pricing" className="text-primary hover:underline">{t("nav_pricing")}</Link>
             {" · "}
-            <Link to="/guide" className="text-primary hover:underline">Read the user guide</Link>
+            <Link to="/guide" className="text-primary hover:underline">{t("guide_title")}</Link>
           </p>
         </section>
       </main>
