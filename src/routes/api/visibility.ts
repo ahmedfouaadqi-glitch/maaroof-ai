@@ -187,11 +187,37 @@ export const Route = createFileRoute("/api/visibility")({
             const policy = await resolveProbePolicy(userId);
             let picked = applyEntitlement(body.probe_engines, ent);
             if (policy.maxEngines != null) picked = picked.slice(0, Math.max(0, policy.maxEngines));
-            const { engines } = await excludeUnhealthyEngines(picked);
+            const healthFiltered = await excludeUnhealthyEngines(picked);
+            let engines = healthFiltered.engines;
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
-            const pRun = crypto.randomUUID();
-            const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
-            if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
+
+            // The earlier affordability estimate can become stale when another request
+            // spends tokens concurrently. The atomic charge is authoritative: on a
+            // budget-only rejection, retry with one fewer engine until a charge succeeds.
+            // Failed atomic charges do not authorize provider calls.
+            let pChg: Awaited<ReturnType<typeof chargeTokens>> | null = null;
+            let lastChargeRunId = "";
+            for (let count = engines.length; count >= 1; count--) {
+              const attemptEngines = engines.slice(0, count);
+              lastChargeRunId = crypto.randomUUID();
+              pChg = await chargeTokens({
+                userId,
+                toolKey: "visibility.probe",
+                runId: lastChargeRunId,
+                units: attemptEngines.length,
+                unitTokens: policy.tokensPerEngine ?? undefined,
+                meta: { engines: attemptEngines, endpoint: "/api/visibility#probe", budget_retry: count !== engines.length },
+              });
+              if (pChg.ok) {
+                engines = attemptEngines;
+                break;
+              }
+              const budgetFailure = ["balance", "daily_limit", "monthly_limit"].includes(String(pChg.reason));
+              if (!budgetFailure) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
+            }
+            if (!pChg?.ok) {
+              return Response.json(chargeFailureBody(pChg?.reason as any || "balance", pChg?.left), { status: 402 });
+            }
             const market = describeMarket(body.scope);
             const models = await resolveEngineModels(engines);
             const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
