@@ -69,9 +69,9 @@ describe("Maaroof interview question bank", () => {
       locale: "ar",
     });
     expect(getNextInterviewQuestion(individualQuestions, state)?.id).toBe("objective");
-    expect(getNextInterviewQuestion(individualQuestions, state, { includeOptional: true })?.id).toBe(
-      "objective",
-    );
+    expect(
+      getNextInterviewQuestion(individualQuestions, state, { includeOptional: true })?.id,
+    ).toBe("objective");
 
     const objective = recordInterviewResponse(
       state,
