@@ -139,7 +139,9 @@ beforeEach(() => {
               : null;
       if (stored && table === "maaroof_interviews") {
         const storedRow = stored as Record<string, unknown>;
-        if (Object.entries(eqFilters).some(([column, expected]) => storedRow[column] !== expected)) {
+        if (
+          Object.entries(eqFilters).some(([column, expected]) => storedRow[column] !== expected)
+        ) {
           return { data: null, error: null };
         }
         if (updatePayload) {
