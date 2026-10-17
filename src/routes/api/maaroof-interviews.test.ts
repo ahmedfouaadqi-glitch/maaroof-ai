@@ -5,9 +5,8 @@ type HandlerArgs = { request: Request };
 type Method = "GET" | "POST" | "PATCH";
 type Handler = (args: HandlerArgs) => Promise<Response>;
 
-const handlers = (
-  Route.options as unknown as { server: { handlers: Record<Method, Handler> } }
-).server.handlers;
+const handlers = (Route.options as unknown as { server: { handlers: Record<Method, Handler> } })
+  .server.handlers;
 
 function makeRequest(method: Method, authorization?: string): Request {
   const headers = new Headers();
