@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
   LoaderCircle, Plus, Search, Sparkles, Square, Target, TrendingUp,
@@ -37,7 +38,7 @@ const COPY = {
     automatic: "دع معروف يختار المهارات المناسبة تلقائياً", skillsHint: "التوصيات الأولية مبنية على كلمات الطلب؛ الاختيار النهائي والتحقق من الأدوات يتمان في الخادم.",
     models: "النماذج", modelsHint: "اختياري — يمكنك طلب فحص مباشر للنماذج. قد يستهلك ذلك رصيداً إضافياً وفق خطتك.",
     liveProbe: "تشغيل فحص مباشر للنماذج المختارة", all: "تحديد الكل", clear: "مسح التحديد",
-    run: "ابدأ المهمة", stop: "إيقاف", working: "معروف يعمل على المهمة", mode: "طريقة العمل", execute: "تنفيذ فعلي", recommendMode: "خطة وتوصية", simulate: "محاكاة",
+    run: "ابدأ المهمة", stop: "إيقاف", working: "معروف يعمل على المهمة", mode: "طريقة العمل", execute: "تنفيذ فعلي", recommendMode: "خطة وتوصية", simulate: "محاكاة", costEstimate: "تقدير الكلفة قبل البدء", balance: "الرصيد الحالي", tokens: "توكن", probeCost: "كلفة الفحص المباشر", toolCostNote: "تُضاف كلفة الأدوات التي تُنفّذ فعلياً وفق أسعارها الحالية.",
     plan: "خطة العمل", progress: "تقدم التنفيذ", result: "النتيجة", activity: "سجل العمل",
     ready: "جاهز", failed: "تعذر إكمال المهمة", empty: "اكتب هدفاً أو اختر مهارة للبدء.",
     selectedTools: "أدوات مرتبطة بالمهارات المختارة", noTools: "لم تختر مهارات؛ سيحدد معروف الأدوات وفق الهدف.",
@@ -55,7 +56,7 @@ const COPY = {
     automatic: "Let Maaroof choose suitable skills automatically", skillsHint: "Initial suggestions use goal keywords; final tool selection and authorization remain server-side.",
     models: "Models", modelsHint: "Optional — live model checks may consume additional balance according to your plan.",
     liveProbe: "Run a live check with selected models", all: "Select all", clear: "Clear selection",
-    run: "Start task", stop: "Stop", working: "Maaroof is working", mode: "Work mode", execute: "Execute", recommendMode: "Plan & recommend", simulate: "Simulate",
+    run: "Start task", stop: "Stop", working: "Maaroof is working", mode: "Work mode", execute: "Execute", recommendMode: "Plan & recommend", simulate: "Simulate", costEstimate: "Estimated cost before starting", balance: "Current balance", tokens: "tokens", probeCost: "Live-check cost", toolCostNote: "Successful tool executions are charged separately at their current prices.",
     plan: "Work plan", progress: "Execution progress", result: "Result", activity: "Activity",
     ready: "Ready", failed: "The task could not be completed", empty: "Enter a goal or choose a skill to begin.",
     selectedTools: "Tools associated with selected skills", noTools: "No skills selected; Maaroof will choose tools from the goal.",
@@ -73,7 +74,7 @@ const COPY = {
     automatic: "با معروف بە شێوەی خۆکار شارەزاییەکان هەڵبژێرێت", skillsHint: "پێشنیارە سەرەتاییەکان بە وشەکانی ئامانجەکە دەستنیشان دەکرێن.",
     models: "مۆدێلەکان", modelsHint: "هەڵبژاردەیی — پشکنینی ڕاستەوخۆ ڕەنگە باڵانسی زیاتر بەکاربهێنێت.",
     liveProbe: "پشکنینی ڕاستەوخۆی مۆدێلە هەڵبژێردراوەکان", all: "هەمووی هەڵبژێرە", clear: "پاککردنەوە",
-    run: "دەستپێکردن", stop: "وەستاندن", working: "معروف لەسەر ئەرکەکە کار دەکات", mode: "شێوازی کار", execute: "جێبەجێکردن", recommendMode: "پلان و پێشنیار", simulate: "هاوشێوەکردن",
+    run: "دەستپێکردن", stop: "وەستاندن", working: "معروف لەسەر ئەرکەکە کار دەکات", mode: "شێوازی کار", execute: "جێبەجێکردن", recommendMode: "پلان و پێشنیار", simulate: "هاوشێوەکردن", costEstimate: "خەمڵاندنی تێچوو پێش دەستپێکردن", balance: "باڵانسی ئێستا", tokens: "تۆکن", probeCost: "تێچووی پشکنینی ڕاستەوخۆ", toolCostNote: "تێچووی ئامرازە جێبەجێکراوەکان بە جیا و بەپێی نرخەکانیان دەبڕدرێت.",
     plan: "پلانی کار", progress: "پێشکەوتن", result: "ئەنجام", activity: "تۆماری کار",
     ready: "ئامادەیە", failed: "ئەرکەکە تەواو نەبوو", empty: "ئامانج بنووسە یان شارەزاییەک هەڵبژێرە.",
     selectedTools: "ئامرازە پەیوەندیدارەکان", noTools: "هیچ شارەزاییەک هەڵنەبژێردرا؛ معروف ئامرازەکان هەڵدەبژێرێت.",
@@ -107,6 +108,9 @@ function WorkspacePage() {
   const [error, setError] = useState("");
   const [showActivity, setShowActivity] = useState(false);
   const [mode, setMode] = useState<"execution" | "recommendation" | "simulation">("execution");
+  const [costRun, setCostRun] = useState<CostPreview | null>(null);
+  const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
+  const [costLoading, setCostLoading] = useState(false);
   const [policy, setPolicy] = useState<{ enabled: boolean; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[] }>({ enabled: true, show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key) });
   const abortRef = useState<{ current: AbortController | null }>({ current: null })[0];
 
@@ -126,6 +130,28 @@ function WorkspacePage() {
     }).catch(() => {});
     return () => { active = false; };
   }, [navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    setCostLoading(true);
+    const toolKey = mode === "recommendation" || mode === "simulation" ? `maaroof.${mode}` : "maaroof";
+    Promise.all([
+      getCostPreview({ data: { toolKey } }),
+      liveProbe && selectedModels.length > 0
+        ? getCostPreview({ data: { toolKey: "visibility.probe", units: selectedModels.length } })
+        : Promise.resolve(null),
+    ]).then(([runPreview, probePreview]) => {
+      if (!active) return;
+      setCostRun(runPreview);
+      setCostProbe(probePreview);
+    }).catch(() => {
+      if (!active) return;
+      setCostRun(null);
+      setCostProbe(null);
+    }).finally(() => { if (active) setCostLoading(false); });
+    return () => { active = false; };
+  }, [user?.id, mode, liveProbe, selectedModels.length]);
 
   const recommendations = useMemo(() => {
     const enabled = MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key));
@@ -279,7 +305,7 @@ function WorkspacePage() {
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
-                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || !policy.allowed_modes.includes(mode)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && costRun.metered && costRun.balance < costRun.total + (costProbe?.total || 0))} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
@@ -313,6 +339,17 @@ function WorkspacePage() {
                     <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
                   ))}
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <h2 className="font-semibold">{c.costEstimate}</h2>
+                {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارێک خەمڵاندن…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
+                  {costProbe && <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.probeCost} ({costProbe.units})</span><span className="font-semibold tabular-nums">{costProbe.total} {c.tokens}</span></div>}
+                  <div className="flex items-center justify-between gap-3 border-t border-border pt-2"><span className="font-medium">{c.balance}</span><span className="tabular-nums">{costRun.balance} {c.tokens}</span></div>
+                  {costRun.metered && costRun.balance < costRun.total + (costProbe?.total || 0) && <p role="alert" className="text-xs text-destructive">{locale === "en" ? "Your balance may not cover the session and live check." : locale === "ku" ? "لەوانەیە باڵانس بۆ دانیشتن و پشکنین بەس نەبێت." : "قد لا يكفي رصيدك للجلسة والفحص المباشر معاً."}</p>}
+                  <p className="text-xs leading-5 text-muted-foreground">{c.toolCostNote}</p>
+                </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
               </div>
 
               {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">
