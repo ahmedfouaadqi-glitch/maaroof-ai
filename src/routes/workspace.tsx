@@ -405,6 +405,7 @@ function WorkspacePage() {
           locale={locale}
           userId={user.id}
           profileEntityType={(profile as any)?.entity_type ?? null}
+          profileInterviewPersona={profile?.interview_persona ?? null}
           initialGoal={goal}
           getAccessToken={getInterviewAccessToken}
         />
