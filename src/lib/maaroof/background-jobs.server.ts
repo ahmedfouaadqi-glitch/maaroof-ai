@@ -72,6 +72,7 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
     });
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (eventType === "phase") patch.current_stage = String(eventData?.phase || "").slice(0, 100);
+    if (eventType === "final" || eventType === "done") patch.result = { type: eventType, data: eventData || {} };
     await admin.from("maaroof_background_jobs").update(patch)
       .eq("id", jobId).eq("user_id", job.user_id).eq("status", "running");
   };
