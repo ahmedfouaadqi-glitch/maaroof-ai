@@ -42,7 +42,7 @@ export function ToolAccessOverrides({ policy, onChange }: Props) {
       onChange({...policy, tool_access: row});
       return;
     }
-    const map = {...(scope === "plan" ? policy.tool_access_by_plan : policy.tool_access_by_user) || {}};
+    const map = {...((scope === "plan" ? policy.tool_access_by_plan : policy.tool_access_by_user) || {})};
     const row = {...(map[scopeKey] || {})};
     if (value) row[toolKey] = value as SkillAccessMode; else delete row[toolKey];
     if (Object.keys(row).length) map[scopeKey] = row; else delete map[scopeKey];
