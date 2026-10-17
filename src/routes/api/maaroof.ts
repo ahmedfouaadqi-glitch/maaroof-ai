@@ -126,16 +126,6 @@ export const Route = createFileRoute("/api/maaroof")({
           // Do not charge the probe here: the existing /api/visibility endpoint
           // performs the authoritative atomic charge immediately before provider calls.
           // This endpoint only selects the eligible engine count.
-          if (!selectedProbeEngines?.length) {
-            return Response.json({
-              error: "probe_balance_or_entitlement_insufficient",
-              message: {
-                ar: "لا توجد محركات مسموحة ومغطاة بالرصيد وحدود الاستخدام لهذه الخطة. راجع إعدادات الاشتراك أو الرصيد.",
-                en: "No engines are allowed and covered by the current plan, balance, and usage limits.",
-                ku: "هیچ بزوێنەرێک لە پلانی ئێستا و بەڵانس و سنوورەکاندا بەردەست نییە.",
-              },
-            }, { status: 402 });
-          }
         }
 
         const encoder = new TextEncoder();
