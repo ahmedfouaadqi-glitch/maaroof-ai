@@ -37,7 +37,6 @@ export function resolveSkillAccessPolicy(opts: {
   userId?: string | null;
 }): Record<string, MaaroofSkillAccessMode> {
   const merged = defaultSkillAccessPolicy();
-  const layers = [recordOf(opts.globalPolicy), recordOf(opts.byPlan)?.[opts.planKey] !== undefined ? { [opts.planKey]: "" } : null];
   // byPlan is a map of planKey -> skill access map.
   const planMap = opts.byPlan && typeof opts.byPlan === "object" && !Array.isArray(opts.byPlan) ? (opts.byPlan as Record<string, unknown>) : null;
   const userMap = opts.byUser && typeof opts.byUser === "object" && !Array.isArray(opts.byUser) ? (opts.byUser as Record<string, unknown>) : null;
