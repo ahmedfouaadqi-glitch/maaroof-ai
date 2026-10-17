@@ -166,6 +166,13 @@ function WorkspacePage() {
   const toolEvents = events.filter((event) => event.type === "tool_call" || event.type === "tool_result");
   const clarifyEvents = events.filter((event) => event.type === "clarify");
   const toolCatalog = [...events].reverse().find((event) => event.type === "tool_catalog")?.data;
+  const estimatedTotal = (costRun?.total || 0) + (liveProbe ? (costProbe?.total || 0) : 0);
+  const estimateFitsQuota = !!costRun && costRun.enough && (!liveProbe || !costProbe || costProbe.enough) &&
+    (!costRun.metered || (
+      costRun.balance >= estimatedTotal &&
+      (costRun.dailyRemaining == null || costRun.dailyRemaining >= estimatedTotal) &&
+      (costRun.monthlyRemaining == null || costRun.monthlyRemaining >= estimatedTotal)
+    ));
 
   function toggleSkill(key: string) {
     setSelectedSkills((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
@@ -307,7 +314,7 @@ function WorkspacePage() {
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
-                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !costRun.enough)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
@@ -349,7 +356,9 @@ function WorkspacePage() {
                   <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
                   {costProbe && <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.probeCost} ({costProbe.units})</span><span className="font-semibold tabular-nums">{costProbe.total} {c.tokens}</span></div>}
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-2"><span className="font-medium">{c.balance}</span><span className="tabular-nums">{costRun.balance} {c.tokens}</span></div>
-                  {costRun.metered && costRun.balance < costRun.total + (costProbe?.total || 0) && <p role="alert" className="text-xs text-destructive">{locale === "en" ? "Your balance may not cover the session and live check." : locale === "ku" ? "لەوانەیە باڵانس بۆ دانیشتن و پشکنین بەس نەبێت." : "قد لا يكفي رصيدك للجلسة والفحص المباشر معاً."}</p>}
+                  {costRun.metered && !estimateFitsQuota && <p role="alert" className="text-xs text-destructive">{locale === "en" ? "The estimated session and live-check cost exceeds your current balance or remaining quota." : locale === "ku" ? "تێچووی خەمڵێنراو لە باڵانس یان سنووری ماوە زیاترە." : "التكلفة التقديرية للجلسة والفحص تتجاوز الرصيد أو الحصة المتبقية."}</p>}
+                  {costRun.dailyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Daily quota remaining" : locale === "ku" ? "سنووری ڕۆژانەی ماوە" : "المتبقي من الحصة اليومية"}: {costRun.dailyRemaining} {c.tokens}</p>}
+                  {costRun.monthlyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Monthly quota remaining" : locale === "ku" ? "سنووری مانگانەی ماوە" : "المتبقي من الحصة الشهرية"}: {costRun.monthlyRemaining} {c.tokens}</p>
                   <p className="text-xs leading-5 text-muted-foreground">{c.toolCostNote}</p>
                 </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
               </div>
