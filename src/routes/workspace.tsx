@@ -103,6 +103,8 @@ function WorkspacePage() {
   const [liveProbe, setLiveProbe] = useState(false);
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [lastEventSeq, setLastEventSeq] = useState(0);
   const [events, setEvents] = useState<WorkspaceEvent[]>([]);
   const [clarification, setClarification] = useState("");
   const [clarifyField, setClarifyField] = useState("");
@@ -113,7 +115,7 @@ function WorkspacePage() {
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
   const [costLoading, setCostLoading] = useState(false);
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
-  const abortRef = useState<{ current: AbortController | null }>({ current: null })[0];
+  const watcherRef = useState<{ current: number }>({ current: 0 })[0];
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/workspace" } });
@@ -218,6 +220,77 @@ function WorkspacePage() {
     return remaining;
   }
 
+  async function watchJob(id: string, after: number, token: string) {
+    watcherRef.current += 1;
+    const watcherId = watcherRef.current;
+    let cursor = after;
+    while (watcherRef.current === watcherId) {
+      const response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(String(body?.error || c.failed));
+      }
+      const body = await response.json();
+      const incoming = Array.isArray(body?.events) ? body.events : [];
+      if (incoming.length) {
+        const mapped = incoming.map((item: any) => ({
+          type: String(item.event_type || "message"),
+          data: item.payload || {},
+          at: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
+        } as WorkspaceEvent));
+        setEvents(current => [...current, ...mapped]);
+        cursor = Math.max(cursor, ...incoming.map((item: any) => Number(item.seq) || 0));
+        setLastEventSeq(cursor);
+        for (const event of mapped) {
+          if (event.type === "clarify") {
+            setClarifyField(String(event.data?.field || ""));
+            setClarification("");
+          }
+          if (event.type === "error") setError(String(event.data?.message || c.failed));
+        }
+      }
+      const status = String(body?.job?.status || "running");
+      if (status === "completed" || status === "failed" || status === "cancelled") {
+        if (status === "failed") setError(String(body?.job?.error || c.failed));
+        if (status === "cancelled") setError(locale === "en" ? "Task cancelled." : locale === "ku" ? "ئەرکەکە ڕاگیرا." : "تم إيقاف المهمة.");
+        setRunning(false);
+        setJobId(id);
+        return;
+      }
+      setRunning(true);
+      await new Promise(resolve => setTimeout(resolve, 1800));
+    }
+  }
+
+  useEffect(() => {
+    if (!user?.id || loading) return;
+    let active = true;
+    (async () => {
+      const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token || !active) return;
+      const response = await fetch("/api/maaroof-jobs", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+      if (!response.ok || !active) return;
+      const body = await response.json();
+      const jobs = Array.isArray(body?.jobs) ? body.jobs : [];
+      const now = Date.now();
+      const recent = jobs.find((job: any) => job.status === "queued" || job.status === "running")
+        || jobs.find((job: any) => now - new Date(job.created_at).getTime() < 24 * 60 * 60 * 1000);
+      if (!recent || !active) return;
+      setJobId(String(recent.id));
+      setGoal(String(recent.goal || ""));
+      setMode(["execution", "recommendation", "simulation"].includes(recent.mode) ? recent.mode : "execution");
+      const payload = recent.request_payload || {};
+      setSelectedSkills(Array.isArray(payload.selected_skills) ? payload.selected_skills.filter((key: unknown) => typeof key === "string") : []);
+      setRunning(recent.status === "queued" || recent.status === "running");
+      setError(recent.status === "failed" ? String(recent.error || c.failed) : "");
+      try { await watchJob(String(recent.id), 0, token); } catch (e: any) { if (active) { setRunning(false); setError(String(e?.message || c.failed)); } }
+    })().catch(() => {});
+    return () => { active = false; watcherRef.current += 1; };
+  }, [user?.id, loading, session?.access_token]);
+
   async function start(clarifications?: Record<string, string>) {
     if (!goal.trim() || running || !user || !policy.allowed_modes.includes(mode)) return;
     if (liveProbe && selectedModels.length === 0) {
@@ -227,14 +300,14 @@ function WorkspacePage() {
     setRunning(true);
     setError("");
     setEvents([]);
-    const controller = new AbortController();
-    abortRef.current = controller;
+    setLastEventSeq(0);
+    setJobId(null);
     try {
       const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
       if (!token) throw new Error("auth_required");
       const response = await fetch("/api/maaroof", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({
           goal: goal.trim(),
           lang: locale,
@@ -249,34 +322,34 @@ function WorkspacePage() {
           interface_mode: "workspace",
           selected_skills: selectedSkills,
         }),
-        signal: controller.signal,
       });
-      if (!response.ok || !response.body) {
-        const body = await response.json().catch(() => ({}));
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body?.job_id) {
         const message = body?.message?.[locale] || body?.message?.ar || body?.error || c.failed;
         throw new Error(String(message));
       }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        buffer = parseEventStreamChunk(buffer);
-      }
-      if (buffer.trim()) parseEventStreamChunk(buffer + "\n\n");
+      setJobId(String(body.job_id));
+      await watchJob(String(body.job_id), 0, token);
     } catch (e: any) {
-      if (e?.name !== "AbortError") setError(String(e?.message || c.failed));
-    } finally {
       setRunning(false);
-      abortRef.current = null;
+      if (e?.name !== "AbortError") setError(String(e?.message || c.failed));
     }
   }
 
-  function stop() {
-    abortRef.current?.abort();
-    setRunning(false);
+  async function stop() {
+    const id = jobId;
+    if (!id) { setRunning(false); return; }
+    try {
+      const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) throw new Error("auth_required");
+      await fetch("/api/maaroof-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ job_id: id }),
+      });
+    } catch (e: any) {
+      setError(String(e?.message || c.failed));
+    }
   }
 
   function toolLabel(key: string) {
