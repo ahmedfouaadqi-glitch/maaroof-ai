@@ -41,7 +41,7 @@ function WorkbenchPage() {
   const language = (lang === "en" || lang === "ku" ? lang : "ar") as keyof typeof COPY;
   const t = COPY[language];
   const [goal, setGoal] = useState("");
-  const [chosenSkills, setChosenSkills] = useState<string[]>([]);
+  const [chosenSkills, setChosenSkills] = useState<string[] | null>(null);
   const [mode, setMode] = useState<"execution" | "recommendation" | "simulation">("execution");
   const [world, setWorld] = useState(false);
   const [live, setLive] = useState(false);
@@ -52,7 +52,7 @@ function WorkbenchPage() {
   const abortRef = useRef<AbortController | null>(null);
   const suggestions = useMemo(() => recommendMaaroofSkills(goal, 3), [goal]);
   const skillLabels = (skill: typeof MAAROOF_SKILLS[number]) => skill.label[language];
-  const toolKeys = toolsForSkills(chosenSkills.length ? chosenSkills : suggestions.map(s => s.key));
+  const toolKeys = toolsForSkills(chosenSkills ?? suggestions.map(s => s.key));
   const final = [...events].reverse().find(e => e.type === "final")?.data?.text;
   const safeText = (value: unknown) => typeof value === "string" ? value : value == null ? "" : JSON.stringify(value, null, 2);
 
@@ -123,22 +123,22 @@ function WorkbenchPage() {
           <section className="space-y-5">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-6">
               <label htmlFor="work-goal" className="mb-3 block text-sm font-semibold">{t.title}</label>
-              <textarea id="work-goal" value={goal} onChange={e => { setGoal(e.target.value); setChosenSkills([]); }} placeholder={t.placeholder} rows={5} maxLength={2000} disabled={running} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm leading-7 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
+              <textarea id="work-goal" value={goal} onChange={e => { setGoal(e.target.value); setChosenSkills(null); }} placeholder={t.placeholder} rows={5} maxLength={2000} disabled={running} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm leading-7 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
               <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground"><span>{goal.length}/2000</span><span>{t.cost}</span></div>
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">{t.skills}</h2><span className="text-xs text-muted-foreground">{t.choose}</span></div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {MAAROOF_SKILLS.map(skill => {
                     const Icon = ICONS[skill.icon];
-                    const active = (chosenSkills.length ? chosenSkills : suggestions.map(s => s.key)).includes(skill.key);
+                    const active = (chosenSkills ?? suggestions.map(s => s.key)).includes(skill.key);
                     const recommended = suggestions.some(s => s.key === skill.key);
-                    return <button key={skill.key} type="button" disabled={running} onClick={() => setChosenSkills(old => { const base = old.length ? old : suggestions.map(s => s.key); const next = base.includes(skill.key) ? base.filter(k => k !== skill.key) : [...base, skill.key]; return next; })} className={`group flex min-h-28 items-start gap-3 rounded-xl border p-3 text-start transition ${active ? "border-primary/60 bg-primary/5 shadow-sm" : "border-border bg-background/50 hover:border-primary/30"}`}>
+                    return <button key={skill.key} type="button" disabled={running} onClick={() => setChosenSkills(old => { const base = old ?? suggestions.map(s => s.key); const next = base.includes(skill.key) ? base.filter(k => k !== skill.key) : [...base, skill.key]; return next; })} className={`group flex min-h-28 items-start gap-3 rounded-xl border p-3 text-start transition ${active ? "border-primary/60 bg-primary/5 shadow-sm" : "border-border bg-background/50 hover:border-primary/30"}`}>
                       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="size-5" /></span>
                       <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2 text-sm font-semibold">{skillLabels(skill)}{active && <Check className="size-3.5 text-primary" />}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[language]}</span>{recommended && <span className="mt-2 inline-block text-[10px] font-medium text-primary">{t.suggestions}</span>}</span>
                     </button>;
                   })}
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground">{chosenSkills.length || suggestions.length} {chosenSkills.length === 1 ? t.selected : t.selectedPlural}</p>
+                <p className="mt-3 text-xs text-muted-foreground">{(chosenSkills ?? suggestions.map(s => s.key)).length} {(chosenSkills ?? suggestions.map(s => s.key)).length === 1 ? t.selected : t.selectedPlural}</p>
               </div>
             </div>
 
