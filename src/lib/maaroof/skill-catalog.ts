@@ -12,6 +12,19 @@ export type MaaroofSkill = {
   salesContact?: boolean;
 };
 
+export type SkillAccessMode = "self_service" | "contact" | "disabled";
+export type SkillAccessPolicy = Record<string, SkillAccessMode>;
+
+export function defaultSkillAccessPolicy(): SkillAccessPolicy {
+  return Object.fromEntries(MAAROOF_SKILLS.map((skill) => [skill.key, skill.salesContact ? "contact" : "self_service"]));
+}
+
+export function getSkillAccessMode(skill: MaaroofSkill, policy?: Partial<SkillAccessPolicy> | null): SkillAccessMode {
+  const configured = policy?.[skill.key];
+  if (configured === "self_service" || configured === "contact" || configured === "disabled") return configured;
+  return skill.salesContact ? "contact" : "self_service";
+}
+
 export const MAAROOF_SKILLS: MaaroofSkill[] = [
   {
     key: "deep-research",
