@@ -30,8 +30,10 @@ export type InterviewAnswerSource = "user" | "client" | "verified_source" | "inf
 
 export type InterviewCondition =
   | { questionId: string; operator: "answered" }
-  | { questionId: string; operator: "equals" | "not_equals"; value: string | number | boolean }
-  | { questionId: string; operator: "contains" | "not_contains"; value: string };
+  | { questionId: string; operator: "equals"; value: string | number | boolean }
+  | { questionId: string; operator: "not_equals"; value: string | number | boolean }
+  | { questionId: string; operator: "contains"; value: string }
+  | { questionId: string; operator: "not_contains"; value: string };
 
 export type InterviewQuestion = {
   id: string;
@@ -143,6 +145,7 @@ function conditionMatches(condition: InterviewCondition, state: InterviewState):
     return comparable(actual) !== comparable(condition.value);
   }
 
+  if (typeof condition.value !== "string") return false;
   const needle = condition.value.trim().toLocaleLowerCase();
   let found: boolean;
 
