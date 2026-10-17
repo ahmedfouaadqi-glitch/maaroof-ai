@@ -101,7 +101,7 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
       .eq("id", jobId).eq("user_id", job.user_id).maybeSingle();
     if (latest?.status === "cancelled") return;
     await admin.from("maaroof_background_jobs").update({
-      status: "completed", finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      status: "completed", auth_token_ciphertext: null, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }).eq("id", jobId).eq("user_id", job.user_id).eq("status", "running");
   } catch (error) {
     const message = String((error as any)?.message || error || "job_failed").slice(0, 500);
@@ -109,7 +109,7 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
       job_id: jobId, user_id: job.user_id, event_type: "error", payload: { message },
     });
     await admin.from("maaroof_background_jobs").update({
-      status: "failed", error: message, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      status: "failed", auth_token_ciphertext: null, error: message, finished_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }).eq("id", jobId).eq("user_id", job.user_id).eq("status", "running");
     throw error;
   }
