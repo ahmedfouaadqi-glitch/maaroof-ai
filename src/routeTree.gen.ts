@@ -25,6 +25,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
@@ -135,6 +136,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -362,6 +369,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -412,6 +420,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/bizdev': typeof ApiBizdevRoute
@@ -463,6 +472,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/bizdev'
@@ -611,6 +623,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  WorkspaceRoute: typeof WorkspaceRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
@@ -752,6 +765,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analyze': {
@@ -1016,6 +1036,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  WorkspaceRoute: WorkspaceRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiAppliedRankingRoute: ApiAppliedRankingRoute,
   ApiBizdevRoute: ApiBizdevRoute,
