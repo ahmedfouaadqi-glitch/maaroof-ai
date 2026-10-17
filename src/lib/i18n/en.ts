@@ -2025,4 +2025,13 @@ export const en: Dict = {
   maaroof_tool_failed_internal: "Temporary tool error. Maaroof continued with the remaining steps.",
   "auto.execution_inspector": "Execution Inspector",
   "auto.all_states": "All states",
+
+  home_about_title: "What is MAAROOF Ai?",
+  home_about_intro: "MAAROOF Ai is a Generative Engine Optimization (GEO) platform that helps brands, publishers and agencies become the source AI answer engines cite. It measures how your brand appears across ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi and Qwen, and gives evidence-based steps to improve it in Arabic, Kurdish and English.",
+  home_analyze_title: "Analyze and score",
+  home_analyze_desc: "Check factual density, local relevance and citation readiness of text before publishing.",
+  home_verify_title: "Verify on AI engines",
+  home_verify_desc: "Check whether AI engines mention your brand and retain available responses as evidence.",
+  home_publish_title: "Publish machine-readable identity",
+  home_publish_desc: "Generate llms.txt and Schema.org JSON-LD to keep your brand identity consistent.",
 };
