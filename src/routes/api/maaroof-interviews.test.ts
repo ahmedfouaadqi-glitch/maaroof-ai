@@ -233,6 +233,80 @@ describe("Maaroof interviews workspace permissions", () => {
   );
 });
 
+describe("Maaroof interviews access isolation", () => {
+  it("hides a personal interview from a different authenticated user", async () => {
+    mockStoredInterview.value = makeStoredInterview();
+    mockGetUser.mockResolvedValue({ data: { user: { id: OTHER_USER_ID } }, error: null });
+
+    const response = await handlers.GET({
+      request: makeRequest(
+        "GET",
+        "Bearer another-users-token",
+        {},
+        "http://localhost/api/maaroof-interviews?id=" + INTERVIEW_ID,
+      ),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "interview_not_found" });
+  });
+
+  it("rejects a workspace non-member from reading an interview", async () => {
+    mockStoredInterview.value = makeStoredInterview(WORKSPACE_ID);
+    mockWorkspace.value = { id: WORKSPACE_ID, owner_id: OTHER_USER_ID };
+    mockWorkspaceMember.value = null;
+
+    const response = await handlers.GET({
+      request: makeRequest(
+        "GET",
+        "Bearer valid-token",
+        {},
+        "http://localhost/api/maaroof-interviews?id=" + INTERVIEW_ID,
+      ),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "interview_not_found" });
+  });
+
+  it("rejects a workspace non-member from modifying an interview", async () => {
+    mockStoredInterview.value = makeStoredInterview(WORKSPACE_ID);
+    mockWorkspace.value = { id: WORKSPACE_ID, owner_id: OTHER_USER_ID };
+    mockWorkspaceMember.value = null;
+
+    const response = await handlers.PATCH({
+      request: makeRequest("PATCH", "Bearer valid-token", {
+        id: INTERVIEW_ID,
+        expected_version: 1,
+        action: "status",
+        status: "paused",
+      }),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "interview_not_found" });
+  });
+
+  it("allows a workspace owner to modify an interview without a membership row", async () => {
+    mockStoredInterview.value = makeStoredInterview(WORKSPACE_ID);
+    mockWorkspace.value = { id: WORKSPACE_ID, owner_id: USER_ID };
+    mockWorkspaceMember.value = null;
+
+    const response = await handlers.PATCH({
+      request: makeRequest("PATCH", "Bearer valid-token", {
+        id: INTERVIEW_ID,
+        expected_version: 1,
+        action: "status",
+        status: "paused",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.interview.status).toBe("paused");
+  });
+});
+
 describe("Maaroof interviews stored-data integrity", () => {
   it("returns the expected question when saved context and cursor agree", async () => {
     mockStoredInterview.value = makeStoredInterview();
