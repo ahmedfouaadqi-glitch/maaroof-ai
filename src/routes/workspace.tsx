@@ -274,7 +274,7 @@ function WorkspacePage() {
       const body = await response.json();
       const jobs = Array.isArray(body?.jobs) ? body.jobs : [];
       const now = Date.now();
-      const recent = jobs.find((job: any) => job.status === "queued" || job.status === "running")
+      const recent = jobs.find((job: any) => job.status === "dispatching" || job.status === "queued" || job.status === "running")
         || jobs.find((job: any) => now - new Date(job.created_at).getTime() < 24 * 60 * 60 * 1000);
       if (!recent || !active) return;
       setJobId(String(recent.id));
@@ -282,7 +282,7 @@ function WorkspacePage() {
       setMode(["execution", "recommendation", "simulation"].includes(recent.mode) ? recent.mode : "execution");
       const payload = recent.request_payload || {};
       setSelectedSkills(Array.isArray(payload.selected_skills) ? payload.selected_skills.filter((key: unknown) => typeof key === "string") : []);
-      setRunning(recent.status === "queued" || recent.status === "running");
+      setRunning(recent.status === "dispatching" || recent.status === "queued" || recent.status === "running");
       setError(recent.status === "failed" ? String(recent.error || c.failed) : "");
       try { await watchJob(String(recent.id), 0, token); } catch (e: any) { if (active) { setRunning(false); setError(String(e?.message || c.failed)); } }
     })().catch(() => {});
