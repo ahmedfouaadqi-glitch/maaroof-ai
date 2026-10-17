@@ -24,7 +24,7 @@ describe("MAAROOF user-facing skill catalog", () => {
     expect(recommendMaaroofSkills("", 3).map(skill => skill.key)).toEqual([
       "deep-research", "market-intelligence", "growth-strategy"
     ]);
-    expect(recommendMaaroofSkills("xyz-123", 2)).toHaveLength(3);
+    expect(recommendMaaroofSkills("xyz-123", 2)).toHaveLength(2);
   });
 
   it("deduplicates shared tools across selected skills", () => {
