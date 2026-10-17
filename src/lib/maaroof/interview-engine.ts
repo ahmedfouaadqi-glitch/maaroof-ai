@@ -145,7 +145,11 @@ export function validateInterviewQuestionSet(input: unknown): InterviewQuestionS
     const localizedPrompt = {} as Record<InterviewLocale, string>;
     for (const locale of INTERVIEW_LOCALES) {
       const localized = prompt[locale];
-      if (typeof localized !== "string" || localized.trim().length === 0 || localized.length > 1200) {
+      if (
+        typeof localized !== "string" ||
+        localized.trim().length === 0 ||
+        localized.length > 1200
+      ) {
         return { ok: false, error: "invalid_question_prompt" };
       }
       localizedPrompt[locale] = localized.trim();
@@ -162,7 +166,10 @@ export function validateInterviewQuestionSet(input: unknown): InterviewQuestionS
     }
     if (
       item.priority !== undefined &&
-      (typeof item.priority !== "number" || !Number.isFinite(item.priority) || item.priority < 0 || item.priority > 10000)
+      (typeof item.priority !== "number" ||
+        !Number.isFinite(item.priority) ||
+        item.priority < 0 ||
+        item.priority > 10000)
     ) {
       return { ok: false, error: "invalid_question_priority" };
     }
@@ -172,7 +179,9 @@ export function validateInterviewQuestionSet(input: unknown): InterviewQuestionS
       if (
         !Array.isArray(item.targetTypes) ||
         item.targetTypes.some(
-          (value) => typeof value !== "string" || !(INTERVIEW_TARGET_TYPES as readonly string[]).includes(value),
+          (value) =>
+            typeof value !== "string" ||
+            !(INTERVIEW_TARGET_TYPES as readonly string[]).includes(value),
         )
       ) {
         return { ok: false, error: "invalid_question_target_types" };
@@ -185,7 +194,8 @@ export function validateInterviewQuestionSet(input: unknown): InterviewQuestionS
       if (
         !Array.isArray(item.domains) ||
         item.domains.some(
-          (value) => typeof value !== "string" || !(INTERVIEW_DOMAINS as readonly string[]).includes(value),
+          (value) =>
+            typeof value !== "string" || !(INTERVIEW_DOMAINS as readonly string[]).includes(value),
         )
       ) {
         return { ok: false, error: "invalid_question_domains" };

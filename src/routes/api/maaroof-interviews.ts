@@ -22,9 +22,7 @@ import {
 } from "@/lib/maaroof/interview-question-bank";
 
 type AdminDb = ReturnType<typeof createClient>;
-type AuthResult =
-  | { ok: true; admin: AdminDb; userId: string }
-  | { ok: false; response: Response };
+type AuthResult = { ok: true; admin: AdminDb; userId: string } | { ok: false; response: Response };
 
 const SUMMARY_FIELDS =
   "id, user_id, workspace_id, target_type, target_name, initial_goal, domains, locale, status, current_question_id, version, created_at, updated_at, completed_at";
@@ -38,21 +36,26 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isUuid(value: unknown): value is string {
-  return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  );
 }
 
 function isInterviewValue(value: unknown): value is InterviewValue {
   if (typeof value === "string") return value.length <= 10000;
   if (typeof value === "boolean") return true;
   if (typeof value === "number") return Number.isFinite(value);
-  return Array.isArray(value) &&
+  return (
+    Array.isArray(value) &&
     value.length <= 50 &&
-    value.every((part) => typeof part === "string" && part.length <= 1000);
+    value.every((part) => typeof part === "string" && part.length <= 1000)
+  );
 }
 
 function isStoredInterviewState(value: unknown): value is InterviewState {
-  if (!isPlainRecord(value) || !isPlainRecord(value.context) || !isPlainRecord(value.answers)) return false;
+  if (!isPlainRecord(value) || !isPlainRecord(value.context) || !isPlainRecord(value.answers))
+    return false;
   const context = value.context;
   if (
     !isInterviewTargetType(context.targetType) ||
@@ -67,7 +70,8 @@ function isStoredInterviewState(value: unknown): value is InterviewState {
     if (!isPlainRecord(rawAnswer)) return false;
     if (rawAnswer.questionId !== questionId) return false;
     if (!["answered", "skipped", "unknown"].includes(String(rawAnswer.status))) return false;
-    if (!["user", "client", "verified_source", "inferred"].includes(String(rawAnswer.source))) return false;
+    if (!["user", "client", "verified_source", "inferred"].includes(String(rawAnswer.source)))
+      return false;
     if (typeof rawAnswer.updatedAt !== "string") return false;
     return rawAnswer.value === null || isInterviewValue(rawAnswer.value);
   });
@@ -152,7 +156,10 @@ async function handleGet(request: Request): Promise<Response> {
   if (id) {
     if (!isUuid(id)) return errorResponse("invalid_interview_id", 400);
     const { data: interview, error } = await db
-      .from("maaroof_interviews").select("*").eq("id", id).maybeSingle();
+      .from("maaroof_interviews")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
     if (error) return errorResponse("interview_lookup_failed", 500);
     if (!interview || !(await interviewAccess(auth.admin, auth.userId, interview, false))) {
@@ -171,9 +178,13 @@ async function handleGet(request: Request): Promise<Response> {
   }
 
   const [ownResult, ownedWorkspaceResult, membershipsResult] = await Promise.all([
-    db.from("maaroof_interviews").select(SUMMARY_FIELDS)
-      .eq("user_id", auth.userId).is("workspace_id", null)
-      .order("updated_at", { ascending: false }).limit(50),
+    db
+      .from("maaroof_interviews")
+      .select(SUMMARY_FIELDS)
+      .eq("user_id", auth.userId)
+      .is("workspace_id", null)
+      .order("updated_at", { ascending: false })
+      .limit(50),
     db.from("workspaces").select("id").eq("owner_id", auth.userId),
     db.from("workspace_members").select("workspace_id").eq("user_id", auth.userId),
   ]);
@@ -182,18 +193,22 @@ async function handleGet(request: Request): Promise<Response> {
     return errorResponse("interview_list_failed", 500);
   }
 
-  const workspaceIds: string[] = [...new Set<string>([
-    ...((ownedWorkspaceResult.data || []).map((row: { id: string }) => row.id)),
-    ...((membershipsResult.data || []).map((row: { workspace_id: string }) => row.workspace_id)),
-  ])].filter(isUuid);
+  const workspaceIds: string[] = [
+    ...new Set<string>([
+      ...(ownedWorkspaceResult.data || []).map((row: { id: string }) => row.id),
+      ...(membershipsResult.data || []).map((row: { workspace_id: string }) => row.workspace_id),
+    ]),
+  ].filter(isUuid);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let workspaceRows: Array<Record<string, any>> = [];
   if (workspaceIds.length) {
-    const { data, error } = await db.from("maaroof_interviews")
+    const { data, error } = await db
+      .from("maaroof_interviews")
       .select(SUMMARY_FIELDS)
       .in("workspace_id", workspaceIds)
-      .order("updated_at", { ascending: false }).limit(50);
+      .order("updated_at", { ascending: false })
+      .limit(50);
     if (error) return errorResponse("interview_list_failed", 500);
     workspaceRows = data || [];
   }
@@ -224,9 +239,10 @@ async function handleCreate(request: Request): Promise<Response> {
   }
   const targetName = body.target_name.trim();
 
-  const domains = body.domains === undefined
-    ? ["general"] as InterviewDomain[]
-    : normalizeInterviewDomains(body.domains);
+  const domains =
+    body.domains === undefined
+      ? (["general"] as InterviewDomain[])
+      : normalizeInterviewDomains(body.domains);
   if (!domains) return errorResponse("invalid_domains", 400);
 
   const locale = body.locale === undefined ? "ar" : body.locale;
@@ -296,11 +312,14 @@ async function handleCreate(request: Request): Promise<Response> {
     .single();
 
   if (error || !interview) return errorResponse("interview_create_failed", 500);
-  return Response.json({
-    interview,
-    progress: getInterviewProgress(validation.questions, state),
-    next_question: currentQuestion,
-  }, { status: 201 });
+  return Response.json(
+    {
+      interview,
+      progress: getInterviewProgress(validation.questions, state),
+      next_question: currentQuestion,
+    },
+    { status: 201 },
+  );
 }
 
 async function handleUpdate(request: Request): Promise<Response> {
@@ -321,7 +340,10 @@ async function handleUpdate(request: Request): Promise<Response> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = auth.admin as any;
   const { data: interview, error: fetchError } = await db
-    .from("maaroof_interviews").select("*").eq("id", body.id).maybeSingle();
+    .from("maaroof_interviews")
+    .select("*")
+    .eq("id", body.id)
+    .maybeSingle();
 
   if (fetchError) return errorResponse("interview_lookup_failed", 500);
   if (!interview || !(await interviewAccess(auth.admin, auth.userId, interview, true))) {
@@ -370,7 +392,7 @@ async function handleUpdate(request: Request): Promise<Response> {
       {
         questionId: answer.questionId,
         status: answer.status as InterviewAnswerStatus,
-        value: answer.status === "answered" ? answer.value as InterviewValue : null,
+        value: answer.status === "answered" ? (answer.value as InterviewValue) : null,
         // Provenance is assigned by the server; callers cannot claim a verified or inferred source.
         source: "user",
       },

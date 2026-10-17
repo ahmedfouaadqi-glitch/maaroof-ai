@@ -13,10 +13,22 @@ import {
 describe("Maaroof interview question bank", () => {
   it("provides valid questions for all target types and domain combinations", () => {
     const targets: InterviewTargetType[] = [
-      "individual", "creator", "company", "agency", "client", "brand", "project", "task",
+      "individual",
+      "creator",
+      "company",
+      "agency",
+      "client",
+      "brand",
+      "project",
+      "task",
     ];
     const domainSets: InterviewDomain[][] = [
-      ["general"], ["seo"], ["aeo"], ["geo"], ["gseo"], ["seo", "aeo", "geo", "gseo"],
+      ["general"],
+      ["seo"],
+      ["aeo"],
+      ["geo"],
+      ["gseo"],
+      ["seo", "aeo", "geo", "gseo"],
     ];
     for (const targetType of targets) {
       for (const domains of domainSets) {
