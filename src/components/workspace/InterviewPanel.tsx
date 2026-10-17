@@ -785,7 +785,7 @@ export function InterviewPanel({
                     <span>{c("progress")}</span>
                     <span>
                       {progress.requiredAnswered}/{progress.requiredTotal}
-                      {progress.optionalRemaining > 0
+                      {interviewDepth === "comprehensive" && progress.optionalRemaining > 0
                         ? ` · ${progress.optionalRemaining} ${c("optionalRemaining")}`
                         : ""}
                     </span>
