@@ -2019,4 +2019,13 @@ export const ar: Dict = {
   maaroof_tool_failed_internal: "خطأ مؤقت في الأداة. تابع معروف بقية الخطوات.",
   "auto.execution_inspector": "مفتِّش التنفيذ",
   "auto.all_states": "كل الحالات",
+
+  home_about_title: "ما هي منصة معروف للذكاء الاصطناعي؟",
+  home_about_intro: "معروف منصة لتحسين الظهور في محركات الإجابة التوليدية (GEO)، تساعد العلامات التجارية والناشرين والوكالات على أن تصبح مصدراً تستشهد به إجابات الذكاء الاصطناعي. تتيح قياس ظهور العلامة عبر ChatGPT وGemini وClaude وPerplexity وCopilot وGrok وMistral وDeepSeek وKimi وQwen، وتقديم خطوات مدعومة بالأدلة لتحسينه بالعربية والكردية والإنجليزية.",
+  home_analyze_title: "حلّل المحتوى وقيّمه",
+  home_analyze_desc: "افحص كثافة الحقائق والملاءمة المحلية والاستعداد للاستشهاد قبل النشر.",
+  home_verify_title: "تحقّق من الظهور في محركات الذكاء",
+  home_verify_desc: "افحص ما إذا كانت محركات الذكاء تذكر علامتك، واحتفظ بالإجابات المتاحة كأدلة.",
+  home_publish_title: "انشر هوية مفهومة للآلات",
+  home_publish_desc: "أنشئ llms.txt وبيانات Schema.org بصيغة JSON-LD للمساعدة في توحيد هوية علامتك.",
 };
