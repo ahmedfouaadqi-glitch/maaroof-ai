@@ -12,6 +12,7 @@ import { AdminTokensPanel } from "@/components/admin/AdminTokensPanel";
 import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
 import { AdminPlansMatrixPanel } from "@/components/admin/AdminPlansMatrixPanel";
 import { AdminFreePlanPolicyPanel } from "@/components/admin/AdminFreePlanPolicyPanel";
+import { WorkbenchSettingsPanel } from "@/components/admin/WorkbenchSettingsPanel";
 
 import { ContentStudioTab } from "@/components/admin/ContentStudioTab";
 import { HeaderConfigTab } from "@/components/admin/HeaderConfigTab";
@@ -143,7 +144,7 @@ function AdminPage() {
         {activeSub === "pricing" && <><AdminPlansMatrixPanel /><MonitorPolicyPanel /><MciPanel /></>}
         {activeSub === "plans" && <PlansTab />}
         {activeSub === "agent" && <AgentTab />}
-        {activeSub === "access" && <AccessTab />}
+        {activeSub === "access" && <><AccessTab /><div className="mt-6"><WorkbenchSettingsPanel /></div></>}
         {activeSub === "finance" && <AdminFinanceTab />}
         {activeSub === "requests" && <RequestsTab />}
         {activeSub === "boost" && <BoostTab />}
