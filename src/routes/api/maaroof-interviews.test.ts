@@ -366,6 +366,32 @@ describe("Maaroof interviews optimistic concurrency", () => {
   });
 });
 
+describe("Maaroof interviews stored-answer integrity", () => {
+  it("rejects saved answers whose question IDs are absent from the saved question set", async () => {
+    const interview = makeStoredInterview();
+    interview.state.answers.orphan_question = {
+      questionId: "orphan_question",
+      status: "answered",
+      source: "user",
+      updatedAt: "2026-10-17T00:01:00.000Z",
+      value: "A response for a question that does not exist",
+    };
+    mockStoredInterview.value = interview;
+
+    const response = await handlers.GET({
+      request: makeRequest(
+        "GET",
+        "Bearer valid-token",
+        {},
+        "http://localhost/api/maaroof-interviews?id=" + INTERVIEW_ID,
+      ),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "stored_interview_invalid" });
+  });
+});
+
 describe("Maaroof interviews stored-data integrity", () => {
   it("returns the expected question when saved context and cursor agree", async () => {
     mockStoredInterview.value = makeStoredInterview();
