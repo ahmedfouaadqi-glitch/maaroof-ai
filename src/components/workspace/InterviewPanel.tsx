@@ -106,7 +106,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     noSessions: "لا توجد مقابلات محفوظة بعد.",
     progress: "تقدم الإجابات",
     done: "اكتملت المقابلة",
-    missingData: "انتهت المقابلة، لكن بقيت معلومات مطلوبة بلا إجابة مؤكدة. ستظل فجوات البيانات واضحة.",
+    missingData:
+      "انتهت المقابلة، لكن بقيت معلومات مطلوبة بلا إجابة مؤكدة. ستظل فجوات البيانات واضحة.",
     completeData: "تمت الإجابة عن الأسئلة المطلوبة.",
     paused: "متوقفة مؤقتاً",
     in_progress: "قيد التنفيذ",
@@ -117,7 +118,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     storageError: "تعذر قراءة جلسات المقابلة. تحقق من تهيئة ترحيل قاعدة البيانات في بيئة الاختبار.",
     nameRequired: "أدخل اسماً للجهة أو المشروع قبل بدء المقابلة.",
     requiredAnswer: "أدخل إجابتك قبل المتابعة.",
-    selectWorkspaceHint: "اختر مساحة عمل لربط المقابلة بالوكالة أو الشركة. من دونها تحفظ الجلسة في حسابك الشخصي.",
+    selectWorkspaceHint:
+      "اختر مساحة عمل لربط المقابلة بالوكالة أو الشركة. من دونها تحفظ الجلسة في حسابك الشخصي.",
     ownerRequired: "تحتاج إلى صلاحية مالك أو محرر في مساحة العمل المحددة.",
     details: "تحديث القائمة",
     count: "إجابة",
@@ -151,7 +153,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     noSessions: "No saved interviews yet.",
     progress: "Answer progress",
     done: "Interview completed",
-    missingData: "The interview ended with required information still missing. Those data gaps remain visible.",
+    missingData:
+      "The interview ended with required information still missing. Those data gaps remain visible.",
     completeData: "All required questions have been answered.",
     paused: "Paused",
     in_progress: "In progress",
@@ -159,17 +162,20 @@ const COPY: Record<Locale, Record<string, string>> = {
     abandoned: "Archived",
     auth: "Your sign-in session expired. Sign in and try again.",
     genericError: "The operation failed. Check your connection and access, then try again.",
-    storageError: "Could not load interviews. Verify that the database migration is applied in the test environment.",
+    storageError:
+      "Could not load interviews. Verify that the database migration is applied in the test environment.",
     nameRequired: "Enter an entity or project name before starting.",
     requiredAnswer: "Enter an answer before continuing.",
-    selectWorkspaceHint: "Select a workspace to associate this interview with a company or agency. Otherwise, it stays in your personal account.",
+    selectWorkspaceHint:
+      "Select a workspace to associate this interview with a company or agency. Otherwise, it stays in your personal account.",
     ownerRequired: "You need an editor or owner role for that workspace.",
     details: "Refresh list",
     count: "answers",
   },
   ku: {
     title: "چاوپێکەوتنە ڕێنماییکراوەکان",
-    subtitle: "چاوپێکەوتن بەپێی لایەن و ئامانج. وەڵامەکان دەپارێزرێن و دواتر دەتوانیت بەردەوام بیت.",
+    subtitle:
+      "چاوپێکەوتن بەپێی لایەن و ئامانج. وەڵامەکان دەپارێزرێن و دواتر دەتوانیت بەردەوام بیت.",
     open: "کردنەوەی چاوپێکەوتنەکان",
     close: "شاردنەوەی چاوپێکەوتنەکان",
     target: "جۆری لایەن یان ئامانج",
@@ -196,7 +202,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     noSessions: "هێشتا چاوپێکەوتنی پاشەکەوتکراو نییە.",
     progress: "پێشکەوتنی وەڵامەکان",
     done: "چاوپێکەوتن تەواو بوو",
-    missingData: "چاوپێکەوتن تەواو بوو، بەڵام هێشتا زانیاریی پێویست نەزانراوە. بۆشاییەکان دیار دەمێننەوە.",
+    missingData:
+      "چاوپێکەوتن تەواو بوو، بەڵام هێشتا زانیاریی پێویست نەزانراوە. بۆشاییەکان دیار دەمێننەوە.",
     completeData: "هەموو پرسیارە پێویستەکان وەڵام دراون.",
     paused: "وەستاوە بۆ کاتێکی تر",
     in_progress: "لە جێبەجێکردندایە",
@@ -204,10 +211,12 @@ const COPY: Record<Locale, Record<string, string>> = {
     abandoned: "ئەرشیفکراو",
     auth: "دانیشتنی چوونەژوورەوە کۆتایی هاتووە. دووبارە بچۆ ژوورەوە.",
     genericError: "کارەکە سەرکەوتوو نەبوو. پەیوەندی و دەسەڵاتەکان بپشکنە و دووبارە هەوڵ بدەوە.",
-    storageError: "نەتوانرا چاوپێکەوتنەکان بخوێنرێنەوە. دڵنیابە لە جێبەجێکردنی migration لە تاقیگە.",
+    storageError:
+      "نەتوانرا چاوپێکەوتنەکان بخوێنرێنەوە. دڵنیابە لە جێبەجێکردنی migration لە تاقیگە.",
     nameRequired: "پێش دەستپێکردن ناوی لایەن یان پڕۆژە بنووسە.",
     requiredAnswer: "پێش بەردەوامبوون وەڵام بنووسە.",
-    selectWorkspaceHint: "شوێنی کاری هەڵبژێرە بۆ بەستنی چاوپێکەوتن بە ئاژانس یان کۆمپانیا؛ ئەگەر نەهەڵبژێریت لە هەژماری کەسیت دەپارێزرێت.",
+    selectWorkspaceHint:
+      "شوێنی کاری هەڵبژێرە بۆ بەستنی چاوپێکەوتن بە ئاژانس یان کۆمپانیا؛ ئەگەر نەهەڵبژێریت لە هەژماری کەسیت دەپارێزرێت.",
     ownerRequired: "بۆ ئەو شوێنی کارە دەسەڵاتی دەستکاریکەر یان خاوەنت پێویستە.",
     details: "نوێکردنەوەی لیست",
     count: "وەڵام",
@@ -270,7 +279,7 @@ export function InterviewPanel({
         headers: { Authorization: "Bearer " + token },
         cache: "no-store",
       });
-      const body = await response.json().catch(() => ({})) as InterviewApiResponse;
+      const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok) throw new Error(body.error || "interview_list_failed");
       setSessions(Array.isArray(body.interviews) ? body.interviews : []);
     } catch (e) {
@@ -283,10 +292,11 @@ export function InterviewPanel({
   async function loadWorkspaces() {
     setLoadingWorkspaces(true);
     try {
-      const [{ data: owned, error: ownError }, { data: memberships, error: memberError }] = await Promise.all([
-        supabase.from("workspaces").select("id,name,kind").eq("owner_id", userId),
-        supabase.from("workspace_members").select("workspace_id,role").eq("user_id", userId),
-      ]);
+      const [{ data: owned, error: ownError }, { data: memberships, error: memberError }] =
+        await Promise.all([
+          supabase.from("workspaces").select("id,name,kind").eq("owner_id", userId),
+          supabase.from("workspace_members").select("workspace_id,role").eq("user_id", userId),
+        ]);
       if (ownError) throw ownError;
 
       const ids = new Set<string>((owned || []).map((workspace) => workspace.id));
@@ -299,7 +309,9 @@ export function InterviewPanel({
       let sharedRows: WorkspaceOption[] = [];
       if (ids.size > 0) {
         const { data, error: sharedError } = await supabase
-          .from("workspaces").select("id,name,kind").in("id", [...ids]);
+          .from("workspaces")
+          .select("id,name,kind")
+          .in("id", [...ids]);
         if (sharedError) throw sharedError;
         sharedRows = data || [];
       }
@@ -344,7 +356,7 @@ export function InterviewPanel({
           workspace_id: workspaceId || null,
         }),
       });
-      const body = await response.json().catch(() => ({})) as InterviewApiResponse;
+      const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_create_failed");
       setSession(body.interview);
       setNextQuestion(body.next_question || null);
@@ -369,7 +381,7 @@ export function InterviewPanel({
         headers: { Authorization: "Bearer " + token },
         cache: "no-store",
       });
-      let body = await response.json().catch(() => ({})) as InterviewApiResponse;
+      let body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_lookup_failed");
 
       if (body.interview.status === "paused" || body.interview.status === "abandoned") {
@@ -383,7 +395,7 @@ export function InterviewPanel({
             status: "in_progress",
           }),
         });
-        const resumedBody = await resumed.json().catch(() => ({})) as InterviewApiResponse;
+        const resumedBody = (await resumed.json().catch(() => ({}))) as InterviewApiResponse;
         if (!resumed.ok || !resumedBody.interview) {
           throw new Error(resumedBody.error || "interview_resume_failed");
         }
@@ -427,7 +439,7 @@ export function InterviewPanel({
           },
         }),
       });
-      const body = await response.json().catch(() => ({})) as InterviewApiResponse;
+      const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_update_failed");
       setSession(body.interview);
       setNextQuestion(body.next_question || null);
@@ -458,7 +470,7 @@ export function InterviewPanel({
           status,
         }),
       });
-      const body = await response.json().catch(() => ({})) as InterviewApiResponse;
+      const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok || !body.interview) throw new Error(body.error || "interview_update_failed");
 
       if (status === "paused") {
@@ -497,7 +509,10 @@ export function InterviewPanel({
     : 0;
 
   return (
-    <section dir={direction} className="mb-7 overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-sm">
+    <section
+      dir={direction}
+      className="mb-7 overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-sm"
+    >
       <button
         type="button"
         onClick={() => void openPanel()}
@@ -509,18 +524,25 @@ export function InterviewPanel({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-semibold">{c("title")}</span>
-          <span className="mt-1 block text-xs leading-5 text-muted-foreground">{c("subtitle")}</span>
+          <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+            {c("subtitle")}
+          </span>
         </span>
         <span className="hidden rounded-full border border-border px-2.5 py-1 text-xs sm:inline-flex">
           {open ? c("close") : c("open")}
         </span>
-        <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
         <div className="space-y-5 border-t border-border p-4 md:p-5">
           {error && (
-            <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+            >
               <CircleAlert className="mt-0.5 size-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -538,7 +560,9 @@ export function InterviewPanel({
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
                   >
                     {INTERVIEW_TARGET_TYPES.map((type) => (
-                      <option key={type} value={type}>{TARGET_LABELS[type][locale]}</option>
+                      <option key={type} value={type}>
+                        {TARGET_LABELS[type][locale]}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -610,7 +634,11 @@ export function InterviewPanel({
                     disabled={busy || !targetName.trim()}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                   >
-                    {busy ? <LoaderCircle className="size-4 animate-spin" /> : <Play className="size-4" />}
+                    {busy ? (
+                      <LoaderCircle className="size-4 animate-spin" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
                     {busy ? c("starting") : c("start")}
                   </button>
                 </div>
@@ -622,11 +650,13 @@ export function InterviewPanel({
                 <div className="min-w-0">
                   <p className="font-semibold">{session.target_name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {TARGET_LABELS[session.target_type]?.[locale] || session.target_type} · {session.domains.map((domain) => DOMAIN_LABELS[domain][locale]).join(" · ")}
+                    {TARGET_LABELS[session.target_type]?.[locale] || session.target_type} ·{" "}
+                    {session.domains.map((domain) => DOMAIN_LABELS[domain][locale]).join(" · ")}
                   </p>
                   {session.workspace_id && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {workspaces.find((workspace) => workspace.id === session.workspace_id)?.name || c("workspace")}
+                      {workspaces.find((workspace) => workspace.id === session.workspace_id)
+                        ?.name || c("workspace")}
                     </p>
                   )}
                 </div>
@@ -638,16 +668,24 @@ export function InterviewPanel({
                       onClick={() => void updateStatus("paused")}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs disabled:opacity-50"
                     >
-                      <Pause className="size-3.5" />{c("pause")}
+                      <Pause className="size-3.5" />
+                      {c("pause")}
                     </button>
                   )}
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => { setSession(null); setNextQuestion(null); setProgress(null); setDataComplete(false); setAnswer(""); }}
+                    onClick={() => {
+                      setSession(null);
+                      setNextQuestion(null);
+                      setProgress(null);
+                      setDataComplete(false);
+                      setAnswer("");
+                    }}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs disabled:opacity-50"
                   >
-                    <RefreshCw className="size-3.5" />{c("start")}
+                    <RefreshCw className="size-3.5" />
+                    {c("start")}
                   </button>
                 </div>
               </div>
@@ -656,10 +694,15 @@ export function InterviewPanel({
                 <div>
                   <div className="mb-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span>{c("progress")}</span>
-                    <span>{progress.requiredAnswered}/{progress.requiredTotal}</span>
+                    <span>
+                      {progress.requiredAnswered}/{progress.requiredTotal}
+                    </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress.completionPercent}%` }} />
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${progress.completionPercent}%` }}
+                    />
                   </div>
                 </div>
               )}
@@ -667,10 +710,17 @@ export function InterviewPanel({
               {nextQuestion ? (
                 <form
                   className="rounded-xl border border-primary/25 bg-primary/[0.025] p-4"
-                  onSubmit={(event) => { event.preventDefault(); void submitAnswer("answered"); }}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void submitAnswer("answered");
+                  }}
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">{c("current")}</p>
-                  <h3 className="mt-2 text-base font-semibold leading-7">{nextQuestion.prompt[locale] || nextQuestion.prompt.ar}</h3>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                    {c("current")}
+                  </p>
+                  <h3 className="mt-2 text-base font-semibold leading-7">
+                    {nextQuestion.prompt[locale] || nextQuestion.prompt.ar}
+                  </h3>
                   <label className="mb-1.5 mt-4 block text-sm font-medium">{c("answer")}</label>
                   <textarea
                     value={answer}
@@ -682,25 +732,50 @@ export function InterviewPanel({
                     className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
                   />
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="submit" disabled={busy || !answer.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-                      {busy ? <LoaderCircle className="size-4 animate-spin" /> : <Send className="size-4" />}{c("send")}
+                    <button
+                      type="submit"
+                      disabled={busy || !answer.trim()}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                    >
+                      {busy ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      {c("send")}
                     </button>
                     {nextQuestion.canSkip !== false && (
-                      <button type="button" disabled={busy} onClick={() => void submitAnswer("skipped")} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void submitAnswer("skipped")}
+                        className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50"
+                      >
                         {c("skip")}
                       </button>
                     )}
                     {nextQuestion.allowUnknown !== false && (
-                      <button type="button" disabled={busy} onClick={() => void submitAnswer("unknown")} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50">
-                        <CircleHelp className="size-4" />{c("unknown")}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void submitAnswer("unknown")}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50"
+                      >
+                        <CircleHelp className="size-4" />
+                        {c("unknown")}
                       </button>
                     )}
                   </div>
                 </form>
               ) : session.status === "completed" ? (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                  <div className="flex items-center gap-2 font-semibold"><Check className="size-4" />{c("done")}</div>
-                  <p className="mt-2 text-sm text-muted-foreground">{dataComplete ? c("completeData") : c("missingData")}</p>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Check className="size-4" />
+                    {c("done")}
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {dataComplete ? c("completeData") : c("missingData")}
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-border p-4">
@@ -712,13 +787,25 @@ export function InterviewPanel({
                         ? "پرسیارە پێویستەکان مامەڵەیان لەگەڵ کرا. بۆ تەواوکردن، چاوپێکەوتنەکە کۆتایی پێبهێنە."
                         : "تم التعامل مع الأسئلة المطلوبة. أنهِ المقابلة لحفظها بالحالة النهائية."}
                   </p>
-                  <button type="button" onClick={() => void updateStatus("completed")} disabled={busy} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-                    {busy ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}{c("finish")}
+                  <button
+                    type="button"
+                    onClick={() => void updateStatus("completed")}
+                    disabled={busy}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    {busy ? (
+                      <LoaderCircle className="size-4 animate-spin" />
+                    ) : (
+                      <Check className="size-4" />
+                    )}
+                    {c("finish")}
                   </button>
                 </div>
               )}
 
-              {session.questions_snapshot.some((question) => session.state.answers[question.id]) && (
+              {session.questions_snapshot.some(
+                (question) => session.state.answers[question.id],
+              ) && (
                 <details className="rounded-xl border border-border p-4">
                   <summary className="cursor-pointer text-sm font-semibold">
                     {c("previous")} ({selectedAnswerCount} {c("count")})
@@ -727,15 +814,24 @@ export function InterviewPanel({
                     {session.questions_snapshot.map((question) => {
                       const record = session.state.answers[question.id];
                       if (!record) return null;
-                      const response = record.status === "answered"
-                        ? String(Array.isArray(record.value) ? record.value.join(", ") : record.value ?? "")
-                        : record.status === "skipped"
-                          ? c("skip")
-                          : c("unknown");
+                      const response =
+                        record.status === "answered"
+                          ? String(
+                              Array.isArray(record.value)
+                                ? record.value.join(", ")
+                                : (record.value ?? ""),
+                            )
+                          : record.status === "skipped"
+                            ? c("skip")
+                            : c("unknown");
                       return (
                         <div key={question.id} className="border-s-2 border-border ps-3">
-                          <p className="text-sm font-medium">{question.prompt[locale] || question.prompt.ar}</p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{response}</p>
+                          <p className="text-sm font-medium">
+                            {question.prompt[locale] || question.prompt.ar}
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                            {response}
+                          </p>
                         </div>
                       );
                     })}
@@ -748,8 +844,18 @@ export function InterviewPanel({
           <div className="border-t border-border pt-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="font-semibold">{c("saved")}</h3>
-              <button type="button" onClick={() => void loadSessions()} disabled={loadingList || busy} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs disabled:opacity-50">
-                {loadingList ? <LoaderCircle className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}{c("details")}
+              <button
+                type="button"
+                onClick={() => void loadSessions()}
+                disabled={loadingList || busy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs disabled:opacity-50"
+              >
+                {loadingList ? (
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3.5" />
+                )}
+                {c("details")}
               </button>
             </div>
             {loadingList ? (
@@ -770,7 +876,8 @@ export function InterviewPanel({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{item.target_name}</span>
                       <span className="mt-1 block text-xs text-muted-foreground">
-                        {TARGET_LABELS[item.target_type]?.[locale] || item.target_type} · {c(item.status)}
+                        {TARGET_LABELS[item.target_type]?.[locale] || item.target_type} ·{" "}
+                        {c(item.status)}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         {new Date(item.updated_at).toLocaleDateString(locale)}
