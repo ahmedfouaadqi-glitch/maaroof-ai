@@ -157,15 +157,15 @@ function Page() {
           <div className="grid gap-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-card/80 to-accent/8 p-6 md:grid-cols-[1fr_auto] md:items-center md:p-8">
             <div>
               <div className="text-xs font-semibold uppercase tracking-widest text-primary">MAAROOF WORKBENCH</div>
-              <h2 id="workbench-intro" className="mt-2 font-display text-2xl font-bold md:text-3xl">ابدأ من هدفك، لا من قائمة الأدوات</h2>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">اكتب ما تريد إنجازه، واختر المهارات المناسبة، ثم تابع مراحل العمل والنتائج الفعلية. تبقى الأدوات الحالية ومحركات الذكاء والصلاحيات والرصيد هي أساس التنفيذ.</p>
+              <h2 id="workbench-intro" className="mt-2 font-display text-2xl font-bold md:text-3xl">{lang === "en" ? "Start with your goal, not a tool list" : lang === "ku" ? "لە ئامانجەکەتەوە دەست پێ بکە، نەک لیستی ئامرازەکان" : "ابدأ من هدفك، لا من قائمة الأدوات"}</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{lang === "en" ? "Describe what you want to accomplish, choose relevant skills, and follow the workflow and actual results. Existing tools, AI engines, permissions, and balance remain the execution foundation." : lang === "ku" ? "ئەوەی دەتەوێت ئەنجامی بدەیت ڕوون بکەرەوە، شارەزایی گونجاو هەڵبژێرە و ڕەوتی کار و ئەنجامی ڕاستەقینە ببینە. ئامراز و مۆدێل و مۆڵەتەکانی هەنووکە بنەمای جێبەجێکردن دەمێننەوە." : "اكتب ما تريد إنجازه، واختر المهارات المناسبة، ثم تابع مراحل العمل والنتائج الفعلية. تبقى الأدوات الحالية ومحركات الذكاء والصلاحيات والرصيد هي أساس التنفيذ."}</p>
               <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">مهارات مرتبطة بالأدوات الحالية</span>
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">تتبّع واضح للتنفيذ</span>
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">العربية والكردية والإنكليزية</span>
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">{lang === "en" ? "Skills built on existing tools" : lang === "ku" ? "شارەزایی پەیوەست بە ئامرازەکانی هەنووکە" : "مهارات مرتبطة بالأدوات الحالية"}</span>
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">{lang === "en" ? "Clear execution tracking" : lang === "ku" ? "بەدواداچوونی ڕوونی جێبەجێکردن" : "تتبّع واضح للتنفيذ"}</span>
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1.5">{lang === "en" ? "Arabic, Kurdish, and English" : lang === "ku" ? "عەرەبی، کوردی و ئینگلیزی" : "العربية والكردية والإنكليزية"}</span>
               </div>
             </div>
-            <Link to="/workspace" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">افتح مساحة العمل <ArrowRight className="size-4" /></Link>
+            <Link to="/workspace" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">{lang === "en" ? "Open workspace" : lang === "ku" ? "کردنەوەی شوێنی کار" : "افتح مساحة العمل"} <ArrowRight className="size-4" /></Link>
           </div>
         </section>
 
