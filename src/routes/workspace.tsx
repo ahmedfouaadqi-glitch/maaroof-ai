@@ -38,7 +38,7 @@ const COPY = {
     automatic: "دع معروف يختار المهارات المناسبة تلقائياً", skillsHint: "التوصيات الأولية مبنية على كلمات الطلب؛ الاختيار النهائي والتحقق من الأدوات يتمان في الخادم.",
     models: "النماذج", modelsHint: "اختياري — يمكنك طلب فحص مباشر للنماذج. قد يستهلك ذلك رصيداً إضافياً وفق خطتك.",
     liveProbe: "تشغيل فحص مباشر للنماذج المختارة", all: "تحديد الكل", clear: "مسح التحديد",
-    run: "ابدأ المهمة", stop: "إيقاف", working: "معروف يعمل على المهمة", mode: "طريقة العمل", execute: "تنفيذ فعلي", recommendMode: "خطة وتوصية", simulate: "محاكاة", costEstimate: "تقدير الكلفة قبل البدء", balance: "الرصيد الحالي", tokens: "توكن", probeCost: "كلفة الفحص المباشر", toolCostNote: "تُضاف كلفة الأدوات التي تُنفّذ فعلياً وفق أسعارها الحالية.",
+    run: "ابدأ المهمة", stop: "إيقاف", working: "معروف يعمل على المهمة", mode: "طريقة العمل", execute: "تنفيذ فعلي", recommendMode: "خطة وتوصية", simulate: "محاكاة", costEstimate: "تقدير الكلفة قبل البدء", balance: "الرصيد الحالي", tokens: "توكن", probeCost: "كلفة الفحص المباشر", toolCostNote: "تُضاف كلفة الأدوات التي تُنفّذ فعلياً. قد يقل عدد المحركات الفعلي عن المحدد وفق خطتك وسياسة الإدارة.",
     plan: "خطة العمل", progress: "تقدم التنفيذ", result: "النتيجة", activity: "سجل العمل",
     ready: "جاهز", failed: "تعذر إكمال المهمة", empty: "اكتب هدفاً أو اختر مهارة للبدء.",
     selectedTools: "أدوات مرتبطة بالمهارات المختارة", noTools: "لم تختر مهارات؛ سيحدد معروف الأدوات وفق الهدف.",
@@ -56,7 +56,7 @@ const COPY = {
     automatic: "Let Maaroof choose suitable skills automatically", skillsHint: "Initial suggestions use goal keywords; final tool selection and authorization remain server-side.",
     models: "Models", modelsHint: "Optional — live model checks may consume additional balance according to your plan.",
     liveProbe: "Run a live check with selected models", all: "Select all", clear: "Clear selection",
-    run: "Start task", stop: "Stop", working: "Maaroof is working", mode: "Work mode", execute: "Execute", recommendMode: "Plan & recommend", simulate: "Simulate", costEstimate: "Estimated cost before starting", balance: "Current balance", tokens: "tokens", probeCost: "Live-check cost", toolCostNote: "Successful tool executions are charged separately at their current prices.",
+    run: "Start task", stop: "Stop", working: "Maaroof is working", mode: "Work mode", execute: "Execute", recommendMode: "Plan & recommend", simulate: "Simulate", costEstimate: "Estimated cost before starting", balance: "Current balance", tokens: "tokens", probeCost: "Live-check cost", toolCostNote: "Successful tool executions are charged separately. Plan and admin limits may reduce the actual number of engines checked.",
     plan: "Work plan", progress: "Execution progress", result: "Result", activity: "Activity",
     ready: "Ready", failed: "The task could not be completed", empty: "Enter a goal or choose a skill to begin.",
     selectedTools: "Tools associated with selected skills", noTools: "No skills selected; Maaroof will choose tools from the goal.",
@@ -74,7 +74,7 @@ const COPY = {
     automatic: "با معروف بە شێوەی خۆکار شارەزاییەکان هەڵبژێرێت", skillsHint: "پێشنیارە سەرەتاییەکان بە وشەکانی ئامانجەکە دەستنیشان دەکرێن.",
     models: "مۆدێلەکان", modelsHint: "هەڵبژاردەیی — پشکنینی ڕاستەوخۆ ڕەنگە باڵانسی زیاتر بەکاربهێنێت.",
     liveProbe: "پشکنینی ڕاستەوخۆی مۆدێلە هەڵبژێردراوەکان", all: "هەمووی هەڵبژێرە", clear: "پاککردنەوە",
-    run: "دەستپێکردن", stop: "وەستاندن", working: "معروف لەسەر ئەرکەکە کار دەکات", mode: "شێوازی کار", execute: "جێبەجێکردن", recommendMode: "پلان و پێشنیار", simulate: "هاوشێوەکردن", costEstimate: "خەمڵاندنی تێچوو پێش دەستپێکردن", balance: "باڵانسی ئێستا", tokens: "تۆکن", probeCost: "تێچووی پشکنینی ڕاستەوخۆ", toolCostNote: "تێچووی ئامرازە جێبەجێکراوەکان بە جیا و بەپێی نرخەکانیان دەبڕدرێت.",
+    run: "دەستپێکردن", stop: "وەستاندن", working: "معروف لەسەر ئەرکەکە کار دەکات", mode: "شێوازی کار", execute: "جێبەجێکردن", recommendMode: "پلان و پێشنیار", simulate: "هاوشێوەکردن", costEstimate: "خەمڵاندنی تێچوو پێش دەستپێکردن", balance: "باڵانسی ئێستا", tokens: "تۆکن", probeCost: "تێچووی پشکنینی ڕاستەوخۆ", toolCostNote: "تێچووی ئامرازە جێبەجێکراوەکان بە جیا دەبڕدرێت؛ سنووری پلان و ئەدمین ڕەنگە ژمارەی مۆدێلەکان کەم بکاتەوە.",
     plan: "پلانی کار", progress: "پێشکەوتن", result: "ئەنجام", activity: "تۆماری کار",
     ready: "ئامادەیە", failed: "ئەرکەکە تەواو نەبوو", empty: "ئامانج بنووسە یان شارەزاییەک هەڵبژێرە.",
     selectedTools: "ئامرازە پەیوەندیدارەکان", noTools: "هیچ شارەزاییەک هەڵنەبژێردرا؛ معروف ئامرازەکان هەڵدەبژێرێت.",
@@ -305,7 +305,7 @@ function WorkspacePage() {
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
-                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && costRun.metered && costRun.balance < costRun.total + (costProbe?.total || 0))} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !costRun.enough)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
