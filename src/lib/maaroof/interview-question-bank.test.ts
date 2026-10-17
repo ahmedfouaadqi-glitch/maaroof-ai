@@ -76,7 +76,11 @@ describe("Maaroof interview question bank", () => {
     const objective = recordInterviewResponse(
       state,
       individualQuestions,
-      { questionId: "objective", status: "answered", value: "Build a clear profile" },
+      {
+        questionId: "objective",
+        status: "answered",
+        value: "Build a clear profile",
+      },
       "2026-10-17T00:00:00.000Z",
     );
     expect(objective.ok).toBe(true);
@@ -95,7 +99,9 @@ describe("Maaroof interview question bank", () => {
       getNextInterviewQuestion(individualQuestions, audience.state, { includeOptional: true })?.id,
     ).toBe("individual_context");
     expect(
-      individualQuestions.some((question) => question.id === "success_measure" && !question.required),
+      individualQuestions.some(
+        (question) => question.id === "success_measure" && !question.required,
+      ),
     ).toBe(true);
   });
 
