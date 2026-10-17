@@ -44,6 +44,11 @@ export const Route = createFileRoute("/api/maaroof")({
           if (uiPolicy?.show_live_engine_picker === false && body?.live_probe !== false) {
             return Response.json({ error: "live_probe_disabled", message: { ar: "الفحص المباشر غير متاح في مساحة العمل حالياً.", en: "Live engine checks are disabled in the workspace.", ku: "پشکنینی ڕاستەوخۆ لە شوێنی کار ناچالاکە." } }, { status: 403 });
           }
+          const allowedSkills = Array.isArray(uiPolicy?.enabled_skills) ? uiPolicy.enabled_skills : undefined;
+          const requestedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((key: unknown): key is string => typeof key === "string") : [];
+          if (allowedSkills && requestedSkills.some((key: string) => !allowedSkills.includes(key))) {
+            return Response.json({ error: "skill_disabled", message: { ar: "إحدى المهارات المختارة غير متاحة حالياً.", en: "One of the selected skills is currently unavailable.", ku: "یەکێک لە شارەزاییە هەڵبژێردراوەکان بەردەست نییە." } }, { status: 403 });
+          }
           const allowedModes = Array.isArray(uiPolicy?.allowed_modes) ? uiPolicy.allowed_modes : ["execution", "recommendation", "simulation"];
           if (!allowedModes.includes(executionMode || "execution")) {
             return Response.json({ error: "work_mode_disabled", message: { ar: "وضع العمل هذا غير متاح لحسابك حالياً.", en: "This work mode is currently unavailable.", ku: "ئەم شێوازی کارە بۆ ئێستا بەردەست نییە." } }, { status: 403 });
