@@ -2,7 +2,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
-import { MAAROOF_SKILLS, recommendMaaroofSkills, getSkillAccessMode } from "@/lib/maaroof/skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, getSkillAccessMode, toolsForSkills } from "@/lib/maaroof/skill-catalog";
+import { assessJobWeight } from "@/lib/maaroof/job-weight";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { enqueueMaaroofJob, hasMaaroofQueue } from "@/lib/request-ctx.server";
 import { encryptJobToken } from "@/lib/maaroof/background-jobs.server";
@@ -119,7 +120,18 @@ export const Route = createFileRoute("/api/maaroof")({
           }
         }
 
+        const requestedToolKeys = interfaceMode === "workspace"
+          ? toolsForSkills(effectiveSkillKeys)
+          : [...new Set(String(clarifications.tools || "").split(",").map((key) => key.trim()).filter(Boolean))];
+        const weight = assessJobWeight({
+          goal,
+          tools: requestedToolKeys,
+          selectedSkills: effectiveSkillKeys,
+          liveProbe: liveProbe !== false,
+          probeEngines: Array.isArray(body?.probe_engines) ? body.probe_engines.filter((key: unknown): key is string => typeof key === "string") : [],
+        });
         const requestPayload = {
+          weight,
           geo_scope: geoScope || null,
           detected_geo: detectedGeo || null,
           origin,
@@ -145,7 +157,7 @@ export const Route = createFileRoute("/api/maaroof")({
 
         const jobId = String(job.id);
         await admin.from("maaroof_background_job_events").insert({
-          job_id: jobId, user_id: userId, event_type: "dispatching", payload: { goal, status: "dispatching" },
+          job_id: jobId, user_id: userId, event_type: "dispatching", payload: { goal, status: "dispatching", weight },
         });
         try {
           const enqueued = await enqueueMaaroofJob(jobId, 5);
@@ -191,9 +203,9 @@ export const Route = createFileRoute("/api/maaroof")({
           return Response.json({ error: "job_finalize_failed", job_id: jobId }, { status: 500 });
         }
         await admin.from("maaroof_background_job_events").insert({
-          job_id: jobId, user_id: userId, event_type: "queued", payload: { goal, status: "queued" },
+          job_id: jobId, user_id: userId, event_type: "queued", payload: { goal, status: "queued", weight },
         });
-        return Response.json({ job_id: jobId, status: "queued" }, { status: 202 });
+        return Response.json({ job_id: jobId, status: "queued", weight }, { status: 202 });
 
       },
     },
