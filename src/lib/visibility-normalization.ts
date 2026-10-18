@@ -55,10 +55,7 @@ export function normalizePlatforms(value: unknown): VisibilityPlatform[] {
     value: unknown,
     allowed: readonly T[],
     fallback: T,
-  ): T =>
-    typeof value === "string" && allowed.includes(value as T)
-      ? (value as T)
-      : fallback;
+  ): T => (typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback);
 
   return PLATFORM_NAMES.map((name) => {
     const platform = byName.get(name) || {};
@@ -97,11 +94,7 @@ export function normalizePlatforms(value: unknown): VisibilityPlatform[] {
       action: String(platform.action || "")
         .trim()
         .slice(0, 220),
-      priority: enumOrDefault(
-        platform.priority,
-        ["high", "medium", "low"] as const,
-        "medium",
-      ),
+      priority: enumOrDefault(platform.priority, ["high", "medium", "low"] as const, "medium"),
     };
   });
 }
@@ -111,9 +104,7 @@ export function normalizeResult(parsed: unknown, fallbackText = "") {
     parsed && typeof parsed === "object" && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : {};
-  const sentiment = ["positive", "neutral", "negative"].includes(
-    String(source.sentiment),
-  )
+  const sentiment = ["positive", "neutral", "negative"].includes(String(source.sentiment))
     ? (source.sentiment as "positive" | "neutral" | "negative")
     : "neutral";
   const platforms = normalizePlatforms(source.platforms);
@@ -123,9 +114,7 @@ export function normalizeResult(parsed: unknown, fallbackText = "") {
     platforms.reduce((sum, platform) => sum + platform.score, 0) /
       platforms.length,
   );
-  const confidence = ["high", "medium", "low"].includes(
-    String(source.confidence),
-  )
+  const confidence = ["high", "medium", "low"].includes(String(source.confidence))
     ? (source.confidence as "high" | "medium" | "low")
     : "medium";
 
@@ -133,9 +122,7 @@ export function normalizeResult(parsed: unknown, fallbackText = "") {
     visibility_percent: visibilityPercent,
     confidence,
     sentiment,
-    appearance_summary: String(
-      source.appearance_summary || fallbackText || "",
-    )
+    appearance_summary: String(source.appearance_summary || fallbackText || "")
       .trim()
       .slice(0, 500),
     strengths: toArray(source.strengths, 6),
