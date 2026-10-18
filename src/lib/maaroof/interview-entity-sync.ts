@@ -72,7 +72,8 @@ export function deriveEntityProfileSync(
   const profileName = normalizeName(profile.brand_name);
   const fullName = normalizeName(profile.full_name);
   const matchesBrand = !!profileName && targetName === profileName;
-  const matchesIndividual = interview.targetType === "individual" && !!fullName && targetName === fullName;
+  const matchesIndividual =
+    interview.targetType === "individual" && !!fullName && targetName === fullName;
   if (!matchesBrand && !matchesIndividual) return {};
 
   const patch: EntityProfileSyncPatch = {};
