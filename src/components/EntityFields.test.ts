@@ -23,27 +23,32 @@ describe("entity truth card account types", () => {
   it("normalizes legacy values without guessing a more specific identity", () => {
     expect(normalizeEntityType("organization")).toBe("product_company");
     expect(normalizeEntityType("person")).toBe("content_creator");
-    expect(entityDraftFrom({ entity_type: "organization", entity_links: [] }).type)
-      .toBe("product_company");
-    expect(entityDraftFrom({ entity_type: "person", entity_links: [] }).type)
-      .toBe("content_creator");
+    expect(
+      entityDraftFrom({ entity_type: "organization", entity_links: [] }).type,
+    ).toBe("product_company");
+    expect(
+      entityDraftFrom({ entity_type: "person", entity_links: [] }).type,
+    ).toBe("content_creator");
   });
 
   it("suggests only types supported by the provided links", () => {
     expect(suggestEntityType("")).toBe("individual");
-    expect(suggestEntityType("https://instagram.com/example\nhttps://youtube.com/@example"))
-      .toBe("content_creator");
+    expect(
+      suggestEntityType("https://instagram.com/example\nhttps://youtube.com/@example"),
+    ).toBe("content_creator");
     expect(suggestEntityType("https://example.com")).toBe("product_company");
   });
 
   it("persists the normalized type and normalized links", () => {
-    expect(entityUpdateFrom({
-      type: "multi_client_agency",
-      hq: "IQ",
-      mk: ["IQ"],
-      sp: "SEO and content",
-      links: "maaroofai.com\nhttps://instagram.com/maaroof",
-    })).toEqual({
+    expect(
+      entityUpdateFrom({
+        type: "multi_client_agency",
+        hq: "IQ",
+        mk: ["IQ"],
+        sp: "SEO and content",
+        links: "maaroofai.com\nhttps://instagram.com/maaroof",
+      }),
+    ).toEqual({
       entity_type: "multi_client_agency",
       hq_country: "IQ",
       target_markets: ["IQ"],
