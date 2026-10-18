@@ -22,7 +22,7 @@ describe("entity truth card account types", () => {
 
   it("normalizes legacy values without guessing a more specific identity", () => {
     expect(normalizeEntityType("organization")).toBe("product_company");
-    expect(normalizeEntityType("person")).toBe("content_creator");
+    expect(normalizeEntityType("person")).toBe("individual");
     expect(entityDraftFrom({ entity_type: "organization", entity_links: [] }).type).toBe(
       "product_company",
     );
