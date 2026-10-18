@@ -15,6 +15,7 @@ const names = [
   "Mistral",
   "DeepSeek",
   "Kimi",
+  "Qwen",
 ];
 
 describe("visibility report normalization", () => {
@@ -56,13 +57,13 @@ describe("visibility report normalization", () => {
     expect(hasValidPlatformScores(malformed)).toBe(false);
   });
 
-  it("derives the headline visibility score from all nine platform scores", () => {
+  it("derives the headline visibility score from all ten platform scores", () => {
     const platforms = names.map((name, index) => ({
       name,
       score: (index + 1) * 10,
     }));
     const result = normalizeResult({ visibility_percent: 99, platforms });
-    expect(result.visibility_percent).toBe(50);
+    expect(result.visibility_percent).toBe(55);
     expect(result.platforms).toHaveLength(9);
   });
 
