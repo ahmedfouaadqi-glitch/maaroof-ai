@@ -614,6 +614,7 @@ async function handleEnrich(request: Request): Promise<Response> {
     .select("id,title,source_url,domain,description,snippet,query,locale,collected_at")
     .eq("interview_id", interview.id)
     .eq("query", query)
+    .eq("locale", locale)
     .gte("collected_at", cacheSince)
     .order("collected_at", { ascending: false })
     .limit(8);
