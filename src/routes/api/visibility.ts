@@ -189,7 +189,7 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
           }
 
-          let chargeUsage: (() => Promise<void>) | null = null;
+          let chargeUsage: ((runId: string, toolKey: string) => Promise<void>) | null = null;
           const { data: roleRow } = await admin
             .from("user_roles")
             .select("role")
@@ -222,11 +222,15 @@ export const Route = createFileRoute("/api/visibility")({
               if ((prof!.monthly_analyses_used || 0) >= limit) {
                 return Response.json({ error: "limit", limit }, { status: 402 });
               }
-              chargeUsage = async () => {
-                const { error } = await admin.from("profiles")
-                  .update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 })
-                  .eq("id", userId);
-                if (error) throw error;
+              chargeUsage = async (_runId, _toolKey) => {
+                const { data, error } = await admin.rpc("consume_visibility_quota", {
+                  _user_id: userId,
+                  _source: "profile",
+                  _profile_limit: limit,
+                  _subscription_id: null,
+                } as any);
+                if (error) throw new Error(`quota_rpc_error:${error.message}`);
+                if (!(data as any)?.ok) throw new Error(`quota_denied:${(data as any)?.reason || "unknown"}`);
               };
             } else {
               const { data: sub } = await admin.from("user_agent_subscriptions")
@@ -246,13 +250,15 @@ export const Route = createFileRoute("/api/visibility")({
               if (dailyUsed + 1 > addon.daily_task_cap) {
                 return Response.json({ error: "daily_cap_reached" }, { status: 402 });
               }
-              chargeUsage = async () => {
-                const { error } = await admin.from("user_agent_subscriptions").update({
-                  tasks_used: sub.tasks_used + 1,
-                  tasks_used_today: dailyUsed + 1,
-                  last_run_date: today,
-                }).eq("id", sub.id);
-                if (error) throw error;
+              chargeUsage = async (_runId, _toolKey) => {
+                const { data, error } = await admin.rpc("consume_visibility_quota", {
+                  _user_id: userId,
+                  _source: "agent_subscription",
+                  _profile_limit: null,
+                  _subscription_id: sub.id,
+                } as any);
+                if (error) throw new Error(`quota_rpc_error:${error.message}`);
+                if (!(data as any)?.ok) throw new Error(`quota_denied:${(data as any)?.reason || "unknown"}`);
               };
             }
           }
@@ -271,10 +277,23 @@ export const Route = createFileRoute("/api/visibility")({
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: pChg.reason === "tool_disabled" ? 403 : 402 });
             if (chargeUsage) {
-              try { await chargeUsage(); }
+              try { await chargeUsage(pRun, "visibility.probe"); }
               catch (e) {
-                console.error("[api/visibility] probe quota update failed:", e);
-                return Response.json({ error: "usage_update_failed" }, { status: 500 });
+                const message = e instanceof Error ? e.message : String(e);
+                console.error("[api/visibility] probe quota reservation failed:", message);
+                // Refund only when the quota RPC explicitly rejected the reservation.
+                // A transport/RPC error may have an unknown commit outcome and needs review.
+                if (message.startsWith("quota_denied:")) {
+                  const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
+                    _user_id: userId, _tool_key: "visibility.probe", _run_id: pRun,
+                    _reason: "quota_denied",
+                  } as any);
+                  if (refundError || !(refundResult as any)?.ok) {
+                    console.error("[api/visibility] quota-denial token refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
+                  }
+                  return Response.json({ error: message.slice("quota_denied:".length) || "quota_rejected" }, { status: 402 });
+                }
+                return Response.json({ error: "usage_update_needs_review" }, { status: 500 });
               }
             }
             const market = describeMarket(body.scope);
@@ -362,10 +381,25 @@ export const Route = createFileRoute("/api/visibility")({
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           try {
-            await chargeUsage?.();
+            await chargeUsage?.(_runId, "visibility");
           } catch (usageError) {
-            console.error("[api/visibility] usage update failed:", usageError);
-            return Response.json({ error: "usage_update_failed" }, { status: 500 });
+            const message = usageError instanceof Error ? usageError.message : String(usageError);
+            console.error("[api/visibility] quota reservation failed:", message);
+            // A confirmed quota rejection means the model work must not proceed.
+            // Refund the already charged tool tokens idempotently.
+            if (message.startsWith("quota_denied:")) {
+              const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
+                _user_id: userId, _tool_key: "visibility", _run_id: _runId,
+                _reason: "quota_denied",
+              } as any);
+              if (refundError || !(refundResult as any)?.ok) {
+                console.error("[api/visibility] quota-denial token refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
+              }
+              return Response.json({ error: message.slice("quota_denied:".length) || "quota_rejected" }, { status: 402 });
+            }
+            // Do not auto-refund on an RPC transport error: the transaction's commit
+            // outcome may be unknown, so an automatic refund could create free quota.
+            return Response.json({ error: "usage_update_needs_review" }, { status: 500 });
           }
 
           const market = describeMarket(body.scope);
