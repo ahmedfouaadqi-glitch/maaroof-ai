@@ -4,14 +4,15 @@
 
 export type EntityCard = {
   brand_name?: string | null;
-  entity_type?: string | null; // organization | person
+  entity_type?: string | null; // One of the seven entity types; legacy values remain readable
   hq_country?: string | null;
   target_markets?: string[] | null;
   specialty_scope?: string | null;
   brand_keywords?: string | null;
+  entity_links?: string[] | null;
 };
 
-export type EntityAlert = { kind: "geo" | "topic" | "missing"; text: { ar: string; en: string; ku: string } };
+export type EntityAlert = { kind: "geo" | "identity" | "topic" | "missing"; text: { ar: string; en: string; ku: string } };
 
 const COUNTRIES: Record<string, string[]> = {
   IQ: ["العراق", "عراق", "بغداد", "أربيل", "اربيل", "البصرة", "iraq", "baghdad", "erbil", "عێراق", "هەولێر"],
@@ -65,11 +66,21 @@ export function checkEntityConsistency(text: string, card: EntityCard | null | u
     if (foreign.length) {
       const f = foreign.map((c) => ({ ar: cn(c, "ar"), en: cn(c, "en"), ku: cn(c, "ku") }));
       const h = hq ? { ar: cn(hq, "ar"), en: cn(hq, "en"), ku: cn(hq, "ku") } : null;
-      out.push({ kind: "geo", text: {
-        ar: `نصك يستهدف ${f.map((x) => x.ar).join("، ")} وهو غير مذكور ضمن أسواقك المعلنة${h ? ` (المقر: ${h.ar})` : ""}. النماذج قد لا تربطك بهذا السوق؛ أضفه لأسواقك إن كنت تخدمه فعلاً، أو اذكر صراحةً علاقتك به في أول النص.`,
-        en: `Your text targets ${f.map((x) => x.en).join(", ")}, which is not among your declared markets${h ? ` (HQ: ${h.en})` : ""}. Engines may not link you to it; add it to your markets if you truly serve it, or state the link early in the text.`,
-        ku: `دەقەکەت ${f.map((x) => x.ku).join("، ")} دەکاتە ئامانج کە لە بازاڕە ڕاگەیەندراوەکانتدا نییە${h ? ` (بارەگا: ${h.ku})` : ""}. ئەگەر بەڕاستی خزمەتی دەکەیت زیادی بکە.`,
-      } });
+      const brandMentioned = !!brand && text.toLowerCase().includes(brand.toLowerCase());
+      out.push({
+        kind: brandMentioned ? "identity" : "geo",
+        text: brandMentioned
+          ? {
+              ar: `يظهر اسم «${brand}» مع ${f.map((x) => x.ar).join("، ")} خارج المقر والأسواق المعلنة${h ? ` (المقر: ${h.ar})` : ""}. تحقّق من أن المصدر يتحدث عن كيانك نفسه لا عن كيان آخر يحمل اسماً مشابهاً.`,
+              en: `The name "${brand}" appears alongside ${f.map((x) => x.en).join(", ")}, outside the declared HQ and markets${h ? ` (HQ: ${h.en})` : ""}. Verify that the source refers to your entity, not another entity with a similar name.`,
+              ku: `ناوی «${brand}» لەگەڵ ${f.map((x) => x.ku).join("، ")} دەردەکەوێت کە لە دەرەوەی بارەگا و بازاڕە ڕاگەیەندراوەکانتە${h ? ` (بارەگا: ${h.ku})` : ""}. دڵنیابە سەرچاوەکە باسی هەمان کیان دەکات، نەک کیانێکی تر بە ناوی هاوشێوە.`,
+            }
+          : {
+              ar: `نصك يستهدف ${f.map((x) => x.ar).join("، ")} وهو غير مذكور ضمن أسواقك المعلنة${h ? ` (المقر: ${h.ar})` : ""}. أضفه إلى أسواقك إن كنت تخدمه فعلاً، أو وضّح علاقته بهدفك.`,
+              en: `Your text targets ${f.map((x) => x.en).join(", ")}, which is not among your declared markets${h ? ` (HQ: ${h.en})` : ""}. Add it to your markets if you truly serve it, or clarify its relevance to your goal.`,
+              ku: `دەقەکەت ${f.map((x) => x.ku).join("، ")} دەکاتە ئامانج کە لە بازاڕە ڕاگەیەندراوەکانتدا نییە${h ? ` (بارەگا: ${h.ku})` : ""}. ئەگەر بەڕاستی خزمەتی دەکەیت زیادی بکە یان پەیوەندییەکەی ڕوون بکەرەوە.`,
+            },
+      });
     }
   }
 
@@ -108,6 +119,15 @@ export function entityContextLine(card: EntityCard | null | undefined): string {
   if (card.hq_country) parts.push(`hq=${card.hq_country}`);
   if (card.target_markets?.length) parts.push(`markets=${card.target_markets.join(",")}`);
   if (card.specialty_scope) parts.push(`specialty=${String(card.specialty_scope).slice(0, 160)}`);
+  const officialDomains = (card.entity_links || [])
+    .map((link) => normalizeUrl(String(link || "")))
+    .filter((link): link is string => !!link)
+    .map((link) => {
+      try { return new URL(link).hostname.replace(/^www\./i, ""); } catch { return ""; }
+    })
+    .filter(Boolean)
+    .slice(0, 5);
+  if (officialDomains.length) parts.push(`declared_links=${Array.from(new Set(officialDomains)).join(",")}`);
   return parts.length ? `Declared entity (user-provided, not independently verified): ${parts.join("; ")}` : "";
 }
 
