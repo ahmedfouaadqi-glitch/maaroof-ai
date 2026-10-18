@@ -312,6 +312,7 @@ export const Route = createFileRoute("/api/visibility")({
             const pRun = crypto.randomUUID();
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: pChg.reason === "tool_disabled" ? 403 : 402 });
+            refundContext = { admin, userId, runId: pRun, toolKey: "visibility.probe" };
             if (chargeUsage) {
               try {
                 await chargeUsage(pRun, "visibility.probe");
@@ -374,6 +375,8 @@ export const Route = createFileRoute("/api/visibility")({
                   const refundConfirmed = !refundError && !!(refundResult as any)?.ok;
                   if (!refundConfirmed) {
                     console.error("[api/visibility] probe refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
+                  } else {
+                    refundContext = null;
                   }
                   try {
                     await notifyUser(
@@ -388,10 +391,20 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 await finalizeQuota("commit");
+                refundContext = null;
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
-              })().catch(() => {});
+              })().catch(async (error) => {
+                console.error("[api/visibility] background probe failed:", error);
+                if (answers.length) {
+                  await finalizeQuota("commit");
+                  refundContext = null;
+                } else {
+                  await finalizeQuota("release");
+                  await refundChargedTokens("probe_background_error");
+                }
+              });
               let scheduled = false;
               try {
                 const { runAfterResponse } = await import("@/lib/request-ctx.server");
@@ -412,6 +425,8 @@ export const Route = createFileRoute("/api/visibility")({
               const refundConfirmed = !refundError && !!(refundResult as any)?.ok;
               if (!refundConfirmed) {
                 console.error("[api/visibility] foreground probe refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
+              } else {
+                refundContext = null;
               }
               return Response.json({ error: "probe_no_results", token_refund_confirmed: refundConfirmed }, { status: 502 });
             }
@@ -427,6 +442,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
+            refundContext = null;
             return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
           }
 
