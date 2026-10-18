@@ -67,9 +67,22 @@ export function checkEntityConsistency(text: string, card: EntityCard | null | u
       const f = foreign.map((c) => ({ ar: cn(c, "ar"), en: cn(c, "en"), ku: cn(c, "ku") }));
       const h = hq ? { ar: cn(hq, "ar"), en: cn(hq, "en"), ku: cn(hq, "ku") } : null;
       const brandMentioned = !!brand && text.toLowerCase().includes(brand.toLowerCase());
+      const declaredDomains = (card.entity_links || [])
+        .map((link) => normalizeUrl(String(link || "")))
+        .filter((link): link is string => !!link)
+        .map((link) => {
+          try { return new URL(link).hostname.replace(/^www\./i, "").toLowerCase(); } catch { return ""; }
+        })
+        .filter(Boolean);
+      const referencedDomains = Array.from(text.matchAll(/https?:\/\/([^/\s)]+)/gi))
+        .map((match) => String(match[1] || "").replace(/^www\./i, "").toLowerCase());
+      const officialLinkConfirmsIdentity = declaredDomains.some((domain) =>
+        referencedDomains.some((referenced) => referenced === domain || referenced.endsWith(`.${domain}`)),
+      );
+      const possibleNameCollision = brandMentioned && !officialLinkConfirmsIdentity;
       out.push({
-        kind: brandMentioned ? "identity" : "geo",
-        text: brandMentioned
+        kind: possibleNameCollision ? "identity" : "geo",
+        text: possibleNameCollision
           ? {
               ar: `يظهر اسم «${brand}» مع ${f.map((x) => x.ar).join("، ")} خارج المقر والأسواق المعلنة${h ? ` (المقر: ${h.ar})` : ""}. تحقّق من أن المصدر يتحدث عن كيانك نفسه لا عن كيان آخر يحمل اسماً مشابهاً.`,
               en: `The name "${brand}" appears alongside ${f.map((x) => x.en).join(", ")}, outside the declared HQ and markets${h ? ` (HQ: ${h.en})` : ""}. Verify that the source refers to your entity, not another entity with a similar name.`,
