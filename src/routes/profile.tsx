@@ -14,6 +14,7 @@ import { TrinityPanel } from "@/components/TrinityPanel";
 import { ToolLinksManager } from "@/components/ToolLinksManager";
 import { EntityFields, entityDraftFrom, entityUpdateFrom, type EntityDraft } from "@/components/EntityFields";
 import { submitSpecialtyRequest, listMySpecialtyRequests } from "@/lib/specialty.functions";
+import { ACCOUNT_TYPES, normalizeAccountType, type AccountType } from "@/lib/account-types";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -38,6 +39,7 @@ function ProfilePage() {
   const [brandName, setBrandName] = useState("");
   const [brandKw, setBrandKw] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [accountType, setAccountType] = useState<AccountType>("individual");
   const [username, setUsername] = useState("");
   const [usernameErr, setUsernameErr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -56,6 +58,7 @@ function ProfilePage() {
     setBrandName((profile as any).brand_name || "");
     setBrandKw((profile as any).brand_keywords || "");
     setSpecialty((profile as any).specialty || "");
+    setAccountType(normalizeAccountType((profile as any).account_type));
     setUsername((profile as any).username || "");
     setEntity(entityDraftFrom(profile));
   }, [profile]);
@@ -71,7 +74,7 @@ function ProfilePage() {
     setSaving(true);
     const entityLocked = !!(profile as any)?.entity_locked;
     const { error } = await supabase.from("profiles").update({
-      full_name: fullName, brand_name: brandName, brand_keywords: brandKw,
+      full_name: fullName, brand_name: brandName, brand_keywords: brandKw, account_type: accountType,
       ...(u ? { username: u } : {}),
       ...(entityLocked ? {} : entityUpdateFrom(entity)),
     } as any).eq("id", user.id);
@@ -121,6 +124,12 @@ function ProfilePage() {
           </Field>
           <Field label={t("profile_brand_keywords")}>
             <input value={brandKw} onChange={(e) => setBrandKw(e.target.value)} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+          </Field>
+          <Field label={lang === "en" ? "Account type" : lang === "ku" ? "جۆری هەژمار" : "نوع الحساب"}>
+            <select value={accountType} onChange={(e) => setAccountType(normalizeAccountType(e.target.value))} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm">
+              {ACCOUNT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label[lang === "en" || lang === "ku" ? lang : "ar"]}</option>)}
+            </select>
+            <small className="text-xs text-muted-foreground">{lang === "en" ? "Used to tailor guidance and workspace defaults; it does not grant permissions." : lang === "ku" ? "بۆ گونجاندنی ڕێنمایی و ڕێکخستنە بنەڕەتییەکانە؛ مۆڵەت زیاد ناکات." : "لتخصيص الإرشادات والإعدادات الافتراضية؛ لا يمنح صلاحيات إضافية."}</small>
           </Field>
           <EntityFields profile={profile} value={entity} onChange={setEntity} onSaveAll={save} onSaved={refreshProfile} />
           <Field label={t("profile_specialty")}>
