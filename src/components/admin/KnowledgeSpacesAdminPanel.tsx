@@ -19,7 +19,7 @@ export function KnowledgeSpacesAdminPanel() {
     setLoading(true);
     setError("");
     try {
-      const result = await adminListKnowledgeSpaces({ data: {} });
+      const result = await adminListKnowledgeSpaces();
       setSpaces(result.spaces ?? []);
     } catch {
       setError(c.error);
