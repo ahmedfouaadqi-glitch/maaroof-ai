@@ -2,7 +2,7 @@
 const SUMMARY_KEYS = [
   "summary", "executive_summary", "short_summary", "answer", "final_answer",
   "text", "message", "recommendation", "strategy", "comparison", "conclusion",
-  "winner", "overview", "result", "data", "report", "analysis", "sections",
+  "winner", "title", "overview", "result", "data", "report", "analysis", "sections",
   "highlights", "findings",
 ] as const;
 
