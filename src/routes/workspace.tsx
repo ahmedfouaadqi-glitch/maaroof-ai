@@ -386,6 +386,17 @@ function WorkspacePage() {
       if (typeof output === "string") return output.slice(0, 500);
       if (output && typeof output === "object") {
         const nested = output.result && typeof output.result === "object" ? output.result : null;
+        const payload = nested || output;
+        if ((d.tool === "compare" || d.tool === "competitor_compare") && (payload.winner || payload.overview)) {
+          const winner = typeof payload.winner === "string" ? payload.winner : "";
+          const reason = typeof payload.winner_reason === "string" ? payload.winner_reason : "";
+          const overview = typeof payload.overview === "string" ? payload.overview : "";
+          return [winner ? (locale === "en" ? `Comparison leader: ${winner}` : locale === "ku" ? `پێشەنگی بەراورد: ${winner}` : `المتصدر في المقارنة: ${winner}`) : "", reason, overview].filter(Boolean).join(" — ").slice(0, 500);
+        }
+        if (d.tool === "geo_strategist" && typeof payload.summary === "string" && payload.summary.trim()) {
+          const horizon = typeof payload.horizon === "string" ? payload.horizon : "";
+          return [payload.summary.trim(), horizon ? (locale === "en" ? `Plan horizon: ${horizon}` : locale === "ku" ? `ماوەی پلان: ${horizon}` : `مدة الخطة: ${horizon}`) : ""].filter(Boolean).join(" — ").slice(0, 500);
+        }
         const candidate = output.summary || output.answer || output.text || output.message
           || nested?.summary || nested?.answer || nested?.text || nested?.message;
         if (typeof candidate === "string" && candidate.trim()) return candidate.trim().slice(0, 500);
