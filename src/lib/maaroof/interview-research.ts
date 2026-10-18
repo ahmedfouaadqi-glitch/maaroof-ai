@@ -33,7 +33,7 @@ const DOMAIN_TERMS: Record<InterviewDomain, Record<InterviewResearchInput["local
 
 function asSearchText(value: unknown, max = 180): string {
   if (typeof value !== "string" && typeof value !== "number") return "";
-  return String(value).replace(/[\\r\\n\\t]+/g, " ").replace(/\\s+/g, " ").trim().slice(0, max);
+  return String(value).replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 /** Build a bounded query from completed interview context without sending the full answer history. */
@@ -54,7 +54,7 @@ export function buildInterviewResearchQuery(input: InterviewResearchInput): stri
   const selectedDomains = input.domains.length ? input.domains : ["general"];
   parts.push(...selectedDomains.slice(0, 3).map((domain) => DOMAIN_TERMS[domain][input.locale]));
   parts.push(input.locale === "en" ? "official sources" : input.locale === "ku" ? "سەرچاوە فەرمییەکان" : "مصادر رسمية");
-  return parts.filter(Boolean).join(" ").replace(/\\s+/g, " ").trim().slice(0, 300);
+  return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 300);
 }
 
 export type InterviewResearchSource = {
@@ -87,7 +87,7 @@ export function normalizeInterviewResearchSources(payload: unknown, limit = 8): 
     sources.push({
       title: asSearchText(row.title, 240) || parsed.hostname,
       url: parsed.href,
-      domain: parsed.hostname.replace(/^www\\./, ""),
+      domain: parsed.hostname.replace(/^www\./, ""),
       description: asSearchText(row.description, 500),
       snippet: asSearchText(row.markdown, 1200),
     });

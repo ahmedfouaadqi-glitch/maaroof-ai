@@ -21,15 +21,14 @@ async function authenticate(request: Request) {
   } catch { return { error: errorResponse("authentication_failed", 500) } as const; }
 }
 
-async function canAccessInterview(admin: ReturnType<typeof createClient<Database>>, interview: any, userId: string): Promise<boolean> {
+async function canAccessInterview(admin: ReturnType<typeof createClient<Database>>, interview: any, userId: string, write: boolean): Promise<boolean> {
   if (!interview.workspace_id) return interview.user_id === userId;
   const db = admin as any;
   const { data: workspace, error: workspaceError } = await db.from("workspaces").select("id, owner_id").eq("id", interview.workspace_id).maybeSingle();
   if (workspaceError || !workspace) return false;
   if (workspace.owner_id === userId) return true;
   const { data: member, error } = await db.from("workspace_members").select("role").eq("workspace_id", interview.workspace_id).eq("user_id", userId).maybeSingle();
-  return !error && !!member;
-}
+  return !error && !!member && (!write || member.role === "owner" || member.role === "editor");}
 
 async function handlePost(request: Request): Promise<Response> {
   const auth = await authenticate(request);
@@ -37,11 +36,13 @@ async function handlePost(request: Request): Promise<Response> {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body || !isUuid(body.interview_id)) return errorResponse("invalid_interview_id", 400);
   const db = auth.admin as any;
-  const { data: interview, error } = await db.from("maaroof_interviews").select("id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status").eq("id", body.interview_id).maybeSingle();
+  const { data: interview, error } = await db.from("maaroof_interviews").select("id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot").eq("id", body.interview_id).maybeSingle();
   if (error) return errorResponse("interview_lookup_failed", 500);
-  if (!interview || !(await canAccessInterview(auth.admin, interview, auth.userId))) return errorResponse("interview_not_found", 404);
+  if (!interview || !(await canAccessInterview(auth.admin, interview, auth.userId, true))) return errorResponse("interview_not_found", 404);
   if (interview.status !== "completed") return errorResponse("interview_must_be_completed", 409);
   if (!interview.state || typeof interview.state !== "object" || !interview.state.answers || typeof interview.state.answers !== "object") return errorResponse("stored_interview_invalid", 500);
+  if (!Array.isArray(interview.questions_snapshot) || !interview.context_snapshot || typeof interview.context_snapshot !== "object") return errorResponse("stored_interview_invalid", 500);
+  if (interview.context_snapshot.workspace_id !== interview.workspace_id || interview.context_snapshot.target_name !== interview.target_name || interview.context_snapshot.target_type !== interview.target_type) return errorResponse("stored_interview_context_mismatch", 500);
   const locale = ["ar", "en", "ku"].includes(interview.locale) ? interview.locale : "ar";
   const query = buildInterviewResearchQuery({ targetType: interview.target_type, targetName: interview.target_name, goal: interview.initial_goal, domains: Array.isArray(interview.domains) ? interview.domains : ["general"], locale, state: interview.state });
   if (!query) return errorResponse("research_query_empty", 422);
