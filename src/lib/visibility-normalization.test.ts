@@ -33,12 +33,7 @@ describe("visibility report normalization", () => {
       { name: "Claude", score: "42garbage" },
       { name: "Perplexity", score: "37" },
     ]);
-    expect(platforms.slice(0, 4).map((platform) => platform.score)).toEqual([
-      100,
-      0,
-      0,
-      37,
-    ]);
+    expect(platforms.slice(0, 4).map((platform) => platform.score)).toEqual([100, 0, 0, 37]);
   });
 
   it("derives the headline visibility score from all nine platform scores", () => {
@@ -56,10 +51,7 @@ describe("visibility report normalization", () => {
       visibility_percent: 0,
       platforms: names.map((name) => ({ name, score: 0 })),
       strengths: ["  first  ", "second", "", null, "third"],
-      recommendations: Array.from(
-        { length: 12 },
-        (_, index) => "action " + index,
-      ),
+      recommendations: Array.from({ length: 12 }, (_, index) => "action " + index),
     });
     expect(result.visibility_percent).toBe(0);
     expect(result.strengths).toEqual(["first", "second", "third"]);
