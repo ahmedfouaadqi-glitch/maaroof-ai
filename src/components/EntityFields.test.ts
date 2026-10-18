@@ -26,9 +26,7 @@ describe("entity truth card account types", () => {
     expect(entityDraftFrom({ entity_type: "organization", entity_links: [] }).type).toBe(
       "product_company",
     );
-    expect(entityDraftFrom({ entity_type: "person", entity_links: [] }).type).toBe(
-      "individual",
-    );
+    expect(entityDraftFrom({ entity_type: "person", entity_links: [] }).type).toBe("individual");
   });
 
   it("suggests only types supported by the provided links", () => {
