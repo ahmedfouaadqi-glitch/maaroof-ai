@@ -204,6 +204,34 @@ describe("Maaroof interviews API authentication", () => {
   );
 });
 
+describe("Maaroof interview research/report actions", () => {
+  it("requires authentication before starting external research", async () => {
+    const response = await handlers.POST({
+      request: makeRequest("POST", "", {
+        action: "enrich",
+        interview_id: INTERVIEW_ID,
+      }),
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "auth_required" });
+    expect(mockCreateClient).not.toHaveBeenCalled();
+  });
+
+  it("requires authentication before generating an advanced report", async () => {
+    const response = await handlers.POST({
+      request: makeRequest("POST", "", {
+        action: "report",
+        interview_id: INTERVIEW_ID,
+      }),
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "auth_required" });
+    expect(mockCreateClient).not.toHaveBeenCalled();
+  });
+});
+
 describe("Maaroof interviews workspace permissions", () => {
   it("allows a workspace viewer to read an interview", async () => {
     mockStoredInterview.value = makeStoredInterview(WORKSPACE_ID);
