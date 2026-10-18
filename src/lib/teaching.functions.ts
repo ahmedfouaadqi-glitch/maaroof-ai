@@ -449,6 +449,58 @@ Do not return commentary, markdown, or a second question.`,
     };
   });
 
+// Persist answers as user-owned knowledge and continue the existing learning pipeline.
+export const answerSpaceInterview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { interviewId: string; answer: string }) =>
+    z.object({ interviewId: uuid, answer: z.string().trim().min(1).max(8000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    const { data: row } = await supabase
+      .from("knowledge_space_interviews")
+      .select("id, space_id, question")
+      .eq("id", data.interviewId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!row) throw new Error("not_found");
+    await assertOwnedSpace(supabase, row.space_id, userId);
+
+    const { data: updated, error: updateError } = await supabase
+      .from("knowledge_space_interviews")
+      .update({ answer: data.answer, answered_at: new Date().toISOString() })
+      .eq("id", data.interviewId)
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+    if (updateError || !updated) throw new Error("not_found");
+
+    // The answer itself is knowledge — register it as a text asset and learn it.
+    const { data: asset, error: assetError } = await supabase
+      .from("knowledge_space_assets")
+      .insert({
+        space_id: row.space_id,
+        user_id: userId,
+        kind: "interview",
+        source_type: "text",
+        title: `Interview: ${String(row.question).slice(0, 120)}`,
+        raw_text: `Q: ${row.question}\nA: ${data.answer}`,
+        status: "queued",
+        stage: "import",
+      })
+      .select("id")
+      .single();
+    if (assetError || !asset) throw new Error("interview_asset_create_failed");
+
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (apiKey) {
+      const { ingestAsset } = await import("@/lib/maaroof/teaching.server");
+      const result = await ingestAsset({ apiKey, assetId: asset.id, userId });
+      return { ok: true, result };
+    }
+    return { ok: true };
+  });
+
 // ===== Dashboard / supervision ============================================
 export const getSpaceDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
