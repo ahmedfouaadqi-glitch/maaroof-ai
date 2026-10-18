@@ -12,7 +12,7 @@ import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
-  LoaderCircle, Plus, Search, Sparkles, Square, Target, TrendingUp,
+  Download, LoaderCircle, Plus, Search, Sparkles, Square, Target, TrendingUp,
   Wrench, X,
 } from "lucide-react";
 
@@ -183,6 +183,58 @@ function WorkspacePage() {
   }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
+  const exportJobReport = (format: "json" | "md") => {
+    const generatedAt = new Date().toISOString();
+    const report = {
+      report_type: "maaroof_task_verification",
+      report_version: 1,
+      run_id: jobId,
+      objective: goal,
+      status: running ? "running" : error ? "failed" : finalEvent ? "completed" : "incomplete",
+      generated_at: generatedAt,
+      workload: jobWeight,
+      skills: selectedSkills.map((key) => MAAROOF_SKILLS.find((skill) => skill.key === key)?.label[locale] || key),
+      tools: [...new Set(events.filter((event) => event.type === "tool_call" || event.type === "tool_result").map((event) => String(event.data?.tool || "")).filter(Boolean))],
+      timeline: events.map((event) => ({ type: event.type, at: new Date(event.at).toISOString(), data: event.data })),
+      final_result: String(finalEvent?.data?.text || finalEvent?.data?.message || ""),
+      error: error || null,
+    };
+    const resultText = report.final_result || (locale === "en" ? "No final result was recorded." : locale === "ku" ? "هیچ ئەنجامێکی کۆتایی تۆمار نەکراوە." : "لم تُسجّل نتيجة نهائية.");
+    const markdown = [
+      "# MAAROOF AI — Task Verification Report",
+      "",
+      `- Run ID: ${report.run_id || "not available"}`,
+      `- Status: ${report.status}`,
+      `- Generated at: ${report.generated_at}`,
+      `- Objective: ${report.objective || "not recorded"}`,
+      `- Workload: ${report.workload ? `${report.workload.weight} (${report.workload.score}/100)` : "not recorded"}`,
+      `- Skills: ${report.skills.join(", ") || "automatic"}`,
+      `- Tools: ${report.tools.join(", ") || "none recorded"}`,
+      "",
+      "## Final result",
+      "",
+      resultText,
+      "",
+      "## Errors",
+      "",
+      report.error || "No interface-level error recorded.",
+      "",
+      "## Evidence and activity timeline",
+      "",
+      ...report.timeline.map((event) => `- ${event.at} — ${event.type}: ${JSON.stringify(event.data)}`),
+      "",
+      "> This report contains the evidence available in the current workspace session. It does not independently certify claims or imply that unrecorded sources were verified.",
+      "",
+    ].join("\n");
+    const content = format === "json" ? JSON.stringify(report, null, 2) : markdown;
+    const blob = new Blob([content], { type: format === "json" ? "application/json;charset=utf-8" : "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `maaroof-report-${(jobId || "session").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)}.${format}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
   const phaseEvents = events.filter((event) => event.type === "phase");
   const toolEvents = events.filter((event) => event.type === "tool_call" || event.type === "tool_result");
   const clarifyEvents = events.filter((event) => event.type === "clarify");
@@ -596,8 +648,14 @@ function WorkspacePage() {
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 
             {finalEvent && <div className="rounded-2xl border border-primary/25 bg-card p-5 md:p-6">
-              <div className="mb-3 flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div>
-              <div className="whitespace-pre-wrap text-sm leading-7">{String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)}</div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => exportJobReport("md")} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium transition hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Download className="size-3.5" />{locale === "en" ? "Export Markdown" : locale === "ku" ? "هەناردەی Markdown" : "تصدير Markdown"}</button>
+                  <button type="button" onClick={() => exportJobReport("json")} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium transition hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Download className="size-3.5" />{locale === "en" ? "Export JSON" : locale === "ku" ? "هەناردەی JSON" : "تصدير JSON"}</button>
+                </div>
+              </div>
+              <div className="whitespace-pre-wrap break-words text-sm leading-7">{String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)}</div>
             </div>}
 
             {!finalEvent && !running && !error && <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">{c.noResults}</div>}
