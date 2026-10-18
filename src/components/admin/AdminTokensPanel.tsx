@@ -7,7 +7,7 @@ import { CostInput } from "@/components/admin/CostInput";
 import { useI18n } from "@/lib/i18n";
 import { ENGINE_KEYS } from "@/lib/ai-engines";
 import { adminGrantRole, adminRevokeRole, adminPatchProfile } from "@/lib/admin.functions";
-import { normalizeInterfacePolicy, type InterfacePolicy } from "@/lib/interface-policy";
+import { normalizeInterfacePolicy, resolveInterfacePolicy, type InterfacePolicy } from "@/lib/interface-policy";
 
 type Profile = {
   id: string; email: string | null; full_name: string | null; username: string | null;
@@ -524,11 +524,142 @@ function VisibilitySection({
     onChange(next);
   };
   const isOn = (g: "tools" | "agent" | "widgets" | "pages", k: string) => (value?.[g] as any)?.[k] !== false;
+  const hasInterfaceOverride = !!value.interface && Object.keys(value.interface).length > 0;
+  const effectiveInterface = resolveInterfacePolicy(globalPolicy, value.interface);
+  const setInterfaceOverride = (enabled: boolean) => {
+    const next: any = { ...(value || {}) };
+    if (enabled) next.interface = { ...globalPolicy };
+    else delete next.interface;
+    onChange(next);
+  };
+  const patchInterface = (patch: Partial<InterfacePolicy>) => {
+    onChange({
+      ...(value || {}),
+      interface: { ...(hasInterfaceOverride ? value.interface : globalPolicy), ...patch },
+    });
+  };
+  const setAvailableInterfaces = (selection: string) => {
+    const available_interfaces = selection === "both"
+      ? ["workbench", "professional"] as const
+      : [selection === "professional" ? "professional" : "workbench"] as const;
+    const default_ui = (available_interfaces as readonly string[]).includes(effectiveInterface.default_ui)
+      ? effectiveInterface.default_ui
+      : available_interfaces[0];
+    patchInterface({ available_interfaces: [...available_interfaces], default_ui });
+  };
+
+  const interfaceCopy = {
+    ar: {
+      title: "تخصيص الواجهة لهذا المستخدم",
+      hint: "عند التفعيل تُطبّق هذه السياسة على هذا الحساب فقط؛ وعند إيقافها يرث المستخدم إعداد الواجهة العام.",
+      inherit: "يرث الإعداد العام",
+      customize: "تجاوز إعداد الواجهة العام لهذا المستخدم",
+      access: "الواجهات المتاحة",
+      both: "الواجهتان",
+      workspace: "مساحة العمل الجديدة فقط",
+      professional: "واجهة المحترفين فقط",
+      default: "الواجهة الافتراضية بعد الدخول",
+      landing: "صفحة الهبوط",
+      newLanding: "الجديدة",
+      classicLanding: "الكلاسيكية",
+      proLink: "إظهار رابط واجهة المحترفين",
+    },
+    en: {
+      title: "Customize this user's interface",
+      hint: "When enabled, this policy applies only to this account. Otherwise, the user inherits the global interface settings.",
+      inherit: "Inherits global settings",
+      customize: "Override global interface settings for this user",
+      access: "Available interfaces",
+      both: "Both interfaces",
+      workspace: "New workspace only",
+      professional: "Professional interface only",
+      default: "Default interface after sign-in",
+      landing: "Landing page",
+      newLanding: "New",
+      classicLanding: "Classic",
+      proLink: "Show professional interface link",
+    },
+    ku: {
+      title: "ڕێکخستنی ڕووکار بۆ ئەم بەکارهێنەرە",
+      hint: "ئەگەر چالاک بێت تەنها بۆ ئەم هەژمارە جێبەجێ دەبێت؛ لەناوچوونی چالاکی واتە لە ڕێکخستنی گشتی وەریدەگرێت.",
+      inherit: "لە ڕێکخستنی گشتی وەردەگرێت",
+      customize: "ڕێکخستنی تایبەت بۆ ئەم بەکارهێنەرە",
+      access: "ڕووکارە بەردەستەکان",
+      both: "هەردوو ڕووکاری",
+      workspace: "تەنها شوێنی کاری نوێ",
+      professional: "تەنها ڕووکاری پسپۆڕان",
+      default: "ڕووکاری بنەڕەت دوای چوونەژوورەوە",
+      landing: "پەڕەی سەرەکی",
+      newLanding: "نوێ",
+      classicLanding: "کلاسیک",
+      proLink: "پیشاندانی بەستەری ڕووکاری پسپۆڕان",
+    },
+  }[lang];
 
   return (
     <details className="mb-4 rounded-xl border border-border bg-card/40 p-3" open>
       <summary className="cursor-pointer text-sm font-semibold">{heading}</summary>
       <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+
+      <section className="mt-3 rounded-lg border border-primary/20 bg-background/50 p-3">
+        <div className="font-medium text-xs">{interfaceCopy.title}</div>
+        <p className="mt-1 text-[11px] text-muted-foreground">{interfaceCopy.hint}</p>
+        <label className="mt-2 flex cursor-pointer items-center gap-2 rounded-md border border-border px-2 py-2 text-xs">
+          <input
+            type="checkbox"
+            checked={hasInterfaceOverride}
+            onChange={(e) => setInterfaceOverride(e.target.checked)}
+          />
+          <span>{hasInterfaceOverride ? interfaceCopy.customize : interfaceCopy.inherit}</span>
+        </label>
+        {hasInterfaceOverride && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs">
+              <span className="mb-1 block text-muted-foreground">{interfaceCopy.access}</span>
+              <select
+                value={effectiveInterface.available_interfaces.length === 2 ? "both" : effectiveInterface.available_interfaces[0]}
+                onChange={(e) => setAvailableInterfaces(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2"
+              >
+                <option value="both">{interfaceCopy.both}</option>
+                <option value="workbench">{interfaceCopy.workspace}</option>
+                <option value="professional">{interfaceCopy.professional}</option>
+              </select>
+            </label>
+            <label className="text-xs">
+              <span className="mb-1 block text-muted-foreground">{interfaceCopy.default}</span>
+              <select
+                value={effectiveInterface.default_ui}
+                onChange={(e) => patchInterface({ default_ui: e.target.value as InterfacePolicy["default_ui"] })}
+                disabled={effectiveInterface.available_interfaces.length < 2}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2 disabled:opacity-50"
+              >
+                <option value="workbench">{interfaceCopy.workspace}</option>
+                <option value="professional">{interfaceCopy.professional}</option>
+              </select>
+            </label>
+            <label className="text-xs">
+              <span className="mb-1 block text-muted-foreground">{interfaceCopy.landing}</span>
+              <select
+                value={effectiveInterface.landing}
+                onChange={(e) => patchInterface({ landing: e.target.value as InterfacePolicy["landing"] })}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2"
+              >
+                <option value="new">{interfaceCopy.newLanding}</option>
+                <option value="classic">{interfaceCopy.classicLanding}</option>
+              </select>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-2 py-2 text-xs">
+              <input
+                type="checkbox"
+                checked={effectiveInterface.show_professional_link}
+                onChange={(e) => patchInterface({ show_professional_link: e.target.checked })}
+              />
+              <span>{interfaceCopy.proLink}</span>
+            </label>
+          </div>
+        )}
+      </section>
 
       <Group title={isAr ? "الأدوات" : isKu ? "ئامرازەکان" : "Tools"}>
         {TOOL_CATALOG.filter(t => t.group === "tools").map(t => (
