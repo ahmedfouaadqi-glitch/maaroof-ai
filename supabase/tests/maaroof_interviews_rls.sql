@@ -29,6 +29,11 @@ VALUES (
 )
 ON CONFLICT DO NOTHING;
 
+-- Explicitly exercise the owner-policy branch, even if a workspace trigger adds membership rows.
+DELETE FROM public.workspace_members
+WHERE workspace_id = '20000000-0000-4000-8000-000000000001'
+  AND user_id = '10000000-0000-4000-8000-000000000001';
+
 INSERT INTO public.maaroof_interviews (
   id, user_id, workspace_id, target_type, target_name,
   question_set_version, questions_snapshot, state
