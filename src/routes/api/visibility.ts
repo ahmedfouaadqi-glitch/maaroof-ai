@@ -364,6 +364,7 @@ export const Route = createFileRoute("/api/visibility")({
                 await askAll();
                 const { notifyUser } = await import("@/lib/notify.server");
                 if (!answers.length) {
+                  await finalizeQuota("release");
                   const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
                     _user_id: userId,
                     _tool_key: "visibility.probe",
@@ -386,6 +387,7 @@ export const Route = createFileRoute("/api/visibility")({
                   } catch {}
                   return;
                 }
+                await finalizeQuota("commit");
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
@@ -400,6 +402,7 @@ export const Route = createFileRoute("/api/visibility")({
             }
             await askAll();
             if (!answers.length) {
+              await finalizeQuota("release");
               const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
                 _user_id: userId,
                 _tool_key: "visibility.probe",
@@ -419,6 +422,7 @@ export const Route = createFileRoute("/api/visibility")({
                 await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
               } catch {}
             }
+            await finalizeQuota("commit");
             const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers, brand, lang as any);
@@ -524,16 +528,16 @@ export const Route = createFileRoute("/api/visibility")({
             console.error("[api/visibility] task insert failed:", taskErr.message);
           }
 
-          // The provider produced a usable report; do not refund for downstream cache/storage errors.
+          // The provider produced a usable report; commit its quota reservation.
+          await finalizeQuota("commit");
           refundContext = null;
           const _q = pickQualityFields(parsed || {});
           { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
-          // If the request failed after charging but before returning a completed report,
-          // attempt the idempotent token refund. Quota reservations are intentionally not
-          // refunded here because they do not yet have a run-linked reservation ledger.
+          // Release any run-linked quota reservation before attempting a token refund.
+          await finalizeQuota("release");
           await refundChargedTokens("visibility_internal_error");
           return Response.json({ error: "internal_error" }, { status: 500 });
         }
