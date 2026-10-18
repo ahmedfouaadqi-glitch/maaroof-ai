@@ -173,6 +173,13 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         usage: { ar: "اضغط على مهمة لعرض سجلها. للقراءة فقط.", en: "Click a task to view its log. Read-only.", ku: "کرتە لە ئەرکێک بکە بۆ بینینی تۆمار." },
       },
       {
+        key: "knowledge_spaces",
+        label: { ar: "مساحات المعرفة", en: "Knowledge Spaces", ku: "شوێنەکانی زانیاری" },
+        purpose: { ar: "مراقبة المساحات المعزولة وأعداد الأصول والتعليمات والعُقد وحالات الموافقة دون فتح محتوى العملاء.", en: "Monitor isolated spaces, asset/prompt/node counts and approval status without opening client content.", ku: "چاودێری شوێنە جیاکراوەکان و ژمارەی سەرچاوە و ڕێنمایی و گرێکان بەبێ کردنەوەی ناوەڕۆکی کڕیار." },
+        usage: { ar: "ابحث عن مساحة، راجع المؤشرات المجمّعة، ثم صدّر بياناتها الوصفية إلى CSV أو JSON. اللوحة للقراءة فقط.", en: "Search for a space, review aggregate metrics, and export metadata to CSV or JSON. This panel is read-only.", ku: "شوێنێک بگەڕێ، پێوەرە کۆکراوەکان ببینە و داتای ناسنامەیی بە CSV یان JSON هەناردە بکە. ئەم پانێڵە تەنها بۆ خوێندنەوەیە." },
+        warning: { ar: "تظل ملفات العملاء ونصوص التعليمات الخاصة خارج هذه اللوحة؛ لا تفتح المساحة أو تعدّلها من هنا.", en: "Client files and private prompt text remain outside this panel; spaces cannot be opened or edited here.", ku: "فایلەکانی کڕیار و دەقی تایبەتی ڕێنمایی لەم پانێڵەدا نیشان نادرێت؛ لێرەوە ناکرێت شوێنەکان بکرێنەوە یان دەستکاری بکرێن." },
+      },
+      {
         key: "insights",
         label: { ar: "رؤى الإدراك", en: "Cognitive Insights", ku: "تێگەیشتنە مێشکییەکان" },
         purpose: { ar: "أنماط الاستخدام المجمّعة التي تتعلمها المنصة.", en: "Aggregated usage patterns the platform learns.", ku: "شێوازە کۆکراوەکانی بەکارهێنان." },
