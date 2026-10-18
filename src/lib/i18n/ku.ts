@@ -1184,6 +1184,7 @@ export const ku: Dict = {
   "auto.content_types": "جۆرەکانی ناوەڕۆک:",
   "auto.contract": "گرێبەست",
   "auto.control": "کۆنتڕۆڵ",
+  "auto.knowledge_spaces": "شوێنەکانی زانین",
   "auto.control_everything_each_plan_offers_in": "کۆنتڕۆڵکردنی هەموو ئەو ئامراز و تایبەتمەندییانەی بریکار کە هەموو پلانێک پێشکەشی دەکات، و نرخەکان بۆ هەر بەکارهێنانێک بە هەر دراوێک.",
   "auto.conversion": "گۆڕین",
   "auto.convert_and_re_evaluate": "گۆڕین و هەڵسەنگاندنەوە",
