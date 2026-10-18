@@ -27,7 +27,7 @@ describe("entity truth card account types", () => {
       "product_company",
     );
     expect(entityDraftFrom({ entity_type: "person", entity_links: [] }).type).toBe(
-      "content_creator",
+      "individual",
     );
   });
 
