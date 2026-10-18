@@ -179,79 +179,6 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
 
-          // Micro-probe (optional): live question to the engines the user selected.
-          // Absent `probe_engines` → the original visibility flow below runs unchanged.
-          if (Array.isArray(body.probe_engines) && body.probe_engines.length) {
-            const { resolveProbePolicy } = await import("@/lib/tokens.server");
-            const ent = await enginesAllowedForUser(admin, userId);
-            const policy = await resolveProbePolicy(userId);
-            let picked = applyEntitlement(body.probe_engines, ent);
-            if (policy.maxEngines) picked = picked.slice(0, policy.maxEngines);
-            const { engines } = await excludeUnhealthyEngines(picked);
-            if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
-            const pRun = crypto.randomUUID();
-            const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
-            if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
-            const market = describeMarket(body.scope);
-            const models = await resolveEngineModels(engines);
-            const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
-            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] }[] = [];
-            const askAll = () => Promise.allSettled(engines.map(async (e) => {
-              const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
-              try {
-                const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-                  method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
-                  body: JSON.stringify({ model: models[e]?.model, max_tokens: 500, messages: [
-                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en} Return JSON only: {"answer":"short answer","brands":["brand names you would recommend, in order"]}` },
-                    { role: "user", content: q },
-                  ] }),
-                });
-                if (!r.ok) return;
-                const j: any = await r.json();
-                const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-                const brands: string[] = Array.isArray(p.brands) ? p.brands.map((x: any) => String(x).slice(0, 80)).slice(0, 8) : [];
-                const idx = brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
-                const ans = String(p.answer || "").slice(0, 600);
-                answers.push({ engine: e, mentioned: idx >= 0 || ans.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: ans, brands });
-              } catch {} finally { clearTimeout(t); }
-            }));
-            // Background mode: finish after the response, save to tool history, notify; refund if nothing came back.
-            if (body.background && policy.backgroundAllowed) {
-              const work = (async () => {
-                await askAll();
-                const { notifyUser } = await import("@/lib/notify.server");
-                if (!answers.length) {
-                  try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -Number(pChg.tokens || 0), _usd: 0, _run_id: pRun, _meta: { refund: true, endpoint: "/api/visibility#probe" } } as any); } catch {}
-                  try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
-                  return;
-                }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
-                const hit = answers.filter((a) => a.mentioned).length;
-                try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
-              })().catch(() => {});
-              let scheduled = false;
-              try {
-                const { runAfterResponse } = await import("@/lib/request-ctx.server");
-                scheduled = runAfterResponse(work);
-              } catch {}
-              if (!scheduled) await work; // fallback: same as notify mode
-              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
-            }
-            await askAll();
-            if (body.notify) {
-              try {
-                const { notifyUser } = await import("@/lib/notify.server");
-                const hit = answers.filter((a) => a.mentioned).length;
-                await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
-              } catch {}
-            }
-            const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
-            const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
-            const reasoned = withReasons(answers, brand, lang as any);
-            const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
-          }
-
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
@@ -328,6 +255,86 @@ export const Route = createFileRoute("/api/visibility")({
                 if (error) throw error;
               };
             }
+          }
+
+          // Micro-probe (optional): live question to the engines the user selected.
+          // Absent `probe_engines` → the original visibility flow below runs unchanged.
+          if (Array.isArray(body.probe_engines) && body.probe_engines.length) {
+            const { resolveProbePolicy } = await import("@/lib/tokens.server");
+            const ent = await enginesAllowedForUser(admin, userId);
+            const policy = await resolveProbePolicy(userId);
+            let picked = applyEntitlement(body.probe_engines, ent);
+            if (policy.maxEngines) picked = picked.slice(0, policy.maxEngines);
+            const { engines } = await excludeUnhealthyEngines(picked);
+            if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
+            const pRun = crypto.randomUUID();
+            const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
+            if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
+            if (chargeUsage) {
+              try { await chargeUsage(); }
+              catch (e) {
+                console.error("[api/visibility] probe quota update failed:", e);
+                return Response.json({ error: "usage_update_failed" }, { status: 500 });
+              }
+            }
+            const market = describeMarket(body.scope);
+            const models = await resolveEngineModels(engines);
+            const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
+            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] }[] = [];
+            const askAll = () => Promise.allSettled(engines.map(async (e) => {
+              const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+              try {
+                const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+                  method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
+                  body: JSON.stringify({ model: models[e]?.model, max_tokens: 500, messages: [
+                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en} Return JSON only: {"answer":"short answer","brands":["brand names you would recommend, in order"]}` },
+                    { role: "user", content: q },
+                  ] }),
+                });
+                if (!r.ok) return;
+                const j: any = await r.json();
+                const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
+                const brands: string[] = Array.isArray(p.brands) ? p.brands.map((x: any) => String(x).slice(0, 80)).slice(0, 8) : [];
+                const idx = brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
+                const ans = String(p.answer || "").slice(0, 600);
+                answers.push({ engine: e, mentioned: idx >= 0 || ans.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: ans, brands });
+              } catch {} finally { clearTimeout(t); }
+            }));
+            // Background mode: finish after the response, save to tool history, notify; refund if nothing came back.
+            if (body.background && policy.backgroundAllowed) {
+              const work = (async () => {
+                await askAll();
+                const { notifyUser } = await import("@/lib/notify.server");
+                if (!answers.length) {
+                  try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -Number(pChg.tokens || 0), _usd: 0, _run_id: pRun, _meta: { refund: true, endpoint: "/api/visibility#probe" } } as any); } catch {}
+                  try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
+                  return;
+                }
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
+                const hit = answers.filter((a) => a.mentioned).length;
+                try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
+              })().catch(() => {});
+              let scheduled = false;
+              try {
+                const { runAfterResponse } = await import("@/lib/request-ctx.server");
+                scheduled = runAfterResponse(work);
+              } catch {}
+              if (!scheduled) await work; // fallback: same as notify mode
+              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
+            }
+            await askAll();
+            if (body.notify) {
+              try {
+                const { notifyUser } = await import("@/lib/notify.server");
+                const hit = answers.filter((a) => a.mentioned).length;
+                await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
+              } catch {}
+            }
+            const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
+            const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
+            const reasoned = withReasons(answers, brand, lang as any);
+            const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
+            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
           }
 
           // MCI cache reuse is free, but only after entitlement and quota checks.
