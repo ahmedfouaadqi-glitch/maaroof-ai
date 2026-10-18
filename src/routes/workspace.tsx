@@ -447,34 +447,38 @@ function WorkspacePage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
-        <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
+      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-5 md:px-6 md:py-8 xl:px-8">
+        <header className="rb-workspace-fade mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.04] p-4 shadow-sm sm:mb-8 sm:gap-4 sm:p-5">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm sm:size-12">
             <BrainCircuit className="size-6" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">{c.eyebrow}</p>
-            <h1 className="mt-1 font-display text-2xl font-bold md:text-3xl">{c.title}</h1>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{c.subtitle}</p>
+            <h1 className="mt-1 font-display text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">{c.title}</h1>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{c.subtitle}</p>
           </div>
           {policy.show_professional_link && policy.available_interfaces.includes("professional") && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
         </header>
 
         {!finalEvent && events.length === 0 && (
-          <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <section className="rb-workspace-fade rb-workspace-delay-1 grid min-w-0 gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
+              <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm transition-shadow duration-200 focus-within:border-primary/40 focus-within:shadow-md sm:p-5 md:p-6">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
-                <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} maxLength={12000} aria-describedby="workspace-goal-hint" className="min-h-36 w-full resize-y rounded-xl border border-border bg-background px-4 py-3.5 text-sm leading-6 outline-none transition placeholder:text-muted-foreground/75 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60 sm:min-h-40" />
+                 <div className="mt-2 flex items-start justify-between gap-3">
+                   <p id="workspace-goal-hint" className="text-xs leading-5 text-muted-foreground">{locale === "en" ? "Be specific about the outcome, audience, and constraints." : locale === "ku" ? "ئەنجام، ئامانج و سنوورەکان بە ڕوونی دیاری بکە." : "حدّد النتيجة المطلوبة والجمهور والقيود بوضوح."}</p>
+                   <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{goal.length.toLocaleString(locale === "ku" ? "en" : locale)} / 12,000</span>
+                 </div>
+                <div className="mt-4 flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center">
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
-                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm sm:min-w-40">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
+              <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-5 md:p-6">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="font-semibold">{c.suggested}</h2>
@@ -482,7 +486,7 @@ function WorkspacePage() {
                   </div>
                   <Sparkles className="size-5 text-primary" />
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
                   {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
                   {MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "contact" && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
                 </div>
@@ -505,7 +509,7 @@ function WorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-5">
                 <h2 className="font-semibold">{c.costEstimate}</h2>
                 {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارێک خەمڵاندن…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
                   <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
@@ -518,7 +522,7 @@ function WorkspacePage() {
                 </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
               </div>
 
-              {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">
+              {policy.show_live_engine_picker && <div className="rounded-2xl border border-border/80 bg-card shadow-sm transition-shadow hover:shadow-md">
                 <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 p-4 text-start">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-muted"><BrainCircuit className="size-5" /></div>
                   <div className="flex-1">
@@ -571,7 +575,7 @@ function WorkspacePage() {
         )}
 
         {(running || events.length > 0 || error) && (
-          <section className="rb-workspace-fade space-y-4">
+          <section className="rb-workspace-fade space-y-4 sm:space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${running ? "animate-pulse bg-primary" : error ? "bg-destructive" : "bg-emerald-500"}`} /><span className="font-semibold">{running ? c.working : error ? c.failed : c.ready}</span></div>
               {running && <button type="button" onClick={stop} className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-xs text-destructive"><Square className="size-3" />{c.stop}</button>}
