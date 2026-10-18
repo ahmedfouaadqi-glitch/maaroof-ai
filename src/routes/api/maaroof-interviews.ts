@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
-import { buildInterviewResearchQuery, normalizeInterviewResearchSources } from "@/lib/maaroof/interview-research";
+import {
+  buildInterviewResearchQuery,
+  normalizeInterviewResearchSources,
+} from "@/lib/maaroof/interview-research";
 import type { Database } from "@/integrations/supabase/types";
 import {
   INTERVIEW_LOCALES,
@@ -551,7 +554,6 @@ async function handleUpdate(request: Request): Promise<Response> {
   });
 }
 
-
 async function handleEnrich(request: Request): Promise<Response> {
   const auth = await authenticate(request);
   if (!auth.ok) return auth.response;
@@ -562,7 +564,9 @@ async function handleEnrich(request: Request): Promise<Response> {
   const db = auth.admin as any;
   const { data: interview, error } = await db
     .from("maaroof_interviews")
-    .select("id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot")
+    .select(
+      "id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot",
+    )
     .eq("id", body.interview_id)
     .maybeSingle();
   if (error) return errorResponse("interview_lookup_failed", 500);
@@ -645,7 +649,10 @@ async function handleEnrich(request: Request): Promise<Response> {
     const isQuota = Boolean(
       error && typeof error === "object" && "name" in error && error.name === "FirecrawlLimitError",
     );
-    return errorResponse(isQuota ? "research_quota_reached" : "external_research_failed", isQuota ? 429 : 502);
+    return errorResponse(
+      isQuota ? "research_quota_reached" : "external_research_failed",
+      isQuota ? 429 : 502,
+    );
   }
 }
 
@@ -654,7 +661,10 @@ export const Route = createFileRoute("/api/maaroof-interviews")({
     handlers: {
       GET: async ({ request }) => handleGet(request),
       POST: async ({ request }) => {
-        const body = await request.clone().json().catch(() => null);
+        const body = await request
+          .clone()
+          .json()
+          .catch(() => null);
         return isPlainRecord(body) && body.action === "enrich"
           ? handleEnrich(request)
           : handleCreate(request);
