@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
 import { chargeTokens, chargeFailureBody, resolveToolCost } from "@/lib/tokens.server";
-import { resolveMonitorPolicy, checkMonitorPolicy } from "@/lib/monitor-policy";
+import { resolveMonitorPolicy, checkMonitorPolicy, resolveMonitorQuota } from "@/lib/monitor-policy";
 
 const COST = 2;
 
@@ -81,13 +81,11 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const pc = checkMonitorPolicy(policy, active || 0, competitors.length, Number(frequency_hours) || 24);
           if (!pc.ok) return Response.json({ error: pc.reason, policy }, { status: 403 });
           const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,subscription_expires_at,quota_overrides").eq("id", userId).maybeSingle();
-          const used = Number((prof as any)?.monthly_analyses_used || 0);
-          const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
-          const subscriptionActive = !!(prof as any)?.is_subscribed && (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
-          const limit = subscriptionActive ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
-          if (limit - used < COST) {
-            return Response.json({ error: subscriptionActive ? "monthly_cap_reached" : "subscription_required", limit, used }, { status: 402 });
+          const quota = resolveMonitorQuota(prof, COST);
+          if (!quota.allowed) {
+            return Response.json({ error: quota.error, limit: quota.limit, used: quota.used }, { status: 402 });
           }
+          const used = quota.used;
           { const f = await charge(); if (f) return f; }
           const baseline = await buildBaseline(brand, competitors, lang);
           const { data: row, error } = await admin.from("competitor_watch").insert({
@@ -103,13 +101,11 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const { data: w } = await admin.from("competitor_watch").select("*").eq("id", id).eq("user_id", userId).maybeSingle();
           if (!w) return Response.json({ error: "not_found" }, { status: 404 });
           const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,subscription_expires_at,quota_overrides").eq("id", userId).maybeSingle();
-          const used = Number((prof as any)?.monthly_analyses_used || 0);
-          const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
-          const subscriptionActive = !!(prof as any)?.is_subscribed && (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
-          const limit = subscriptionActive ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
-          if (limit - used < COST) {
-            return Response.json({ error: subscriptionActive ? "monthly_cap_reached" : "subscription_required", limit, used }, { status: 402 });
+          const quota = resolveMonitorQuota(prof, COST);
+          if (!quota.allowed) {
+            return Response.json({ error: quota.error, limit: quota.limit, used: quota.used }, { status: 402 });
           }
+          const used = quota.used;
           const f = await charge();
           if (f) return f;
           const fresh = await buildBaseline((w as any).brand, (w as any).competitors as string[], lang);
