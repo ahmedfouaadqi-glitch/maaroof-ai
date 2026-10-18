@@ -125,9 +125,6 @@ export const Route = createFileRoute("/api/brand-boost")({
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
 
-          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-
           // Admin-controlled overrides via app_settings.brand_boost:
           //   { enabled_platforms?: Platform[], probe_prompt?: string, probe_system?: string }
           let adminCfg: any = {};
@@ -142,6 +139,20 @@ export const Route = createFileRoute("/api/brand-boost")({
             lang === "ar" ? "اكتب جميع القيم النصية في JSON بالعربية الفصحى فقط."
             : lang === "ku" ? "هەموو دەقەکانی ناو JSON بە کوردی سۆرانی بنووسە."
             : "Write all string values inside the JSON in clear English only.";
+
+          // ── Step 2: probe each selected engine with its governed model
+          // Admin may restrict the engine set globally; the user's plan caps how
+          // many of the ten engines a single run may probe (MARK 1/2/3 = 3/6/10).
+          const adminAllowed: Platform[] | null = Array.isArray(adminCfg.enabled_platforms) && adminCfg.enabled_platforms.length
+            ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
+            : null;
+          const entitlement = await enginesAllowedForUser(admin, userId);
+          const requested = applyEntitlement(platforms, entitlement);
+          const picked = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
+9472          
+
+          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // ── Step 1: gather real public evidence (the "feeding") via Firecrawl
           let evidence: { title: string; url: string; snippet: string }[] = [];
@@ -176,16 +187,7 @@ export const Route = createFileRoute("/api/brand-boost")({
             ? evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.snippet}`).join("\n\n")
             : "(no public evidence retrieved)";
 
-          // ── Step 2: probe each selected engine with its governed model
-          // Admin may restrict the engine set globally; the user's plan caps how
-          // many of the ten engines a single run may probe (MARK 1/2/3 = 3/6/10).
-          const adminAllowed: Platform[] | null = Array.isArray(adminCfg.enabled_platforms) && adminCfg.enabled_platforms.length
-            ? (adminCfg.enabled_platforms as string[]).filter((p) => (PLATFORMS as readonly string[]).includes(p)) as Platform[]
-            : null;
-          const entitlement = await enginesAllowedForUser(admin, userId);
-          const requested = applyEntitlement(platforms, entitlement);
-          const picked = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
-          if (!picked.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
+
           // A provider that is currently failing is skipped instead of failing
           // the whole run; the reason travels back in the response.
           const { excludeUnhealthyEngines } = await import("@/lib/ai-engines.server");
