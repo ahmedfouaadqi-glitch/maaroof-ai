@@ -160,10 +160,10 @@ const EXAMPLES: Record<string, Record<"ar" | "en" | "ku", string>> = {
   },
 };
 function questionSupport(id: string): Pick<InterviewQuestion, "guidance" | "example"> {
- const example = EXAMPLES[id];
+  const example = EXAMPLES[id];
   const group = QUESTION_GROUP[id];
   const guidance = GUIDANCE[group];
- return example && guidance ? { guidance, example } : {};
+  return example && guidance ? { guidance, example } : {};
 }
 
 const q = (

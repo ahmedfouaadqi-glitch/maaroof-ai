@@ -858,10 +858,26 @@ export function InterviewPanel({
                   </h3>
                   {(nextQuestion.guidance || nextQuestion.example) && (
                     <details className="mt-3 rounded-lg border border-border bg-background/70 px-3 py-2.5">
-                      <summary className="cursor-pointer text-sm font-medium">{c("questionHelp")}</summary>
+                      <summary className="cursor-pointer text-sm font-medium">
+                        {c("questionHelp")}
+                      </summary>
                       <div className="mt-3 space-y-3 text-sm">
-                        {nextQuestion.guidance && <div><p className="font-medium text-muted-foreground">{c("guidance")}</p><p className="mt-1 leading-6">{nextQuestion.guidance[locale] || nextQuestion.guidance.ar}</p></div>}
-                        {nextQuestion.example && <div><p className="font-medium text-muted-foreground">{c("example")}</p><p className="mt-1 leading-6">{nextQuestion.example[locale] || nextQuestion.example.ar}</p></div>}
+                        {nextQuestion.guidance && (
+                          <div>
+                            <p className="font-medium text-muted-foreground">{c("guidance")}</p>
+                            <p className="mt-1 leading-6">
+                              {nextQuestion.guidance[locale] || nextQuestion.guidance.ar}
+                            </p>
+                          </div>
+                        )}
+                        {nextQuestion.example && (
+                          <div>
+                            <p className="font-medium text-muted-foreground">{c("example")}</p>
+                            <p className="mt-1 leading-6">
+                              {nextQuestion.example[locale] || nextQuestion.example.ar}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </details>
                   )}

@@ -56,13 +56,7 @@ describe("Maaroof interview question bank", () => {
       "project",
       "task",
     ];
-    const domains: InterviewDomain[][] = [
-      ["general"],
-      ["seo"],
-      ["aeo"],
-      ["geo"],
-      ["gseo"],
-    ];
+    const domains: InterviewDomain[][] = [["general"], ["seo"], ["aeo"], ["geo"], ["gseo"]];
     for (const targetType of targets) {
       for (const selectedDomains of domains) {
         for (const question of buildInterviewQuestionSet(targetType, selectedDomains)) {
