@@ -37,7 +37,7 @@ export function specialtyHint(ctx: UserContext, lang: "ar" | "en" | "ku" = "en")
   const hasSpec = ctx.specialty || ctx.brand_name || ctx.brand_keywords;
   const accountLabel = accountTypeLabel(ctx.account_type, lang);
   const intentHint = buildIntentHint(ctx.intent, lang);
-  if (!hasSpec && !intentHint) return "";
+  if (!hasSpec && !intentHint && ctx.account_type === "individual") return "";
   const labels = {
     ar: { title: "سياق المستخدم — التزم بهذا التخصص في كل المخرجات:", spec: "التخصص", brand: "العلامة", kw: "كلمات مفتاحية", account: "نوع الحساب" },
     ku: { title: "سیاقی بەکارهێنەر — لە هەموو دەرئەنجامەکاندا پابەند بە بە ئەم بوارە:", spec: "بوار", brand: "نیشان", kw: "وشە کلیلیەکان", account: "جۆری هەژمار" },
