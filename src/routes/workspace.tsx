@@ -109,6 +109,7 @@ function WorkspacePage() {
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [jobWeight, setJobWeight] = useState<{ weight?: string; score?: number; tools_count?: number } | null>(null);
   const [events, setEvents] = useState<WorkspaceEvent[]>([]);
   const [clarification, setClarification] = useState("");
   const [clarifyField, setClarifyField] = useState("");
@@ -246,6 +247,8 @@ function WorkspacePage() {
           at: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
         } as WorkspaceEvent));
         setEvents(current => [...current, ...mapped]);
+        const weightedEvent = mapped.find((event) => event.data?.weight && typeof event.data.weight === "object");
+        if (weightedEvent) setJobWeight(weightedEvent.data.weight);
         cursor = Math.max(cursor, ...incoming.map((item: any) => Number(item.seq) || 0));
         for (const event of mapped) {
           if (event.type === "clarify") {
@@ -304,6 +307,7 @@ function WorkspacePage() {
     setError("");
     setEvents([]);
     setJobId(null);
+    setJobWeight(null);
     try {
       const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
       if (!token) throw new Error("auth_required");
@@ -331,6 +335,7 @@ function WorkspacePage() {
         throw new Error(String(message));
       }
       setJobId(String(body.job_id));
+      setJobWeight(body.weight && typeof body.weight === "object" ? body.weight : null);
       await watchJob(String(body.job_id), 0, token);
     } catch (e: any) {
       setRunning(false);
@@ -375,6 +380,27 @@ function WorkspacePage() {
 
   function eventSummary(event: WorkspaceEvent): string {
     const d = event.data || {};
+    if ((event.type === "queued" || event.type === "dispatching") && d.weight) {
+      const weight = String(d.weight.weight || "light");
+      const label = weight === "deep" ? (locale === "en" ? "Deep" : locale === "ku" ? "قووڵ" : "عميق")
+        : weight === "medium" ? (locale === "en" ? "Medium" : locale === "ku" ? "مامناوەند" : "متوسط")
+        : (locale === "en" ? "Light" : locale === "ku" ? "سووک" : "خفيف");
+      return (locale === "en" ? "Workload: " : locale === "ku" ? "کێشی ئەرک: " : "وزن المهمة: ") + label + " (" + Number(d.weight.score || 0) + "/100)";
+    }
+    if (event.type === "deep_entity_discovery") {
+      if (d.status === "started") return locale === "en" ? `Background entity discovery started (${d.depth || "quick"}).` : locale === "ku" ? "دۆزینەوەی کەسایەتی لە پشتەوە دەستی پێکرد." : `بدأ الاستكشاف الخلفي للكيان (${d.depth === "deep" ? "عميق" : "سريع"}).`;
+      if (d.status === "completed") {
+        const cost = Number(d.actual_cost_tokens || 0);
+        const count = Number(d.candidates || 0);
+        return locale === "en" ? `Entity discovery complete: ${count} candidates; actual cost ${cost} tokens${d.reused ? " (reused result)" : ""}.`
+          : locale === "ku" ? `دۆزینەوە تەواو بوو: ${count} ئەگەری؛ تێچووی ڕاستەقینە ${cost} تۆکن.`
+          : `اكتمل الاستكشاف: ${count} كيانات مرشحة؛ الكلفة الفعلية ${cost} توكن${d.reused ? " (نتيجة معاد استخدامها)" : ""}.`;
+      }
+      if (d.status === "skipped") return d.reason === "already_run"
+        ? (locale === "en" ? "Background discovery skipped: the main run already used the discovery tool." : locale === "ku" ? "دۆزینەوە تێپەڕێنرا؛ ئامرازی دۆزینەوە پێشتر بەکارهاتووە." : "تم تجاوز الاستكشاف الخلفي لأن أداة الاستكشاف استُخدمت في المهمة الأساسية.")
+        : (locale === "en" ? "Background discovery skipped: no verified entity identity was available." : locale === "ku" ? "دۆزینەوە تێپەڕێنرا؛ ناسنامەی پشتڕاستکراو نەبوو." : "تم تجاوز الاستكشاف الخلفي لعدم توفر هوية كيان معروفة.");
+      return locale === "en" ? `Background discovery could not complete: ${d.reason || "unknown error"}` : locale === "ku" ? "دۆزینەوەی پشتەوە تەواو نەبوو." : `تعذر إكمال الاستكشاف الخلفي: ${d.reason || "سبب غير معروف"}`;
+    }
     if (event.type === "phase") {
       const phase = String(d.phase || "");
       return (c.stages as Record<string, string>)[phase] || phase || c.unknown;
@@ -548,8 +574,19 @@ function WorkspacePage() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${running ? "animate-pulse bg-primary" : error ? "bg-destructive" : "bg-emerald-500"}`} /><span className="font-semibold">{running ? c.working : error ? c.failed : c.ready}</span></div>
               {running && <button type="button" onClick={stop} className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-xs text-destructive"><Square className="size-3" />{c.stop}</button>}
-              {!running && <button type="button" onClick={() => { setEvents([]); setError(""); setGoal(""); setSelectedSkills([]); setJobId(null); }} className="rounded-lg border px-3 py-2 text-xs">{c.runAgain}</button>}
+              {!running && <button type="button" onClick={() => { setEvents([]); setError(""); setGoal(""); setSelectedSkills([]); setJobId(null); setJobWeight(null); }} className="rounded-lg border px-3 py-2 text-xs">{c.runAgain}</button>}
             </div>
+
+            {jobWeight && <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium">{locale === "en" ? "Workload weight" : locale === "ku" ? "کێشی ئەرک" : "وزن المهمة"}</span>
+                <span className="text-sm font-semibold">{jobWeight.weight === "deep" ? (locale === "en" ? "Deep" : locale === "ku" ? "قووڵ" : "عميق") : jobWeight.weight === "medium" ? (locale === "en" ? "Medium" : locale === "ku" ? "مامناوەند" : "متوسط") : (locale === "en" ? "Light" : locale === "ku" ? "سووک" : "خفيف")} · {Math.max(0, Math.min(100, Number(jobWeight.score || 0)))}/100</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={locale === "en" ? "Workload weight" : locale === "ku" ? "کێشی ئەرک" : "وزن المهمة"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, Number(jobWeight.score || 0)))}>
+                <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${Math.max(0, Math.min(100, Number(jobWeight.score || 0)))}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? `${Number(jobWeight.tools_count || 0)} selected tools; background discovery depth follows this weight.` : locale === "ku" ? `${Number(jobWeight.tools_count || 0)} ئامراز؛ قووڵی دۆزینەوە بەپێی ئەم کێشە دیاری دەکرێت.` : `${Number(jobWeight.tools_count || 0)} أداة محسوبة؛ يتحدد عمق الاستكشاف الخلفي وفق هذا الوزن.`}</p>
+            </div>}
 
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 
