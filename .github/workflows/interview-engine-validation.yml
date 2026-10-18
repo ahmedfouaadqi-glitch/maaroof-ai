@@ -74,7 +74,7 @@ jobs:
         run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-question-bank.test.ts src/lib/maaroof/interview-research.test.ts src/lib/maaroof/interview-report.test.ts src/routes/api/maaroof-interviews.test.ts
 
       - name: Lint interview engine
-        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-context.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/lib/maaroof/interview-research.ts src/lib/maaroof/interview-research.test.ts src/lib/maaroof/interview-report.ts src/lib/maaroof/interview-report.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/routes/api/maaroof-interviews.integration.test.ts src/components/workspace/InterviewPanel.tsx
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-context.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/lib/maaroof/interview-research.ts src/lib/maaroof/interview-research.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/routes/api/maaroof-interviews.integration.test.ts src/components/workspace/InterviewPanel.tsx
 
       - name: Type-check project
         run: bunx tsc --noEmit
