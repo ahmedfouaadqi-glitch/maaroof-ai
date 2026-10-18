@@ -1591,7 +1591,7 @@ function buildSystemPrompt(
   const memBlock = memories.length ? `\n\nLong-term memory about this user:\n${memories.slice(0, 10).join("\n")}` : "";
   const accountType = accountTypeLabel(normalizeAccountType(entityProfile?.account_type), ctx.language);
   const identityBlock = entityProfile
-    ? "\n\n[Declared account identity — context only, not permissions]\\nAccount type: " + accountType + "\\nEntity type: " + String(entityProfile.entity_type || "not specified") + "\\nBrand/entity name: " + String(entityProfile.brand_name || "not specified").slice(0, 160) + "\\nUse this classification to tailor examples and recommendations. Never infer authorization, legal status, or verified facts from the account type."
+    ? ["", "", "[Declared account identity — context only, not permissions]", "Account type: " + accountType, "Entity type: " + String(entityProfile.entity_type || "not specified"), "Brand/entity name: " + String(entityProfile.brand_name || "not specified").slice(0, 160), "Use this classification to tailor examples and recommendations. Never infer authorization, legal status, or verified facts from the account type."].join("\n")
     : "";
   let wsBlock = "";
   if (workspaceProfile) {
