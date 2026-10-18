@@ -37,7 +37,59 @@ export const Route = createFileRoute("/api/research")({
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
-          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          // Require an active entitlement before allowing cache reuse or paid provider work.
+          let chargeUsage: (() => Promise<void>) | null = null;
+          const { data: roleRow } = await admin.from("user_roles")
+            .select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+          if (!roleRow) {
+            const { data: prof } = await admin.from("profiles")
+              .select("is_subscribed, subscription_tier, subscription_expires_at, monthly_analyses_used, usage_period_start, quota_overrides")
+              .eq("id", userId).maybeSingle();
+            const planActive = !!prof?.is_subscribed && (!prof.subscription_expires_at || new Date(prof.subscription_expires_at) >= new Date());
+            if (planActive) {
+              const { data: plan } = await admin.from("subscription_plans")
+                .select("monthly_analyses").eq("name", prof!.subscription_tier).maybeSingle();
+              const override = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
+              const limit = Math.max(plan?.monthly_analyses || 200, override);
+              if ((prof!.monthly_analyses_used || 0) >= limit) {
+                return Response.json({ error: "limit", limit }, { status: 402 });
+              }
+              chargeUsage = async () => {
+                const { error } = await admin.from("profiles")
+                  .update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 })
+                  .eq("id", userId);
+                if (error) throw error;
+              };
+            } else {
+              const { data: sub } = await admin.from("user_agent_subscriptions")
+                .select("*, agent_addons(*)").eq("user_id", userId).eq("status", "active")
+                .order("created_at", { ascending: false }).limit(1).maybeSingle();
+              if (!sub) return Response.json({ error: "no_active_subscription" }, { status: 402 });
+              const addon = (sub as any).agent_addons;
+              if (!addon) return Response.json({ error: "no_addon" }, { status: 402 });
+              if (sub.expires_at && new Date(sub.expires_at) < new Date()) {
+                return Response.json({ error: "subscription_expired" }, { status: 402 });
+              }
+              const today = new Date().toISOString().slice(0, 10);
+              const dailyUsed = sub.last_run_date === today ? sub.tasks_used_today : 0;
+              if (sub.tasks_used + 1 > addon.monthly_tasks) {
+                return Response.json({ error: "monthly_cap_reached" }, { status: 402 });
+              }
+              if (dailyUsed + 1 > addon.daily_task_cap) {
+                return Response.json({ error: "daily_cap_reached" }, { status: 402 });
+              }
+              chargeUsage = async () => {
+                const { error } = await admin.from("user_agent_subscriptions").update({
+                  tasks_used: sub.tasks_used + 1,
+                  tasks_used_today: dailyUsed + 1,
+                  last_run_date: today,
+                }).eq("id", sub.id);
+                if (error) throw error;
+              };
+            }
+          }
+
+          // MCI reuse is free, but cannot bypass the entitlement/quota gate above.
           const _access = await resolveToolCost(userId, "research");
           if ((_access.source as string) === "disabled_by_admin") {
             return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
@@ -46,6 +98,12 @@ export const Route = createFileRoute("/api/research")({
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+          try {
+            await chargeUsage?.();
+          } catch (usageError) {
+            console.error("[api/research] usage update failed:", usageError);
+            return Response.json({ error: "usage_update_failed" }, { status: 500 });
+          }
           const userCtx = await getUserContext(admin, userId);
 
           const geo = scope?.country ? ` ${scope.country}` : "";
