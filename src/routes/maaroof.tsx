@@ -1,10 +1,11 @@
 import { ProgressLine } from "@/components/TrinityPanel";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { useVisibility, usePageGuard } from "@/lib/visibility";
 
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
@@ -57,6 +58,16 @@ function MaaroofPage() {
   const { user, loading } = useAuth();
   const { t, lang } = useI18n();
   const { tab } = Route.useSearch();
+  const navigate = useNavigate();
+  const visibility = useVisibility();
+  const canUseKnowledge = visibility.isAgentFeatureVisible("knowledge");
+  usePageGuard();
+
+  useEffect(() => {
+    if (!loading && user && !visibility.loading && tab === "knowledge" && !canUseKnowledge) {
+      navigate({ to: "/maaroof", search: { tab: "chat" }, replace: true });
+    }
+  }, [loading, user?.id, visibility.loading, tab, canUseKnowledge, navigate]);
   const [goal, setGoal] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [running, setRunning] = useState(false);
@@ -298,7 +309,7 @@ function MaaroofPage() {
 
           {/* Unified tab bar */}
           <nav className="rounded-lg border bg-card p-1 flex flex-wrap gap-1" aria-label={t("mrf_tabs_aria")}>
-            {TABS.map((k) => {
+            {TABS.filter((k) => k !== "knowledge" || canUseKnowledge).map((k) => {
               const Icon = TAB_META[k].icon;
               const active = tab === k;
               return (
@@ -519,7 +530,7 @@ function MaaroofPage() {
             </div>
           )}
 
-          {tab === "knowledge" && (
+          {tab === "knowledge" && canUseKnowledge && (
             <div className="rounded-lg border bg-card p-4">
               <p className="mb-2 text-xs text-muted-foreground">{t("mrf_tab_knowledge_hint")}</p>
               <KnowledgeSpaces userId={user?.id ?? null} />
