@@ -113,7 +113,7 @@ export function usePageGuard() {
     const match = PATH_TO_PAGE.find(([rx]) => rx.test(pathname));
     if (!match) return;
     if (!vis.isPageVisible(match[1])) navigate({ to: "/" });
-  }, [vis.loading, pathname]);
+  }, [vis.loading, vis.isPageVisible, pathname, navigate]);
 }
 
 /**
