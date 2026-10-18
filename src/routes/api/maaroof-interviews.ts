@@ -606,6 +606,28 @@ async function handleEnrich(request: Request): Promise<Response> {
   });
   if (!query) return errorResponse("research_query_empty", 422);
 
+  // Reuse evidence collected for this exact interview query during the 12-hour freshness window.
+  // This avoids repeat Firecrawl calls when users reopen the report or retry the UI.
+  const cacheSince = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+  const { data: cachedSources, error: cacheError } = await db
+    .from("maaroof_interview_evidence")
+    .select("id,title,source_url,domain,description,snippet,query,locale,collected_at")
+    .eq("interview_id", interview.id)
+    .eq("query", query)
+    .gte("collected_at", cacheSince)
+    .order("collected_at", { ascending: false })
+    .limit(8);
+  if (cacheError) return errorResponse("research_evidence_read_failed", 500);
+  if (Array.isArray(cachedSources) && cachedSources.length > 0) {
+    return Response.json({
+      interview_id: interview.id,
+      query,
+      sources: cachedSources,
+      collected_at: cachedSources[0].collected_at,
+      reused: true,
+    });
+  }
+
   try {
     const providerPayload = await fcSearch(
       query,
