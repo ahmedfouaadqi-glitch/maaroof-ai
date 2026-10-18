@@ -12,9 +12,8 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const configured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_ROLE_KEY);
 const integrationDescribe = configured ? describe : describe.skip;
-const handlers = (
-  Route.options as unknown as { server: { handlers: Record<Method, Handler> } }
-).server.handlers;
+const handlers = (Route.options as unknown as { server: { handlers: Record<Method, Handler> } })
+  .server.handlers;
 
 let admin: AdminDb | null = null;
 let publicClient: AdminDb | null = null;
@@ -60,7 +59,9 @@ async function createAuthenticatedUser(
 
   const signIn = await anonymousClient.auth.signInWithPassword({ email, password });
   if (signIn.error || !signIn.data.session?.access_token) {
-    throw new Error("Could not sign in local test user: " + (signIn.error?.message || "missing token"));
+    throw new Error(
+      "Could not sign in local test user: " + (signIn.error?.message || "missing token"),
+    );
   }
 
   return { id: data.user.id, token: signIn.data.session.access_token };
@@ -112,7 +113,8 @@ integrationDescribe("Maaroof interview API against local Supabase", () => {
       .single();
     if (workspaceError || !workspace) {
       throw new Error(
-        "Could not create local test workspace: " + (workspaceError?.message || "missing workspace"),
+        "Could not create local test workspace: " +
+          (workspaceError?.message || "missing workspace"),
       );
     }
     workspaceId = workspace.id;
@@ -199,7 +201,11 @@ integrationDescribe("Maaroof interview API against local Supabase", () => {
         id: personalInterviewId,
         expected_version: 3,
         action: "answer",
-        answer: { questionId: "objective", status: "answered", value: "Increase qualified organic traffic" },
+        answer: {
+          questionId: "objective",
+          status: "answered",
+          value: "Increase qualified organic traffic",
+        },
       }),
     });
     expect(answered.status).toBe(200);
