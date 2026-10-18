@@ -574,11 +574,7 @@ async function handleUpdate(request: Request): Promise<Response> {
           profile,
         );
         if (Object.keys(patch).length) {
-          await db
-            .from("profiles")
-            .update(patch)
-            .eq("id", auth.userId)
-            .eq("entity_locked", false);
+          await db.from("profiles").update(patch).eq("id", auth.userId).eq("entity_locked", false);
         }
       }
     } catch {
