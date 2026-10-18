@@ -28,9 +28,9 @@ describe("agent-input", () => {
     expect(result.input.competitors).toEqual(["شركة النور"]);
     expect(result.removed).toEqual(["Competitor A", "Example Competitor", "المنافس الأول", "Rival 2"]);
   });
-  it("leaves an explicit real competitor untouched", () => {
-    const result = removePlaceholderCompetitors({ competitors: ["Toyota", "Samsung"] });
-    expect(result.input.competitors).toEqual(["Toyota", "Samsung"]);
+  it("leaves explicit real competitors, including named objects, untouched", () => {
+    const result = removePlaceholderCompetitors({ competitors: ["Toyota", "Samsung", { name: "Kia" }] });
+    expect(result.input.competitors).toEqual(["Toyota", "Samsung", { name: "Kia" }]);
     expect(result.removed).toEqual([]);
   });
 
