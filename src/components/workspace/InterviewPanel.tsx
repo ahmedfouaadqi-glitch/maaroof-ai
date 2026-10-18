@@ -1113,7 +1113,9 @@ export function InterviewPanel({
                             {source.title}
                           </a>
                           <p className="mt-1 text-xs text-muted-foreground">{source.domain}</p>
-                          {source.description && <p className="mt-2 text-sm">{source.description}</p>}
+                          {source.description && (
+                            <p className="mt-2 text-sm">{source.description}</p>
+                          )}
                           {source.snippet && (
                             <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
                               {source.snippet}
@@ -1134,26 +1136,41 @@ export function InterviewPanel({
                         </p>
                       </div>
                       {researchReport.sections.map((reportSection) => (
-                        <article key={reportSection.id} className="space-y-3 rounded-lg border border-border p-3">
+                        <article
+                            key={reportSection.id}
+                            className="space-y-3 rounded-lg border border-border p-3"
+                          >
                           <h5 className="font-semibold">{reportSection.title}</h5>
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground">{c("findings")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {c("findings")}
+                            </p>
                             <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                              {reportSection.findings.map((finding, index) => <li key={index}>{finding}</li>)}
+                              {reportSection.findings.map((finding, index) => (
+                                <li key={index}>{finding}</li>
+                              ))}
                             </ul>
                           </div>
                           {reportSection.gaps.length > 0 && (
                             <div>
-                              <p className="text-xs font-semibold text-muted-foreground">{c("gaps")}</p>
+                              <p className="text-xs font-semibold text-muted-foreground">
+                                {c("gaps")}
+                              </p>
                               <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                                {reportSection.gaps.map((gap, index) => <li key={index}>{gap}</li>)}
+                                {reportSection.gaps.map((gap, index) => (
+                                  <li key={index}>{gap}</li>
+                                ))}
                               </ul>
                             </div>
                           )}
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground">{c("recommendations")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {c("recommendations")}
+                            </p>
                             <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                              {reportSection.recommendations.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
+                              {reportSection.recommendations.map((recommendation, index) => (
+                                <li key={index}>{recommendation}</li>
+                              ))}
                             </ul>
                           </div>
                           <p className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
@@ -1166,7 +1183,7 @@ export function InterviewPanel({
                   )}
                 </section>
               )}
-    
+
               {session.questions_snapshot.some(
                 (question) => session.state.answers[question.id],
               ) && (
