@@ -91,7 +91,8 @@ export const Route = createFileRoute("/api/brand-authority")({
           // Quota check (same model as brand-boost)
           const bbToggle = String((profile as any)?.quota_overrides?.brand_boost || "").toLowerCase();
           if (bbToggle === "off") return Response.json({ error: "tool_disabled_by_admin" }, { status: 403 });
-          let allowed = bbToggle === "on" || !!(profile as any).is_subscribed;
+          const subscriptionActive = !!(profile as any).is_subscribed && (!(profile as any).subscription_expires_at || new Date((profile as any).subscription_expires_at) >= new Date());
+          let allowed = bbToggle === "on" || subscriptionActive;
           const overrideLimit = Number((profile as any)?.quota_overrides?.monthly_analyses || 0);
           const used = Number((profile as any).monthly_analyses_used || 0);
           if (!allowed && overrideLimit - used < AUTHORITY_COST) {
