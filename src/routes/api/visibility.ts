@@ -8,6 +8,7 @@ import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-q
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
+import { normalizeResult } from "@/lib/visibility-normalization";
 
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean };
@@ -36,6 +37,7 @@ Each AI platform uses a DIFFERENT citation mechanism — name it explicitly:
 - Grok (xAI): real-time X (Twitter) signal + general web. Favors brand presence on X, recent buzz, viral mentions, news. citation_method = "x_realtime + web_search".
 - Mistral (Le Chat): web search via Brave/SerpAPI partners, training corpus. Favors EU-friendly sources, multilingual content, structured pages. citation_method = "training_corpus + brave_search".
 - DeepSeek: efficient reasoning model with web tool. Favors technical docs, GitHub/Stack Overflow content, structured factual pages, multilingual sources (Chinese + English strong). citation_method = "training_corpus + web_search".
+- Kimi (Moonshot AI): model knowledge plus available web/search tools depending on product and mode. Favor clear Chinese/English primary sources, detailed structured pages, and corroborated recent references. citation_method = "training_corpus + available_web_tools".
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -67,83 +69,11 @@ Return ONLY valid JSON in this exact shape:
     { "name": "Copilot", ... },
     { "name": "Grok", ... },
     { "name": "Mistral", ... },
-    { "name": "DeepSeek", ... }
+    { "name": "DeepSeek", ... },
+    { "name": "Kimi", ... }
   ]
 }
-visibility_percent MUST be the weighted average of the 8 platform scores (rounded). All text fields MUST be in REPORT language.`;
-
-function clamp(n: unknown) {
-  const value = Number.parseInt(String(n ?? 0), 10);
-  if (Number.isNaN(value)) return 0;
-  return Math.max(0, Math.min(100, value));
-}
-
-function toArray(value: unknown, max = 6) {
-  if (!Array.isArray(value)) return [] as string[];
-  return value
-    .map((item) => String(item ?? "").trim())
-    .filter(Boolean)
-    .slice(0, max)
-    .map((item) => item.slice(0, 220));
-}
-
-function normalizePlatforms(value: unknown): Array<any> {
-  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi"];
-  const arr = Array.isArray(value) ? value : [];
-  const byName = new Map<string, any>();
-  for (const item of arr) {
-    if (item && typeof item === "object") {
-      const name = String((item as any).name || "").trim();
-      if (name) byName.set(name, item);
-    }
-  }
-  const enumOrDefault = (v: any, vals: string[], d: string) => (vals.includes(v) ? v : d);
-  return NAMES.map((name) => {
-    const p: any = byName.get(name) || {};
-    const factors = Array.isArray(p.authority_factors)
-      ? p.authority_factors.slice(0, 4).map((x: any) => String(x ?? "").slice(0, 90)).filter(Boolean)
-      : [];
-    return {
-      name,
-      score: clamp(p.score),
-      citation_likelihood: enumOrDefault(p.citation_likelihood, ["high", "medium", "low"], "low"),
-      citation_method: String(p.citation_method || "").trim().slice(0, 100),
-      evidence_basis: String(p.evidence_basis || "").trim().slice(0, 240),
-      authority_factors: factors,
-      trust_signal: String(p.trust_signal || "").trim().slice(0, 120),
-      freshness_weight: enumOrDefault(p.freshness_weight, ["high", "medium", "low"], "medium"),
-      why: String(p.why || "").trim().slice(0, 360),
-      action: String(p.action || "").trim().slice(0, 220),
-      priority: enumOrDefault(p.priority, ["high", "medium", "low"], "medium"),
-    };
-  });
-}
-
-function normalizeResult(parsed: any, fallbackText = "") {
-  const sentiment = ["positive", "neutral", "negative"].includes(parsed?.sentiment)
-    ? parsed.sentiment
-    : "neutral";
-
-  const platforms = normalizePlatforms(parsed?.platforms);
-  const platformAvg = platforms.length
-    ? Math.round(platforms.reduce((s, p) => s + (p.score || 0), 0) / platforms.length)
-    : clamp(parsed?.visibility_percent);
-  const visibility_percent = clamp(parsed?.visibility_percent) || platformAvg;
-
-  const confidence = ["high", "medium", "low"].includes(parsed?.confidence) ? parsed.confidence : "medium";
-
-  return {
-    visibility_percent,
-    confidence,
-    sentiment,
-    appearance_summary: String(parsed?.appearance_summary || fallbackText || "").trim().slice(0, 500),
-    strengths: toArray(parsed?.strengths, 6),
-    weaknesses: toArray(parsed?.weaknesses, 6),
-    competitors: toArray(parsed?.competitors, 6),
-    recommendations: toArray(parsed?.recommendations, 8),
-    platforms,
-  };
-}
+visibility_percent MUST equal the arithmetic mean (equal weights) of all 9 platform scores, rounded to the nearest integer. All text fields MUST be in REPORT language.`;
 
 export const Route = createFileRoute("/api/visibility")({
   server: {
@@ -314,26 +244,25 @@ export const Route = createFileRoute("/api/visibility")({
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: pChg.reason === "tool_disabled" ? 403 : 402 });
             refundContext = { admin, userId, runId: pRun, toolKey: "visibility.probe" };
             if (chargeUsage) {
+              quotaContext = { admin, userId, runId: pRun };
               try {
                 await chargeUsage(pRun, "visibility.probe");
-                quotaContext = { admin, userId, runId: pRun };
-              }
-              catch (e) {
+              } catch (e) {
                 const message = e instanceof Error ? e.message : String(e);
                 console.error("[api/visibility] probe quota reservation failed:", message);
-                // Refund only when the quota RPC explicitly rejected the reservation.
-                // A transport/RPC error may have an unknown commit outcome and needs review.
                 if (message.startsWith("quota_denied:")) {
-                  const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
-                    _user_id: userId, _tool_key: "visibility.probe", _run_id: pRun,
-                    _reason: "quota_denied",
-                  } as any);
-                  if (refundError || !(refundResult as any)?.ok) {
-                    console.error("[api/visibility] quota-denial token refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
-                  }
-                  return Response.json({ error: message.slice("quota_denied:".length) || "quota_rejected" }, { status: 402 });
+                  const refunded = await refundChargedTokens("quota_denied");
+                  return Response.json({
+                    error: message.slice("quota_denied:".length) || "quota_rejected",
+                    token_refund_confirmed: refunded,
+                  }, { status: 402 });
                 }
-                return Response.json({ error: "usage_update_needs_review" }, { status: 500 });
+                const released = await finalizeQuota("release");
+                if (released) {
+                  const refunded = await refundChargedTokens("quota_reservation_failed");
+                  return Response.json({ error: "usage_update_failed", token_refund_confirmed: refunded }, { status: 500 });
+                }
+                return Response.json({ error: "usage_update_needs_review", token_refund_confirmed: false }, { status: 500 });
               }
             }
             const market = describeMarket(body.scope);
@@ -453,27 +382,25 @@ export const Route = createFileRoute("/api/visibility")({
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           refundContext = { admin, userId, runId: _runId, toolKey: "visibility" };
+          if (chargeUsage) quotaContext = { admin, userId, runId: _runId };
           try {
             await chargeUsage?.(_runId, "visibility");
-            if (chargeUsage) quotaContext = { admin, userId, runId: _runId };
           } catch (usageError) {
             const message = usageError instanceof Error ? usageError.message : String(usageError);
             console.error("[api/visibility] quota reservation failed:", message);
-            // A confirmed quota rejection means the model work must not proceed.
-            // Refund the already charged tool tokens idempotently.
             if (message.startsWith("quota_denied:")) {
-              const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
-                _user_id: userId, _tool_key: "visibility", _run_id: _runId,
-                _reason: "quota_denied",
-              } as any);
-              if (refundError || !(refundResult as any)?.ok) {
-                console.error("[api/visibility] quota-denial token refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
-              }
-              return Response.json({ error: message.slice("quota_denied:".length) || "quota_rejected" }, { status: 402 });
+              const refunded = await refundChargedTokens("quota_denied");
+              return Response.json({
+                error: message.slice("quota_denied:".length) || "quota_rejected",
+                token_refund_confirmed: refunded,
+              }, { status: 402 });
             }
-            // Do not auto-refund on an RPC transport error: the transaction's commit
-            // outcome may be unknown, so an automatic refund could create free quota.
-            return Response.json({ error: "usage_update_needs_review" }, { status: 500 });
+            const released = await finalizeQuota("release");
+            if (released) {
+              const refunded = await refundChargedTokens("quota_reservation_failed");
+              return Response.json({ error: "usage_update_failed", token_refund_confirmed: refunded }, { status: 500 });
+            }
+            return Response.json({ error: "usage_update_needs_review", token_refund_confirmed: false }, { status: 500 });
           }
 
           const market = describeMarket(body.scope);
@@ -518,8 +445,18 @@ export const Route = createFileRoute("/api/visibility")({
           const content = String(data?.choices?.[0]?.message?.content || "{}");
 
           const parsed = extractJsonObject(content);
+          const hasPlatformEvidence = Array.isArray((parsed as any)?.platforms)
+            && (parsed as any).platforms.some((platform: unknown) =>
+              !!platform && typeof platform === "object"
+              && typeof (platform as any).name === "string"
+              && (platform as any).name.trim().length > 0
+            );
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !hasPlatformEvidence) {
+            await refundChargedTokens("invalid_provider_response");
+            return Response.json({ error: "invalid_ai_response", token_refund_confirmed: !refundContext }, { status: 502 });
+          }
 
-          const result = normalizeResult(parsed || {}, content);
+          const result = normalizeResult(parsed, content);
 
           await admin.from("profiles").update({
             brand_name: brand,
@@ -545,10 +482,10 @@ export const Route = createFileRoute("/api/visibility")({
           }
 
           // The provider produced a usable report; commit its quota reservation.
-          await finalizeQuota("commit");
+          const quotaFinalized = await finalizeQuota("commit");
           refundContext = null;
           const _q = pickQualityFields(parsed || {});
-          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
+          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q, quota_needs_review: !quotaFinalized }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
