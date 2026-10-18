@@ -11,6 +11,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { supabase } from "@/integrations/supabase/client";
 import { Activity, Sparkles, Loader2, Bot, ArrowRight, ClipboardList, TrendingUp, Search, Megaphone, Trophy, Share2, Bell, Target, FlaskConical, FileText, LayoutGrid, ChevronLeft, ChevronRight, Radar } from "lucide-react";
 import { useVisibility, useToolPrice } from "@/lib/visibility";
+import { useInterfacePolicy } from "@/lib/use-interface-policy";
 import { TokensBar } from "@/components/TokensBar";
 import { CostBadge } from "@/components/CostBadge";
 
@@ -86,6 +87,7 @@ function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const vis = useVisibility();
+  const { policy: interfacePolicy, ready: interfacePolicyReady } = useInterfacePolicy();
   const { tool: openTool } = Route.useSearch();
   const [agentSub, setAgentSub] = useState<any | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -113,10 +115,28 @@ function DashboardPage() {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/dashboard" } });
   }, [loading, user, navigate]);
 
-  // Page-level gate: admin hid the dashboard page itself
+  // Respect both the global interface policy and this user's admin override.
+  // UI visibility is a separate per-user control: hiding the dashboard page
+  // must still work even when the professional interface is available.
   useEffect(() => {
+    if (loading || !user || !interfacePolicyReady) return;
+    if (!interfacePolicy.available_interfaces.includes("professional")) {
+      navigate({
+        to: interfacePolicy.available_interfaces.includes("workbench") ? "/workspace" : "/",
+        replace: true,
+      });
+      return;
+    }
     if (!vis.loading && !vis.isPageVisible("dashboard")) navigate({ to: "/" });
-  }, [vis.loading]);
+  }, [
+    loading,
+    user?.id,
+    interfacePolicyReady,
+    interfacePolicy.available_interfaces,
+    vis.loading,
+    vis.isPageVisible,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (!user) return;
