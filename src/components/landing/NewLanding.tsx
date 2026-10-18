@@ -49,6 +49,86 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const c = COPY[(lang === "en" || lang === "ku" ? lang : "ar") as keyof typeof COPY];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
   const skillName = (s: (typeof MAAROOF_SKILLS)[number]) => s.label[(lang === "en" || lang === "ku" ? lang : "ar")];
+  const locale = lang === "en" || lang === "ku" ? lang : "ar";
+  const pillars = {
+    ar: [
+      { key: "SEO", title: "تحسين محركات البحث", body: "بنية الصفحات، نية البحث، والفهرسة والأداء — مع فصل القياس الفعلي عن التوصيات." },
+      { key: "AEO", title: "تحسين محركات الإجابة", body: "إجابات مباشرة ودقيقة، أسئلة واضحة، ومصادر يمكن التحقق منها." },
+      { key: "GEO", title: "تحسين الظهور التوليدي", body: "رفع قابلية فهم الكيان والاستشهاد بمعلوماته في الإجابات التوليدية." },
+      { key: "SGE", title: "تجربة البحث التوليدي", body: "تهيئة المحتوى لملخصات وتجارب البحث المدعومة بالذكاء الاصطناعي." },
+      { key: "GSEO", title: "تحسين رحلة البحث التوليدي", body: "ربط أسئلة المستخدم ومراحل قراره بالمحتوى والأدلة المناسبة." },
+    ],
+    en: [
+      { key: "SEO", title: "Search engine optimization", body: "Page structure, search intent, indexing and performance—separating measured results from recommendations." },
+      { key: "AEO", title: "Answer engine optimization", body: "Direct, accurate answers, clear questions and verifiable sources." },
+      { key: "GEO", title: "Generative engine optimization", body: "Make entity information easier to understand, retrieve and cite in generated answers." },
+      { key: "SGE", title: "Generative search experience", body: "Prepare content for AI-assisted search summaries and discovery experiences." },
+      { key: "GSEO", title: "Generative search journey optimization", body: "Connect user questions and decision stages with relevant content and evidence." },
+    ],
+    ku: [
+      { key: "SEO", title: "باشترکردنی گەڕانی وێب", body: "پێکهاتەی پەڕە، مەبەستی گەڕان و کارایی؛ جیاکردنەوەی پێوانەی ڕاستەقینە لە پێشنیار." },
+      { key: "AEO", title: "باشترکردنی وەڵامدانەوە", body: "وەڵامی ڕاستەوخۆ و ورد، پرسیاری ڕوون و سەرچاوەی پشتڕاستکراو." },
+      { key: "GEO", title: "باشترکردنی دەرکەوتنی بزوێنەری زایەندە", body: "زانیاریی کیانەکە ئاسانتر بۆ تێگەیشتن و ئاماژەپێکردن بکە." },
+      { key: "SGE", title: "ئەزموونی گەڕانی زایەندە", body: "ناوەڕۆک بۆ پوختە و ئەزموونی گەڕانی پشتبەستوو بە زیرەکی ئامادە بکە." },
+      { key: "GSEO", title: "باشترکردنی ڕێڕەوی گەڕانی زایەندە", body: "پرسیار و قۆناغەکانی بڕیاری بەکارهێنەر بە ناوەڕۆک و بەڵگە پەیوەست بکە." },
+    ],
+  }[locale];
+  const comparison = {
+    ar: {
+      title: "من نتائج الروابط إلى إجابات مدعومة بالسياق",
+      old: "البحث التقليدي",
+      new: "معروف: البحث التوليدي",
+      rows: [
+        ["وحدة التركيز", "صفحة وكلمة مفتاحية", "كيان وحقائق وأسئلة المستخدم"],
+        ["شكل النتيجة", "روابط وترتيب", "إجابة وتوصيات مع أدلة عند توفرها"],
+        ["التحقق", "مراجعة الصفحات والقياسات", "تمييز الحقائق المصرّح بها والمصادر والفجوات"],
+      ],
+      truth: "معاينة بطاقة الحقيقة",
+      name: "اسم الكيان",
+      nameValue: "يُحفظ كما يحدده المستخدم",
+      hq: "المقر والأسواق",
+      hqValue: "مصادر معلنة — غير مؤكدة مستقلاً",
+      links: "الروابط الرسمية",
+      linksValue: "موقع رسمي وحسابات موثقة",
+      note: "هذه معاينة توضيحية وليست بيانات كيان حقيقي.",
+    },
+    en: {
+      title: "From ranked links to context-aware answers",
+      old: "Traditional search",
+      new: "Maaroof: generative search",
+      rows: [
+        ["Focus", "Pages and keywords", "Entity, facts and user questions"],
+        ["Output", "Links and ranking", "Answers and recommendations with evidence when available"],
+        ["Verification", "Review pages and measurements", "Separate declared facts, sources and gaps"],
+      ],
+      truth: "Truth-card preview",
+      name: "Entity name",
+      nameValue: "Stored as supplied by the user",
+      hq: "HQ and markets",
+      hqValue: "Declared, not independently verified",
+      links: "Official links",
+      linksValue: "Official website and social accounts",
+      note: "Illustrative preview, not real entity data.",
+    },
+    ku: {
+      title: "لە بەستەری ڕیزکراوەوە بۆ وەڵامی پەیوەست بە کۆنتێکست",
+      old: "گەڕانی ئاسایی",
+      new: "مەعروف: گەڕانی زایەندە",
+      rows: [
+        ["سەرنج", "پەڕە و وشەی سەرەکی", "کیان، ڕاستی و پرسیاری بەکارهێنەر"],
+        ["ئەنجام", "بەستەر و ڕیزبەندی", "وەڵام و پێشنیار لەگەڵ بەڵگە ئەگەر هەبێت"],
+        ["پشتڕاستکردنەوە", "پشکنینی پەڕە و پێوانە", "جیاکردنەوەی ڕاستی، سەرچاوە و کەلێنەکان"],
+      ],
+      truth: "پێشبینینی کارتی ڕاستی",
+      name: "ناوی کیان",
+      nameValue: "بەپێی زانیاریی بەکارهێنەر پاشەکەوت دەکرێت",
+      hq: "بارەگا و بازاڕ",
+      hqValue: "ڕاگەیەندراوە، بەڵام سەربەخۆ پشتڕاست نەکراوەتەوە",
+      links: "بەستەری فەرمی",
+      linksValue: "ماڵپەڕ و هەژماری فەرمی",
+      note: "ئەمە تەنها نموونەیە، نەک داتای کیانێکی ڕاستەقینە.",
+    },
+  }[locale];
 
   return (
     <div className="min-h-screen">
@@ -98,6 +178,51 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
                 <h3 className="mt-3 font-semibold">{n + 1}. {s.t}</h3>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <h2 className="text-center font-display text-2xl font-bold">{comparison.title}</h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pillars.map((pillar) => (
+              <article key={pillar.key} className="group rounded-2xl border border-border bg-card/40 p-5 transition-colors hover:border-primary/40 motion-reduce:transition-none">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold">{pillar.title}</span>
+                  <span className="rounded-md border border-primary/30 px-2 py-1 text-xs font-bold text-primary">{pillar.key}</span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{pillar.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <div className="overflow-hidden rounded-2xl border border-border">
+            <div className="grid grid-cols-2 bg-muted/40 text-sm font-semibold">
+              <div className="p-4">{comparison.old}</div>
+              <div className="border-s border-border p-4">{comparison.new}</div>
+            </div>
+            {comparison.rows.map((row) => (
+              <div key={row[0]} className="grid grid-cols-2 border-t border-border text-sm">
+                <div className="p-4"><span className="block text-xs text-muted-foreground">{row[0]}</span><span className="mt-1 block">{row[1]}</span></div>
+                <div className="border-s border-border p-4 text-muted-foreground">{row[2]}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-primary/25 bg-card/50 p-6 shadow-[var(--shadow-glow)]">
+            <div className="flex items-center gap-2"><ShieldCheck className="size-5 text-primary" /><h2 className="font-display text-xl font-bold">{comparison.truth}</h2></div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {[[comparison.name, comparison.nameValue], [comparison.hq, comparison.hqValue], [comparison.links, comparison.linksValue]].map(([label, value]) => (
+                <div key={label} className="rounded-xl border border-border bg-background/60 p-4">
+                  <div className="text-xs text-muted-foreground">{label}</div>
+                  <div className="mt-1 text-sm font-medium">{value}</div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">{comparison.note}</p>
           </div>
         </section>
 
