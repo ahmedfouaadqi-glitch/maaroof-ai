@@ -74,7 +74,7 @@ export function deriveEntityProfileSync(
   const matchesBrand = !!profileName && targetName === profileName;
   const matchesIndividual =
     interview.targetType === "individual" && !!fullName && targetName === fullName;
-  if (!matchesBrand && !matchesIndividual) return {};
+  if (profileName ? !matchesBrand : !matchesIndividual) return {};
 
   const patch: EntityProfileSyncPatch = {};
   const inferredType = TYPE_FROM_INTERVIEW[interview.targetType];
