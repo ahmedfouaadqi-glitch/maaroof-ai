@@ -186,7 +186,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     generateAdvanced: "إنشاء التقرير المتقدم",
     generatingAdvanced: "جارٍ إعداد التقرير...",
     advancedReport: "التقرير المتقدم المدعوم بالأدلة",
-    advancedReportError: "تعذر إنشاء التقرير المتقدم. تحقق من الرصيد وإعدادات مزود الذكاء الاصطناعي.",
+    advancedReportError:
+      "تعذر إنشاء التقرير المتقدم. تحقق من الرصيد وإعدادات مزود الذكاء الاصطناعي.",
   },
   en: {
     title: "Saved context interview",
@@ -266,7 +267,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     generateAdvanced: "Generate advanced report",
     generatingAdvanced: "Generating report...",
     advancedReport: "Evidence-grounded advanced report",
-    advancedReportError: "Could not generate the advanced report. Check token balance and AI provider configuration.",
+    advancedReportError:
+      "Could not generate the advanced report. Check token balance and AI provider configuration.",
   },
   ku: {
     title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
@@ -346,7 +348,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     generateAdvanced: "دروستکردنی ڕاپۆرتی پێشکەوتوو",
     generatingAdvanced: "ڕاپۆرتەکە ئامادە دەکرێت...",
     advancedReport: "ڕاپۆرتی پێشکەوتوو پشتگیریکراو بە بەڵگە",
-    advancedReportError: "دروستکردنی ڕاپۆرت سەرکەوتوو نەبوو؛ بەڵانس و ڕێکخستنی دابینکەری AI بپشکنە.",
+    advancedReportError:
+      "دروستکردنی ڕاپۆرت سەرکەوتوو نەبوو؛ بەڵانس و ڕێکخستنی دابینکەری AI بپشکنە.",
   },
 };
 
@@ -671,7 +674,15 @@ export function InterviewPanel({
   }
 
   async function generateAdvancedReport() {
-    if (!session || session.status !== "completed" || !researchSources.length || advancedReportBusy || busy) return;
+    if (
+      !session ||
+      session.status !== "completed" ||
+      !researchSources.length ||
+      advancedReportBusy ||
+      busy
+    ) {
+      return;
+    }
     setAdvancedReportBusy(true);
     setAdvancedReportError("");
     try {
@@ -1189,7 +1200,9 @@ export function InterviewPanel({
                         {advancedReportBusy ? c("generatingAdvanced") : c("generateAdvanced")}
                       </button>
                       {advancedReportError && (
-                        <p role="alert" className="text-sm text-destructive">{advancedReportError}</p>
+                        <p role="alert" className="text-sm text-destructive">
+                          {advancedReportError}
+                        </p>
                       )}
                     </div>
                   )}
@@ -1198,26 +1211,41 @@ export function InterviewPanel({
                       <h4 className="font-semibold">{c("advancedReport")}</h4>
                       <p className="text-sm leading-6">{advancedReport.summary}</p>
                       {advancedReport.sections.map((reportSection) => (
-                        <article key={reportSection.id} className="space-y-3 rounded-lg border border-border p-3">
+                        <article
+                          key={reportSection.id}
+                          className="space-y-3 rounded-lg border border-border p-3"
+                        >
                           <h5 className="font-semibold">{reportSection.title}</h5>
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground">{c("findings")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {c("findings")}
+                            </p>
                             <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                              {reportSection.findings.map((finding, index) => <li key={index}>{finding}</li>)}
+                              {reportSection.findings.map((finding, index) => (
+                                <li key={index}>{finding}</li>
+                              ))}
                             </ul>
                           </div>
                           {reportSection.gaps.length > 0 && (
                             <div>
-                              <p className="text-xs font-semibold text-muted-foreground">{c("gaps")}</p>
+                              <p className="text-xs font-semibold text-muted-foreground">
+                                {c("gaps")}
+                              </p>
                               <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                                {reportSection.gaps.map((gap, index) => <li key={index}>{gap}</li>)}
+                                {reportSection.gaps.map((gap, index) => (
+                                  <li key={index}>{gap}</li>
+                                ))}
                               </ul>
                             </div>
                           )}
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground">{c("recommendations")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {c("recommendations")}
+                            </p>
                             <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                              {reportSection.recommendations.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
+                              {reportSection.recommendations.map((recommendation, index) => (
+                                <li key={index}>{recommendation}</li>
+                              ))}
                             </ul>
                           </div>
                           <p className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
