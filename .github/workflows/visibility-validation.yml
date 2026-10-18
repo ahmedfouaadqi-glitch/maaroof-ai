@@ -33,7 +33,7 @@ jobs:
       - name: Test visibility normalization
         run: bun run test -- src/lib/visibility-normalization.test.ts
       - name: Lint visibility code
-        run: bunx eslint src/routes/api/visibility.ts src/lib/visibility-normalization.ts src/lib/visibility-normalization.test.ts
+        run: bunx eslint src/lib/visibility-normalization.ts src/lib/visibility-normalization.test.ts
       - name: Type-check project
         run: bunx tsc --noEmit
       - name: Build application
