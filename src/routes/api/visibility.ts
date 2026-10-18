@@ -149,6 +149,26 @@ export const Route = createFileRoute("/api/visibility")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        let refundContext: { admin: any; userId: string; runId: string; toolKey: string } | null = null;
+        const refundChargedTokens = async (reason: string) => {
+          const ctx = refundContext;
+          if (!ctx) return false;
+          try {
+            const { data, error } = await ctx.admin.rpc("refund_token_charge", {
+              _user_id: ctx.userId, _tool_key: ctx.toolKey, _run_id: ctx.runId, _reason: reason,
+            } as any);
+            const confirmed = !error && !!(data as any)?.ok;
+            if (!confirmed) {
+              console.error("[api/visibility] token refund needs review:", error?.message || (data as any)?.reason || "unknown_error", { reason, runId: ctx.runId, toolKey: ctx.toolKey });
+            } else {
+              refundContext = null;
+            }
+            return confirmed;
+          } catch (refundError) {
+            console.error("[api/visibility] token refund threw:", refundError, { reason, runId: ctx.runId, toolKey: ctx.toolKey });
+            return false;
+          }
+        };
         try {
           const body = (await request.json()) as Body;
           const brand = asText(body.brand, 200);
@@ -373,6 +393,7 @@ export const Route = createFileRoute("/api/visibility")({
 
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+          refundContext = { admin, userId, runId: _runId, toolKey: "visibility" };
           try {
             await chargeUsage?.(_runId, "visibility");
           } catch (usageError) {
@@ -412,11 +433,18 @@ export const Route = createFileRoute("/api/visibility")({
           });
 
 
-          if (resp.status === 429) return Response.json({ error: "rate_limited" }, { status: 429 });
-          if (resp.status === 402) return Response.json({ error: "credits_exhausted" }, { status: 402 });
+          if (resp.status === 429) {
+            await refundChargedTokens("provider_rate_limited");
+            return Response.json({ error: "rate_limited" }, { status: 429 });
+          }
+          if (resp.status === 402) {
+            await refundChargedTokens("provider_credits_exhausted");
+            return Response.json({ error: "credits_exhausted" }, { status: 402 });
+          }
           if (!resp.ok) {
             const rawError = await resp.text();
             console.error("[api/visibility] AI gateway error:", resp.status, rawError);
+            await refundChargedTokens(`provider_http_${resp.status}`);
             return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
           }
 
@@ -457,10 +485,14 @@ export const Route = createFileRoute("/api/visibility")({
           }
 
           const _q = pickQualityFields(parsed || {});
-          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); return Response.json(_out); }
+          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
+          // If the request failed after charging but before returning a completed report,
+          // attempt the idempotent token refund. Quota reservations are intentionally not
+          // refunded here because they do not yet have a run-linked reservation ledger.
+          await refundChargedTokens("visibility_internal_error");
           return Response.json({ error: "internal_error" }, { status: 500 });
         }
       },
