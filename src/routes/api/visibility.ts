@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
-import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { chargeTokens, chargeFailureBody, resolveToolCost } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
@@ -257,6 +257,10 @@ export const Route = createFileRoute("/api/visibility")({
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _access = await resolveToolCost(userId, "visibility");
+          if ((_access.source as string) === "disabled_by_admin") {
+            return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
+          }
           const _mci = await mciReuse(admin as any, "visibility", userId, [brand, keywords, lang, body.scope], !!(body as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
