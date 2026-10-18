@@ -2483,7 +2483,6 @@ export type Database = {
           },
         ]
       }
-      knowledge_space_interviews: {
         Row: {
           answer: string | null
           answered_at: string | null
@@ -2491,6 +2490,8 @@ export type Database = {
           id: string
           node_id: string | null
           question: string
+          reason: string | null
+          answer_example: string | null
           space_id: string
           topic: string | null
           user_id: string
@@ -2502,6 +2503,8 @@ export type Database = {
           id?: string
           node_id?: string | null
           question: string
+          reason?: string | null
+          answer_example?: string | null
           space_id: string
           topic?: string | null
           user_id: string
@@ -2513,6 +2516,8 @@ export type Database = {
           id?: string
           node_id?: string | null
           question?: string
+          reason?: string | null
+          answer_example?: string | null
           space_id?: string
           topic?: string | null
           user_id?: string
