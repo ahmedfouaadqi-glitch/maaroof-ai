@@ -266,6 +266,38 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!space) throw new Error("not_found");
 
+    // Include knowledge already learned in this space and previous answers,
+    // so the ten perspectives target real gaps rather than repeat questions.
+    const [{ data: nodes }, { data: priorInterviews }] = await Promise.all([
+      supabase
+        .from("knowledge_nodes")
+        .select("title, summary, payload, confidence, status")
+        .eq("space_id", data.spaceId)
+        .eq("user_id", userId)
+        .limit(30),
+      supabase
+        .from("knowledge_space_interviews")
+        .select("question, answer, topic")
+        .eq("space_id", data.spaceId)
+        .eq("user_id", userId)
+        .limit(30),
+    ]);
+    const knownContext = ((nodes || []) as any[])
+      .map((node) => {
+        const payload = node.payload && typeof node.payload === "object"
+          ? JSON.stringify(node.payload).slice(0, 160)
+          : "";
+        return [node.title, node.summary, payload, node.confidence != null ? `confidence: ${node.confidence}` : ""]
+          .filter(Boolean)
+          .join(" — ");
+      })
+      .join("\n")
+      .slice(0, 3800);
+    const priorContext = ((priorInterviews || []) as any[])
+      .map((row) => `Q: ${String(row.question || "").slice(0, 240)}\nA: ${String(row.answer || "(unanswered)").slice(0, 240)}`)
+      .join("\n")
+      .slice(0, 2800);
+
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
     const {
@@ -294,6 +326,8 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       `Metrics: ${JSON.stringify(space.metrics || {}).slice(0, 1200)}`,
       `Knowledge DNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1200)}`,
       `Brand identity: ${JSON.stringify(space.brand_identity || {}).slice(0, 1200)}`,
+      `Known learning: ${knownContext || "(no learned nodes yet)"}`,
+      `Previous interview: ${priorContext || "(no prior interview)"}`,
     ].join("\n");
 
     const results = await Promise.all(engines.map(async (engine) => {
@@ -311,7 +345,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
           signal: controller.signal,
           body: JSON.stringify({
             model,
-            max_tokens: 1200,
+            max_tokens: 800,
             temperature: 0.35,
             ...reasoning,
             messages: [
