@@ -267,6 +267,18 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
 
     const { ENGINE_LIST } = await import("@/lib/ai-engines");
     const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows } = await import("@/lib/space-interview");
+    const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
+    const { randomUUID } = await import("node:crypto");
+    const runId = randomUUID();
+    const charge = await chargeTokens({
+      userId,
+      toolKey: "teach_space",
+      runId,
+      meta: { action: "generate_space_interview", space_id: data.spaceId, engines: ENGINE_LIST.length },
+    });
+    if (!charge.ok) {
+      return { questions: [], failures: [], total: 0, succeeded: 0, billing: chargeFailureBody(charge.reason as any, (charge as any).left) };
+    }
     const apiKey = process.env.LOVABLE_API_KEY;
     const lang = String(space.lang || "ar");
     const outcomes = await Promise.all(
@@ -324,10 +336,32 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       .from("knowledge_space_interviews")
       .insert(rows)
       .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason");
-    if (error) throw new Error("interview_questions_save_failed");
+    if (error) {
+      await supabase.rpc("refund_token_charge", {
+        _user_id: userId,
+        _tool_key: "teach_space",
+        _run_id: runId,
+        _reason: "space_interview_save_failed",
+      });
+      throw new Error("interview_questions_save_failed");
+    }
     const questions = (saved || []).filter((row: any) => row.generation_status === "ready");
     const failures = (saved || []).filter((row: any) => row.generation_status === "failed");
-    return { questions, failures, total: rows.length, succeeded: questions.length };
+    if (questions.length === 0) {
+      await supabase.rpc("refund_token_charge", {
+        _user_id: userId,
+        _tool_key: "teach_space",
+        _run_id: runId,
+        _reason: "space_interview_all_engines_failed",
+      });
+    }
+    return {
+      questions,
+      failures,
+      total: rows.length,
+      succeeded: questions.length,
+      cost: questions.length ? { tokens: charge.tokens, usd: charge.usd } : { tokens: 0, usd: 0 },
+    };
   });
 
 export const answerSpaceInterview = createServerFn({ method: "POST" })
