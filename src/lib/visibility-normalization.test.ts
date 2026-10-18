@@ -56,16 +56,20 @@ describe("visibility report normalization", () => {
     expect(hasValidPlatformScores(outOfRange)).toBe(false);
     expect(hasValidPlatformScores(malformed)).toBe(false);
     expect(
-      hasValidPlatformScores(complete.map((platform, index) => ({
-        ...platform,
-        score: index === 0 ? "   " : platform.score,
-      }))),
+      hasValidPlatformScores(
+        complete.map((platform, index) => ({
+          ...platform,
+          score: index === 0 ? "   " : platform.score,
+        })),
+      ),
     ).toBe(false);
     expect(
-      hasValidPlatformScores(complete.map((platform, index) => ({
-        ...platform,
-        score: index === 0 ? true : platform.score,
-      }))),
+      hasValidPlatformScores(
+        complete.map((platform, index) => ({
+          ...platform,
+          score: index === 0 ? true : platform.score,
+        })),
+      ),
     ).toBe(false);
   });
 
