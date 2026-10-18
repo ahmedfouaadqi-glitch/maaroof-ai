@@ -401,7 +401,13 @@ export const Route = createFileRoute("/api/visibility")({
           }
 
           // MCI cache reuse is free, but only after entitlement and quota checks.
-          const _mci = await mciReuse(admin as any, "visibility", userId, [brand, keywords, lang, body.scope], !!(body as any)?.force);
+          const _mci = await mciReuse(
+            admin as any,
+            "visibility",
+            userId,
+            [brand, keywords, lang, body.scope, "visibility-v2-ten-engine-score"],
+            !!(body as any)?.force,
+          );
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
 
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
