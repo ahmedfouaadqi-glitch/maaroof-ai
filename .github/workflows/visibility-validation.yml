@@ -8,6 +8,7 @@ on:
       - "src/lib/visibility-normalization.ts"
       - "src/lib/visibility-normalization.test.ts"
       - "supabase/migrations/*visibility*"
+      - "supabase/tests/**"
       - ".github/workflows/visibility-validation.yml"
   push:
     branches: [feat/admin-knowledge-spaces-readonly]
