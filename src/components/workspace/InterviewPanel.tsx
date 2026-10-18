@@ -138,7 +138,9 @@ const COPY: Record<Locale, Record<string, string>> = {
     ownerRequired: "تحتاج إلى صلاحية مالك أو محرر في مساحة العمل المحددة.",
     details: "تحديث القائمة",
     count: "إجابة",
-    questionHelp: "إرشادات ومثال للإجابة", guidance: "ما الذي ينبغي أن تتضمنه الإجابة؟", example: "مثال توضيحي",
+    questionHelp: "إرشادات ومثال للإجابة",
+    guidance: "ما الذي ينبغي أن تتضمنه الإجابة؟",
+    example: "مثال توضيحي",
   },
   en: {
     title: "Saved context interview",
@@ -200,7 +202,9 @@ const COPY: Record<Locale, Record<string, string>> = {
     ownerRequired: "You need an editor or owner role for that workspace.",
     details: "Refresh list",
     count: "answers",
-    questionHelp: "Answer guidance and example", guidance: "What should the answer cover?", example: "Illustrative example",
+    questionHelp: "Answer guidance and example",
+    guidance: "What should the answer cover?",
+    example: "Illustrative example",
   },
   ku: {
     title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
@@ -261,7 +265,9 @@ const COPY: Record<Locale, Record<string, string>> = {
     ownerRequired: "بۆ ئەو شوێنی کارە دەسەڵاتی دەستکاریکەر یان خاوەنت پێویستە.",
     details: "نوێکردنەوەی لیست",
     count: "وەڵام",
-    questionHelp: "ڕێنمایی و نموونەی وەڵام", guidance: "وەڵامەکە دەبێت چی لەخۆ بگرێت؟", example: "نموونەی ڕوونکەرەوە",
+    questionHelp: "ڕێنمایی و نموونەی وەڵام",
+    guidance: "وەڵامەکە دەبێت چی لەخۆ بگرێت؟",
+    example: "نموونەی ڕوونکەرەوە",
   },
 };
 

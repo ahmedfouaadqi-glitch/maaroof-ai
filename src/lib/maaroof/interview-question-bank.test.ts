@@ -46,15 +46,37 @@ describe("Maaroof interview question bank", () => {
 
   it("provides localized guidance and examples for every question in all supported locales", () => {
     const locales = ["ar", "en", "ku"] as const;
-    const targets: InterviewTargetType[] = ["individual", "creator", "company", "agency", "client", "brand", "project", "task"];
-    const domains: InterviewDomain[][] = [["general"], ["seo"], ["aeo"], ["geo"], ["gseo"]];
-    for (const targetType of targets) for (const selectedDomains of domains) {
+    const targets: InterviewTargetType[] = [
+      "individual",
+      "creator",
+      "company",
+      "agency",
+      "client",
+      "brand",
+      "project",
+      "task",
+    ];
+    const domains: InterviewDomain[][] = [
+      ["general"],
+      ["seo"],
+      ["aeo"],
+      ["geo"],
+      ["gseo"],
+    ];
+    for (const targetType of targets) {
+      for (const selectedDomains of domains) {
       for (const question of buildInterviewQuestionSet(targetType, selectedDomains)) {
         expect(question.guidance, question.id).toBeDefined();
         expect(question.example, question.id).toBeDefined();
         for (const locale of locales) {
-          expect(question.guidance?.[locale].trim().length, `${question.id} guidance ${locale}`).toBeGreaterThan(0);
-          expect(question.example?.[locale].trim().length, `${question.id} example ${locale}`).toBeGreaterThan(0);
+          expect(
+            question.guidance?.[locale].trim().length,
+            `${question.id} guidance ${locale}`,
+          ).toBeGreaterThan(0);
+          expect(
+            question.example?.[locale].trim().length,
+            `${question.id} example ${locale}`,
+          ).toBeGreaterThan(0);
         }
       }
     }
