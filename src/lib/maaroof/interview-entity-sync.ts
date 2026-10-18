@@ -2,6 +2,7 @@ import type { InterviewState } from "@/lib/maaroof/interview-engine";
 
 type ProfileSnapshot = {
   brand_name?: string | null;
+  full_name?: string | null;
   entity_type?: string | null;
   specialty_scope?: string | null;
   entity_locked?: boolean | null;
@@ -69,7 +70,10 @@ export function deriveEntityProfileSync(
   if (!interview.completed || interview.workspaceId || profile.entity_locked) return {};
   const targetName = normalizeName(interview.targetName);
   const profileName = normalizeName(profile.brand_name);
-  if (profileName && targetName !== profileName) return {};
+  const fullName = normalizeName(profile.full_name);
+  const matchesBrand = !!profileName && targetName === profileName;
+  const matchesIndividual = interview.targetType === "individual" && !!fullName && targetName === fullName;
+  if (!matchesBrand && !matchesIndividual) return {};
 
   const patch: EntityProfileSyncPatch = {};
   const inferredType = TYPE_FROM_INTERVIEW[interview.targetType];
