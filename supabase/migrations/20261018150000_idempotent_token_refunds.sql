@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.charge_tokens(
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_profile public.profiles%ROWTYPE;
   v_daily_left integer;
