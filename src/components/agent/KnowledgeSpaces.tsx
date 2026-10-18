@@ -471,7 +471,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                   );
                 })}
               </>
-            )}}
+            )}
           </div>
         </>
       )}
