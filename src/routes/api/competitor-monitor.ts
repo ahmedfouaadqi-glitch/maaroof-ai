@@ -85,8 +85,8 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
           const subscriptionActive = !!(prof as any)?.is_subscribed && (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
           const limit = subscriptionActive ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
-          if (!subscriptionActive && limit - used < COST) {
-            return Response.json({ error: "subscription_required" }, { status: 402 });
+          if (limit - used < COST) {
+            return Response.json({ error: subscriptionActive ? "monthly_cap_reached" : "subscription_required", limit, used }, { status: 402 });
           }
           { const f = await charge(); if (f) return f; }
           const baseline = await buildBaseline(brand, competitors, lang);
@@ -102,6 +102,14 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           if (!id) return Response.json({ error: "id_required" }, { status: 400 });
           const { data: w } = await admin.from("competitor_watch").select("*").eq("id", id).eq("user_id", userId).maybeSingle();
           if (!w) return Response.json({ error: "not_found" }, { status: 404 });
+          const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,subscription_expires_at,quota_overrides").eq("id", userId).maybeSingle();
+          const used = Number((prof as any)?.monthly_analyses_used || 0);
+          const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
+          const subscriptionActive = !!(prof as any)?.is_subscribed && (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
+          const limit = subscriptionActive ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
+          if (limit - used < COST) {
+            return Response.json({ error: subscriptionActive ? "monthly_cap_reached" : "subscription_required", limit, used }, { status: 402 });
+          }
           const f = await charge();
           if (f) return f;
           const fresh = await buildBaseline((w as any).brand, (w as any).competitors as string[], lang);
@@ -116,7 +124,10 @@ export const Route = createFileRoute("/api/competitor-monitor")({
             }
           }
           const alerts = [...newAlerts, ...((w as any).alerts || [])].slice(0, 50);
-          await admin.from("competitor_watch").update({ baseline: fresh, last_run_at: new Date().toISOString(), alerts }).eq("id", id);
+          const { error: watchUpdateError } = await admin.from("competitor_watch").update({ baseline: fresh, last_run_at: new Date().toISOString(), alerts }).eq("id", id);
+          if (watchUpdateError) return Response.json({ error: "monitor_update_failed" }, { status: 500 });
+          const { error: quotaUpdateError } = await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
+          if (quotaUpdateError) return Response.json({ error: "usage_update_failed" }, { status: 500 });
 
           // Insert per-alert notifications for the user
           if (newAlerts.length > 0) {
