@@ -688,6 +688,8 @@ export const en: Dict = {
   teach_answer: "Your answer", teach_send: "Send", teach_delete: "Delete", teach_no_space: "Create a knowledge space to start",
   teach_inherit: "Inherit knowledge to sub-agents",
   teach_interview_generated: "New questions added",
+  teach_interview_reason: "Why this question?",
+  teach_interview_answer_example: "Example of a useful answer:",
   teach_interview_no_new_questions: "No new distinct questions were found. Answer existing questions or add knowledge sources, then try again.",
   teach_interview_empty: "No interview questions yet",
   teach_interview_empty_hint: "Generate questions to identify missing knowledge in this space.",

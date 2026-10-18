@@ -680,6 +680,8 @@ export const ar: Dict = {
   teach_answer: "إجابتك", teach_send: "إرسال", teach_delete: "حذف", teach_no_space: "أنشئ مساحة معرفة للبدء",
   teach_inherit: "توريث المعرفة للوكلاء الفرعيين",
   teach_interview_generated: "أُضيفت أسئلة جديدة",
+  teach_interview_reason: "لماذا هذا السؤال؟",
+  teach_interview_answer_example: "مثال على إجابة مفيدة:",
   teach_interview_no_new_questions: "لم تظهر أسئلة جديدة مختلفة. أجب عن الأسئلة الحالية أو أضف مصادر معرفة ثم حاول مجدداً.",
   teach_interview_empty: "لا توجد أسئلة مقابلة بعد",
   teach_interview_empty_hint: "ولّد أسئلة لتحديد المعلومات الناقصة في مساحة المعرفة هذه.",

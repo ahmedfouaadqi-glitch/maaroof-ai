@@ -662,6 +662,8 @@ export const ku: Dict = {
   teach_answer: "وەڵامت", teach_send: "ناردن", teach_delete: "سڕینەوە", teach_no_space: "بۆشاییەکی زانست دروست بکە",
   teach_inherit: "میراتی زانست بۆ ئەجێنتەکان",
   teach_interview_generated: "پرسیاری نو زیاد کرا",
+  teach_interview_reason: "بۆچی ئەم پرسیارە؟",
+  teach_interview_answer_example: "نموونەی وەڵامێکی بەسوود:",
   teach_interview_no_new_questions: "پرسیاری نو و جیاواز نەدۆزرایەوە. وەڵامی پرسیارەکانی ئێستا بدە یان سەرچاوەی زانیاری زیاد بکە و دووبارە هەوڵ بدە.",
   teach_interview_empty: "هێشتا پرسیاری چاوپێکەوتن نییە",
   teach_interview_empty_hint: "پرسیار دروست بکە بۆ دیاریکردنی زانیارییە ونبووەکانی ئەم بۆشاییە.",
