@@ -455,7 +455,11 @@ function WorkspacePage() {
         {!finalEvent && events.length === 0 && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
+              <div className="rb-workspace-spotlight rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5" onMouseMove={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  event.currentTarget.style.setProperty("--spotlight-x", `${event.clientX - rect.left}px`);
+                  event.currentTarget.style.setProperty("--spotlight-y", `${event.clientY - rect.top}px`);
+                }}>
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -470,7 +474,11 @@ function WorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
+              <div className="rb-workspace-spotlight rounded-2xl border border-border bg-card p-4 md:p-5" onMouseMove={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  event.currentTarget.style.setProperty("--spotlight-x", `${event.clientX - rect.left}px`);
+                  event.currentTarget.style.setProperty("--spotlight-y", `${event.clientY - rect.top}px`);
+                }}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="font-semibold">{c.suggested}</h2>
