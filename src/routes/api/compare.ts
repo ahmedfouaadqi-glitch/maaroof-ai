@@ -97,16 +97,6 @@ export const Route = createFileRoute("/api/compare")({
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-3-flash-preview");
-          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
-          const _access = await resolveToolCost(userId, "compare");
-          if ((_access.source as string) === "disabled_by_admin") {
-            return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
-          }
-          const _mci = await mciReuse(admin as any, "compare", userId, [brand, competitors, keywords, lang, body.scope], !!(body as any)?.force);
-          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
-          const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-
           let chargeUsage: (() => Promise<void>) | null = null;
           const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
           if (!roleRow) {
@@ -132,6 +122,16 @@ export const Route = createFileRoute("/api/compare")({
               chargeUsage = async () => { await admin.from("user_agent_subscriptions").update({ tasks_used: sub.tasks_used + 1, tasks_used_today: dailyUsed + 1, last_run_date: today }).eq("id", sub.id); };
             }
           }
+
+          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _access = await resolveToolCost(userId, "compare");
+          if ((_access.source as string) === "disabled_by_admin") {
+            return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
+          }
+          const _mci = await mciReuse(admin as any, "compare", userId, [brand, competitors, keywords, lang, body.scope], !!(body as any)?.force);
+          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
+          const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const userCtx = await getUserContext(admin, userId);
           const market = describeMarket(body.scope);
