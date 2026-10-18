@@ -40,6 +40,8 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   const [busy, setBusy] = useState(false);
   const [answers, setAnswers] = useState<ProbeAnswer[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [quotaNeedsReview, setQuotaNeedsReview] = useState(false);
+  const [refundNeedsReview, setRefundNeedsReview] = useState(false);
   const [council, setCouncil] = useState<Council | null>(null);
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
 
   async function run() {
     if (!sel.length || busy) return;
-    setBusy(true); setErr(null); setAnswers(null); setBgMsg(false);
+    setBusy(true); setErr(null); setQuotaNeedsReview(false); setRefundNeedsReview(false); setAnswers(null); setBgMsg(false);
     if (!brandProp.trim() && typed.trim() && saveIt) {
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id); } catch {}
     }
@@ -75,7 +77,13 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
-      if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
+      if (!r.ok) {
+        setErr(String(j?.[L] || j?.error || r.status));
+        setRefundNeedsReview(j?.token_refund_confirmed === false);
+        setQuotaNeedsReview(j?.quota_needs_review === true);
+        return;
+      }
+      setQuotaNeedsReview(j?.quota_needs_review === true);
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
       setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null);
     } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); }
@@ -142,6 +150,24 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
         ? <div className="text-xs text-destructive">{T.signIn} <a href="/auth" className="underline font-semibold">{T.login}</a></div>
         : err && <div className="text-xs text-destructive">{err}</div>}
       {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
+      {quotaNeedsReview && (
+        <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed">
+          {L === "ar"
+            ? "أُنجز الفحص، لكن تعذّر تأكيد تثبيت الحصة. الحالة تحتاج إلى مراجعة؛ لا تكرر الفحص لمجرد ظهور هذا التنبيه."
+            : L === "ku"
+              ? "پشکنینەکە تەواو بوو، بەڵام پشتڕاستکردنەوەی حەجزەکە نەکرا. دۆخەکە پێویستی بە پێداچوونەوە هەیە."
+              : "The probe completed, but quota finalization could not be confirmed. Reconciliation is required; do not rerun solely because of this warning."}
+        </div>
+      )}
+      {refundNeedsReview && (
+        <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed">
+          {L === "ar"
+            ? "تعذّر تأكيد استرداد التوكنات. لا تكرر العملية الآن؛ يجب مراجعة سجل الرصيد."
+            : L === "ku"
+              ? "گەڕاندنەوەی تۆکن پشتڕاست نەکرایەوە. کردارەکە دووبارە مەکەوە؛ تۆماری باڵانس پێویستی بە پێداچوونەوە هەیە."
+              : "Token refund could not be confirmed. Do not retry immediately; the token ledger needs review."}
+        </div>
+      )}
       {cards.length > 0 && <EngineResponseFlow answers={cards} title={T.res} compact />}
       {council && (
         <div className="rounded-lg border border-border bg-background/60 p-2 text-xs space-y-1">
