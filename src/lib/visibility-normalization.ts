@@ -31,15 +31,15 @@ export function hasValidPlatformScores(value: unknown): boolean {
     value.some((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return false;
       const platform = item as Record<string, unknown>;
-      if (
-        platform.name !== name ||
-        platform.score === null ||
-        platform.score === undefined ||
-        platform.score === ""
-      ) {
+      if (platform.name !== name) return false;
+      let score: number;
+      if (typeof platform.score === "number") {
+        score = platform.score;
+      } else if (typeof platform.score === "string" && platform.score.trim().length > 0) {
+        score = Number(platform.score.trim());
+      } else {
         return false;
       }
-      const score = typeof platform.score === "number" ? platform.score : Number(platform.score);
       return Number.isFinite(score) && score >= 0 && score <= 100;
     }),
   );
