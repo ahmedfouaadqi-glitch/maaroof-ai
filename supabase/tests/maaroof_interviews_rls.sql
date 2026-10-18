@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(11);
+SELECT plan(14);
 
 -- Fixed fixtures are isolated inside this transaction and removed by ROLLBACK.
 INSERT INTO auth.users (id, email)
@@ -60,6 +60,22 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO public.maaroof_interview_evidence (
+  interview_id, user_id, workspace_id, query, title, source_url, domain, locale
+)
+VALUES
+  (
+    '30000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    NULL, 'owner query', 'Owner evidence', 'https://owner.example.test/source', 'owner.example.test', 'en'
+  ),
+  (
+    '30000000-0000-4000-8000-000000000003',
+    '10000000-0000-4000-8000-000000000001',
+    '20000000-0000-4000-8000-000000000001', 'workspace query', 'Workspace evidence', 'https://workspace.example.test/source', 'workspace.example.test', 'en'
+  )
+ON CONFLICT (interview_id, source_url) DO NOTHING;
+
 SELECT has_table(
   'public',
   'maaroof_interviews',
@@ -75,6 +91,15 @@ SELECT has_column(
   'interview_persona',
   'Profile interview persona preference column exists'
 );
+SELECT has_table(
+  'public',
+  'maaroof_interview_evidence',
+  'Interview external evidence table exists'
+);
+SELECT ok(
+  (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.maaroof_interview_evidence'::regclass),
+  'Row-level security is enabled for interview external evidence'
+);
 
 SET LOCAL ROLE authenticated;
 DO $$
@@ -88,6 +113,24 @@ BEGIN
 END
 $$;
 
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_evidence
+   WHERE interview_id = '30000000-0000-4000-8000-000000000001'),
+  1,
+  'a user can read evidence linked to their own personal interview'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_evidence
+   WHERE interview_id = '30000000-0000-4000-8000-000000000003'),
+  1,
+  'a user can read evidence linked to a workspace they own'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_evidence
+   WHERE interview_id = '30000000-0000-4000-8000-000000000002'),
+  0,
+  'a user cannot read evidence linked to another personal interview'
+);
 SELECT is(
   (SELECT count(*)::integer FROM public.maaroof_interviews
    WHERE id = '30000000-0000-4000-8000-000000000001'),
