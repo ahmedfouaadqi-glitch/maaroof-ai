@@ -65,7 +65,10 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
         .eq("plan_id", planId)
         .eq("tool_key", toolKey)
         .maybeSingle();
-      if (tpa && (tpa as any).enabled && (Number((tpa as any).tokens_per_use) > 0 || Number((tpa as any).usd_per_use) > 0)) {
+      if (tpa && !(tpa as any).enabled) {
+        return { tokens: 0, usd: 0, source: "disabled_by_admin" as any };
+      }
+      if (tpa && (Number((tpa as any).tokens_per_use) > 0 || Number((tpa as any).usd_per_use) > 0)) {
         return {
           tokens: Number((tpa as any).tokens_per_use) || 0,
           usd: Number((tpa as any).usd_per_use) || 0,
@@ -111,20 +114,22 @@ export async function chargeTokens(opts: {
     .maybeSingle();
   if (!prof) return { ok: false, reason: "profile_not_found" };
 
+  const cost = await resolveToolCost(opts.userId, opts.toolKey);
+  // Explicit admin disablement must win even for legacy/free accounts without token metering.
+  if ((cost.source as any) === "disabled_by_admin") {
+    return { ok: false, reason: "tool_disabled" };
+  }
+
   const hasMeter =
     Number((prof as any).tokens_balance) > 0 ||
     (prof as any).tokens_daily_limit != null ||
     (prof as any).tokens_monthly_limit != null;
 
-  // No metering configured for this user → skip token system entirely.
+  // Preserve the legacy no-meter path, but never bypass an explicit admin disable.
   if (!hasMeter) {
     return { ok: true, balance: 0, used_today: 0, used_month: 0, tokens: 0, usd: 0, source: "unpriced" };
   }
 
-  const cost = await resolveToolCost(opts.userId, opts.toolKey);
-  if ((cost.source as any) === "disabled_by_admin") {
-    return { ok: false, reason: "tool_disabled" };
-  }
   if (cost.source === "unpriced") {
     return { ok: false, reason: "unpriced" };
   }
