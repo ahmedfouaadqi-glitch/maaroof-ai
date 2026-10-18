@@ -82,11 +82,18 @@ export function normalizeInterviewResearchSources(payload: unknown, limit = 8): 
     const row = item as Record<string, unknown>;
     let parsed: URL;
     try { parsed = new URL(String(row.url || "")); } catch { continue; }
-    if (parsed.protocol !== "https:" || seen.has(parsed.href)) continue;
-    seen.add(parsed.href);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) continue;
+    // Strip fragments and common tracking parameters so the same page is not counted twice.
+    parsed.hash = "";
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (/^(utm_.+|fbclid|gclid|mc_cid|mc_eid)$/i.test(key)) parsed.searchParams.delete(key);
+    }
+    const canonicalUrl = parsed.href;
+    if (seen.has(canonicalUrl)) continue;
+    seen.add(canonicalUrl);
     sources.push({
       title: asSearchText(row.title, 240) || parsed.hostname,
-      url: parsed.href,
+      url: canonicalUrl,
       domain: parsed.hostname.replace(/^www\./, ""),
       description: asSearchText(row.description, 500),
       snippet: asSearchText(row.markdown, 1200),
