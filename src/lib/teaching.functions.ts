@@ -103,8 +103,8 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
         .select("id, title, intent, structure, prompt_dna, quality, approved, created_at")
         .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(100),
       supabase.from("knowledge_space_interviews")
-        .select("id, question, topic, answer, answered_at, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(60),
+        .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason")
+        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).order("engine_order", { ascending: true }).limit(60),
       supabase.from("knowledge_nodes")
         .select("id, title, summary, layer, payload, confidence, quality, approved, updated_at")
         .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(120),
@@ -259,34 +259,80 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
-      .from("knowledge_spaces").select("id, name, lang, metrics, space_dna, brand_identity").eq("id", data.spaceId).maybeSingle();
+      .from("knowledge_spaces")
+      .select("id, name, lang, metrics, space_dna, brand_identity")
+      .eq("id", data.spaceId)
+      .maybeSingle();
     if (!space) throw new Error("not_found");
 
+    const { ENGINE_LIST } = await import("@/lib/ai-engines");
+    const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows } = await import("@/lib/space-interview");
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-    const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } = await import("@/lib/lovable-ai");
-    const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-      method: "POST",
-      headers: lovableAiHeaders(apiKey),
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is missing.` },
-          { role: "user", content: `Space: ${space.name}\nLanguage: ${space.lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1500)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1500)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1500)}` },
-        ],
+    const lang = String(space.lang || "ar");
+    const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } =
+      apiKey ? await import("@/lib/lovable-ai") : {
+        LOVABLE_AI_CHAT_COMPLETIONS_URL: "",
+        lovableAiHeaders: () => ({}),
+        extractJsonObject: <T,>(_value: unknown): T | null => null,
+      };
+
+    const outcomes = await Promise.all(
+      ENGINE_LIST.map(async (engine) => {
+        if (!apiKey) return { engineKey: engine.key, failureCode: "unavailable" as const };
+        try {
+          const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+            method: "POST",
+            headers: lovableAiHeaders(apiKey),
+            body: JSON.stringify({
+              model: engine.defaultModel,
+              temperature: 0.4,
+              messages: [
+                {
+                  role: "system",
+                  content: `You are asking one question from the ${engine.name} perspective: ${ENGINE_PERSPECTIVES[engine.key]}. Ask exactly ONE specific, non-duplicative question that closes a real knowledge gap for an institutional knowledge space. Return STRICT JSON only: {"question":"..."}. Use the space language. Keep the question answerable in 1-3 sentences. Do not invent facts or ask about information already present.`,
+                },
+                {
+                  role: "user",
+                  content: `Space: ${space.name}\nLanguage: ${lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1200)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1200)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1200)}`,
+                },
+              ],
+            }),
+          });
+          if (!response.ok) {
+            const failureCode =
+              response.status === 429
+                ? "rate_limit"
+                : response.status === 401 || response.status === 403
+                  ? "unauthorized"
+                  : "unavailable";
+            return { engineKey: engine.key, failureCode } as const;
+          }
+          const json: any = await response.json().catch(() => null);
+          let parsed: { question?: string } | null = null;
+          try {
+            parsed = extractJsonObject<{ question?: string }>(json?.choices?.[0]?.message?.content);
+          } catch {
+            parsed = null;
+          }
+          const question = typeof parsed?.question === "string" ? parsed.question.trim() : "";
+          return question
+            ? { engineKey: engine.key, question }
+            : { engineKey: engine.key, failureCode: "invalid_response" as const };
+        } catch {
+          return { engineKey: engine.key, failureCode: "network" as const };
+        }
       }),
-    });
-    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
-    const json: any = await res.json();
-    const parsed = extractJsonObject<{ questions: string[] }>(json?.choices?.[0]?.message?.content);
-    const questions = (parsed?.questions || []).slice(0, 8);
-    for (const q of questions) {
-      await supabase.from("knowledge_space_interviews").insert({
-        space_id: data.spaceId, user_id: userId, question: String(q).slice(0, 1000), topic: "gap",
-      });
-    }
-    return { questions };
+    );
+
+    const rows = buildSpaceInterviewRows(data.spaceId, userId, lang, outcomes);
+    const { data: saved, error } = await supabase
+      .from("knowledge_space_interviews")
+      .insert(rows)
+      .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason");
+    if (error) throw new Error("interview_questions_save_failed");
+    const questions = (saved || []).filter((row: any) => row.generation_status === "ready");
+    const failures = (saved || []).filter((row: any) => row.generation_status === "failed");
+    return { questions, failures, total: rows.length, succeeded: questions.length };
   });
 
 export const answerSpaceInterview = createServerFn({ method: "POST" })
