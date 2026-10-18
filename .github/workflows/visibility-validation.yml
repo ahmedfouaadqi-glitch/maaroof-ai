@@ -6,6 +6,7 @@ on:
     paths:
       - "src/routes/api/visibility.ts"
       - "src/components/AIVisibility.tsx"
+      - "src/components/EngineProbePanel.tsx"
       - "src/lib/visibility-normalization.ts"
       - "src/lib/visibility-normalization.test.ts"
       - "supabase/migrations/**"
@@ -16,6 +17,7 @@ on:
     paths:
       - "src/routes/api/visibility.ts"
       - "src/components/AIVisibility.tsx"
+      - "src/components/EngineProbePanel.tsx"
       - "src/lib/visibility-normalization.ts"
       - "src/lib/visibility-normalization.test.ts"
       - "supabase/migrations/**"
