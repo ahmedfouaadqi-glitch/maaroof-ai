@@ -6,6 +6,7 @@ import {
   normalizeInterviewResearchSources,
 } from "@/lib/maaroof/interview-research";
 import { generateInterviewEvidenceReport } from "@/lib/maaroof/interview-report.server";
+import { deriveEntityProfileSync } from "@/lib/maaroof/interview-entity-sync";
 import type { Database } from "@/integrations/supabase/types";
 import {
   INTERVIEW_LOCALES,
@@ -546,6 +547,44 @@ async function handleUpdate(request: Request): Promise<Response> {
 
   if (updateError) return errorResponse("interview_update_failed", 500);
   if (!updated) return errorResponse("interview_version_conflict", 409);
+
+  // A completed personal interview may fill only empty, unlocked truth-card fields.
+  // Workspace interviews and inferred/external answers never mutate the personal profile.
+  if (
+    body.action === "status" &&
+    body.status === "completed" &&
+    !interview.workspace_id &&
+    interview.user_id === auth.userId
+  ) {
+    try {
+      const { data: profile } = await db
+        .from("profiles")
+        .select("brand_name,entity_type,specialty_scope,entity_locked")
+        .eq("id", auth.userId)
+        .maybeSingle();
+      if (profile && !profile.entity_locked) {
+        const patch = deriveEntityProfileSync(
+          {
+            completed: true,
+            workspaceId: interview.workspace_id,
+            targetType: String(interview.target_type || ""),
+            targetName: String(interview.target_name || ""),
+            state: nextState,
+          },
+          profile,
+        );
+        if (Object.keys(patch).length) {
+          await db
+            .from("profiles")
+            .update(patch)
+            .eq("id", auth.userId)
+            .eq("entity_locked", false);
+        }
+      }
+    } catch {
+      // Profile sync is additive; an interview save must succeed even if profile sync is unavailable.
+    }
+  }
 
   return Response.json({
     interview: updated,
