@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(8);
+SELECT plan(11);
 
 -- Fixed fixtures are isolated inside this transaction and removed by ROLLBACK.
 INSERT INTO auth.users (id, email)
@@ -59,6 +59,22 @@ VALUES
     'rls-test', '[]'::jsonb, '{}'::jsonb
   )
 ON CONFLICT (id) DO NOTHING;
+
+SELECT has_table(
+  'public',
+  'maaroof_interviews',
+  'Interview sessions table exists'
+);
+SELECT ok(
+  (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.maaroof_interviews'::regclass),
+  'Row-level security is enabled for interview sessions'
+);
+SELECT has_column(
+  'public',
+  'profiles',
+  'interview_persona',
+  'Profile interview persona preference column exists'
+);
 
 SET LOCAL ROLE authenticated;
 DO $
