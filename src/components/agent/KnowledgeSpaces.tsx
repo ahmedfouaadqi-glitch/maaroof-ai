@@ -227,7 +227,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
         </div>
       </div>
 
-      <HelpHint className="mt-2" label={t("teach_help_toggle")} description={t("teach_help_space_desc")} example={t("teach_help_space_example")} exampleLabel={t("teach_example_label")} />
+      <HelpHint className="mt-2" label={t("teach_space_name")} description={t("teach_help_space_desc")} example={t("teach_help_space_example")} exampleLabel={t("teach_example_label")} />
 
       {!active ? (
         <p className="mt-6 text-sm text-muted-foreground">{t("teach_no_space")}</p>
@@ -263,6 +263,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             <div className="flex items-center gap-1">
               <input
                 value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…"
+                aria-label={t("teach_add_url")}
                 className="w-56 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none transition-colors duration-200 focus:border-primary motion-reduce:transition-none"
               />
               <button onClick={onAddUrl} disabled={busy === "url"} className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-2 text-xs transition-colors duration-200 hover:border-primary hover:bg-primary/5 disabled:opacity-50 motion-reduce:transition-none">
@@ -293,19 +294,19 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
 
           <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-3 sm:gap-2">
             <HelpHint
-              label={t("teach_help_toggle")}
+              label={t("teach_upload")}
               description={t("teach_help_upload_desc")}
               example={t("teach_help_upload_example")}
               exampleLabel={t("teach_example_label")}
             />
             <HelpHint
-              label={t("teach_help_toggle")}
+              label={t("teach_add_url")}
               description={t("teach_help_url_desc")}
               example={t("teach_help_url_example")}
               exampleLabel={t("teach_example_label")}
             />
             <HelpHint
-              label={t("teach_help_toggle")}
+              label={t("teach_inherit")}
               description={t("teach_help_inherit_desc")}
               example={t("teach_help_inherit_example")}
               exampleLabel={t("teach_example_label")}
@@ -323,7 +324,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
               {busy === "text" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
               {t("teach_learn")}
             </button>
-            <HelpHint className="mt-1" label={t("teach_help_toggle")} description={t("teach_help_text_desc")} example={t("teach_help_text_example")} exampleLabel={t("teach_example_label")} />
+            <HelpHint className="mt-1" label={t("teach_add_text")} description={t("teach_help_text_desc")} example={t("teach_help_text_example")} exampleLabel={t("teach_example_label")} />
           </div>
 
           {/* Gap proposals from Hermes supervision */}
@@ -351,7 +352,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             ))}
           </div>
 
-          <HelpHint className="mb-3" label={t("teach_help_toggle")} description={activeTabHelp.description} example={activeTabHelp.example} exampleLabel={t("teach_example_label")} />
+          <HelpHint className="mb-3" label={tab === "assets" ? t("teach_assets") : tab === "nodes" ? t("teach_nodes") : tab === "prompts" ? t("teach_prompts") : t("teach_interview")} description={activeTabHelp.description} example={activeTabHelp.example} exampleLabel={t("teach_example_label")} />
 
           <div className="mt-3 space-y-2">
             {tab === "assets" && data.assets.map((a) => (
