@@ -45,7 +45,8 @@ const COPY = {
     selectedTools: "أدوات مرتبطة بالمهارات المختارة", noTools: "لم تختر مهارات؛ سيحدد معروف الأدوات وفق الهدف.",
     noResults: "ستظهر النتيجة هنا بعد بدء المهمة.", home: "الرئيسية", professional: "واجهة المحترفين",
     ask: "تأكد من أن الطلب واضح قبل بدء التنفيذ. تخضع الأدوات والتكلفة والصلاحيات لسياسات النظام.",
-    phase: "مرحلة", toolStarted: "بدأت أداة", toolDone: "نتيجة أداة", final: "اكتملت المهمة",
+    phase: "مرحلة", toolStarted: "بدأت أداة", toolDone: "اكتملت الأداة", toolSkipped: "تم تخطي الفحص بناءً على اختيارك", final: "اكتملت المهمة",
+    stages: { envision: "تحديد الهدف", planning: "التخطيط", council: "مراجعة الخبراء", conflict: "معالجة التعارض", summarizing: "تلخيص النتائج", reflection: "مراجعة التقدم" },
     clarify: "يحتاج معروف إلى معلومة إضافية", sendAnswer: "إرسال الإجابة", answerPlaceholder: "اكتب إجابتك…",
     runAgain: "مهمة جديدة", unknown: "حدث تحديث في المهمة", modelCount: "نموذج محدد",
   },
@@ -66,6 +67,8 @@ const COPY = {
     phase: "Phase", toolStarted: "Tool started", toolDone: "Tool result", final: "Task completed",
     clarify: "Maaroof needs one more detail", sendAnswer: "Send answer", answerPlaceholder: "Type your answer…",
     runAgain: "New task", unknown: "Task updated", modelCount: "model selected",
+    toolSkipped: "Live check skipped by your choice",
+    stages: { envision: "Goal definition", planning: "Planning", council: "Expert review", conflict: "Conflict resolution", summarizing: "Summarizing results", reflection: "Progress review" },
   },
   ku: {
     eyebrow: "شوێنی کاری زیرەک", title: "دەتەوێت چی ئەنجام بدەیت؟",
@@ -83,6 +86,8 @@ const COPY = {
     ask: "پێش دەستپێکردن ئامانجەکە بپشکنە؛ دەسەڵات و تێچوو لەلایەن سیستەمەوە کۆنترۆڵ دەکرێن.",
     phase: "قۆناغ", toolStarted: "ئامراز دەستی پێکرد", toolDone: "ئەنجامی ئامراز", final: "ئەرکەکە تەواو بوو",
     clarify: "معروف پێویستی بە زانیاری زیاترە", sendAnswer: "ناردنی وەڵام", answerPlaceholder: "وەڵام بنووسە…",
+    toolSkipped: "پشکنینی ڕاستەوخۆ بە هەڵبژاردنی تۆ تێپەڕێنرا",
+    stages: { envision: "دیاریکردنی ئامانج", planning: "پلان دانان", council: "پێداچوونەوەی پسپۆڕان", conflict: "چارەسەری ناکۆکی", summarizing: "پوختەکردنەوەی ئەنجامەکان", reflection: "پێداچوونەوەی پێشکەوتن" },
     runAgain: "ئەرکی نوێ", unknown: "ئەرکەکە نوێ کرایەوە", modelCount: "مۆدێل هەڵبژێردرا",
   },
 } as const;
@@ -370,14 +375,27 @@ function WorkspacePage() {
 
   function eventSummary(event: WorkspaceEvent): string {
     const d = event.data || {};
-    if (event.type === "phase") return String(d.phase || c.unknown);
+    if (event.type === "phase") {
+      const phase = String(d.phase || "");
+      return (c.stages as Record<string, string>)[phase] || phase || c.unknown;
+    }
     if (event.type === "tool_call") return String(d.reason || toolLabel(d.tool || ""));
     if (event.type === "tool_result") {
       const output = d.output;
+      if (output && typeof output === "object" && output.skipped === "live_probe_disabled_by_user") return c.toolSkipped;
       if (typeof output === "string") return output.slice(0, 500);
       if (output && typeof output === "object") {
-        const candidate = output.summary || output.answer || output.text || output.message;
-        if (typeof candidate === "string") return candidate.slice(0, 500);
+        const nested = output.result && typeof output.result === "object" ? output.result : null;
+        const candidate = output.summary || output.answer || output.text || output.message
+          || nested?.summary || nested?.answer || nested?.text || nested?.message;
+        if (typeof candidate === "string" && candidate.trim()) return candidate.trim().slice(0, 500);
+        const count = Array.isArray(output.competitors) ? output.competitors.length
+          : Array.isArray(nested?.competitors) ? nested.competitors.length : null;
+        if (count !== null) return locale === "en" ? `Analyzed ${count} competitor${count === 1 ? "" : "s"}.`
+          : locale === "ku" ? `شیکاری ${count} ڕکابەر کرا.`
+          : `تم تحليل ${count} من المنافسين.`;
+        const keys = Object.keys(output).filter(key => !["debug", "raw", "trace"].includes(key));
+        if (keys.length > 0 && keys.length <= 5) return keys.map(key => `${key}: ${String(output[key]).slice(0, 100)}`).join(" · ").slice(0, 500);
       }
       return d.ok ? c.toolDone : c.failed;
     }
