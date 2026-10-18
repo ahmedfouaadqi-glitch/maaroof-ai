@@ -267,6 +267,24 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
 
     const { ENGINE_LIST } = await import("@/lib/ai-engines");
     const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows } = await import("@/lib/space-interview");
+    const { data: existingRows, error: existingError } = await supabase
+      .from("knowledge_space_interviews")
+      .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason")
+      .eq("space_id", data.spaceId)
+      .order("engine_order", { ascending: true });
+    if (existingError) throw new Error("interview_questions_lookup_failed");
+    const existing = (existingRows || []) as any[];
+    const readyKeys = new Set(existing.filter((row) => row.generation_status === "ready").map((row) => String(row.engine_key)));
+    const enginesToAsk = ENGINE_LIST.filter((engine) => !readyKeys.has(engine.key));
+    if (!enginesToAsk.length) {
+      return {
+        questions: existing.filter((row) => row.generation_status === "ready"),
+        failures: existing.filter((row) => row.generation_status === "failed"),
+        total: ENGINE_LIST.length,
+        succeeded: readyKeys.size,
+        reused: true,
+      };
+    }
     const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
     const { randomUUID } = await import("node:crypto");
     const runId = randomUUID();
@@ -274,15 +292,15 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       userId,
       toolKey: "teach_space",
       runId,
-      meta: { action: "generate_space_interview", space_id: data.spaceId, engines: ENGINE_LIST.length },
+      meta: { action: "generate_space_interview", space_id: data.spaceId, engines: enginesToAsk.length },
     });
     if (!charge.ok) {
-      return { questions: [], failures: [], total: 0, succeeded: 0, billing: chargeFailureBody(charge.reason as any, (charge as any).left) };
+      return { questions: [], failures: [], total: ENGINE_LIST.length, succeeded: readyKeys.size, billing: chargeFailureBody(charge.reason as any, (charge as any).left) };
     }
     const apiKey = process.env.LOVABLE_API_KEY;
     const lang = String(space.lang || "ar");
     const outcomes = await Promise.all(
-      ENGINE_LIST.map(async (engine) => {
+      enginesToAsk.map(async (engine) => {
         if (!apiKey) return { engineKey: engine.key, failureCode: "unavailable" as const };
         try {
           const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } =
@@ -331,7 +349,21 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       }),
     );
 
-    const rows = buildSpaceInterviewRows(data.spaceId, userId, lang, outcomes);
+    const retryKeys = enginesToAsk.filter((engine) => existing.some((row) => row.engine_key === engine.key && row.generation_status === "failed")).map((engine) => engine.key);
+    if (retryKeys.length) {
+      const { error: deleteError } = await supabase
+        .from("knowledge_space_interviews")
+        .delete()
+        .eq("space_id", data.spaceId)
+        .eq("generation_status", "failed")
+        .in("engine_key", retryKeys);
+      if (deleteError) {
+        await supabase.rpc("refund_token_charge", { _user_id: userId, _tool_key: "teach_space", _run_id: runId, _reason: "space_interview_retry_cleanup_failed" });
+        throw new Error("interview_questions_retry_failed");
+      }
+    }
+    const targetKeys = new Set(enginesToAsk.map((engine) => engine.key));
+    const rows = buildSpaceInterviewRows(data.spaceId, userId, lang, outcomes).filter((row) => targetKeys.has(row.engine_key));
     const { data: saved, error } = await supabase
       .from("knowledge_space_interviews")
       .insert(rows)
@@ -355,11 +387,16 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
         _reason: "space_interview_all_engines_failed",
       });
     }
+    const allReady = [
+      ...existing.filter((row) => row.generation_status === "ready"),
+      ...questions,
+    ].filter((row, index, list) => list.findIndex((item) => item.engine_key === row.engine_key) === index);
     return {
-      questions,
+      questions: allReady.sort((a, b) => Number(a.engine_order) - Number(b.engine_order)),
       failures,
-      total: rows.length,
-      succeeded: questions.length,
+      total: ENGINE_LIST.length,
+      succeeded: allReady.length,
+      reused: false,
       cost: questions.length ? { tokens: charge.tokens, usd: charge.usd } : { tokens: 0, usd: 0 },
     };
   });
