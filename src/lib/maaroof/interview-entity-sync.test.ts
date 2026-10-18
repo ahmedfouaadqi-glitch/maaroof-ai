@@ -5,7 +5,6 @@ import { deriveEntityProfileSync } from "./interview-entity-sync";
 function answeredState(targetType: "company" | "creator" | "individual" | "agency" | "brand" = "company") {
   const state = createInterviewState({
     targetType,
-    targetName: "Maaroof",
     locale: "ar",
     domains: ["general"],
   });
