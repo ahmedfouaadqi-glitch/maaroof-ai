@@ -289,6 +289,7 @@ function WorkspacePage() {
       setGoal(String(recent.goal || ""));
       setMode(["execution", "recommendation", "simulation"].includes(recent.mode) ? recent.mode : "execution");
       const payload = recent.request_payload || {};
+       setJobWeight(payload.weight && typeof payload.weight === "object" ? payload.weight : null);
       setSelectedSkills(Array.isArray(payload.selected_skills) ? payload.selected_skills.filter((key: unknown) => typeof key === "string") : []);
       setRunning(recent.status === "dispatching" || recent.status === "queued" || recent.status === "running");
       setError(recent.status === "failed" ? String(recent.error || c.failed) : "");
