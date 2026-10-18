@@ -55,6 +55,18 @@ describe("visibility report normalization", () => {
     }));
     expect(hasValidPlatformScores(outOfRange)).toBe(false);
     expect(hasValidPlatformScores(malformed)).toBe(false);
+    expect(
+      hasValidPlatformScores(complete.map((platform, index) => ({
+        ...platform,
+        score: index === 0 ? "   " : platform.score,
+      }))),
+    ).toBe(false);
+    expect(
+      hasValidPlatformScores(complete.map((platform, index) => ({
+        ...platform,
+        score: index === 0 ? true : platform.score,
+      }))),
+    ).toBe(false);
   });
 
   it("derives the headline visibility score from all ten platform scores", () => {
@@ -64,7 +76,7 @@ describe("visibility report normalization", () => {
     }));
     const result = normalizeResult({ visibility_percent: 99, platforms });
     expect(result.visibility_percent).toBe(55);
-    expect(result.platforms).toHaveLength(9);
+    expect(result.platforms).toHaveLength(10);
   });
 
   it("preserves a true zero score and bounds user-facing text arrays", () => {
