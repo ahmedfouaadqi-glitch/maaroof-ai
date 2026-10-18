@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import type { InterfacePolicy } from "@/lib/interface-policy";
 
 export type WidgetKey =
   | "tokens_bar"
@@ -31,6 +32,7 @@ export type VisibilityShape = {
   agent?: Record<string, boolean>;
   widgets?: Partial<Record<WidgetKey, boolean>>;
   pages?: Partial<Record<PageKey, boolean>>;
+  interface?: Partial<InterfacePolicy>;
 };
 
 const visCache = new Map<string, VisibilityShape>();
@@ -95,6 +97,7 @@ export function Widget({ k, children }: { k: WidgetKey; children: React.ReactNod
  */
 const PATH_TO_PAGE: Array<[RegExp, PageKey]> = [
   [/^\/dashboard(\/|$)/, "dashboard"],
+  [/^\/maaroof(\/|$)/, "agent"],
   [/^\/agent(\/|$)/, "agent"],
   [/^\/tools(\/|$)/, "tools"],
   [/^\/guide(\/|$)/, "guide"],
@@ -110,7 +113,7 @@ export function usePageGuard() {
     const match = PATH_TO_PAGE.find(([rx]) => rx.test(pathname));
     if (!match) return;
     if (!vis.isPageVisible(match[1])) navigate({ to: "/" });
-  }, [vis.loading, pathname]);
+  }, [vis.loading, vis.isPageVisible, pathname, navigate]);
 }
 
 /**

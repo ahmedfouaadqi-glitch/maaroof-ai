@@ -3,17 +3,32 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { ENGINE_KEYS, ENGINE_CATALOG, ENGINE_PERSONA, type EngineKey } from "@/lib/ai-engines";
 
 const uuid = z.string().uuid();
+
+// Defense in depth: every user-facing operation must act only on a space owned
+// by the authenticated user, even if a database policy is accidentally loosened.
+async function assertOwnedSpace(supabase: any, spaceId: string, userId: string) {
+  const { data: space, error } = await supabase
+    .from("knowledge_spaces")
+    .select("id")
+    .eq("id", spaceId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !space) throw new Error("not_found");
+  return space;
+}
 
 // ===== Spaces ==============================================================
 export const listKnowledgeSpaces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
     const { data, error } = await supabase
       .from("knowledge_spaces")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return { spaces: data || [] };
@@ -31,6 +46,15 @@ export const createKnowledgeSpace = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
+    if (data.workspaceId) {
+      const { data: workspace } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("id", data.workspaceId)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (!workspace) throw new Error("workspace_not_found");
+    }
     const { data: row, error } = await supabase
       .from("knowledge_spaces")
       .insert({
@@ -65,7 +89,8 @@ export const updateKnowledgeSpace = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
     if (data.name) patch.name = data.name;
     if (data.description !== undefined) patch.description = data.description;
@@ -74,7 +99,7 @@ export const updateKnowledgeSpace = createServerFn({ method: "POST" })
     if (data.inheritance) patch.inheritance = data.inheritance;
     if (data.policies) patch.policies = data.policies;
     if (data.brandIdentity) patch.brand_identity = data.brandIdentity;
-    const { error } = await supabase.from("knowledge_spaces").update(patch).eq("id", data.spaceId);
+    const { error } = await supabase.from("knowledge_spaces").update(patch).eq("id", data.spaceId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -83,8 +108,9 @@ export const deleteKnowledgeSpace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
-    const { error } = await supabase.from("knowledge_spaces").delete().eq("id", data.spaceId);
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
+    const { error } = await supabase.from("knowledge_spaces").delete().eq("id", data.spaceId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -94,20 +120,21 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     const [assets, prompts, interviews, nodes] = await Promise.all([
       supabase.from("knowledge_space_assets")
         .select("id, title, kind, source_type, source_url, file_path, mime_type, size_bytes, status, stage, stages, classification, extracted, confidence, evidence_score, reality_score, verification_score, conflicts, needs_approval, approved, nodes_created, error, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(200),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("created_at", { ascending: false }).limit(200),
       supabase.from("knowledge_space_prompts")
         .select("id, title, intent, structure, prompt_dna, quality, approved, created_at")
-        .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(100),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("quality", { ascending: false }).limit(100),
       supabase.from("knowledge_space_interviews")
         .select("id, question, topic, answer, answered_at, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(60),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("created_at", { ascending: false }).limit(60),
       supabase.from("knowledge_nodes")
         .select("id, title, summary, layer, payload, confidence, quality, approved, updated_at")
-        .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(120),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("quality", { ascending: false }).limit(120),
     ]);
     return {
       assets: assets.data || [],
@@ -138,6 +165,7 @@ export const registerSpaceAsset = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     if (data.sourceType === "file" && !data.filePath) throw new Error("filePath required");
     if (data.sourceType === "url" && !data.sourceUrl) throw new Error("sourceUrl required");
     if (data.sourceType === "text" && !data.text?.trim()) throw new Error("text required");
@@ -165,7 +193,15 @@ export const learnSpaceAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { assetId: string }) => z.object({ assetId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { userId } = context as any;
+    const { supabase, userId } = context as any;
+    const { data: asset } = await supabase
+      .from("knowledge_space_assets")
+      .select("id, space_id")
+      .eq("id", data.assetId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!asset) throw new Error("not_found");
+    await assertOwnedSpace(supabase, asset.space_id, userId);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
 
@@ -184,14 +220,19 @@ export const deleteSpaceAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { assetId: string }) => z.object({ assetId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
     const { data: asset } = await supabase
-      .from("knowledge_space_assets").select("id, space_id, file_path").eq("id", data.assetId).maybeSingle();
+      .from("knowledge_space_assets")
+      .select("id, space_id, file_path")
+      .eq("id", data.assetId)
+      .eq("user_id", userId)
+      .maybeSingle();
     if (!asset) throw new Error("not_found");
+    await assertOwnedSpace(supabase, asset.space_id, userId);
     if (asset.file_path) {
       await supabase.storage.from("knowledge-spaces").remove([asset.file_path]);
     }
-    const { error } = await supabase.from("knowledge_space_assets").delete().eq("id", data.assetId);
+    const { error } = await supabase.from("knowledge_space_assets").delete().eq("id", data.assetId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     const { refreshSpaceMetrics } = await import("@/lib/maaroof/teaching.server");
     await refreshSpaceMetrics(asset.space_id);
@@ -216,8 +257,9 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
 
     if (data.assetId) {
       const { data: asset } = await supabase
-        .from("knowledge_space_assets").select("id, space_id").eq("id", data.assetId).maybeSingle();
+        .from("knowledge_space_assets").select("id, space_id").eq("id", data.assetId).eq("user_id", userId).maybeSingle();
       if (!asset) throw new Error("not_found");
+      await assertOwnedSpace(supabase, asset.space_id, userId);
       spaceId = asset.space_id;
       await supabase.from("knowledge_space_assets").update({
         approved: data.approved,
@@ -225,25 +267,29 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
         approved_at: data.approved ? now : null,
         status: data.approved ? "learned" : "needs_approval",
         stage: data.approved ? "institutional_learning" : "approval",
-      }).eq("id", data.assetId);
+      }).eq("id", data.assetId).eq("user_id", userId);
       // Cascade to the nodes learned from this asset.
       const { data: nodes } = await supabase
         .from("knowledge_nodes").select("id, payload").eq("space_id", asset.space_id).eq("user_id", userId);
       for (const n of (nodes || [])) {
         if ((n.payload as any)?.asset_id === data.assetId) {
-          await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", n.id);
+          await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", n.id).eq("user_id", userId);
         }
       }
     }
     if (data.nodeId) {
-      const { data: node } = await supabase.from("knowledge_nodes").select("space_id").eq("id", data.nodeId).maybeSingle();
-      spaceId = node?.space_id ?? spaceId;
-      await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", data.nodeId);
+      const { data: node } = await supabase.from("knowledge_nodes").select("space_id").eq("id", data.nodeId).eq("user_id", userId).maybeSingle();
+      if (!node) throw new Error("not_found");
+      await assertOwnedSpace(supabase, node.space_id, userId);
+      spaceId = node.space_id;
+      await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", data.nodeId).eq("user_id", userId);
     }
     if (data.promptId) {
-      const { data: p } = await supabase.from("knowledge_space_prompts").select("space_id").eq("id", data.promptId).maybeSingle();
-      spaceId = p?.space_id ?? spaceId;
-      await supabase.from("knowledge_space_prompts").update({ approved: data.approved }).eq("id", data.promptId);
+      const { data: p } = await supabase.from("knowledge_space_prompts").select("space_id").eq("id", data.promptId).eq("user_id", userId).maybeSingle();
+      if (!p) throw new Error("not_found");
+      await assertOwnedSpace(supabase, p.space_id, userId);
+      spaceId = p.space_id;
+      await supabase.from("knowledge_space_prompts").update({ approved: data.approved }).eq("id", data.promptId).eq("user_id", userId);
     }
     if (spaceId) {
       const { refreshSpaceMetrics } = await import("@/lib/maaroof/teaching.server");
@@ -252,67 +298,207 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ===== Interview mode ======================================================
+// ===== Interview mode: ten engine perspectives ============================
 export const generateSpaceInterview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
-      .from("knowledge_spaces").select("id, name, lang, metrics, space_dna, brand_identity").eq("id", data.spaceId).maybeSingle();
+      .from("knowledge_spaces")
+      .select("id, name, lang, metrics, space_dna, brand_identity")
+      .eq("id", data.spaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
     if (!space) throw new Error("not_found");
+
+    // Include knowledge already learned in this space and previous answers,
+    // so the ten perspectives target real gaps rather than repeat questions.
+    const [{ data: nodes }, { data: priorInterviews }] = await Promise.all([
+      supabase
+        .from("knowledge_nodes")
+        .select("title, summary, payload, confidence, status")
+        .eq("space_id", data.spaceId)
+        .eq("user_id", userId)
+        .limit(30),
+      supabase
+        .from("knowledge_space_interviews")
+        .select("question, answer, topic")
+        .eq("space_id", data.spaceId)
+        .eq("user_id", userId)
+        .limit(30),
+    ]);
+    const knownContext = ((nodes || []) as any[])
+      .map((node) => {
+        const payload = node.payload && typeof node.payload === "object"
+          ? JSON.stringify(node.payload).slice(0, 160)
+          : "";
+        return [node.title, node.summary, payload, node.confidence != null ? `confidence: ${node.confidence}` : ""]
+          .filter(Boolean)
+          .join(" — ");
+      })
+      .join("\n")
+      .slice(0, 1800);
+    const priorContext = ((priorInterviews || []) as any[])
+      .map((row) => `Q: ${String(row.question || "").slice(0, 240)}\nA: ${String(row.answer || "(unanswered)").slice(0, 240)}`)
+      .join("\n")
+      .slice(0, 1400);
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-    const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } = await import("@/lib/lovable-ai");
-    const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-      method: "POST",
-      headers: lovableAiHeaders(apiKey),
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is missing.` },
-          { role: "user", content: `Space: ${space.name}\nLanguage: ${space.lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1500)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1500)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1500)}` },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
-    const json: any = await res.json();
-    const parsed = extractJsonObject<{ questions: string[] }>(json?.choices?.[0]?.message?.content);
-    const questions = (parsed?.questions || []).slice(0, 8);
-    for (const q of questions) {
-      await supabase.from("knowledge_space_interviews").insert({
-        space_id: data.spaceId, user_id: userId, question: String(q).slice(0, 1000), topic: "gap",
-      });
-    }
-    return { questions };
+    const {
+      LOVABLE_AI_CHAT_COMPLETIONS_URL,
+      lovableAiHeaders,
+      extractJsonObject,
+    } = await import("@/lib/lovable-ai");
+
+    // Load server-only model governance only inside the handler so this
+    // client-safe RPC module does not pull server code into the browser bundle.
+    const { resolveEngineModels } = await import("@/lib/ai-engines.server");
+
+    // Resolve models through the existing governance layer. A failed model
+    // must not prevent the other engine perspectives from returning.
+    const engines = [...ENGINE_KEYS] as EngineKey[];
+    const models = await resolveEngineModels(engines);
+    const language = String(space.lang || "ar");
+    const languageInstruction: Record<string, string> = {
+      ar: "Write the question in clear Arabic.",
+      en: "Write the question in clear English.",
+      ku: "پرسیارەکە بە کوردیی سۆرانیی ڕوون بنووسە.",
+    };
+    const contextBlock = [
+      `Knowledge space: ${String(space.name || "").slice(0, 300)}`,
+      `Language: ${language}`,
+      `Metrics: ${JSON.stringify(space.metrics || {}).slice(0, 700)}`,
+      `Knowledge DNA: ${JSON.stringify(space.space_dna || {}).slice(0, 700)}`,
+      `Brand identity: ${JSON.stringify(space.brand_identity || {}).slice(0, 700)}`,
+      `Known learning: ${knownContext || "(no learned nodes yet)"}`,
+      `Previous interview: ${priorContext || "(no prior interview)"}`,
+    ].join("\n");
+
+    const results = await Promise.all(engines.map(async (engine) => {
+      const definition = ENGINE_CATALOG[engine];
+      const model = String(models[engine]?.model || definition.defaultModel);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      try {
+        const reasoning = /^openai\//.test(model) || /gemini-2\.5-pro|gemini-3/.test(model)
+          ? { reasoning_effort: "low" }
+          : {};
+        const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+          method: "POST",
+          headers: lovableAiHeaders(apiKey),
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            max_tokens: 800,
+            temperature: 0.35,
+            ...reasoning,
+            messages: [
+              {
+                role: "system",
+                content: `You are evaluating missing knowledge for a private knowledge space. Perspective: ${ENGINE_PERSONA[engine]}.
+Return strict JSON only: {"questions":["one question"]}.
+Generate exactly ONE precise, high-value interview question that closes a real knowledge gap. Avoid questions already answered by the supplied context. Ask about an operational rule, decision rationale, process, identity, quality standard, or missing evidence. The question must be answerable by the space owner in 1–3 sentences. ${languageInstruction[language] || languageInstruction.ar}
+Do not return commentary, markdown, or a second question.`,
+              },
+              {
+                role: "user",
+                content: `${contextBlock}\n\nGenerate one adaptive question from your assigned perspective.`,
+              },
+            ],
+          }),
+        });
+        if (!response.ok) {
+          return { key: engine, name: definition.name, proxy: definition.proxy, status: "error" as const, questionsCount: 0 };
+        }
+        const payload: any = await response.json();
+        const raw = String(payload?.choices?.[0]?.message?.content || "");
+        const parsed = extractJsonObject<{ questions?: unknown }>(raw);
+        const questions = Array.isArray(parsed?.questions)
+          ? Array.from(new Set(parsed.questions.map((q: unknown) => String(q || "").trim()).filter((q: string) => q.length >= 8)))
+              .slice(0, 1)
+          : [];
+        if (!questions.length) {
+          return { key: engine, name: definition.name, proxy: definition.proxy, status: "empty" as const, questionsCount: 0 };
+        }
+
+        const { error: insertError } = await supabase
+          .from("knowledge_space_interviews")
+          .insert(questions.map((question) => ({
+            space_id: data.spaceId,
+            user_id: userId,
+            question: question.slice(0, 1000),
+            topic: `engine:${engine}`,
+          })));
+        if (insertError) {
+          return { key: engine, name: definition.name, proxy: definition.proxy, status: "error" as const, questionsCount: 0 };
+        }
+        return { key: engine, name: definition.name, proxy: definition.proxy, status: "answered" as const, questionsCount: questions.length };
+      } catch (error: any) {
+        return {
+          key: engine,
+          name: definition.name,
+          proxy: definition.proxy,
+          status: error?.name === "AbortError" ? "timeout" as const : "error" as const,
+          questionsCount: 0,
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
+    }));
+
+    return {
+      questions: results.reduce((total, result) => total + result.questionsCount, 0),
+      engines: results,
+    };
   });
 
+// Persist answers as user-owned knowledge and continue the existing learning pipeline.
 export const answerSpaceInterview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { interviewId: string; answer: string }) =>
-    z.object({ interviewId: uuid, answer: z.string().min(1).max(8000) }).parse(d),
+    z.object({ interviewId: uuid, answer: z.string().trim().min(1).max(8000) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: row } = await supabase
-      .from("knowledge_space_interviews").select("id, space_id, question").eq("id", data.interviewId).maybeSingle();
+      .from("knowledge_space_interviews")
+      .select("id, space_id, question")
+      .eq("id", data.interviewId)
+      .eq("user_id", userId)
+      .maybeSingle();
     if (!row) throw new Error("not_found");
+    await assertOwnedSpace(supabase, row.space_id, userId);
 
-    await supabase.from("knowledge_space_interviews")
-      .update({ answer: data.answer, answered_at: new Date().toISOString() }).eq("id", data.interviewId);
+    const { data: updated, error: updateError } = await supabase
+      .from("knowledge_space_interviews")
+      .update({ answer: data.answer, answered_at: new Date().toISOString() })
+      .eq("id", data.interviewId)
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+    if (updateError || !updated) throw new Error("not_found");
 
     // The answer itself is knowledge — register it as a text asset and learn it.
-    const { data: asset } = await supabase.from("knowledge_space_assets").insert({
-      space_id: row.space_id, user_id: userId, kind: "interview", source_type: "text",
-      title: `مقابلة: ${String(row.question).slice(0, 120)}`,
-      raw_text: `س: ${row.question}\nج: ${data.answer}`,
-      status: "queued", stage: "import",
-    }).select("id").single();
+    const { data: asset, error: assetError } = await supabase
+      .from("knowledge_space_assets")
+      .insert({
+        space_id: row.space_id,
+        user_id: userId,
+        kind: "interview",
+        source_type: "text",
+        title: `مقابلة: ${String(row.question).slice(0, 120)}`,
+        raw_text: `Q: ${row.question}\nA: ${data.answer}`,
+        status: "queued",
+        stage: "import",
+      })
+      .select("id")
+      .single();
+    if (assetError || !asset) throw new Error("interview_asset_create_failed");
 
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (apiKey && asset?.id) {
+    if (apiKey) {
       const { ingestAsset } = await import("@/lib/maaroof/teaching.server");
       const result = await ingestAsset({ apiKey, assetId: asset.id, userId });
       return { ok: true, result };
@@ -327,7 +513,7 @@ export const getSpaceDashboard = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
-      .from("knowledge_spaces").select("*").eq("id", data.spaceId).maybeSingle();
+      .from("knowledge_spaces").select("*").eq("id", data.spaceId).eq("user_id", userId).maybeSingle();
     if (!space) throw new Error("not_found");
     const { refreshSpaceMetrics, learningGapReport } = await import("@/lib/maaroof/teaching.server");
     const metrics = await refreshSpaceMetrics(data.spaceId);
@@ -352,7 +538,8 @@ export const setSpaceAgentAccess = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     const { error } = await supabase.from("knowledge_space_agents").insert({
       space_id: data.spaceId,
       agent_id: data.agentId ?? null,

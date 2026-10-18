@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
@@ -124,7 +125,7 @@ function WorkspacePage() {
     let active = true;
     Promise.all([
       supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle(),
-      user?.id ? supabase.from("profiles").select("subscription_tier,is_subscribed,subscription_expires_at").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      user?.id ? supabase.from("profiles").select("subscription_tier,is_subscribed,subscription_expires_at,ui_visibility").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
     ]).then(([settingsResult, profileResult]) => {
       if (!active) return;
       const value = settingsResult.data?.value && typeof settingsResult.data.value === "object" ? settingsResult.data.value as any : {};
@@ -138,9 +139,12 @@ function WorkspacePage() {
         planKey,
         userId: user?.id,
       });
-      const availableInterfaces = Array.isArray(value.available_interfaces) ? value.available_interfaces : value.enabled === false ? ["professional"] : ["workbench", "professional"];
-      setPolicy(old => ({ ...old, ...value, skill_access: effectiveSkillAccess, available_interfaces: availableInterfaces }));
-      if (!availableInterfaces.includes("workbench")) navigate({ to: availableInterfaces.includes("professional") ? "/maaroof" : "/", replace: true });
+      const effectiveInterfacePolicy = resolveInterfacePolicy(value, profile?.ui_visibility?.interface);
+      const availableInterfaces = effectiveInterfacePolicy.available_interfaces;
+      setPolicy(old => ({ ...old, ...value, ...effectiveInterfacePolicy, skill_access: effectiveSkillAccess }));
+      if (!availableInterfaces.includes("workbench")) {
+        navigate({ to: availableInterfaces.includes("professional") ? "/dashboard" : "/", replace: true });
+      }
       if (Array.isArray(value.enabled_skills)) setSelectedSkills(current => current.filter(key => value.enabled_skills.includes(key) && getSkillAccessMode(MAAROOF_SKILLS.find(skill => skill.key === key)!, effectiveSkillAccess) === "self_service"));
       if (Array.isArray(value.allowed_modes) && value.allowed_modes.length) setMode(current => value.allowed_modes.includes(current) ? current : value.allowed_modes[0]);
     }).catch(() => {});

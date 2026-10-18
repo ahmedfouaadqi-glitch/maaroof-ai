@@ -1,5 +1,7 @@
 // Prompt 22 — "Teach Once, Work Forever"™ dashboard (subscriber add-on inside the agent).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ENGINE_CATALOG, isEngineKey } from "@/lib/ai-engines";
+import { ENGINE_LOGOS } from "@/components/engine-logos";
 import { useServerFn } from "@tanstack/react-start";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +21,7 @@ const TABS = ["assets", "nodes", "prompts", "interview"] as const;
 type Tab = (typeof TABS)[number];
 
 export function KnowledgeSpaces({ userId }: { userId: string | null }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const list = useServerFn(listKnowledgeSpaces);
   const create = useServerFn(createKnowledgeSpace);
   const patch = useServerFn(updateKnowledgeSpace);
@@ -47,6 +49,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
   });
   const [metrics, setMetrics] = useState<any>({});
   const [proposals, setProposals] = useState<any[]>([]);
+  const [interviewEngines, setInterviewEngines] = useState<Array<{ key: string; name: string; proxy: boolean; status: string; questionsCount: number }>>([]);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const active = useMemo(() => spaces.find((s) => s.id === activeId) || null, [spaces, activeId]);
@@ -76,7 +79,10 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
   }, [loadAssets, dashboard]);
 
   useEffect(() => { if (userId) void refreshSpaces(); }, [userId, refreshSpaces]);
-  useEffect(() => { if (activeId) void refreshActive(activeId); }, [activeId, refreshActive]);
+  useEffect(() => {
+    setInterviewEngines([]);
+    if (activeId) void refreshActive(activeId);
+  }, [activeId, refreshActive]);
 
   if (!userId) return null;
 
@@ -364,44 +370,109 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
 
             {tab === "interview" && (
               <>
-                <button
-                  onClick={() => run("gen", async () => { await genQuestions({ data: { spaceId: active.id } }); await refreshActive(active.id); })}
-                  disabled={busy === "gen"}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
-                >
-                  {busy === "gen" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquareQuote className="h-3.5 w-3.5" />}
-                  {t("teach_generate_questions")}
-                </button>
-                {data.interviews.map((q) => (
-                  <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3">
-                    <p className="text-sm">{q.question}</p>
-                    {q.answer ? (
-                      <p className="mt-1.5 text-xs text-emerald-500">{q.answer}</p>
-                    ) : (
-                      <div className="mt-2 flex items-center gap-1">
-                        <input
-                          value={answers[q.id] || ""}
-                          onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
-                          placeholder={t("teach_answer")}
-                          className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
-                        />
-                        <button
-                          onClick={() => run(q.id, async () => {
-                            const a = (answers[q.id] || "").trim();
-                            if (!a) return;
-                            await answer({ data: { interviewId: q.id, answer: a } });
-                            setAnswers((s) => ({ ...s, [q.id]: "" }));
-                            await refreshActive(active.id);
-                          })}
-                          disabled={busy === q.id}
-                          className="rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
-                        >
-                          {busy === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("teach_send")}
-                        </button>
-                      </div>
-                    )}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => run("gen", async () => {
+                      const result: any = await genQuestions({ data: { spaceId: active.id } });
+                      setInterviewEngines(Array.isArray(result?.engines) ? result.engines : []);
+                      await refreshActive(active.id);
+                    })}
+                    disabled={busy === "gen"}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
+                  >
+                    {busy === "gen" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquareQuote className="h-3.5 w-3.5" />}
+                    {t("teach_generate_questions")}
+                  </button>
+                  <p className="text-xs text-muted-foreground">
+                    {lang === "en"
+                      ? "Each engine contributes one adaptive question. Results are shown with the actual response status."
+                      : lang === "ku"
+                        ? "هەر بزوێنەرێک پرسیارێکی گونجاو پێشکەش دەکات؛ دۆخی وەڵامی هەر یەک بە ڕوونی پیشان دەدرێت."
+                        : "يساهم كل محرك بسؤال تكيّفي واحد، وتظهر حالة الاستجابة الفعلية لكل محرك."}
+                  </p>
+                </div>
+                {interviewEngines.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {interviewEngines.map((engine) => {
+                      const validKey = isEngineKey(engine.key);
+                      const Logo = validKey ? ENGINE_LOGOS[engine.key] : null;
+                      const statusLabel: Record<string, Record<string, string>> = {
+                        ar: { answered: "أنشأ سؤالاً", empty: "استجابة فارغة", timeout: "انتهت المهلة", error: "تعذر الاستدعاء" },
+                        en: { answered: "Question generated", empty: "Empty response", timeout: "Timed out", error: "Call failed" },
+                        ku: { answered: "پرسیار دروستکرا", empty: "وەڵامی بەتاڵ", timeout: "کاتی بەسەرچوو", error: "بانگکردن سەرکەوتوو نەبوو" },
+                      };
+                      const langKey = lang === "en" || lang === "ku" ? lang : "ar";
+                      const good = engine.status === "answered";
+                      return (
+                        <div key={engine.key} className="rounded-xl border border-border/60 bg-background/40 p-3">
+                          <div className="flex items-center gap-2">
+                            {Logo && <Logo size={20} />}
+                            <span className="text-sm font-semibold">{engine.name || (validKey ? ENGINE_CATALOG[engine.key].name : engine.key)}</span>
+                            <span className={`ms-auto rounded-full px-2 py-0.5 text-[10px] ${good ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                              {statusLabel[langKey][engine.status] || engine.status}
+                            </span>
+                          </div>
+                          {engine.proxy && (
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              {lang === "en" ? "Uses a configured proxy model" : lang === "ku" ? "مۆدێلی ناوەندگیر بەکاردەهێنێت" : "يعمل عبر نموذج وسيط مُهيّأ"}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {lang === "en" ? `${engine.questionsCount} questions saved` : lang === "ku" ? `${engine.questionsCount} پرسیار پاشەکەوتکرا` : `${engine.questionsCount} سؤال محفوظ`}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                )}
+                {data.interviews.map((q) => {
+                  const topic = String(q.topic || "");
+                  const candidateKey = topic.startsWith("engine:") ? topic.slice("engine:".length) : "";
+                  const engineKey = isEngineKey(candidateKey) ? candidateKey : null;
+                  const Logo = engineKey ? ENGINE_LOGOS[engineKey] : null;
+                  const engineName = engineKey ? ENGINE_CATALOG[engineKey].name : null;
+                  return (
+                    <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3">
+                      {engineName && (
+                        <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                          {Logo && <Logo size={18} />}
+                          <span className="font-semibold">{engineName}</span>
+                          {ENGINE_CATALOG[engineKey!].proxy && (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px]">
+                              {lang === "en" ? "Proxy" : lang === "ku" ? "ناوەندگیر" : "وسيط"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-sm">{q.question}</p>
+                      {q.answer ? (
+                        <p className="mt-1.5 text-xs text-emerald-500">{q.answer}</p>
+                      ) : (
+                        <div className="mt-2 flex items-center gap-1">
+                          <input
+                            value={answers[q.id] || ""}
+                            onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
+                            placeholder={t("teach_answer")}
+                            className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
+                          />
+                          <button
+                            onClick={() => run(q.id, async () => {
+                              const a = (answers[q.id] || "").trim();
+                              if (!a) return;
+                              await answer({ data: { interviewId: q.id, answer: a } });
+                              setAnswers((s) => ({ ...s, [q.id]: "" }));
+                              await refreshActive(active.id);
+                            })}
+                            disabled={busy === q.id}
+                            className="rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
+                          >
+                            {busy === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("teach_send")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </>
             )}
           </div>

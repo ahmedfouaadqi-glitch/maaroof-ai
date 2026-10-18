@@ -36,3 +36,21 @@ export function normalizeInterfacePolicy(raw: unknown): InterfacePolicy {
 export function postLoginTarget(policy: InterfacePolicy): "/workspace" | "/dashboard" {
   return policy.default_ui === "workbench" && policy.available_interfaces.includes("workbench") ? "/workspace" : "/dashboard";
 }
+
+/**
+ * Merge a user-specific policy override on top of the site-wide defaults.
+ * Missing override properties inherit global values; invalid values are
+ * normalized by the same validator used for the global policy.
+ */
+export function resolveInterfacePolicy(globalRaw: unknown, userOverrideRaw?: unknown): InterfacePolicy {
+  const base = normalizeInterfacePolicy(globalRaw);
+  if (!userOverrideRaw || typeof userOverrideRaw !== "object" || Array.isArray(userOverrideRaw)) return base;
+  const override = userOverrideRaw as Partial<InterfacePolicy>;
+  return normalizeInterfacePolicy({
+    ...base,
+    ...(Array.isArray(override.available_interfaces) ? { available_interfaces: override.available_interfaces } : {}),
+    ...(override.default_ui === "workbench" || override.default_ui === "professional" ? { default_ui: override.default_ui } : {}),
+    ...(override.landing === "new" || override.landing === "classic" ? { landing: override.landing } : {}),
+    ...(typeof override.show_professional_link === "boolean" ? { show_professional_link: override.show_professional_link } : {}),
+  });
+}
