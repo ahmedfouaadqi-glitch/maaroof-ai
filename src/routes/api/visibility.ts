@@ -324,18 +324,45 @@ export const Route = createFileRoute("/api/visibility")({
                   } catch {}
                   return;
                 }
-                await finalizeQuota("commit");
+                const probeQuotaFinalized = await finalizeQuota("commit");
+                if (!probeQuotaFinalized) {
+                  console.error("[api/visibility] background probe completed with quota reservation needing review:", { runId: pRun });
+                }
+                // Probe results exist, so the token charge is earned even if quota reconciliation is pending.
                 refundContext = null;
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
+                try {
+                  await admin.from("report_drafts").insert({
+                    user_id: userId,
+                    tool_key: "visibility",
+                    title: `${brand} — live probe`,
+                    payload: {
+                      probe: { query: q, asked: engines, answers, charged: pChg.tokens, run_id: pRun },
+                      quota_needs_review: !probeQuotaFinalized,
+                    } as any,
+                    lang,
+                  } as any);
+                } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
-                try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
+                try {
+                  await notifyUser(
+                    userId,
+                    "analysis_done",
+                    probeQuotaFinalized
+                      ? `${brand}: ${hit}/${answers.length}`
+                      : `${brand}: ${hit}/${answers.length}; quota usage needs review`,
+                    { link: "/dashboard" },
+                  );
+                } catch {}
               })().catch(async (error) => {
                 console.error("[api/visibility] background probe failed:", error);
                 if (answers.length) {
-                  await finalizeQuota("commit");
+                  const quotaFinalized = await finalizeQuota("commit");
+                  if (!quotaFinalized) {
+                    console.error("[api/visibility] background failure after usable probe results; quota needs review:", { runId: pRun });
+                  }
+                  // Do not refund when at least one engine returned usable results.
                   refundContext = null;
                 } else {
-                  await finalizeQuota("release");
                   await refundChargedTokens("probe_background_error");
                 }
               });
@@ -418,18 +445,18 @@ export const Route = createFileRoute("/api/visibility")({
 
 
           if (resp.status === 429) {
-            await refundChargedTokens("provider_rate_limited");
-            return Response.json({ error: "rate_limited" }, { status: 429 });
+            const tokenRefundConfirmed = await refundChargedTokens("provider_rate_limited");
+            return Response.json({ error: "rate_limited", token_refund_confirmed: tokenRefundConfirmed }, { status: 429 });
           }
           if (resp.status === 402) {
-            await refundChargedTokens("provider_credits_exhausted");
-            return Response.json({ error: "credits_exhausted" }, { status: 402 });
+            const tokenRefundConfirmed = await refundChargedTokens("provider_credits_exhausted");
+            return Response.json({ error: "credits_exhausted", token_refund_confirmed: tokenRefundConfirmed }, { status: 402 });
           }
           if (!resp.ok) {
             const rawError = await resp.text();
             console.error("[api/visibility] AI gateway error:", resp.status, rawError);
-            await refundChargedTokens(`provider_http_${resp.status}`);
-            return Response.json({ error: `ai_${resp.status}` }, { status: 500 });
+            const tokenRefundConfirmed = await refundChargedTokens(`provider_http_${resp.status}`);
+            return Response.json({ error: `ai_${resp.status}`, token_refund_confirmed: tokenRefundConfirmed }, { status: 500 });
           }
 
           const data = await resp.json();
@@ -448,8 +475,8 @@ export const Route = createFileRoute("/api/visibility")({
             || Array.isArray(parsed)
             || !hasValidPlatformScores((parsed as any)?.platforms)
           ) {
-            await refundChargedTokens("invalid_provider_response");
-            return Response.json({ error: "invalid_ai_response", token_refund_confirmed: !refundContext }, { status: 502 });
+            const tokenRefundConfirmed = await refundChargedTokens("invalid_provider_response");
+            return Response.json({ error: "invalid_ai_response", token_refund_confirmed: tokenRefundConfirmed }, { status: 502 });
           }
 
           const result = normalizeResult(parsed, content);
