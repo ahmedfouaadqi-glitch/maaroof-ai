@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fillToolInput, missingFields, sanitizeReflection } from "./agent-input";
+import { fillToolInput, missingFields, removePlaceholderCompetitors, sanitizeReflection } from "./agent-input";
 
 describe("agent-input", () => {
   it("fills the tool's own brand key with priority goal > workspace > profile", () => {
@@ -19,4 +19,19 @@ describe("agent-input", () => {
     expect(sanitizeReflection('```json\n{"decision":"stop","why":"brand missing"}\n```')).toBe("stop — brand missing");
     expect(sanitizeReflection("continue")).toBe("continue");
   });
+
+  it("removes placeholder competitor names while preserving real competitor names", () => {
+    const result = removePlaceholderCompetitors({
+      brand: "Maaroof",
+      competitors: ["Competitor A", "Example Competitor", "شركة النور", "المنافس الأول", "Rival 2"],
+    });
+    expect(result.input.competitors).toEqual(["شركة النور"]);
+    expect(result.removed).toEqual(["Competitor A", "Example Competitor", "المنافس الأول", "Rival 2"]);
+  });
+  it("leaves an explicit real competitor untouched", () => {
+    const result = removePlaceholderCompetitors({ competitors: ["Toyota", "Samsung"] });
+    expect(result.input.competitors).toEqual(["Toyota", "Samsung"]);
+    expect(result.removed).toEqual([]);
+  });
+
 });
