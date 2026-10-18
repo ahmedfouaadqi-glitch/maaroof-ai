@@ -4,7 +4,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ENGINE_KEYS, ENGINE_CATALOG, ENGINE_PERSONA, type EngineKey } from "@/lib/ai-engines";
-import { resolveEngineModels } from "@/lib/ai-engines.server";
 
 const uuid = z.string().uuid();
 
@@ -274,6 +273,10 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       lovableAiHeaders,
       extractJsonObject,
     } = await import("@/lib/lovable-ai");
+
+    // Load server-only model governance only inside the handler so this
+    // client-safe RPC module does not pull server code into the browser bundle.
+    const { resolveEngineModels } = await import("@/lib/ai-engines.server");
 
     // Resolve models through the existing governance layer. A failed model
     // must not prevent the other engine perspectives from returning.
