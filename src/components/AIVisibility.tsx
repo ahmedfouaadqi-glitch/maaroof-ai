@@ -59,11 +59,12 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [refundNeedsReview, setRefundNeedsReview] = useState(false);
   const [out, setOut] = useState<any>(null);
 
   const run = async () => {
     if (!brand.trim() || busy) return;
-    setBusy(true); setErr(""); setOut(null);
+    setBusy(true); setErr(""); setRefundNeedsReview(false); setOut(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -73,7 +74,13 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey) }),
       });
       const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
+      if (!res.ok || !j?.ok) {
+        const failure = new Error(j?.error || `http_${res.status}`) as Error & {
+          tokenRefundConfirmed?: boolean;
+        };
+        failure.tokenRefundConfirmed = j?.token_refund_confirmed;
+        throw failure;
+      }
       setOut({
         ...j.result,
         mci: j.mci || null,
@@ -89,7 +96,10 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
           : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
           : "Tokens charged ✓ — see updated balance above");
       }
-    } catch (e: any) { setErr(e?.message || "failed"); }
+    } catch (e: any) {
+      setErr(e?.message || "failed");
+      setRefundNeedsReview(e?.tokenRefundConfirmed === false);
+    }
     finally { setBusy(false); }
   };
 
@@ -133,6 +143,15 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
       <div className="mt-3 flex items-center justify-between gap-2">
         {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || t("auto.monthly_analytics_balance_exhausted") : err}</span>}
+      {refundNeedsReview && (
+        <div role="alert" className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed">
+          {outLang === "ar"
+            ? "تعذّر تأكيد استرداد التوكنات. لا تكرر العملية الآن؛ الحالة تحتاج إلى مراجعة سجل الرصيد."
+            : outLang === "ku"
+              ? "گەڕاندنەوەی تۆکن پشتڕاست نەکرایەوە. ئێستا کردارەکە دووبارە مەکەوە؛ پێویستە تۆماری باڵانس بپشکنرێت."
+              : "Token refund could not be confirmed. Do not retry immediately; the token ledger needs review."}
+        </div>
+      )}
         <button onClick={run} disabled={busy || !brand.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
