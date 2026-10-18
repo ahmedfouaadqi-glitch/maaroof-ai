@@ -266,7 +266,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     if (!space) throw new Error("not_found");
 
     const { ENGINE_LIST } = await import("@/lib/ai-engines");
-    const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows } = await import("@/lib/space-interview");
+    const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows, enginesNeedingQuestions } = await import("@/lib/space-interview");
     const { data: existingRows, error: existingError } = await supabase
       .from("knowledge_space_interviews")
       .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason")
@@ -275,7 +275,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     if (existingError) throw new Error("interview_questions_lookup_failed");
     const existing = (existingRows || []) as any[];
     const readyKeys = new Set(existing.filter((row) => row.generation_status === "ready").map((row) => String(row.engine_key)));
-    const enginesToAsk = ENGINE_LIST.filter((engine) => !readyKeys.has(engine.key));
+    const enginesToAsk = ENGINE_LIST.filter((engine) => enginesNeedingQuestions(existing).includes(engine.key));
     if (!enginesToAsk.length) {
       return {
         questions: existing.filter((row) => row.generation_status === "ready"),
