@@ -109,8 +109,9 @@ export function normalizeToolInput(input: any): Record<string, any> {
   return out;
 }
 
-function toolsDescription(): string {
-  return TOOL_CATALOG.filter((t) => t.group === "tools")
+function toolsDescription(enabledTools?: string[]): string {
+  const enabled = enabledTools?.length ? new Set(enabledTools) : null;
+  return TOOL_CATALOG.filter((t) => t.group === "tools" && (!enabled || enabled.has(t.key)))
     .map((t) => { const o = describeToolOptions(t.key); return `- ${t.key}: ${t.labels.en}${o ? ` (${o})` : ""}`; })
     .join("\n");
 }
@@ -334,7 +335,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile, settings.enabled_tools);
 
     // Part 13 — pipeline stages 1..6 (understanding & context).
     if (tracer.enabled) {
@@ -497,11 +498,15 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
     let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
-    if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
+    if (settings.enabled_tools.includes("analyze") && /(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
-    // User-edited tool list (from the pre-execution catalog card) wins over the planner.
-    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && (skillToolAllowlist === null || skillToolAllowlist.has(k as any)));
+    // Tool permissions are authoritative: never plan or execute a tool that admin disabled.
+    const enabledToolSet = new Set(settings.enabled_tools);
+    steps = steps.filter((st) => enabledToolSet.has(st.tool));
+    // User-edited tool list (from the pre-execution catalog card) wins over the planner,
+    // but cannot override admin enablement or the workspace skill allowlist.
+    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && enabledToolSet.has(k) && (skillToolAllowlist === null || skillToolAllowlist.has(k as any)));
     if (userTools.length) {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
@@ -1564,6 +1569,7 @@ function buildSystemPrompt(
   geo: { country: string; city?: string; label: string },
   memories: string[],
   workspaceProfile?: any,
+  enabledTools?: string[],
 ): string {
   const memBlock = memories.length ? `\n\nLong-term memory about this user:\n${memories.slice(0, 10).join("\n")}` : "";
   let wsBlock = "";
@@ -1586,8 +1592,8 @@ You are "Maaroof" — a Manus-style intelligent agent that PLANS, USES TOOLS, an
 User location/scope: ${geo.label || "World"} (country=${geo.country || "—"}, city=${geo.city || "—"})
 Tailor every step to this market: language, currency, competitors, channels, regulations, culture.
 
-Available tools (call by exact key):
-${toolsDescription()}
+Available tools (call by exact key; tools disabled by administration are not available):
+${toolsDescription(enabledTools)}
 
 Rules:
 - Be evidence-based; never invent facts, numbers, or sources.
