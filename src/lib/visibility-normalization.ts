@@ -30,7 +30,12 @@ export function hasValidPlatformScores(value: unknown): boolean {
     value.some((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return false;
       const platform = item as Record<string, unknown>;
-      if (platform.name !== name || platform.score === null || platform.score === undefined || platform.score === "") {
+      if (
+        platform.name !== name ||
+        platform.score === null ||
+        platform.score === undefined ||
+        platform.score === ""
+      ) {
         return false;
       }
       const score = typeof platform.score === "number" ? platform.score : Number(platform.score);
