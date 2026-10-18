@@ -103,6 +103,14 @@ export const Route = createFileRoute("/api/visibility")({
         const refundChargedTokens = async (reason: string) => {
           const ctx = refundContext;
           if (!ctx) return false;
+          // Never refund tokens while the associated quota reservation may still be active.
+          if (quotaContext?.runId === ctx.runId) {
+            const released = await finalizeQuota("release");
+            if (!released) {
+              console.error("[api/visibility] token refund withheld until quota release is confirmed:", { reason, runId: ctx.runId, toolKey: ctx.toolKey });
+              return false;
+            }
+          }
           try {
             const { data, error } = await ctx.admin.rpc("refund_token_charge", {
               _user_id: ctx.userId, _tool_key: ctx.toolKey, _run_id: ctx.runId, _reason: reason,
@@ -113,7 +121,6 @@ export const Route = createFileRoute("/api/visibility")({
             } else {
               refundContext = null;
             }
-            if (quotaContext?.runId === ctx.runId) await finalizeQuota("release");
             return confirmed;
           } catch (refundError) {
             console.error("[api/visibility] token refund threw:", refundError, { reason, runId: ctx.runId, toolKey: ctx.toolKey });
@@ -251,6 +258,7 @@ export const Route = createFileRoute("/api/visibility")({
                 const message = e instanceof Error ? e.message : String(e);
                 console.error("[api/visibility] probe quota reservation failed:", message);
                 if (message.startsWith("quota_denied:")) {
+                  quotaContext = null;
                   const refunded = await refundChargedTokens("quota_denied");
                   return Response.json({
                     error: message.slice("quota_denied:".length) || "quota_rejected",
@@ -294,19 +302,7 @@ export const Route = createFileRoute("/api/visibility")({
                 await askAll();
                 const { notifyUser } = await import("@/lib/notify.server");
                 if (!answers.length) {
-                  await finalizeQuota("release");
-                  const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
-                    _user_id: userId,
-                    _tool_key: "visibility.probe",
-                    _run_id: pRun,
-                    _reason: "no_results",
-                  } as any);
-                  const refundConfirmed = !refundError && !!(refundResult as any)?.ok;
-                  if (!refundConfirmed) {
-                    console.error("[api/visibility] probe refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
-                  } else {
-                    refundContext = null;
-                  }
+                  const refundConfirmed = await refundChargedTokens("no_results");
                   try {
                     await notifyUser(
                       userId,
@@ -344,21 +340,11 @@ export const Route = createFileRoute("/api/visibility")({
             }
             await askAll();
             if (!answers.length) {
-              await finalizeQuota("release");
-              const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
-                _user_id: userId,
-                _tool_key: "visibility.probe",
-                _run_id: pRun,
-                _reason: "no_results",
-              } as any);
-              const refundConfirmed = !refundError && !!(refundResult as any)?.ok;
-              if (!refundConfirmed) {
-                console.error("[api/visibility] foreground probe refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
-              } else {
-                refundContext = null;
-              }
+              const refundConfirmed = await refundChargedTokens("no_results");
               return Response.json({ error: "probe_no_results", token_refund_confirmed: refundConfirmed }, { status: 502 });
             }
+            // At least one engine returned usable results, so the token charge is earned.
+            refundContext = null;
             if (body.notify) {
               try {
                 const { notifyUser } = await import("@/lib/notify.server");
@@ -366,13 +352,14 @@ export const Route = createFileRoute("/api/visibility")({
                 await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
               } catch {}
             }
-            await finalizeQuota("commit");
+            const probeQuotaFinalized = await finalizeQuota("commit");
+            if (!probeQuotaFinalized) quotaContext = null; // Keep the DB reservation for reconciliation; this run produced results.
             const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
             refundContext = null;
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
+            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" }, quota_needs_review: !probeQuotaFinalized });
           }
 
           // MCI cache reuse is free, but only after entitlement and quota checks.
@@ -389,6 +376,7 @@ export const Route = createFileRoute("/api/visibility")({
             const message = usageError instanceof Error ? usageError.message : String(usageError);
             console.error("[api/visibility] quota reservation failed:", message);
             if (message.startsWith("quota_denied:")) {
+              quotaContext = null;
               const refunded = await refundChargedTokens("quota_denied");
               return Response.json({
                 error: message.slice("quota_denied:".length) || "quota_rejected",
@@ -483,6 +471,7 @@ export const Route = createFileRoute("/api/visibility")({
 
           // The provider produced a usable report; commit its quota reservation.
           const quotaFinalized = await finalizeQuota("commit");
+          if (!quotaFinalized) quotaContext = null; // Report work succeeded; retain reservation for reconciliation.
           refundContext = null;
           const _q = pickQualityFields(parsed || {});
           { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q, quota_needs_review: !quotaFinalized }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
