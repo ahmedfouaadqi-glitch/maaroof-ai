@@ -7,14 +7,28 @@ import { ENGINE_KEYS, ENGINE_CATALOG, ENGINE_PERSONA, type EngineKey } from "@/l
 
 const uuid = z.string().uuid();
 
+// Defense in depth: every user-facing operation must act only on a space owned
+// by the authenticated user, even if a database policy is accidentally loosened.
+async function assertOwnedSpace(supabase: any, spaceId: string, userId: string) {
+  const { data: space, error } = await supabase
+    .from("knowledge_spaces")
+    .select("id")
+    .eq("id", spaceId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !space) throw new Error("not_found");
+  return space;
+}
+
 // ===== Spaces ==============================================================
 export const listKnowledgeSpaces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
     const { data, error } = await supabase
       .from("knowledge_spaces")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return { spaces: data || [] };
@@ -32,6 +46,15 @@ export const createKnowledgeSpace = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
+    if (data.workspaceId) {
+      const { data: workspace } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("id", data.workspaceId)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (!workspace) throw new Error("workspace_not_found");
+    }
     const { data: row, error } = await supabase
       .from("knowledge_spaces")
       .insert({
@@ -66,7 +89,8 @@ export const updateKnowledgeSpace = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
     if (data.name) patch.name = data.name;
     if (data.description !== undefined) patch.description = data.description;
@@ -75,7 +99,7 @@ export const updateKnowledgeSpace = createServerFn({ method: "POST" })
     if (data.inheritance) patch.inheritance = data.inheritance;
     if (data.policies) patch.policies = data.policies;
     if (data.brandIdentity) patch.brand_identity = data.brandIdentity;
-    const { error } = await supabase.from("knowledge_spaces").update(patch).eq("id", data.spaceId);
+    const { error } = await supabase.from("knowledge_spaces").update(patch).eq("id", data.spaceId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -84,8 +108,9 @@ export const deleteKnowledgeSpace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
-    const { error } = await supabase.from("knowledge_spaces").delete().eq("id", data.spaceId);
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
+    const { error } = await supabase.from("knowledge_spaces").delete().eq("id", data.spaceId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -95,7 +120,8 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     const [assets, prompts, interviews, nodes] = await Promise.all([
       supabase.from("knowledge_space_assets")
         .select("id, title, kind, source_type, source_url, file_path, mime_type, size_bytes, status, stage, stages, classification, extracted, confidence, evidence_score, reality_score, verification_score, conflicts, needs_approval, approved, nodes_created, error, created_at")
@@ -139,6 +165,7 @@ export const registerSpaceAsset = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     if (data.sourceType === "file" && !data.filePath) throw new Error("filePath required");
     if (data.sourceType === "url" && !data.sourceUrl) throw new Error("sourceUrl required");
     if (data.sourceType === "text" && !data.text?.trim()) throw new Error("text required");
@@ -166,7 +193,15 @@ export const learnSpaceAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { assetId: string }) => z.object({ assetId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { userId } = context as any;
+    const { supabase, userId } = context as any;
+    const { data: asset } = await supabase
+      .from("knowledge_space_assets")
+      .select("id, space_id")
+      .eq("id", data.assetId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!asset) throw new Error("not_found");
+    await assertOwnedSpace(supabase, asset.space_id, userId);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
 
@@ -185,14 +220,19 @@ export const deleteSpaceAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { assetId: string }) => z.object({ assetId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
     const { data: asset } = await supabase
-      .from("knowledge_space_assets").select("id, space_id, file_path").eq("id", data.assetId).maybeSingle();
+      .from("knowledge_space_assets")
+      .select("id, space_id, file_path")
+      .eq("id", data.assetId)
+      .eq("user_id", userId)
+      .maybeSingle();
     if (!asset) throw new Error("not_found");
+    await assertOwnedSpace(supabase, asset.space_id, userId);
     if (asset.file_path) {
       await supabase.storage.from("knowledge-spaces").remove([asset.file_path]);
     }
-    const { error } = await supabase.from("knowledge_space_assets").delete().eq("id", data.assetId);
+    const { error } = await supabase.from("knowledge_space_assets").delete().eq("id", data.assetId).eq("user_id", userId);
     if (error) throw new Error(error.message);
     const { refreshSpaceMetrics } = await import("@/lib/maaroof/teaching.server");
     await refreshSpaceMetrics(asset.space_id);
@@ -217,7 +257,7 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
 
     if (data.assetId) {
       const { data: asset } = await supabase
-        .from("knowledge_space_assets").select("id, space_id").eq("id", data.assetId).maybeSingle();
+        .from("knowledge_space_assets").select("id, space_id").eq("id", data.assetId).eq("user_id", userId).maybeSingle();
       if (!asset) throw new Error("not_found");
       spaceId = asset.space_id;
       await supabase.from("knowledge_space_assets").update({
@@ -226,25 +266,25 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
         approved_at: data.approved ? now : null,
         status: data.approved ? "learned" : "needs_approval",
         stage: data.approved ? "institutional_learning" : "approval",
-      }).eq("id", data.assetId);
+      }).eq("id", data.assetId).eq("user_id", userId);
       // Cascade to the nodes learned from this asset.
       const { data: nodes } = await supabase
         .from("knowledge_nodes").select("id, payload").eq("space_id", asset.space_id).eq("user_id", userId);
       for (const n of (nodes || [])) {
         if ((n.payload as any)?.asset_id === data.assetId) {
-          await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", n.id);
+          await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", n.id).eq("user_id", userId);
         }
       }
     }
     if (data.nodeId) {
-      const { data: node } = await supabase.from("knowledge_nodes").select("space_id").eq("id", data.nodeId).maybeSingle();
+      const { data: node } = await supabase.from("knowledge_nodes").select("space_id").eq("id", data.nodeId).eq("user_id", userId).maybeSingle();
       spaceId = node?.space_id ?? spaceId;
-      await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", data.nodeId);
+      await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", data.nodeId).eq("user_id", userId);
     }
     if (data.promptId) {
-      const { data: p } = await supabase.from("knowledge_space_prompts").select("space_id").eq("id", data.promptId).maybeSingle();
+      const { data: p } = await supabase.from("knowledge_space_prompts").select("space_id").eq("id", data.promptId).eq("user_id", userId).maybeSingle();
       spaceId = p?.space_id ?? spaceId;
-      await supabase.from("knowledge_space_prompts").update({ approved: data.approved }).eq("id", data.promptId);
+      await supabase.from("knowledge_space_prompts").update({ approved: data.approved }).eq("id", data.promptId).eq("user_id", userId);
     }
     if (spaceId) {
       const { refreshSpaceMetrics } = await import("@/lib/maaroof/teaching.server");
@@ -263,6 +303,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       .from("knowledge_spaces")
       .select("id, name, lang, metrics, space_dna, brand_identity")
       .eq("id", data.spaceId)
+      .eq("user_id", userId)
       .maybeSingle();
     if (!space) throw new Error("not_found");
 
@@ -415,7 +456,7 @@ export const getSpaceDashboard = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
-      .from("knowledge_spaces").select("*").eq("id", data.spaceId).maybeSingle();
+      .from("knowledge_spaces").select("*").eq("id", data.spaceId).eq("user_id", userId).maybeSingle();
     if (!space) throw new Error("not_found");
     const { refreshSpaceMetrics, learningGapReport } = await import("@/lib/maaroof/teaching.server");
     const metrics = await refreshSpaceMetrics(data.spaceId);
@@ -440,7 +481,8 @@ export const setSpaceAgentAccess = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
+    await assertOwnedSpace(supabase, data.spaceId, userId);
     const { error } = await supabase.from("knowledge_space_agents").insert({
       space_id: data.spaceId,
       agent_id: data.agentId ?? null,
