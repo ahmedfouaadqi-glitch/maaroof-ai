@@ -547,10 +547,11 @@ export const Route = createFileRoute("/api/visibility")({
           console.error("[api/visibility] fatal error:", error);
           // Release any run-linked quota reservation before attempting a token refund.
           await finalizeQuota("release");
+          const hadTokenCharge = !!refundContext;
           const tokenRefundConfirmed = await refundChargedTokens("visibility_internal_error");
           return Response.json({
             error: "internal_error",
-            ...(refundContext ? { token_refund_confirmed: tokenRefundConfirmed } : {}),
+            ...(hadTokenCharge ? { token_refund_confirmed: tokenRefundConfirmed } : {}),
             ...(quotaContext ? { quota_needs_review: true } : {}),
           }, { status: 500 });
         }
