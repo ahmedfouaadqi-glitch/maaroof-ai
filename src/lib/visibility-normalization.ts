@@ -110,7 +110,9 @@ export function normalizeResult(parsed: unknown, fallbackText = "") {
   const platforms = normalizePlatforms(source.platforms);
   // All supported engines have equal weight. Derive the headline from the normalized
   // platform values so the headline can never contradict the platform breakdown.
-  const visibilityPercent = Math.round(platforms.reduce((sum, platform) => sum + platform.score, 0) / platforms.length);
+  const visibilityPercent = Math.round(
+    platforms.reduce((sum, platform) => sum + platform.score, 0) / platforms.length,
+  );
   const confidence = ["high", "medium", "low"].includes(String(source.confidence))
     ? (source.confidence as "high" | "medium" | "low")
     : "medium";
