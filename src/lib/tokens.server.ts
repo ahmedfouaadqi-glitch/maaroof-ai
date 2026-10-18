@@ -66,7 +66,7 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
         .eq("tool_key", toolKey)
         .maybeSingle();
       if (tpa && !(tpa as any).enabled) {
-        return { tokens: 0, usd: 0, source: "disabled_by_admin" as any };
+        return { tokens: 0, usd: 0, source: "disabled_by_admin" };
       }
       if (tpa && (Number((tpa as any).tokens_per_use) > 0 || Number((tpa as any).usd_per_use) > 0)) {
         return {
