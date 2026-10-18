@@ -116,7 +116,8 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 export function normalizeEntityType(value: unknown): EntityType {
   const type = String(value || "").trim().toLowerCase();
   if ((ENTITY_TYPES as readonly string[]).includes(type)) return type as EntityType;
-  if (type === "person" || type === "creator") return "content_creator";
+  if (type === "person") return "individual";
+  if (type === "creator") return "content_creator";
   if (type === "agency" || type === "marketing_agency") return "multi_client_agency";
   if (type === "marketing" || type === "marketing_company") return "marketing_company";
   if (type === "news" || type === "publisher") return "news_agency";
