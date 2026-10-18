@@ -22,6 +22,7 @@ const PLATFORM_NAMES = [
   "Mistral",
   "DeepSeek",
   "Kimi",
+  "Qwen",
 ] as const;
 
 export function hasValidPlatformScores(value: unknown): boolean {
