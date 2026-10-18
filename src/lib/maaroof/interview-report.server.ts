@@ -29,6 +29,30 @@ function stringArray(value: unknown, maxItems = 8): string[] {
     .filter(Boolean);
 }
 
+async function refundInterviewReportTokens(
+  db: any,
+  userId: string,
+  runId: string,
+  reason: string,
+): Promise<boolean> {
+  try {
+    const { data, error } = await db.rpc("refund_token_charge", {
+      _user_id: userId,
+      _tool_key: "research",
+      _run_id: runId,
+      _reason: reason,
+    });
+    if (error || !(data as any)?.ok) {
+      console.error("[maaroof-interviews] report token refund needs review:", error?.message || (data as any)?.reason || "unknown_error", { runId, reason });
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[maaroof-interviews] report token refund threw:", error, { runId, reason });
+    return false;
+  }
+}
+
 export async function generateInterviewEvidenceReport(
   db: any,
   userId: string,
@@ -145,11 +169,15 @@ export async function generateInterviewEvidenceReport(
         ],
       }),
     });
-    if (!response.ok) return { status: 502, body: { error: "report_generation_failed" } };
+    if (!response.ok) {
+      await refundInterviewReportTokens(db, userId, runId, `provider_http_${response.status}`);
+      return { status: 502, body: { error: "report_generation_failed" } };
+    }
     const responseBody = await response.json();
     const raw = (responseBody as any)?.choices?.[0]?.message?.content;
     const parsed = extractJsonObject<Record<string, unknown>>(raw);
     if (!parsed || typeof parsed.summary !== "string" || !Array.isArray(parsed.sections)) {
+      await refundInterviewReportTokens(db, userId, runId, "invalid_report_response");
       return { status: 502, body: { error: "report_response_invalid" } };
     }
     const allowedIds = new Set(["general", ...domainList]);
@@ -208,9 +236,13 @@ export async function generateInterviewEvidenceReport(
       }, { onConflict: "interview_id,report_type" })
       .select("report_payload,updated_at")
       .single();
-    if (saveError || !saved) return { status: 500, body: { error: "interview_report_save_failed" } };
+    if (saveError || !saved) {
+      await refundInterviewReportTokens(db, userId, runId, "report_persistence_failed");
+      return { status: 500, body: { error: "interview_report_save_failed" } };
+    }
     return { status: 200, body: { interview_id: interview.id, report: saved.report_payload, reused: false } };
   } catch {
+    await refundInterviewReportTokens(db, userId, runId, "report_generation_exception");
     return { status: 502, body: { error: "report_generation_failed" } };
   }
 }
