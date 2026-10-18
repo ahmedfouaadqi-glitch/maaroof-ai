@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import type { InterfacePolicy } from "@/lib/interface-policy";
 
 export type WidgetKey =
   | "tokens_bar"
@@ -31,6 +32,7 @@ export type VisibilityShape = {
   agent?: Record<string, boolean>;
   widgets?: Partial<Record<WidgetKey, boolean>>;
   pages?: Partial<Record<PageKey, boolean>>;
+  interface?: Partial<InterfacePolicy>;
 };
 
 const visCache = new Map<string, VisibilityShape>();
