@@ -185,10 +185,10 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
             } catch {}
           }
           if (!result) throw new Error(streamError || "entity_discovery_result_missing");
-          let actualCostTokens = 0;
+          let actualCostTokens: number | null = result.reused ? 0 : null;
           if (result.run_id && !result.reused) {
             const { data: discoveryRun } = await admin.from("mkd_runs").select("cost_tokens,status").eq("id", result.run_id).maybeSingle();
-            actualCostTokens = Math.max(0, Number((discoveryRun as any)?.cost_tokens || 0));
+            if (discoveryRun && (discoveryRun as any).cost_tokens != null) actualCostTokens = Math.max(0, Number((discoveryRun as any).cost_tokens));
           }
           await emit("deep_entity_discovery", {
             status: "completed",
@@ -199,6 +199,7 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
             candidates: Array.isArray(result.relations) ? result.relations.length : 0,
             sources: Array.isArray(result.sources) ? result.sources.length : 0,
             actual_cost_tokens: actualCostTokens,
+            cost_known: actualCostTokens !== null,
             weight: weight.weight || "light",
           });
         }
@@ -208,7 +209,8 @@ export async function processMaaroofBackgroundJob(jobId: string): Promise<void> 
       await emit("deep_entity_discovery", {
         status: "failed",
         reason: String(discoveryError?.message || discoveryError || "entity_discovery_failed").slice(0, 200),
-        actual_cost_tokens: 0,
+        actual_cost_tokens: null,
+        cost_known: false,
         weight: String((payload.weight as any)?.weight || "light"),
       });
     }
