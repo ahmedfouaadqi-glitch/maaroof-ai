@@ -142,10 +142,8 @@ export type EntityDraft = {
 
 export function entityDraftFrom(profile: any): EntityDraft {
   const links = Array.isArray(profile?.entity_links) ? profile.entity_links : [];
-  const legacyType = profile?.entity_type;
-  const type = legacyType === "organization"
-    ? suggestEntityType(links.join("\n")) === "individual" ? "product_company" : suggestEntityType(links.join("\n"))
-    : normalizeEntityType(legacyType);
+  // Preserve the broad legacy organization choice rather than inferring an agency or creator.
+  const type = normalizeEntityType(profile?.entity_type);
   return {
     type,
     hq: profile?.hq_country || "",
