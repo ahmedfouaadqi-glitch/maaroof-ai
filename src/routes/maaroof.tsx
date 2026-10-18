@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { useVisibility } from "@/lib/visibility";
+import { useInterfacePolicy } from "@/lib/use-interface-policy";
 
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
@@ -60,9 +61,17 @@ function MaaroofPage() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
   const visibility = useVisibility();
+  const { policy: interfacePolicy, ready: interfacePolicyReady } = useInterfacePolicy();
   const canUseKnowledge = visibility.isAgentFeatureVisible("knowledge");
   useEffect(() => {
-    if (loading || !user || visibility.loading) return;
+    if (loading || !user || visibility.loading || !interfacePolicyReady) return;
+    if (!interfacePolicy.available_interfaces.includes("professional")) {
+      navigate({
+        to: interfacePolicy.available_interfaces.includes("workbench") ? "/workspace" : "/",
+        replace: true,
+      });
+      return;
+    }
     if (!visibility.isPageVisible("agent")) {
       navigate({ to: "/", replace: true });
       return;
@@ -70,7 +79,17 @@ function MaaroofPage() {
     if (tab === "knowledge" && !canUseKnowledge) {
       navigate({ to: "/maaroof", search: { tab: "chat" }, replace: true });
     }
-  }, [loading, user?.id, visibility.loading, visibility.isPageVisible, tab, canUseKnowledge, navigate]);
+  }, [
+    loading,
+    user?.id,
+    visibility.loading,
+    visibility.isPageVisible,
+    interfacePolicyReady,
+    interfacePolicy.available_interfaces,
+    tab,
+    canUseKnowledge,
+    navigate,
+  ]);
   const [goal, setGoal] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [running, setRunning] = useState(false);
