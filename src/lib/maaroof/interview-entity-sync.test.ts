@@ -113,4 +113,20 @@ describe("deriveEntityProfileSync", () => {
       ),
     ).toEqual({});
   });
+
+  it("does not apply a company interview to a profile with no matching brand name", () => {
+    expect(
+      deriveEntityProfileSync(
+        {
+          completed: true,
+          targetType: "company",
+          targetName: "A different company",
+          state: answeredState(),
+          workspaceId: null,
+        },
+        { full_name: "Ahmed", brand_name: null, entity_type: null, specialty_scope: "", entity_locked: false },
+      ),
+    ).toEqual({});
+  });
+
 });
