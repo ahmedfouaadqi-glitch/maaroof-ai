@@ -1118,6 +1118,7 @@ export const en: Dict = {
   "auto.content_types": "Content types:",
   "auto.contract": "Contract",
   "auto.control": "Control",
+  "auto.knowledge_spaces": "Knowledge spaces",
   "auto.control_everything_each_plan_offers_in": "Control everything each plan offers in terms of agent tools and features, and pricing per use in any currency.",
   "auto.conversion": "Conversion",
   "auto.convert_and_re_evaluate": "Convert and re-evaluate",
