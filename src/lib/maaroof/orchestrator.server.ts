@@ -971,6 +971,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
+      // Reject obvious planner placeholders rather than treating them as real competitors.
+      if (step.tool === "compare" || step.tool === "competitor_compare") {
+        const placeholder = /^(?:competitor\s*\d*|competitor\s*[a-z]|example(?:\s+competitor)?|sample(?:\s+competitor)?|unknown|n\/?a|none|null|غير\s*معروف|منافس\s*(?:وهمي|افتراضي|مثال)|مثال\s*منافس|لا\s*يوجد)$/i;
+        const supplied = Array.isArray((filled as any).competitors) ? (filled as any).competitors : [];
+        (filled as any).competitors = supplied.map((value: unknown) => flatten(value)).filter((value: string) => value && !placeholder.test(value.trim()));
+      }
       const missing = missingFields(step.tool, filled);
       // Specialised sub-agent per tool (reused once created). Fail-open.
       if (ctx.useSubagents !== false && !specialists.has(step.tool)) {
@@ -988,8 +994,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
       if (ctx.liveProbe === false && step.tool === "visibility") {
         const skip = { skipped: "live_probe_disabled_by_user", tool: step.tool };
-        results.push({ tool: step.tool, ok: false, output: skip });
-        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+        // A user-requested skip is a neutral outcome, not an execution failure.
+        results.push({ tool: step.tool, ok: true, output: skip });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: true, output: skip });
+        await logMsg("tool_result", { tool: step.tool, ok: true, output: skip });
         continue;
       }
       // Default: ask all ten engines live (entitlement/plan limits are enforced server-side).
