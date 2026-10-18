@@ -1,6 +1,7 @@
-// Admin tab for Maaroof: Overview / Runs / Agents / Capabilities / Memory / Controls
+// Admin tab for Maaroof: Overview / Runs / Agents / Capabilities / Memory / Controls / Knowledge Spaces
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { KnowledgeSpacesAdminPanel } from "@/components/admin/KnowledgeSpacesAdminPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive, Network } from "lucide-react";
 
@@ -17,6 +18,7 @@ const SUB_TABS = [
   { k: "capabilities", label: "auto.capabilities", Icon: Network },
   { k: "memory", label: "auto.memory", Icon: Brain },
   { k: "controls", label: "auto.control", Icon: Settings2 },
+  { k: "knowledge_spaces", label: "مساحات المعرفة", Icon: Archive },
 ] as const;
 
 export function MaaroofAdminTab() {
@@ -37,6 +39,7 @@ export function MaaroofAdminTab() {
       {sub === "capabilities" && <CapabilitiesSection />}
       {sub === "memory" && <MemorySection />}
       {sub === "controls" && <ControlsSection />}
+      {sub === "knowledge_spaces" && <KnowledgeSpacesAdminPanel />}
     </div>
   );
 }
