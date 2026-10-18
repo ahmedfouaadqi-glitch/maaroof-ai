@@ -3,6 +3,7 @@
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { describeToolOptions, enforceEnums, TOOL_OPTIONS } from "@/lib/tool-options";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
+import { accountTypeLabel, normalizeAccountType } from "@/lib/account-types";
 import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
 import { createClient } from "@supabase/supabase-js";
@@ -191,7 +192,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   // Entity Truth Card fallback for tool inputs (fail-open).
   let entityProfile: any = null;
   try {
-    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
+    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links, account_type").eq("id", ctx.userId).maybeSingle();
     entityProfile = data || null;
   } catch {}
   // Saved clarification answers (only stored with the user's memory consent): reuse instead of asking again.
@@ -335,7 +336,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile, settings.enabled_tools);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile, entityProfile, settings.enabled_tools);
 
     // Part 13 — pipeline stages 1..6 (understanding & context).
     if (tracer.enabled) {
@@ -1584,9 +1585,14 @@ function buildSystemPrompt(
   geo: { country: string; city?: string; label: string },
   memories: string[],
   workspaceProfile?: any,
+  entityProfile?: any,
   enabledTools?: string[],
 ): string {
   const memBlock = memories.length ? `\n\nLong-term memory about this user:\n${memories.slice(0, 10).join("\n")}` : "";
+  const accountType = accountTypeLabel(normalizeAccountType(entityProfile?.account_type), ctx.language);
+  const identityBlock = entityProfile
+    ? "\n\n[Declared account identity — context only, not permissions]\\nAccount type: " + accountType + "\\nEntity type: " + String(entityProfile.entity_type || "not specified") + "\\nBrand/entity name: " + String(entityProfile.brand_name || "not specified").slice(0, 160) + "\\nUse this classification to tailor examples and recommendations. Never infer authorization, legal status, or verified facts from the account type."
+    : "";
   let wsBlock = "";
   if (workspaceProfile) {
     const wp = workspaceProfile;
@@ -1615,7 +1621,7 @@ Rules:
 - Choose as many tool steps as the task truly needs (no fixed cap); avoid shallow duplicates. For every step add a short "why" (reason for choosing it).
 - If the goal mentions checking the website/pages/technical/SEO health, ALWAYS include the "analyze" tool.
 - For each tool, provide minimal valid input; the executor injects "scope" and "lang" automatically.
-- Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
+- Reply concisely in JSON when asked.${identityBlock}${wsBlock}${memBlock}`;
 }
 
 async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[] } = {}): Promise<{ text: string; tokens: number; usd: number }> {
