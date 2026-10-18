@@ -67,6 +67,12 @@ export async function generateInterviewEvidenceReport(
 
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!lovableKey) return { status: 503, body: { error: "report_provider_not_configured" } };
+  let model: string;
+  try {
+    model = await resolveToolModel("google/gemini-2.5-flash-lite");
+  } catch {
+    return { status: 502, body: { error: "report_model_unavailable" } };
+  }
   const runId = crypto.randomUUID();
   const charge = await chargeTokens({
     userId,
@@ -116,7 +122,6 @@ export async function generateInterviewEvidenceReport(
   ].join("\n");
 
   const startedAt = Date.now();
-  const model = await resolveToolModel("google/gemini-2.5-flash-lite");
   try {
     const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
       method: "POST",
