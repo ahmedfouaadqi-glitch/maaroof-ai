@@ -35,3 +35,30 @@ export function checkMonitorPolicy(p: MonitorPolicy, activeWatches: number, comp
   if (frequencyHours < p.min_frequency_hours) return { ok: false, reason: "monitor_min_frequency" };
   return { ok: true };
 }
+
+
+export type MonitorQuotaDecision = {
+  used: number;
+  limit: number;
+  subscriptionActive: boolean;
+  allowed: boolean;
+  error: "monthly_cap_reached" | "subscription_required" | null;
+};
+
+/** Resolve the monthly analysis quota shared by create and recheck actions. */
+export function resolveMonitorQuota(profile: any, cost: number, now = new Date()): MonitorQuotaDecision {
+  const used = Math.max(0, Number(profile?.monthly_analyses_used) || 0);
+  const overrideLimit = Number(profile?.quota_overrides?.monthly_analyses) || 0;
+  const expiresAt = profile?.subscription_expires_at;
+  const subscriptionActive = !!profile?.is_subscribed &&
+    (!expiresAt || new Date(expiresAt).getTime() >= now.getTime());
+  const limit = subscriptionActive ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
+  const allowed = limit - used >= Math.max(1, Number(cost) || 1);
+  return {
+    used,
+    limit,
+    subscriptionActive,
+    allowed,
+    error: allowed ? null : subscriptionActive ? "monthly_cap_reached" : "subscription_required",
+  };
+}
