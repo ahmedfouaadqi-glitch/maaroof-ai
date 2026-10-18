@@ -373,6 +373,19 @@ export const Route = createFileRoute("/api/visibility")({
               return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
             }
             await askAll();
+            if (!answers.length) {
+              const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
+                _user_id: userId,
+                _tool_key: "visibility.probe",
+                _run_id: pRun,
+                _reason: "no_results",
+              } as any);
+              const refundConfirmed = !refundError && !!(refundResult as any)?.ok;
+              if (!refundConfirmed) {
+                console.error("[api/visibility] foreground probe refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
+              }
+              return Response.json({ error: "probe_no_results", token_refund_confirmed: refundConfirmed }, { status: 502 });
+            }
             if (body.notify) {
               try {
                 const { notifyUser } = await import("@/lib/notify.server");
