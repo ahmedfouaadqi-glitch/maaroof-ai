@@ -656,7 +656,6 @@ async function handleEnrich(request: Request): Promise<Response> {
   }
 }
 
-
 async function handleGenerateReport(request: Request): Promise<Response> {
   const auth = await authenticate(request);
   if (!auth.ok) return auth.response;
@@ -666,7 +665,9 @@ async function handleGenerateReport(request: Request): Promise<Response> {
   const db = auth.admin as any;
   const { data: interview, error } = await db
     .from("maaroof_interviews")
-    .select("id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot")
+    .select(
+      "id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot",
+    )
     .eq("id", body.interview_id)
     .maybeSingle();
   if (error) return errorResponse("interview_lookup_failed", 500);
