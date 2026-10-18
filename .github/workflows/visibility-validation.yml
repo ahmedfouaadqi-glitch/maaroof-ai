@@ -40,3 +40,22 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=6144
         run: bun run build
+
+  visibility-quota-db:
+    name: Local Supabase migration and quota permission tests
+    needs: validate-visibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+      - name: Start isolated local Supabase and apply migrations
+        run: supabase start
+      - name: Run database tests
+        run: supabase test db
