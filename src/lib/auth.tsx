@@ -6,6 +6,7 @@ import { computeFingerprint } from "@/lib/fingerprint";
 type Profile = {
   id: string;
   email: string | null;
+  account_type?: string;
   full_name: string | null;
   is_subscribed: boolean;
   subscription_tier: string | null;
