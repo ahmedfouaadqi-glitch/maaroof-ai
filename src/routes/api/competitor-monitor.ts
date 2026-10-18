@@ -80,11 +80,12 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const { count: active } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
           const pc = checkMonitorPolicy(policy, active || 0, competitors.length, Number(frequency_hours) || 24);
           if (!pc.ok) return Response.json({ error: pc.reason, policy }, { status: 403 });
-          const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,quota_overrides").eq("id", userId).maybeSingle();
+          const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,subscription_expires_at,quota_overrides").eq("id", userId).maybeSingle();
           const used = Number((prof as any)?.monthly_analyses_used || 0);
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
-          const limit = (prof as any)?.is_subscribed ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
-          if (!(prof as any)?.is_subscribed && limit - used < COST) {
+          const subscriptionActive = !!(prof as any)?.is_subscribed && (!(prof as any)?.subscription_expires_at || new Date((prof as any).subscription_expires_at) >= new Date());
+          const limit = subscriptionActive ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
+          if (!subscriptionActive && limit - used < COST) {
             return Response.json({ error: "subscription_required" }, { status: 402 });
           }
           { const f = await charge(); if (f) return f; }
