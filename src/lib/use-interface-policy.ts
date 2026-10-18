@@ -31,9 +31,14 @@ export function useInterfacePolicy() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let active = true;
+    let latestRequest = 0;
     const refresh = (userId?: string | null) => {
+      const requestId = ++latestRequest;
       void fetchInterfacePolicy(userId).then((next) => {
-        if (!active) return;
+        // An auth event can race the initial getUser() request. Only the most
+        // recent request may publish policy, so another account's settings
+        // never overwrite the signed-in user's interface.
+        if (!active || requestId !== latestRequest) return;
         setPolicy(next);
         setReady(true);
       });
