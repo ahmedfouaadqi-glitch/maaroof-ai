@@ -559,7 +559,7 @@ async function handleUpdate(request: Request): Promise<Response> {
     try {
       const { data: profile } = await db
         .from("profiles")
-        .select("brand_name,entity_type,specialty_scope,entity_locked")
+        .select("full_name,brand_name,entity_type,specialty_scope,entity_locked")
         .eq("id", auth.userId)
         .maybeSingle();
       if (profile && !profile.entity_locked) {
