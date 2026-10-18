@@ -426,6 +426,28 @@
   transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
 }
 .rb-workspace-skill:hover { transform: translateY(-2px); }
+
+.rb-workspace-spotlight {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.rb-workspace-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(360px circle at var(--spotlight-x, 50%) var(--spotlight-y, 0%), color-mix(in oklab, var(--primary) 12%, transparent), transparent 68%);
+  transition: opacity 180ms ease;
+}
+.rb-workspace-spotlight:hover::before,
+.rb-workspace-spotlight:focus-within::before { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .rb-workspace-spotlight::before { transition: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rb-workspace-fade { animation: none !important; opacity: 1; transform: none; }
   .rb-workspace-skill { transition: none; }
