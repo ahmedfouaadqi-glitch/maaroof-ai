@@ -953,7 +953,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await logMsg("tool_call", step);
 
       const path = toolPath(step.tool);
-      if (!path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
+      if (!path || !settings.enabled_tools.includes(step.tool)) {
         const err = { error: path ? "tool_disabled" : "unknown_tool", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
