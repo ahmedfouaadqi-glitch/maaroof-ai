@@ -2483,6 +2483,7 @@ export type Database = {
           },
         ]
       }
+      knowledge_space_interviews: {
         Row: {
           answer: string | null
           answered_at: string | null
