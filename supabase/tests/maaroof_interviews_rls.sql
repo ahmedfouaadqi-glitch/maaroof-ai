@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(16);
+SELECT plan(22);
 
 -- Fixed fixtures are isolated inside this transaction and removed by ROLLBACK.
 INSERT INTO auth.users (id, email)
@@ -91,10 +91,37 @@ SELECT has_column(
   'interview_persona',
   'Profile interview persona preference column exists'
 );
+INSERT INTO public.maaroof_interview_reports (
+  interview_id, user_id, workspace_id, locale, evidence_count,
+  evidence_collected_at, report_payload, model_key
+)
+VALUES
+  (
+    '30000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    NULL, 'en', 1, now(), '{"summary":"personal test"}'::jsonb, 'test-model'
+  ),
+  (
+    '30000000-0000-4000-8000-000000000003',
+    '10000000-0000-4000-8000-000000000001',
+    '20000000-0000-4000-8000-000000000001', 'en', 1, now(),
+    '{"summary":"workspace test"}'::jsonb, 'test-model'
+  )
+ON CONFLICT (interview_id, report_type) DO NOTHING;
+
 SELECT has_table(
   'public',
   'maaroof_interview_evidence',
   'Interview external evidence table exists'
+);
+SELECT has_table(
+  'public',
+  'maaroof_interview_reports',
+  'Interview advanced reports table exists'
+);
+SELECT ok(
+  (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.maaroof_interview_reports'::regclass),
+  'Row-level security is enabled for interview reports'
 );
 SELECT ok(
   (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.maaroof_interview_evidence'::regclass),
@@ -113,6 +140,18 @@ BEGIN
 END
 $$;
 
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_reports
+   WHERE interview_id = '30000000-0000-4000-8000-000000000001'),
+  1,
+  'a user can read a report linked to their own personal interview'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_reports
+   WHERE interview_id = '30000000-0000-4000-8000-000000000003'),
+  1,
+  'a workspace owner can read the workspace report'
+);
 SELECT is(
   (SELECT count(*)::integer FROM public.maaroof_interview_evidence
    WHERE interview_id = '30000000-0000-4000-8000-000000000001'),
@@ -166,6 +205,12 @@ SELECT is(
   1,
   'a workspace viewer can read the workspace interview'
 );
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_reports
+   WHERE interview_id = '30000000-0000-4000-8000-000000000003'),
+  1,
+  'a workspace viewer can read the workspace report'
+);
 
 DO $$
 BEGIN
@@ -182,6 +227,12 @@ SELECT is(
    WHERE id = '30000000-0000-4000-8000-000000000003'),
   0,
   'a user who is not a workspace member cannot read its interview'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.maaroof_interview_reports
+   WHERE interview_id = '30000000-0000-4000-8000-000000000003'),
+  0,
+  'a user who is not a workspace member cannot read its report'
 );
 
 RESET ROLE;
