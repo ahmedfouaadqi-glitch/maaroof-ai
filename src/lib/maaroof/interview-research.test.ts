@@ -32,7 +32,7 @@ describe("normalize interview research sources", () => {
       { title: "Second source", url: "https://news.example.org/story" },
     ], news: [] } });
     expect(result).toHaveLength(2);
-    expect(result[0]).toMatchObject({ title: "Official page", domain: "www.example.com", snippet: "Evidence snippet" });
+    expect(result[0]).toMatchObject({ title: "Official page", domain: "example.com", snippet: "Evidence snippet" });
     expect(result[1].url).toBe("https://news.example.org/story");
   });
 

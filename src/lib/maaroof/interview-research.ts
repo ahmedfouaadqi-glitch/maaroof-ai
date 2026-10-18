@@ -51,7 +51,7 @@ export function buildInterviewResearchQuery(input: InterviewResearchInput): stri
     if (text && !parts.includes(text)) parts.push(text);
     if (parts.join(" ").length > 210) break;
   }
-  const selectedDomains = input.domains.length ? input.domains : ["general"];
+  const selectedDomains: InterviewDomain[] = input.domains.length ? input.domains : ["general"];
   parts.push(...selectedDomains.slice(0, 3).map((domain) => DOMAIN_TERMS[domain][input.locale]));
   parts.push(input.locale === "en" ? "official sources" : input.locale === "ku" ? "سەرچاوە فەرمییەکان" : "مصادر رسمية");
   return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 300);

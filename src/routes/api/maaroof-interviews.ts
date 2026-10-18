@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { fcSearch } from "@/lib/firecrawl";
+import { buildInterviewResearchQuery, normalizeInterviewResearchSources } from "@/lib/maaroof/interview-research";
 import type { Database } from "@/integrations/supabase/types";
 import {
   INTERVIEW_LOCALES,
@@ -549,11 +551,114 @@ async function handleUpdate(request: Request): Promise<Response> {
   });
 }
 
+
+async function handleEnrich(request: Request): Promise<Response> {
+  const auth = await authenticate(request);
+  if (!auth.ok) return auth.response;
+  const body = await readJsonBody(request);
+  if (!body || !isUuid(body.interview_id)) return errorResponse("invalid_interview_id", 400);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = auth.admin as any;
+  const { data: interview, error } = await db
+    .from("maaroof_interviews")
+    .select("id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot")
+    .eq("id", body.interview_id)
+    .maybeSingle();
+  if (error) return errorResponse("interview_lookup_failed", 500);
+  if (!interview || !(await interviewAccess(auth.admin, auth.userId, interview, true))) {
+    return errorResponse("interview_not_found", 404);
+  }
+  if (interview.status !== "completed") return errorResponse("interview_must_be_completed", 409);
+  if (
+    !interview.state ||
+    typeof interview.state !== "object" ||
+    !interview.state.answers ||
+    typeof interview.state.answers !== "object" ||
+    !Array.isArray(interview.questions_snapshot) ||
+    !isPlainRecord(interview.context_snapshot)
+  ) {
+    return errorResponse("stored_interview_invalid", 500);
+  }
+  if (
+    interview.context_snapshot.workspace_id !== interview.workspace_id ||
+    interview.context_snapshot.target_name !== interview.target_name ||
+    interview.context_snapshot.target_type !== interview.target_type
+  ) {
+    return errorResponse("stored_interview_context_mismatch", 500);
+  }
+
+  const locale = (INTERVIEW_LOCALES as readonly string[]).includes(interview.locale)
+    ? (interview.locale as "ar" | "en" | "ku")
+    : "ar";
+  const query = buildInterviewResearchQuery({
+    targetType: interview.target_type,
+    targetName: interview.target_name,
+    goal: interview.initial_goal,
+    domains: normalizeInterviewDomains(interview.domains) || ["general"],
+    locale,
+    state: interview.state,
+  });
+  if (!query) return errorResponse("research_query_empty", 422);
+
+  try {
+    const providerPayload = await fcSearch(
+      query,
+      { limit: 6, lang: locale },
+      { userId: auth.userId, toolKey: "interview_enrichment" },
+    );
+    const sources = normalizeInterviewResearchSources(providerPayload, 6);
+    const collectedAt = new Date().toISOString();
+    const rows = sources.map((source) => ({
+      interview_id: interview.id,
+      user_id: auth.userId,
+      workspace_id: interview.workspace_id,
+      query,
+      title: source.title,
+      source_url: source.url,
+      domain: source.domain,
+      description: source.description,
+      snippet: source.snippet,
+      locale,
+      collected_at: collectedAt,
+    }));
+    if (rows.length) {
+      const { error: saveError } = await db
+        .from("maaroof_interview_evidence")
+        .upsert(rows, { onConflict: "interview_id,source_url" });
+      if (saveError) return errorResponse("research_evidence_save_failed", 500);
+    }
+    const { data: saved, error: readError } = await db
+      .from("maaroof_interview_evidence")
+      .select("id,title,source_url,domain,description,snippet,query,locale,collected_at")
+      .eq("interview_id", interview.id)
+      .order("collected_at", { ascending: false })
+      .limit(8);
+    if (readError) return errorResponse("research_evidence_read_failed", 500);
+    return Response.json({
+      interview_id: interview.id,
+      query,
+      sources: saved || [],
+      collected_at: collectedAt,
+    });
+  } catch (error) {
+    const isQuota = Boolean(
+      error && typeof error === "object" && "name" in error && error.name === "FirecrawlLimitError",
+    );
+    return errorResponse(isQuota ? "research_quota_reached" : "external_research_failed", isQuota ? 429 : 502);
+  }
+}
+
 export const Route = createFileRoute("/api/maaroof-interviews")({
   server: {
     handlers: {
       GET: async ({ request }) => handleGet(request),
-      POST: async ({ request }) => handleCreate(request),
+      POST: async ({ request }) => {
+        const body = await request.clone().json().catch(() => null);
+        return isPlainRecord(body) && body.action === "enrich"
+          ? handleEnrich(request)
+          : handleCreate(request);
+      },
       PATCH: async ({ request }) => handleUpdate(request),
     },
   },

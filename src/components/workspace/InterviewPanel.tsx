@@ -589,10 +589,10 @@ export function InterviewPanel({
     setResearchError("");
     try {
       const token = await tokenOrThrow();
-      const response = await fetch("/api/maaroof-interviews/enrich", {
+      const response = await fetch("/api/maaroof-interviews",
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ interview_id: session.id }),
+        body: JSON.stringify({ action: "enrich", interview_id: session.id }),
       });
       const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok) throw new Error(body.error || "external_research_failed");
