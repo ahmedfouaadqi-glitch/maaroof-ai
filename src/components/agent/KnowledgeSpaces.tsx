@@ -21,7 +21,7 @@ const TABS = ["assets", "nodes", "prompts", "interview"] as const;
 type Tab = (typeof TABS)[number];
 
 export function KnowledgeSpaces({ userId }: { userId: string | null }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const list = useServerFn(listKnowledgeSpaces);
   const create = useServerFn(createKnowledgeSpace);
   const patch = useServerFn(updateKnowledgeSpace);
@@ -383,11 +383,13 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                         <EngineLogo width={18} height={18} aria-hidden="true" />
                         <span className="text-xs font-semibold">{q.engine_name || "Gemini"}</span>
                         <span className={`ms-auto rounded-full border px-2 py-0.5 text-[10px] ${failed ? "border-amber-500/40 text-amber-500" : "border-border text-muted-foreground"}`}>
-                          {failed ? (t("teach_engine_unavailable") || "Unavailable") : (t("teach_engine_question") || "Question")}
+                          {failed
+                            ? lang === "en" ? "Unavailable" : lang === "ku" ? "بەردەست نییە" : "غير متاح"
+                            : lang === "en" ? "Question" : lang === "ku" ? "پرسیار" : "سؤال"}
                         </span>
                       </div>
                       {failed ? (
-                        <p className="text-xs text-muted-foreground">{q.failure_reason || t("teach_engine_unavailable")}</p>
+                        <p className="text-xs text-muted-foreground">{q.failure_reason || (lang === "en" ? "This engine failed. You can retry." : lang === "ku" ? "مۆتۆڕەکە سەرکەوتوو نەبوو؛ دووبارە هەوڵ بدەوە." : "تعذر توليد سؤال من هذا المحرك؛ يمكنك إعادة المحاولة.")}</p>
                       ) : (
                         <>
                           <p className="text-sm">{q.question}</p>
