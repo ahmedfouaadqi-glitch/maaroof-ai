@@ -253,6 +253,12 @@ export const Route = createFileRoute("/api/visibility")({
             const { resolveProbePolicy } = await import("@/lib/tokens.server");
             const ent = await enginesAllowedForUser(admin, userId);
             const policy = await resolveProbePolicy(userId);
+            if (body.notify && !policy.notifyAllowed) {
+              return Response.json({ error: "probe_notifications_disabled" }, { status: 403 });
+            }
+            if (body.background && !policy.backgroundAllowed) {
+              return Response.json({ error: "probe_background_disabled" }, { status: 403 });
+            }
             let picked = applyEntitlement(body.probe_engines, ent);
             if (policy.maxEngines) picked = picked.slice(0, policy.maxEngines);
             const { engines } = await excludeUnhealthyEngines(picked);
