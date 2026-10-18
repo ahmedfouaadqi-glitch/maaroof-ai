@@ -201,16 +201,9 @@ export const Route = createFileRoute("/api/visibility")({
             const { data: prof } = await admin.from("profiles")
               .select("is_subscribed, subscription_tier, subscription_expires_at, monthly_analyses_used, usage_period_start, quota_overrides")
               .eq("id", userId).maybeSingle();
+            // Treat an expired period as zero for the preliminary check only.
+            // The atomic quota RPC performs the actual reset under a row lock.
             if (prof?.usage_period_start && Date.now() - new Date(prof.usage_period_start).getTime() > 30 * 86400000) {
-              const { error: resetError } = await admin.from("profiles").update({
-                monthly_analyses_used: 0,
-                monthly_suggestions_used: 0,
-                usage_period_start: new Date().toISOString(),
-              }).eq("id", userId);
-              if (resetError) {
-                console.error("[api/visibility] quota period reset failed:", resetError.message);
-                return Response.json({ error: "quota_reset_failed" }, { status: 500 });
-              }
               (prof as any).monthly_analyses_used = 0;
             }
             const planActive = !!prof?.is_subscribed && (!prof.subscription_expires_at || new Date(prof.subscription_expires_at) >= new Date());
