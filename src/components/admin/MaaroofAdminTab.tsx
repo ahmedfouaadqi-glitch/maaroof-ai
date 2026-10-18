@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive, Network } from "lucide-react";
+import { AdminPlanPricingPanel } from "@/components/admin/AdminPlanPricingPanel";
+import { Loader2, Activity, ListChecks, Brain, Settings2, Trash2, RefreshCw, Power, Bot, Archive, Network, BookOpen } from "lucide-react";
 
 type RunRow = { id: string; user_id: string; goal: string; status: string; started_at: string; finished_at: string | null; total_usd: number | string | null; total_tokens: number | null; steps_count: number | null; detected_geo: any; geo_scope: any; error: string | null };
 type MemRow = { id: string; user_id: string; kind: string; content: string; importance: number; last_accessed_at: string; created_at: string };
@@ -17,6 +18,7 @@ const SUB_TABS = [
   { k: "capabilities", label: "auto.capabilities", Icon: Network },
   { k: "memory", label: "auto.memory", Icon: Brain },
   { k: "controls", label: "auto.control", Icon: Settings2 },
+  { k: "knowledge", label: "auto.knowledge_spaces", Icon: BookOpen },
 ] as const;
 
 export function MaaroofAdminTab() {
@@ -37,6 +39,7 @@ export function MaaroofAdminTab() {
       {sub === "capabilities" && <CapabilitiesSection />}
       {sub === "memory" && <MemorySection />}
       {sub === "controls" && <ControlsSection />}
+      {sub === "knowledge" && <KnowledgeSpacesSection />}
     </div>
   );
 }
@@ -809,6 +812,177 @@ function LearningControls({ settings, set }: { settings: Record<string, any>; se
           </label>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+/* ---------- Knowledge spaces: read-only monitoring + existing pricing editor ---------- */
+type KnowledgeSpaceAdminRow = {
+  id: string;
+  name: string;
+  user_id: string;
+  status: string | null;
+  created_at: string;
+  assets: number;
+  interviews: number;
+  nodes: number;
+  prompts: number;
+};
+
+function KnowledgeSpacesSection() {
+  const { lang } = useI18n();
+  const [rows, setRows] = useState<KnowledgeSpaceAdminRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const copy = {
+    ar: {
+      title: "مساحات المعرفة",
+      hint: "مراقبة الأصول والمقابلات والعقد المعرفية. هذه الشاشة للقراءة فقط؛ إدارة الأسعار تتم عبر شبكة التسعير الحالية أدناه.",
+      refresh: "تحديث",
+      space: "المساحة",
+      owner: "معرّف المالك",
+      status: "الحالة",
+      assets: "الأصول",
+      interviews: "أسئلة المقابلة",
+      nodes: "العقد المعرفية",
+      prompts: "التوجيهات",
+      created: "تاريخ الإنشاء",
+      empty: "لا توجد مساحات معرفة.",
+      pricing: "تسعير مساحات المعرفة",
+      pricingHint: "استخدم جدول الخطط الحالي لتعديل teach_space. لا توجد آلية تسعير موازية.",
+      loadError: "تعذر تحميل بيانات مساحات المعرفة. تحقق من صلاحيات الإدارة والجداول.",
+    },
+    en: {
+      title: "Knowledge spaces",
+      hint: "Monitor assets, interviews, and knowledge nodes. This view is read-only; pricing uses the existing pricing grid below.",
+      refresh: "Refresh",
+      space: "Space",
+      owner: "Owner ID",
+      status: "Status",
+      assets: "Assets",
+      interviews: "Interview questions",
+      nodes: "Knowledge nodes",
+      prompts: "Prompts",
+      created: "Created",
+      empty: "No knowledge spaces found.",
+      pricing: "Knowledge-space pricing",
+      pricingHint: "Edit teach_space through the existing plan pricing grid. No parallel pricing mechanism is introduced.",
+      loadError: "Could not load knowledge-space data. Check admin permissions and table availability.",
+    },
+    ku: {
+      title: "شوێنەکانی زانین",
+      hint: "چاودێری ئەرشیف، پرسیارەکان و گرێکانی زانین. ئەم بەشە تەنها بۆ خوێندنەوەیە؛ نرخ لە خشتەی هەمان نرخدانانەوە دەگۆڕدرێت.",
+      refresh: "نوێکردنەوە",
+      space: "شوێن",
+      owner: "ناسنامەی خاوەن",
+      status: "دۆخ",
+      assets: "ئەرشیف",
+      interviews: "پرسیارەکانی چاوپێکەوتن",
+      nodes: "گرێکانی زانین",
+      prompts: "ڕێنماییەکان",
+      created: "بەرواری دروستکردن",
+      empty: "هیچ شوێنێکی زانین نەدۆزرایەوە.",
+      pricing: "نرخی شوێنی زانین",
+      pricingHint: "نرخی teach_space لە هەمان خشتەی نرخی پلانەکان بگۆڕە؛ سیستەمی نرخدانانی دووەم دروست ناکرێت.",
+      loadError: "داتاکانی شوێنی زانین بار نەبوو؛ دەسەڵاتی ئەدمین و خشتەکان بپشکنە.",
+    },
+  }[lang === "en" || lang === "ku" ? lang : "ar"];
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      setLoading(true);
+      setError("");
+      const [spacesResult, assetsResult, interviewsResult, nodesResult, promptsResult] = await Promise.all([
+        supabase.from("knowledge_spaces").select("id,name,user_id,status,created_at").order("created_at", { ascending: false }).limit(200),
+        supabase.from("knowledge_space_assets").select("id,space_id").limit(5000),
+        supabase.from("knowledge_space_interviews").select("id,space_id").limit(5000),
+        supabase.from("knowledge_nodes").select("id,space_id").limit(5000),
+        supabase.from("knowledge_space_prompts").select("id,space_id").limit(5000),
+      ]);
+      if (!active) return;
+      const failed = [spacesResult, assetsResult, interviewsResult, nodesResult, promptsResult].some((result) => !!result.error);
+      if (failed) {
+        setError(copy.loadError);
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+      const countBySpace = (items: any[] | null | undefined) => {
+        const map = new Map<string, number>();
+        for (const item of items || []) {
+          const id = String(item.space_id || "");
+          if (id) map.set(id, (map.get(id) || 0) + 1);
+        }
+        return map;
+      };
+      const assets = countBySpace(assetsResult.data as any[]);
+      const interviews = countBySpace(interviewsResult.data as any[]);
+      const nodes = countBySpace(nodesResult.data as any[]);
+      const prompts = countBySpace(promptsResult.data as any[]);
+      setRows(((spacesResult.data || []) as any[]).map((space) => ({
+        ...space,
+        assets: assets.get(space.id) || 0,
+        interviews: interviews.get(space.id) || 0,
+        nodes: nodes.get(space.id) || 0,
+        prompts: prompts.get(space.id) || 0,
+      })));
+      setLoading(false);
+    }
+    void load();
+    return () => { active = false; };
+  }, [refreshKey, copy.loadError]);
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-border bg-card/50 p-4">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold">{copy.title}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{copy.hint}</p>
+          </div>
+          <button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs hover:bg-muted">
+            <RefreshCw className="size-3.5" /> {copy.refresh}
+          </button>
+        </div>
+        {error && <p role="alert" className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+        {loading ? (
+          <div className="p-8 text-center"><Loader2 className="inline size-5 animate-spin" /></div>
+        ) : rows.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">{copy.empty}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[850px] text-xs">
+              <thead><tr className="border-b text-muted-foreground">
+                {[copy.space, copy.owner, copy.status, copy.assets, copy.interviews, copy.nodes, copy.prompts, copy.created].map((label) => <th key={label} className="p-2 text-start font-medium">{label}</th>)}
+              </tr></thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-b border-border/60">
+                    <td className="p-2"><div className="font-medium">{row.name}</div><div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{row.id}</div></td>
+                    <td className="p-2 font-mono">{row.user_id}</td>
+                    <td className="p-2">{row.status || "—"}</td>
+                    <td className="p-2 tabular-nums">{row.assets}</td>
+                    <td className="p-2 tabular-nums">{row.interviews}</td>
+                    <td className="p-2 tabular-nums">{row.nodes}</td>
+                    <td className="p-2 tabular-nums">{row.prompts}</td>
+                    <td className="p-2 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <section className="space-y-2">
+        <div>
+          <h3 className="font-semibold">{copy.pricing}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">{copy.pricingHint}</p>
+        </div>
+        <AdminPlanPricingPanel />
+      </section>
     </div>
   );
 }

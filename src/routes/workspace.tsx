@@ -1,14 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { InterviewPanel } from "@/components/workspace/InterviewPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { extractToolSummary } from "@/lib/maaroof/tool-summary";
+import { estimateTaskWeight } from "@/lib/maaroof/task-weight";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
@@ -48,6 +51,7 @@ const COPY = {
     phase: "مرحلة", toolStarted: "بدأت أداة", toolDone: "نتيجة أداة", final: "اكتملت المهمة",
     clarify: "يحتاج معروف إلى معلومة إضافية", sendAnswer: "إرسال الإجابة", answerPlaceholder: "اكتب إجابتك…",
     runAgain: "مهمة جديدة", unknown: "حدث تحديث في المهمة", modelCount: "نموذج محدد",
+    taskWeight: "وزن المهمة", weightLight: "خفيفة", weightMedium: "متوسطة", weightDeep: "عميقة",
   },
   en: {
     eyebrow: "Intelligent workspace", title: "What would you like to accomplish?",
@@ -66,6 +70,7 @@ const COPY = {
     phase: "Phase", toolStarted: "Tool started", toolDone: "Tool result", final: "Task completed",
     clarify: "Maaroof needs one more detail", sendAnswer: "Send answer", answerPlaceholder: "Type your answer…",
     runAgain: "New task", unknown: "Task updated", modelCount: "model selected",
+    taskWeight: "Task weight", weightLight: "Light", weightMedium: "Medium", weightDeep: "Deep",
   },
   ku: {
     eyebrow: "شوێنی کاری زیرەک", title: "دەتەوێت چی ئەنجام بدەیت؟",
@@ -84,6 +89,7 @@ const COPY = {
     phase: "قۆناغ", toolStarted: "ئامراز دەستی پێکرد", toolDone: "ئەنجامی ئامراز", final: "ئەرکەکە تەواو بوو",
     clarify: "معروف پێویستی بە زانیاری زیاترە", sendAnswer: "ناردنی وەڵام", answerPlaceholder: "وەڵام بنووسە…",
     runAgain: "ئەرکی نوێ", unknown: "ئەرکەکە نوێ کرایەوە", modelCount: "مۆدێل هەڵبژێردرا",
+    taskWeight: "قورسایی ئەرک", weightLight: "سووک", weightMedium: "مامناوەند", weightDeep: "قووڵ",
   },
 } as const;
 
@@ -92,11 +98,16 @@ const SKILL_ICONS = {
 };
 
 function WorkspacePage() {
-  const { user, loading, session } = useAuth();
+  const { user, loading, session, profile } = useAuth();
   const { lang } = useI18n();
   const navigate = useNavigate();
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[locale];
+  const getInterviewAccessToken = useCallback(async () => {
+    if (session?.access_token) return session.access_token;
+    const result = await supabase.auth.getSession();
+    return result.data.session?.access_token ?? null;
+  }, [session?.access_token]);
   const [goal, setGoal] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -176,6 +187,8 @@ function WorkspacePage() {
     return (matched.length ? matched : enabled).slice(0, 3);
   }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
+  const taskWeight = estimateTaskWeight({ goal, selectedSkillCount: selectedSkills.length, selectedToolCount: tools.length, liveEngineCount: liveProbe ? selectedModels.length : 0 });
+  const taskWeightLabel = taskWeight === "deep" ? c.weightDeep : taskWeight === "medium" ? c.weightMedium : c.weightLight;
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
   const phaseEvents = events.filter((event) => event.type === "phase");
   const toolEvents = events.filter((event) => event.type === "tool_call" || event.type === "tool_result");
@@ -359,22 +372,57 @@ function WorkspacePage() {
     return tool?.labels[locale] || tool?.labels.ar || key;
   }
 
+  function phaseLabel(value: unknown): string {
+    const key = String(value || "");
+    const labels: Record<string, Record<SkillLocale, string>> = {
+      envision: { ar: "التصور", en: "Envision", ku: "خەیاڵکردن" },
+      planning: { ar: "التخطيط", en: "Planning", ku: "پلاندانان" },
+      council: { ar: "المجلس", en: "Council", ku: "ئەنجوومەن" },
+      conflict: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      reflection: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      reflect: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      reconciliation: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      recommendation: { ar: "التوصية", en: "Recommendation", ku: "پێشنیار" },
+      simulation: { ar: "المحاكاة", en: "Simulation", ku: "هاوشێوەسازی" },
+      summarizing: { ar: "تلخيص النتائج", en: "Summarizing results", ku: "پوختەکردنەوەی ئەنجامەکان" },
+      execution: { ar: "التنفيذ", en: "Execution", ku: "جێبەجێکردن" },
+    };
+    return labels[key]?.[locale] || key || c.unknown;
+  }
+
   function eventSummary(event: WorkspaceEvent): string {
     const d = event.data || {};
-    if (event.type === "phase") return String(d.phase || c.unknown);
+    if (event.type === "phase") return phaseLabel(d.phase);
     if (event.type === "tool_call") return String(d.reason || toolLabel(d.tool || ""));
     if (event.type === "tool_result") {
       const output = d.output;
-      if (typeof output === "string") return output.slice(0, 500);
-      if (output && typeof output === "object") {
-        const candidate = output.summary || output.answer || output.text || output.message;
-        if (typeof candidate === "string") return candidate.slice(0, 500);
+      if (output && typeof output === "object" && !Array.isArray(output)) {
+        const skipped = output.skipped;
+        if (typeof skipped === "string") {
+          const reasonLabels: Record<string, Record<SkillLocale, string>> = {
+            live_probe_disabled_by_user: {
+              ar: "تم التخطي بناءً على اختيار المستخدم؛ لم يُشغّل الفحص المباشر.",
+              en: "Intentionally skipped by user; no live probe was run.",
+              ku: "بەپێی هەڵبژاردەی بەکارهێنەر تێپەڕێندرا؛ پشکنینی ڕاستەوخۆ نەکرا.",
+            },
+          };
+          return reasonLabels[skipped]?.[locale] || (locale === "ar" ? `تم تخطي الأداة: ${skipped}` : locale === "ku" ? `ئامرازەکە تێپەڕێندرا: ${skipped}` : `Tool intentionally skipped: ${skipped}`);
+        }
+        const summary = extractToolSummary(output, 500);
+        if (summary) return summary;
       }
+      if (typeof output === "string" && output.trim()) return output.trim().slice(0, 500);
       return d.ok ? c.toolDone : c.failed;
     }
     if (event.type === "error") return String(d.message || c.failed);
     if (event.type === "clarify") return String(d.question || c.clarify);
     return String(d.text || d.message || d.phase || c.unknown);
+  }
+
+  function isIntentionalSkip(event: WorkspaceEvent): boolean {
+    const output = event.data?.output;
+    return event.type === "tool_result" && !!output && typeof output === "object" &&
+      (typeof output.skipped === "string" || output.error === "live_probe_disabled_by_user");
   }
 
   if (loading || !user) return <AuthGate state={loading ? "loading" : "signed-out"} title={c.eyebrow} redirect="/workspace" />;
@@ -395,13 +443,30 @@ function WorkspacePage() {
           {policy.show_professional_link && policy.available_interfaces.includes("professional") && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
         </header>
 
+        <InterviewPanel
+          locale={locale}
+          userId={user.id}
+          profileEntityType={(profile as any)?.entity_type ?? null}
+          profileInterviewPersona={profile?.interview_persona ?? null}
+          initialGoal={goal}
+          getAccessToken={getInterviewAccessToken}
+        />
+
         {!finalEvent && events.length === 0 && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
+              <div className="rb-workspace-spotlight rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5" onMouseMove={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  event.currentTarget.style.setProperty("--spotlight-x", `${event.clientX - rect.left}px`);
+                  event.currentTarget.style.setProperty("--spotlight-y", `${event.clientY - rect.top}px`);
+                }}>
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{c.taskWeight}:</span>
+                    <span className={`rounded-full border px-2.5 py-1 font-medium ${taskWeight === "deep" ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-muted/40"}`}>{taskWeightLabel}</span>
+                  </div>
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
                   <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
@@ -409,7 +474,11 @@ function WorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
+              <div className="rb-workspace-spotlight rounded-2xl border border-border bg-card p-4 md:p-5" onMouseMove={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  event.currentTarget.style.setProperty("--spotlight-x", `${event.clientX - rect.left}px`);
+                  event.currentTarget.style.setProperty("--spotlight-y", `${event.clientY - rect.top}px`);
+                }}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="font-semibold">{c.suggested}</h2>
@@ -538,9 +607,9 @@ function WorkspacePage() {
               {showActivity && <div className="mt-4 space-y-2">
                 {events.filter((event) => ["phase", "tool_call", "tool_result", "error", "clarify", "done"].includes(event.type)).map((event, index) => (
                   <div key={`${event.at}-${index}`} className="flex items-start gap-3 rounded-lg border border-border/70 p-3">
-                    <span className={`mt-1 size-2 shrink-0 rounded-full ${event.type === "error" || event.data?.ok === false ? "bg-destructive" : event.type === "tool_result" ? "bg-emerald-500" : "bg-primary"}`} />
+                    <span className={`mt-1 size-2 shrink-0 rounded-full ${(event.type === "error" || (event.data?.ok === false && !isIntentionalSkip(event))) ? "bg-destructive" : event.type === "tool_result" && !isIntentionalSkip(event) ? "bg-emerald-500" : "bg-primary"}`} />
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? c.toolDone : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
+                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? (isIntentionalSkip(event) ? (locale === "ar" ? "تخطٍ مقصود" : locale === "ku" ? "تێپەڕاندنی مەبەستدار" : "Intentional skip") : c.toolDone) : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
                       <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{eventSummary(event)}</div>
                     </div>
                   </div>

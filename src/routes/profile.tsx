@@ -45,6 +45,7 @@ function ProfilePage() {
   const [locking, setLocking] = useState(false);
   const [copied, setCopied] = useState(false);
   const [entity, setEntity] = useState<EntityDraft>(() => entityDraftFrom(null));
+  const [interviewPersona, setInterviewPersona] = useState("");
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/profile" } }); }, [loading, user, navigate]);
 
@@ -58,6 +59,7 @@ function ProfilePage() {
     setSpecialty((profile as any).specialty || "");
     setUsername((profile as any).username || "");
     setEntity(entityDraftFrom(profile));
+    setInterviewPersona(String((profile as any).interview_persona || ""));
   }, [profile]);
 
   const save = async (): Promise<boolean> => {
@@ -72,6 +74,7 @@ function ProfilePage() {
     const entityLocked = !!(profile as any)?.entity_locked;
     const { error } = await supabase.from("profiles").update({
       full_name: fullName, brand_name: brandName, brand_keywords: brandKw,
+      interview_persona: interviewPersona || null,
       ...(u ? { username: u } : {}),
       ...(entityLocked ? {} : entityUpdateFrom(entity)),
     } as any).eq("id", user.id);
@@ -123,6 +126,28 @@ function ProfilePage() {
             <input value={brandKw} onChange={(e) => setBrandKw(e.target.value)} className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
           </Field>
           <EntityFields profile={profile} value={entity} onChange={setEntity} onSaveAll={save} onSaved={refreshProfile} />
+          <Field label={lang === "en" ? "Default interview persona" : lang === "ku" ? "کەسایەتی بنەڕەتی چاوپێکەوتن" : "طبيعة المقابلة الافتراضية"}>
+            <select
+              value={interviewPersona}
+              onChange={(event) => setInterviewPersona(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm"
+            >
+              <option value="">
+                {lang === "en" ? "Use saved entity identity" : lang === "ku" ? "بەکارهێنانی ناسنامەی پاشەکەوتکراو" : "استخدم هوية الكيان المحفوظة"}
+              </option>
+              <option value="individual">{lang === "en" ? "Individual" : lang === "ku" ? "تاک" : "فرد"}</option>
+              <option value="creator">{lang === "en" ? "Content creator" : lang === "ku" ? "دروستکەری ناوەڕۆک" : "صانع محتوى"}</option>
+              <option value="company">{lang === "en" ? "Company" : lang === "ku" ? "کۆمپانیا" : "شركة"}</option>
+              <option value="agency">{lang === "en" ? "Agency" : lang === "ku" ? "ئاژانس" : "وكالة"}</option>
+            </select>
+            <small className="text-xs text-muted-foreground">
+              {lang === "en"
+                ? "Controls the default target for new saved-context interviews. Client and brand workspaces still take precedence; it does not change your verified entity identity."
+                : lang === "ku"
+                  ? "ئامانجی بنەڕەتی چاوپێکەوتنی نوێ دیاری دەکات. شوێنی کاری کڕیار و براند پێشینەیان هەیە؛ ناسنامەی پشتڕاستکراوت ناگۆڕێت."
+                  : "يحدد الهدف الافتراضي للمقابلات السياقية الجديدة. تظل مساحة العميل أو العلامة أولى بالأولوية، ولا يغيّر هوية الكيان الموثّقة."}
+            </small>
+          </Field>
           <Field label={t("profile_specialty")}>
             <input value={specialty} disabled placeholder={t("profile_specialty_ph")} className="w-full rounded-lg border border-border bg-background/30 px-3 py-2 text-sm opacity-70" />
             <small className="text-xs text-muted-foreground">{t("specialty_locked_note")}</small>

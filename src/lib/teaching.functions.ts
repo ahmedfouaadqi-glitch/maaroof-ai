@@ -103,8 +103,8 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
         .select("id, title, intent, structure, prompt_dna, quality, approved, created_at")
         .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(100),
       supabase.from("knowledge_space_interviews")
-        .select("id, question, topic, answer, answered_at, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(60),
+        .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason")
+        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).order("engine_order", { ascending: true }).limit(60),
       supabase.from("knowledge_nodes")
         .select("id, title, summary, layer, payload, confidence, quality, approved, updated_at")
         .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(120),
@@ -259,34 +259,147 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
-      .from("knowledge_spaces").select("id, name, lang, metrics, space_dna, brand_identity").eq("id", data.spaceId).maybeSingle();
+      .from("knowledge_spaces")
+      .select("id, name, lang, metrics, space_dna, brand_identity")
+      .eq("id", data.spaceId)
+      .maybeSingle();
     if (!space) throw new Error("not_found");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-    const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } = await import("@/lib/lovable-ai");
-    const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-      method: "POST",
-      headers: lovableAiHeaders(apiKey),
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is missing.` },
-          { role: "user", content: `Space: ${space.name}\nLanguage: ${space.lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1500)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1500)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1500)}` },
-        ],
-      }),
+    const { ENGINE_LIST } = await import("@/lib/ai-engines");
+    const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows, enginesNeedingQuestions } = await import("@/lib/space-interview");
+    const { data: existingRows, error: existingError } = await supabase
+      .from("knowledge_space_interviews")
+      .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason")
+      .eq("space_id", data.spaceId)
+      .order("engine_order", { ascending: true });
+    if (existingError) throw new Error("interview_questions_lookup_failed");
+    const existing = (existingRows || []) as any[];
+    const readyKeys = new Set(existing.filter((row) => row.generation_status === "ready").map((row) => String(row.engine_key)));
+    const neededKeys = new Set(enginesNeedingQuestions(existing));
+    const enginesToAsk = ENGINE_LIST.filter((engine) => neededKeys.has(engine.key));
+    if (!enginesToAsk.length) {
+      return {
+        questions: existing.filter((row) => row.generation_status === "ready"),
+        failures: existing.filter((row) => row.generation_status === "failed"),
+        total: ENGINE_LIST.length,
+        succeeded: readyKeys.size,
+        reused: true,
+      };
+    }
+    const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
+    const { randomUUID } = await import("node:crypto");
+    const runId = randomUUID();
+    const charge = await chargeTokens({
+      userId,
+      toolKey: "teach_space",
+      runId,
+      meta: { action: "generate_space_interview", space_id: data.spaceId, engines: enginesToAsk.length },
     });
-    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
-    const json: any = await res.json();
-    const parsed = extractJsonObject<{ questions: string[] }>(json?.choices?.[0]?.message?.content);
-    const questions = (parsed?.questions || []).slice(0, 8);
-    for (const q of questions) {
-      await supabase.from("knowledge_space_interviews").insert({
-        space_id: data.spaceId, user_id: userId, question: String(q).slice(0, 1000), topic: "gap",
+    if (!charge.ok) {
+      return { questions: [], failures: [], total: ENGINE_LIST.length, succeeded: readyKeys.size, billing: chargeFailureBody(charge.reason as any, (charge as any).left) };
+    }
+    const apiKey = process.env.LOVABLE_API_KEY;
+    const lang = String(space.lang || "ar");
+    const outcomes = await Promise.all(
+      enginesToAsk.map(async (engine) => {
+        if (!apiKey) return { engineKey: engine.key, failureCode: "unavailable" as const };
+        try {
+          const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } =
+            await import("@/lib/lovable-ai");
+          const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+            method: "POST",
+            headers: lovableAiHeaders(apiKey),
+            body: JSON.stringify({
+              model: engine.defaultModel,
+              temperature: 0.4,
+              messages: [
+                {
+                  role: "system",
+                  content: `You are asking one question from the ${engine.name} perspective: ${ENGINE_PERSPECTIVES[engine.key]}. Ask exactly ONE specific, non-duplicative question that closes a real knowledge gap for an institutional knowledge space. Return STRICT JSON only: {"question":"..."}. Use the space language. Keep the question answerable in 1-3 sentences. Do not invent facts or ask about information already present.`,
+                },
+                {
+                  role: "user",
+                  content: `Space: ${space.name}\nLanguage: ${lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1200)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1200)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1200)}`,
+                },
+              ],
+            }),
+          });
+          if (!response.ok) {
+            const failureCode =
+              response.status === 429
+                ? "rate_limit"
+                : response.status === 401 || response.status === 403
+                  ? "unauthorized"
+                  : "unavailable";
+            return { engineKey: engine.key, failureCode } as const;
+          }
+          const json: any = await response.json().catch(() => null);
+          let parsed: { question?: string } | null = null;
+          try {
+            parsed = extractJsonObject<{ question?: string }>(json?.choices?.[0]?.message?.content);
+          } catch {
+            parsed = null;
+          }
+          const question = typeof parsed?.question === "string" ? parsed.question.trim() : "";
+          return question
+            ? { engineKey: engine.key, question }
+            : { engineKey: engine.key, failureCode: "invalid_response" as const };
+        } catch {
+          return { engineKey: engine.key, failureCode: "network" as const };
+        }
+      }),
+    );
+
+    const retryKeys = enginesToAsk.filter((engine) => existing.some((row) => row.engine_key === engine.key && row.generation_status === "failed")).map((engine) => engine.key);
+    if (retryKeys.length) {
+      const { error: deleteError } = await supabase
+        .from("knowledge_space_interviews")
+        .delete()
+        .eq("space_id", data.spaceId)
+        .eq("generation_status", "failed")
+        .in("engine_key", retryKeys);
+      if (deleteError) {
+        await supabase.rpc("refund_token_charge", { _user_id: userId, _tool_key: "teach_space", _run_id: runId, _reason: "space_interview_retry_cleanup_failed" });
+        throw new Error("interview_questions_retry_failed");
+      }
+    }
+    const targetKeys = new Set(enginesToAsk.map((engine) => engine.key));
+    const rows = buildSpaceInterviewRows(data.spaceId, userId, lang, outcomes).filter((row) => targetKeys.has(row.engine_key));
+    const { data: saved, error } = await supabase
+      .from("knowledge_space_interviews")
+      .insert(rows)
+      .select("id, question, topic, answer, answered_at, created_at, engine_key, engine_name, engine_order, generation_status, failure_reason");
+    if (error) {
+      await supabase.rpc("refund_token_charge", {
+        _user_id: userId,
+        _tool_key: "teach_space",
+        _run_id: runId,
+        _reason: "space_interview_save_failed",
+      });
+      throw new Error("interview_questions_save_failed");
+    }
+    const questions = (saved || []).filter((row: any) => row.generation_status === "ready");
+    const failures = (saved || []).filter((row: any) => row.generation_status === "failed");
+    if (questions.length === 0) {
+      await supabase.rpc("refund_token_charge", {
+        _user_id: userId,
+        _tool_key: "teach_space",
+        _run_id: runId,
+        _reason: "space_interview_all_engines_failed",
       });
     }
-    return { questions };
+    const allReady = [
+      ...existing.filter((row) => row.generation_status === "ready"),
+      ...questions,
+    ].filter((row, index, list) => list.findIndex((item) => item.engine_key === row.engine_key) === index);
+    return {
+      questions: allReady.sort((a, b) => Number(a.engine_order) - Number(b.engine_order)),
+      failures,
+      total: ENGINE_LIST.length,
+      succeeded: allReady.length,
+      reused: false,
+      cost: questions.length ? { tokens: charge.tokens, usd: charge.usd } : { tokens: 0, usd: 0 },
+    };
   });
 
 export const answerSpaceInterview = createServerFn({ method: "POST" })

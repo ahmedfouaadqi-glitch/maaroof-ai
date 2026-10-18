@@ -12,6 +12,7 @@ type Profile = {
   subscription_expires_at: string | null;
   monthly_analyses_used: number;
   monthly_suggestions_used: number;
+  interview_persona?: string | null;
 };
 
 type AuthCtx = {

@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useI18n } from "@/lib/i18n";
+import { ENGINE_LOGOS } from "@/components/engine-logos";
+import type { EngineKey } from "@/lib/ai-engines";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listKnowledgeSpaces, createKnowledgeSpace, updateKnowledgeSpace, deleteKnowledgeSpace,
@@ -19,7 +21,7 @@ const TABS = ["assets", "nodes", "prompts", "interview"] as const;
 type Tab = (typeof TABS)[number];
 
 export function KnowledgeSpaces({ userId }: { userId: string | null }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const list = useServerFn(listKnowledgeSpaces);
   const create = useServerFn(createKnowledgeSpace);
   const patch = useServerFn(updateKnowledgeSpace);
@@ -372,36 +374,55 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                   {busy === "gen" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquareQuote className="h-3.5 w-3.5" />}
                   {t("teach_generate_questions")}
                 </button>
-                {data.interviews.map((q) => (
-                  <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3">
-                    <p className="text-sm">{q.question}</p>
-                    {q.answer ? (
-                      <p className="mt-1.5 text-xs text-emerald-500">{q.answer}</p>
-                    ) : (
-                      <div className="mt-2 flex items-center gap-1">
-                        <input
-                          value={answers[q.id] || ""}
-                          onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
-                          placeholder={t("teach_answer")}
-                          className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
-                        />
-                        <button
-                          onClick={() => run(q.id, async () => {
-                            const a = (answers[q.id] || "").trim();
-                            if (!a) return;
-                            await answer({ data: { interviewId: q.id, answer: a } });
-                            setAnswers((s) => ({ ...s, [q.id]: "" }));
-                            await refreshActive(active.id);
-                          })}
-                          disabled={busy === q.id}
-                          className="rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
-                        >
-                          {busy === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("teach_send")}
-                        </button>
+                {data.interviews.map((q) => {
+                  const EngineLogo = ENGINE_LOGOS[String(q.engine_key || "gemini") as EngineKey] || ENGINE_LOGOS.gemini;
+                  const failed = q.generation_status === "failed";
+                  return (
+                    <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <EngineLogo width={18} height={18} aria-hidden="true" />
+                        <span className="text-xs font-semibold">{q.engine_name || "Gemini"}</span>
+                        <span className={`ms-auto rounded-full border px-2 py-0.5 text-[10px] ${failed ? "border-amber-500/40 text-amber-500" : "border-border text-muted-foreground"}`}>
+                          {failed
+                            ? lang === "en" ? "Unavailable" : lang === "ku" ? "بەردەست نییە" : "غير متاح"
+                            : lang === "en" ? "Question" : lang === "ku" ? "پرسیار" : "سؤال"}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {failed ? (
+                        <p className="text-xs text-muted-foreground">{q.failure_reason || (lang === "en" ? "This engine failed. You can retry." : lang === "ku" ? "مۆتۆڕەکە سەرکەوتوو نەبوو؛ دووبارە هەوڵ بدەوە." : "تعذر توليد سؤال من هذا المحرك؛ يمكنك إعادة المحاولة.")}</p>
+                      ) : (
+                        <>
+                          <p className="text-sm">{q.question}</p>
+                          {q.answer ? (
+                            <p className="mt-1.5 text-xs text-emerald-500">{q.answer}</p>
+                          ) : (
+                            <div className="mt-2 flex items-center gap-1">
+                              <input
+                                value={answers[q.id] || ""}
+                                onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
+                                placeholder={t("teach_answer")}
+                                className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
+                              />
+                              <button
+                                onClick={() => run(q.id, async () => {
+                                  const a = (answers[q.id] || "").trim();
+                                  if (!a) return;
+                                  await answer({ data: { interviewId: q.id, answer: a } });
+                                  setAnswers((s) => ({ ...s, [q.id]: "" }));
+                                  await refreshActive(active.id);
+                                })}
+                                disabled={busy === q.id}
+                                className="rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
+                              >
+                                {busy === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("teach_send")}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </>
             )}
           </div>

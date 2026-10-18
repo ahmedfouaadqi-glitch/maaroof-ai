@@ -1112,6 +1112,7 @@ export const ar: Dict = {
   "auto.content_types": "أنواع المحتوى:",
   "auto.contract": "العقد",
   "auto.control": "التحكم",
+  "auto.knowledge_spaces": "مساحات المعرفة",
   "auto.control_everything_each_plan_offers_in": "تحكّم بكل ما تقدمه كل خطة من أدوات وميزات الوكيل، والأسعار لكل استخدام بأي عملة.",
   "auto.conversion": "التحويل",
   "auto.convert_and_re_evaluate": "تحويل وإعادة التقييم",

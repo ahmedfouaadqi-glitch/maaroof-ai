@@ -121,24 +121,24 @@ function brandHeaderHtml(lang: ExportLang, payload: ExportPayload, logoData: str
 
 
 function sectionHtml(s: ExportSection): string {
-  const h = `<h2>${escapeHtml(s.heading)}</h2>`;
+  const h = `<h2 dir="auto">${escapeHtml(s.heading)}</h2>`;
   if (s.kind === "text" && s.text) {
-    return `${h}<p class="prose">${escapeHtml(s.text).replace(/\n/g, "<br/>")}</p>`;
+    return `${h}<p class="prose" dir="auto">${escapeHtml(s.text).replace(/\n/g, "<br/>")}</p>`;
   }
   if (s.kind === "list" && s.list) {
-    return `${h}<ul>${s.list.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+    return `${h}<ul>${s.list.map((x) => `<li dir="auto">${escapeHtml(x)}</li>`).join("")}</ul>`;
   }
   if (s.kind === "kv" && s.rows) {
     return `${h}<table class="kv"><tbody>${s.rows
-      .map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`)
+      .map(([k, v]) => `<tr><th dir="auto">${escapeHtml(k)}</th><td dir="auto">${escapeHtml(v)}</td></tr>`)
       .join("")}</tbody></table>`;
   }
   if (s.kind === "table" && s.table) {
     const { columns, data } = s.table;
     return `${h}<table class="data"><thead><tr>${columns
-      .map((c) => `<th>${escapeHtml(c)}</th>`)
+      .map((c) => `<th dir="auto">${escapeHtml(c)}</th>`)
       .join("")}</tr></thead><tbody>${data
-      .map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`)
+      .map((row) => `<tr>${row.map((c) => `<td dir="auto">${escapeHtml(c)}</td>`).join("")}</tr>`)
       .join("")}</tbody></table>`;
   }
   return h;
@@ -194,7 +194,7 @@ export async function exportToPDF(payload: ExportPayload) {
 <body>
   <div class="noprint"><button onclick="window.print()">🖨️ ${dir === "rtl" ? "طباعة / حفظ PDF" : "Print / Save PDF"}</button></div>
   ${brandHeaderHtml(lang, payload, logoData)}
-  <h1>${escapeHtml(payload.title)}</h1>
+  <h1 dir="auto">${escapeHtml(payload.title)}</h1>
   ${payload.subtitle ? `<div class="subtitle">${escapeHtml(payload.subtitle)}</div>` : ""}
   ${payload.sections.map(sectionHtml).join("")}
   <footer class="disclaimer">

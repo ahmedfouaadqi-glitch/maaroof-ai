@@ -9,29 +9,160 @@ import { CostBadge } from "@/components/CostBadge";
 import { useEffect } from "react";
 
 const TX = {
-  ar: { unlock: "فتح للتعديل (يُخصم من رصيدك)", nobal: "رصيدك غير كافٍ", err: "حدث خطأ، حاول مجدداً", unlocked: "تم فتح البطاقة للتعديل. بعد التعديل اضغط «توثيق وتثبيت».", h: "هوية علامتك (بطاقة الحقيقة)", hint: "تُستخدم في كل الأدوات لتنبيهك عند تعارض النص مع هويتك. الروابط اختيارية ولا نطلب تعديل البايو.", type: "نوع الكيان", org: "منشأة / شركة", person: "شخص / صانع محتوى", hq: "المقر الرئيسي", mk: "الأسواق التي تخدمها", sp: "التخصص ونطاق الخدمات", links: "روابط الموقع أو الحسابات (سطر لكل رابط)", save: "حفظ الهوية", verify: "توثيق وتثبيت (مرة واحدة، يُخصم من رصيدك)", locked: "البطاقة موثّقة ومقفلة. لتعديلها استخدم «فتح للتعديل» بالكلفة الظاهرة.", ok: "تم التوثيق", conf: "مؤكد من المصدر", unconf: "غير مؤكد", incomplete: "أكمل اسم العلامة والمقر أولاً", none: "—" },
-  en: { unlock: "Unlock for editing (charged to your balance)", nobal: "Insufficient balance", err: "Something went wrong, try again", unlocked: "Card unlocked. After editing, press “Verify & lock”.", h: "Your brand identity (truth card)", hint: "Used by every tool to warn you when a text conflicts with your identity. Links are optional; no bio change needed.", type: "Entity type", org: "Organization / company", person: "Person / creator", hq: "Headquarters", mk: "Markets you serve", sp: "Specialty & service scope", links: "Website or profile links (one per line)", save: "Save identity", verify: "Verify & lock (once, charged to your balance)", locked: "Card verified and locked. To edit, use “Unlock for editing” at the shown cost.", ok: "Verified", conf: "Confirmed by source", unconf: "Not confirmed", incomplete: "Fill brand name and HQ first", none: "—" },
-  ku: { unlock: "کردنەوە بۆ دەستکاری (لە باڵانسەکەت دەبڕدرێت)", nobal: "باڵانس بەس نییە", err: "هەڵەیەک ڕوویدا", unlocked: "کارتەکە کرایەوە. دوای دەستکاری «پشتڕاستکردنەوە» بکە.", h: "ناسنامەی براندەکەت", hint: "لە هەموو ئامرازەکاندا بەکاردێت بۆ ئاگادارکردنەوە. بەستەرەکان ئارەزوومەندانەن.", type: "جۆری کیان", org: "دامەزراوە / کۆمپانیا", person: "کەس / دروستکەری ناوەڕۆک", hq: "بارەگای سەرەکی", mk: "ئەو بازاڕانەی خزمەتیان دەکەیت", sp: "پسپۆڕی و بواری خزمەتگوزاری", links: "بەستەرەکان (هەر یەکە لە دێڕێک)", save: "پاشەکەوت", verify: "پشتڕاستکردنەوە و قوفڵکردن", locked: "کارتەکە پشتڕاستکراوە و قوفڵە.", ok: "پشتڕاستکرا", conf: "پشتڕاستکراو", unconf: "پشتڕاست نەکراو", incomplete: "سەرەتا ناو و بارەگا پڕبکەوە", none: "—" },
+  ar: {
+    unlock: "فتح للتعديل (يُخصم من رصيدك)",
+    nobal: "رصيدك غير كافٍ",
+    err: "حدث خطأ، حاول مجدداً",
+    unlocked: "تم فتح البطاقة للتعديل. بعد التعديل اضغط «توثيق وتثبيت».",
+    h: "هوية الكيان (بطاقة الحقيقة)",
+    hint: "تُستخدم في الأدوات لتحديد الكيان الصحيح. الروابط اختيارية؛ لا تحفظ معلومات غير مؤكدة كحقائق.",
+    type: "نوع الكيان",
+    types: {
+      product_company: "شركة تبيع منتجاتها أو خدماتها",
+      marketing_company: "شركة تسويق",
+      news_agency: "وكالة إخبارية",
+      content_creator: "صانع محتوى",
+      public_figure: "شخصية عامة",
+      individual: "فرد",
+      multi_client_agency: "وكالة تسويق متعددة العملاء",
+    },
+    hq: "المقر الرئيسي",
+    mk: "الأسواق التي تخدمها",
+    sp: "التخصص ونطاق الخدمات",
+    links: "روابط الموقع أو الحسابات الرسمية (سطر لكل رابط)",
+    save: "حفظ الهوية",
+    verify: "توثيق وتثبيت (مرة واحدة، يُخصم من رصيدك)",
+    locked: "البطاقة موثّقة ومقفلة. لتعديلها استخدم «فتح للتعديل» بالكلفة الظاهرة.",
+    ok: "تم التوثيق",
+    conf: "مؤكد من المصدر",
+    unconf: "غير مؤكد",
+    incomplete: "أكمل اسم العلامة والمقر أولاً",
+    none: "—",
+  },
+  en: {
+    unlock: "Unlock for editing (charged to your balance)",
+    nobal: "Insufficient balance",
+    err: "Something went wrong, try again",
+    unlocked: "Card unlocked. After editing, press “Verify & lock”.",
+    h: "Entity identity (truth card)",
+    hint: "Used by tools to resolve entity identity. Links are optional; do not save unconfirmed information as fact.",
+    type: "Entity type",
+    types: {
+      product_company: "Company selling its own products or services",
+      marketing_company: "Marketing company",
+      news_agency: "News agency",
+      content_creator: "Content creator",
+      public_figure: "Public figure",
+      individual: "Individual",
+      multi_client_agency: "Marketing agency serving multiple clients",
+    },
+    hq: "Headquarters",
+    mk: "Markets you serve",
+    sp: "Specialty & service scope",
+    links: "Official website or account links (one per line)",
+    save: "Save identity",
+    verify: "Verify & lock (once, charged to your balance)",
+    locked: "Card verified and locked. To edit, use “Unlock for editing” at the shown cost.",
+    ok: "Verified",
+    conf: "Confirmed by source",
+    unconf: "Not confirmed",
+    incomplete: "Fill brand name and HQ first",
+    none: "—",
+  },
+  ku: {
+    unlock: "کردنەوە بۆ دەستکاری (لە باڵانسەکەت دەبڕدرێت)",
+    nobal: "باڵانس بەس نییە",
+    err: "هەڵەیەک ڕوویدا",
+    unlocked: "کارتەکە کرایەوە. دوای دەستکاری «پشتڕاستکردنەوە» بکە.",
+    h: "ناسنامەی کیان (کارتی ڕاستی)",
+    hint: "ئامرازەکان بۆ ناسینەوەی کیانی دروست بەکاری دەهێنن. بەستەرەکان ئارەزوومەندانەن؛ زانیاری پشتڕاستنەکراو وەک ڕاستی مەپارێزە.",
+    type: "جۆری کیان",
+    types: {
+      product_company: "کۆمپانیا کە بەرهەم یان خزمەتگوزاریی خۆی دەفرۆشێت",
+      marketing_company: "کۆمپانیای بازاڕکردن",
+      news_agency: "ئاژانسی هەواڵ",
+      content_creator: "دروستکەری ناوەڕۆک",
+      public_figure: "کەسایەتی گشتی",
+      individual: "تاک",
+      multi_client_agency: "ئاژانسی بازاڕکردن بۆ چەند کڕیار",
+    },
+    hq: "بارەگای سەرەکی",
+    mk: "ئەو بازاڕانەی خزمەتیان دەکەیت",
+    sp: "پسپۆڕی و بواری خزمەتگوزاری",
+    links: "بەستەری فەرمی ماڵپەڕ یان هەژمارەکان (هەر یەک لە دێڕێک)",
+    save: "پاشەکەوتکردنی ناسنامە",
+    verify: "پشتڕاستکردنەوە و قوفڵکردن",
+    locked: "کارتەکە پشتڕاستکراوە و قوفڵە.",
+    ok: "پشتڕاستکرا",
+    conf: "لە سەرچاوە پشتڕاستکرا",
+    unconf: "پشتڕاست نەکراو",
+    incomplete: "سەرەتا ناو و بارەگا پڕبکەوە",
+    none: "—",
+  },
 };
 
 const SOCIAL = /(instagram|tiktok|facebook|fb\.com|x\.com|twitter|youtube|youtu\.be|linkedin|snapchat|threads|telegram|t\.me)/i;
-/** No links -> individual; only social links -> creator; any website -> organization. */
-export function suggestEntityType(links: string): "organization" | "person" | "individual" {
-  const l = String(links || "").split(/\n+/).map((s) => s.trim()).filter(Boolean);
-  if (!l.length) return "individual";
-  return l.every((u) => SOCIAL.test(u)) ? "person" : "organization";
+export const ENTITY_TYPES = [
+  "product_company",
+  "marketing_company",
+  "news_agency",
+  "content_creator",
+  "public_figure",
+  "individual",
+  "multi_client_agency",
+] as const;
+export type EntityType = (typeof ENTITY_TYPES)[number];
+
+export function normalizeEntityType(value: unknown): EntityType {
+  const type = String(value || "").trim().toLowerCase();
+  if ((ENTITY_TYPES as readonly string[]).includes(type)) return type as EntityType;
+  if (type === "person") return "individual";
+  if (type === "creator") return "content_creator";
+  if (type === "agency" || type === "marketing_agency") return "multi_client_agency";
+  if (type === "marketing" || type === "marketing_company") return "marketing_company";
+  if (type === "news" || type === "publisher") return "news_agency";
+  if (type === "public_person" || type === "public-figure") return "public_figure";
+  if (type === "individual") return "individual";
+  return "product_company";
 }
-export type EntityDraft = { type: string; hq: string; mk: string[]; sp: string; links: string };
+
+/** Suggest only broad types inferable from links; never infer news, agency, or public status. */
+export function suggestEntityType(links: string): EntityType {
+  const values = String(links || "").split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  if (!values.length) return "individual";
+  return values.every((url) => SOCIAL.test(url)) ? "content_creator" : "product_company";
+}
+
+export type EntityDraft = {
+  type: EntityType;
+  hq: string;
+  mk: string[];
+  sp: string;
+  links: string;
+};
+
 export function entityDraftFrom(profile: any): EntityDraft {
+  const links = Array.isArray(profile?.entity_links) ? profile.entity_links : [];
+  // Preserve the broad legacy organization choice rather than inferring an agency or creator.
+  const type = normalizeEntityType(profile?.entity_type);
   return {
-    type: profile?.entity_type || "organization", hq: profile?.hq_country || "", mk: profile?.target_markets || [],
-    sp: profile?.specialty_scope || "", links: (Array.isArray(profile?.entity_links) ? profile.entity_links : []).join("\n"),
+    type,
+    hq: profile?.hq_country || "",
+    mk: Array.isArray(profile?.target_markets) ? profile.target_markets : [],
+    sp: profile?.specialty_scope || "",
+    links: links.join("\n"),
   };
 }
+
 export function entityUpdateFrom(d: EntityDraft) {
   return {
-    entity_type: d.type, hq_country: d.hq || null, target_markets: d.mk, specialty_scope: d.sp.slice(0, 400) || null,
-    entity_links: Array.from(new Set(d.links.split(/\n+/).map((s) => normalizeUrl(s)).filter(Boolean) as string[])).slice(0, 10),
+    entity_type: normalizeEntityType(d.type),
+    hq_country: d.hq || null,
+    target_markets: d.mk,
+    specialty_scope: d.sp.slice(0, 400) || null,
+    entity_links: Array.from(
+      new Set(d.links.split(/\n+/).map((s) => normalizeUrl(s)).filter(Boolean) as string[]),
+    ).slice(0, 10),
   };
 }
 
@@ -42,7 +173,7 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
   const verifyFn = useServerFn(verifyEntityCard);
   const { type, hq, mk, sp, links } = value;
   const set = (patch: Partial<EntityDraft>) => onChange({ ...value, ...patch });
-  const setType = (v: string) => set({ type: v });
+  const setType = (v: EntityType) => set({ type: v });
   const setHq = (v: string) => set({ hq: v });
   const setMk = (f: (p: string[]) => string[]) => set({ mk: f(mk) });
   const setSp = (v: string) => set({ sp: v });
@@ -87,13 +218,19 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
       <p className="text-xs text-muted-foreground">{locked ? T.locked : T.hint}</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs">{T.type}
-          <select value={type} disabled={locked} onChange={(e) => setType(e.target.value)} className={cls}>
-            <option value="organization">{T.org}</option><option value="person">{T.person}</option><option value="individual">{L === "en" ? "Individual — no website or accounts" : L === "ku" ? "تاک — بێ ماڵپەڕ و هەژمار" : "فرد — بلا موقع ولا حسابات"}</option>
+          <select value={type} disabled={locked} onChange={(e) => setType(e.target.value as EntityType)} className={cls}>
+            {ENTITY_TYPES.map((entityType) => (
+              <option key={entityType} value={entityType}>{T.types[entityType]}</option>
+            ))}
           </select>
-          {!locked && (() => { const sug = suggestEntityType(links); return sug !== type ? (
-            <button type="button" onClick={() => setType(sug)} className="mt-1 block text-[11px] text-primary underline">
-              {(L === "en" ? "Suggested from your links: " : L === "ku" ? "پێشنیار لە بەستەرەکانت: " : "مقترح من روابطك: ") + (sug === "organization" ? T.org : sug === "person" ? T.person : (L === "en" ? "Individual" : L === "ku" ? "تاک" : "فرد بلا موقع"))}
-            </button>) : null; })()}
+          {!locked && (() => {
+            const suggested = suggestEntityType(links);
+            return suggested !== type ? (
+              <button type="button" onClick={() => setType(suggested)} className="mt-1 block text-[11px] text-primary underline">
+                {(L === "en" ? "Suggested from your links: " : L === "ku" ? "پێشنیار لە بەستەرەکانت: " : "مقترح من روابطك: ") + T.types[suggested]}
+              </button>
+            ) : null;
+          })()}
         </label>
         <label className="text-xs">{T.hq}
           <select value={hq} disabled={locked} onChange={(e) => setHq(e.target.value)} className={cls}>

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
+import { estimateTaskWeight } from "@/lib/maaroof/task-weight";
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -83,7 +84,7 @@ export const Route = createFileRoute("/api/maaroof")({
           if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
             user_id: userId, goal, mode: executionMode || "execution", status: "running",
-            request_payload: { selected_skills: selectedSkills, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
+            request_payload: { selected_skills: selectedSkills, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang, task_weight: estimateTaskWeight({ goal, selectedSkillCount: selectedSkills.length, selectedToolCount: selectedSkills.length ? selectedSkills.length * 2 : 0, liveEngineCount: liveProbe === false ? 0 : (probeEngines || []).length }) },
           }).select("id").single();
           if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
           const jobId = job.id as string;

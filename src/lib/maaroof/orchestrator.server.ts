@@ -3,7 +3,7 @@
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { describeToolOptions, enforceEnums, TOOL_OPTIONS } from "@/lib/tool-options";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
-import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
+import { fillToolInput, missingFields, clarifyQuestion, removePlaceholderCompetitors, sanitizeReflection } from "./agent-input";
 import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
@@ -946,6 +946,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
     const specialists = new Set<string>();
+    let knownFailed = false;
     for (let i = 0; i < steps.length; i++) {
       if (ctx.signal.aborted) break;
       const step = steps[i];
@@ -954,6 +955,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
       const path = toolPath(step.tool);
       if (!path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
+        if (step.tool === "known") knownFailed = true;
         const err = { error: path ? "tool_disabled" : "unknown_tool", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
@@ -961,7 +963,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         continue;
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
-      const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
+      let filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
+      if (step.tool === "compare" && knownFailed && Array.isArray(filled.competitors)) {
+        const cleaned = removePlaceholderCompetitors(filled);
+        filled = cleaned.input;
+        if (cleaned.removed.length && !filled.competitors.length) {
+          const blocked = { error: "competitor_discovery_failed", removed_placeholders: cleaned.removed.length, message: "لم يتم العثور على منافسين موثوقين؛ أُوقفت المقارنة بدلاً من اختلاق أسماء." };
+          results.push({ tool: step.tool, ok: false, output: blocked });
+          await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: blocked });
+          await logMsg("tool_result", { tool: step.tool, ok: false, output: blocked });
+          continue;
+        }
+      }
       const missing = missingFields(step.tool, filled);
       // Specialised sub-agent per tool (reused once created). Fail-open.
       if (ctx.useSubagents !== false && !specialists.has(step.tool)) {
@@ -988,6 +1001,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
       }
       if (missing.length) {
+        if (step.tool === "known") knownFailed = true;
         const q = { index: i, tool: step.tool, field: missing[0], question: clarifyQuestion(missing[0], ctx.language) };
         results.push({ tool: step.tool, ok: false, output: { needs_input: missing } });
         await ctx.emit("clarify", q);
@@ -1031,6 +1045,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           json = await resp.json().catch(() => ({}));
         }
         const ok = resp.ok && !sseError;
+        if (step.tool === "known") knownFailed = !ok;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
         // Brand agent: identity consistency vs the Entity Truth Card (pure rules, no model cost).
@@ -1056,6 +1071,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           });
         } catch {}
       } catch (e: any) {
+        if (step.tool === "known") knownFailed = true;
         const err = { error: String(e?.message || e) };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });

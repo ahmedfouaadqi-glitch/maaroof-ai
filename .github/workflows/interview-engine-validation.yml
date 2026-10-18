@@ -1,0 +1,149 @@
+name: Interview Engine Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/lib/maaroof/interview-engine.ts"
+      - "src/lib/maaroof/interview-context.ts"
+      - "src/lib/maaroof/interview-engine.test.ts"
+      - "src/lib/maaroof/interview-context.test.ts"
+      - "src/lib/maaroof/interview-question-bank.ts"
+      - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/lib/maaroof/interview-research.ts"
+      - "src/lib/maaroof/interview-research.test.ts"
+      - "src/lib/maaroof/interview-report.ts"
+      - "src/lib/maaroof/interview-report.server.ts"
+      - "src/lib/maaroof/interview-report.test.ts"
+      - "src/components/workspace/InterviewPanel.tsx"
+      - "src/routes/workspace.tsx"
+      - "src/lib/maaroof/agent-input.ts"
+      - "src/lib/maaroof/agent-input.test.ts"
+      - "src/lib/maaroof/tool-summary.ts"
+      - "src/lib/maaroof/tool-summary.test.ts"
+      - "src/lib/entity-consistency.ts"
+      - "src/lib/entity-consistency.test.ts"
+      - "src/components/EntityFields.tsx"
+      - "src/components/EntityFields.test.ts"
+      - "src/lib/maaroof/interview-entity-sync.ts"
+      - "src/lib/maaroof/interview-entity-sync.test.ts"
+      - "src/lib/maaroof/task-weight.ts"
+      - "src/lib/maaroof/task-weight.test.ts"
+      - "src/lib/space-interview.ts"
+      - "src/lib/space-interview.test.ts"
+      - "src/routes/profile.tsx"
+      - "src/lib/auth.tsx"
+      - "src/routes/api/maaroof-interviews.ts"
+      - "src/routes/api/maaroof-interviews.test.ts"
+      - "src/routes/api/maaroof-interviews.integration.test.ts"
+      - "src/routeTree.gen.ts"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
+      - ".github/workflows/**"
+  push:
+    branches:
+      - feat/maaroof-interview-foundation-no-cloudflare
+    paths:
+      - "src/lib/maaroof/interview-engine.ts"
+      - "src/lib/maaroof/interview-context.ts"
+      - "src/lib/maaroof/interview-engine.test.ts"
+      - "src/lib/maaroof/interview-context.test.ts"
+      - "src/lib/maaroof/interview-question-bank.ts"
+      - "src/lib/maaroof/interview-question-bank.test.ts"
+      - "src/lib/maaroof/interview-research.ts"
+      - "src/lib/maaroof/interview-research.test.ts"
+      - "src/lib/maaroof/interview-report.ts"
+      - "src/lib/maaroof/interview-report.server.ts"
+      - "src/lib/maaroof/interview-report.test.ts"
+      - "src/components/workspace/InterviewPanel.tsx"
+      - "src/routes/workspace.tsx"
+      - "src/lib/maaroof/agent-input.ts"
+      - "src/lib/maaroof/agent-input.test.ts"
+      - "src/lib/maaroof/tool-summary.ts"
+      - "src/lib/maaroof/tool-summary.test.ts"
+      - "src/lib/entity-consistency.ts"
+      - "src/lib/entity-consistency.test.ts"
+      - "src/components/EntityFields.tsx"
+      - "src/components/EntityFields.test.ts"
+      - "src/lib/maaroof/interview-entity-sync.ts"
+      - "src/lib/maaroof/interview-entity-sync.test.ts"
+      - "src/routes/profile.tsx"
+      - "src/lib/auth.tsx"
+      - "src/routes/api/maaroof-interviews.ts"
+      - "src/routes/api/maaroof-interviews.test.ts"
+      - "src/routes/api/maaroof-interviews.integration.test.ts"
+      - "src/routeTree.gen.ts"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-interview-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run interview and API tests
+        run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-question-bank.test.ts src/lib/maaroof/interview-research.test.ts src/lib/maaroof/interview-report.test.ts src/routes/api/maaroof-interviews.test.ts src/lib/maaroof/agent-input.test.ts src/lib/maaroof/tool-summary.test.ts src/lib/entity-consistency.test.ts src/components/EntityFields.test.ts src/lib/maaroof/interview-entity-sync.test.ts src/lib/maaroof/task-weight.test.ts src/lib/space-interview.ts src/lib/space-interview.test.ts
+
+      - name: Lint interview engine
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-context.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/routes/api/maaroof-interviews.integration.test.ts src/components/workspace/InterviewPanel.tsx src/lib/maaroof/agent-input.test.ts src/lib/maaroof/tool-summary.ts src/lib/maaroof/tool-summary.test.ts src/lib/entity-consistency.test.ts src/components/EntityFields.test.ts src/lib/maaroof/interview-entity-sync.ts src/lib/maaroof/interview-entity-sync.test.ts src/lib/maaroof/task-weight.ts src/lib/maaroof/task-weight.test.ts
+
+      - name: Type-check project
+        run: bunx tsc --noEmit
+
+      - name: Build application
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: bun run build
+  interview-rls:
+    name: Local Supabase migration and RLS tests
+    needs: validate-interview-engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Start isolated local Supabase and apply migrations
+        run: supabase start
+
+      - name: Run pgTAP database tests
+        run: supabase test db
+
+      - name: Export local Supabase environment
+        shell: bash
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            printf 'SUPABASE_URL=%s\n' "$API_URL"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Exercise interview API against local Supabase
+        run: bun run test -- src/routes/api/maaroof-interviews.integration.test.ts

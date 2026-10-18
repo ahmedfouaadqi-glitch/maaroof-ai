@@ -2488,6 +2488,11 @@ export type Database = {
           answer: string | null
           answered_at: string | null
           created_at: string
+          engine_key: string
+          engine_name: string
+          engine_order: number
+          failure_reason: string | null
+          generation_status: string
           id: string
           node_id: string | null
           question: string
@@ -2499,6 +2504,11 @@ export type Database = {
           answer?: string | null
           answered_at?: string | null
           created_at?: string
+          engine_key?: string
+          engine_name?: string
+          engine_order?: number
+          failure_reason?: string | null
+          generation_status?: string
           id?: string
           node_id?: string | null
           question: string
