@@ -19,7 +19,7 @@ jobs:
       - name: Run test suite
         run: bun run test
       - name: Lint new interview helpers and tests
-        run: bunx eslint src/lib/maaroof/interview-questions.ts src/lib/__tests__/interview-questions.test.ts --rule 'prettier/prettier: off'
+        run: bunx eslint src/lib/maaroof/interview-questions.ts src/lib/__tests__/interview-questions.test.ts --rule=prettier/prettier:off
       - name: Check formatting of new files
         run: bunx prettier --check src/lib/maaroof/interview-questions.ts src/lib/__tests__/interview-questions.test.ts
       - name: TypeScript check
