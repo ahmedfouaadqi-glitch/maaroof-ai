@@ -88,24 +88,16 @@ export function uniqueInterviewQuestionDetails(
   existingQuestions: readonly unknown[] = [],
   maximum = 8,
 ): InterviewQuestionProposal[] {
-  if (
-    !Array.isArray(proposed) ||
-    !Number.isSafeInteger(maximum) ||
-    maximum <= 0
-  ) {
+  if (!Array.isArray(proposed) || !Number.isSafeInteger(maximum) || maximum <= 0) {
     return [];
   }
 
-  const seen = new Set(
-    existingQuestions.map(normalizeInterviewQuestion).filter(Boolean),
-  );
+  const seen = new Set(existingQuestions.map(normalizeInterviewQuestion).filter(Boolean));
   const result: InterviewQuestionProposal[] = [];
 
   for (const value of proposed) {
     const record =
-      typeof value === "object" && value !== null
-        ? (value as Record<string, unknown>)
-        : null;
+      typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
     const rawQuestion =
       typeof value === "string"
         ? value
@@ -117,10 +109,7 @@ export function uniqueInterviewQuestionDetails(
     const key = normalizeInterviewQuestion(question);
     if (!key || seen.has(key)) continue;
 
-    const normalizeDetail = (
-      detail: unknown,
-      maxLength: number,
-    ): string | null => {
+    const normalizeDetail = (detail: unknown, maxLength: number): string | null => {
       if (typeof detail !== "string") return null;
       const normalized = detail.replace(/\s+/gu, " ").trim().slice(0, maxLength);
       return normalized || null;
@@ -130,10 +119,7 @@ export function uniqueInterviewQuestionDetails(
     result.push({
       question,
       reason: normalizeDetail(record?.reason, 800),
-      answer_example: normalizeDetail(
-        record?.answer_example ?? record?.example_answer,
-        1200,
-      ),
+      answer_example: normalizeDetail(record?.answer_example ?? record?.example_answer, 1200),
     });
 
     if (result.length >= maximum) break;

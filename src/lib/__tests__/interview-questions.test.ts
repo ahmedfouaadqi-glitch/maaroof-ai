@@ -90,8 +90,8 @@ describe("knowledge-space interview questions", () => {
     ]);
     expect(history).toContain("Q: Which markets matter?\nA: Iraq and the Gulf");
     expect(history).toContain("A: Unanswered");
-    expect(formatInterviewHistory([{ question: "q", answer: "a".repeat(1000) }], 20)).toHaveLength(
-      20,
-    );
+    expect(
+      formatInterviewHistory([{ question: "q", answer: "a".repeat(1000) }], 20),
+    ).toHaveLength(20);
   });
 });
