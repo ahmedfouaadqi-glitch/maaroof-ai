@@ -3,6 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { formatInterviewHistory, uniqueInterviewQuestions } from "@/lib/maaroof/interview-questions";
 
 const uuid = z.string().uuid();
 
@@ -258,13 +259,28 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
-    const { data: space } = await supabase
-      .from("knowledge_spaces").select("id, name, lang, metrics, space_dna, brand_identity").eq("id", data.spaceId).maybeSingle();
+    const { data: space, error: spaceError } = await supabase
+      .from("knowledge_spaces")
+      .select("id, name, lang, metrics, space_dna, brand_identity")
+      .eq("id", data.spaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (spaceError) throw new Error(spaceError.message);
     if (!space) throw new Error("not_found");
+
+    const { data: previousRows, error: historyError } = await supabase
+      .from("knowledge_space_interviews")
+      .select("question, answer, topic")
+      .eq("space_id", data.spaceId)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (historyError) throw new Error(historyError.message);
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
     const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } = await import("@/lib/lovable-ai");
+    const history = formatInterviewHistory(previousRows || [], 5000);
     const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
       method: "POST",
       headers: lovableAiHeaders(apiKey),
@@ -272,52 +288,95 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
         model: "google/gemini-2.5-flash",
         temperature: 0.4,
         messages: [
-          { role: "system", content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is missing.` },
-          { role: "user", content: `Space: ${space.name}\nLanguage: ${space.lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1500)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1500)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1500)}` },
+          {
+            role: "system",
+            content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is genuinely missing. Consider the existing interview history. Do not repeat existing questions, paraphrase them as duplicates, or ask for information already present in an answer. Prioritize unanswered gaps, then ask about new uncovered areas.`,
+          },
+          {
+            role: "user",
+            content: `Space: ${space.name}\nLanguage: ${space.lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1500)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1500)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1500)}\nPrevious questions and answers:\n${history}`,
+          },
         ],
       }),
     });
     if (!res.ok) throw new Error(`AI gateway ${res.status}`);
     const json: any = await res.json();
-    const parsed = extractJsonObject<{ questions: string[] }>(json?.choices?.[0]?.message?.content);
-    const questions = (parsed?.questions || []).slice(0, 8);
-    for (const q of questions) {
-      await supabase.from("knowledge_space_interviews").insert({
-        space_id: data.spaceId, user_id: userId, question: String(q).slice(0, 1000), topic: "gap",
-      });
+    const parsed = extractJsonObject<{ questions: unknown }>(json?.choices?.[0]?.message?.content);
+    const questions = uniqueInterviewQuestions(
+      parsed?.questions,
+      (previousRows || []).map((row: { question?: unknown }) => row.question),
+      8,
+    );
+
+    if (questions.length) {
+      const { error: insertError } = await supabase.from("knowledge_space_interviews").insert(
+        questions.map((question) => ({
+          space_id: data.spaceId,
+          user_id: userId,
+          question,
+          topic: "gap",
+        })),
+      );
+      if (insertError) throw new Error(insertError.message);
     }
+
     return { questions };
   });
 
 export const answerSpaceInterview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { interviewId: string; answer: string }) =>
-    z.object({ interviewId: uuid, answer: z.string().min(1).max(8000) }).parse(d),
+    z.object({ interviewId: uuid, answer: z.string().trim().min(1).max(8000) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
-    const { data: row } = await supabase
-      .from("knowledge_space_interviews").select("id, space_id, question").eq("id", data.interviewId).maybeSingle();
+    const { data: row, error: rowError } = await supabase
+      .from("knowledge_space_interviews")
+      .select("id, space_id, question, answer")
+      .eq("id", data.interviewId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (rowError) throw new Error(rowError.message);
     if (!row) throw new Error("not_found");
+    if (row.answer != null && String(row.answer).trim()) throw new Error("interview_already_answered");
 
-    await supabase.from("knowledge_space_interviews")
-      .update({ answer: data.answer, answered_at: new Date().toISOString() }).eq("id", data.interviewId);
-
-    // The answer itself is knowledge — register it as a text asset and learn it.
-    const { data: asset } = await supabase.from("knowledge_space_assets").insert({
-      space_id: row.space_id, user_id: userId, kind: "interview", source_type: "text",
+    // Create the knowledge asset first so an asset registration failure does not mark
+    // the interview as answered without leaving a source that can be learned or retried.
+    const { data: asset, error: assetError } = await supabase.from("knowledge_space_assets").insert({
+      space_id: row.space_id,
+      user_id: userId,
+      kind: "interview",
+      source_type: "text",
       title: `مقابلة: ${String(row.question).slice(0, 120)}`,
       raw_text: `س: ${row.question}\nج: ${data.answer}`,
-      status: "queued", stage: "import",
+      status: "queued",
+      stage: "import",
     }).select("id").single();
+    if (assetError || !asset?.id) throw new Error(assetError?.message || "interview_asset_create_failed");
+
+    // Atomic compare-and-set prevents duplicate submissions from creating multiple assets.
+    const { data: updatedInterview, error: answerError } = await supabase
+      .from("knowledge_space_interviews")
+      .update({ answer: data.answer, answered_at: new Date().toISOString() })
+      .eq("id", data.interviewId)
+      .eq("user_id", userId)
+      .is("answer", null)
+      .select("id")
+      .maybeSingle();
+
+    if (answerError || !updatedInterview) {
+      await supabase.from("knowledge_space_assets").delete().eq("id", asset.id).eq("user_id", userId);
+      if (answerError) throw new Error(answerError.message);
+      throw new Error("interview_already_answered");
+    }
 
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (apiKey && asset?.id) {
+    if (apiKey) {
       const { ingestAsset } = await import("@/lib/maaroof/teaching.server");
       const result = await ingestAsset({ apiKey, assetId: asset.id, userId });
-      return { ok: true, result };
+      return { ok: result.ok, answerSaved: true, result };
     }
-    return { ok: true };
+    return { ok: true, answerSaved: true, queued: true };
   });
 
 // ===== Dashboard / supervision ============================================

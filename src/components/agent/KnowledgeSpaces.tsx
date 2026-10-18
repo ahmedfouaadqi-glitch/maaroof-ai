@@ -73,6 +73,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [interviewNotice, setInterviewNotice] = useState<string | null>(null);
   const [data, setData] = useState<{ assets: any[]; nodes: any[]; prompts: any[]; interviews: any[] }>({
     assets: [], nodes: [], prompts: [], interviews: [],
   });
@@ -108,6 +109,10 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
 
   useEffect(() => { if (userId) void refreshSpaces(); }, [userId, refreshSpaces]);
   useEffect(() => { if (activeId) void refreshActive(activeId); }, [activeId, refreshActive]);
+  useEffect(() => {
+    setAnswers({});
+    setInterviewNotice(null);
+  }, [activeId]);
 
   if (!userId) return null;
 
@@ -434,38 +439,76 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             ))}
 
             {tab === "interview" && (
-              <>
+              <div className="space-y-3">
                 <button
-                  onClick={() => run("gen", async () => { await genQuestions({ data: { spaceId: active.id } }); await refreshActive(active.id); })}
-                  disabled={busy === "gen"}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
+                  onClick={() => run("gen", async () => {
+                    setInterviewNotice(null);
+                    const result: any = await genQuestions({ data: { spaceId: active.id } });
+                    const generatedCount = Array.isArray(result?.questions) ? result.questions.length : 0;
+                    setInterviewNotice(
+                      generatedCount
+                        ? `${t("teach_interview_generated")}: ${generatedCount}`
+                        : t("teach_interview_no_new_questions"),
+                    );
+                    await refreshActive(active.id);
+                  })}
+                  disabled={busy !== null}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary transition-colors duration-200 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
                 >
                   {busy === "gen" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquareQuote className="h-3.5 w-3.5" />}
                   {t("teach_generate_questions")}
                 </button>
+
+                {interviewNotice && (
+                  <p role="status" aria-live="polite" className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                    {interviewNotice}
+                  </p>
+                )}
+
+                {data.interviews.length === 0 && busy !== "gen" && (
+                  <div className="rounded-xl border border-dashed border-border/60 bg-background/30 px-4 py-5 text-center">
+                    <MessageSquareQuote className="mx-auto h-5 w-5 text-muted-foreground" />
+                    <p className="mt-2 text-sm font-medium">{t("teach_interview_empty")}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t("teach_interview_empty_hint")}</p>
+                  </div>
+                )}
+
                 {data.interviews.map((q) => (
-                  <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3">
-                    <p className="text-sm">{q.question}</p>
+                  <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3 transition-colors duration-200 hover:border-primary/25 motion-reduce:transition-none">
+                    <p className="text-sm leading-relaxed">{q.question}</p>
                     {q.answer ? (
-                      <p className="mt-1.5 text-xs text-emerald-500">{q.answer}</p>
+                      <p className="mt-2 rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-xs leading-relaxed text-emerald-600 dark:text-emerald-400">
+                        {q.answer}
+                      </p>
                     ) : (
-                      <div className="mt-2 flex items-center gap-1">
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                         <input
                           value={answers[q.id] || ""}
                           onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
                           placeholder={t("teach_answer")}
-                          className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
+                          aria-label={t("teach_answer")}
+                          maxLength={8000}
+                          disabled={busy !== null}
+                          className="min-w-0 flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none transition-colors duration-200 focus:border-primary disabled:opacity-60 motion-reduce:transition-none"
                         />
                         <button
                           onClick={() => run(q.id, async () => {
-                            const a = (answers[q.id] || "").trim();
-                            if (!a) return;
-                            await answer({ data: { interviewId: q.id, answer: a } });
+                            const answerText = (answers[q.id] || "").trim();
+                            if (!answerText) return;
+                            setInterviewNotice(null);
+                            const outcome: any = await answer({ data: { interviewId: q.id, answer: answerText } });
                             setAnswers((s) => ({ ...s, [q.id]: "" }));
+                            setInterviewNotice(
+                              outcome?.result?.ok === false
+                                ? t("teach_interview_learning_failed")
+                                : outcome?.queued
+                                  ? t("teach_interview_answer_queued")
+                                  : t("teach_interview_answer_saved"),
+                            );
                             await refreshActive(active.id);
                           })}
-                          disabled={busy === q.id}
-                          className="rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
+                          disabled={busy !== null || !(answers[q.id] || "").trim()}
+                          className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary transition-colors duration-200 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
                         >
                           {busy === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("teach_send")}
                         </button>
@@ -473,7 +516,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                     )}
                   </div>
                 ))}
-              </>
+              </div>
             )}
           </div>
         </>
