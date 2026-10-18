@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENGINE_LIST } from "@/lib/ai-engines";
-import { buildSpaceInterviewRows, engineFailureReason, ENGINE_PERSPECTIVES } from "./space-interview";
+import { buildSpaceInterviewRows, engineFailureReason, ENGINE_PERSPECTIVES, enginesNeedingQuestions } from "./space-interview";
 
 describe("ten-engine knowledge-space interview", () => {
   it("creates one user-facing question row per configured engine", () => {
@@ -37,4 +37,16 @@ describe("ten-engine knowledge-space interview", () => {
     expect(engineFailureReason("en", "network")).toBe("The engine could not be reached. You can retry.");
     expect(engineFailureReason("ku", "unavailable")).toContain("بەردەست نییە");
   });
+  it("reuses ready questions and retries only missing or failed engines", () => {
+    const existing = ENGINE_LIST.slice(0, 9).map((engine) => ({
+      engine_key: engine.key,
+      generation_status: engine.key === "grok" ? "failed" : "ready",
+    }));
+    expect(enginesNeedingQuestions(existing)).toEqual(["grok", ENGINE_LIST[9].key]);
+    expect(enginesNeedingQuestions(ENGINE_LIST.map((engine) => ({
+      engine_key: engine.key,
+      generation_status: "ready",
+    })))).toEqual([]);
+  });
+
 });
