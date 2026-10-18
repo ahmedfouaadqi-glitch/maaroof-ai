@@ -23,11 +23,7 @@ const SUMMARY_KEYS = [
   "findings",
 ] as const;
 
-export function extractToolSummary(
-  value: unknown,
-  maxLength = 500,
-  depth = 0,
-): string | null {
+export function extractToolSummary(value: unknown, maxLength = 500, depth = 0): string | null {
   if (depth > 4 || value == null) return null;
   if (typeof value === "string") {
     const text = value.replace(/\s+/g, " ").trim();
