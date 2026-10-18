@@ -598,3 +598,41 @@ export const adminListMaaroofJobs = createServerFn({ method: "POST" })
     if (error) throw new Response(error.message, { status: 400 });
     return { jobs: jobs ?? [], events: [] };
   });
+
+/** Read-only cross-account knowledge-space overview for administrators. */
+export const adminListKnowledgeSpaces = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = context as any;
+    const { data: spaces, error: spacesError } = await supabaseAdmin
+      .from("knowledge_spaces")
+      .select("id,user_id,name,description,status,lang,assets_count,nodes_count,confidence,metrics,created_at,updated_at")
+      .order("updated_at", { ascending: false, nullsFirst: false })
+      .limit(200);
+    if (spacesError) throw new Response("Knowledge spaces could not be loaded", { status: 400 });
+    const ids = (spaces ?? []).map((s: any) => s.id);
+    if (!ids.length) return { spaces: [] };
+    const [{ data: assets, error: assetsError }, { data: prompts, error: promptsError }] = await Promise.all([
+      supabaseAdmin.from("knowledge_space_assets").select("space_id,status").in("space_id", ids),
+      supabaseAdmin.from("knowledge_space_prompts").select("space_id").in("space_id", ids),
+    ]);
+    if (assetsError || promptsError) throw new Response("Knowledge-space metrics could not be loaded", { status: 400 });
+    const assetStats = new Map<string, { total: number; pending: number; failed: number }>();
+    for (const asset of assets ?? []) {
+      const stat = assetStats.get(asset.space_id) ?? { total: 0, pending: 0, failed: 0 };
+      stat.total += 1;
+      if (asset.status === "needs_approval") stat.pending += 1;
+      if (asset.status === "failed") stat.failed += 1;
+      assetStats.set(asset.space_id, stat);
+    }
+    const promptCounts = new Map<string, number>();
+    for (const prompt of prompts ?? []) promptCounts.set(prompt.space_id, (promptCounts.get(prompt.space_id) ?? 0) + 1);
+    return {
+      spaces: (spaces ?? []).map((space: any) => ({
+        ...space,
+        asset_stats: assetStats.get(space.id) ?? { total: 0, pending: 0, failed: 0 },
+        prompt_count: promptCounts.get(space.id) ?? 0,
+      })),
+    };
+  });
+

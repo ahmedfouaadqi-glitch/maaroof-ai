@@ -28,6 +28,7 @@ import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenc
 import { AdminGuideTab } from "@/components/admin/AdminGuideTab";
 import { InterfacesAdminPanel } from "@/components/admin/InterfacesAdminPanel";
 import { JobsAdminPanel } from "@/components/admin/JobsAdminPanel";
+import { KnowledgeSpacesPanel } from "@/components/admin/KnowledgeSpacesPanel";
 import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
 import { ADMIN_GROUPS, type L3 } from "@/components/admin/admin-guide-content";
 
@@ -162,6 +163,7 @@ function AdminPage() {
         {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
         {activeSub === "interfaces" && <InterfacesAdminPanel />}
         {activeSub === "jobs" && <JobsAdminPanel />}
+        {activeSub === "knowledge_spaces" && <KnowledgeSpacesPanel />}
       </main>
     </div>
   );
