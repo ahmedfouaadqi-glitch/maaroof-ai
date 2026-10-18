@@ -2490,6 +2490,7 @@ export type Database = {
           created_at: string
           engine_key: string
           engine_name: string
+          engine_order: number
           failure_reason: string | null
           generation_status: string
           id: string
@@ -2505,6 +2506,7 @@ export type Database = {
           created_at?: string
           engine_key?: string
           engine_name?: string
+          engine_order?: number
           failure_reason?: string | null
           generation_status?: string
           id?: string
