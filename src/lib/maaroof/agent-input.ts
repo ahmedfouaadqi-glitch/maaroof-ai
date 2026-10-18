@@ -88,7 +88,11 @@ export function removePlaceholderCompetitors(input: Record<string, any>): {
   if (!Array.isArray(raw)) return { input: out, removed: [] };
   const removed: string[] = [];
   out.competitors = raw.filter((value: unknown) => {
-    const name = str(value);
+    const name = typeof value === "string"
+      ? str(value)
+      : value && typeof value === "object"
+        ? str((value as any).name || (value as any).brand || (value as any).competitor)
+        : str(value);
     const placeholder = !name || PLACEHOLDER_COMPETITOR_PATTERNS.some((pattern) => pattern.test(name));
     if (placeholder) removed.push(name);
     return !placeholder;
