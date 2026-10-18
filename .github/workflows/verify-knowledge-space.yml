@@ -20,14 +20,8 @@ jobs:
         run: bun run test
       - name: Lint new interview helpers and tests
         run: bunx eslint src/lib/maaroof/interview-questions.ts src/lib/__tests__/interview-questions.test.ts --rule=prettier/prettier:off
-      - name: Format and print new interview files temporarily for exact review
-        run: |
-          bunx prettier --write src/lib/maaroof/interview-questions.ts src/lib/__tests__/interview-questions.test.ts
-          echo "===INTERVIEW_HELPER_START==="
-          cat src/lib/maaroof/interview-questions.ts
-          echo "===INTERVIEW_TEST_START==="
-          cat src/lib/__tests__/interview-questions.test.ts
-          echo "===INTERVIEW_TEST_END==="
+      - name: Check formatting of new files
+        run: bunx prettier --check src/lib/maaroof/interview-questions.ts src/lib/__tests__/interview-questions.test.ts
       - name: TypeScript check
         run: bunx tsc --noEmit
       - name: Build production bundle

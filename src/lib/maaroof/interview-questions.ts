@@ -27,17 +27,11 @@ export function uniqueInterviewQuestions(
   existingQuestions: readonly unknown[] = [],
   maximum = 8,
 ): string[] {
-  if (
-    !Array.isArray(proposed) ||
-    !Number.isSafeInteger(maximum) ||
-    maximum <= 0
-  ) {
+  if (!Array.isArray(proposed) || !Number.isSafeInteger(maximum) || maximum <= 0) {
     return [];
   }
 
-  const seen = new Set(
-    existingQuestions.map(normalizeInterviewQuestion).filter(Boolean),
-  );
+  const seen = new Set(existingQuestions.map(normalizeInterviewQuestion).filter(Boolean));
   const result: string[] = [];
 
   for (const value of proposed) {
@@ -55,10 +49,7 @@ export function uniqueInterviewQuestions(
 }
 
 /** Format a bounded history for the model so it can avoid repeating old questions. */
-export function formatInterviewHistory(
-  records: unknown,
-  maximumCharacters = 5000,
-): string {
+export function formatInterviewHistory(records: unknown, maximumCharacters = 5000): string {
   if (!Array.isArray(records) || maximumCharacters <= 0) {
     return "No previous interview questions.";
   }
@@ -79,7 +70,5 @@ export function formatInterviewHistory(
   }
 
   const formatted = entries.join("\n\n");
-  return formatted
-    ? formatted.slice(0, maximumCharacters)
-    : "No previous interview questions.";
+  return formatted ? formatted.slice(0, maximumCharacters) : "No previous interview questions.";
 }
