@@ -488,7 +488,7 @@ export const answerSpaceInterview = createServerFn({ method: "POST" })
         user_id: userId,
         kind: "interview",
         source_type: "text",
-        title: `Interview: ${String(row.question).slice(0, 120)}`,
+        title: `مقابلة: ${String(row.question).slice(0, 120)}`,
         raw_text: `Q: ${row.question}\nA: ${data.answer}`,
         status: "queued",
         stage: "import",
