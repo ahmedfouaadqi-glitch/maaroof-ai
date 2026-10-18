@@ -111,7 +111,7 @@ export async function generateInterviewEvidenceReport(
     interview.questions_snapshot.map((question) => [String(question.id), question]),
   );
   const answers = Object.entries(interview.state.answers)
-    .filter(([, answer]) => answer.status === "answered" && answer.value !== null && answer.value !== undefined)
+    .filter(([, answer]) => Boolean(answer && typeof answer === "object" && answer.status === "answered" && answer.value !== null && answer.value !== undefined))
     .slice(0, 25)
     .map(([questionId, answer]) => {
       const question = questionById.get(questionId);
@@ -129,7 +129,8 @@ export async function generateInterviewEvidenceReport(
     description: boundedString(source.description, 500),
     snippet: boundedString(source.snippet, 1200),
   }));
-  const domainList = interview.domains.length ? interview.domains.slice(0, 5) : ["general"];
+  const selectedDomains = Array.isArray(interview.domains) ? interview.domains : [];
+  const domainList = selectedDomains.length ? selectedDomains.slice(0, 5) : ["general"];
   const languageInstruction = interview.locale === "en"
     ? "Write all report text in clear English."
     : interview.locale === "ku"
