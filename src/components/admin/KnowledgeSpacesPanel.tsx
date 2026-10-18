@@ -22,7 +22,7 @@ type Space = {
 
 const COPY = {
   ar: {
-    title: "مساحات المعرفة", intro: "نظرة إدارية مجمّعة على المساحات دون فتح محتوى ملفات العملاء أو تعليماتهم الخاصة.",
+    title: "مساحات المعرفة", intro: "هذه نظرة إدارية على بيانات المساحات فقط؛ كل مساحة تخص حساب صاحبها وتُدار من مساحة المعرفة داخل واجهة معروف الخاصة به. تحكّم بإظهار الميزة لكل مستخدم من إعداداته الفردية.",
     refresh: "تحديث", search: "ابحث بالاسم أو الوصف أو المعرّف", all: "كل الحالات", active: "نشطة", pending: "تحتاج مراجعة", failed: "تحتوي أخطاء",
     total: "المساحات", assets: "الأصول", prompts: "التعليمات", nodes: "عُقد المعرفة", approval: "بانتظار الموافقة", errors: "أصول فاشلة",
     name: "المساحة", status: "الحالة", language: "اللغة", updated: "آخر تحديث", details: "ملخص المساحة", owner: "معرّف المالك", description: "الوصف",
@@ -30,7 +30,7 @@ const COPY = {
     confidence: "الثقة", privacy: "حماية الخصوصية: هذه الشاشة لا تعرض محتويات الملفات أو نصوص التعليمات، ولا تسمح بتعديل المساحات.",
   },
   en: {
-    title: "Knowledge Spaces", intro: "Cross-space administrative overview without exposing client files or private prompt contents.",
+    title: "Knowledge Spaces", intro: "Administrative metadata overview only. Each space belongs to its user and is managed from that user’s Knowledge Space area in Maaroof. Control feature visibility per account in the individual user settings.",
     refresh: "Refresh", search: "Search name, description, or ID", all: "All statuses", active: "Active", pending: "Needs review", failed: "Has errors",
     total: "Spaces", assets: "Assets", prompts: "Prompts", nodes: "Knowledge nodes", approval: "Awaiting approval", errors: "Failed assets",
     name: "Space", status: "Status", language: "Language", updated: "Last updated", details: "Space summary", owner: "Owner ID", description: "Description",
@@ -38,7 +38,7 @@ const COPY = {
     confidence: "Confidence", privacy: "Privacy boundary: this view does not expose file contents or prompt text and does not allow space mutations.",
   },
   ku: {
-    title: "شوێنەکانی زانیاری", intro: "پوختەی بەڕێوەبەرایەتی بۆ شوێنەکان، بەبێ پیشاندانی ناوەڕۆکی فایل یان دەقی تایبەتی ڕێنماییەکان.",
+    title: "شوێنەکانی زانیاری", intro: "ئەمە تەنها پوختەیەکی بەڕێوەبەرایەتییە؛ هەر شوێنێک هی هەژماری خاوەنەکەیە و لە ڕووکاری معروفی ئەو بەکارهێنەرەوە بەڕێوەدەبرێت. دەتوانیت لە ڕێکخستنی تایبەتی هەر بەکارهێنەرێکەوە دەرکەوتنی تایبەتمەندییەکە کۆنترۆڵ بکەیت.",
     refresh: "نوێکردنەوە", search: "بە ناو، وەسف یان ناسنامە بگەڕێ", all: "هەموو دۆخەکان", active: "چالاک", pending: "پێویستی بە پێداچوونەوە", failed: "هەڵەی تێدایە",
     total: "شوێنەکان", assets: "سەرچاوەکان", prompts: "ڕێنماییەکان", nodes: "گرێکانی زانیاری", approval: "چاوەڕوانی پەسەندکردن", errors: "سەرچاوەی شکستخواردوو",
     name: "شوێن", status: "دۆخ", language: "زمان", updated: "دوایین نوێکردنەوە", details: "پوختەی شوێن", owner: "ناسنامەی خاوەن", description: "وەسف",
