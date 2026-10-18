@@ -1,0 +1,42 @@
+name: Visibility Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/routes/api/visibility.ts"
+      - "src/lib/visibility-normalization.ts"
+      - "src/lib/visibility-normalization.test.ts"
+      - "supabase/migrations/*visibility*"
+      - ".github/workflows/visibility-validation.yml"
+  push:
+    branches: [feat/admin-knowledge-spaces-readonly]
+    paths:
+      - "src/routes/api/visibility.ts"
+      - "src/lib/visibility-normalization.ts"
+      - "src/lib/visibility-normalization.test.ts"
+      - "supabase/migrations/*visibility*"
+      - ".github/workflows/visibility-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-visibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Test visibility normalization
+        run: bun run test -- src/lib/visibility-normalization.test.ts
+      - name: Lint visibility code
+        run: bunx eslint src/routes/api/visibility.ts src/lib/visibility-normalization.ts src/lib/visibility-normalization.test.ts
+      - name: Type-check project
+        run: bunx tsc --noEmit
+      - name: Build application
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: bun run build
