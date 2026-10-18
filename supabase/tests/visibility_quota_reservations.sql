@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(13);
+SELECT plan(17);
 
 SELECT has_table(
   'public',
@@ -57,6 +57,23 @@ SELECT ok(
 SELECT ok(
   has_function_privilege('service_role', 'public.finalize_visibility_quota(uuid,text,text)', 'EXECUTE'),
   'Service role can finalize quota'
+);
+
+SELECT ok(
+  public.consume_visibility_quota(NULL, 'profile', 1, NULL, 'invalid-test-run')->>'reason' = 'invalid_request',
+  'Quota reservation rejects a missing user without mutating counters'
+);
+SELECT ok(
+  public.finalize_visibility_quota(NULL, 'invalid-test-run', 'release')->>'reason' = 'invalid_request',
+  'Quota finalization rejects a missing user'
+);
+SELECT ok(
+  public.refund_token_charge(NULL, 'visibility', 'invalid-test-run', 'test')->>'reason' = 'invalid_refund_reference',
+  'Token refund rejects an incomplete charge reference'
+);
+SELECT ok(
+  public.charge_tokens(NULL, 'visibility', -1, 0, 'invalid-test-run', '{}'::jsonb)->>'reason' = 'invalid_amount',
+  'Ordinary token charge rejects negative token amounts'
 );
 
 SELECT * FROM finish();
