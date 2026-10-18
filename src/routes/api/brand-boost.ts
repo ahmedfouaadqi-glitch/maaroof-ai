@@ -111,9 +111,6 @@ export const Route = createFileRoute("/api/brand-boost")({
 
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (!prof) return Response.json({ error: "auth_required" }, { status: 401 });
           // Per-user super-admin toggle for Brand Boost: quota_overrides.brand_boost = "on" | "off" | undefined
@@ -127,6 +124,9 @@ export const Route = createFileRoute("/api/brand-boost")({
 
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
+
+          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Admin-controlled overrides via app_settings.brand_boost:
           //   { enabled_platforms?: Platform[], probe_prompt?: string, probe_system?: string }
