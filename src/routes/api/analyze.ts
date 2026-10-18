@@ -105,16 +105,6 @@ export const Route = createFileRoute("/api/analyze")({
           const runId = crypto.randomUUID();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
-          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
-          const _access = await resolveToolCost(userId, "analyze");
-          if ((_access.source as string) === "disabled_by_admin") {
-            return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
-          }
-          const _mci = await mciReuse(admin as any, "analyze", userId, [text, lang, scopeKey], !!(body as any)?.force);
-          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
-          const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-
           // Quota
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
           if (prof) {
@@ -139,6 +129,16 @@ export const Route = createFileRoute("/api/analyze")({
               return Response.json({ error: "limit", limit }, { status: 402 });
             }
           }
+
+          // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _access = await resolveToolCost(userId, "analyze");
+          if ((_access.source as string) === "disabled_by_admin") {
+            return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
+          }
+          const _mci = await mciReuse(admin as any, "analyze", userId, [text, lang, scopeKey], !!(body as any)?.force);
+          if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
+          const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze" } });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const hash = await sha256Hex(`v4-strict::${lang}::${scopeKey}::${text}`);
           const { data: cached } = await admin.from("analysis_cache").select("result, hits").eq("input_hash", hash).maybeSingle();
