@@ -534,6 +534,12 @@ export function InterviewPanel({
       setProgress(body.progress || null);
       setDataComplete(false);
       setAnswer("");
+      setResearchSources([]);
+      setResearchQuery("");
+      setResearchReport(null);
+      setAdvancedReport(null);
+      setResearchError("");
+      setAdvancedReportError("");
       await loadSessions();
     } catch (e) {
       setError(apiError(locale, e instanceof Error ? e.message : undefined));
@@ -586,6 +592,12 @@ export function InterviewPanel({
       setProgress(body.progress || null);
       setDataComplete(body.data_complete === true);
       setAnswer("");
+      setResearchSources([]);
+      setResearchQuery("");
+      setResearchReport(null);
+      setAdvancedReport(null);
+      setResearchError("");
+      setAdvancedReportError("");
     } catch (e) {
       setError(apiError(locale, e instanceof Error ? e.message : undefined));
     } finally {
