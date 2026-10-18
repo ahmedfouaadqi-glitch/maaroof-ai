@@ -656,6 +656,40 @@ async function handleEnrich(request: Request): Promise<Response> {
   }
 }
 
+
+async function handleGenerateReport(request: Request): Promise<Response> {
+  const auth = await authenticate(request);
+  if (!auth.ok) return auth.response;
+  const body = await readJsonBody(request);
+  if (!body || !isUuid(body.interview_id)) return errorResponse("invalid_interview_id", 400);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = auth.admin as any;
+  const { data: interview, error } = await db
+    .from("maaroof_interviews")
+    .select("id,user_id,workspace_id,target_type,target_name,initial_goal,domains,locale,state,status,questions_snapshot,context_snapshot")
+    .eq("id", body.interview_id)
+    .maybeSingle();
+  if (error) return errorResponse("interview_lookup_failed", 500);
+  if (!interview || !(await interviewAccess(auth.admin, auth.userId, interview, true))) {
+    return errorResponse("interview_not_found", 404);
+  }
+  if (interview.status !== "completed") return errorResponse("interview_must_be_completed", 409);
+  if (
+    !interview.state ||
+    typeof interview.state !== "object" ||
+    !interview.state.answers ||
+    !Array.isArray(interview.questions_snapshot) ||
+    !isPlainRecord(interview.context_snapshot) ||
+    interview.context_snapshot.workspace_id !== interview.workspace_id ||
+    interview.context_snapshot.target_name !== interview.target_name ||
+    interview.context_snapshot.target_type !== interview.target_type
+  ) {
+    return errorResponse("stored_interview_context_mismatch", 500);
+  }
+  const result = await generateInterviewEvidenceReport(db, auth.userId, interview);
+  return Response.json(result.body, { status: result.status });
+}
+
 export const Route = createFileRoute("/api/maaroof-interviews")({
   server: {
     handlers: {
@@ -665,9 +699,9 @@ export const Route = createFileRoute("/api/maaroof-interviews")({
           .clone()
           .json()
           .catch(() => null);
-        return isPlainRecord(body) && body.action === "enrich"
-          ? handleEnrich(request)
-          : handleCreate(request);
+        if (isPlainRecord(body) && body.action === "enrich") return handleEnrich(request);
+        if (isPlainRecord(body) && body.action === "report") return handleGenerateReport(request);
+        return handleCreate(request);
       },
       PATCH: async ({ request }) => handleUpdate(request),
     },
