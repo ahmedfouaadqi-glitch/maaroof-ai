@@ -144,6 +144,12 @@ export const Route = createFileRoute("/api/compare")({
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+          try {
+            await chargeUsage?.();
+          } catch (usageError) {
+            console.error("[api/compare] usage update failed:", usageError);
+            return Response.json({ error: "usage_update_failed" }, { status: 500 });
+          }
 
           const userCtx = await getUserContext(admin, userId);
           const market = describeMarket(body.scope);
