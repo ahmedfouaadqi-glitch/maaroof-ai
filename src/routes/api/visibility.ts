@@ -306,8 +306,26 @@ export const Route = createFileRoute("/api/visibility")({
                 await askAll();
                 const { notifyUser } = await import("@/lib/notify.server");
                 if (!answers.length) {
-                  try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -Number(pChg.tokens || 0), _usd: 0, _run_id: pRun, _meta: { refund: true, endpoint: "/api/visibility#probe" } } as any); } catch {}
-                  try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
+                  const { data: refundResult, error: refundError } = await admin.rpc("refund_token_charge", {
+                    _user_id: userId,
+                    _tool_key: "visibility.probe",
+                    _run_id: pRun,
+                    _reason: "no_results",
+                  } as any);
+                  const refundConfirmed = !refundError && !!(refundResult as any)?.ok;
+                  if (!refundConfirmed) {
+                    console.error("[api/visibility] probe refund failed:", refundError?.message || (refundResult as any)?.reason || "unknown_error");
+                  }
+                  try {
+                    await notifyUser(
+                      userId,
+                      "analysis_done",
+                      refundConfirmed
+                        ? `${brand}: probe failed — token refund confirmed`
+                        : `${brand}: probe failed — token refund needs review`,
+                      { link: "/dashboard" },
+                    );
+                  } catch {}
                   return;
                 }
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
