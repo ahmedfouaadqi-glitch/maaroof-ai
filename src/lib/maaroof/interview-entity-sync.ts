@@ -16,7 +16,14 @@ type InterviewSnapshot = {
 };
 
 export type EntityProfileSyncPatch = {
-  entity_type?: "product_company" | "marketing_company" | "news_agency" | "content_creator" | "public_figure" | "individual" | "multi_client_agency";
+  entity_type?:
+    | "product_company"
+    | "marketing_company"
+    | "news_agency"
+    | "content_creator"
+    | "public_figure"
+    | "individual"
+    | "multi_client_agency";
   specialty_scope?: string;
 };
 
@@ -29,7 +36,11 @@ const TYPE_FROM_INTERVIEW: Record<string, EntityProfileSyncPatch["entity_type"]>
 };
 
 function normalizeName(value: unknown): string {
-  return String(value || "").normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return String(value || "")
+    .normalize("NFKC")
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function answerText(state: InterviewState, questionIds: string[]): string {
@@ -38,7 +49,10 @@ function answerText(state: InterviewState, questionIds: string[]): string {
     if (!answer || answer.status !== "answered" || answer.source !== "user") continue;
     const value = answer.value;
     const text = Array.isArray(value)
-      ? value.map((part) => String(part || "").trim()).filter(Boolean).join(", ")
+      ? value
+          .map((part) => String(part || "").trim())
+          .filter(Boolean)
+          .join(", ")
       : typeof value === "string"
         ? value.trim()
         : "";
@@ -60,7 +74,9 @@ export function deriveEntityProfileSync(
   const patch: EntityProfileSyncPatch = {};
   const inferredType = TYPE_FROM_INTERVIEW[interview.targetType];
   const currentType = String(profile.entity_type || "").toLowerCase();
-  const isLegacyType = !currentType || ["organization", "person", "company", "creator", "agency"].includes(currentType);
+  const isLegacyType =
+    !currentType ||
+    ["organization", "person", "company", "creator", "agency"].includes(currentType);
   if (inferredType && isLegacyType) patch.entity_type = inferredType;
 
   if (!String(profile.specialty_scope || "").trim()) {
