@@ -34,4 +34,19 @@ describe("entity consistency identity anchors", () => {
     expect(context).toContain("declared_links=maaroofai.com,instagram.com");
     expect(context).toContain("not independently verified");
   });
+
+  it("uses a matching declared official link to disambiguate the entity", () => {
+    const alerts = checkEntityConsistency(
+      "Maaroof provides software services in Saudi Arabia. Official details: https://maaroofai.com/about",
+      {
+        brand_name: "Maaroof",
+        hq_country: "IQ",
+        target_markets: ["IQ"],
+        entity_links: ["https://www.maaroofai.com"],
+      },
+    );
+    expect(alerts.some((alert) => alert.kind === "identity")).toBe(false);
+    expect(alerts.some((alert) => alert.kind === "geo")).toBe(true);
+  });
+
 });
