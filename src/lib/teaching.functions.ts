@@ -275,7 +275,8 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     if (existingError) throw new Error("interview_questions_lookup_failed");
     const existing = (existingRows || []) as any[];
     const readyKeys = new Set(existing.filter((row) => row.generation_status === "ready").map((row) => String(row.engine_key)));
-    const enginesToAsk = ENGINE_LIST.filter((engine) => enginesNeedingQuestions(existing).includes(engine.key));
+    const neededKeys = new Set(enginesNeedingQuestions(existing));
+    const enginesToAsk = ENGINE_LIST.filter((engine) => neededKeys.has(engine.key));
     if (!enginesToAsk.length) {
       return {
         questions: existing.filter((row) => row.generation_status === "ready"),
