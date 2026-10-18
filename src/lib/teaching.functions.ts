@@ -3,6 +3,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { ENGINE_KEYS, ENGINE_CATALOG, ENGINE_PERSONA, type EngineKey } from "@/lib/ai-engines";
+import { resolveEngineModels } from "@/lib/ai-engines.server";
 
 const uuid = z.string().uuid();
 
@@ -252,72 +254,121 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ===== Interview mode ======================================================
+// ===== Interview mode: ten engine perspectives ============================
 export const generateSpaceInterview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
-      .from("knowledge_spaces").select("id, name, lang, metrics, space_dna, brand_identity").eq("id", data.spaceId).maybeSingle();
+      .from("knowledge_spaces")
+      .select("id, name, lang, metrics, space_dna, brand_identity")
+      .eq("id", data.spaceId)
+      .maybeSingle();
     if (!space) throw new Error("not_found");
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-    const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } = await import("@/lib/lovable-ai");
-    const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-      method: "POST",
-      headers: lovableAiHeaders(apiKey),
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is missing.` },
-          { role: "user", content: `Space: ${space.name}\nLanguage: ${space.lang}\nMetrics: ${JSON.stringify(space.metrics || {}).slice(0, 1500)}\nDNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1500)}\nBrand: ${JSON.stringify(space.brand_identity || {}).slice(0, 1500)}` },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
-    const json: any = await res.json();
-    const parsed = extractJsonObject<{ questions: string[] }>(json?.choices?.[0]?.message?.content);
-    const questions = (parsed?.questions || []).slice(0, 8);
-    for (const q of questions) {
-      await supabase.from("knowledge_space_interviews").insert({
-        space_id: data.spaceId, user_id: userId, question: String(q).slice(0, 1000), topic: "gap",
-      });
-    }
-    return { questions };
-  });
+    const {
+      LOVABLE_AI_CHAT_COMPLETIONS_URL,
+      lovableAiHeaders,
+      extractJsonObject,
+    } = await import("@/lib/lovable-ai");
 
-export const answerSpaceInterview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: { interviewId: string; answer: string }) =>
-    z.object({ interviewId: uuid, answer: z.string().min(1).max(8000) }).parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
-    const { data: row } = await supabase
-      .from("knowledge_space_interviews").select("id, space_id, question").eq("id", data.interviewId).maybeSingle();
-    if (!row) throw new Error("not_found");
+    // Resolve models through the existing governance layer. A failed model
+    // must not prevent the other engine perspectives from returning.
+    const engines = [...ENGINE_KEYS] as EngineKey[];
+    const models = await resolveEngineModels(engines);
+    const language = String(space.lang || "ar");
+    const languageInstruction: Record<string, string> = {
+      ar: "Write the question in clear Arabic.",
+      en: "Write the question in clear English.",
+      ku: "پرسیارەکە بە کوردیی سۆرانیی ڕوون بنووسە.",
+    };
+    const contextBlock = [
+      `Knowledge space: ${String(space.name || "").slice(0, 300)}`,
+      `Language: ${language}`,
+      `Metrics: ${JSON.stringify(space.metrics || {}).slice(0, 1200)}`,
+      `Knowledge DNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1200)}`,
+      `Brand identity: ${JSON.stringify(space.brand_identity || {}).slice(0, 1200)}`,
+    ].join("\\n");
 
-    await supabase.from("knowledge_space_interviews")
-      .update({ answer: data.answer, answered_at: new Date().toISOString() }).eq("id", data.interviewId);
+    const results = await Promise.all(engines.map(async (engine) => {
+      const definition = ENGINE_CATALOG[engine];
+      const model = String(models[engine]?.model || definition.defaultModel);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      try {
+        const reasoning = /^openai\\//.test(model) || /gemini-2\\.5-pro|gemini-3/.test(model)
+          ? { reasoning_effort: "low" }
+          : {};
+        const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+          method: "POST",
+          headers: lovableAiHeaders(apiKey),
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            max_tokens: 1200,
+            temperature: 0.35,
+            ...reasoning,
+            messages: [
+              {
+                role: "system",
+                content: `You are evaluating missing knowledge for a private knowledge space. Perspective: ${ENGINE_PERSONA[engine]}.
+Return strict JSON only: {"questions":["one question"]}.
+Generate exactly ONE precise, high-value interview question that closes a real knowledge gap. Avoid questions already answered by the supplied context. Ask about an operational rule, decision rationale, process, identity, quality standard, or missing evidence. The question must be answerable by the space owner in 1–3 sentences. ${languageInstruction[language] || languageInstruction.ar}
+Do not return commentary, markdown, or a second question.`,
+              },
+              {
+                role: "user",
+                content: `${contextBlock}\\n\\nGenerate one adaptive question from your assigned perspective.`,
+              },
+            ],
+          }),
+        });
+        if (!response.ok) {
+          return { key: engine, name: definition.name, proxy: definition.proxy, status: "error" as const, questionsCount: 0 };
+        }
+        const payload: any = await response.json();
+        const raw = String(payload?.choices?.[0]?.message?.content || "");
+        const parsed = extractJsonObject<{ questions?: unknown }>(raw);
+        const questions = Array.isArray(parsed?.questions)
+          ? Array.from(new Set(parsed.questions.map((q: unknown) => String(q || "").trim()).filter((q: string) => q.length >= 8)))
+              .slice(0, 1)
+          : [];
+        if (!questions.length) {
+          return { key: engine, name: definition.name, proxy: definition.proxy, status: "empty" as const, questionsCount: 0 };
+        }
 
-    // The answer itself is knowledge — register it as a text asset and learn it.
-    const { data: asset } = await supabase.from("knowledge_space_assets").insert({
-      space_id: row.space_id, user_id: userId, kind: "interview", source_type: "text",
-      title: `مقابلة: ${String(row.question).slice(0, 120)}`,
-      raw_text: `س: ${row.question}\nج: ${data.answer}`,
-      status: "queued", stage: "import",
-    }).select("id").single();
+        const { error: insertError } = await supabase
+          .from("knowledge_space_interviews")
+          .insert(questions.map((question) => ({
+            space_id: data.spaceId,
+            user_id: userId,
+            question: question.slice(0, 1000),
+            topic: `engine:${engine}`,
+          })));
+        if (insertError) {
+          return { key: engine, name: definition.name, proxy: definition.proxy, status: "error" as const, questionsCount: 0 };
+        }
+        return { key: engine, name: definition.name, proxy: definition.proxy, status: "answered" as const, questionsCount: questions.length };
+      } catch (error: any) {
+        return {
+          key: engine,
+          name: definition.name,
+          proxy: definition.proxy,
+          status: error?.name === "AbortError" ? "timeout" as const : "error" as const,
+          questionsCount: 0,
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
+    }));
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (apiKey && asset?.id) {
-      const { ingestAsset } = await import("@/lib/maaroof/teaching.server");
-      const result = await ingestAsset({ apiKey, assetId: asset.id, userId });
-      return { ok: true, result };
-    }
-    return { ok: true };
+    return {
+      questions: results.reduce((total, result) => total + result.questionsCount, 0),
+      engines: results,
+    };
   });
 
 // ===== Dashboard / supervision ============================================
