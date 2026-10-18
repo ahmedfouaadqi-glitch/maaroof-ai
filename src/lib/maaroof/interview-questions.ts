@@ -27,9 +27,17 @@ export function uniqueInterviewQuestions(
   existingQuestions: readonly unknown[] = [],
   maximum = 8,
 ): string[] {
-  if (!Array.isArray(proposed) || !Number.isSafeInteger(maximum) || maximum <= 0) return [];
+  if (
+    !Array.isArray(proposed) ||
+    !Number.isSafeInteger(maximum) ||
+    maximum <= 0
+  ) {
+    return [];
+  }
 
-  const seen = new Set(existingQuestions.map(normalizeInterviewQuestion).filter(Boolean));
+  const seen = new Set(
+    existingQuestions.map(normalizeInterviewQuestion).filter(Boolean),
+  );
   const result: string[] = [];
 
   for (const value of proposed) {
@@ -51,21 +59,27 @@ export function formatInterviewHistory(
   records: unknown,
   maximumCharacters = 5000,
 ): string {
-  if (!Array.isArray(records) || maximumCharacters <= 0) return "No previous interview questions.";
+  if (!Array.isArray(records) || maximumCharacters <= 0) {
+    return "No previous interview questions.";
+  }
 
   const entries: string[] = [];
   for (const item of records.slice(0, 40) as InterviewHistoryItem[]) {
-    const question = typeof item?.question === "string"
-      ? item.question.replace(/\s+/gu, " ").trim().slice(0, 300)
-      : "";
+    const question =
+      typeof item?.question === "string"
+        ? item.question.replace(/\s+/gu, " ").trim().slice(0, 300)
+        : "";
     if (!question) continue;
 
-    const answer = typeof item.answer === "string" && item.answer.trim()
-      ? item.answer.replace(/\s+/gu, " ").trim().slice(0, 400)
-      : "Unanswered";
+    const answer =
+      typeof item.answer === "string" && item.answer.trim()
+        ? item.answer.replace(/\s+/gu, " ").trim().slice(0, 400)
+        : "Unanswered";
     entries.push(`Q: ${question}\nA: ${answer}`);
   }
 
   const formatted = entries.join("\n\n");
-  return formatted ? formatted.slice(0, maximumCharacters) : "No previous interview questions.";
+  return formatted
+    ? formatted.slice(0, maximumCharacters)
+    : "No previous interview questions.";
 }
