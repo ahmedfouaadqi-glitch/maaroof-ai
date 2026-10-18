@@ -60,7 +60,7 @@ BEGIN
     'used_today', v_profile.tokens_used_today + _tokens,
     'used_month', v_profile.tokens_used_month + _tokens);
 END;
-$;
+$$;
 
 -- Idempotent token refunds for failed visibility probes.
 -- The original charge and refund are serialized by locking the user's profile row.
