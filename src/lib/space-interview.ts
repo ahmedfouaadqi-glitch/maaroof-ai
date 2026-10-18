@@ -20,6 +20,20 @@ export type SpaceInterviewRow = {
   failure_reason: string | null;
 };
 
+export type ExistingEngineInterviewRow = {
+  engine_key: string;
+  generation_status: string;
+};
+
+export function enginesNeedingQuestions(
+  existing: ExistingEngineInterviewRow[],
+): EngineKey[] {
+  const ready = new Set(
+    existing.filter((row) => row.generation_status === "ready").map((row) => row.engine_key),
+  );
+  return ENGINE_LIST.filter((engine) => !ready.has(engine.key)).map((engine) => engine.key);
+}
+
 export const ENGINE_PERSPECTIVES: Record<EngineKey, string> = {
   chatgpt: "clarify user intent, structure, and measurable outcomes",
   gemini: "connect the knowledge space context and identify missing relationships",
