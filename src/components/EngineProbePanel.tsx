@@ -46,7 +46,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
     entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 10)); }).catch(() => setAllowed([]));
   }, []);
 
-  const maxN = cost?.maxEngines ?? 9;
+  const maxN = cost?.maxEngines ?? 10;
   useEffect(() => {
     if (!sel.length) { setCost(null); return; }
     costFn({ data: { toolKey: "visibility.probe", units: sel.length } }).then(setCost).catch(() => setCost(null));
@@ -131,7 +131,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
         <select value={mode} onChange={(e) => setMode(e.target.value as any)} className="rounded-md border border-border bg-background px-2 py-1 text-xs">
           <option value="instant">{T.instant}</option>
           {cost?.notifyAllowed !== false && <option value="notify">{T.notify}</option>}
-          {cost?.backgroundAllowed !== false && <option value="background">{T.bg}</option>}
+          {cost?.backgroundAllowed !== false && cost?.notifyAllowed !== false && <option value="background">{T.bg}</option>}
         </select>
         <button type="button" onClick={run} disabled={busy || !sel.length || !brand.trim() || (cost ? !cost.enough : false)}
           className="ms-auto inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">
