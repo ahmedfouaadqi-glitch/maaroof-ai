@@ -1001,6 +1001,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
       }
       if (missing.length) {
+        if (step.tool === "known") knownFailed = true;
         const q = { index: i, tool: step.tool, field: missing[0], question: clarifyQuestion(missing[0], ctx.language) };
         results.push({ tool: step.tool, ok: false, output: { needs_input: missing } });
         await ctx.emit("clarify", q);
