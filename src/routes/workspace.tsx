@@ -481,8 +481,8 @@ function WorkspacePage() {
               <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-5 md:p-6">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold">{c.suggested}</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">{c.skillsHint}</p>
+                    <h2 className="font-semibold tracking-tight">{c.suggested}</h2>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{c.skillsHint}</p>
                   </div>
                   <Sparkles className="size-5 text-primary" />
                 </div>
@@ -490,7 +490,7 @@ function WorkspacePage() {
                   {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
                   {MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "contact" && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
                   {selectedSkills.map((key) => {
                     const skill = MAAROOF_SKILLS.find((item) => item.key === key);
                     return skill ? <button key={key} type="button" onClick={() => toggleSkill(key)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary">{skill.label[locale]} <X className="size-3" /></button> : null;
@@ -501,16 +501,16 @@ function WorkspacePage() {
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
-                <h2 className="mb-3 font-semibold">{c.mode}</h2>
+                <div className="mb-3 flex items-center justify-between gap-2"><h2 className="font-semibold tracking-tight">{c.mode}</h2><span className="rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">{locale === "en" ? "Choose one" : locale === "ku" ? "یەکێک هەڵبژێرە" : "اختر طريقة"}</span></div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
-                    <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
+                    <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`min-h-11 rounded-xl border px-3 py-2 text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${mode === item.key ? "border-primary bg-primary/10 text-primary shadow-sm" : "border-border hover:border-primary/30 hover:bg-muted/40"}` } aria-pressed={mode === item.key}>{item.label}</button>
                   ))}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-5">
-                <h2 className="font-semibold">{c.costEstimate}</h2>
+                <h2 className="font-semibold tracking-tight">{c.costEstimate}</h2>
                 {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارێک خەمڵاندن…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
                   <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
                   {costProbe && <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.probeCost} ({costProbe.units})</span><span className="font-semibold tabular-nums">{costProbe.total} {c.tokens}</span></div>}
@@ -523,10 +523,10 @@ function WorkspacePage() {
               </div>
 
               {policy.show_live_engine_picker && <div className="rounded-2xl border border-border/80 bg-card shadow-sm transition-shadow hover:shadow-md">
-                <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 p-4 text-start">
+                <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 rounded-2xl p-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-muted"><BrainCircuit className="size-5" /></div>
                   <div className="flex-1">
-                    <h2 className="font-semibold">{c.models}</h2>
+                    <h2 className="font-semibold tracking-tight">{c.models}</h2>
                     <p className="mt-1 text-xs text-muted-foreground">{c.modelsHint}</p>
                   </div>
                   <ChevronDown className={`size-4 transition-transform ${modelsOpen ? "rotate-180" : ""}`} />
@@ -554,7 +554,7 @@ function WorkspacePage() {
               </div>}
             </div>
 
-            <aside className="space-y-3">
+            <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
               <div className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="font-semibold">{locale === "en" ? "How Maaroof works" : locale === "ku" ? "چۆنیەتی کارکردنی معروف" : "كيف يعمل معروف؟"}</h2>
                 <ol className="mt-3 space-y-3 text-sm">
