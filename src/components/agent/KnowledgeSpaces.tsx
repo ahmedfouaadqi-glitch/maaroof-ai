@@ -10,13 +10,44 @@ import {
 } from "@/lib/teaching.functions";
 import {
   Loader2, Plus, Upload, Link2, FileText, Brain, CheckCircle2, XCircle,
-  Trash2, Sparkles, MessageSquareQuote, GraduationCap, AlertTriangle,
+  Trash2, Sparkles, MessageSquareQuote, GraduationCap, AlertTriangle, Info,
 } from "lucide-react";
 
 type Space = any;
 
 const TABS = ["assets", "nodes", "prompts", "interview"] as const;
 type Tab = (typeof TABS)[number];
+
+type HelpHintProps = {
+  label: string;
+  description: string;
+  example?: string;
+  exampleLabel: string;
+  compact?: boolean;
+  className?: string;
+};
+
+/** Lightweight native disclosure: no timers, observers, canvas or tooltip runtime. */
+function HelpHint({
+  label, description, example, exampleLabel, compact = false, className = "",
+}: HelpHintProps) {
+  return (
+    <details className={`group min-w-0 ${className}`}>
+      <summary
+        title={label}
+        aria-label={label}
+        className={`inline-flex cursor-pointer list-none select-none items-center gap-1.5 rounded-md text-[11px] text-muted-foreground transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 motion-reduce:transition-none [&::-webkit-details-marker]:hidden ${compact ? "p-1" : "py-1"}`}
+      >
+        <Info className="h-3.5 w-3.5 shrink-0" />
+        {!compact && <span>{label}</span>}
+      </summary>
+      <div className="mt-2 rounded-lg border border-primary/15 bg-gradient-to-br from-primary/[0.06] to-transparent p-3 text-xs leading-relaxed text-muted-foreground">
+        <p>{description}</p>
+        {example && <p className="mt-1.5"><span className="font-semibold text-foreground">{exampleLabel}</span>{" "}{example}</p>}
+      </div>
+    </details>
+  );
+}
 
 export function KnowledgeSpaces({ userId }: { userId: string | null }) {
   const { t } = useI18n();
@@ -133,20 +164,28 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
     });
 
   const metricCards = [
-    { label: t("teach_assets"), value: metrics.documents_processed ?? 0 },
-    { label: t("teach_learned"), value: metrics.documents_learned ?? 0 },
-    { label: t("teach_nodes"), value: metrics.knowledge_nodes ?? 0 },
-    { label: t("teach_prompts"), value: metrics.prompts ?? 0 },
-    { label: "Confidence", value: `${metrics.confidence ?? 0}%` },
-    { label: "Reality", value: `${metrics.reality ?? 0}%` },
+    { label: t("teach_assets"), value: metrics.documents_processed ?? 0, help: t("teach_help_metric_desc"), example: t("teach_help_metric_example") },
+    { label: t("teach_learned"), value: metrics.documents_learned ?? 0, help: t("teach_help_metric_desc"), example: t("teach_help_metric_example") },
+    { label: t("teach_nodes"), value: metrics.knowledge_nodes ?? 0, help: t("teach_help_nodes_desc"), example: t("teach_help_nodes_example") },
+    { label: t("teach_prompts"), value: metrics.prompts ?? 0, help: t("teach_help_prompts_desc"), example: t("teach_help_prompts_example") },
+    { label: "Confidence", value: `${metrics.confidence ?? 0}%`, help: t("teach_help_confidence_desc"), example: t("teach_help_metric_example") },
+    { label: "Reality", value: `${metrics.reality ?? 0}%`, help: t("teach_help_reality_desc"), example: t("teach_help_metric_example") },
   ];
 
+  const activeTabHelp = tab === "assets"
+    ? { description: t("teach_help_assets_desc"), example: t("teach_help_assets_example") }
+    : tab === "nodes"
+      ? { description: t("teach_help_nodes_desc"), example: t("teach_help_nodes_example") }
+      : tab === "prompts"
+        ? { description: t("teach_help_prompts_desc"), example: t("teach_help_prompts_example") }
+        : { description: t("teach_help_interview_desc"), example: t("teach_help_interview_example") };
+
   return (
-    <section className="rounded-2xl border border-border/60 bg-card/60 p-4 sm:p-6 backdrop-blur">
+    <section className="rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card/95 to-primary/5 p-4 shadow-sm transition-colors duration-200 sm:p-6 motion-reduce:transition-none">
       <header className="flex flex-wrap items-center gap-3">
         <GraduationCap className="h-5 w-5 text-primary" />
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold leading-tight">{t("teach_title")}</h2>
+          <h2 className="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-lg font-semibold leading-tight text-transparent">{t("teach_title")}</h2>
           <p className="text-xs text-muted-foreground">{t("teach_subtitle")}</p>
         </div>
       </header>
@@ -163,8 +202,8 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
           <button
             key={s.id}
             onClick={() => setActiveId(s.id)}
-            className={`rounded-full border px-3 py-1.5 text-xs transition ${
-              s.id === activeId ? "border-primary bg-primary/15 text-primary" : "border-border/60 text-muted-foreground hover:text-foreground"
+            className={`rounded-full border px-3 py-1.5 text-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm motion-reduce:transform-none motion-reduce:transition-none ${
+              s.id === activeId ? "border-primary bg-primary/15 text-primary ring-1 ring-primary/20" : "border-border/60 text-muted-foreground hover:border-primary/45 hover:text-foreground"
             }`}
           >
             {s.name} · {s.nodes_count ?? 0}
@@ -188,6 +227,8 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
         </div>
       </div>
 
+      <HelpHint className="mt-2" label={t("teach_help_toggle")} description={t("teach_help_space_desc")} example={t("teach_help_space_example")} exampleLabel={t("teach_example_label")} />
+
       {!active ? (
         <p className="mt-6 text-sm text-muted-foreground">{t("teach_no_space")}</p>
       ) : (
@@ -195,9 +236,12 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
           {/* Metrics */}
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {metricCards.map((m) => (
-              <div key={m.label} className="rounded-xl border border-border/50 bg-background/40 px-3 py-2">
-                <div className="text-[11px] text-muted-foreground">{m.label}</div>
-                <div className="text-sm font-semibold">{m.value}</div>
+              <div key={m.label} className="group rounded-xl border border-border/50 bg-background/45 px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm motion-reduce:transform-none motion-reduce:transition-none">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="text-[11px] text-muted-foreground">{m.label}</div>
+                  <HelpHint compact label={`${m.label}: ${t("teach_help_toggle")}`} description={m.help} example={m.example} exampleLabel={t("teach_example_label")} />
+                </div>
+                <div className="text-sm font-semibold tabular-nums">{m.value}</div>
               </div>
             ))}
           </div>
@@ -211,7 +255,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={busy === "upload"}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-2 text-xs hover:border-primary disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-2 text-xs transition-colors duration-200 hover:border-primary hover:bg-primary/5 disabled:opacity-50 motion-reduce:transition-none"
             >
               {busy === "upload" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               {t("teach_upload")}
@@ -219,9 +263,9 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             <div className="flex items-center gap-1">
               <input
                 value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…"
-                className="w-56 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
+                className="w-56 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none transition-colors duration-200 focus:border-primary motion-reduce:transition-none"
               />
-              <button onClick={onAddUrl} disabled={busy === "url"} className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-2 text-xs hover:border-primary disabled:opacity-50">
+              <button onClick={onAddUrl} disabled={busy === "url"} className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-2 text-xs transition-colors duration-200 hover:border-primary hover:bg-primary/5 disabled:opacity-50 motion-reduce:transition-none">
                 {busy === "url" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                 {t("teach_add_url")}
               </button>
@@ -251,12 +295,14 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             <textarea
               value={text} onChange={(e) => setText(e.target.value)} rows={2}
               placeholder={t("teach_add_text")}
-              className="w-full rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
+              aria-label={t("teach_add_text")}
+              className="w-full rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none transition-colors duration-200 focus:border-primary motion-reduce:transition-none"
             />
-            <button onClick={onAddText} disabled={busy === "text"} className="mt-1 inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:border-primary disabled:opacity-50">
+            <button onClick={onAddText} disabled={busy === "text"} className="mt-1 inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-1.5 text-xs transition-colors duration-200 hover:border-primary hover:bg-primary/5 disabled:opacity-50 motion-reduce:transition-none">
               {busy === "text" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
               {t("teach_learn")}
             </button>
+            <HelpHint className="mt-1" label={t("teach_help_toggle")} description={t("teach_help_text_desc")} example={t("teach_help_text_example")} exampleLabel={t("teach_example_label")} />
           </div>
 
           {/* Gap proposals from Hermes supervision */}
@@ -276,12 +322,14 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
               <button
                 key={x}
                 onClick={() => setTab(x)}
-                className={`px-3 py-2 text-xs transition ${tab === x ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                className={`px-3 py-2 text-xs transition-colors duration-200 motion-reduce:transition-none ${tab === x ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground hover:bg-primary/5"}`}
               >
                 {x === "assets" ? t("teach_assets") : x === "nodes" ? t("teach_nodes") : x === "prompts" ? t("teach_prompts") : t("teach_interview")}
               </button>
             ))}
           </div>
+
+          <HelpHint className="mb-3" label={t("teach_help_toggle")} description={activeTabHelp.description} example={activeTabHelp.example} exampleLabel={t("teach_example_label")} />
 
           <div className="mt-3 space-y-2">
             {tab === "assets" && data.assets.map((a) => (
