@@ -150,6 +150,26 @@ export const Route = createFileRoute("/api/visibility")({
     handlers: {
       POST: async ({ request }) => {
         let refundContext: { admin: any; userId: string; runId: string; toolKey: string } | null = null;
+        let quotaContext: { admin: any; userId: string; runId: string } | null = null;
+        const finalizeQuota = async (action: "commit" | "release") => {
+          const ctx = quotaContext;
+          if (!ctx) return true;
+          try {
+            const { data, error } = await ctx.admin.rpc("finalize_visibility_quota", {
+              _user_id: ctx.userId, _run_id: ctx.runId, _action: action,
+            } as any);
+            const ok = !error && !!(data as any)?.ok;
+            if (!ok) {
+              console.error("[api/visibility] quota finalization needs review:", error?.message || (data as any)?.reason || "unknown_error", { action, runId: ctx.runId });
+              return false;
+            }
+            quotaContext = null;
+            return true;
+          } catch (e) {
+            console.error("[api/visibility] quota finalization threw:", e, { action, runId: ctx.runId });
+            return false;
+          }
+        };
         const refundChargedTokens = async (reason: string) => {
           const ctx = refundContext;
           if (!ctx) return false;
@@ -163,6 +183,7 @@ export const Route = createFileRoute("/api/visibility")({
             } else {
               refundContext = null;
             }
+            if (quotaContext?.runId === ctx.runId) await finalizeQuota("release");
             return confirmed;
           } catch (refundError) {
             console.error("[api/visibility] token refund threw:", refundError, { reason, runId: ctx.runId, toolKey: ctx.toolKey });
@@ -235,12 +256,13 @@ export const Route = createFileRoute("/api/visibility")({
               if ((prof!.monthly_analyses_used || 0) >= limit) {
                 return Response.json({ error: "limit", limit }, { status: 402 });
               }
-              chargeUsage = async (_runId, _toolKey) => {
+              chargeUsage = async (quotaRunId, _toolKey) => {
                 const { data, error } = await admin.rpc("consume_visibility_quota", {
                   _user_id: userId,
                   _source: "profile",
                   _profile_limit: limit,
                   _subscription_id: null,
+                  _run_id: quotaRunId,
                 } as any);
                 if (error) throw new Error(`quota_rpc_error:${error.message}`);
                 if (!(data as any)?.ok) throw new Error(`quota_denied:${(data as any)?.reason || "unknown"}`);
@@ -269,6 +291,7 @@ export const Route = createFileRoute("/api/visibility")({
                   _source: "agent_subscription",
                   _profile_limit: null,
                   _subscription_id: sub.id,
+                  _run_id: _runId,
                 } as any);
                 if (error) throw new Error(`quota_rpc_error:${error.message}`);
                 if (!(data as any)?.ok) throw new Error(`quota_denied:${(data as any)?.reason || "unknown"}`);
@@ -290,7 +313,10 @@ export const Route = createFileRoute("/api/visibility")({
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: pChg.reason === "tool_disabled" ? 403 : 402 });
             if (chargeUsage) {
-              try { await chargeUsage(pRun, "visibility.probe"); }
+              try {
+                await chargeUsage(pRun, "visibility.probe");
+                quotaContext = { admin, userId, runId: pRun };
+              }
               catch (e) {
                 const message = e instanceof Error ? e.message : String(e);
                 console.error("[api/visibility] probe quota reservation failed:", message);
@@ -409,6 +435,7 @@ export const Route = createFileRoute("/api/visibility")({
           refundContext = { admin, userId, runId: _runId, toolKey: "visibility" };
           try {
             await chargeUsage?.(_runId, "visibility");
+            if (chargeUsage) quotaContext = { admin, userId, runId: _runId };
           } catch (usageError) {
             const message = usageError instanceof Error ? usageError.message : String(usageError);
             console.error("[api/visibility] quota reservation failed:", message);
