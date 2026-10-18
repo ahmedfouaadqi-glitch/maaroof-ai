@@ -79,7 +79,10 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
   }, [loadAssets, dashboard]);
 
   useEffect(() => { if (userId) void refreshSpaces(); }, [userId, refreshSpaces]);
-  useEffect(() => { if (activeId) void refreshActive(activeId); }, [activeId, refreshActive]);
+  useEffect(() => {
+    setInterviewEngines([]);
+    if (activeId) void refreshActive(activeId);
+  }, [activeId, refreshActive]);
 
   if (!userId) return null;
 
