@@ -292,11 +292,11 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
           .join(" — ");
       })
       .join("\n")
-      .slice(0, 3800);
+      .slice(0, 1800);
     const priorContext = ((priorInterviews || []) as any[])
       .map((row) => `Q: ${String(row.question || "").slice(0, 240)}\nA: ${String(row.answer || "(unanswered)").slice(0, 240)}`)
       .join("\n")
-      .slice(0, 2800);
+      .slice(0, 1400);
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
@@ -323,9 +323,9 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     const contextBlock = [
       `Knowledge space: ${String(space.name || "").slice(0, 300)}`,
       `Language: ${language}`,
-      `Metrics: ${JSON.stringify(space.metrics || {}).slice(0, 1200)}`,
-      `Knowledge DNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1200)}`,
-      `Brand identity: ${JSON.stringify(space.brand_identity || {}).slice(0, 1200)}`,
+      `Metrics: ${JSON.stringify(space.metrics || {}).slice(0, 700)}`,
+      `Knowledge DNA: ${JSON.stringify(space.space_dna || {}).slice(0, 700)}`,
+      `Brand identity: ${JSON.stringify(space.brand_identity || {}).slice(0, 700)}`,
       `Known learning: ${knownContext || "(no learned nodes yet)"}`,
       `Previous interview: ${priorContext || "(no prior interview)"}`,
     ].join("\n");
