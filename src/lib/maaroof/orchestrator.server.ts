@@ -977,10 +977,25 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
       // Reject obvious planner placeholders rather than treating them as real competitors.
+      let rejectedPlaceholderCompetitors = false;
       if (step.tool === "compare" || step.tool === "competitor_compare") {
         const placeholder = /^(?:competitor\s*\d*|competitor\s*[a-z]|example(?:\s+competitor)?|sample(?:\s+competitor)?|unknown|n\/?a|none|null|غير\s*معروف|منافس\s*(?:وهمي|افتراضي|مثال)|مثال\s*منافس|لا\s*يوجد)$/i;
         const supplied = Array.isArray((filled as any).competitors) ? (filled as any).competitors : [];
-        (filled as any).competitors = supplied.map((value: unknown) => flatten(value)).filter((value: string) => value && !placeholder.test(value.trim()));
+        const normalized = supplied.map((value: unknown) => flatten(value)).filter(Boolean);
+        (filled as any).competitors = normalized.filter((value: string) => !placeholder.test(value.trim()));
+        rejectedPlaceholderCompetitors = normalized.length > 0 && (filled as any).competitors.length === 0;
+      }
+      if (rejectedPlaceholderCompetitors) {
+        const question = ctx.language === "en"
+          ? "The previous step did not provide a verified competitor name. Which competitor or competitors should be compared?"
+          : ctx.language === "ku"
+            ? "لە هەنگاوی پێشوو ناوی ڕکابەری پشتڕاستکراو نەدۆزرایەوە. کام ڕکابەر بەراورد بکرێت؟"
+            : "لم تنتج الخطوة السابقة أسماء منافسين موثوقة. ما اسم المنافس أو المنافسين الذين تريد مقارنتهم؟";
+        const q = { index: i, tool: step.tool, field: "competitors", question };
+        results.push({ tool: step.tool, ok: false, output: { needs_input: ["competitors"] } });
+        await ctx.emit("clarify", q);
+        await logMsg("clarify", q);
+        continue;
       }
       const missing = missingFields(step.tool, filled);
       // Specialised sub-agent per tool (reused once created). Fail-open.
