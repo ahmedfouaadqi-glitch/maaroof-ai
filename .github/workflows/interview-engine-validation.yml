@@ -18,6 +18,7 @@ on:
       - "src/routes/api/maaroof-interviews.test.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
+      - "supabase/tests/**"
       - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
       - ".github/workflows/**"
   push:
@@ -38,6 +39,7 @@ on:
       - "src/routes/api/maaroof-interviews.test.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
+      - "supabase/tests/**"
       - "docs/MAAROOF-IMPLEMENTATION-NO-CLOUDFLARE.md"
       - ".github/workflows/**"
 
