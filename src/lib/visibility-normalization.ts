@@ -24,6 +24,21 @@ const PLATFORM_NAMES = [
   "Kimi",
 ] as const;
 
+export function hasValidPlatformScores(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return PLATFORM_NAMES.every((name) =>
+    value.some((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const platform = item as Record<string, unknown>;
+      if (platform.name !== name || platform.score === null || platform.score === undefined || platform.score === "") {
+        return false;
+      }
+      const score = typeof platform.score === "number" ? platform.score : Number(platform.score);
+      return Number.isFinite(score) && score >= 0 && score <= 100;
+    }),
+  );
+}
+
 function clamp(n: unknown): number {
   const value = typeof n === "number" ? n : Number(String(n ?? ""));
   if (!Number.isFinite(value)) return 0;
