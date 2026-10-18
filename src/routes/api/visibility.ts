@@ -128,7 +128,16 @@ export const Route = createFileRoute("/api/visibility")({
           }
         };
         try {
-          const body = (await request.json()) as Body;
+          let body: Body;
+          try {
+            const parsedBody: unknown = await request.json();
+            if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+              return Response.json({ error: "invalid_request_body" }, { status: 400 });
+            }
+            body = parsedBody as Body;
+          } catch {
+            return Response.json({ error: "invalid_json" }, { status: 400 });
+          }
           const brand = asText(body.brand, 200);
           const keywords = asText(body.keywords, 400);
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
@@ -446,10 +455,18 @@ export const Route = createFileRoute("/api/visibility")({
 
           const result = normalizeResult(parsed, content);
 
-          await admin.from("profiles").update({
-            brand_name: brand,
-            brand_keywords: keywords || null,
-          }).eq("id", userId);
+          let persistenceWarning: string | null = null;
+          const { error: profileUpdateError } = await admin
+            .from("profiles")
+            .update({
+              brand_name: brand,
+              brand_keywords: keywords || null,
+            })
+            .eq("id", userId);
+          if (profileUpdateError) {
+            persistenceWarning = "profile_update_failed";
+            console.error("[api/visibility] profile update failed:", profileUpdateError.message);
+          }
 
           const taskPayload = {
             user_id: userId,
@@ -466,6 +483,7 @@ export const Route = createFileRoute("/api/visibility")({
             .single();
 
           if (taskErr) {
+            persistenceWarning = persistenceWarning || "task_history_save_failed";
             console.error("[api/visibility] task insert failed:", taskErr.message);
           }
 
@@ -474,7 +492,22 @@ export const Route = createFileRoute("/api/visibility")({
           if (!quotaFinalized) quotaContext = null; // Report work succeeded; retain reservation for reconciliation.
           refundContext = null;
           const _q = pickQualityFields(parsed || {});
-          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q, quota_needs_review: !quotaFinalized }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
+          const _out = {
+            ok: true,
+            taskId: taskRow?.id ?? null,
+            basis: "estimated",
+            result: { ...result, basis: "estimated", sources: pack.sources, ..._q },
+            sources: pack.sources,
+            ..._q,
+            quota_needs_review: !quotaFinalized,
+            persistence_warning: persistenceWarning,
+          };
+          try {
+            await mciStore(admin as any, "visibility", userId, _mci.key, _out);
+          } catch (cacheError) {
+            console.error("[api/visibility] cache write failed:", cacheError);
+          }
+          return Response.json(_out);
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
