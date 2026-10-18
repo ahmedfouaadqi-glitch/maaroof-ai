@@ -291,6 +291,27 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
             </button>
           </div>
 
+          <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-3 sm:gap-2">
+            <HelpHint
+              label={t("teach_help_toggle")}
+              description={t("teach_help_upload_desc")}
+              example={t("teach_help_upload_example")}
+              exampleLabel={t("teach_example_label")}
+            />
+            <HelpHint
+              label={t("teach_help_toggle")}
+              description={t("teach_help_url_desc")}
+              example={t("teach_help_url_example")}
+              exampleLabel={t("teach_example_label")}
+            />
+            <HelpHint
+              label={t("teach_help_toggle")}
+              description={t("teach_help_inherit_desc")}
+              example={t("teach_help_inherit_example")}
+              exampleLabel={t("teach_example_label")}
+            />
+          </div>
+
           <div className="mt-3">
             <textarea
               value={text} onChange={(e) => setText(e.target.value)} rows={2}
@@ -322,6 +343,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
               <button
                 key={x}
                 onClick={() => setTab(x)}
+                aria-pressed={tab === x}
                 className={`px-3 py-2 text-xs transition-colors duration-200 motion-reduce:transition-none ${tab === x ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground hover:bg-primary/5"}`}
               >
                 {x === "assets" ? t("teach_assets") : x === "nodes" ? t("teach_nodes") : x === "prompts" ? t("teach_prompts") : t("teach_interview")}
