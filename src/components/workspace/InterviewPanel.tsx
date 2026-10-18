@@ -62,6 +62,20 @@ type InterviewApiResponse = {
   sources?: InterviewResearchSource[];
   query?: string;
   collected_at?: string;
+  report?: GeneratedInterviewReport;
+  reused?: boolean;
+};
+
+type GeneratedInterviewReport = {
+  summary: string;
+  sections: Array<{
+    id: string;
+    title: string;
+    findings: string[];
+    gaps: string[];
+    recommendations: string[];
+    measurementNote: string;
+  }>;
 };
 
 type InterviewResearchSource = {
@@ -169,6 +183,10 @@ const COPY: Record<Locale, Record<string, string>> = {
     gaps: "فجوات البيانات",
     recommendations: "التوصيات",
     measurementNote: "حدود القياس",
+    generateAdvanced: "إنشاء التقرير المتقدم",
+    generatingAdvanced: "جارٍ إعداد التقرير...",
+    advancedReport: "التقرير المتقدم المدعوم بالأدلة",
+    advancedReportError: "تعذر إنشاء التقرير المتقدم. تحقق من الرصيد وإعدادات مزود الذكاء الاصطناعي.",
   },
   en: {
     title: "Saved context interview",
@@ -245,6 +263,10 @@ const COPY: Record<Locale, Record<string, string>> = {
     gaps: "Data gaps",
     recommendations: "Recommendations",
     measurementNote: "Measurement limits",
+    generateAdvanced: "Generate advanced report",
+    generatingAdvanced: "Generating report...",
+    advancedReport: "Evidence-grounded advanced report",
+    advancedReportError: "Could not generate the advanced report. Check token balance and AI provider configuration.",
   },
   ku: {
     title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
@@ -321,6 +343,10 @@ const COPY: Record<Locale, Record<string, string>> = {
     gaps: "بۆشاییەکانی داتا",
     recommendations: "پێشنیارەکان",
     measurementNote: "سنووری پێوانەکردن",
+    generateAdvanced: "دروستکردنی ڕاپۆرتی پێشکەوتوو",
+    generatingAdvanced: "ڕاپۆرتەکە ئامادە دەکرێت...",
+    advancedReport: "ڕاپۆرتی پێشکەوتوو پشتگیریکراو بە بەڵگە",
+    advancedReportError: "دروستکردنی ڕاپۆرت سەرکەوتوو نەبوو؛ بەڵانس و ڕێکخستنی دابینکەری AI بپشکنە.",
   },
 };
 
@@ -376,6 +402,9 @@ export function InterviewPanel({
   const [researchSources, setResearchSources] = useState<InterviewResearchSource[]>([]);
   const [researchQuery, setResearchQuery] = useState("");
   const [researchReport, setResearchReport] = useState<InterviewReport | null>(null);
+  const [advancedReport, setAdvancedReport] = useState<GeneratedInterviewReport | null>(null);
+  const [advancedReportBusy, setAdvancedReportBusy] = useState(false);
+  const [advancedReportError, setAdvancedReportError] = useState("");
 
   useEffect(() => {
     if (session || targetTypeManuallySelected) return;
@@ -638,6 +667,27 @@ export function InterviewPanel({
       setResearchError(c("researchError"));
     } finally {
       setResearchBusy(false);
+    }
+  }
+
+  async function generateAdvancedReport() {
+    if (!session || session.status !== "completed" || !researchSources.length || advancedReportBusy || busy) return;
+    setAdvancedReportBusy(true);
+    setAdvancedReportError("");
+    try {
+      const token = await tokenOrThrow();
+      const response = await fetch("/api/maaroof-interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ action: "report", interview_id: session.id }),
+      });
+      const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
+      if (!response.ok || !body.report) throw new Error(body.error || "report_generation_failed");
+      setAdvancedReport(body.report);
+    } catch {
+      setAdvancedReportError(c("advancedReportError"));
+    } finally {
+      setAdvancedReportBusy(false);
     }
   }
 
@@ -1126,6 +1176,57 @@ export function InterviewPanel({
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">{c("noSources")}</p>
+                  )}
+                  {researchSources.length > 0 && (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => void generateAdvancedReport()}
+                        disabled={advancedReportBusy || busy}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                      >
+                        {advancedReportBusy && <LoaderCircle className="size-4 animate-spin" />}
+                        {advancedReportBusy ? c("generatingAdvanced") : c("generateAdvanced")}
+                      </button>
+                      {advancedReportError && (
+                        <p role="alert" className="text-sm text-destructive">{advancedReportError}</p>
+                      )}
+                    </div>
+                  )}
+                  {advancedReport && (
+                    <div className="space-y-4 rounded-xl border border-primary/25 bg-primary/[0.025] p-4">
+                      <h4 className="font-semibold">{c("advancedReport")}</h4>
+                      <p className="text-sm leading-6">{advancedReport.summary}</p>
+                      {advancedReport.sections.map((reportSection) => (
+                        <article key={reportSection.id} className="space-y-3 rounded-lg border border-border p-3">
+                          <h5 className="font-semibold">{reportSection.title}</h5>
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground">{c("findings")}</p>
+                            <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                              {reportSection.findings.map((finding, index) => <li key={index}>{finding}</li>)}
+                            </ul>
+                          </div>
+                          {reportSection.gaps.length > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground">{c("gaps")}</p>
+                              <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                                {reportSection.gaps.map((gap, index) => <li key={index}>{gap}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground">{c("recommendations")}</p>
+                            <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                              {reportSection.recommendations.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
+                            </ul>
+                          </div>
+                          <p className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                            <span className="font-semibold">{c("measurementNote")}: </span>
+                            {reportSection.measurementNote}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
                   )}
                   {researchReport && (
                     <div className="space-y-4 border-t border-border pt-4">
