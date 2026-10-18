@@ -10,6 +10,7 @@ import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { extractToolSummary } from "@/lib/maaroof/tool-summary";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
@@ -401,12 +402,8 @@ function WorkspacePage() {
           };
           return reasonLabels[skipped]?.[locale] || (locale === "ar" ? `تم تخطي الأداة: ${skipped}` : locale === "ku" ? `ئامرازەکە تێپەڕێندرا: ${skipped}` : `Tool intentionally skipped: ${skipped}`);
         }
-        const candidate = output.summary || output.answer || output.text || output.message ||
-          output.recommendation || output.strategy || output.comparison || output.result;
-        if (typeof candidate === "string" && candidate.trim()) return candidate.trim().slice(0, 500);
-        const details = [output.winner, output.conclusion, output.recommendation?.summary]
-          .filter((value) => typeof value === "string" && value.trim());
-        if (details.length) return details.join(" — ").slice(0, 500);
+        const summary = extractToolSummary(output, 500);
+        if (summary) return summary;
       }
       if (typeof output === "string" && output.trim()) return output.trim().slice(0, 500);
       return d.ok ? c.toolDone : c.failed;
