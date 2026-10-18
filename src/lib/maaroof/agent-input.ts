@@ -71,6 +71,31 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
   return out;
 }
 
+/** Remove planner-generated competitor placeholders without touching real names. */
+const PLACEHOLDER_COMPETITOR_PATTERNS = [
+  /^(?:competitor|competitor name|rival|competitor brand)\s*(?:#?\s*[a-z0-9]+)?$/i,
+  /^(?:example competitor|sample competitor|unknown competitor|tbd|n\/a|not available)$/i,
+  /^(?:المنافس|منافس|اسم المنافس|منافس افتراضي|منافس نموذجي)\s*(?:رقم\s*)?(?:[0-9]+|[أ-ي]|الأول|الثاني|الثالث)?$/i,
+  /^(?:منافس غير معروف|غير معروف|غير محدد|مثال منافس)$/i,
+];
+
+export function removePlaceholderCompetitors(input: Record<string, any>): {
+  input: Record<string, any>;
+  removed: string[];
+} {
+  const out = { ...input };
+  const raw = out.competitors;
+  if (!Array.isArray(raw)) return { input: out, removed: [] };
+  const removed: string[] = [];
+  out.competitors = raw.filter((value: unknown) => {
+    const name = str(value);
+    const placeholder = !name || PLACEHOLDER_COMPETITOR_PATTERNS.some((pattern) => pattern.test(name));
+    if (placeholder) removed.push(name);
+    return !placeholder;
+  });
+  return { input: out, removed };
+}
+
 /** Required fields still empty after filling. */
 export function missingFields(tool: string, input: Record<string, any>): string[] {
   return (REQUIRED_FIELDS[tool] || []).filter((k) => str(input[k]).length < 2);
