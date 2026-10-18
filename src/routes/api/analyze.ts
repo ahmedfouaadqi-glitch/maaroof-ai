@@ -137,9 +137,6 @@ export const Route = createFileRoute("/api/analyze")({
           }
           const _mci = await mciReuse(admin as any, "analyze", userId, [text, lang, scopeKey], !!(body as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
-          const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-
           const hash = await sha256Hex(`v4-strict::${lang}::${scopeKey}::${text}`);
           const { data: cached } = await admin.from("analysis_cache").select("result, hits").eq("input_hash", hash).maybeSingle();
           let result: any;
@@ -150,6 +147,10 @@ export const Route = createFileRoute("/api/analyze")({
             fromCache = true;
             await admin.from("analysis_cache").update({ hits: ((cached as any).hits || 0) + 1 }).eq("input_hash", hash);
           } else {
+            // Charge only when the shared analysis cache misses; cached results do not incur provider work.
+            const _chg = await chargeTokens({ userId, toolKey: "analyze", runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/analyze" } });
+            if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+
             const langGuide: Record<string, string> = {
               ar: "اكتب جميع القيم النصية باللغة العربية الفصحى فقط.",
               en: "Write all string fields in clear English only.",
