@@ -125,16 +125,16 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
     const [assets, prompts, interviews, nodes] = await Promise.all([
       supabase.from("knowledge_space_assets")
         .select("id, title, kind, source_type, source_url, file_path, mime_type, size_bytes, status, stage, stages, classification, extracted, confidence, evidence_score, reality_score, verification_score, conflicts, needs_approval, approved, nodes_created, error, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(200),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("created_at", { ascending: false }).limit(200),
       supabase.from("knowledge_space_prompts")
         .select("id, title, intent, structure, prompt_dna, quality, approved, created_at")
-        .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(100),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("quality", { ascending: false }).limit(100),
       supabase.from("knowledge_space_interviews")
         .select("id, question, topic, answer, answered_at, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(60),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("created_at", { ascending: false }).limit(60),
       supabase.from("knowledge_nodes")
         .select("id, title, summary, layer, payload, confidence, quality, approved, updated_at")
-        .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(120),
+        .eq("space_id", data.spaceId).eq("user_id", userId).order("quality", { ascending: false }).limit(120),
     ]);
     return {
       assets: assets.data || [],
@@ -259,6 +259,7 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
       const { data: asset } = await supabase
         .from("knowledge_space_assets").select("id, space_id").eq("id", data.assetId).eq("user_id", userId).maybeSingle();
       if (!asset) throw new Error("not_found");
+      await assertOwnedSpace(supabase, asset.space_id, userId);
       spaceId = asset.space_id;
       await supabase.from("knowledge_space_assets").update({
         approved: data.approved,
@@ -278,12 +279,16 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
     }
     if (data.nodeId) {
       const { data: node } = await supabase.from("knowledge_nodes").select("space_id").eq("id", data.nodeId).eq("user_id", userId).maybeSingle();
-      spaceId = node?.space_id ?? spaceId;
+      if (!node) throw new Error("not_found");
+      await assertOwnedSpace(supabase, node.space_id, userId);
+      spaceId = node.space_id;
       await supabase.from("knowledge_nodes").update({ approved: data.approved }).eq("id", data.nodeId).eq("user_id", userId);
     }
     if (data.promptId) {
       const { data: p } = await supabase.from("knowledge_space_prompts").select("space_id").eq("id", data.promptId).eq("user_id", userId).maybeSingle();
-      spaceId = p?.space_id ?? spaceId;
+      if (!p) throw new Error("not_found");
+      await assertOwnedSpace(supabase, p.space_id, userId);
+      spaceId = p.space_id;
       await supabase.from("knowledge_space_prompts").update({ approved: data.approved }).eq("id", data.promptId).eq("user_id", userId);
     }
     if (spaceId) {
