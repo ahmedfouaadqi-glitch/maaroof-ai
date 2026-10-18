@@ -291,7 +291,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       `Metrics: ${JSON.stringify(space.metrics || {}).slice(0, 1200)}`,
       `Knowledge DNA: ${JSON.stringify(space.space_dna || {}).slice(0, 1200)}`,
       `Brand identity: ${JSON.stringify(space.brand_identity || {}).slice(0, 1200)}`,
-    ].join("\\n");
+    ].join("\n");
 
     const results = await Promise.all(engines.map(async (engine) => {
       const definition = ENGINE_CATALOG[engine];
@@ -299,7 +299,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 45000);
       try {
-        const reasoning = /^openai\\//.test(model) || /gemini-2\\.5-pro|gemini-3/.test(model)
+        const reasoning = /^openai\//.test(model) || /gemini-2\.5-pro|gemini-3/.test(model)
           ? { reasoning_effort: "low" }
           : {};
         const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
@@ -321,7 +321,7 @@ Do not return commentary, markdown, or a second question.`,
               },
               {
                 role: "user",
-                content: `${contextBlock}\\n\\nGenerate one adaptive question from your assigned perspective.`,
+                content: `${contextBlock}\n\nGenerate one adaptive question from your assigned perspective.`,
               },
             ],
           }),
