@@ -75,8 +75,8 @@ export function KnowledgeSpacesPanel() {
     const text = `${space.name || ""} ${space.description || ""} ${space.id}`.toLowerCase();
     if (query.trim() && !text.includes(query.trim().toLowerCase())) return false;
     if (statusFilter === "active" && !["active", "ready", "published"].includes(String(space.status || "").toLowerCase())) return false;
-    if (statusFilter === "pending" && !(space.asset_stats?.pending > 0)) return false;
-    if (statusFilter === "failed" && !(space.asset_stats?.failed > 0)) return false;
+    if (statusFilter === "pending" && !((space.asset_stats?.pending ?? 0) > 0)) return false;
+    if (statusFilter === "failed" && !((space.asset_stats?.failed ?? 0) > 0)) return false;
     return true;
   }), [spaces, query, statusFilter]);
 
