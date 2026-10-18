@@ -269,7 +269,7 @@ export const Route = createFileRoute("/api/visibility")({
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
             const pRun = crypto.randomUUID();
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
-            if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
+            if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: pChg.reason === "tool_disabled" ? 403 : 402 });
             if (chargeUsage) {
               try { await chargeUsage(); }
               catch (e) {
