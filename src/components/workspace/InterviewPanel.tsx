@@ -25,6 +25,7 @@ import {
   type InterviewTargetType,
 } from "@/lib/maaroof/interview-engine";
 import { defaultInterviewTargetType } from "@/lib/maaroof/interview-context";
+import { buildInterviewReport, type InterviewReport } from "@/lib/maaroof/interview-report";
 
 type Locale = "ar" | "en" | "ku";
 type InterviewDepth = "focused" | "comprehensive";
@@ -163,6 +164,11 @@ const COPY: Record<Locale, Record<string, string>> = {
     noSources: "لم تُعثر على مصادر صالحة بعد.",
     researchError: "تعذر جمع المصادر. تحقق من الحصة والاتصال ثم أعد المحاولة.",
     collectedAt: "تاريخ الجمع",
+    reportTitle: "التقرير التحليلي",
+    findings: "النتائج المستخلصة من السياق",
+    gaps: "فجوات البيانات",
+    recommendations: "التوصيات",
+    measurementNote: "حدود القياس",
   },
   en: {
     title: "Saved context interview",
@@ -234,6 +240,11 @@ const COPY: Record<Locale, Record<string, string>> = {
     noSources: "No valid sources found yet.",
     researchError: "Could not collect sources. Check quota and connection, then retry.",
     collectedAt: "Collected at",
+    reportTitle: "Analysis report",
+    findings: "Findings from collected context",
+    gaps: "Data gaps",
+    recommendations: "Recommendations",
+    measurementNote: "Measurement limits",
   },
   ku: {
     title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
@@ -305,6 +316,11 @@ const COPY: Record<Locale, Record<string, string>> = {
     researchError:
       "کۆکردنەوەی سەرچاوەکان سەرکەوتوو نەبوو؛ پشکنینی پەیوەندی و سنووری بەکارهێنان بکە.",
     collectedAt: "کاتی کۆکردنەوە",
+    reportTitle: "ڕاپۆرتی شیکاری",
+    findings: "ئەنجامەکان لە کۆنتێکستی کۆکراوە",
+    gaps: "بۆشاییەکانی داتا",
+    recommendations: "پێشنیارەکان",
+    measurementNote: "سنووری پێوانەکردن",
   },
 };
 
@@ -359,6 +375,7 @@ export function InterviewPanel({
   const [researchError, setResearchError] = useState("");
   const [researchSources, setResearchSources] = useState<InterviewResearchSource[]>([]);
   const [researchQuery, setResearchQuery] = useState("");
+  const [researchReport, setResearchReport] = useState<InterviewReport | null>(null);
 
   useEffect(() => {
     if (session || targetTypeManuallySelected) return;
@@ -597,8 +614,26 @@ export function InterviewPanel({
       });
       const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
       if (!response.ok) throw new Error(body.error || "external_research_failed");
-      setResearchSources(Array.isArray(body.sources) ? body.sources : []);
+      const sources = Array.isArray(body.sources) ? body.sources : [];
+      setResearchSources(sources);
       setResearchQuery(typeof body.query === "string" ? body.query : "");
+      setResearchReport(
+        buildInterviewReport({
+          targetType: session.target_type,
+          targetName: session.target_name,
+          goal: session.initial_goal,
+          domains: session.domains,
+          locale: session.locale,
+          state: session.state,
+          sources: sources.map((source) => ({
+            title: source.title,
+            url: source.source_url,
+            domain: source.domain,
+            description: source.description,
+            snippet: source.snippet,
+          })),
+        }),
+      );
     } catch {
       setResearchError(c("researchError"));
     } finally {
@@ -1089,6 +1124,45 @@ export function InterviewPanel({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">{c("noSources")}</p>
+              )}
+              {researchReport && (
+                <div className="space-y-4 border-t border-border pt-4">
+                  <div>
+                    <h4 className="font-semibold">{researchReport.title}</h4>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {researchReport.evidenceSummary}
+                    </p>
+                  </div>
+                  {researchReport.sections.map((reportSection) => (
+                    <article key={reportSection.id} className="space-y-3 rounded-lg border border-border p-3">
+                      <h5 className="font-semibold">{reportSection.title}</h5>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">{c("findings")}</p>
+                        <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                          {reportSection.findings.map((finding, index) => <li key={index}>{finding}</li>)}
+                        </ul>
+                      </div>
+                      {reportSection.gaps.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground">{c("gaps")}</p>
+                          <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                            {reportSection.gaps.map((gap, index) => <li key={index}>{gap}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">{c("recommendations")}</p>
+                        <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                          {reportSection.recommendations.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
+                        </ul>
+                      </div>
+                      <p className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                        <span className="font-semibold">{c("measurementNote")}: </span>
+                        {reportSection.measurementNote}
+                      </p>
+                    </article>
+                  ))}
+                </div>
               )}
             </section>
           )}
