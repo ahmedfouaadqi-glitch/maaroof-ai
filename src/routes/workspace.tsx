@@ -11,6 +11,7 @@ import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessM
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { extractToolSummary } from "@/lib/maaroof/tool-summary";
+import { estimateTaskWeight } from "@/lib/maaroof/task-weight";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
@@ -50,6 +51,7 @@ const COPY = {
     phase: "مرحلة", toolStarted: "بدأت أداة", toolDone: "نتيجة أداة", final: "اكتملت المهمة",
     clarify: "يحتاج معروف إلى معلومة إضافية", sendAnswer: "إرسال الإجابة", answerPlaceholder: "اكتب إجابتك…",
     runAgain: "مهمة جديدة", unknown: "حدث تحديث في المهمة", modelCount: "نموذج محدد",
+    taskWeight: "وزن المهمة", weightLight: "خفيفة", weightMedium: "متوسطة", weightDeep: "عميقة",
   },
   en: {
     eyebrow: "Intelligent workspace", title: "What would you like to accomplish?",
@@ -68,6 +70,7 @@ const COPY = {
     phase: "Phase", toolStarted: "Tool started", toolDone: "Tool result", final: "Task completed",
     clarify: "Maaroof needs one more detail", sendAnswer: "Send answer", answerPlaceholder: "Type your answer…",
     runAgain: "New task", unknown: "Task updated", modelCount: "model selected",
+    taskWeight: "Task weight", weightLight: "Light", weightMedium: "Medium", weightDeep: "Deep",
   },
   ku: {
     eyebrow: "شوێنی کاری زیرەک", title: "دەتەوێت چی ئەنجام بدەیت؟",
@@ -86,6 +89,7 @@ const COPY = {
     phase: "قۆناغ", toolStarted: "ئامراز دەستی پێکرد", toolDone: "ئەنجامی ئامراز", final: "ئەرکەکە تەواو بوو",
     clarify: "معروف پێویستی بە زانیاری زیاترە", sendAnswer: "ناردنی وەڵام", answerPlaceholder: "وەڵام بنووسە…",
     runAgain: "ئەرکی نوێ", unknown: "ئەرکەکە نوێ کرایەوە", modelCount: "مۆدێل هەڵبژێردرا",
+    taskWeight: "قورسایی ئەرک", weightLight: "سووک", weightMedium: "مامناوەند", weightDeep: "قووڵ",
   },
 } as const;
 
@@ -183,6 +187,8 @@ function WorkspacePage() {
     return (matched.length ? matched : enabled).slice(0, 3);
   }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
+  const taskWeight = estimateTaskWeight({ goal, selectedSkillCount: selectedSkills.length, selectedToolCount: tools.length, liveEngineCount: liveProbe ? selectedModels.length : 0 });
+  const taskWeightLabel = taskWeight === "deep" ? c.weightDeep : taskWeight === "medium" ? c.weightMedium : c.weightLight;
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
   const phaseEvents = events.filter((event) => event.type === "phase");
   const toolEvents = events.filter((event) => event.type === "tool_call" || event.type === "tool_result");
@@ -453,6 +459,10 @@ function WorkspacePage() {
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{c.taskWeight}:</span>
+                    <span className={`rounded-full border px-2.5 py-1 font-medium ${taskWeight === "deep" ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-muted/40"}`}>{taskWeightLabel}</span>
+                  </div>
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
                   <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
