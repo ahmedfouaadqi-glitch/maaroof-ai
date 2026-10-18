@@ -10,7 +10,7 @@
 // it is never auto-applied to a user's run.
 import { createClient } from "@supabase/supabase-js";
 
-export type ResolvedCost = { tokens: number; usd: number; source: "user_override" | "plan" | "unpriced" };
+export type ResolvedCost = { tokens: number; usd: number; source: "user_override" | "plan" | "unpriced" | "disabled_by_admin" };
 export type ChargeResult =
   | { ok: true; balance: number; used_today: number; used_month: number; tokens: number; usd: number; source: ResolvedCost["source"] }
   | { ok: false; reason: "unpriced" | "daily_limit" | "monthly_limit" | "balance" | "profile_not_found" | string; left?: number };
@@ -35,7 +35,7 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
   // 0) Admin explicitly disabled this tool for this user
   const ov = (prof as any)?.per_user_tool_overrides?.[toolKey];
   if (ov && ov.enabled === false) {
-    return { tokens: 0, usd: 0, source: "disabled_by_admin" as any };
+    return { tokens: 0, usd: 0, source: "disabled_by_admin" };
   }
 
   // 1) Per-user override wins
