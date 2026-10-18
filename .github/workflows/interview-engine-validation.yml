@@ -16,6 +16,7 @@ on:
       - "src/lib/auth.tsx"
       - "src/routes/api/maaroof-interviews.ts"
       - "src/routes/api/maaroof-interviews.test.ts"
+      - "src/routes/api/maaroof-interviews.integration.test.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
       - "supabase/tests/**"
@@ -37,6 +38,7 @@ on:
       - "src/lib/auth.tsx"
       - "src/routes/api/maaroof-interviews.ts"
       - "src/routes/api/maaroof-interviews.test.ts"
+      - "src/routes/api/maaroof-interviews.integration.test.ts"
       - "src/routeTree.gen.ts"
       - "supabase/migrations/**"
       - "supabase/tests/**"
@@ -64,7 +66,7 @@ jobs:
         run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.test.ts
 
       - name: Lint interview engine
-        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-context.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/components/workspace/InterviewPanel.tsx
+        run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-context.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/routes/api/maaroof-interviews.integration.test.ts src/components/workspace/InterviewPanel.tsx
 
       - name: Type-check project
         run: bunx tsc --noEmit
@@ -82,6 +84,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v3
         with:
@@ -92,3 +100,16 @@ jobs:
 
       - name: Run pgTAP database tests
         run: supabase test db
+
+      - name: Export local Supabase environment
+        shell: bash
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            printf 'SUPABASE_URL=%s\n' "$API_URL"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Exercise interview API against local Supabase
+        run: bun run test -- src/routes/api/maaroof-interviews.integration.test.ts
