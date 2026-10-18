@@ -17,6 +17,7 @@ on:
       - "src/lib/visibility-normalization.ts"
       - "src/lib/visibility-normalization.test.ts"
       - "supabase/migrations/**"
+      - "supabase/tests/**"
       - ".github/workflows/visibility-validation.yml"
 
 permissions:
