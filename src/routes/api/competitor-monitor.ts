@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         // Only billable actions consume quota (list/delete/policy are free).
         const charge = async () => {
           const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor", runId: crypto.randomUUID(), meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor", action } });
-          return _chg.ok ? null : Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+          return _chg.ok ? null : Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: _chg.reason === "tool_disabled" ? 403 : 402 });
         };
 
         const loadPolicy = async () => {
