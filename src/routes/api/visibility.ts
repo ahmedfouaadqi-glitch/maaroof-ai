@@ -484,6 +484,8 @@ export const Route = createFileRoute("/api/visibility")({
             console.error("[api/visibility] task insert failed:", taskErr.message);
           }
 
+          // The provider produced a usable report; do not refund for downstream cache/storage errors.
+          refundContext = null;
           const _q = pickQualityFields(parsed || {});
           { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); refundContext = null; return Response.json(_out); }
 
