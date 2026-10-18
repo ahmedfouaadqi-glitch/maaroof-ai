@@ -124,9 +124,14 @@ describe("deriveEntityProfileSync", () => {
           state: answeredState(),
           workspaceId: null,
         },
-        { full_name: "Ahmed", brand_name: null, entity_type: null, specialty_scope: "", entity_locked: false },
+        {
+          full_name: "Ahmed",
+          brand_name: null,
+          entity_type: null,
+          specialty_scope: "",
+          entity_locked: false,
+        },
       ),
     ).toEqual({});
   });
-
 });
