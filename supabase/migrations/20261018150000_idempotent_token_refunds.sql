@@ -1,3 +1,67 @@
+-- Prevent negative amounts from using the ordinary charge RPC as an unguarded refund path.
+-- Refunds must go through refund_token_charge so each refund is linked to one original ledger entry.
+CREATE OR REPLACE FUNCTION public.charge_tokens(
+  _user_id uuid, _tool_key text, _tokens integer, _usd numeric, _run_id text DEFAULT NULL, _meta jsonb DEFAULT '{}'::jsonb
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $
+DECLARE
+  v_profile public.profiles%ROWTYPE;
+  v_daily_left integer;
+  v_monthly_left integer;
+BEGIN
+  IF _tokens < 0 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_amount');
+  END IF;
+
+  SELECT * INTO v_profile FROM public.profiles WHERE id = _user_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'profile_not_found');
+  END IF;
+
+  IF v_profile.usage_day_start IS DISTINCT FROM CURRENT_DATE THEN
+    UPDATE public.profiles SET tokens_used_today = 0, usage_day_start = CURRENT_DATE WHERE id = _user_id;
+    v_profile.tokens_used_today := 0;
+  END IF;
+  IF date_trunc('month', v_profile.usage_period_start) <> date_trunc('month', now()) THEN
+    UPDATE public.profiles SET tokens_used_month = 0, usage_period_start = date_trunc('month', now()) WHERE id = _user_id;
+    v_profile.tokens_used_month := 0;
+  END IF;
+
+  IF v_profile.tokens_daily_limit IS NOT NULL THEN
+    v_daily_left := v_profile.tokens_daily_limit - v_profile.tokens_used_today;
+    IF v_daily_left < _tokens THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'daily_limit', 'left', v_daily_left);
+    END IF;
+  END IF;
+  IF v_profile.tokens_monthly_limit IS NOT NULL THEN
+    v_monthly_left := v_profile.tokens_monthly_limit - v_profile.tokens_used_month;
+    IF v_monthly_left < _tokens THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'monthly_limit', 'left', v_monthly_left);
+    END IF;
+  END IF;
+  IF v_profile.tokens_balance < _tokens THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'balance', 'left', v_profile.tokens_balance);
+  END IF;
+
+  UPDATE public.profiles
+    SET tokens_balance = tokens_balance - _tokens,
+        tokens_used_today = tokens_used_today + _tokens,
+        tokens_used_month = tokens_used_month + _tokens
+    WHERE id = _user_id;
+
+  INSERT INTO public.token_ledger (user_id, tool_key, tokens, usd_cost, run_id, meta)
+    VALUES (_user_id, _tool_key, _tokens, _usd, _run_id, _meta);
+
+  RETURN jsonb_build_object('ok', true,
+    'balance', v_profile.tokens_balance - _tokens,
+    'used_today', v_profile.tokens_used_today + _tokens,
+    'used_month', v_profile.tokens_used_month + _tokens);
+END;
+$;
+
 -- Idempotent token refunds for failed visibility probes.
 -- The original charge and refund are serialized by locking the user's profile row.
 -- Refunds are recorded as negative ledger entries and cannot be applied twice.
