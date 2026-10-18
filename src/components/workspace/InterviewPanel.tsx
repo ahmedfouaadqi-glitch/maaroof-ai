@@ -589,7 +589,7 @@ export function InterviewPanel({
     setResearchError("");
     try {
       const token = await tokenOrThrow();
-      const response = await fetch("/api/maaroof-interviews",
+      const response = await fetch("/api/maaroof-interviews", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ action: "enrich", interview_id: session.id }),
