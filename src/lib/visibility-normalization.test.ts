@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePlatforms, normalizeResult } from "@/lib/visibility-normalization";
+import { hasValidPlatformScores, normalizePlatforms, normalizeResult } from "@/lib/visibility-normalization";
 
 const names = [
   "ChatGPT",
@@ -34,6 +34,22 @@ describe("visibility report normalization", () => {
       { name: "Perplexity", score: "37" },
     ]);
     expect(platforms.slice(0, 4).map((platform) => platform.score)).toEqual([100, 0, 0, 37]);
+  });
+
+  it("rejects incomplete or out-of-range engine scores before a report is accepted", () => {
+    const complete = names.map((name) => ({ name, score: 42 }));
+    expect(hasValidPlatformScores(complete)).toBe(true);
+    expect(hasValidPlatformScores(complete.slice(1))).toBe(false);
+    expect(
+      hasValidPlatformScores(complete.map((platform, index) =>
+        index === 0 ? { ...platform, score: 140 } : platform,
+      )),
+    ).toBe(false);
+    expect(
+      hasValidPlatformScores(complete.map((platform, index) =>
+        index === 0 ? { ...platform, score: "unknown" } : platform,
+      )),
+    ).toBe(false);
   });
 
   it("derives the headline visibility score from all nine platform scores", () => {
