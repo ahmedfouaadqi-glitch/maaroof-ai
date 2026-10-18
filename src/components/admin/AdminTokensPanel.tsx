@@ -7,6 +7,7 @@ import { CostInput } from "@/components/admin/CostInput";
 import { useI18n } from "@/lib/i18n";
 import { ENGINE_KEYS } from "@/lib/ai-engines";
 import { adminGrantRole, adminRevokeRole, adminPatchProfile } from "@/lib/admin.functions";
+import { normalizeInterfacePolicy, type InterfacePolicy } from "@/lib/interface-policy";
 
 type Profile = {
   id: string; email: string | null; full_name: string | null; username: string | null;
@@ -18,7 +19,7 @@ type Profile = {
   is_subscribed?: boolean | null;
   max_devices?: number | null;
   hide_usage_counter?: boolean;
-  ui_visibility?: { tools?: Record<string, boolean>; agent?: Record<string, boolean>; widgets?: Record<string, boolean>; pages?: Record<string, boolean> };
+  ui_visibility?: { tools?: Record<string, boolean>; agent?: Record<string, boolean>; widgets?: Record<string, boolean>; pages?: Record<string, boolean>; interface?: Partial<InterfacePolicy> };
 };
 
 const WIDGET_KEYS = [
@@ -26,7 +27,7 @@ const WIDGET_KEYS = [
   "history", "alerts_bell", "handoff_menu", "engines_orbit",
   "specialty_banner", "tool_links",
 ] as const;
-const AGENT_FEATURE_KEYS = ["command", "run_targets", "visibility"] as const;
+const AGENT_FEATURE_KEYS = ["command", "run_targets", "visibility", "knowledge"] as const;
 const PAGE_KEYS = ["dashboard", "agent", "tools", "guide", "pricing"] as const;
 
 const VIS_LABELS: Record<string, { ar: string; en: string; ku: string }> = {
@@ -43,6 +44,7 @@ const VIS_LABELS: Record<string, { ar: string; en: string; ku: string }> = {
   command:          { ar: "أمر مباشر للوكيل",          en: "Agent command",         ku: "فەرمانی ئاراستە" },
   run_targets:      { ar: "تشغيل الأهداف",             en: "Run targets",           ku: "جێبەجێکردنی ئامانج" },
   visibility:       { ar: "تحليل الظهور",              en: "AI Visibility section", ku: "بەشی دەرکەوتن" },
+  knowledge:        { ar: "مساحة المعرفة",              en: "Knowledge space",       ku: "شوێنی زانیاری" },
   dashboard:        { ar: "صفحة لوحة التحكم",          en: "/dashboard",            ku: "داشبۆرد" },
   agent:            { ar: "صفحة الوكيل",               en: "/agent",                ku: "وەکیل" },
   tools:            { ar: "صفحة الأدوات",              en: "/tools",                ku: "ئامرازەکان" },
@@ -65,6 +67,7 @@ export function AdminTokensPanel() {
   const { lang } = useI18n();
   const L = (T as any)[lang] || T.ar;
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [globalInterfacePolicy, setGlobalInterfacePolicy] = useState<InterfacePolicy>(normalizeInterfacePolicy(undefined));
   const [pricing, setPricing] = useState<Pricing[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [q, setQ] = useState("");
@@ -73,14 +76,16 @@ export function AdminTokensPanel() {
 
   async function load() {
     setBusy(true);
-    const [p, c, r] = await Promise.all([
+    const [p, c, r, interfaceSettings] = await Promise.all([
       supabase.from("profiles").select("id,email,full_name,username,tokens_balance,tokens_daily_limit,tokens_monthly_limit,tokens_used_today,tokens_used_month,per_user_tool_overrides,subscription_tier,subscription_expires_at,is_subscribed,max_devices,hide_usage_counter,ui_visibility").order("email"),
       supabase.from("tool_pricing_catalog").select("tool_key, default_tokens, default_usd, model"),
       supabase.from("user_roles").select("user_id, role"),
+      supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle(),
     ]);
     setProfiles((p.data || []) as any);
     setPricing((c.data || []) as any);
     setRoles((r.data || []) as any);
+    setGlobalInterfacePolicy(normalizeInterfacePolicy(interfaceSettings.data?.value));
     setBusy(false);
   }
   useEffect(() => { load(); }, []);
@@ -181,12 +186,12 @@ export function AdminTokensPanel() {
         </div>
       </details>
 
-      {editing && <UserTokensDrawer user={editing} catalog={catalog} L={L} lang={lang as any} onClose={() => { setEditing(null); load(); }} />}
+      {editing && <UserTokensDrawer user={editing} catalog={catalog} L={L} lang={lang as any} globalInterfacePolicy={globalInterfacePolicy} onClose={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; catalog: Record<string, Pricing>; L: any; lang: "ar" | "en" | "ku"; onClose: () => void }) {
+function UserTokensDrawer({ user, catalog, L, lang, globalInterfacePolicy, onClose }: { user: Profile; catalog: Record<string, Pricing>; L: any; lang: "ar" | "en" | "ku"; globalInterfacePolicy: InterfacePolicy; onClose: () => void }) {
   const [balance, setBalance] = useState(user.tokens_balance);
   const [daily, setDaily] = useState<number | "">(user.tokens_daily_limit ?? "");
   const [monthly, setMonthly] = useState<number | "">(user.tokens_monthly_limit ?? "");
@@ -365,7 +370,7 @@ function UserTokensDrawer({ user, catalog, L, lang, onClose }: { user: Profile; 
           </div>
         </div>
 
-        <VisibilitySection lang={lang} value={uiVis} onChange={setUiVis} />
+        <VisibilitySection lang={lang} value={uiVis} globalPolicy={globalInterfacePolicy} onChange={setUiVis} />
 
         <h4 className="mb-2 text-sm font-semibold">{L.toolsHeader}</h4>
 
@@ -492,10 +497,11 @@ function Field({ label, icon, children }: { label: string; icon?: React.ReactNod
 }
 
 function VisibilitySection({
-  lang, value, onChange,
+  lang, value, globalPolicy, onChange,
 }: {
   lang: "ar" | "en" | "ku";
   value: NonNullable<Profile["ui_visibility"]>;
+  globalPolicy: InterfacePolicy;
   onChange: (v: NonNullable<Profile["ui_visibility"]>) => void;
 }) {
   const { t } = useI18n();
