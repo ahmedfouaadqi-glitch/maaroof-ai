@@ -371,10 +371,13 @@ function WorkspacePage() {
       envision: { ar: "التصور", en: "Envision", ku: "خەیاڵکردن" },
       planning: { ar: "التخطيط", en: "Planning", ku: "پلاندانان" },
       council: { ar: "المجلس", en: "Council", ku: "ئەنجوومەن" },
+      conflict: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
       reflection: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
       reflect: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
       reconciliation: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
       recommendation: { ar: "التوصية", en: "Recommendation", ku: "پێشنیار" },
+      simulation: { ar: "المحاكاة", en: "Simulation", ku: "هاوشێوەسازی" },
+      summarizing: { ar: "تلخيص النتائج", en: "Summarizing results", ku: "پوختەکردنەوەی ئەنجامەکان" },
       execution: { ar: "التنفيذ", en: "Execution", ku: "جێبەجێکردن" },
     };
     return labels[key]?.[locale] || key || c.unknown;
