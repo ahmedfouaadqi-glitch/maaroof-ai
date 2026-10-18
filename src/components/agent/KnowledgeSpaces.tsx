@@ -476,6 +476,18 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                 {data.interviews.map((q) => (
                   <div key={q.id} className="rounded-xl border border-border/50 bg-background/40 p-3 transition-colors duration-200 hover:border-primary/25 motion-reduce:transition-none">
                     <p className="text-sm leading-relaxed">{q.question}</p>
+                    {q.reason && (
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-semibold text-foreground">{t("teach_interview_reason")}</span>{" "}
+                        {q.reason}
+                      </p>
+                    )}
+                    {q.answer_example && (
+                      <div className="mt-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-semibold text-foreground">{t("teach_interview_answer_example")}</span>{" "}
+                        {q.answer_example}
+                      </div>
+                    )}
                     {q.answer ? (
                       <p className="mt-2 rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-xs leading-relaxed text-emerald-600 dark:text-emerald-400">
                         {q.answer}

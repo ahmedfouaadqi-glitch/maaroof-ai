@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatInterviewHistory,
   normalizeInterviewQuestion,
+  uniqueInterviewQuestionDetails,
   uniqueInterviewQuestions,
 } from "../maaroof/interview-questions";
 
@@ -35,6 +36,50 @@ describe("knowledge-space interview questions", () => {
     );
     expect(result).toEqual(["A question about support", "Second useful question"]);
     expect(uniqueInterviewQuestions(["x".repeat(1200)], [])[0]).toHaveLength(1000);
+  });
+
+  it("retains question rationale and answer examples from structured model output", () => {
+    const result = uniqueInterviewQuestionDetails(
+      [
+        {
+          question: "What is the refund policy?",
+          reason: "The sources do not define how exceptions are approved.",
+          answer_example: "State the policy, then describe one documented exception.",
+        },
+        {
+          question: " WHAT IS THE REFUND POLICY?! ",
+          reason: "Duplicate question.",
+          answer_example: "Duplicate example.",
+        },
+        {
+          question: "Which markets are in scope?",
+          reason: "The target market is unclear.",
+          answer_example: "List only the confirmed countries.",
+        },
+        42,
+      ],
+      ["Already asked question"],
+      2,
+    );
+
+    expect(result).toEqual([
+      {
+        question: "What is the refund policy?",
+        reason: "The sources do not define how exceptions are approved.",
+        answer_example: "State the policy, then describe one documented exception.",
+      },
+      {
+        question: "Which markets are in scope?",
+        reason: "The target market is unclear.",
+        answer_example: "List only the confirmed countries.",
+      },
+    ]);
+  });
+
+  it("supports legacy text-only questions without fabricated explanation", () => {
+    expect(uniqueInterviewQuestionDetails(["A legacy question"])).toEqual([
+      { question: "A legacy question", reason: null, answer_example: null },
+    ]);
   });
 
   it("does not generate model context from malformed history and keeps context bounded", () => {

@@ -3,7 +3,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { formatInterviewHistory, uniqueInterviewQuestions } from "@/lib/maaroof/interview-questions";
+import {
+  formatInterviewHistory,
+  uniqueInterviewQuestionDetails,
+} from "@/lib/maaroof/interview-questions";
 
 const uuid = z.string().uuid();
 
@@ -95,7 +98,7 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
     const [assets, prompts, interviews, nodes] = await Promise.all([
       supabase.from("knowledge_space_assets")
         .select("id, title, kind, source_type, source_url, file_path, mime_type, size_bytes, status, stage, stages, classification, extracted, confidence, evidence_score, reality_score, verification_score, conflicts, needs_approval, approved, nodes_created, error, created_at")
@@ -104,8 +107,11 @@ export const listSpaceAssets = createServerFn({ method: "GET" })
         .select("id, title, intent, structure, prompt_dna, quality, approved, created_at")
         .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(100),
       supabase.from("knowledge_space_interviews")
-        .select("id, question, topic, answer, answered_at, created_at")
-        .eq("space_id", data.spaceId).order("created_at", { ascending: false }).limit(60),
+        .select("id, question, topic, answer, answered_at, reason, answer_example, created_at")
+        .eq("space_id", data.spaceId)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(60),
       supabase.from("knowledge_nodes")
         .select("id, title, summary, layer, payload, confidence, quality, approved, updated_at")
         .eq("space_id", data.spaceId).order("quality", { ascending: false }).limit(120),
@@ -263,7 +269,6 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       .from("knowledge_spaces")
       .select("id, name, lang, metrics, space_dna, brand_identity")
       .eq("id", data.spaceId)
-      .eq("user_id", userId)
       .maybeSingle();
     if (spaceError) throw new Error(spaceError.message);
     if (!space) throw new Error("not_found");
@@ -290,7 +295,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
         messages: [
           {
             role: "system",
-            content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":["..."]} — 4 to 8 questions, in the space language, each answerable in 1-3 sentences. Ask only about knowledge that is genuinely missing. Consider the existing interview history. Do not repeat existing questions, paraphrase them as duplicates, or ask for information already present in an answer. Prioritize unanswered gaps, then ask about new uncovered areas.`,
+            content: `You design short adaptive interview questions that close knowledge gaps for MAAROOF's institutional learning. Return STRICT JSON: {"questions":[{"question":"...","reason":"...","answer_example":"..."}]} — 4 to 8 question objects, in the space language. Each question must be answerable in 1-3 sentences. "reason" briefly explains which knowledge gap the question addresses. "answer_example" is a clearly illustrative response pattern; do not invent business facts that are not in the source material. Ask only about genuinely missing knowledge. Consider the existing interview history. Do not repeat existing questions, paraphrase them as duplicates, or ask for information already present in an answer. Prioritize unanswered gaps, then ask about new uncovered areas.`,
           },
           {
             role: "user",
@@ -302,7 +307,7 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(`AI gateway ${res.status}`);
     const json: any = await res.json();
     const parsed = extractJsonObject<{ questions: unknown }>(json?.choices?.[0]?.message?.content);
-    const questions = uniqueInterviewQuestions(
+    const questions = uniqueInterviewQuestionDetails(
       parsed?.questions,
       (previousRows || []).map((row: { question?: unknown }) => row.question),
       8,
@@ -310,10 +315,12 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
 
     if (questions.length) {
       const { error: insertError } = await supabase.from("knowledge_space_interviews").insert(
-        questions.map((question) => ({
+        questions.map(({ question, reason, answer_example }) => ({
           space_id: data.spaceId,
           user_id: userId,
           question,
+          reason,
+          answer_example,
           topic: "gap",
         })),
       );
