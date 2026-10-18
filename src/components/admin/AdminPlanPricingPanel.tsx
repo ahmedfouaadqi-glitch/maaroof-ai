@@ -62,6 +62,7 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [planPrices, setPlanPrices] = useState<PricesValue>({
     prices: normalizePrices(plan.prices) || {},
     default_currency: plan.default_currency || "USD",
@@ -123,23 +124,30 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
 
   async function saveAll() {
     setSaving(true);
-    await adminUpdatePlan({ data: { planId: plan.id, patch: {
-      prices: planPrices.prices, default_currency: planPrices.default_currency,
-      monthly_tokens: monthlyTok, daily_tokens: dailyTok,
-      agent_daily_cap: agentDaily || null, agent_monthly_cap: agentMonthly || null, agent_max_targets: agentTargets || null,
-    } } });
-    const payload = Object.values(rows).map((r) => ({
-      plan_id: r.plan_id, tool_key: r.tool_key, enabled: r.enabled,
-      tokens_per_use: r.tokens_per_use,
-      usd_per_use: Number(r.prices?.USD) || r.usd_per_use || 0,
-      prices: r.prices, default_currency: r.default_currency || "USD",
-      monthly_quota: r.monthly_quota, daily_quota: r.daily_quota,
-    }));
-    await adminUpsertToolPlanAccess({ data: { rows: payload } });
-    setSaving(false);
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 1500);
-    onPlanUpdate();
+    setSaveError("");
+    setSavedFlash(false);
+    try {
+      await adminUpdatePlan({ data: { planId: plan.id, patch: {
+        prices: planPrices.prices, default_currency: planPrices.default_currency,
+        monthly_tokens: monthlyTok, daily_tokens: dailyTok,
+        agent_daily_cap: agentDaily || null, agent_monthly_cap: agentMonthly || null, agent_max_targets: agentTargets || null,
+      } } });
+      const payload = Object.values(rows).map((r) => ({
+        plan_id: r.plan_id, tool_key: r.tool_key, enabled: r.enabled,
+        tokens_per_use: r.tokens_per_use,
+        usd_per_use: Number(r.prices?.USD) || r.usd_per_use || 0,
+        prices: r.prices, default_currency: r.default_currency || "USD",
+        monthly_quota: r.monthly_quota, daily_quota: r.daily_quota,
+      }));
+      await adminUpsertToolPlanAccess({ data: { rows: payload } });
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1500);
+      onPlanUpdate();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "تعذر حفظ التغييرات. تحقق من الاتصال والصلاحيات.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const unpricedCount = Object.values(rows).filter((r) => r.enabled && Object.keys(r.prices).length === 0 && r.tokens_per_use === 0).length;
@@ -250,6 +258,7 @@ function PlanCard({ plan, L, lang, onPlanUpdate }: { plan: Plan; L: any; lang: "
         </div>
       )}
 
+      {saveError && <p role="alert" className="mb-2 rounded-md border border-destructive/40 p-3 text-xs text-destructive">{saveError}</p>}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         {unpricedCount > 0 ? (
           <div className="text-xs text-destructive">⚠ {unpricedCount} {L.priceUnsetWarn}</div>
