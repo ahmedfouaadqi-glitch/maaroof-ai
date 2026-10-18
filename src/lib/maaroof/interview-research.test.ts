@@ -69,11 +69,11 @@ describe("normalize interview research sources", () => {
         web: [
           {
             title: "Official page",
-            url: "https://www.example.com/about",
+            url: "https://www.example.com/about?utm_source=newsletter#overview",
             description: "Official description",
             markdown: "Evidence snippet",
           },
-          { title: "Duplicate", url: "https://www.example.com/about" },
+          { title: "Duplicate", url: "https://www.example.com/about?utm_source=another&utm_medium=email" },
           { title: "Unsafe", url: "javascript:alert(1)" },
           { title: "HTTP", url: "http://example.org/page" },
           { title: "Second source", url: "https://news.example.org/story" },
@@ -85,6 +85,7 @@ describe("normalize interview research sources", () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({
       title: "Official page",
+      url: "https://www.example.com/about",
       domain: "example.com",
       snippet: "Evidence snippet",
     });
