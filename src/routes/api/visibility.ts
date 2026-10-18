@@ -8,7 +8,7 @@ import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-q
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
-import { normalizeResult } from "@/lib/visibility-normalization";
+import { hasValidPlatformScores, normalizeResult } from "@/lib/visibility-normalization";
 
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean };
@@ -442,13 +442,12 @@ export const Route = createFileRoute("/api/visibility")({
           const content = String(data?.choices?.[0]?.message?.content || "{}");
 
           const parsed = extractJsonObject(content);
-          const hasPlatformEvidence = Array.isArray((parsed as any)?.platforms)
-            && (parsed as any).platforms.some((platform: unknown) =>
-              !!platform && typeof platform === "object"
-              && typeof (platform as any).name === "string"
-              && (platform as any).name.trim().length > 0
-            );
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !hasPlatformEvidence) {
+          if (
+            !parsed
+            || typeof parsed !== "object"
+            || Array.isArray(parsed)
+            || !hasValidPlatformScores((parsed as any)?.platforms)
+          ) {
             await refundChargedTokens("invalid_provider_response");
             return Response.json({ error: "invalid_ai_response", token_refund_confirmed: !refundContext }, { status: 502 });
           }
