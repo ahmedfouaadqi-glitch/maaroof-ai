@@ -391,7 +391,7 @@ function WorkspacePage() {
     if (event.type === "deep_entity_discovery") {
       if (d.status === "started") return locale === "en" ? `Background entity discovery started (${d.depth || "quick"}).` : locale === "ku" ? "دۆزینەوەی کەسایەتی لە پشتەوە دەستی پێکرد." : `بدأ الاستكشاف الخلفي للكيان (${d.depth === "deep" ? "عميق" : "سريع"}).`;
       if (d.status === "completed") {
-        const cost = Number(d.actual_cost_tokens || 0);
+        const cost = d.cost_known === false ? (locale === "en" ? "unknown" : locale === "ku" ? "نەزانراو" : "غير محددة") : String(Number(d.actual_cost_tokens || 0));
         const count = Number(d.candidates || 0);
         return locale === "en" ? `Entity discovery complete: ${count} candidates; actual cost ${cost} tokens${d.reused ? " (reused result)" : ""}.`
           : locale === "ku" ? `دۆزینەوە تەواو بوو: ${count} ئەگەری؛ تێچووی ڕاستەقینە ${cost} تۆکن.`
