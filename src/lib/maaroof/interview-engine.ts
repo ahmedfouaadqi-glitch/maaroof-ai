@@ -35,8 +35,13 @@ export type InterviewCondition =
   | { questionId: string; operator: "contains"; value: string }
   | { questionId: string; operator: "not_contains"; value: string };
 
+export type InterviewLocalizedText = Record<InterviewLocale, string>;
+
 export type InterviewQuestion = {
   id: string;
+  /** Optional localized guidance and illustrative example; never user-provided facts. */
+  guidance?: InterviewLocalizedText;
+  example?: InterviewLocalizedText;
   /** Questions are scoped to the entity being interviewed, not just the signed-in user. */
   targetTypes?: InterviewTargetType[];
   /** A question with no domains is generally applicable. */

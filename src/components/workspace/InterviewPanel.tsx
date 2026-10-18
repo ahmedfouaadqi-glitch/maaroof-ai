@@ -138,6 +138,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     ownerRequired: "تحتاج إلى صلاحية مالك أو محرر في مساحة العمل المحددة.",
     details: "تحديث القائمة",
     count: "إجابة",
+    questionHelp: "إرشادات ومثال للإجابة", guidance: "ما الذي ينبغي أن تتضمنه الإجابة؟", example: "مثال توضيحي",
   },
   en: {
     title: "Saved context interview",
@@ -199,6 +200,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     ownerRequired: "You need an editor or owner role for that workspace.",
     details: "Refresh list",
     count: "answers",
+    questionHelp: "Answer guidance and example", guidance: "What should the answer cover?", example: "Illustrative example",
   },
   ku: {
     title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
@@ -259,6 +261,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     ownerRequired: "بۆ ئەو شوێنی کارە دەسەڵاتی دەستکاریکەر یان خاوەنت پێویستە.",
     details: "نوێکردنەوەی لیست",
     count: "وەڵام",
+    questionHelp: "ڕێنمایی و نموونەی وەڵام", guidance: "وەڵامەکە دەبێت چی لەخۆ بگرێت؟", example: "نموونەی ڕوونکەرەوە",
   },
 };
 
@@ -847,6 +850,15 @@ export function InterviewPanel({
                   <h3 className="mt-2 text-base font-semibold leading-7">
                     {nextQuestion.prompt[locale] || nextQuestion.prompt.ar}
                   </h3>
+                  {(nextQuestion.guidance || nextQuestion.example) && (
+                    <details className="mt-3 rounded-lg border border-border bg-background/70 px-3 py-2.5">
+                      <summary className="cursor-pointer text-sm font-medium">{c("questionHelp")}</summary>
+                      <div className="mt-3 space-y-3 text-sm">
+                        {nextQuestion.guidance && <div><p className="font-medium text-muted-foreground">{c("guidance")}</p><p className="mt-1 leading-6">{nextQuestion.guidance[locale] || nextQuestion.guidance.ar}</p></div>}
+                        {nextQuestion.example && <div><p className="font-medium text-muted-foreground">{c("example")}</p><p className="mt-1 leading-6">{nextQuestion.example[locale] || nextQuestion.example.ar}</p></div>}
+                      </div>
+                    </details>
+                  )}
                   <label className="mb-1.5 mt-4 block text-sm font-medium">{c("answer")}</label>
                   <textarea
                     value={answer}
