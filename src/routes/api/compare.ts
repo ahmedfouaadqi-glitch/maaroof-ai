@@ -7,7 +7,7 @@ import { fcSearch, fcScrape, isFirecrawlError } from "@/lib/firecrawl";
 import { analyzeSeoSge, derivePlatformPresence, deriveStrengthsWeaknesses, type SeoSgeReport } from "@/lib/seo-sge.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { probeBrandsPerPlatform, PLATFORMS_8, type BrandEvidenceInput } from "@/lib/platform-probe.server";
-import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
+import { chargeTokens, chargeFailureBody, resolveToolCost } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asList, asText } from "@/lib/input-coerce";
@@ -98,6 +98,10 @@ export const Route = createFileRoute("/api/compare")({
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-3-flash-preview");
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
+          const _access = await resolveToolCost(userId, "compare");
+          if ((_access.source as string) === "disabled_by_admin") {
+            return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
+          }
           const _mci = await mciReuse(admin as any, "compare", userId, [brand, competitors, keywords, lang, body.scope], !!(body as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
