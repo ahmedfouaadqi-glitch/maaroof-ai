@@ -156,6 +156,42 @@ function Page() {
           </div>
         </section>
 
+        
+        <section className="mx-auto max-w-6xl px-4 pb-14 md:px-6" aria-labelledby="maaroof-capabilities">
+          <div className="rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/[0.06] p-5 shadow-sm sm:p-8 md:p-10">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">GEO · AEO · AI Search</p>
+              <h2 id="maaroof-capabilities" className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                {lang === "ar" ? "اجعل علامتك أوضح لمحركات الإجابة الذكية" : lang === "ku" ? "ناساندنی براندەکەت بۆ گەڕانی زیرەک ئاسانتر بکە" : "Make your brand easier for AI answer engines to understand"}
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+                {lang === "ar" ? "حلّل حضورك الرقمي، نظّم معلومات العلامة، وحسّن المحتوى لمحركات البحث التوليدي والإجابات الذكية — مع إبقاء النتائج والأدلة قابلة للمراجعة." : lang === "ku" ? "بوونی دیجیتاڵی خۆت شیکاری بکە، زانیارییەکانی براند ڕێک بخە و ناوەڕۆک بۆ گەڕانی زیرەک باشتر بکە، لەگەڵ توانای پێداچوونەوە بە بەڵگەکان." : "Analyze digital presence, structure brand information, and improve content for generative search and AI answers—with results and evidence kept reviewable."}
+              </p>
+            </div>
+            <div className="mt-7 grid gap-3 md:grid-cols-3">
+              <article className="rounded-2xl border border-border/70 bg-background/70 p-4 sm:p-5">
+                <Globe2 className="size-5 text-primary" />
+                <h3 className="mt-3 font-semibold">{lang === "ar" ? "رؤية الظهور في البحث الذكي" : lang === "ku" ? "بینینی دەرکەوتن لە گەڕانی زیرەک" : "AI search visibility"}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{lang === "ar" ? "افهم إشارات حضور علامتك ومدى وضوح معلوماتها عبر مصادر الويب المتاحة." : lang === "ku" ? "ئاماژەکانی بوونی براند و ڕوونی زانیارییەکانی لە سەرچاوە بەردەستەکانی وێب تێبگە." : "Understand brand-presence signals and how clearly your information appears in available web sources."}</p>
+              </article>
+              <article className="rounded-2xl border border-border/70 bg-background/70 p-4 sm:p-5">
+                <Sparkles className="size-5 text-primary" />
+                <h3 className="mt-3 font-semibold">{lang === "ar" ? "تحسين GEO وAEO" : lang === "ku" ? "باشترکردنی GEO و AEO" : "GEO and AEO readiness"}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{lang === "ar" ? "طوّر بنية المحتوى والإجابات والهوية المعرفية لتكون أكثر قابلية للفهم والاستشهاد." : lang === "ku" ? "پێکهاتەی ناوەڕۆک و وەڵام و ناسنامەی زانیاری باشتر بکە بۆ تێگەیشتن و ئاماژەپێدان." : "Improve content structure, answers, and brand knowledge so they are easier to interpret and cite."}</p>
+              </article>
+              <article className="rounded-2xl border border-border/70 bg-background/70 p-4 sm:p-5">
+                <Bot className="size-5 text-primary" />
+                <h3 className="mt-3 font-semibold">{lang === "ar" ? "عمل قابل للمراجعة" : lang === "ku" ? "کارێک کە پێداچوونەوەی بۆ دەکرێت" : "Reviewable work"}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{lang === "ar" ? "تابع مراحل العمل والأدوات والنتيجة، وصدّر تقرير المهمة للاحتفاظ بسجلها." : lang === "ku" ? "قۆناغەکان، ئامرازەکان و ئەنجامەکە ببینە و ڕاپۆرتەکە هەناردە بکە بۆ پاراستنی تۆمارەکە." : "Review the workflow, tools, and result, then export a task report for your records."}</p>
+              </article>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to="/guide" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold transition hover:border-primary/50">{lang === "ar" ? "استكشف المنهجية" : lang === "ku" ? "ڕێبازەکە ببینە" : "Explore the methodology"} <ArrowRight className="size-4" /></Link>
+              <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">{lang === "ar" ? "ابدأ مساحة العمل" : lang === "ku" ? "دەستپێکردنی شوێنی کار" : "Open the workspace"} <ArrowRight className="size-4" /></Link>
+            </div>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-6xl px-4 pb-14 md:px-6" aria-labelledby="how-maaroof-works"><h2 id="how-maaroof-works" className="text-center font-display text-2xl font-bold md:text-3xl">{t("home_steps_title")}</h2><div className="mt-6 grid gap-4 md:grid-cols-3"><div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">1</span><h3 className="mt-3 font-semibold">{t("home_step1_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step1_desc")}</p></div><div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span><h3 className="mt-3 font-semibold">{t("home_step2_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step2_desc")}</p></div><div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</span><h3 className="mt-3 font-semibold">{t("home_step3_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step3_desc")}</p></div></div><div className="mt-6 flex flex-wrap justify-center gap-3"><Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:border-primary/50">{t("hero_cta_guide")}</Link><Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10">{t("hero_cta_secondary")}</Link></div></section>
 
         {/* Crawlable, server-rendered summary so the homepage has substantive content for search engines */}
