@@ -149,7 +149,7 @@ export const Route = createFileRoute("/api/brand-boost")({
           const entitlement = await enginesAllowedForUser(admin, userId);
           const requested = applyEntitlement(platforms, entitlement);
           const picked = adminAllowed ? requested.filter((p) => adminAllowed.includes(p)) : requested;
-9472          
+          if (!picked.length) return Response.json({ error: "no_platforms_enabled" }, { status: 400 });
 
           const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
