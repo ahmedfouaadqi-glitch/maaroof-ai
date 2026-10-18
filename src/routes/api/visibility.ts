@@ -22,7 +22,7 @@ const LANG_INSTRUCTION: Record<string, string> = {
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
 You are a STRICT, evidence-based AI Visibility analyst for ${m.market}.
-Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
+Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
 
 LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
@@ -38,10 +38,11 @@ Each AI platform uses a DIFFERENT citation mechanism — name it explicitly:
 - Mistral (Le Chat): web search via Brave/SerpAPI partners, training corpus. Favors EU-friendly sources, multilingual content, structured pages. citation_method = "training_corpus + brave_search".
 - DeepSeek: efficient reasoning model with web tool. Favors technical docs, GitHub/Stack Overflow content, structured factual pages, multilingual sources (Chinese + English strong). citation_method = "training_corpus + web_search".
 - Kimi (Moonshot AI): model knowledge plus available web/search tools depending on product and mode. Favor clear Chinese/English primary sources, detailed structured pages, and corroborated recent references. citation_method = "training_corpus + available_web_tools".
+- Qwen (Alibaba): capabilities and retrieval vary by model and product mode; assess public web discoverability, multilingual source coverage, structured factual content, and corroboration rather than assuming a live search tool is always active. citation_method = "training_corpus + available_web_tools".
 
 Return ONLY valid JSON in this exact shape:
 {
-  "visibility_percent": <0-100, unified weighted score>,
+  "visibility_percent": <0-100, unified arithmetic mean>,
   "confidence": "high" | "medium" | "low",
   "sentiment": "positive" | "neutral" | "negative",
   "appearance_summary": "1-2 sentence summary in REPORT language",
@@ -70,10 +71,11 @@ Return ONLY valid JSON in this exact shape:
     { "name": "Grok", ... },
     { "name": "Mistral", ... },
     { "name": "DeepSeek", ... },
-    { "name": "Kimi", ... }
+    { "name": "Kimi", ... },
+    { "name": "Qwen", ... }
   ]
 }
-visibility_percent MUST equal the arithmetic mean (equal weights) of all 9 platform scores, rounded to the nearest integer. All text fields MUST be in REPORT language.`;
+visibility_percent MUST equal the arithmetic mean (equal weights) of all 10 platform scores, rounded to the nearest integer. All text fields MUST be in REPORT language.`;
 
 export const Route = createFileRoute("/api/visibility")({
   server: {
