@@ -87,8 +87,6 @@ export const Route = createFileRoute("/api/brand-authority")({
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
-          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/brand-authority" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota check (same model as brand-boost)
           const bbToggle = String((profile as any)?.quota_overrides?.brand_boost || "").toLowerCase();
@@ -111,6 +109,9 @@ export const Route = createFileRoute("/api/brand-authority")({
 
           const slug = slugify(brand_name);
           if (!slug) return Response.json({ error: "invalid_brand_name" }, { status: 400 });
+
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/brand-authority" } });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Step 1: optional scrape for grounding
           let evidenceText = "";
