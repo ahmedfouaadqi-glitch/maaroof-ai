@@ -74,10 +74,20 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
-      setOut(j.result);
-      toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
-        : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
-        : "Tokens charged ✓ — see updated balance above");
+      setOut({
+        ...j.result,
+        quota_needs_review: !!j.quota_needs_review,
+        persistence_warning: j.persistence_warning || null,
+      });
+      if (j.mci?.reused) {
+        toast.success(outLang === "ar" ? "تمت إعادة استخدام نتيجة محفوظة — لم تُخصم توكنات"
+          : outLang === "ku" ? "ئەنجامی پاشەکەوتکراو بەکارهێنرایەوە — تۆکن کەم نەکرایەوە"
+          : "Cached result reused — no tokens charged");
+      } else {
+        toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
+          : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
+          : "Tokens charged ✓ — see updated balance above");
+      }
     } catch (e: any) { setErr(e?.message || "failed"); }
     finally { setBusy(false); }
   };
@@ -129,6 +139,24 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         </button>
       </div>
 
+      {out?.quota_needs_review && (
+        <div role="alert" className="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
+          {outLang === "ar"
+            ? "اكتمل التقرير، لكن تعذّر تأكيد تثبيت الحصة. سُجّلت الحالة للمراجعة؛ لا تعِد التشغيل لمجرد ظهور هذا التنبيه."
+            : outLang === "ku"
+              ? "ڕاپۆرتەکە تەواو بوو، بەڵام پشتڕاستکردنەوەی حەجزەکە نەکرا. دۆخەکە بۆ پێداچوونەوە تۆمار کرا؛ تەنها بۆ ئەم ئاگادارکردنەوەیە دووبارەی مەکەوە."
+              : "The report completed, but quota finalization could not be confirmed. This run needs reconciliation; do not rerun solely because of this warning."}
+        </div>
+      )}
+      {out?.persistence_warning && (
+        <div role="alert" className="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
+          {outLang === "ar"
+            ? "أُنتج التقرير، لكن تعذّر حفظ بعض بيانات الملف أو سجل المهمة."
+            : outLang === "ku"
+              ? "ڕاپۆرتەکە دروست کرا، بەڵام هەندێک زانیاریی پرۆفایل یان مێژووی کار پاشەکەوت نەکرا."
+              : "The report was generated, but some profile or task-history data could not be saved."}
+        </div>
+      )}
       {out && <MciReuseBadge mci={out.mci} path="/api/visibility" onRefresh={run} />}
       {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="visibility" result={out} /></div>}
       <ToolHistory toolKey="visibility" />
