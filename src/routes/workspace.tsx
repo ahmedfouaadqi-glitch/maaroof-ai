@@ -365,22 +365,58 @@ function WorkspacePage() {
     return tool?.labels[locale] || tool?.labels.ar || key;
   }
 
+  function phaseLabel(value: unknown): string {
+    const key = String(value || "");
+    const labels: Record<string, Record<SkillLocale, string>> = {
+      envision: { ar: "التصور", en: "Envision", ku: "خەیاڵکردن" },
+      planning: { ar: "التخطيط", en: "Planning", ku: "پلاندانان" },
+      council: { ar: "المجلس", en: "Council", ku: "ئەنجوومەن" },
+      reflection: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      reflect: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      reconciliation: { ar: "حل التعارض", en: "Conflict resolution", ku: "چارەسەری ناکۆکی" },
+      recommendation: { ar: "التوصية", en: "Recommendation", ku: "پێشنیار" },
+      execution: { ar: "التنفيذ", en: "Execution", ku: "جێبەجێکردن" },
+    };
+    return labels[key]?.[locale] || key || c.unknown;
+  }
+
   function eventSummary(event: WorkspaceEvent): string {
     const d = event.data || {};
-    if (event.type === "phase") return String(d.phase || c.unknown);
+    if (event.type === "phase") return phaseLabel(d.phase);
     if (event.type === "tool_call") return String(d.reason || toolLabel(d.tool || ""));
     if (event.type === "tool_result") {
       const output = d.output;
-      if (typeof output === "string") return output.slice(0, 500);
-      if (output && typeof output === "object") {
-        const candidate = output.summary || output.answer || output.text || output.message;
-        if (typeof candidate === "string") return candidate.slice(0, 500);
+      if (output && typeof output === "object" && !Array.isArray(output)) {
+        const skipped = output.skipped;
+        if (typeof skipped === "string") {
+          const reasonLabels: Record<string, Record<SkillLocale, string>> = {
+            live_probe_disabled_by_user: {
+              ar: "تم التخطي بناءً على اختيار المستخدم؛ لم يُشغّل الفحص المباشر.",
+              en: "Intentionally skipped by user; no live probe was run.",
+              ku: "بەپێی هەڵبژاردەی بەکارهێنەر تێپەڕێندرا؛ پشکنینی ڕاستەوخۆ نەکرا.",
+            },
+          };
+          return reasonLabels[skipped]?.[locale] || (locale === "ar" ? `تم تخطي الأداة: ${skipped}` : locale === "ku" ? `ئامرازەکە تێپەڕێندرا: ${skipped}` : `Tool intentionally skipped: ${skipped}`);
+        }
+        const candidate = output.summary || output.answer || output.text || output.message ||
+          output.recommendation || output.strategy || output.comparison || output.result;
+        if (typeof candidate === "string" && candidate.trim()) return candidate.trim().slice(0, 500);
+        const details = [output.winner, output.conclusion, output.recommendation?.summary]
+          .filter((value) => typeof value === "string" && value.trim());
+        if (details.length) return details.join(" — ").slice(0, 500);
       }
+      if (typeof output === "string" && output.trim()) return output.trim().slice(0, 500);
       return d.ok ? c.toolDone : c.failed;
     }
     if (event.type === "error") return String(d.message || c.failed);
     if (event.type === "clarify") return String(d.question || c.clarify);
     return String(d.text || d.message || d.phase || c.unknown);
+  }
+
+  function isIntentionalSkip(event: WorkspaceEvent): boolean {
+    const output = event.data?.output;
+    return event.type === "tool_result" && !!output && typeof output === "object" &&
+      (typeof output.skipped === "string" || output.error === "live_probe_disabled_by_user");
   }
 
   if (loading || !user) return <AuthGate state={loading ? "loading" : "signed-out"} title={c.eyebrow} redirect="/workspace" />;
@@ -553,9 +589,9 @@ function WorkspacePage() {
               {showActivity && <div className="mt-4 space-y-2">
                 {events.filter((event) => ["phase", "tool_call", "tool_result", "error", "clarify", "done"].includes(event.type)).map((event, index) => (
                   <div key={`${event.at}-${index}`} className="flex items-start gap-3 rounded-lg border border-border/70 p-3">
-                    <span className={`mt-1 size-2 shrink-0 rounded-full ${event.type === "error" || event.data?.ok === false ? "bg-destructive" : event.type === "tool_result" ? "bg-emerald-500" : "bg-primary"}`} />
+                    <span className={`mt-1 size-2 shrink-0 rounded-full ${(event.type === "error" || (event.data?.ok === false && !isIntentionalSkip(event))) ? "bg-destructive" : event.type === "tool_result" && !isIntentionalSkip(event) ? "bg-emerald-500" : "bg-primary"}`} />
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? c.toolDone : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
+                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? (isIntentionalSkip(event) ? (locale === "ar" ? "تخطٍ مقصود" : locale === "ku" ? "تێپەڕاندنی مەبەستدار" : "Intentional skip") : c.toolDone) : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
                       <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{eventSummary(event)}</div>
                     </div>
                   </div>
