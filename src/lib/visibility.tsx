@@ -97,6 +97,7 @@ export function Widget({ k, children }: { k: WidgetKey; children: React.ReactNod
  */
 const PATH_TO_PAGE: Array<[RegExp, PageKey]> = [
   [/^\/dashboard(\/|$)/, "dashboard"],
+  [/^\/maaroof(\/|$)/, "agent"],
   [/^\/agent(\/|$)/, "agent"],
   [/^\/tools(\/|$)/, "tools"],
   [/^\/guide(\/|$)/, "guide"],
