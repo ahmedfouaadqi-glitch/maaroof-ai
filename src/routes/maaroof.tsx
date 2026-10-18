@@ -5,7 +5,7 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
-import { useVisibility, usePageGuard } from "@/lib/visibility";
+import { useVisibility } from "@/lib/visibility";
 
 import { supabase } from "@/integrations/supabase/client";
 import { NAMES as COUNTRY_NAMES } from "@/lib/countries";
@@ -61,13 +61,16 @@ function MaaroofPage() {
   const navigate = useNavigate();
   const visibility = useVisibility();
   const canUseKnowledge = visibility.isAgentFeatureVisible("knowledge");
-  usePageGuard();
-
   useEffect(() => {
-    if (!loading && user && !visibility.loading && tab === "knowledge" && !canUseKnowledge) {
+    if (loading || !user || visibility.loading) return;
+    if (!visibility.isPageVisible("agent")) {
+      navigate({ to: "/", replace: true });
+      return;
+    }
+    if (tab === "knowledge" && !canUseKnowledge) {
       navigate({ to: "/maaroof", search: { tab: "chat" }, replace: true });
     }
-  }, [loading, user?.id, visibility.loading, tab, canUseKnowledge, navigate]);
+  }, [loading, user?.id, visibility.loading, visibility.isPageVisible, tab, canUseKnowledge, navigate]);
   const [goal, setGoal] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [running, setRunning] = useState(false);
