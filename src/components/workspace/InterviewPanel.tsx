@@ -302,7 +302,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     researchTitle: "سەرچاوە بەستراوەکان بە چاوپێکەوتن",
     researchQuery: "پرسیاری گەڕان",
     noSources: "هێشتا هیچ سەرچاوەیەکی دروست نەدۆزرایەوە.",
-    researchError: "کۆکردنەوەی سەرچاوەکان سەرکەوتوو نەبوو؛ پشکنینی پەیوەندی و سنووری بەکارهێنان بکە.",
+    researchError:
+      "کۆکردنەوەی سەرچاوەکان سەرکەوتوو نەبوو؛ پشکنینی پەیوەندی و سنووری بەکارهێنان بکە.",
     collectedAt: "کاتی کۆکردنەوە",
   },
 };
@@ -1031,17 +1032,64 @@ export function InterviewPanel({
                 <div>
                   <h3 className="font-semibold">{c("researchTitle")}</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {c("collectedAt")}: {researchSources.length ? new Date(researchSources[0].collected_at).toLocaleString(locale) : "—"}
+                    {c("collectedAt")}:{" "}
+                    {researchSources.length
+                      ? new Date(researchSources[0].collected_at).toLocaleString(locale)
+                      : "—"}
                   </p>
                 </div>
-                <button type="button" onClick={() => void enrichInterview()} disabled={busy || researchBusy} className="inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-sm font-medium disabled:opacity-50">
-                  {researchBusy ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                <button
+                  type="button"
+                  onClick={() => void enrichInterview()}
+                  disabled={busy || researchBusy}
+                  className="inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {researchBusy ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
                   {researchBusy ? c("enriching") : c("enrich")}
                 </button>
               </div>
-              {researchError && <p role="alert" className="text-sm text-destructive">{researchError}</p>}
-              {researchQuery && <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium text-muted-foreground">{c("researchQuery")}</p><p className="mt-1 text-sm">{researchQuery}</p></div>}
-              {researchSources.length ? <div className="space-y-3">{researchSources.map((source) => <article key={source.id} className="rounded-lg border border-border p-3"><a href={source.source_url} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-4">{source.title}</a><p className="mt-1 text-xs text-muted-foreground">{source.domain}</p>{source.description && <p className="mt-2 text-sm">{source.description}</p>}{source.snippet && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{source.snippet}</p>}</article>)}</div> : <p className="text-sm text-muted-foreground">{c("noSources")}</p>}
+              {researchError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {researchError}
+                </p>
+              )}
+              {researchQuery && (
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {c("researchQuery")}
+                  </p>
+                  <p className="mt-1 text-sm">{researchQuery}</p>
+                </div>
+              )}
+              {researchSources.length ? (
+                <div className="space-y-3">
+                  {researchSources.map((source) => (
+                    <article key={source.id} className="rounded-lg border border-border p-3">
+                      <a
+                        href={source.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-primary underline underline-offset-4"
+                      >
+                        {source.title}
+                      </a>
+                      <p className="mt-1 text-xs text-muted-foreground">{source.domain}</p>
+                      {source.description && <p className="mt-2 text-sm">{source.description}</p>}
+                      {source.snippet && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                          {source.snippet}
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{c("noSources")}</p>
+              )}
             </section>
           )}
 
