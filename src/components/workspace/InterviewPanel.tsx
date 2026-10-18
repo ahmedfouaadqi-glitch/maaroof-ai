@@ -58,6 +58,21 @@ type InterviewApiResponse = {
   data_complete?: boolean;
   error?: string;
   current_version?: number;
+  sources?: InterviewResearchSource[];
+  query?: string;
+  collected_at?: string;
+};
+
+type InterviewResearchSource = {
+  id: string;
+  title: string;
+  source_url: string;
+  domain: string;
+  description: string;
+  snippet: string;
+  query: string;
+  locale: Locale;
+  collected_at: string;
 };
 
 const TARGET_LABELS: Record<InterviewTargetType, Record<Locale, string>> = {
@@ -141,6 +156,13 @@ const COPY: Record<Locale, Record<string, string>> = {
     questionHelp: "إرشادات ومثال للإجابة",
     guidance: "ما الذي ينبغي أن تتضمنه الإجابة؟",
     example: "مثال توضيحي",
+    enrich: "جمع مصادر خارجية وتحليلها",
+    enriching: "جارٍ جمع المصادر...",
+    researchTitle: "مصادر مرتبطة بالمقابلة",
+    researchQuery: "استعلام البحث",
+    noSources: "لم تُعثر على مصادر صالحة بعد.",
+    researchError: "تعذر جمع المصادر. تحقق من الحصة والاتصال ثم أعد المحاولة.",
+    collectedAt: "تاريخ الجمع",
   },
   en: {
     title: "Saved context interview",
@@ -205,6 +227,13 @@ const COPY: Record<Locale, Record<string, string>> = {
     questionHelp: "Answer guidance and example",
     guidance: "What should the answer cover?",
     example: "Illustrative example",
+    enrich: "Collect external sources",
+    enriching: "Collecting sources...",
+    researchTitle: "Sources linked to this interview",
+    researchQuery: "Research query",
+    noSources: "No valid sources found yet.",
+    researchError: "Could not collect sources. Check quota and connection, then retry.",
+    collectedAt: "Collected at",
   },
   ku: {
     title: "چاوپێکەوتنی پاشەکەوتکردنی کۆنتێکست",
@@ -268,6 +297,13 @@ const COPY: Record<Locale, Record<string, string>> = {
     questionHelp: "ڕێنمایی و نموونەی وەڵام",
     guidance: "وەڵامەکە دەبێت چی لەخۆ بگرێت؟",
     example: "نموونەی ڕوونکەرەوە",
+    enrich: "کۆکردنەوەی سەرچاوە دەرەکییەکان",
+    enriching: "سەرچاوەکان کۆدەکرێنەوە...",
+    researchTitle: "سەرچاوە بەستراوەکان بە چاوپێکەوتن",
+    researchQuery: "پرسیاری گەڕان",
+    noSources: "هێشتا هیچ سەرچاوەیەکی دروست نەدۆزرایەوە.",
+    researchError: "کۆکردنەوەی سەرچاوەکان سەرکەوتوو نەبوو؛ پشکنینی پەیوەندی و سنووری بەکارهێنان بکە.",
+    collectedAt: "کاتی کۆکردنەوە",
   },
 };
 
@@ -318,6 +354,10 @@ export function InterviewPanel({
   const [progress, setProgress] = useState<InterviewProgress | null>(null);
   const [dataComplete, setDataComplete] = useState(false);
   const [answer, setAnswer] = useState("");
+  const [researchBusy, setResearchBusy] = useState(false);
+  const [researchError, setResearchError] = useState("");
+  const [researchSources, setResearchSources] = useState<InterviewResearchSource[]>([]);
+  const [researchQuery, setResearchQuery] = useState("");
 
   useEffect(() => {
     if (session || targetTypeManuallySelected) return;
@@ -540,6 +580,28 @@ export function InterviewPanel({
       setError(apiError(locale, e instanceof Error ? e.message : undefined));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function enrichInterview() {
+    if (!session || session.status !== "completed" || researchBusy || busy) return;
+    setResearchBusy(true);
+    setResearchError("");
+    try {
+      const token = await tokenOrThrow();
+      const response = await fetch("/api/maaroof-interviews/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ interview_id: session.id }),
+      });
+      const body = (await response.json().catch(() => ({}))) as InterviewApiResponse;
+      if (!response.ok) throw new Error(body.error || "external_research_failed");
+      setResearchSources(Array.isArray(body.sources) ? body.sources : []);
+      setResearchQuery(typeof body.query === "string" ? body.query : "");
+    } catch {
+      setResearchError(c("researchError"));
+    } finally {
+      setResearchBusy(false);
     }
   }
 
@@ -963,7 +1025,27 @@ export function InterviewPanel({
                 </div>
               )}
 
-              {session.questions_snapshot.some(
+              {session.status === "completed" && (
+            <section className="space-y-3 rounded-xl border border-border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">{c("researchTitle")}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {c("collectedAt")}: {researchSources.length ? new Date(researchSources[0].collected_at).toLocaleString(locale) : "—"}
+                  </p>
+                </div>
+                <button type="button" onClick={() => void enrichInterview()} disabled={busy || researchBusy} className="inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-sm font-medium disabled:opacity-50">
+                  {researchBusy ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                  {researchBusy ? c("enriching") : c("enrich")}
+                </button>
+              </div>
+              {researchError && <p role="alert" className="text-sm text-destructive">{researchError}</p>}
+              {researchQuery && <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-medium text-muted-foreground">{c("researchQuery")}</p><p className="mt-1 text-sm">{researchQuery}</p></div>}
+              {researchSources.length ? <div className="space-y-3">{researchSources.map((source) => <article key={source.id} className="rounded-lg border border-border p-3"><a href={source.source_url} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-4">{source.title}</a><p className="mt-1 text-xs text-muted-foreground">{source.domain}</p>{source.description && <p className="mt-2 text-sm">{source.description}</p>}{source.snippet && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{source.snippet}</p>}</article>)}</div> : <p className="text-sm text-muted-foreground">{c("noSources")}</p>}
+            </section>
+          )}
+
+          {session.questions_snapshot.some(
                 (question) => session.state.answers[question.id],
               ) && (
                 <details className="rounded-xl border border-border p-4">
