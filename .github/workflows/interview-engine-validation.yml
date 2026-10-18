@@ -29,6 +29,8 @@ on:
       - "src/lib/maaroof/interview-entity-sync.test.ts"
       - "src/lib/maaroof/task-weight.ts"
       - "src/lib/maaroof/task-weight.test.ts"
+      - "src/lib/space-interview.ts"
+      - "src/lib/space-interview.test.ts"
       - "src/routes/profile.tsx"
       - "src/lib/auth.tsx"
       - "src/routes/api/maaroof-interviews.ts"
@@ -95,7 +97,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run interview and API tests
-        run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-question-bank.test.ts src/lib/maaroof/interview-research.test.ts src/lib/maaroof/interview-report.test.ts src/routes/api/maaroof-interviews.test.ts src/lib/maaroof/agent-input.test.ts src/lib/maaroof/tool-summary.test.ts src/lib/entity-consistency.test.ts src/components/EntityFields.test.ts src/lib/maaroof/interview-entity-sync.test.ts src/lib/maaroof/task-weight.test.ts
+        run: bun run test -- src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-question-bank.test.ts src/lib/maaroof/interview-research.test.ts src/lib/maaroof/interview-report.test.ts src/routes/api/maaroof-interviews.test.ts src/lib/maaroof/agent-input.test.ts src/lib/maaroof/tool-summary.test.ts src/lib/entity-consistency.test.ts src/components/EntityFields.test.ts src/lib/maaroof/interview-entity-sync.test.ts src/lib/maaroof/task-weight.test.ts src/lib/space-interview.ts src/lib/space-interview.test.ts
 
       - name: Lint interview engine
         run: bunx eslint src/lib/maaroof/interview-engine.ts src/lib/maaroof/interview-context.ts src/lib/maaroof/interview-context.test.ts src/lib/maaroof/interview-engine.test.ts src/lib/maaroof/interview-question-bank.ts src/lib/maaroof/interview-question-bank.test.ts src/routes/api/maaroof-interviews.ts src/routes/api/maaroof-interviews.test.ts src/routes/api/maaroof-interviews.integration.test.ts src/components/workspace/InterviewPanel.tsx src/lib/maaroof/agent-input.test.ts src/lib/maaroof/tool-summary.ts src/lib/maaroof/tool-summary.test.ts src/lib/entity-consistency.test.ts src/components/EntityFields.test.ts src/lib/maaroof/interview-entity-sync.ts src/lib/maaroof/interview-entity-sync.test.ts src/lib/maaroof/task-weight.ts src/lib/maaroof/task-weight.test.ts
