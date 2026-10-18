@@ -269,17 +269,12 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     const { ENGINE_PERSPECTIVES, buildSpaceInterviewRows } = await import("@/lib/space-interview");
     const apiKey = process.env.LOVABLE_API_KEY;
     const lang = String(space.lang || "ar");
-    const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } =
-      apiKey ? await import("@/lib/lovable-ai") : {
-        LOVABLE_AI_CHAT_COMPLETIONS_URL: "",
-        lovableAiHeaders: () => ({}),
-        extractJsonObject: <T,>(_value: unknown): T | null => null,
-      };
-
     const outcomes = await Promise.all(
       ENGINE_LIST.map(async (engine) => {
         if (!apiKey) return { engineKey: engine.key, failureCode: "unavailable" as const };
         try {
+          const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } =
+            await import("@/lib/lovable-ai");
           const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
             headers: lovableAiHeaders(apiKey),
