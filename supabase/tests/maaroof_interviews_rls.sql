@@ -61,12 +61,16 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 SET LOCAL ROLE authenticated;
-SELECT set_config(
-  'request.jwt.claims',
-  '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',
-  true
-);
-SELECT set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
+DO $
+BEGIN
+  PERFORM set_config(
+    'request.jwt.claims',
+    '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',
+    true
+  );
+  PERFORM set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true);
+END
+$;
 
 SELECT is(
   (SELECT count(*)::integer FROM public.maaroof_interviews
@@ -87,12 +91,16 @@ SELECT is(
   'a workspace owner can read a workspace interview without a membership row'
 );
 
-SELECT set_config(
-  'request.jwt.claims',
-  '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',
-  true
-);
-SELECT set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000002', true);
+DO $
+BEGIN
+  PERFORM set_config(
+    'request.jwt.claims',
+    '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',
+    true
+  );
+  PERFORM set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000002', true);
+END
+$;
 SELECT is(
   (SELECT count(*)::integer FROM public.maaroof_interviews
    WHERE id = '30000000-0000-4000-8000-000000000003'),
@@ -100,12 +108,16 @@ SELECT is(
   'a workspace viewer can read the workspace interview'
 );
 
-SELECT set_config(
-  'request.jwt.claims',
-  '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}',
-  true
-);
-SELECT set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000003', true);
+DO $
+BEGIN
+  PERFORM set_config(
+    'request.jwt.claims',
+    '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}',
+    true
+  );
+  PERFORM set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000003', true);
+END
+$;
 SELECT is(
   (SELECT count(*)::integer FROM public.maaroof_interviews
    WHERE id = '30000000-0000-4000-8000-000000000003'),
