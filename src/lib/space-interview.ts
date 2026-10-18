@@ -16,6 +16,7 @@ export type SpaceInterviewRow = {
   engine_key: EngineKey;
   engine_name: string;
   generation_status: "ready" | "failed";
+  engine_order: number;
   failure_reason: string | null;
 };
 
@@ -70,7 +71,7 @@ export function buildSpaceInterviewRows(
   outcomes: EngineInterviewOutcome[],
 ): SpaceInterviewRow[] {
   const byKey = new Map(outcomes.map((outcome) => [outcome.engineKey, outcome]));
-  return ENGINE_LIST.map((engine) => {
+  return ENGINE_LIST.map((engine, engine_order) => {
     const outcome = byKey.get(engine.key);
     const question = typeof outcome?.question === "string" ? outcome.question.trim().slice(0, 1000) : "";
     const ready = question.length > 0;
@@ -81,6 +82,7 @@ export function buildSpaceInterviewRows(
       topic: "gap",
       engine_key: engine.key,
       engine_name: engine.name,
+      engine_order,
       generation_status: ready ? "ready" : "failed",
       failure_reason: ready ? null : engineFailureReason(locale, outcome?.failureCode || "unavailable"),
     };
