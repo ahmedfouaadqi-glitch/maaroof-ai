@@ -76,6 +76,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
       setOut({
         ...j.result,
+        mci: j.mci || null,
         quota_needs_review: !!j.quota_needs_review,
         persistence_warning: j.persistence_warning || null,
       });
