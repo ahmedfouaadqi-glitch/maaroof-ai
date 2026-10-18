@@ -48,5 +48,4 @@ describe("entity consistency identity anchors", () => {
     expect(alerts.some((alert) => alert.kind === "identity")).toBe(false);
     expect(alerts.some((alert) => alert.kind === "geo")).toBe(true);
   });
-
 });
