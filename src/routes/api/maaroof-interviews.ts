@@ -5,6 +5,7 @@ import {
   buildInterviewResearchQuery,
   normalizeInterviewResearchSources,
 } from "@/lib/maaroof/interview-research";
+import { generateInterviewEvidenceReport } from "@/lib/maaroof/interview-report.server";
 import type { Database } from "@/integrations/supabase/types";
 import {
   INTERVIEW_LOCALES,
