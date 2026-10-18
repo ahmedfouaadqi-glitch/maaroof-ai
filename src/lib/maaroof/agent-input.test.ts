@@ -26,21 +26,18 @@ describe("agent-input", () => {
     ).toEqual([]);
   });
   it("turns JSON reflections into plain text", () => {
+    const fence = String.fromCharCode(96).repeat(3);
     expect(
-      sanitizeReflection("\x60\x60\x60json\n" + '{"decision":"stop","why":"brand missing"}' + "\n\x60\x60\x60"),
+      sanitizeReflection(
+        fence + "json\n" + '{"decision":"stop","why":"brand missing"}' + "\n" + fence,
+      ),
     ).toBe("stop — brand missing");
     expect(sanitizeReflection("continue")).toBe("continue");
   });
   it("removes placeholder competitor names while preserving real competitor names", () => {
     const result = removePlaceholderCompetitors({
       brand: "Maaroof",
-      competitors: [
-        "Competitor A",
-        "Example Competitor",
-        "شركة النور",
-        "المنافس الأول",
-        "Rival 2",
-      ],
+      competitors: ["Competitor A", "Example Competitor", "شركة النور", "المنافس الأول", "Rival 2"],
     });
     expect(result.input.competitors).toEqual(["شركة النور"]);
     expect(result.removed).toEqual([
