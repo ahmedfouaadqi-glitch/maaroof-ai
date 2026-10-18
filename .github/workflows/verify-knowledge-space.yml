@@ -19,4 +19,6 @@ jobs:
       - name: Run test suite
         run: bun run test
       - name: Build production bundle
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: bun run build
