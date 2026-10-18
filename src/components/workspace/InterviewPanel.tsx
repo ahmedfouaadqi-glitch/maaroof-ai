@@ -1137,9 +1137,9 @@ export function InterviewPanel({
                       </div>
                       {researchReport.sections.map((reportSection) => (
                         <article
-                            key={reportSection.id}
-                            className="space-y-3 rounded-lg border border-border p-3"
-                          >
+                          key={reportSection.id}
+                          className="space-y-3 rounded-lg border border-border p-3"
+                        >
                           <h5 className="font-semibold">{reportSection.title}</h5>
                           <div>
                             <p className="text-xs font-semibold text-muted-foreground">
