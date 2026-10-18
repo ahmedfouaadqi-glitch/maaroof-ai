@@ -3,7 +3,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(14);
+SELECT plan(16);
 
 -- Fixed fixtures are isolated inside this transaction and removed by ROLLBACK.
 INSERT INTO auth.users (id, email)
