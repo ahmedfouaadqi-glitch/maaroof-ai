@@ -10,6 +10,8 @@ import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
 import { phaseLabel, isIntentionalSkip, summarizeToolOutput, taskWeight } from "@/lib/maaroof/event-labels";
 import { PulseBadge } from "@/components/motion/effects";
+import { useRotatingHint } from "@/lib/workspace-hints";
+import { WorkspaceAuditPulse } from "@/components/WorkspaceAuditPulse";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
@@ -101,6 +103,7 @@ function WorkspacePage() {
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[locale];
   const [goal, setGoal] = useState("");
+  const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [liveProbe, setLiveProbe] = useState(false);
@@ -403,7 +406,7 @@ function WorkspacePage() {
             <div className="space-y-4">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
-                <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={c.placeholder} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
+                <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
                   <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
@@ -411,6 +414,9 @@ function WorkspacePage() {
                   </button>
                 </div>
               </div>
+
+              <WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); document.getElementById("workspace-goal")?.focus(); }} />
+
 
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
                 <div className="mb-3 flex items-center justify-between gap-3">

@@ -72,7 +72,16 @@ export const Route = createFileRoute("/api/deep-audit")({
         const cost = await resolveToolCost(a.userId, TOOL_KEY);
         const { data: last } = await a.admin.from("maaroof_jobs").select("id, status, error, created_at, updated_at")
           .eq("user_id", a.userId).eq("mode", "deep_audit").order("created_at", { ascending: false }).limit(1).maybeSingle();
-        return Response.json({ targets, perTarget: cost.tokens, estimate: cost.tokens * targets.length, priced: cost.source !== "unpriced", balance: Number(p.tokens_balance) || 0, last: last || null });
+        // Previous completed audit (for change-over-time), excluding the latest job.
+        let previous: { id: string; overall: number | null; created_at: string } | null = null;
+        const { data: done } = await a.admin.from("maaroof_jobs").select("id, created_at")
+          .eq("user_id", a.userId).eq("mode", "deep_audit").eq("status", "completed").order("created_at", { ascending: false }).limit(2);
+        const prevJob = (done || []).find((j: any) => j.id !== last?.id) || null;
+        if (prevJob) {
+          const { data: ev } = await a.admin.from("maaroof_job_events").select("payload").eq("job_id", prevJob.id).eq("event_type", "audit_result").limit(1).maybeSingle();
+          previous = { id: prevJob.id, created_at: prevJob.created_at, overall: ev?.payload?.overall ?? null };
+        }
+        return Response.json({ targets, perTarget: cost.tokens, estimate: cost.tokens * targets.length, priced: cost.source !== "unpriced", balance: Number(p.tokens_balance) || 0, last: last || null, previous });
       },
       POST: async ({ request }) => {
         const a = await auth(request);

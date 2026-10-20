@@ -26,6 +26,12 @@ import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
 
+const SANDBOX_HINTS: Record<"ar" | "en" | "ku", string[]> = {
+  ar: ["الصق فقرة من صفحة خدماتك…", "الصق وصف منتجك كما يظهر في موقعك…", "الصق نبذة «من نحن» لقياس قابليتها للاقتباس…", "الصق مقالاً أو منشوراً بأي لغة…"],
+  en: ["Paste a paragraph from your services page…", "Paste your product description as it appears on your site…", "Paste your About text to test how citable it is…", "Paste an article or post in any language…"],
+  ku: ["بڕگەیەک لە پەڕەی خزمەتگوزارییەکانت بلکێنە…", "وەسفی بەرهەمەکەت بلکێنە…", "دەقی «دەربارەی ئێمە» بلکێنە…", "وتار یان پۆستێک بە هەر زمانێک بلکێنە…"],
+};
+
 type Result = {
   score: number; authority: number; local: number; citation: number;
   cached?: boolean;
@@ -72,11 +78,19 @@ function localStepLabel(
 
 export function Sandbox() {
   const { t, lang } = useI18n();
+  const [hintTick, setHintTick] = useState(0);
+  const sandboxHint = SANDBOX_HINTS[lang === "en" || lang === "ku" ? lang : "ar"][hintTick % 4];
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
   const user = auth?.user;
 
   const [text, setText] = useState("");
+  useEffect(() => {
+    if (text) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setHintTick((x) => x + 1), 2000);
+    return () => clearInterval(id);
+  }, [text]);
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(-1);
   const [result, setResult] = useState<Result | null>(null);
@@ -187,7 +201,7 @@ export function Sandbox() {
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={t("sandbox_placeholder")}
+          placeholder={sandboxHint}
           rows={5}
           maxLength={8000}
           className="w-full resize-none rounded-xl border border-border bg-background/60 p-4 font-mono text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
