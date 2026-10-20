@@ -61,7 +61,7 @@ export function KnowledgeSpacesPanel() {
     setBusy(true);
     setError("");
     try {
-      const result = await adminListKnowledgeSpaces({ data: {} });
+      const result = await (adminListKnowledgeSpaces as any)({ data: {} });
       setSpaces((result.spaces || []) as Space[]);
     } catch {
       setError(c.loadError);
