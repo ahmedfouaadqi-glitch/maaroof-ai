@@ -412,11 +412,6 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                               {statusLabel[langKey][engine.status] || engine.status}
                             </span>
                           </div>
-                          {engine.proxy && (
-                            <p className="mt-1 text-[10px] text-muted-foreground">
-                              {lang === "en" ? "Uses a configured proxy model" : lang === "ku" ? "مۆدێلی ناوەندگیر بەکاردەهێنێت" : "يعمل عبر نموذج وسيط مُهيّأ"}
-                            </p>
-                          )}
                           <p className="mt-1 text-xs text-muted-foreground">
                             {lang === "en" ? `${engine.questionsCount} questions saved` : lang === "ku" ? `${engine.questionsCount} پرسیار پاشەکەوتکرا` : `${engine.questionsCount} سؤال محفوظ`}
                           </p>
@@ -437,11 +432,6 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                           {Logo && <Logo size={18} />}
                           <span className="font-semibold">{engineName}</span>
-                          {ENGINE_CATALOG[engineKey!].proxy && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px]">
-                              {lang === "en" ? "Proxy" : lang === "ku" ? "ناوەندگیر" : "وسيط"}
-                            </span>
-                          )}
                         </div>
                       )}
                       <p className="text-sm">{q.question}</p>
