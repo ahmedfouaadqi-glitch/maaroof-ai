@@ -1,3 +1,4 @@
+import { isPlaceholderName } from "@/lib/maaroof/event-labels";
 // Architecture & Concept: Ahmed Maaroof
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
@@ -99,7 +100,8 @@ export function normalizeToolInput(input: any): Record<string, any> {
     if (LIST_FIELDS.has(k)) {
       const list = (Array.isArray(v) ? v.map(flatten) : flatten(v).split(/[\n,؛;|]+/))
         .map((s) => s.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((s) => k !== "competitors" || !isPlaceholderName(s));
       if (list.length) out[k] = list;
       continue;
     }

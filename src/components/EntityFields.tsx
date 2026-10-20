@@ -1,3 +1,4 @@
+import { ACCOUNT_KINDS, isAccountKind, kindToEntityType, presenceNotes } from "@/lib/account-kinds";
 // Entity Truth Card fields inside the existing profile page.
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,16 +22,16 @@ export function suggestEntityType(links: string): "organization" | "person" | "i
   if (!l.length) return "individual";
   return l.every((u) => SOCIAL.test(u)) ? "person" : "organization";
 }
-export type EntityDraft = { type: string; hq: string; mk: string[]; sp: string; links: string };
+export type EntityDraft = { kind?: string; type: string; hq: string; mk: string[]; sp: string; links: string };
 export function entityDraftFrom(profile: any): EntityDraft {
   return {
-    type: profile?.entity_type || "organization", hq: profile?.hq_country || "", mk: profile?.target_markets || [],
+    kind: profile?.account_kind || "", type: profile?.entity_type || "organization", hq: profile?.hq_country || "", mk: profile?.target_markets || [],
     sp: profile?.specialty_scope || "", links: (Array.isArray(profile?.entity_links) ? profile.entity_links : []).join("\n"),
   };
 }
 export function entityUpdateFrom(d: EntityDraft) {
   return {
-    entity_type: d.type, hq_country: d.hq || null, target_markets: d.mk, specialty_scope: d.sp.slice(0, 400) || null,
+    ...(isAccountKind(d.kind) ? { account_kind: d.kind } : {}), entity_type: d.type, hq_country: d.hq || null, target_markets: d.mk, specialty_scope: d.sp.slice(0, 400) || null,
     entity_links: Array.from(new Set(d.links.split(/\n+/).map((s) => normalizeUrl(s)).filter(Boolean) as string[])).slice(0, 10),
   };
 }
@@ -86,6 +87,15 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
       </div>
       <p className="text-xs text-muted-foreground">{locked ? T.locked : T.hint}</p>
       <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs sm:col-span-2">{L === "en" ? "Account type" : L === "ku" ? "جۆری هەژمار" : "نوع الحساب"}
+          <select value={value.kind || ""} disabled={locked} onChange={(e) => { const k = e.target.value; set(isAccountKind(k) ? { kind: k, type: kindToEntityType(k) } : { kind: "" }); }} className={cls}>
+            <option value="">{T.none}</option>
+            {ACCOUNT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label[L]}</option>)}
+          </select>
+          {presenceNotes(links.split(/\n+/), isAccountKind(value.kind) ? value.kind : null, L).map((n) => (
+            <span key={n} className="mt-1 block text-[11px] text-warning">{n}</span>
+          ))}
+        </label>
         <label className="text-xs">{T.type}
           <select value={type} disabled={locked} onChange={(e) => setType(e.target.value)} className={cls}>
             <option value="organization">{T.org}</option><option value="person">{T.person}</option><option value="individual">{L === "en" ? "Individual — no website or accounts" : L === "ku" ? "تاک — بێ ماڵپەڕ و هەژمار" : "فرد — بلا موقع ولا حسابات"}</option>

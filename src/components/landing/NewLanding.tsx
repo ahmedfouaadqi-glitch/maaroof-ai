@@ -1,4 +1,8 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { getLandingData } from "@/lib/landing.functions";
+import { truthCardCompleteness, type PublicTruthCard } from "@/lib/landing-data";
+import { COUNTRY_NAMES } from "@/lib/entity-consistency";
 import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Globe2, Link2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -32,9 +36,8 @@ const COPY = {
     vsCols: ["البحث التقليدي", "محركات الإجابة التوليدية"],
     vsRows: [["قائمة روابط", "إجابة مباشرة واحدة"], ["النجاح = نقرة", "النجاح = اقتباس"], ["كلمات مفتاحية", "حقائق وكيانات"], ["ترتيب الصفحة", "ثقة المصدر واتساقه"]],
     truth: "بطاقة حقيقة الكيان",
-    truthSub: "مصدر واحد لهويتك تعتمد عليه كل الأدوات والوكيل.",
-    truthFields: { name: "الاسم", type: "النوع", country: "البلد", links: "الروابط الرسمية", consistency: "اتساق الهوية" },
-    truthDemo: { name: "علامتك", type: "شركة تبيع منتجاتها", country: "العراق", links: "الموقع + 3 حسابات" },
+    truthSub: "مصدر واحد لهويتك تعتمد عليه كل الأدوات والوكيل. هذه بطاقة معروف الحقيقية كما هي محفوظة الآن.",
+    truthFields: { name: "الاسم", type: "النوع", country: "البلد", links: "الروابط الرسمية", consistency: "اكتمال البطاقة", markets: "الأسواق المستهدفة" },
     types: "لكل نوع حساب طريقه",
     accountTypes: [
       ["شركة تبيع منتجاتها", "ظهور المنتجات في إجابات الشراء والمقارنة."],
@@ -76,9 +79,8 @@ const COPY = {
     vsCols: ["Traditional search", "Generative answer engines"],
     vsRows: [["List of links", "One direct answer"], ["Success = a click", "Success = a citation"], ["Keywords", "Facts and entities"], ["Page ranking", "Source trust and consistency"]],
     truth: "Entity Truth Card",
-    truthSub: "One source for your identity that every tool and the agent rely on.",
-    truthFields: { name: "Name", type: "Type", country: "Country", links: "Official links", consistency: "Identity consistency" },
-    truthDemo: { name: "Your brand", type: "Product company", country: "Iraq", links: "Website + 3 accounts" },
+    truthSub: "One source for your identity that every tool and the agent rely on. This is Maaroof's real card as stored now.",
+    truthFields: { name: "Name", type: "Type", country: "Country", links: "Official links", consistency: "Card completeness", markets: "Target markets" },
     types: "Every account type has its path",
     accountTypes: [
       ["Product company", "Products appear in buying and comparison answers."],
@@ -120,9 +122,8 @@ const COPY = {
     vsCols: ["گەڕانی ئاسایی", "بزوێنەرە زیرەکەکانی وەڵام"],
     vsRows: [["لیستی بەستەر", "یەک وەڵامی ڕاستەوخۆ"], ["سەرکەوتن = کلیک", "سەرکەوتن = ئاماژەپێدان"], ["وشەی سەرەکی", "ڕاستی و قەوارە"], ["ڕیزبەندی پەڕە", "متمانە و یەکگرتوویی سەرچاوە"]],
     truth: "کارتی ڕاستی قەوارە",
-    truthSub: "یەک سەرچاوە بۆ ناسنامەت کە هەموو ئامرازەکان پشتی پێ دەبەستن.",
-    truthFields: { name: "ناو", type: "جۆر", country: "وڵات", links: "بەستەرە فەرمییەکان", consistency: "یەکگرتوویی ناسنامە" },
-    truthDemo: { name: "براندەکەت", type: "کۆمپانیای بەرهەم", country: "عێراق", links: "ماڵپەڕ + ٣ هەژمار" },
+    truthSub: "یەک سەرچاوە بۆ ناسنامەت کە هەموو ئامرازەکان پشتی پێ دەبەستن. ئەمە کارتی ڕاستەقینەی مەعروفە.",
+    truthFields: { name: "ناو", type: "جۆر", country: "وڵات", links: "بەستەرە فەرمییەکان", consistency: "تەواوبوونی کارت", markets: "بازاڕە ئامانجەکان" },
     types: "هەر جۆرە هەژمارێک ڕێگای خۆی هەیە",
     accountTypes: [
       ["کۆمپانیای فرۆشتنی بەرهەم", "دەرکەوتنی بەرهەم لە وەڵامەکانی کڕین."],
@@ -153,6 +154,11 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { user } = useAuth();
   const l: L = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[l];
+  const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
+  useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
+  const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
+  const card = data?.card ?? null;
+  const typeLabel = (t: string | null) => t === "person" ? ({ ar: "شخص", en: "Person", ku: "کەس" } as const)[l] : ({ ar: "منشأة", en: "Organization", ku: "دامەزراوە" } as const)[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
 
   const ctaClass = "inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]";
@@ -263,20 +269,23 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               <h2 className="font-display text-3xl font-bold">{c.truth}</h2>
               <p className="mt-3 text-muted-foreground">{c.truthSub}</p>
             </div>
+            {card && (
             <Reveal>
               <SpotlightCard className="glass p-5">
-                <div className="flex items-center gap-2 text-sm font-semibold"><BadgeCheck className="size-5 text-primary" />{c.truthDemo.name}</div>
+                <div className="flex items-center gap-2 text-sm font-semibold"><BadgeCheck className="size-5 text-primary" />{card.name}</div>
                 <dl className="mt-4 space-y-2 text-sm">
-                  <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{c.truthFields.type}</dt><dd>{c.truthDemo.type}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Globe2 className="size-3.5" />{c.truthFields.country}</dt><dd>{c.truthDemo.country}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Link2 className="size-3.5" />{c.truthFields.links}</dt><dd>{c.truthDemo.links}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{c.truthFields.type}</dt><dd>{typeLabel(card.entity_type)}</dd></div>
+                  {card.hq_country && <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Globe2 className="size-3.5" />{c.truthFields.country}</dt><dd>{COUNTRY_NAMES[card.hq_country]?.[l] || card.hq_country}</dd></div>}
+                  <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Link2 className="size-3.5" />{c.truthFields.links}</dt><dd dir="ltr">{card.website || "—"}{card.links_count > 1 ? ` +${card.links_count - 1}` : ""}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{c.truthFields.markets}</dt><dd>{card.markets_count}</dd></div>
                 </dl>
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs"><span>{c.truthFields.consistency}</span><CountUp to={92} suffix="%" /></div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full w-[92%] rounded-full bg-gradient-to-r from-primary to-accent" /></div>
+                  <div className="flex justify-between text-xs"><span>{c.truthFields.consistency}</span><CountUp to={truthCardCompleteness(card)} suffix="%" /></div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${truthCardCompleteness(card)}%` }} /></div>
                 </div>
               </SpotlightCard>
             </Reveal>
+            )}
           </div>
         </section>
 
@@ -299,7 +308,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {MAAROOF_SKILLS.map((s) => (
+            {skills.map((s) => (
               <SpotlightCard key={s.key} className="p-4">
                 <div className="text-sm font-semibold">{s.label[l]}</div>
                 <p className="mt-1 text-xs text-muted-foreground">{s.description[l]}</p>
@@ -311,7 +320,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         {/* 9. Real stats */}
         <section className="mx-auto max-w-4xl px-4 pb-16">
           <div className="grid grid-cols-3 gap-3 text-center">
-            {[ENGINES.length, MAAROOF_SKILLS.length, 3].map((n, i) => (
+            {[ENGINES.length, skills.length, 3].map((n, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card/40 p-4">
                 <CountUp to={n} className="font-display text-3xl font-bold text-gradient md:text-4xl" />
                 <div className="mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>

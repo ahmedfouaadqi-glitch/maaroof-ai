@@ -3681,6 +3681,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_kind: string | null
           brand_keywords: string | null
           brand_name: string | null
           cognitive_consent: string
@@ -3729,6 +3730,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          account_kind?: string | null
           brand_keywords?: string | null
           brand_name?: string | null
           cognitive_consent?: string
@@ -3777,6 +3779,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          account_kind?: string | null
           brand_keywords?: string | null
           brand_name?: string | null
           cognitive_consent?: string

@@ -19,5 +19,8 @@
 - [x] A: motion library (SpotlightCard, CountUp, RotatingText, ShinyText, PulseBadge, LogoLoop, Magnetic)
 - [x] B: new home page, 10 sections in ar/en/ku
 - [x] D part: proxy notice removed from interview
-- [ ] C: auth glass card, welcome wizard (7 account types), header balance counter, profile completeness, workspace pulse badges + weight meter, mobile dock
-- [ ] D rest: Arabic phase labels, skip vs error, composite tool summaries, deep discovery job, export direction, teach-space pricing
+- [x] Real truth card on home; skill count/list follows admin toggles
+- [x] C part: 7 account kinds + missing-link notes in profile, workspace pulse badges + weight meter
+- [ ] C rest: auth glass card, welcome wizard, header balance counter, mobile dock
+- [x] D part: Arabic phase labels, skip vs error, readable tool summaries, filler competitor guard, per-line export direction
+- [ ] D rest: deep discovery job (needs owner review, costs balance), teach-space pricing
