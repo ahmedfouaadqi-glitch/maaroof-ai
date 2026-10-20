@@ -38,7 +38,7 @@ const COPY = {
     badge: "مساحة العمل الذكية",
     title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
     rotPrefix: "نحسّن ظهورك عبر",
-    sub: "عشرة نماذج ذكاء اصطناعي تُسأل عن علامتك. نقيس حضورك، ونقترح ما يرفعه، والكلفة أمامك قبل أي تنفيذ. لا خصم إلا عند النجاح.",
+    brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
     cta: "ابدأ مساحة العمل", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
@@ -81,7 +81,7 @@ const COPY = {
     badge: "Smart Workspace",
     title: "Make your brand a source answer engines cite",
     rotPrefix: "We improve your visibility through",
-    sub: "ten AI models asked about your brand. We measure your presence, suggest what lifts it, and show the cost first. Pay only on success.",
+    brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
     cta: "Start the workspace", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
@@ -124,7 +124,7 @@ const COPY = {
     badge: "شوێنی کاری زیرەک",
     title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
-    sub: "دە مۆدێلی زیرەکی دەستکرد دەربارەی براندەکەت دەپرسرێن. ئامادەبوونت دەپێوین و تێچوو پێشوەختە دەبینیت. تەنها لە سەرکەوتندا پارە دەبڕدرێت.",
+    brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
     cta: "دەستپێکردنی شوێنی کار", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
@@ -203,7 +203,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             <p className="mt-4 text-lg font-semibold md:text-2xl">
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
             </p>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong dir="ltr" className="font-display text-xl font-extrabold text-primary md:text-2xl">MAAROOF Ai</strong> — {c.sub}</p>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong className="font-display text-xl font-extrabold text-primary md:text-2xl">{c.brandName}</strong> — {c.sub}</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Cta />
               {showPro && (
