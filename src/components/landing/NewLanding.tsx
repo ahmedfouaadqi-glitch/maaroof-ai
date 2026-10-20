@@ -15,6 +15,24 @@ import { SpotlightCard, CountUp, RotatingText, ShinyText, LogoLoop, Magnetic } f
 
 type L = "ar" | "en" | "ku";
 
+function HeroPulses() {
+  const [dots, setDots] = useState<{ x: number; y: number; d: number; s: number }[]>([]);
+  useEffect(() => {
+    const gen = () => Array.from({ length: 6 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, d: Math.random() * 3, s: 6 + Math.random() * 8 }));
+    setDots(gen());
+    const id = setInterval(() => setDots(gen()), 6000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div aria-hidden className="relative mx-auto h-10 w-56">
+      {dots.map((p, i) => (
+        <span key={i} className="absolute rounded-full bg-primary motion-safe:animate-ping transition-all duration-[2000ms]"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, animationDelay: `${p.d}s`, animationDuration: "2.4s", opacity: 0.7 }} />
+      ))}
+    </div>
+  );
+}
+
 const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
@@ -180,14 +198,12 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 grid-bg opacity-40" />
           <div className="relative mx-auto max-w-5xl px-4 pb-10 pt-16 text-center md:pt-24">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-              <Sparkles className="size-3.5" /> {c.badge}
-            </span>
+            <HeroPulses />
             <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-gradient md:text-6xl">{c.title}</h1>
             <p className="mt-4 text-lg font-semibold md:text-2xl">
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
             </p>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">{c.sub}</p>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong dir="ltr" className="font-display text-xl font-extrabold text-primary md:text-2xl">MAAROOF Ai</strong> — {c.sub}</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Cta />
               {showPro && (

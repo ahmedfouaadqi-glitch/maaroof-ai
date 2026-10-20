@@ -1384,7 +1384,7 @@ export const ar: Dict = {
   "auto.maaroof_2": "معروف",
   "auto.maaroof_agent": "معروف — الوكيل",
   "auto.maaroof_evolution_reports": "تقارير تطور معروف",
-  "auto.maaroof_intelligence_center": "مركز ذكاء معروف",
+  "auto.maaroof_intelligence_center": "مركز MAAROOF Ai",
   "auto.maaroof_kill_switch": "إيقاف كامل لمعروف (Kill switch)",
   "auto.maaroof_memory_maaroof_ai": "ذاكرة معروف · MAAROOF Ai",
   "auto.maaroof_report": "تقرير معروف",
