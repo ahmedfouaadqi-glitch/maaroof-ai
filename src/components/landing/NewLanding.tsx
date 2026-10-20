@@ -15,12 +15,30 @@ import { SpotlightCard, CountUp, RotatingText, ShinyText, LogoLoop, Magnetic } f
 
 type L = "ar" | "en" | "ku";
 
+function HeroPulses() {
+  const [dots, setDots] = useState<{ x: number; y: number; d: number; s: number }[]>([]);
+  useEffect(() => {
+    const gen = () => Array.from({ length: 6 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, d: Math.random() * 3, s: 6 + Math.random() * 8 }));
+    setDots(gen());
+    const id = setInterval(() => setDots(gen()), 6000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div aria-hidden className="relative mx-auto h-10 w-56">
+      {dots.map((p, i) => (
+        <span key={i} className="absolute rounded-full bg-primary motion-safe:animate-ping transition-all duration-[2000ms]"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, animationDelay: `${p.d}s`, animationDuration: "2.4s", opacity: 0.7 }} />
+      ))}
+    </div>
+  );
+}
+
 const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
     title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
     rotPrefix: "نحسّن ظهورك عبر",
-    sub: "معروف يسأل عشرة نماذج ذكاء اصطناعي عن علامتك، يقيس حضورك، ويقترح المهارات المناسبة مع عرض الكلفة قبل أي تنفيذ. لا خصم إلا بعد النجاح.",
+    sub: "عشرة نماذج ذكاء اصطناعي تُسأل عن علامتك. نقيس حضورك، ونقترح ما يرفعه، والكلفة أمامك قبل أي تنفيذ. لا خصم إلا عند النجاح.",
     cta: "ابدأ مساحة العمل", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
@@ -63,7 +81,7 @@ const COPY = {
     badge: "Smart Workspace",
     title: "Make your brand a source answer engines cite",
     rotPrefix: "We improve your visibility through",
-    sub: "Maaroof asks ten AI models about your brand, measures your presence and suggests the right skills with the cost shown before anything runs. You are charged only on success.",
+    sub: "ten AI models asked about your brand. We measure your presence, suggest what lifts it, and show the cost first. Pay only on success.",
     cta: "Start the workspace", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
@@ -106,7 +124,7 @@ const COPY = {
     badge: "شوێنی کاری زیرەک",
     title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
-    sub: "مەعروف لە دە مۆدێلی زیرەکی دەستکرد دەربارەی براندەکەت دەپرسێت، ئامادەبوونت دەپێوێت و کارامەیی گونجاو پێشنیار دەکات، تێچوو پێش جێبەجێکردن پیشان دەدات. تەنها دوای سەرکەوتن پارە دەبڕدرێت.",
+    sub: "دە مۆدێلی زیرەکی دەستکرد دەربارەی براندەکەت دەپرسرێن. ئامادەبوونت دەپێوین و تێچوو پێشوەختە دەبینیت. تەنها لە سەرکەوتندا پارە دەبڕدرێت.",
     cta: "دەستپێکردنی شوێنی کار", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
@@ -180,14 +198,12 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 grid-bg opacity-40" />
           <div className="relative mx-auto max-w-5xl px-4 pb-10 pt-16 text-center md:pt-24">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-              <Sparkles className="size-3.5" /> {c.badge}
-            </span>
+            <HeroPulses />
             <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-gradient md:text-6xl">{c.title}</h1>
             <p className="mt-4 text-lg font-semibold md:text-2xl">
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
             </p>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">{c.sub}</p>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong dir="ltr" className="font-display text-xl font-extrabold text-primary md:text-2xl">MAAROOF Ai</strong> — {c.sub}</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Cta />
               {showPro && (
