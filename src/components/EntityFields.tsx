@@ -1,4 +1,5 @@
 import { ACCOUNT_KINDS, isAccountKind, kindToEntityType, presenceNotes } from "@/lib/account-kinds";
+import { auditTargets, axisPriority } from "@/lib/maaroof/deep-audit";
 // Entity Truth Card fields inside the existing profile page.
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -123,6 +124,29 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
       </div>
       <label className="block text-xs">{T.sp}<input value={sp} disabled={locked} onChange={(e) => setSp(e.target.value)} className={cls} /></label>
       <label className="block text-xs">{T.links}<textarea rows={3} value={links} disabled={locked} onChange={(e) => setLinks(e.target.value)} className={cls} /></label>
+      {(() => {
+        const targets = auditTargets(links.split(/\n+/));
+        const pr = axisPriority(isAccountKind(value.kind) ? value.kind : null).map((a) => a.toUpperCase()).join(" ← ");
+        const kindLbl = (k: string) => ({ official: { ar: "موقع رسمي", en: "Official site", ku: "ماڵپەڕی فەرمی" }, social: { ar: "تواصل", en: "Social", ku: "تۆڕی کۆمەڵایەتی" }, page: { ar: "صفحة", en: "Page", ku: "پەڕە" } } as any)[k][L];
+        return (
+          <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+            <div className="font-semibold">{L === "en" ? "Deep audit of your account" : L === "ku" ? "پشکنینی قووڵی هەژمارەکەت" : "الفحص العميق لحسابك"}</div>
+            {targets.length ? (
+              <>
+                <p className="mt-1 text-muted-foreground">{L === "en" ? "Required: every link below will be audited across SEO, AEO, GEO, SGE and GSEO by its nature." : L === "ku" ? "پێویستە: هەموو بەستەرەکان بەپێی سروشتیان دەپشکنرێن." : "إلزامي: سيُفحص كل رابط أدناه بمحاور SEO وAEO وGEO وSGE وGSEO حسب طبيعته."}</p>
+                <ul className="mt-2 space-y-1">
+                  {targets.map((t) => (
+                    <li key={t.url} className="flex flex-wrap items-center gap-2"><span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">{kindLbl(t.kind)}{t.platform ? ` · ${t.platform}` : ""}</span><span dir="ltr" className="truncate">{t.url}</span><span className="text-muted-foreground">{t.axes.map((a) => a.toUpperCase()).join(" ")}</span></li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="mt-1 text-muted-foreground">{L === "en" ? "No links to audit — only your name and identity will be checked. Add links for a deeper audit." : L === "ku" ? "هیچ بەستەرێک نییە — تەنها ناو و ناسنامە دەپشکنرێت." : "لا روابط لفحصها — سيُفحص الاسم والهوية فقط. أضف روابطك لفحص أعمق."}</p>
+            )}
+            <p className="mt-2 text-muted-foreground">{(L === "en" ? "Priority for your account type: " : L === "ku" ? "ئەولەویەت: " : "أولوية المحاور لنوع حسابك: ")}<span dir="ltr">{pr}</span></p>
+          </div>
+        );
+      })()}
       {!locked && (
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={verify} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">
