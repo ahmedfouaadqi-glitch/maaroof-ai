@@ -34,3 +34,26 @@ describe("deep audit rules", () => {
     expect(weightedScore({ seo: 80 }, "product_company")).toBe(80);
   });
 });
+
+import { scoreTarget, aggregateAxes, billableUnits } from "../deep-audit";
+describe("deep audit scoring", () => {
+  const off = auditTargets(["maaroofai.com"])[0];
+  it("no content -> every axis unmeasured with null score", () => {
+    const f = scoreTarget(off, null, "Maaroof");
+    expect(f).toHaveLength(5);
+    expect(f.every((x) => x.score === null && x.verdict === "unmeasured")).toBe(true);
+  });
+  it("real content yields measured scores with evidence", () => {
+    const md = "# Maaroof\n\nMaaroof serves 120 brands in 9 countries with 10 engines measured weekly across the region.\n\n## FAQ\n- What? yes\n- Why? because\n- How? like this";
+    const f = scoreTarget(off, { markdown: md, title: "Maaroof", description: "GEO platform" }, "Maaroof");
+    expect(f.find((x) => x.axis === "seo")!.score).toBe(80);
+    expect(f.find((x) => x.axis === "gseo")!.score).toBe(100);
+  });
+  it("aggregate ignores unmeasured axes", () => {
+    expect(aggregateAxes([scoreTarget(off, null, "x")]).seo).toBeNull();
+  });
+  it("charges only successful targets; all failed -> 0", () => {
+    expect(billableUnits([{ ok: false }, { ok: false }])).toBe(0);
+    expect(billableUnits([{ ok: true }, { ok: false }, { ok: true }])).toBe(2);
+  });
+});

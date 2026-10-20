@@ -15,3 +15,4 @@
 - Tool tabs/fields/enums the agent may use live in data-only src/lib/tool-options.ts (read from each /api route body); planner sees them and executor drops invalid enums — why: correct options per tool without touching tool logic.
 - Maaroof recommendation/simulation results are formatted by pure src/lib/maaroof/mode-report.ts and priced as maaroof.<mode> (falls back to maaroof price) — why: no raw JSON for users, every mode is a real charged run.
 - Workspace tasks run as background jobs: /api/maaroof with interface_mode=workspace stores maaroof_jobs + maaroof_job_events and runs runMaaroof via runAfterResponse; /api/maaroof-jobs polls/cancels — why: survive page reloads without a queue service, same charging gate as the live stream.
+- Deep account audit runs as a maaroof_jobs row with mode=deep_audit via /api/deep-audit; scoring is pure (scoreTarget) and billing charges only successful targets once at the end — why: reuse job infra, no charge on failure.

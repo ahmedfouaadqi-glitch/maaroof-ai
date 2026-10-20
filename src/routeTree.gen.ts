@@ -35,6 +35,7 @@ import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
 import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompetitorMonitorRouteImport } from './routes/api/competitor-monitor'
+import { Route as ApiDeepAuditRouteImport } from './routes/api/deep-audit'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
@@ -190,6 +191,11 @@ const ApiCompetitorMonitorRoute = ApiCompetitorMonitorRouteImport.update({
   path: '/api/competitor-monitor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeepAuditRoute = ApiDeepAuditRouteImport.update({
+  id: '/api/deep-audit',
+  path: '/api/deep-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
   id: '/api/feasibility',
   path: '/api/feasibility',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
+  '/api/deep-audit': typeof ApiDeepAuditRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
+  '/api/deep-audit': typeof ApiDeepAuditRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
@@ -446,6 +454,7 @@ export interface FileRoutesById {
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
+  '/api/deep-audit': typeof ApiDeepAuditRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
@@ -500,6 +509,7 @@ export interface FileRouteTypes {
     | '/api/company-email'
     | '/api/compare'
     | '/api/competitor-monitor'
+    | '/api/deep-audit'
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
@@ -552,6 +562,7 @@ export interface FileRouteTypes {
     | '/api/company-email'
     | '/api/compare'
     | '/api/competitor-monitor'
+    | '/api/deep-audit'
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
@@ -604,6 +615,7 @@ export interface FileRouteTypes {
     | '/api/company-email'
     | '/api/compare'
     | '/api/competitor-monitor'
+    | '/api/deep-audit'
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
@@ -657,6 +669,7 @@ export interface RootRouteChildren {
   ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
   ApiCompareRoute: typeof ApiCompareRoute
   ApiCompetitorMonitorRoute: typeof ApiCompetitorMonitorRoute
+  ApiDeepAuditRoute: typeof ApiDeepAuditRoute
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
@@ -861,6 +874,13 @@ declare module '@tanstack/react-router' {
       path: '/api/competitor-monitor'
       fullPath: '/api/competitor-monitor'
       preLoaderRoute: typeof ApiCompetitorMonitorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/deep-audit': {
+      id: '/api/deep-audit'
+      path: '/api/deep-audit'
+      fullPath: '/api/deep-audit'
+      preLoaderRoute: typeof ApiDeepAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/feasibility': {
@@ -1086,6 +1106,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCompanyEmailRoute: ApiCompanyEmailRoute,
   ApiCompareRoute: ApiCompareRoute,
   ApiCompetitorMonitorRoute: ApiCompetitorMonitorRoute,
+  ApiDeepAuditRoute: ApiDeepAuditRoute,
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
