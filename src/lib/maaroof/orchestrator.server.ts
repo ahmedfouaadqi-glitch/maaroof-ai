@@ -85,6 +85,13 @@ function flatten(v: unknown): string {
   try { return JSON.stringify(v); } catch { return String(v); }
 }
 
+const PLACEHOLDER_RE = /^(competitor|منافس|المنافس|منافسين|brand|علامة)\s*[\d#a-z]?$|[<{]|\b(n\/a|tbd|unknown|placeholder|from known|known result|result of)\b|غير معروف|نتيجة أداة|من نتيجة|من المعروفين/i;
+/** A planner filler (e.g. "Competitor 1", "{{known.result}}") is not a real competitor name. */
+export function isPlaceholderName(s: string): boolean {
+  const t = String(s || "").trim();
+  return !t || t.length > 80 || PLACEHOLDER_RE.test(t);
+}
+
 /** Coerce planner-produced step input into the shapes tool endpoints expect. */
 export function normalizeToolInput(input: any): Record<string, any> {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
@@ -99,7 +106,8 @@ export function normalizeToolInput(input: any): Record<string, any> {
     if (LIST_FIELDS.has(k)) {
       const list = (Array.isArray(v) ? v.map(flatten) : flatten(v).split(/[\n,؛;|]+/))
         .map((s) => s.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((s) => k !== "competitors" || !isPlaceholderName(s));
       if (list.length) out[k] = list;
       continue;
     }
