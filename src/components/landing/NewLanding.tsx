@@ -1,115 +1,342 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid } from "lucide-react";
+import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Globe2, Link2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { useAuth } from "@/lib/auth";
 import type { InterfacePolicy } from "@/lib/interface-policy";
+import { Reveal } from "@/components/motion/Reveal";
+import { SpotlightCard, CountUp, RotatingText, ShinyText, LogoLoop, Magnetic } from "@/components/motion/effects";
+
+type L = "ar" | "en" | "ku";
 
 const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
-    title: "اكتب هدفك، ومعروف يختار الطريق",
-    sub: "صف ما تريد تحقيقه لعلامتك في محركات الإجابة التوليدية، وسنقترح المهارات المناسبة ونعرض الكلفة قبل أي تنفيذ.",
-    cta: "ابدأ مساحة العمل",
-    pro: "واجهة المحترفين",
-    skills: "المهارات المتاحة",
+    title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
+    rotPrefix: "نحسّن ظهورك عبر",
+    sub: "معروف يسأل عشرة نماذج ذكاء اصطناعي عن علامتك، يقيس حضورك، ويقترح المهارات المناسبة مع عرض الكلفة قبل أي تنفيذ. لا خصم إلا بعد النجاح.",
+    cta: "ابدأ مساحة العمل", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
-    s1: "حدّد هدفك", s2: "راجع الخطة والكلفة", s3: "تابع التنفيذ والأدلة",
+    how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
+    core: "الجوهر الخماسي",
+    pillars: [
+      ["SEO", "البنية", "صفحات قابلة للزحف وبيانات منظمة تفهمها الآلة."],
+      ["AEO", "الإجابات المباشرة", "محتوى يجيب عن السؤال في أول سطرين."],
+      ["GEO", "كثافة الحقائق", "إحصاءات واقتباسات تجعل النماذج تستشهد بك."],
+      ["SGE", "تلخيصات البحث", "حضور داخل الملخصات التوليدية أعلى نتائج البحث."],
+      ["GSEO", "اتساق الهوية", "هوية واحدة متطابقة عبر كل المحركات والمنصات."],
+    ],
+    vsTitle: "البحث التقليدي مقابل محركات الإجابة",
+    vsCols: ["البحث التقليدي", "محركات الإجابة التوليدية"],
+    vsRows: [["قائمة روابط", "إجابة مباشرة واحدة"], ["النجاح = نقرة", "النجاح = اقتباس"], ["كلمات مفتاحية", "حقائق وكيانات"], ["ترتيب الصفحة", "ثقة المصدر واتساقه"]],
+    truth: "بطاقة حقيقة الكيان",
+    truthSub: "مصدر واحد لهويتك تعتمد عليه كل الأدوات والوكيل.",
+    truthFields: { name: "الاسم", type: "النوع", country: "البلد", links: "الروابط الرسمية", consistency: "اتساق الهوية" },
+    truthDemo: { name: "علامتك", type: "شركة تبيع منتجاتها", country: "العراق", links: "الموقع + 3 حسابات" },
+    types: "لكل نوع حساب طريقه",
+    accountTypes: [
+      ["شركة تبيع منتجاتها", "ظهور المنتجات في إجابات الشراء والمقارنة."],
+      ["شركة تسويقية", "إثبات الخبرة والحضور في أسئلة القطاع."],
+      ["وكالة إخبارية", "أن تكون مصدراً موثوقاً تقتبسه النماذج."],
+      ["صانع محتوى", "ربط اسمك بموضوعاتك حتى بلا موقع رسمي."],
+      ["شخصية عامة", "سيرة دقيقة ومتسقة وفك تشابه الأسماء."],
+      ["فرد", "هوية رقمية واضحة تبدأ من الصفر."],
+      ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
+    ],
+    skills: "المهارات المتاحة",
+    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة"],
+    faq: "أسئلة شائعة",
+    faqs: [
+      ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
+      ["متى يُخصم الرصيد؟", "بعد نجاح العملية فقط، ونعرض الكلفة قبل التنفيذ."],
+      ["هل أحتاج موقعاً؟", "لا، نعمل أيضاً مع صناع المحتوى والأفراد بلا موقع أو حسابات."],
+    ],
+    final: "ابدأ الآن واعرف كيف تراك النماذج العشرة",
     classic: "الصفحة الكلاسيكية",
   },
   en: {
     badge: "Smart Workspace",
-    title: "Write your goal, Maaroof picks the path",
-    sub: "Describe what you want for your brand in generative answer engines. We suggest the right skills and show the cost before anything runs.",
-    cta: "Start the workspace",
-    pro: "Professional interface",
-    skills: "Available skills",
+    title: "Make your brand a source answer engines cite",
+    rotPrefix: "We improve your visibility through",
+    sub: "Maaroof asks ten AI models about your brand, measures your presence and suggests the right skills with the cost shown before anything runs. You are charged only on success.",
+    cta: "Start the workspace", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
-    s1: "Set your goal", s2: "Review plan and cost", s3: "Follow execution and evidence",
+    how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
+    core: "The five pillars",
+    pillars: [
+      ["SEO", "Structure", "Crawlable pages and machine-readable structured data."],
+      ["AEO", "Direct answers", "Content that answers the question in its first lines."],
+      ["GEO", "Fact density", "Statistics and quotes that make models cite you."],
+      ["SGE", "Search summaries", "Presence inside generative summaries at the top of search."],
+      ["GSEO", "Identity consistency", "One matching identity across every engine and platform."],
+    ],
+    vsTitle: "Traditional search vs answer engines",
+    vsCols: ["Traditional search", "Generative answer engines"],
+    vsRows: [["List of links", "One direct answer"], ["Success = a click", "Success = a citation"], ["Keywords", "Facts and entities"], ["Page ranking", "Source trust and consistency"]],
+    truth: "Entity Truth Card",
+    truthSub: "One source for your identity that every tool and the agent rely on.",
+    truthFields: { name: "Name", type: "Type", country: "Country", links: "Official links", consistency: "Identity consistency" },
+    truthDemo: { name: "Your brand", type: "Product company", country: "Iraq", links: "Website + 3 accounts" },
+    types: "Every account type has its path",
+    accountTypes: [
+      ["Product company", "Products appear in buying and comparison answers."],
+      ["Marketing company", "Prove expertise in sector questions."],
+      ["News agency", "Become a trusted source models quote."],
+      ["Content creator", "Tie your name to your topics, even without a website."],
+      ["Public figure", "An accurate, consistent bio and name disambiguation."],
+      ["Individual", "A clear digital identity from scratch."],
+      ["Agency with clients", "Separate spaces for each client and identity."],
+    ],
+    skills: "Available skills",
+    stats: ["AI models", "Ready skills", "Supported languages"],
+    faq: "FAQ",
+    faqs: [
+      ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
+      ["When is my balance charged?", "Only after success, and the cost is shown before running."],
+      ["Do I need a website?", "No. We also work with creators and individuals without a site or accounts."],
+    ],
+    final: "Start now and see how the ten models see you",
     classic: "Classic page",
   },
   ku: {
     badge: "شوێنی کاری زیرەک",
-    title: "ئامانجەکەت بنووسە، مەعروف ڕێگاکە هەڵدەبژێرێت",
-    sub: "باسی ئەوە بکە کە دەتەوێت بۆ براندەکەت، ئێمە کارامەییە گونجاوەکان پێشنیار دەکەین و تێچوو پیشان دەدەین پێش جێبەجێکردن.",
-    cta: "دەستپێکردنی شوێنی کار",
-    pro: "ڕووکاری پسپۆڕان",
-    skills: "کارامەییە بەردەستەکان",
+    title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
+    rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
+    sub: "مەعروف لە دە مۆدێلی زیرەکی دەستکرد دەربارەی براندەکەت دەپرسێت، ئامادەبوونت دەپێوێت و کارامەیی گونجاو پێشنیار دەکات، تێچوو پێش جێبەجێکردن پیشان دەدات. تەنها دوای سەرکەوتن پارە دەبڕدرێت.",
+    cta: "دەستپێکردنی شوێنی کار", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
-    s1: "ئامانج دیاری بکە", s2: "پلان و تێچوو ببینە", s3: "جێبەجێکردن و بەڵگە بەدواداچوون",
+    how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
+    core: "پێنج کۆڵەکەکە",
+    pillars: [
+      ["SEO", "پێکهاتە", "پەڕەی خوێندراوە و داتای ڕێکخراو بۆ ئامێر."],
+      ["AEO", "وەڵامی ڕاستەوخۆ", "ناوەڕۆکێک لە یەکەم دێڕدا وەڵام دەداتەوە."],
+      ["GEO", "چڕی ڕاستییەکان", "ئامار و وتە کە مۆدێلەکان ئاماژەت پێ دەکەن."],
+      ["SGE", "پوختەی گەڕان", "ئامادەبوون لە پوختە زیرەکەکانی سەرەوەی گەڕان."],
+      ["GSEO", "یەکگرتوویی ناسنامە", "یەک ناسنامە لە هەموو بزوێنەر و پلاتفۆرمەکان."],
+    ],
+    vsTitle: "گەڕانی ئاسایی بەرامبەر بزوێنەرەکانی وەڵام",
+    vsCols: ["گەڕانی ئاسایی", "بزوێنەرە زیرەکەکانی وەڵام"],
+    vsRows: [["لیستی بەستەر", "یەک وەڵامی ڕاستەوخۆ"], ["سەرکەوتن = کلیک", "سەرکەوتن = ئاماژەپێدان"], ["وشەی سەرەکی", "ڕاستی و قەوارە"], ["ڕیزبەندی پەڕە", "متمانە و یەکگرتوویی سەرچاوە"]],
+    truth: "کارتی ڕاستی قەوارە",
+    truthSub: "یەک سەرچاوە بۆ ناسنامەت کە هەموو ئامرازەکان پشتی پێ دەبەستن.",
+    truthFields: { name: "ناو", type: "جۆر", country: "وڵات", links: "بەستەرە فەرمییەکان", consistency: "یەکگرتوویی ناسنامە" },
+    truthDemo: { name: "براندەکەت", type: "کۆمپانیای بەرهەم", country: "عێراق", links: "ماڵپەڕ + ٣ هەژمار" },
+    types: "هەر جۆرە هەژمارێک ڕێگای خۆی هەیە",
+    accountTypes: [
+      ["کۆمپانیای فرۆشتنی بەرهەم", "دەرکەوتنی بەرهەم لە وەڵامەکانی کڕین."],
+      ["کۆمپانیای بازاڕگەری", "سەلماندنی شارەزایی لە پرسیارەکانی کەرت."],
+      ["ئاژانسی هەواڵ", "ببە بە سەرچاوەیەکی متمانەپێکراو."],
+      ["دروستکەری ناوەڕۆک", "ناوت بە بابەتەکانتەوە ببەستە."],
+      ["کەسایەتی گشتی", "ژیاننامەیەکی ورد و جیاکردنەوەی ناوە هاوشێوەکان."],
+      ["تاک", "ناسنامەیەکی دیجیتاڵی ڕوون لە سفرەوە."],
+      ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
+    ],
+    skills: "کارامەییە بەردەستەکان",
+    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو"],
+    faq: "پرسیارە باوەکان",
+    faqs: [
+      ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
+      ["کەی باڵانس دەبڕدرێت؟", "تەنها دوای سەرکەوتن، و تێچوو پێشتر پیشان دەدرێت."],
+      ["پێویستم بە ماڵپەڕە؟", "نەخێر، لەگەڵ دروستکەران و تاکەکانی بێ ماڵپەڕیش کار دەکەین."],
+    ],
+    final: "ئێستا دەست پێبکە و بزانە دە مۆدێلەکە چۆن دەتبینن",
     classic: "پەڕەی کلاسیک",
   },
 } as const;
 
+const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "GSEO"];
+
 export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { lang } = useI18n();
   const { user } = useAuth();
-  const c = COPY[(lang === "en" || lang === "ku" ? lang : "ar") as keyof typeof COPY];
+  const l: L = lang === "en" || lang === "ku" ? lang : "ar";
+  const c = COPY[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
-  const skillName = (s: (typeof MAAROOF_SKILLS)[number]) => s.label[(lang === "en" || lang === "ku" ? lang : "ar")];
+
+  const ctaClass = "inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]";
+  const Cta = () => (
+    <Magnetic>
+      {user ? (
+        <Link to="/workspace" className={ctaClass}>{c.cta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
+      ) : (
+        <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className={ctaClass}>{c.cta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
+      )}
+    </Magnetic>
+  );
 
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <main>
+        {/* 1. Hero */}
         <section className="relative overflow-hidden">
-          <div className="absolute inset-0 grid-bg opacity-30" />
-          <div className="relative mx-auto max-w-5xl px-4 pb-12 pt-16 text-center md:pt-24">
+          <div className="absolute inset-0 grid-bg opacity-40" />
+          <div className="relative mx-auto max-w-5xl px-4 pb-10 pt-16 text-center md:pt-24">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
               <Sparkles className="size-3.5" /> {c.badge}
             </span>
             <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-gradient md:text-6xl">{c.title}</h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">{c.sub}</p>
+            <p className="mt-4 text-lg font-semibold md:text-2xl">
+              {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
+            </p>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">{c.sub}</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              {user ? (
-                <Link to="/workspace" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
-                  {c.cta} <ArrowRight className="size-4" />
-                </Link>
-              ) : (
-                <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
-                  {c.cta} <ArrowRight className="size-4" />
-                </Link>
-              )}
+              <Cta />
               {showPro && (
-                <Link to={user ? "/dashboard" : "/auth"} search={user ? undefined : { mode: "signin", redirect: "/dashboard" } as any}
+                <Link to={user ? "/dashboard" : "/auth"} search={user ? undefined : ({ mode: "signin", redirect: "/dashboard" } as any)}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-6 py-3 text-sm font-semibold">
                   <LayoutGrid className="size-4" /> {c.pro}
                 </Link>
               )}
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">{c.engines}</p>
-            <div className="mx-auto mt-3 flex max-w-3xl flex-wrap justify-center gap-2">
-              {ENGINES.map((e) => (
-                <span key={e.name} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/40 px-3 py-1 text-xs">
-                  <e.Logo size={12} /> {e.name}
-                </span>
-              ))}
-            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-4 pb-12">
-          <div className="grid gap-4 md:grid-cols-3">
+        {/* 2. Engines loop */}
+        <section className="mx-auto max-w-5xl px-4 pb-14">
+          <p className="mb-3 text-center text-xs text-muted-foreground">{c.engines}</p>
+          <LogoLoop>
+            {ENGINES.map((e) => (
+              <span key={e.name} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card/40 px-3 py-1.5 text-xs">
+                <e.Logo size={14} /> {e.name}
+              </span>
+            ))}
+          </LogoLoop>
+        </section>
+
+        {/* 3. How it works */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <h2 className="text-center font-display text-3xl font-bold">{c.how}</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[{ i: Target, t: c.s1 }, { i: ShieldCheck, t: c.s2 }, { i: Sparkles, t: c.s3 }].map((s, n) => (
-              <div key={n} className="rounded-xl border border-border bg-card/40 p-5">
-                <s.i className="size-5 text-primary" />
-                <h3 className="mt-3 font-semibold">{n + 1}. {s.t}</h3>
+              <Reveal key={n} delay={n * 0.08}>
+                <SpotlightCard className="h-full p-5">
+                  <s.i className="size-5 text-primary" />
+                  <h3 className="mt-3 font-semibold">{n + 1}. {s.t[0]}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.t[1]}</p>
+                </SpotlightCard>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* 4. Five pillars */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {c.pillars.map(([k, t, d], n) => (
+              <Reveal key={k} delay={n * 0.06}>
+                <SpotlightCard className="h-full p-4">
+                  <ShinyText className="font-mono text-lg font-bold">{k}</ShinyText>
+                  <div className="mt-1 text-sm font-semibold">{t}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{d}</p>
+                </SpotlightCard>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. Comparison */}
+        <section className="mx-auto max-w-4xl px-4 pb-16">
+          <h2 className="text-center font-display text-3xl font-bold">{c.vsTitle}</h2>
+          <Reveal>
+            <div className="mt-6 overflow-hidden rounded-2xl border border-border">
+              <div className="grid grid-cols-2 bg-muted/40 text-sm font-semibold">
+                <div className="p-3">{c.vsCols[0]}</div><div className="p-3 text-primary">{c.vsCols[1]}</div>
+              </div>
+              {c.vsRows.map(([a, b]) => (
+                <div key={a} className="grid grid-cols-2 border-t border-border text-sm">
+                  <div className="flex items-center gap-2 p-3 text-muted-foreground"><X className="size-4 shrink-0 text-destructive" />{a}</div>
+                  <div className="flex items-center gap-2 p-3"><Check className="size-4 shrink-0 text-success" />{b}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </section>
+
+        {/* 6. Truth card */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <div className="grid items-center gap-8 md:grid-cols-2">
+            <div>
+              <h2 className="font-display text-3xl font-bold">{c.truth}</h2>
+              <p className="mt-3 text-muted-foreground">{c.truthSub}</p>
+            </div>
+            <Reveal>
+              <SpotlightCard className="glass p-5">
+                <div className="flex items-center gap-2 text-sm font-semibold"><BadgeCheck className="size-5 text-primary" />{c.truthDemo.name}</div>
+                <dl className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{c.truthFields.type}</dt><dd>{c.truthDemo.type}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Globe2 className="size-3.5" />{c.truthFields.country}</dt><dd>{c.truthDemo.country}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Link2 className="size-3.5" />{c.truthFields.links}</dt><dd>{c.truthDemo.links}</dd></div>
+                </dl>
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs"><span>{c.truthFields.consistency}</span><CountUp to={92} suffix="%" /></div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full w-[92%] rounded-full bg-gradient-to-r from-primary to-accent" /></div>
+                </div>
+              </SpotlightCard>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* 7. Account types */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <h2 className="text-center font-display text-3xl font-bold">{c.types}</h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {c.accountTypes.map(([t, d], n) => (
+              <Reveal key={t} delay={n * 0.04}>
+                <SpotlightCard className="h-full p-4">
+                  <div className="text-sm font-semibold">{t}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{d}</p>
+                </SpotlightCard>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* 8. Skills */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {MAAROOF_SKILLS.map((s) => (
+              <SpotlightCard key={s.key} className="p-4">
+                <div className="text-sm font-semibold">{s.label[l]}</div>
+                <p className="mt-1 text-xs text-muted-foreground">{s.description[l]}</p>
+              </SpotlightCard>
+            ))}
+          </div>
+        </section>
+
+        {/* 9. Real stats */}
+        <section className="mx-auto max-w-4xl px-4 pb-16">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            {[ENGINES.length, MAAROOF_SKILLS.length, 3].map((n, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card/40 p-4">
+                <CountUp to={n} className="font-display text-3xl font-bold text-gradient md:text-4xl" />
+                <div className="mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-4 pb-16">
-          <h2 className="text-center font-display text-2xl font-bold">{c.skills}</h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {MAAROOF_SKILLS.map((s) => (
-              <div key={s.key} className="rounded-xl border border-border bg-card/40 p-4"><div className="text-sm font-semibold">{skillName(s)}</div><p className="mt-1 text-xs text-muted-foreground">{s.description[(lang === "en" || lang === "ku" ? lang : "ar")]}</p></div>
+        {/* 10. FAQ + final CTA */}
+        <section className="mx-auto max-w-3xl px-4 pb-20">
+          <h2 className="text-center font-display text-3xl font-bold">{c.faq}</h2>
+          <div className="mt-6 space-y-2">
+            {c.faqs.map(([q, a]) => (
+              <details key={q} className="group rounded-xl border border-border bg-card/40 p-4">
+                <summary className="cursor-pointer text-sm font-semibold">{q}</summary>
+                <p className="mt-2 text-sm text-muted-foreground">{a}</p>
+              </details>
             ))}
           </div>
-          <div className="mt-8 text-center text-xs">
-            <Link to="/classic" className="text-muted-foreground hover:text-primary">{c.classic}</Link>
+          <div className="mt-12 text-center">
+            <h3 className="font-display text-2xl font-bold">{c.final}</h3>
+            <div className="mt-5 flex justify-center"><Cta /></div>
+            <div className="mt-8 text-xs">
+              <Link to="/classic" className="text-muted-foreground hover:text-primary">{c.classic}</Link>
+            </div>
           </div>
         </section>
       </main>
