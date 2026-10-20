@@ -211,7 +211,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.how}</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[{ i: Target, t: c.s1 }, { i: ShieldCheck, t: c.s2 }, { i: Sparkles, t: c.s3 }].map((s, n) => (
-              <Reveal key={n} delay={n * 0.08}>
+              <Reveal key={n} delay={n * 80}>
                 <SpotlightCard className="h-full p-5">
                   <s.i className="size-5 text-primary" />
                   <h3 className="mt-3 font-semibold">{n + 1}. {s.t[0]}</h3>
@@ -227,7 +227,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {c.pillars.map(([k, t, d], n) => (
-              <Reveal key={k} delay={n * 0.06}>
+              <Reveal key={k} delay={n * 60}>
                 <SpotlightCard className="h-full p-4">
                   <ShinyText className="font-mono text-lg font-bold">{k}</ShinyText>
                   <div className="mt-1 text-sm font-semibold">{t}</div>
@@ -285,7 +285,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.types}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {c.accountTypes.map(([t, d], n) => (
-              <Reveal key={t} delay={n * 0.04}>
+              <Reveal key={t} delay={n * 40}>
                 <SpotlightCard className="h-full p-4">
                   <div className="text-sm font-semibold">{t}</div>
                   <p className="mt-1 text-xs text-muted-foreground">{d}</p>
