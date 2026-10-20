@@ -395,7 +395,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {interviewEngines.map((engine) => {
                       const validKey = isEngineKey(engine.key);
-                      const Logo = validKey ? ENGINE_LOGOS[engine.key] : null;
+                      const Logo = validKey ? ENGINE_LOGOS[engine.key as keyof typeof ENGINE_LOGOS] : null;
                       const statusLabel: Record<string, Record<string, string>> = {
                         ar: { answered: "أنشأ سؤالاً", empty: "استجابة فارغة", timeout: "انتهت المهلة", error: "تعذر الاستدعاء" },
                         en: { answered: "Question generated", empty: "Empty response", timeout: "Timed out", error: "Call failed" },
@@ -407,16 +407,11 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                         <div key={engine.key} className="rounded-xl border border-border/60 bg-background/40 p-3">
                           <div className="flex items-center gap-2">
                             {Logo && <Logo size={20} />}
-                            <span className="text-sm font-semibold">{engine.name || (validKey ? ENGINE_CATALOG[engine.key].name : engine.key)}</span>
+                            <span className="text-sm font-semibold">{engine.name || (validKey ? ENGINE_CATALOG[engine.key as keyof typeof ENGINE_CATALOG].name : engine.key)}</span>
                             <span className={`ms-auto rounded-full px-2 py-0.5 text-[10px] ${good ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
                               {statusLabel[langKey][engine.status] || engine.status}
                             </span>
                           </div>
-                          {engine.proxy && (
-                            <p className="mt-1 text-[10px] text-muted-foreground">
-                              {lang === "en" ? "Uses a configured proxy model" : lang === "ku" ? "مۆدێلی ناوەندگیر بەکاردەهێنێت" : "يعمل عبر نموذج وسيط مُهيّأ"}
-                            </p>
-                          )}
                           <p className="mt-1 text-xs text-muted-foreground">
                             {lang === "en" ? `${engine.questionsCount} questions saved` : lang === "ku" ? `${engine.questionsCount} پرسیار پاشەکەوتکرا` : `${engine.questionsCount} سؤال محفوظ`}
                           </p>
@@ -437,11 +432,6 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                           {Logo && <Logo size={18} />}
                           <span className="font-semibold">{engineName}</span>
-                          {ENGINE_CATALOG[engineKey!].proxy && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px]">
-                              {lang === "en" ? "Proxy" : lang === "ku" ? "ناوەندگیر" : "وسيط"}
-                            </span>
-                          )}
                         </div>
                       )}
                       <p className="text-sm">{q.question}</p>

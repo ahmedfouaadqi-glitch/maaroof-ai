@@ -14,3 +14,10 @@
 - [ ] P3 rest: list of all tools with selection reason + cost before execution
 - [x] P4 part: export language selector + Arabic/Kurdish labels instead of English keys
 - [ ] P4 rest: account type detection, SEO/AEO/GEO index, user-visible evolution
+
+# Roadmap — React Bits plan (approved 2026-10-20)
+- [x] A: motion library (SpotlightCard, CountUp, RotatingText, ShinyText, PulseBadge, LogoLoop, Magnetic)
+- [x] B: new home page, 10 sections in ar/en/ku
+- [x] D part: proxy notice removed from interview
+- [ ] C: auth glass card, welcome wizard (7 account types), header balance counter, profile completeness, workspace pulse badges + weight meter, mobile dock
+- [ ] D rest: Arabic phase labels, skip vs error, composite tool summaries, deep discovery job, export direction, teach-space pricing
