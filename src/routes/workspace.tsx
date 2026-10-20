@@ -415,6 +415,9 @@ function WorkspacePage() {
                 </div>
               </div>
 
+              <WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); document.getElementById("workspace-goal")?.focus(); }} />
+
+
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
