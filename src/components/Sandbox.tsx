@@ -72,6 +72,8 @@ function localStepLabel(
 
 export function Sandbox() {
   const { t, lang } = useI18n();
+  const [hintTick, setHintTick] = useState(0);
+  const sandboxHint = SANDBOX_HINTS[lang === "en" || lang === "ku" ? lang : "ar"][hintTick % 4];
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
   const user = auth?.user;
@@ -187,7 +189,7 @@ export function Sandbox() {
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={t("sandbox_placeholder")}
+          placeholder={sandboxHint}
           rows={5}
           maxLength={8000}
           className="w-full resize-none rounded-xl border border-border bg-background/60 p-4 font-mono text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
