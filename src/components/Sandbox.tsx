@@ -26,6 +26,12 @@ import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
 
+const SANDBOX_HINTS: Record<"ar" | "en" | "ku", string[]> = {
+  ar: ["الصق فقرة من صفحة خدماتك…", "الصق وصف منتجك كما يظهر في موقعك…", "الصق نبذة «من نحن» لقياس قابليتها للاقتباس…", "الصق مقالاً أو منشوراً بأي لغة…"],
+  en: ["Paste a paragraph from your services page…", "Paste your product description as it appears on your site…", "Paste your About text to test how citable it is…", "Paste an article or post in any language…"],
+  ku: ["بڕگەیەک لە پەڕەی خزمەتگوزارییەکانت بلکێنە…", "وەسفی بەرهەمەکەت بلکێنە…", "دەقی «دەربارەی ئێمە» بلکێنە…", "وتار یان پۆستێک بە هەر زمانێک بلکێنە…"],
+};
+
 type Result = {
   score: number; authority: number; local: number; citation: number;
   cached?: boolean;
@@ -79,6 +85,12 @@ export function Sandbox() {
   const user = auth?.user;
 
   const [text, setText] = useState("");
+  useEffect(() => {
+    if (text) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setHintTick((x) => x + 1), 2000);
+    return () => clearInterval(id);
+  }, [text]);
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(-1);
   const [result, setResult] = useState<Result | null>(null);
