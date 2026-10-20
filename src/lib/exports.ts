@@ -158,6 +158,7 @@ export async function exportToPDF(payload: ExportPayload) {
 <style>
   @page { size: A4; margin: 18mm 14mm 22mm 14mm; }
   * { box-sizing: border-box; }
+  p, li, td, th, h1, h2, h3, .subtitle { unicode-bidi: plaintext; }
   body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#0f172a; margin:0; padding: 0 8px; line-height: 1.6; }
   header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #1e40af; margin-bottom: 18px; }
   .brand-text { flex:1; }
@@ -402,6 +403,13 @@ export function exportToMarkdown(payload: ExportPayload) {
 }
 
 /** Native Word document with an embedded logo and complete report content. */
+/** Direction follows the text's first strong letter; falls back to the report language. */
+export function textIsRtl(text: string, fallback: boolean): boolean {
+  const m = String(text || "").match(/[\u0590-\u08FF\uFB1D-\uFEFC]|[A-Za-z\u00C0-\u024F]/);
+  if (!m) return fallback;
+  return /[\u0590-\u08FF\uFB1D-\uFEFC]/.test(m[0]);
+}
+
 export async function exportToWord(payload: ExportPayload) {
   const lang = payload.lang || "ar";
   const rtl = lang !== "en";
@@ -413,8 +421,8 @@ export async function exportToWord(payload: ExportPayload) {
   const paragraph = (text: string, opts: { bold?: boolean; size?: number; color?: string; heading?: "Heading1" | "Heading2" } = {}) =>
     new Paragraph({
       ...(opts.heading ? { heading: opts.heading } : {}),
-      bidirectional: rtl,
-      alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+      bidirectional: textIsRtl(text, rtl),
+      alignment: textIsRtl(text, rtl) ? AlignmentType.RIGHT : AlignmentType.LEFT,
       spacing: { after: 120 },
       children: [new TextRun({ text, font: "Arial", bold: opts.bold, size: opts.size, color: opts.color })],
     });
@@ -447,7 +455,7 @@ export async function exportToWord(payload: ExportPayload) {
   payload.sections.forEach((section) => {
     content.push(paragraph(section.heading, { heading: HeadingLevel.HEADING_2, bold: true, size: 27, color: "4338CA" }));
     if (section.kind === "text" && section.text) section.text.split("\n").forEach((line) => content.push(paragraph(line)));
-    else if (section.kind === "list" && section.list) section.list.forEach((item) => content.push(new Paragraph({ bidirectional: rtl, alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT, bullet: { level: 0 }, children: [new TextRun({ text: item, font: "Arial", size: 22 })] })));
+    else if (section.kind === "list" && section.list) section.list.forEach((item) => content.push(new Paragraph({ bidirectional: textIsRtl(item, rtl), alignment: textIsRtl(item, rtl) ? AlignmentType.RIGHT : AlignmentType.LEFT, bullet: { level: 0 }, children: [new TextRun({ text: item, font: "Arial", size: 22 })] })));
     else if (section.kind === "kv" && section.rows) content.push(makeTable(["", ""], section.rows.map(([key, value]) => [key, value])));
     else if (section.kind === "table" && section.table) content.push(makeTable(section.table.columns, section.table.data));
   });
