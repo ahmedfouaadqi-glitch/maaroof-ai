@@ -44,8 +44,8 @@ export function RotatingText({ words, interval = 2200, className = "" }: { words
     return () => clearInterval(t);
   }, [words.length, interval, reduced]);
   return (
-    <span className={`relative inline-flex overflow-hidden align-bottom ${className}`}>
-      <motion.span key={i} initial={reduced ? false : { y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }} className="inline-block">
+    <span className={`relative inline-block ${className}`}>
+      <motion.span key={i} initial={reduced ? false : { y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }} className="inline-block">
         {words[i]}
       </motion.span>
     </span>
