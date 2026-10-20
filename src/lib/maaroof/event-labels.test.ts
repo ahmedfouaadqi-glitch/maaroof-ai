@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { phaseLabel, isIntentionalSkip, summarizeToolOutput, taskWeight } from "./event-labels";
+import { isPlaceholderName, phaseLabel, isIntentionalSkip, summarizeToolOutput, taskWeight } from "./event-labels";
 
 describe("event labels", () => {
   it("translates phases to Arabic", () => {
@@ -17,5 +17,10 @@ describe("event labels", () => {
     expect(taskWeight(1, 10)).toBe("light");
     expect(taskWeight(3, 10)).toBe("medium");
     expect(taskWeight(10, 10)).toBe("deep");
+  });
+  it("rejects filler competitor names but keeps real ones", () => {
+    expect(isPlaceholderName("Competitor 1")).toBe(true);
+    expect(isPlaceholderName("{{known.result}}")).toBe(true);
+    expect(isPlaceholderName("Zain Iraq")).toBe(false);
   });
 });

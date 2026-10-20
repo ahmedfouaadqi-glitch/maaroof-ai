@@ -1,3 +1,4 @@
+import { isPlaceholderName } from "@/lib/maaroof/event-labels";
 // Architecture & Concept: Ahmed Maaroof
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
@@ -83,13 +84,6 @@ function flatten(v: unknown): string {
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (Array.isArray(v)) return v.map(flatten).filter(Boolean).join(", ");
   try { return JSON.stringify(v); } catch { return String(v); }
-}
-
-const PLACEHOLDER_RE = /^(competitor|منافس|المنافس|منافسين|brand|علامة)\s*[\d#a-z]?$|[<{]|\b(n\/a|tbd|unknown|placeholder|from known|known result|result of)\b|غير معروف|نتيجة أداة|من نتيجة|من المعروفين/i;
-/** A planner filler (e.g. "Competitor 1", "{{known.result}}") is not a real competitor name. */
-export function isPlaceholderName(s: string): boolean {
-  const t = String(s || "").trim();
-  return !t || t.length > 80 || PLACEHOLDER_RE.test(t);
 }
 
 /** Coerce planner-produced step input into the shapes tool endpoints expect. */

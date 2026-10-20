@@ -53,3 +53,11 @@ export function taskWeight(steps: number, engines: number): "light" | "medium" |
   if (load <= 40) return "medium";
   return "deep";
 }
+
+const PLACEHOLDER_RE = /^(competitor|منافس|المنافس|منافسين|brand|علامة)\s*[\d#a-z]?$|[<{]|\b(n\/a|tbd|unknown|placeholder|from known|known result|result of)\b|غير معروف|نتيجة أداة|من نتيجة|من المعروفين/i;
+/** A planner filler (e.g. "Competitor 1", "{{known.result}}") is not a real competitor name. */
+export function isPlaceholderName(s: string): boolean {
+  const t = String(s || "").trim();
+  return !t || t.length > 80 || PLACEHOLDER_RE.test(t);
+}
+
