@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
-import { phaseLabel, isIntentionalSkip, summarizeToolOutput } from "@/lib/maaroof/event-labels";
+import { phaseLabel, isIntentionalSkip, summarizeToolOutput, taskWeight } from "@/lib/maaroof/event-labels";
 import { PulseBadge } from "@/components/motion/effects";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
@@ -445,7 +445,12 @@ function WorkspacePage() {
 
               <div className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="font-semibold">{c.costEstimate}</h2>
-                {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارێک خەمڵاندن…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
+                {(() => { const w = taskWeight(Math.max(1, selectedSkills.length || 3), liveProbe ? 10 : 1); const lbl = { light: { ar: "خفيفة", en: "Light", ku: "سووک" }, medium: { ar: "متوسطة", en: "Medium", ku: "مامناوەند" }, deep: { ar: "عميقة", en: "Deep", ku: "قووڵ" } }[w][locale]; const pct = w === "light" ? 33 : w === "medium" ? 66 : 100; return (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">{locale === "en" ? "Task weight" : locale === "ku" ? "قورسایی ئەرک" : "وزن المهمة"}</span><span className="font-semibold">{lbl}</span></div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: `${pct}%` }} /></div>
+                  </div>); })()}
+                {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارٍ الحساب…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
                   <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
                   {costProbe && <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.probeCost} ({costProbe.units})</span><span className="font-semibold tabular-nums">{costProbe.total} {c.tokens}</span></div>}
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-2"><span className="font-medium">{c.balance}</span><span className="tabular-nums">{costRun.balance} {c.tokens}</span></div>
