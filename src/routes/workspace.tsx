@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
 import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
+import { phaseLabel, isIntentionalSkip, summarizeToolOutput } from "@/lib/maaroof/event-labels";
+import { PulseBadge } from "@/components/motion/effects";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
@@ -46,7 +48,7 @@ const COPY = {
     selectedTools: "أدوات مرتبطة بالمهارات المختارة", noTools: "لم تختر مهارات؛ سيحدد معروف الأدوات وفق الهدف.",
     noResults: "ستظهر النتيجة هنا بعد بدء المهمة.", home: "الرئيسية", professional: "واجهة المحترفين",
     ask: "تأكد من أن الطلب واضح قبل بدء التنفيذ. تخضع الأدوات والتكلفة والصلاحيات لسياسات النظام.",
-    phase: "مرحلة", toolStarted: "بدأت أداة", toolDone: "نتيجة أداة", final: "اكتملت المهمة",
+    phase: "مرحلة", toolStarted: "بدأت أداة", toolDone: "نتيجة أداة", skipped: "متخطى عن قصد", final: "اكتملت المهمة",
     clarify: "يحتاج معروف إلى معلومة إضافية", sendAnswer: "إرسال الإجابة", answerPlaceholder: "اكتب إجابتك…",
     runAgain: "مهمة جديدة", unknown: "حدث تحديث في المهمة", modelCount: "نموذج محدد",
   },
@@ -64,7 +66,7 @@ const COPY = {
     selectedTools: "Tools associated with selected skills", noTools: "No skills selected; Maaroof will choose tools from the goal.",
     noResults: "Your result will appear here after you start.", home: "Home", professional: "Professional interface",
     ask: "Review your goal before execution. Tool access, cost, and permissions are enforced by the system.",
-    phase: "Phase", toolStarted: "Tool started", toolDone: "Tool result", final: "Task completed",
+    phase: "Phase", toolStarted: "Tool started", toolDone: "Tool result", skipped: "Skipped on purpose", final: "Task completed",
     clarify: "Maaroof needs one more detail", sendAnswer: "Send answer", answerPlaceholder: "Type your answer…",
     runAgain: "New task", unknown: "Task updated", modelCount: "model selected",
   },
@@ -82,7 +84,7 @@ const COPY = {
     selectedTools: "ئامرازە پەیوەندیدارەکان", noTools: "هیچ شارەزاییەک هەڵنەبژێردرا؛ معروف ئامرازەکان هەڵدەبژێرێت.",
     noResults: "دوای دەستپێکردنی ئەرکەکە ئەنجامەکە لێرە دەردەکەوێت.", home: "سەرەتا", professional: "ڕووکار بۆ پسپۆڕان",
     ask: "پێش دەستپێکردن ئامانجەکە بپشکنە؛ دەسەڵات و تێچوو لەلایەن سیستەمەوە کۆنترۆڵ دەکرێن.",
-    phase: "قۆناغ", toolStarted: "ئامراز دەستی پێکرد", toolDone: "ئەنجامی ئامراز", final: "ئەرکەکە تەواو بوو",
+    phase: "قۆناغ", toolStarted: "ئامراز دەستی پێکرد", toolDone: "ئەنجامی ئامراز", skipped: "بە مەبەست تێپەڕێنرا", final: "ئەرکەکە تەواو بوو",
     clarify: "معروف پێویستی بە زانیاری زیاترە", sendAnswer: "ناردنی وەڵام", answerPlaceholder: "وەڵام بنووسە…",
     runAgain: "ئەرکی نوێ", unknown: "ئەرکەکە نوێ کرایەوە", modelCount: "مۆدێل هەڵبژێردرا",
   },
@@ -365,15 +367,12 @@ function WorkspacePage() {
 
   function eventSummary(event: WorkspaceEvent): string {
     const d = event.data || {};
-    if (event.type === "phase") return String(d.phase || c.unknown);
+    if (event.type === "phase") return phaseLabel(d.phase, locale as any) || c.unknown;
     if (event.type === "tool_call") return String(d.reason || toolLabel(d.tool || ""));
     if (event.type === "tool_result") {
-      const output = d.output;
-      if (typeof output === "string") return output.slice(0, 500);
-      if (output && typeof output === "object") {
-        const candidate = output.summary || output.answer || output.text || output.message;
-        if (typeof candidate === "string") return candidate.slice(0, 500);
-      }
+      if (isIntentionalSkip(d)) return c.skipped;
+      const readable = summarizeToolOutput(d.output, locale as any);
+      if (readable) return readable;
       return d.ok ? c.toolDone : c.failed;
     }
     if (event.type === "error") return String(d.message || c.failed);
@@ -542,9 +541,9 @@ function WorkspacePage() {
               {showActivity && <div className="mt-4 space-y-2">
                 {events.filter((event) => ["phase", "tool_call", "tool_result", "error", "clarify", "done"].includes(event.type)).map((event, index) => (
                   <div key={`${event.at}-${index}`} className="flex items-start gap-3 rounded-lg border border-border/70 p-3">
-                    <span className={`mt-1 size-2 shrink-0 rounded-full ${event.type === "error" || event.data?.ok === false ? "bg-destructive" : event.type === "tool_result" ? "bg-emerald-500" : "bg-primary"}`} />
+                    <span className="mt-0.5 shrink-0"><PulseBadge label="" state={isIntentionalSkip(event.data) ? "skipped" : event.type === "error" || event.data?.ok === false ? "failed" : event.type === "tool_result" || event.type === "done" ? "done" : running && index === events.length - 1 ? "running" : "done"} /></span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? c.toolDone : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
+                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? (isIntentionalSkip(event.data) ? c.skipped : c.toolDone) : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
                       <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{eventSummary(event)}</div>
                     </div>
                   </div>
