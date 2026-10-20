@@ -431,3 +431,22 @@
   .rb-workspace-skill { transition: none; }
   .rb-workspace-skill:hover { transform: none; }
 }
+
+/* React Bits inspired effects */
+.spotlight-layer {
+  background: radial-gradient(320px circle at var(--sx, 50%) var(--sy, 50%), oklch(0.62 0.24 274 / 0.18), transparent 70%);
+}
+.shiny-text {
+  background: linear-gradient(110deg, var(--foreground) 35%, var(--accent) 50%, var(--foreground) 65%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shiny-sweep 4s linear infinite;
+}
+@keyframes shiny-sweep { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+.logo-loop-track { animation: logo-loop 40s linear infinite; }
+@keyframes logo-loop { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text, .logo-loop-track { animation: none; }
+}
