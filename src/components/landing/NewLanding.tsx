@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import type { InterfacePolicy } from "@/lib/interface-policy";
 import { Reveal } from "@/components/motion/Reveal";
 import { SpotlightCard, CountUp, RotatingText, ShinyText, LogoLoop, Magnetic } from "@/components/motion/effects";
+import { ModelInsights } from "@/components/landing/ModelInsights";
 
 type L = "ar" | "en" | "ku";
 
@@ -204,14 +205,8 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
             </p>
             <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong className="font-display text-xl font-extrabold text-primary md:text-2xl">{c.brandName}</strong> — {c.sub}</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Cta />
-              {showPro && (
-                <Link to={user ? "/dashboard" : "/auth"} search={user ? undefined : ({ mode: "signin", redirect: "/dashboard" } as any)}
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-6 py-3 text-sm font-semibold">
-                  <LayoutGrid className="size-4" /> {c.pro}
-                </Link>
-              )}
+            <div className="mt-8">
+              <ModelInsights lang={l} />
             </div>
           </div>
         </section>
