@@ -12,9 +12,9 @@ export const Route = createFileRoute("/guide")({
   head: () => ({
     meta: [
       { title: "Guide · MAAROOF Ai" },
-      { name: "description", content: "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more." },
+      { name: "description", content: "How to use the Maaroof workspace: goals, skills, the ten AI models, deep audit, work modes and exports." },
       { property: "og:title", content: "Guide · MAAROOF Ai" },
-      { property: "og:description", content: "How to use every MAAROOF Ai tool and the AI Agent." },
+      { property: "og:description", content: "Guide to the Maaroof workspace and skills." },
       { property: "og:url", content: "https://maaroofai.com/guide" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/guide" }],
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/guide")({
           "@type": "CollectionPage",
           name: "MAAROOF Ai Guide",
           description:
-            "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more.",
+            "How to use the Maaroof workspace: goals, skills, the ten AI models, deep audit, work modes and exports.",
           url: "https://maaroofai.com/guide",
           isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://maaroofai.com" },
           hasPart: TOOL_CATALOG.filter((td) =>
@@ -101,10 +101,16 @@ function GuidePage() {
 
 
 
-        <GuideEssentials L={L} />
+        {WS_GUIDE.map((sec) => (
+          <Section key={sec.title.en} icon={<BookOpen className="size-5" />} title={sec.title[L]}>
+            <ul className="list-disc space-y-1.5 ps-5 text-sm leading-relaxed text-foreground/85">
+              {sec.items[L].map((it) => <li key={it}>{it}</li>)}
+            </ul>
+          </Section>
+        ))}
 
         <Section icon={<Wrench className="size-5" />} title={L === "en" ? "Skills" : L === "ku" ? "کارامەییەکان" : "المهارات"}>
-          <p className="text-sm text-muted-foreground">{L === "en" ? "Write your goal in the workspace; Maaroof suggests the matching skills, shows the cost and waits for your approval. You are charged only when it succeeds." : L === "ku" ? "ئامانجەکەت لە شوێنی کار بنووسە؛ مەعروف کارامەیی گونجاو پێشنیار دەکات و تێچوو پیشان دەدات پێش جێبەجێکردن." : "اكتب هدفك في مساحة العمل؛ يقترح معروف المهارات المناسبة، ويعرض الكلفة وينتظر موافقتك. لا خصم إلا عند النجاح."}</p>
+          <p className="text-sm text-muted-foreground">{L === "en" ? "Every tool now works as part of a skill. Pick skills yourself or let Maaroof choose them from your goal." : L === "ku" ? "هەموو ئامرازێک ئێستا بەشێکە لە کارامەییەک. خۆت هەڵیبژێرە یان با مەعروف لە ئامانجەکەتەوە هەڵیبژێرێت." : "كل أداة أصبحت جزءاً من مهارة. اختر المهارات بنفسك أو دع معروف يختارها من هدفك."}</p>
           {MAAROOF_SKILLS.map((s) => (
             <div key={s.key} className="rounded-2xl border border-border bg-card/70 p-5">
               <h3 className="font-display text-base font-bold">{s.label[L]}</h3>
@@ -114,81 +120,7 @@ function GuidePage() {
           ))}
         </Section>
 
-        <Section icon={<Bot className="size-5" />} title={t("guide_maaroof_title")}>
-          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">
-            <p className="text-sm leading-relaxed text-foreground/85">{t("guide_maaroof_intro")}</p>
-            <ol className="mt-4 space-y-1.5 text-sm text-foreground/85">
-              {(["guide_maaroof_step1", "guide_maaroof_step2", "guide_maaroof_step3", "guide_maaroof_step4", "guide_maaroof_step5"] as const).map((k) => (
-                <li key={k}>{t(k)}</li>
-              ))}
-            </ol>
-            <Link to="/maaroof" search={{ tab: "chat" as const }} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
-              <Bot className="size-4" /> {t("guide_maaroof_title")}
-            </Link>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {([
-              { tab: "tasks", t: "guide_mrf_tasks_t", d: "guide_mrf_tasks_d" },
-              { tab: "channels", t: "guide_mrf_channels_t", d: "guide_mrf_channels_d" },
-              { tab: "approvals", t: "guide_mrf_approvals_t", d: "guide_mrf_approvals_d" },
-              { tab: "knowledge", t: "guide_mrf_knowledge_t", d: "guide_mrf_knowledge_d" },
-            ] as const).map((f) => (
-              <div key={f.tab} className="rounded-2xl border border-border bg-card/70 p-4">
-                <h3 className="font-display text-base font-bold">{t(f.t)}</h3>
-                <p className="mt-1 text-sm text-foreground/85 leading-relaxed">{t(f.d)}</p>
-                <Link to="/maaroof" search={{ tab: f.tab }} className="mt-2 inline-block text-xs font-semibold text-primary hover:underline">
-                  {t("mrf_tab_" + f.tab as any)} →
-                </Link>
-              </div>
-            ))}
-            <div className="rounded-2xl border border-border bg-card/70 p-4">
-              <h3 className="font-display text-base font-bold">{t("guide_mrf_memory_t")}</h3>
-              <p className="mt-1 text-sm text-foreground/85 leading-relaxed">{t("guide_mrf_memory_d")}</p>
-              <Link to="/maaroof/memory" className="mt-2 inline-block text-xs font-semibold text-primary hover:underline">{t("auto.memory")} →</Link>
-            </div>
-          </div>
-        </Section>
-
-        <Section icon={<Share2 className="size-5" />} title={t("guide_channels_title")}>
-          <div className="rounded-2xl border border-accent/30 bg-card/70 p-5">
-            <p className="text-sm leading-relaxed text-foreground/85">{t("guide_channels_intro")}</p>
-            <ol className="mt-4 space-y-1.5 text-sm text-foreground/85">
-              {(["guide_channels_s1", "guide_channels_s2", "guide_channels_s3", "guide_channels_s4", "guide_channels_s5"] as const).map((k) => (
-                <li key={k}>{t(k)}</li>
-              ))}
-            </ol>
-            <p className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/85">
-              {t("guide_channels_security")}
-            </p>
-            <Link to="/maaroof" search={{ tab: "channels" as const }} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground">
-              <Share2 className="size-4" /> {t("mrf_tab_channels")}
-            </Link>
-          </div>
-        </Section>
-
-        <Section icon={<Wrench className="size-5" />} title={t("guide_tools_section")}>
-
-          {tools.map((td) => (
-            <ToolRow key={td.key} toolKey={td.key} name={td.labels[L]} cost={td.costPerRun} body={t(HOWTO_KEY[td.key] as any)} />
-          ))}
-        </Section>
-
-        <Section icon={<Bot className="size-5" />} title={t("guide_agent_section")}>
-          {agent.map((td) => (
-            <ToolRow key={td.key} toolKey={td.key} name={td.labels[L]} cost={td.costPerRun} body={t(HOWTO_KEY[td.key] as any)} />
-          ))}
-        </Section>
-
-        <Section icon={<Globe2 className="size-5" />} title={t("geo_scope_title")}>
-          <p className="text-sm text-foreground/85 leading-relaxed">{t("guide_geo_body")}</p>
-        </Section>
-
-        <Section icon={<User className="size-5" />} title={t("profile_title")}>
-          <p className="text-sm text-foreground/85 leading-relaxed">{t("guide_profile_body")}</p>
-        </Section>
-
-        <div className="mt-8 text-center"><Link to="/dashboard" className="text-sm text-primary hover:underline">← {t("nav_dashboard")}</Link></div>
+        <div className="mt-8 text-center"><Link to="/workspace" className="text-sm text-primary hover:underline">{L === "en" ? "Open the workspace →" : L === "ku" ? "کردنەوەی شوێنی کار ←" : "افتح مساحة العمل ←"}</Link></div>
       </main>
     </div>
   );
@@ -254,3 +186,47 @@ function GuideEssentials({ L }: { L: "ar" | "en" | "ku" }) {
     </div>
   );
 }
+
+type T3 = { ar: string; en: string; ku: string };
+const WS_GUIDE: { title: T3; items: { ar: string[]; en: string[]; ku: string[] } }[] = [
+  {
+    title: { ar: "كيف تبدأ", en: "Getting started", ku: "چۆن دەست پێبکەیت" },
+    items: {
+      ar: ["اكتب هدفك بجملة واضحة في مساحة العمل، مثل: «أريد أن تذكر النماذج علامتي عند السؤال عن أفضل مطعم».", "حدد نطاقك الجغرافي بالترتيب: الدولة ثم الإقليم ثم المحافظة ثم المدينة، أو اتركه عالمياً.", "يعرض معروف خطة العمل والكلفة التقديرية ورصيدك، ولا يبدأ إلا بموافقتك.", "تعمل المهمة في الخلفية؛ يمكنك إغلاق الصفحة والعودة لاحقاً."],
+      en: ["Write your goal clearly in the workspace, e.g. “I want AI models to mention my brand when asked about the best restaurant”.", "Set your location in order: country, region, province, city — or keep it worldwide.", "Maaroof shows the plan, the estimated cost and your balance, and only starts after you approve.", "Tasks run in the background; you can close the page and come back."],
+      ku: ["ئامانجەکەت بە ڕوونی لە شوێنی کار بنووسە.", "شوێنەکەت بە ڕیز دیاری بکە: وڵات، هەرێم، پارێزگا، شار — یان جیهانی بیهێڵەوە.", "مەعروف پلان و تێچوو و باڵانسەکەت پیشان دەدات و تەنها دوای ڕەزامەندیت دەست پێدەکات.", "ئەرکەکان لە پاشبنەمادا کار دەکەن."],
+    },
+  },
+  {
+    title: { ar: "النماذج العشرة", en: "The ten models", ku: "دە مۆدێلەکە" },
+    items: {
+      ar: ["يسأل معروف افتراضياً عشرة نماذج: ChatGPT وGemini وClaude وPerplexity وCopilot وGrok وMistral وDeepSeek وKimi وQwen.", "يمكنك اختيار نماذج محددة أو إيقاف الفحص المباشر من مساحة العمل.", "تُعرض إجابات النماذج كما هي، ولا يُختلق أي رقم أو مصدر."],
+      en: ["By default Maaroof asks ten models: ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi and Qwen.", "You can pick specific models or turn off live checking in the workspace.", "Model answers are shown as they are; no number or source is invented."],
+      ku: ["بە شێوەی بنەڕەت مەعروف پرسیار لە دە مۆدێل دەکات: ChatGPT، Gemini، Claude، Perplexity، Copilot، Grok، Mistral، DeepSeek، Kimi و Qwen.", "دەتوانیت مۆدێلی دیاریکراو هەڵبژێریت.", "هیچ ژمارە یان سەرچاوەیەک دروست ناکرێت."],
+    },
+  },
+  {
+    title: { ar: "الفحص العميق", en: "Deep audit", ku: "پشکنینی قووڵ" },
+    items: {
+      ar: ["يقرأ موقعك الرسمي وصفحاتك وحساباتك على المنصات ويقيسها على خمسة محاور: SEO وAEO وGEO وSGE وGSEO.", "الموقع الرئيسي يأخذ المحاور الخمسة، والصفحات الداخلية أربعة، والحسابات الاجتماعية GSEO وGEO.", "يظهر «نبض الحساب» في مساحة العمل، ويمكنك تحويل أي نقطة ضعف إلى مهمة بضغطة.", "الخصم مرة واحدة في النهاية، وعن الروابط التي قُرئت فعلاً فقط."],
+      en: ["Reads your official site, pages and social accounts and measures them on five axes: SEO, AEO, GEO, SGE and GSEO.", "The main site gets all five, inner pages four, social accounts GSEO and GEO.", "The account pulse appears in the workspace; turn any weak point into a task with one click.", "You are charged once at the end, only for links actually read."],
+      ku: ["ماڵپەڕ و پەڕە و هەژمارەکانت لەسەر پێنج تەوەر دەپێوێت: SEO، AEO، GEO، SGE و GSEO.", "ماڵپەڕی سەرەکی هەر پێنج تەوەر، پەڕەکانی ناوەوە چوار، هەژماری کۆمەڵایەتی GSEO و GEO.", "هەر خاڵێکی لاواز دەتوانیت بیکەیتە ئەرک.", "تەنها یەکجار لە کۆتاییدا و بۆ بەستەرە خوێندراوەکان پارە دەبڕدرێت."],
+    },
+  },
+  {
+    title: { ar: "أوضاع العمل الثلاثة", en: "Three work modes", ku: "سێ شێوازی کار" },
+    items: {
+      ar: ["التنفيذ: يشغّل المهارات فعلاً ويعطيك النتائج.", "التوصية: يقترح ما يجب فعله دون تنفيذ كامل.", "المحاكاة: يتوقع أثر الخطة قبل تنفيذها.", "كل وضع تشغيل حقيقي بكلفة حقيقية، ولا خصم إلا عند النجاح."],
+      en: ["Execution: runs the skills and gives you results.", "Recommendation: suggests what to do without full execution.", "Simulation: predicts the effect of the plan before running it.", "Each mode is a real run with a real cost; you are charged only on success."],
+      ku: ["جێبەجێکردن: کارامەییەکان کار پێدەکات.", "پێشنیار: پێشنیاری کار دەکات.", "هاوشێوەکردن: کاریگەری پلان پێشبینی دەکات.", "تەنها لە کاتی سەرکەوتندا پارە دەبڕدرێت."],
+    },
+  },
+  {
+    title: { ar: "التصدير", en: "Exporting", ku: "هەناردەکردن" },
+    items: {
+      ar: ["صدّر أي نتيجة بصيغة PDF أو Word أو Excel أو CSV أو PowerPoint أو Markdown أو JSON.", "اختر لغة التقرير (العربية أو English أو کوردی) من قائمة التصدير، بغض النظر عن لغة الموقع أو لغة النص المكتوب."],
+      en: ["Export any result as PDF, Word, Excel, CSV, PowerPoint, Markdown or JSON.", "Choose the report language (Arabic, English or Kurdish) in the export menu, regardless of the site language or the text language."],
+      ku: ["هەر ئەنجامێک بە PDF، Word، Excel، CSV، PowerPoint، Markdown یان JSON هەناردە بکە.", "زمانی ڕاپۆرت لە لیستی هەناردەکردن هەڵبژێرە، جیاواز لە زمانی ماڵپەڕ."],
+    },
+  },
+];

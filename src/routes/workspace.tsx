@@ -14,6 +14,8 @@ import { useRotatingHint } from "@/lib/workspace-hints";
 import { WorkspaceAuditPulse } from "@/components/WorkspaceAuditPulse";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { ExportButtons } from "@/components/ExportButtons";
+import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
@@ -97,7 +99,7 @@ const SKILL_ICONS = {
 };
 
 function WorkspacePage() {
-  const { user, loading, session } = useAuth();
+  const { user, loading, session, profile: authProfile } = useAuth();
   const { lang } = useI18n();
   const navigate = useNavigate();
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
@@ -326,6 +328,7 @@ function WorkspacePage() {
             ...(clarifications || {}),
           },
           interface_mode: "workspace",
+          geo_scope: toServerGeo(getEffectiveScope(authProfile)),
           selected_skills: selectedSkills,
         }),
       });
@@ -415,6 +418,7 @@ function WorkspacePage() {
                 </div>
               </div>
 
+              <div className="mt-3"><GeoScopeSelector compact /></div>
               <WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); document.getElementById("workspace-goal")?.focus(); }} />
 
 
@@ -530,7 +534,7 @@ function WorkspacePage() {
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 
             {finalEvent && <div className="rounded-2xl border border-primary/25 bg-card p-5 md:p-6">
-              <div className="mb-3 flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div><ExportButtons toolKey="maaroof" build={() => ({ title: c.result, subtitle: goal.trim(), sections: [{ heading: c.result, kind: "text", text: String(finalEvent.data?.text || finalEvent.data?.message || "") }] })} /></div>
               <div className="whitespace-pre-wrap text-sm leading-7">{String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)}</div>
             </div>}
 
@@ -598,4 +602,12 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
       </span>
     </button>
   );
+}
+
+/** Convert the profile's ordered scope (country > region > province > city) to the agent's geo format. */
+function toServerGeo(scope: { scope: string; country?: string; region?: string; city?: string }) {
+  if (!scope || scope.scope === "world") return { mode: "world" as const };
+  if (scope.scope === "auto") return { mode: "auto" as const };
+  const local = [scope.city, scope.region].filter(Boolean).join(", ");
+  return local ? { mode: "city" as const, country: scope.country, city: local } : { mode: "country" as const, country: scope.country };
 }

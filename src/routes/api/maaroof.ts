@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/maaroof")({
         if (body?.interface_mode === "workspace") {
           const db = admin as any;
           const probeEngines = Array.isArray(body?.probe_engines) ? body.probe_engines.filter((x: unknown) => typeof x === "string").slice(0, 10) : undefined;
-          const selectedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 10) : [];
+          const selectedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
           if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
             user_id: userId, goal, mode: executionMode || "execution", status: "running",
