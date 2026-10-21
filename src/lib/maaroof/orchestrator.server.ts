@@ -468,7 +468,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     try {
       const { freshFacts, factsContextLine } = await import("@/lib/knowledge-facts");
       const { data: kf } = await (db() as any).from("knowledge_facts").select("fact, source, expires_at").eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(20);
-      mciHintLine += factsContextLine(freshFacts(kf || []));
+      mciHintLine += factsContextLine(freshFacts((kf || []) as Array<{ fact: string; source: string; expires_at?: string | null }>));
     } catch {}
     // User's own recent tool runs (saved results + chosen options) — read-only, fail-open.
     let historyLine = "";
