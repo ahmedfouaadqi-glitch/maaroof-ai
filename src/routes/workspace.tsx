@@ -41,7 +41,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s.tab === "string" ? { tab: s.tab } : {}),
+  validateSearch: (s: Record<string, unknown>): { tab?: string; skill?: string } => ({ ...(typeof s.tab === "string" ? { tab: s.tab } : {}), ...(typeof s.skill === "string" ? { skill: s.skill } : {}) }),
   component: () => <I18nProvider><AuthProvider><WorkspacePage /></AuthProvider></I18nProvider>,
 });
 
@@ -213,6 +213,12 @@ function WorkspacePage() {
     return () => { active = false; };
   }, [user?.id, mode, liveProbe, selectedModels.length]);
 
+  useEffect(() => {
+    const k = search.skill;
+    if (k && MAAROOF_SKILLS.some((x) => x.key === k)) setSelectedSkills((cur) => (cur.includes(k) ? cur : [...cur, k]));
+  }, [search.skill]);
+  const [skillView, setSkillView] = useState<"suggested" | "all">("suggested");
+  const allSkills = useMemo(() => MAAROOF_SKILLS.map((skill) => ({ skill, access: policy.enabled_skills.includes(skill.key) ? getSkillAccessMode(skill, policy.skill_access) : "disabled" as const })), [policy.enabled_skills, policy.skill_access]);
   const recommendations = useMemo(() => {
     const isSelfService = (skill: MaaroofSkill) => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "self_service";
     const enabled = MAAROOF_SKILLS.filter(isSelfService);
@@ -440,7 +446,7 @@ function WorkspacePage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <WorkspaceShell locale={locale} tab={tab}>
+      <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} /></div>}
@@ -523,12 +529,16 @@ function WorkspacePage() {
                   <div>
                     <h2 className="flex items-center gap-2 font-semibold">{c.suggested} <HelpTip id="skills" lang={locale} /></h2>
                     <p className="mt-1 text-xs text-muted-foreground">{c.skillsHint}</p>
+                    <div role="tablist" className="mt-2 inline-flex rounded-lg border border-border p-0.5 text-xs">
+                      {(["suggested", "all"] as const).map((v) => <button key={v} type="button" role="tab" aria-selected={skillView === v} onClick={() => setSkillView(v)} className={`rounded-md px-3 py-1 font-semibold ${skillView === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>{v === "suggested" ? (locale === "en" ? "Suggested" : locale === "ku" ? "پێشنیارکراو" : "المقترحة") : `${locale === "en" ? "All" : locale === "ku" ? "هەموو" : "الكل"} (${MAAROOF_SKILLS.length})`}</button>)}
+                    </div>
                   </div>
                   <Sparkles className="size-5 text-primary" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
-                  {MAAROOF_SKILLS.filter(skill => policy.enabled_skills.includes(skill.key) && getSkillAccessMode(skill, policy.skill_access) === "contact" && recommendMaaroofSkills(goal, MAAROOF_SKILLS.length).some(match => match.key === skill.key)).map(skill => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={false} onToggle={() => {}} labelAdd={c.add} labelAdded={c.added} />)}
+                  {skillView === "suggested"
+                    ? recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)
+                    : allSkills.map(({ skill, access }) => <SkillCard key={skill.key} skill={skill} accessMode={access} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => access === "self_service" && toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {selectedSkills.map((key) => {
@@ -661,6 +671,14 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
   skill: MaaroofSkill; accessMode: "self_service" | "contact" | "disabled"; locale: SkillLocale; selected: boolean; onToggle: () => void; labelAdd: string; labelAdded: string;
 }) {
   const Icon = SKILL_ICONS[skill.icon];
+  if (accessMode === "disabled") {
+    return (
+      <div className="flex h-full items-start gap-3 rounded-xl border border-dashed border-border p-4 opacity-70">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"><Icon className="size-5" /></span>
+        <span className="min-w-0 flex-1"><span className="block font-semibold">{skill.label[locale]}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[locale]}</span><span className="mt-2 inline-block rounded-full bg-muted px-2 py-0.5 text-[11px]">{locale === "en" ? "Not enabled on your account" : locale === "ku" ? "بۆ هەژمارەکەت چالاک نییە" : "غير مفعّلة لحسابك"}</span></span>
+      </div>
+    );
+  }
   if (accessMode === "contact") {
     return (
       <div className="rb-workspace-skill flex h-full flex-col rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
@@ -683,10 +701,22 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{skill.label[locale]}</span>
         <span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[locale]}</span>
-        {(() => { const f = skillFramework(skill, locale); return <span className="mt-2 block space-y-0.5 text-[11px] leading-4 text-muted-foreground"><span className="block">{locale === "en" ? "Sources" : locale === "ku" ? "سەرچاوە" : "المصادر"}: {f.sources}</span><span className="block">{locale === "en" ? "Next" : locale === "ku" ? "دواتر" : "التالي"}: {f.nextStep}</span></span>; })()}
+        <SkillDetails skill={skill} locale={locale} />
         <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${selected ? "text-primary" : "text-muted-foreground"}`}>{selected ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}{selected ? labelAdded : labelAdd}</span>
       </span>
     </button>
+  );
+}
+
+function SkillDetails({ skill, locale }: { skill: MaaroofSkill; locale: SkillLocale }) {
+  const f = skillFramework(skill, locale);
+  const L = (ar: string, en: string, ku: string) => (locale === "en" ? en : locale === "ku" ? ku : ar);
+  const rows: [string, string][] = [[L("الهدف", "Goal", "ئامانج"), f.goal], [L("المصادر", "Sources", "سەرچاوە"), f.sources], [L("الخطة", "Plan", "پلان"), f.plan], [L("الكلفة", "Cost", "تێچوو"), f.cost], [L("الأدلة", "Evidence", "بەڵگە"), f.evidence], [L("النتيجة", "Output", "ئەنجام"), f.output], [L("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), f.nextStep]];
+  return (
+    <details className="mt-2 text-[11px] leading-4 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+      <summary className="cursor-pointer font-semibold text-primary">{L("تفاصيل", "Details", "وردەکاری")}</summary>
+      <dl className="mt-1 space-y-1">{rows.map(([k, v]) => <div key={k}><dt className="inline font-semibold text-foreground">{k}: </dt><dd className="inline">{v}</dd></div>)}</dl>
+    </details>
   );
 }
 

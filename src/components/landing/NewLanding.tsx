@@ -322,10 +322,12 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {skills.map((s) => (
-              <SpotlightCard key={s.key} className="p-4">
-                <div className="text-sm font-semibold">{s.label[l]}</div>
-                <p className="mt-1 text-xs text-muted-foreground">{s.description[l]}</p>
-              </SpotlightCard>
+              <Link key={s.key} to="/workspace" search={{ skill: s.key }} className="block h-full">
+                <SpotlightCard className="h-full p-4 transition hover:border-primary/40">
+                  <div className="text-sm font-semibold">{s.label[l]}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.description[l]}</p>
+                </SpotlightCard>
+              </Link>
             ))}
           </div>
         </section>
