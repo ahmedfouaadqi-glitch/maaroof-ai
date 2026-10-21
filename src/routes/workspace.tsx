@@ -4,6 +4,7 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
 import { WorkspaceShell, formatElapsed, NavLink, MORE_ITEMS, type WorkspaceTab } from "@/components/workspace/WorkspaceShell";
 import { HistoryPanel, BalancePanel, KnowledgePanel, type PastJob } from "@/components/workspace/WorkspacePanels";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,7 +133,7 @@ function WorkspacePage() {
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
   const search = Route.useSearch();
-  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "more"];
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "more"];
   const tab: WorkspaceTab = TABS.includes(search.tab as WorkspaceTab) ? (search.tab as WorkspaceTab) : "main";
   const goMain = () => navigate({ to: "/workspace", search: {} });
   async function openPastJob(j: PastJob) {
@@ -466,6 +467,7 @@ function WorkspacePage() {
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="text-sm">{locale === "en" ? "Day / night mode" : locale === "ku" ? "دۆخی ڕۆژ / شەو" : "الوضع النهاري / الليلي"}</span><ThemeToggle /></div>
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="min-w-0 truncate text-sm">{user.email}</span><Link to="/profile" className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted">{locale === "en" ? "Full profile" : locale === "ku" ? "پرۆفایلی تەواو" : "الملف الكامل"}</Link></div>
       </section></div>}
+      {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} /></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
       <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" ? "" : "hidden"}`}>
         <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
