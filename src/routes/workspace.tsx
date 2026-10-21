@@ -9,7 +9,9 @@ import { HistoryPanel, BalancePanel, KnowledgePanel, type PastJob } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
-import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill } from "@/lib/maaroof/skill-catalog";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, toolsForSkills, getSkillAccessMode, defaultSkillAccessPolicy, type MaaroofSkill, skillFramework } from "@/lib/maaroof/skill-catalog";
 import { phaseLabel, isIntentionalSkip, summarizeToolOutput, taskWeight } from "@/lib/maaroof/event-labels";
 import { PulseBadge } from "@/components/motion/effects";
 import { useRotatingHint } from "@/lib/workspace-hints";
@@ -130,9 +132,8 @@ function WorkspacePage() {
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
   const search = Route.useSearch();
-  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "more"];
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "more"];
   const tab: WorkspaceTab = TABS.includes(search.tab as WorkspaceTab) ? (search.tab as WorkspaceTab) : "main";
-  useEffect(() => { if (tab === "models") setModelsOpen(true); }, [tab]);
   const goMain = () => navigate({ to: "/workspace", search: {} });
   async function openPastJob(j: PastJob) {
     const token = (await supabase.auth.getSession()).data.session?.access_token;
@@ -424,8 +425,33 @@ function WorkspacePage() {
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /></div>}
       {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /></div>}
+      {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
+        <h1 className="font-display text-xl font-bold">{c.models}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{locale === "en" ? "All ten models are questioned by default. Connection status is confirmed live when a task runs, never assumed." : locale === "ku" ? "هەر دە مۆدێلەکە بە شێوەی بنەڕەت پرسیاریان لێدەکرێت. دۆخی پەیوەندی لە کاتی جێبەجێکردندا پشتڕاست دەکرێتەوە." : "تُسأل النماذج العشرة افتراضياً. حالة الربط تُؤكَّد فعلياً عند تشغيل المهمة ولا تُفترض مسبقاً."}</p>
+        <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={liveProbe} onChange={(e) => setLiveProbe(e.target.checked)} className="mt-1 accent-primary" /><span>{c.liveProbe}</span></label>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {ENGINE_LIST.map((engine) => { const on = selectedModels.includes(engine.key); const st = engineStatus[engine.key]; return (
+            <label key={engine.key} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition ${on ? "border-primary/40 bg-primary/5" : "border-border hover:bg-muted/40"}`}>
+              <input type="checkbox" checked={on} onChange={(e) => setSelectedModels((cur) => e.target.checked ? [...cur, engine.key] : cur.filter((k) => k !== engine.key))} className="accent-primary" />
+              <span className="flex-1 font-medium">{engine.name}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st === "ok" ? "bg-success/15 text-success" : st === "failed" ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"}`}>{st === "ok" ? (locale === "en" ? "Connected" : locale === "ku" ? "پەیوەستە" : "متصل") : st === "failed" ? (locale === "en" ? "Unavailable" : locale === "ku" ? "بەردەست نییە" : "متعذر") : (locale === "en" ? "Checked on run" : locale === "ku" ? "لە کاتی کار" : "يُفحص عند التشغيل")}</span>
+            </label>); })}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setSelectedModels(ENGINE_LIST.map((e) => e.key))} className="rounded-lg border px-3 py-1.5 text-xs">{c.all}</button>
+          <button type="button" onClick={() => setSelectedModels([])} className="rounded-lg border px-3 py-1.5 text-xs">{c.clear}</button>
+          <span className="ms-auto self-center text-xs text-muted-foreground">{selectedModels.length} {c.modelCount}</span>
+          <button type="button" onClick={goMain} className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">{locale === "en" ? "Back to task" : locale === "ku" ? "گەڕانەوە بۆ ئەرک" : "العودة إلى المهمة"}</button>
+        </div>
+      </section></div>}
+      {tab === "settings" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+        <h1 className="font-display text-xl font-bold">{locale === "en" ? "Settings" : locale === "ku" ? "ڕێکخستن" : "الإعدادات"}</h1>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="text-sm">{locale === "en" ? "Interface language" : locale === "ku" ? "زمانی ڕووکار" : "لغة الواجهة"}</span><LanguageSwitcher /></div>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="text-sm">{locale === "en" ? "Day / night mode" : locale === "ku" ? "دۆخی ڕۆژ / شەو" : "الوضع النهاري / الليلي"}</span><ThemeToggle /></div>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="min-w-0 truncate text-sm">{user.email}</span><Link to="/profile" className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted">{locale === "en" ? "Full profile" : locale === "ku" ? "پرۆفایلی تەواو" : "الملف الكامل"}</Link></div>
+      </section></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
-      <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" || tab === "models" ? "" : "hidden"}`}>
+      <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" ? "" : "hidden"}`}>
         <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
           <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <BrainCircuit className="size-6" />
@@ -438,6 +464,9 @@ function WorkspacePage() {
           {policy.show_professional_link && policy.available_interfaces.includes("professional") && <Link to="/maaroof" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted"><Wrench className="size-4" />{c.professional}</Link>}
         </header>
 
+        {(finalEvent || events.length > 0) && !running && (
+          <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button></div>
+        )}
         {!finalEvent && events.length === 0 && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
             <div className="space-y-4">
@@ -634,6 +663,7 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{skill.label[locale]}</span>
         <span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[locale]}</span>
+        {(() => { const f = skillFramework(skill, locale); return <span className="mt-2 block space-y-0.5 text-[11px] leading-4 text-muted-foreground"><span className="block">{locale === "en" ? "Sources" : locale === "ku" ? "سەرچاوە" : "المصادر"}: {f.sources}</span><span className="block">{locale === "en" ? "Next" : locale === "ku" ? "دواتر" : "التالي"}: {f.nextStep}</span></span>; })()}
         <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${selected ? "text-primary" : "text-muted-foreground"}`}>{selected ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}{selected ? labelAdded : labelAdd}</span>
       </span>
     </button>
