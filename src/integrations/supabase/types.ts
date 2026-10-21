@@ -2318,6 +2318,39 @@ export type Database = {
           },
         ]
       }
+      knowledge_facts: {
+        Row: {
+          confidence: string
+          created_at: string
+          expires_at: string | null
+          fact: string
+          id: string
+          source: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: string
+          created_at?: string
+          expires_at?: string | null
+          fact: string
+          id?: string
+          source: string
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: string
+          created_at?: string
+          expires_at?: string | null
+          fact?: string
+          id?: string
+          source?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       knowledge_nodes: {
         Row: {
           approved: boolean
