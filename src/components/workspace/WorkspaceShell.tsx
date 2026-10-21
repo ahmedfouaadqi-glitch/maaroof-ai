@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe } from "lucide-react";
-import type { ReactNode } from "react";
+import { PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
 export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "more";
@@ -22,12 +22,20 @@ const MORE: NavItem = { tab: "more", icon: LayoutGrid, label: { ar: "المزي�
 export const MORE_ITEMS = NAV.slice(4);
 
 /** Presentation-only app shell: side menu on desktop, bottom bar on phones. */
-export function WorkspaceShell({ locale, tab, children }: { locale: Locale; tab: WorkspaceTab; children: ReactNode }) {
+export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: { locale: Locale; tab: WorkspaceTab; children: ReactNode; autoCollapse?: boolean }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const [userCollapsed, setUserCollapsed] = useState(false);
+  const [hover, setHover] = useState(false);
+  useEffect(() => { try { setUserCollapsed(localStorage.getItem("ws-sidebar-collapsed") === "1"); } catch {} }, []);
+  const toggle = () => setUserCollapsed((v) => { const n = !v; try { localStorage.setItem("ws-sidebar-collapsed", n ? "1" : "0"); } catch {} return n; });
+  const collapsed = sidebarCollapsed(userCollapsed, autoCollapse) && !hover;
   return (
     <div className="mx-auto flex max-w-7xl gap-6 px-0 md:px-6">
-      <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-56 shrink-0 flex-col gap-1 rounded-2xl border border-border bg-card/80 p-3 backdrop-blur md:flex">
-        {NAV.map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={n.tab ? path === "/workspace" && tab === n.tab : path === n.to} compact={false} />)}
+      <aside onMouseEnter={() => autoCollapse && !userCollapsed && setHover(true)} onMouseLeave={() => setHover(false)} className={`sticky top-20 hidden h-[calc(100vh-6rem)] shrink-0 flex-col gap-1 rounded-2xl border border-border bg-card/80 p-2 backdrop-blur transition-[width] duration-300 md:flex ${collapsed ? "w-14" : "w-56"}`}>
+        <button type="button" onClick={toggle} aria-label={userCollapsed ? (locale === "en" ? "Show menu" : locale === "ku" ? "پیشاندانی لیست" : "إظهار القائمة") : (locale === "en" ? "Hide menu" : locale === "ku" ? "شاردنەوەی لیست" : "إخفاء القائمة")} title={userCollapsed ? "+" : "−"} className="mb-1 flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+          {collapsed ? <PanelRightOpen className="size-4" /> : <PanelRightClose className="size-4" />}
+        </button>
+        {NAV.map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={n.tab ? path === "/workspace" && tab === n.tab : path === n.to} compact={false} iconOnly={collapsed} />)}
       </aside>
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 backdrop-blur md:hidden">
@@ -37,18 +45,25 @@ export function WorkspaceShell({ locale, tab, children }: { locale: Locale; tab:
   );
 }
 
-export function NavLink({ n, locale, on, compact }: { n: NavItem; locale: Locale; on: boolean; compact: boolean }) {
+export function NavLink({ n, locale, on, compact, iconOnly = false }: { n: NavItem; locale: Locale; on: boolean; compact: boolean; iconOnly?: boolean }) {
   const Icon = n.icon;
   const cls = compact
     ? `flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${on ? "text-primary" : "text-muted-foreground"}`
     : `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${on ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
-  const inner = <><Icon className={compact ? "size-5" : "size-4"} /><span>{n.label[locale]}</span></>;
-  if (n.to) return <Link to={n.to} className={cls}>{inner}</Link>;
-  return <Link to="/workspace" search={{ tab: n.tab === "main" ? undefined : n.tab }} aria-current={on ? "page" : undefined} className={cls}>{inner}</Link>;
+  const label = n.label[locale];
+  const inner = <><Icon className={`${compact ? "size-5" : "size-4"} shrink-0`} /><span className={iconOnly ? "sr-only" : "truncate"}>{label}</span></>;
+  const c2 = iconOnly ? cls.replace("px-3", "justify-center px-2") : cls;
+  if (n.to) return <Link to={n.to} title={iconOnly ? label : undefined} className={c2}>{inner}</Link>;
+  return <Link to="/workspace" search={{ tab: n.tab === "main" ? undefined : n.tab }} title={iconOnly ? label : undefined} aria-current={on ? "page" : undefined} className={c2}>{inner}</Link>;
 }
 
 /** Formats a real elapsed duration in ms as m:ss. */
 export function formatElapsed(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** Sidebar is collapsed when the user chose so, or automatically while a task runs. */
+export function sidebarCollapsed(userCollapsed: boolean, autoCollapse: boolean): boolean {
+  return userCollapsed || autoCollapse;
 }
