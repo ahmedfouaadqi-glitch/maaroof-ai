@@ -25,6 +25,7 @@ const ERR: Record<string, [string, string, string]> = {
 
 export function DelegatedBrowserPanel({ lang }: { lang: L }) {
   const [grant, setGrant] = useState<any>(null);
+  const [cost, setCost] = useState(0);
   const [steps, setSteps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [domains, setDomains] = useState("");
@@ -37,7 +38,7 @@ export function DelegatedBrowserPanel({ lang }: { lang: L }) {
   const [links, setLinks] = useState<string[]>([]);
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
 
-  const load = async () => { const r = await call("GET"); setGrant(r.json.grant || null); setSteps(r.json.steps || []); setLoading(false); };
+  const load = async () => { const r = await call("GET"); setGrant(r.json.grant || null); setSteps(r.json.steps || []); setCost(Number(r.json.cost_per_page) || 0); setLoading(false); };
   useEffect(() => { void load(); }, []);
 
   const doGrant = async () => {
@@ -103,6 +104,7 @@ export function DelegatedBrowserPanel({ lang }: { lang: L }) {
               <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm">
                 <p>{tr(lang, "سيقرأ معروف هذه الصفحة فقط (قراءة دون أي تفاعل):", "Maaroof will only read this page (no interaction):", "تەنها ئەم پەڕەیە دەخوێنرێتەوە:")}</p>
                 <p dir="ltr" className="my-1 break-all font-mono text-xs">{confirmUrl}</p>
+                <p className="text-xs text-muted-foreground">{tr(lang, "الكلفة", "Cost", "تێچوون")}: {cost} {tr(lang, "توكن — تُخصم عند نجاح القراءة فقط", "tokens — charged only if the read succeeds", "توکن — تەنها لە سەرکەوتندا")}</p>
                 <div className="mt-2 flex gap-2">
                   <button onClick={() => read(confirmUrl)} className="rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground">{tr(lang, "تنفيذ الخطوة", "Run step", "ئەنجامدان")}</button>
                   <button onClick={() => setConfirmUrl(null)} className="rounded-lg border border-border px-3 py-1.5">{tr(lang, "تراجع", "Cancel", "پاشگەزبوونەوە")}</button>

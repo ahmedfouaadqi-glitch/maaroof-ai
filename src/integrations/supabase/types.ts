@@ -2318,6 +2318,39 @@ export type Database = {
           },
         ]
       }
+      knowledge_facts: {
+        Row: {
+          confidence: string
+          created_at: string
+          expires_at: string | null
+          fact: string
+          id: string
+          source: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: string
+          created_at?: string
+          expires_at?: string | null
+          fact: string
+          id?: string
+          source: string
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: string
+          created_at?: string
+          expires_at?: string | null
+          fact?: string
+          id?: string
+          source?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       knowledge_nodes: {
         Row: {
           approved: boolean
@@ -4838,6 +4871,51 @@ export type Database = {
           mode?: string
           output?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      task_attachments: {
+        Row: {
+          analysis: string | null
+          context: string
+          created_at: string
+          id: string
+          mime: string
+          name: string
+          path: string
+          question: string | null
+          size: number
+          status: string
+          tokens_charged: number
+          user_id: string
+        }
+        Insert: {
+          analysis?: string | null
+          context?: string
+          created_at?: string
+          id?: string
+          mime: string
+          name: string
+          path: string
+          question?: string | null
+          size?: number
+          status?: string
+          tokens_charged?: number
+          user_id: string
+        }
+        Update: {
+          analysis?: string | null
+          context?: string
+          created_at?: string
+          id?: string
+          mime?: string
+          name?: string
+          path?: string
+          question?: string | null
+          size?: number
+          status?: string
+          tokens_charged?: number
+          user_id?: string
         }
         Relationships: []
       }

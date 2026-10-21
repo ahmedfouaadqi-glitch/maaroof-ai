@@ -1,0 +1,38 @@
+// Pure helpers for facts Maaroof learned (from tasks, interview, profile). No I/O.
+
+export const TASK_FACT_TTL_DAYS = 30;
+export const FACT_MAX_CHARS = 600;
+
+export type FactSource = "task" | "interview" | "profile";
+export type Fact = { source: FactSource; fact: string; confidence: "evidence" | "hypothesis"; created_at: string; expires_at?: string | null; source_ref?: string | null };
+
+/** Builds the stored fact for a completed task, or null when the task produced no usable result. */
+export function taskFact(goal: string, finalText: string, now = Date.now()) {
+  const g = String(goal || "").trim();
+  const t = String(finalText || "").replace(/\s+/g, " ").trim();
+  if (!g || t.length < 20) return null;
+  return {
+    fact: `${g.slice(0, 150)} — ${t}`.slice(0, FACT_MAX_CHARS),
+    confidence: "evidence" as const,
+    expires_at: new Date(now + TASK_FACT_TTL_DAYS * 86400000).toISOString(),
+  };
+}
+
+/** Facts not yet expired. */
+export function freshFacts<T extends { expires_at?: string | null }>(facts: T[], now = Date.now()): T[] {
+  return facts.filter((f) => !f.expires_at || new Date(f.expires_at).getTime() > now);
+}
+
+/** Compact planner context line from fresh facts; empty string when none. */
+export function factsContextLine(facts: Array<{ fact: string; source: string }>, max = 8): string {
+  const list = facts.slice(0, max).map((f) => `- [${f.source}] ${f.fact.slice(0, 240)}`);
+  return list.length ? `Known facts about this user from earlier work (verify before relying on them):\n${list.join("\n")}\n\n` : "";
+}
+
+/** Interview answers become facts; unanswered questions are skipped. */
+export function interviewFacts(rows: Array<{ question: string; answer: string | null; answered_at?: string | null; created_at: string }>): Fact[] {
+  return rows.filter((r) => r.answer && r.answer.trim()).map((r) => ({
+    source: "interview", fact: `${r.question} — ${String(r.answer).trim()}`.slice(0, FACT_MAX_CHARS),
+    confidence: "evidence", created_at: r.answered_at || r.created_at,
+  }));
+}

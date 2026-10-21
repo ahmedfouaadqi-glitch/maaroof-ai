@@ -29,6 +29,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
+import { Route as ApiAttachmentAnalyzeRouteImport } from './routes/api/attachment-analyze'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-authority'
 import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
@@ -160,6 +161,11 @@ const ApiAnalyzeRoute = ApiAnalyzeRouteImport.update({
 const ApiAppliedRankingRoute = ApiAppliedRankingRouteImport.update({
   id: '/api/applied-ranking',
   path: '/api/applied-ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAttachmentAnalyzeRoute = ApiAttachmentAnalyzeRouteImport.update({
+  id: '/api/attachment-analyze',
+  path: '/api/attachment-analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBizdevRoute = ApiBizdevRouteImport.update({
@@ -347,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
+  '/api/attachment-analyze': typeof ApiAttachmentAnalyzeRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
+  '/api/attachment-analyze': typeof ApiAttachmentAnalyzeRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
@@ -456,6 +464,7 @@ export interface FileRoutesById {
   '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
+  '/api/attachment-analyze': typeof ApiAttachmentAnalyzeRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
@@ -512,6 +521,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
+    | '/api/attachment-analyze'
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
@@ -566,6 +576,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
+    | '/api/attachment-analyze'
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
@@ -620,6 +631,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
+    | '/api/attachment-analyze'
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
@@ -675,6 +687,7 @@ export interface RootRouteChildren {
   WorkspaceRoute: typeof WorkspaceRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
+  ApiAttachmentAnalyzeRoute: typeof ApiAttachmentAnalyzeRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
   ApiBrandAuthorityRoute: typeof ApiBrandAuthorityRoute
   ApiBrandBoostRoute: typeof ApiBrandBoostRoute
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       path: '/api/applied-ranking'
       fullPath: '/api/applied-ranking'
       preLoaderRoute: typeof ApiAppliedRankingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/attachment-analyze': {
+      id: '/api/attachment-analyze'
+      path: '/api/attachment-analyze'
+      fullPath: '/api/attachment-analyze'
+      preLoaderRoute: typeof ApiAttachmentAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bizdev': {
@@ -1120,6 +1140,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceRoute: WorkspaceRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiAppliedRankingRoute: ApiAppliedRankingRoute,
+  ApiAttachmentAnalyzeRoute: ApiAttachmentAnalyzeRoute,
   ApiBizdevRoute: ApiBizdevRoute,
   ApiBrandAuthorityRoute: ApiBrandAuthorityRoute,
   ApiBrandBoostRoute: ApiBrandBoostRoute,

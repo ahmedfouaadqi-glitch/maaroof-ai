@@ -91,7 +91,9 @@ export const Route = createFileRoute("/api/maaroof")({
           const next = createSeqCounter();
           const ctl = new AbortController();
           let chain: Promise<unknown> = Promise.resolve();
+          let finalText = "";
           const emit = async (event: string, data: any) => {
+            if (event === "final" && typeof data?.text === "string") finalText = data.text;
             const seq = next();
             chain = chain.then(() => db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq, event_type: event, payload: data ?? {} })).catch(() => {});
             if (seq % 5 === 0) {
@@ -117,6 +119,13 @@ export const Route = createFileRoute("/api/maaroof")({
             if (j?.status !== "cancelled") {
               const now = new Date().toISOString();
               await db.from("maaroof_jobs").update({ status, error: err, finished_at: now, updated_at: now }).eq("id", jobId);
+              if (status === "completed") {
+                try {
+                  const { taskFact } = await import("@/lib/knowledge-facts");
+                  const f = taskFact(goal, finalText);
+                  if (f) await db.from("knowledge_facts").insert({ user_id: userId, source: "task", source_ref: jobId, ...f });
+                } catch {}
+              }
             }
           })();
           const { runAfterResponse } = await import("@/lib/request-ctx.server");

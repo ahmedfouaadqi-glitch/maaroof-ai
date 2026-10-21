@@ -29,7 +29,9 @@ export const Route = createFileRoute("/api/delegated-browser")({
           const { data } = await a.db.from("browser_steps").select("*").eq("grant_id", active.id).order("created_at", { ascending: true }).limit(MAX_STEPS_PER_GRANT);
           steps = data || [];
         }
-        return Response.json({ grant: active, steps });
+        let cost = 0;
+        try { const { resolveToolCost } = await import("@/lib/tokens.server"); cost = Number((await resolveToolCost(a.userId, "browser.read")).tokens) || 0; } catch {}
+        return Response.json({ grant: active, steps, cost_per_page: cost });
       },
       POST: async ({ request }) => {
         const a = await auth(request);
@@ -74,7 +76,14 @@ export const Route = createFileRoute("/api/delegated-browser")({
             const md = String(d.markdown || "");
             const links = allowedLinks(d.links, grant.domains);
             const step = await log({ status: "ok", title: String(d.metadata?.title || "").slice(0, 200) || null, excerpt: md.slice(0, 1500), links_count: links.length });
-            return Response.json({ step, links });
+            // Charge only after a successful read; an unpriced step stays free.
+            let charged = 0;
+            try {
+              const { chargeTokens } = await import("@/lib/tokens.server");
+              const c: any = await chargeTokens({ userId: a.userId, toolKey: "browser.read", meta: { url: url.slice(0, 200) } });
+              if (c?.ok) charged = Number(c.tokens ?? c.charged ?? 0) || 0;
+            } catch {}
+            return Response.json({ step, links, charged });
           } catch (e: any) {
             return Response.json({ step: await log({ status: "failed", error: String(e?.message || e).slice(0, 200) }) }, { status: 502 });
           }

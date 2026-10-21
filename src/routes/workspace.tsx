@@ -4,6 +4,9 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { AttachmentAnalyzer } from "@/components/workspace/AttachmentAnalyzer";
+import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
+import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
 import { WorkspaceShell, formatElapsed, NavLink, MORE_ITEMS, type WorkspaceTab } from "@/components/workspace/WorkspaceShell";
 import { HistoryPanel, BalancePanel, KnowledgePanel, type PastJob } from "@/components/workspace/WorkspacePanels";
@@ -439,8 +442,8 @@ function WorkspacePage() {
       <WorkspaceShell locale={locale} tab={tab}>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
-      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /></div>}
-      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /></div>}
+      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} /></div>}
+      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /></div>}
       {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
         <h1 className="font-display text-xl font-bold">{c.models}</h1>
@@ -483,7 +486,7 @@ function WorkspacePage() {
         </header>
 
         {(finalEvent || events.length > 0) && !running && (
-          <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button></div>
+          <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; watcherRef.current += 1; setEvents([]); setJobId(null); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
         {!finalEvent && events.length === 0 && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -499,9 +502,11 @@ function WorkspacePage() {
                 </div>
               </div>
 
-              <div className="mt-3"><GeoScopeSelector compact /></div>
-              <WorkspaceSpacesPanel lang={locale} />
-              <WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); document.getElementById("workspace-goal")?.focus(); }} />
+              <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <h2 className="mb-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"}</h2>
+                <GeoScopeSelector compact />
+              </div>
 
 
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
