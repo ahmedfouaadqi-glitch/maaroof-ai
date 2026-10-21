@@ -59,6 +59,7 @@ export function ExportButtons({
     showLogo: override?.show_logo ?? exportCfg.footer.show_logo,
   });
   const [open, setOpen] = useState(false);
+  const [exportLang, setExportLang] = useState<"ar" | "en" | "ku">(lang === "en" || lang === "ku" ? lang : "ar");
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
 
   if (!vis.loading && !vis.isWidgetVisible("results_export")) return null;
@@ -82,7 +83,7 @@ export function ExportButtons({
 
   const run = async (f: ExportFormat) => {
     const p = await build();
-    p.lang = (lang as any) || "ar";
+    p.lang = exportLang;
     p.identity = identity;
     setOpen(false);
     await RUNNERS[f](p);
@@ -101,6 +102,14 @@ export function ExportButtons({
         <>
           <button type="button" aria-hidden className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
           <div className="absolute top-full z-50 mt-1 min-w-44 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg ltr:left-0 rtl:right-0">
+            <div className="mb-1 flex gap-1 border-b border-border p-1" role="group" aria-label="Report language">
+              {(["ar", "en", "ku"] as const).map((l) => (
+                <button key={l} type="button" onClick={() => setExportLang(l)}
+                  className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold ${exportLang === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10"}`}>
+                  {l === "ar" ? "العربية" : l === "en" ? "English" : "کوردی"}
+                </button>
+              ))}
+            </div>
             {available.map((f) => {
               const Icon = ICONS[f];
               return (
