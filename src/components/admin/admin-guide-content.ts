@@ -167,6 +167,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         usage: { ar: "اختر الجديدة أو المحترفين أو كلتيهما، ثم احفظ.", en: "Pick new, professional or both, then save.", ku: "نوێ یان پسپۆڕان یان هەردووکیان هەڵبژێرە." },
       },
       {
+        key: "skills",
+        label: { ar: "المهارات", en: "Skills", ku: "کارامەییەکان" },
+        purpose: { ar: "فتح أو إيقاف كل مهارة لجميع المستخدمين أو لاشتراك أو لمستخدم محدد.", en: "Open or stop each skill for everyone, a plan or a specific user.", ku: "کردنەوە یان ڕاگرتنی هەر کارامەییەک بۆ هەمووان، بەشداریکردن یان بەکارهێنەر." },
+        usage: { ar: "اختر الوضع لكل مهارة ثم احفظ؛ الإعداد الأخص يغلب الأعم.", en: "Pick a mode per skill and save; the more specific setting wins.", ku: "شێواز هەڵبژێرە و پاشەکەوت بکە." },
+      },
+      {
         key: "jobs",
         label: { ar: "المهام الخلفية", en: "Background tasks", ku: "ئەرکە پاشبنەماکان" },
         purpose: { ar: "عرض مهام مساحة العمل وحالاتها وسجل أحداثها.", en: "View workspace tasks, their status and event log.", ku: "بینینی ئەرکەکان و دۆخ و تۆماریان." },
