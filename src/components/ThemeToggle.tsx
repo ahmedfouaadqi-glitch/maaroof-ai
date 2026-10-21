@@ -12,9 +12,9 @@ function apply(theme: "light" | "dark") {
 
 export function ThemeToggle() {
   const { t } = useI18n();
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   useEffect(() => {
-    const saved = (typeof localStorage !== "undefined" && (localStorage.getItem(KEY) as "light" | "dark")) || "dark";
+    const saved = (typeof localStorage !== "undefined" && (localStorage.getItem(KEY) as "light" | "dark")) || "light";
     setTheme(saved);
     apply(saved);
   }, []);

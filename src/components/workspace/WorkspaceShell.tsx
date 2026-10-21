@@ -3,7 +3,7 @@ import { BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activit
 import type { ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
-export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "more";
+export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "more";
 
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
@@ -15,7 +15,7 @@ const NAV: NavItem[] = [
   { tab: "interview", icon: MessagesSquare, label: { ar: "المقابلة", en: "Interview", ku: "چاوپێکەوتن" } },
   { tab: "pulse", icon: Activity, label: { ar: "نبض حسابك", en: "Account pulse", ku: "لێدانی هەژمار" } },
   { tab: "models", icon: Cpu, label: { ar: "اختيار النماذج", en: "Models", ku: "مۆدێلەکان" } },
-  { to: "/profile", icon: Settings, label: { ar: "الإعدادات", en: "Settings", ku: "ڕێکخستن" } },
+  { tab: "settings", icon: Settings, label: { ar: "الإعدادات", en: "Settings", ku: "ڕێکخستن" } },
 ];
 const MORE: NavItem = { tab: "more", icon: LayoutGrid, label: { ar: "المزيد", en: "More", ku: "زیاتر" } };
 export const MORE_ITEMS = NAV.slice(4);
@@ -30,7 +30,7 @@ export function WorkspaceShell({ locale, tab, children }: { locale: Locale; tab:
       </aside>
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 backdrop-blur md:hidden">
-        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models"].includes(tab))} compact />)}
+        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "settings"].includes(tab))} compact />)}
       </nav>
     </div>
   );
