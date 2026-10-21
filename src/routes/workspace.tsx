@@ -216,6 +216,22 @@ function WorkspacePage() {
   }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
+  /** Real per-engine status read only from recorded task events; unknown engines stay "checked on run". */
+  const engineStatus = useMemo(() => {
+    const out: Record<string, "ok" | "failed"> = {};
+    const walk = (v: any, depth: number) => {
+      if (!v || typeof v !== "object" || depth > 5) return;
+      if (Array.isArray(v)) { v.forEach((x) => walk(x, depth + 1)); return; }
+      const key = typeof v.engine === "string" ? v.engine : typeof v.engine_key === "string" ? v.engine_key : null;
+      if (key && ENGINE_LIST.some((e) => e.key === key)) {
+        if (v.error || v.ok === false || v.status === "failed") out[key] = "failed";
+        else if (v.ok === true || v.status === "ok" || v.status === "completed" || typeof v.answer === "string") out[key] = "ok";
+      }
+      for (const k in v) walk(v[k], depth + 1);
+    };
+    events.forEach((e) => walk(e.data, 0));
+    return out;
+  }, [events]);
   const phaseEvents = events.filter((event) => event.type === "phase");
   const toolEvents = events.filter((event) => event.type === "tool_call" || event.type === "tool_result");
   const clarifyEvents = events.filter((event) => event.type === "clarify");
