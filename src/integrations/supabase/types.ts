@@ -756,6 +756,86 @@ export type Database = {
           },
         ]
       }
+      browser_grants: {
+        Row: {
+          created_at: string
+          domains: string[]
+          expires_at: string
+          id: string
+          purpose: string | null
+          revoked: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domains?: string[]
+          expires_at: string
+          id?: string
+          purpose?: string | null
+          revoked?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domains?: string[]
+          expires_at?: string
+          id?: string
+          purpose?: string | null
+          revoked?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      browser_steps: {
+        Row: {
+          created_at: string
+          error: string | null
+          excerpt: string | null
+          grant_id: string
+          id: string
+          instruction: string | null
+          links_count: number | null
+          status: string
+          title: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          excerpt?: string | null
+          grant_id: string
+          id?: string
+          instruction?: string | null
+          links_count?: number | null
+          status: string
+          title?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          excerpt?: string | null
+          grant_id?: string
+          id?: string
+          instruction?: string | null
+          links_count?: number | null
+          status?: string
+          title?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "browser_steps_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "browser_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitor_alerts: {
         Row: {
           created_at: string
