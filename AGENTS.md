@@ -19,3 +19,5 @@
 - Workspace hierarchy uses workspaces.space_kind (company/product/client) + parent_id; structure and per-plan space limits are pure rules in src/lib/space-structure.ts — why: one tree for companies, products and agency clients without new tables.
 - Each skill's 7-part framework (goal, sources, plan, cost, evidence, output, next step) is derived by pure skillFramework() in skill-catalog.ts from its tools — why: one consistent description without per-skill copy drift.
 - Delegated browser is a read-only, per-session grant (browser_grants/browser_steps) checked by pure rules in src/lib/delegated-browser.ts on every step — why: no access outside explicit, expiring user permission.
+- Learned facts live in knowledge_facts (source, confidence, expires_at); written on job completion/attachment analysis and read fail-open into the planner via src/lib/knowledge-facts.ts — why: Maaroof reuses what it already knows without changing tool logic.
+- Attachments go to the private task-files bucket under <userId>/ and are analyzed by /api/attachment-analyze, charged as attachment.analyze only on success — why: same balance system, no cross-user file access.
