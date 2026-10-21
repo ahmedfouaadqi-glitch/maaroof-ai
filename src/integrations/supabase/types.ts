@@ -5274,12 +5274,14 @@ export type Database = {
           meta: Json
           name: string
           owner_id: string
+          parent_id: string | null
           policies: Json
           preferred_experts: Json
           preferred_mcp: Json
           preferred_models: Json
           profile: Json
           risk_level: string | null
+          space_kind: string
           success_metrics: Json
           updated_at: string
         }
@@ -5298,12 +5300,14 @@ export type Database = {
           meta?: Json
           name: string
           owner_id: string
+          parent_id?: string | null
           policies?: Json
           preferred_experts?: Json
           preferred_mcp?: Json
           preferred_models?: Json
           profile?: Json
           risk_level?: string | null
+          space_kind?: string
           success_metrics?: Json
           updated_at?: string
         }
@@ -5322,16 +5326,26 @@ export type Database = {
           meta?: Json
           name?: string
           owner_id?: string
+          parent_id?: string | null
           policies?: Json
           preferred_experts?: Json
           preferred_mcp?: Json
           preferred_models?: Json
           profile?: Json
           risk_level?: string | null
+          space_kind?: string
           success_metrics?: Json
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
