@@ -502,3 +502,13 @@
 @media (prefers-reduced-motion: reduce) {
   .shiny-text, .logo-loop-track { animation: none; }
 }
+
+/* Spotlight that follows the pointer on skill cards (presentation only). */
+.rb-spotlight { position: relative; overflow: hidden; }
+.rb-spotlight::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--primary) 16%, transparent), transparent 70%);
+}
+.rb-spotlight:hover::before { opacity: 1; }
+#workspace-goal:focus { box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 25%, transparent), 0 0 24px color-mix(in oklab, var(--primary) 18%, transparent); }
+@media (prefers-reduced-motion: reduce) { .rb-spotlight::before { display: none; } }

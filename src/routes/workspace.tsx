@@ -4,6 +4,7 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { WorkspaceShell, formatElapsed } from "@/components/workspace/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
@@ -117,7 +118,9 @@ function WorkspacePage() {
   const [clarification, setClarification] = useState("");
   const [clarifyField, setClarifyField] = useState("");
   const [error, setError] = useState("");
-  const [showActivity, setShowActivity] = useState(false);
+  const [showActivity, setShowActivity] = useState(true);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => { if (!running) return; const id = setInterval(() => setNowTick(Date.now()), 1000); return () => clearInterval(id); }, [running]);
   const [mode, setMode] = useState<"execution" | "recommendation" | "simulation">("execution");
   const [costRun, setCostRun] = useState<CostPreview | null>(null);
   const [costProbe, setCostProbe] = useState<CostPreview | null>(null);
@@ -392,7 +395,8 @@ function WorkspacePage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
+      <WorkspaceShell locale={locale}>
+      <main id="skills" className="px-4 py-6 md:px-0 md:py-10">
         <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
           <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <BrainCircuit className="size-6" />
@@ -552,7 +556,7 @@ function WorkspacePage() {
 
             <div className="rounded-2xl border border-border bg-card p-4">
               <button type="button" onClick={() => setShowActivity((show) => !show)} className="flex w-full items-center justify-between gap-2 text-start font-semibold">
-                <span className="flex items-center gap-2"><Clock3 className="size-4" />{c.activity} ({phaseEvents.length + toolEvents.length})</span>
+                <span className="flex items-center gap-2"><Clock3 className="size-4" />{c.activity} ({phaseEvents.length + toolEvents.length}){events.length > 0 && <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground" aria-label="elapsed">{formatElapsed((running ? nowTick : events[events.length - 1].at) - events[0].at)}</span>}</span>
                 <ChevronDown className={`size-4 transition-transform ${showActivity ? "rotate-180" : ""}`} />
               </button>
               {showActivity && <div className="mt-4 space-y-2">
@@ -560,7 +564,7 @@ function WorkspacePage() {
                   <div key={`${event.at}-${index}`} className="flex items-start gap-3 rounded-lg border border-border/70 p-3">
                     <span className="mt-0.5 shrink-0"><PulseBadge label="" state={isIntentionalSkip(event.data) ? "skipped" : event.type === "error" || event.data?.ok === false ? "failed" : event.type === "tool_result" || event.type === "done" ? "done" : running && index === events.length - 1 ? "running" : "done"} /></span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold">{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? (isIntentionalSkip(event.data) ? c.skipped : c.toolDone) : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</div>
+                      <div className="flex items-center justify-between gap-2 text-xs font-semibold"><span>{event.type === "phase" ? c.phase : event.type === "tool_call" ? c.toolStarted : event.type === "tool_result" ? (isIntentionalSkip(event.data) ? c.skipped : c.toolDone) : event.type === "clarify" ? c.clarify : event.type === "error" ? c.failed : c.unknown}{event.data?.tool ? ` · ${toolLabel(event.data.tool)}` : ""}</span><span className="shrink-0 font-mono font-normal tabular-nums text-muted-foreground">+{formatElapsed(event.at - events[0].at)}</span></div>
                       <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{eventSummary(event)}</div>
                     </div>
                   </div>
@@ -570,6 +574,7 @@ function WorkspacePage() {
           </section>
         )}
       </main>
+      </WorkspaceShell>
     </div>
   );
 }
@@ -595,7 +600,7 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
     );
   }
   return (
-    <button type="button" onClick={onToggle} aria-pressed={selected} className={`rb-workspace-skill group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
+    <button type="button" onClick={onToggle} onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`); e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`); }} aria-pressed={selected} className={`rb-workspace-skill rb-spotlight group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="size-5" /></span>
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{skill.label[locale]}</span>
