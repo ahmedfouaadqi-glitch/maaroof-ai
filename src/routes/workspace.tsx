@@ -4,7 +4,8 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
-import { WorkspaceShell, formatElapsed } from "@/components/workspace/WorkspaceShell";
+import { WorkspaceShell, formatElapsed, NavLink, MORE_ITEMS, type WorkspaceTab } from "@/components/workspace/WorkspaceShell";
+import { HistoryPanel, BalancePanel, KnowledgePanel, type PastJob } from "@/components/workspace/WorkspacePanels";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s.tab === "string" ? { tab: s.tab } : {}),
   component: () => <I18nProvider><AuthProvider><WorkspacePage /></AuthProvider></I18nProvider>,
 });
 
@@ -127,6 +129,27 @@ function WorkspacePage() {
   const [costLoading, setCostLoading] = useState(false);
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
+  const search = Route.useSearch();
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "more"];
+  const tab: WorkspaceTab = TABS.includes(search.tab as WorkspaceTab) ? (search.tab as WorkspaceTab) : "main";
+  useEffect(() => { if (tab === "models") setModelsOpen(true); }, [tab]);
+  const goMain = () => navigate({ to: "/workspace", search: {} });
+  async function openPastJob(j: PastJob) {
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    if (!token) return;
+    setEvents([]); setError(""); setJobId(j.id); setGoal(j.goal || "");
+    setRunning(!["completed", "failed", "cancelled"].includes(j.status));
+    goMain();
+    try { await watchJob(j.id, 0, token); } catch (e: any) { setRunning(false); setError(String(e?.message || c.failed)); }
+  }
+  function continuePastJob(j: PastJob) {
+    watcherRef.current += 1;
+    setEvents([]); setJobId(null); setRunning(false);
+    const prefix = locale === "en" ? "Follow-up on previous task: " : locale === "ku" ? "بەردەوامی ئەرکی پێشوو: " : "استكمال للمهمة السابقة: ";
+    setGoal(prefix + (j.goal || "") + "\n");
+    goMain();
+    setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50);
+  }
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/workspace" } });
@@ -395,8 +418,14 @@ function WorkspacePage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <WorkspaceShell locale={locale}>
-      <main id="skills" className="px-4 py-6 md:px-0 md:py-10">
+      <WorkspaceShell locale={locale} tab={tab}>
+      {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
+      {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
+      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /></div>}
+      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /></div>}
+      {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /></div>}
+      {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
+      <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" || tab === "models" ? "" : "hidden"}`}>
         <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
           <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <BrainCircuit className="size-6" />
