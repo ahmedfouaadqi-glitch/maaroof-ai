@@ -4,6 +4,8 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
+import { AttachmentAnalyzer } from "@/components/workspace/AttachmentAnalyzer";
+import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
 import { WorkspaceShell, formatElapsed, NavLink, MORE_ITEMS, type WorkspaceTab } from "@/components/workspace/WorkspaceShell";
@@ -440,8 +442,8 @@ function WorkspacePage() {
       <WorkspaceShell locale={locale} tab={tab}>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
-      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /></div>}
-      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /></div>}
+      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} /></div>}
+      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /></div>}
       {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
         <h1 className="font-display text-xl font-bold">{c.models}</h1>
@@ -500,6 +502,7 @@ function WorkspacePage() {
                 </div>
               </div>
 
+              <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
               <div className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="mb-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"}</h2>
                 <GeoScopeSelector compact />
