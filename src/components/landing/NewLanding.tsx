@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { useAuth } from "@/lib/auth";
+import { useCountry } from "@/lib/use-country";
 import type { InterfacePolicy } from "@/lib/interface-policy";
 import { Reveal } from "@/components/motion/Reveal";
 import { SpotlightCard, CountUp, RotatingText, ShinyText, LogoLoop, Magnetic } from "@/components/motion/effects";
@@ -200,6 +201,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <div className="absolute inset-0 grid-bg opacity-40" />
           <div className="relative mx-auto max-w-5xl px-4 pb-10 pt-16 text-center md:pt-24">
             <HeroPulses />
+            <CountryWelcome lang={l} />
             <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-gradient md:text-6xl">{c.title}</h1>
             <p className="mt-4 text-lg font-semibold md:text-2xl">
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
@@ -354,12 +356,19 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <div className="mt-12 text-center">
             <h3 className="font-display text-2xl font-bold">{c.final}</h3>
             <div className="mt-5 flex justify-center"><Cta /></div>
-            <div className="mt-8 text-xs">
-              <Link to="/classic" className="text-muted-foreground hover:text-primary">{c.classic}</Link>
-            </div>
           </div>
         </section>
       </main>
     </div>
   );
+}
+
+function CountryWelcome({ lang }: { lang: "ar" | "en" | "ku" }) {
+  const { info } = useCountry();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  if (!ready || !info || !info.code) return null;
+  const name = lang === "en" ? info.name_en : lang === "ku" ? info.name_ku : info.name_ar;
+  const text = lang === "en" ? `Welcome, visitors from ${name}` : lang === "ku" ? `بەخێربێن، میوانانی ${name}` : `أهلاً بزوارنا من ${name}`;
+  return <p className="mt-4 text-sm font-medium text-muted-foreground">{info.flag} {text}</p>;
 }
