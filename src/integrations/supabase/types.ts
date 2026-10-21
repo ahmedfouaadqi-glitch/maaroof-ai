@@ -4874,6 +4874,51 @@ export type Database = {
         }
         Relationships: []
       }
+      task_attachments: {
+        Row: {
+          analysis: string | null
+          context: string
+          created_at: string
+          id: string
+          mime: string
+          name: string
+          path: string
+          question: string | null
+          size: number
+          status: string
+          tokens_charged: number
+          user_id: string
+        }
+        Insert: {
+          analysis?: string | null
+          context?: string
+          created_at?: string
+          id?: string
+          mime: string
+          name: string
+          path: string
+          question?: string | null
+          size?: number
+          status?: string
+          tokens_charged?: number
+          user_id: string
+        }
+        Update: {
+          analysis?: string | null
+          context?: string
+          created_at?: string
+          id?: string
+          mime?: string
+          name?: string
+          path?: string
+          question?: string | null
+          size?: number
+          status?: string
+          tokens_charged?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       token_ledger: {
         Row: {
           created_at: string
