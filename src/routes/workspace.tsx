@@ -12,6 +12,7 @@ import { phaseLabel, isIntentionalSkip, summarizeToolOutput, taskWeight } from "
 import { PulseBadge } from "@/components/motion/effects";
 import { useRotatingHint } from "@/lib/workspace-hints";
 import { WorkspaceAuditPulse } from "@/components/WorkspaceAuditPulse";
+import { WorkspaceSpacesPanel } from "@/components/WorkspaceSpacesPanel";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -419,6 +420,7 @@ function WorkspacePage() {
               </div>
 
               <div className="mt-3"><GeoScopeSelector compact /></div>
+              <WorkspaceSpacesPanel lang={locale} />
               <WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); document.getElementById("workspace-goal")?.focus(); }} />
 
 
