@@ -490,8 +490,22 @@ function WorkspacePage() {
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; watcherRef.current += 1; setEvents([]); setJobId(null); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
         {!finalEvent && events.length === 0 && (
-          <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="space-y-4">
+          <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_16rem] xl:grid-cols-[18rem_minmax(0,1fr)_18rem]">
+            <div className="order-3 space-y-3 lg:order-none lg:sticky lg:top-20 lg:self-start">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"} <HelpTip id="geo" lang={locale} /></h2>
+                <GeoScopeSelector compact />
+              </div>
+              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
+                <h2 className="mb-3 flex items-center gap-2 font-semibold">{c.mode} <HelpTip id="mode" lang={locale} /></h2>
+                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                  {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
+                    <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
@@ -504,13 +518,6 @@ function WorkspacePage() {
               </div>
 
               <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
-              <div className="grid gap-3 lg:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"} <HelpTip id="geo" lang={locale} /></h2>
-                <GeoScopeSelector compact />
-              </div>
-
-
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5 lg:order-first lg:col-span-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
@@ -532,35 +539,6 @@ function WorkspacePage() {
                 </div>
                 {tools.length > 0 && <p className="mt-3 text-xs text-muted-foreground">{c.selectedTools}: {tools.map(toolLabel).join("، ")}</p>}
               </div>
-
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
-                <h2 className="mb-3 flex items-center gap-2 font-semibold">{c.mode} <HelpTip id="mode" lang={locale} /></h2>
-                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                  {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
-                    <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="flex items-center gap-2 font-semibold">{c.costEstimate} <HelpTip id="cost" lang={locale} /></h2>
-                {(() => { const w = taskWeight(Math.max(1, selectedSkills.length || 3), liveProbe ? 10 : 1); const lbl = { light: { ar: "خفيفة", en: "Light", ku: "سووک" }, medium: { ar: "متوسطة", en: "Medium", ku: "مامناوەند" }, deep: { ar: "عميقة", en: "Deep", ku: "قووڵ" } }[w][locale]; const pct = w === "light" ? 33 : w === "medium" ? 66 : 100; return (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">{locale === "en" ? "Task weight" : locale === "ku" ? "قورسایی ئەرک" : "وزن المهمة"}</span><span className="font-semibold">{lbl}</span></div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: `${pct}%` }} /></div>
-                  </div>); })()}
-                {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارٍ الحساب…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
-                  {costProbe && <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.probeCost} ({costProbe.units})</span><span className="font-semibold tabular-nums">{costProbe.total} {c.tokens}</span></div>}
-                  <div className="flex items-center justify-between gap-3 border-t border-border pt-2"><span className="font-medium">{c.balance}</span><span className="tabular-nums">{costRun.balance} {c.tokens}</span></div>
-                  {costRun.metered && !estimateFitsQuota && <p role="alert" className="text-xs text-destructive">{locale === "en" ? "The estimated session and live-check cost exceeds your current balance or remaining quota." : locale === "ku" ? "تێچووی خەمڵێنراو لە باڵانس یان سنووری ماوە زیاترە." : "التكلفة التقديرية للجلسة والفحص تتجاوز الرصيد أو الحصة المتبقية."}</p>}
-                  {costRun.dailyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Daily quota remaining" : locale === "ku" ? "سنووری ڕۆژانەی ماوە" : "المتبقي من الحصة اليومية"}: {costRun.dailyRemaining} {c.tokens}</p>}
-                  {costRun.monthlyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Monthly quota remaining" : locale === "ku" ? "سنووری مانگانەی ماوە" : "المتبقي من الحصة الشهرية"}: {costRun.monthlyRemaining} {c.tokens}</p>}
-                  <p className="text-xs leading-5 text-muted-foreground">{c.toolCostNote}</p>
-                </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
-              </div>
-              </div>
-
               {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">
                 <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 p-4 text-start">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-muted"><BrainCircuit className="size-5" /></div>
@@ -592,8 +570,24 @@ function WorkspacePage() {
                 </div>}
               </div>}
             </div>
-
-            <aside className="space-y-3">
+            <aside className="order-2 space-y-3 lg:order-none lg:sticky lg:top-20 lg:self-start">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <h2 className="flex items-center gap-2 font-semibold">{c.costEstimate} <HelpTip id="cost" lang={locale} /></h2>
+                {(() => { const w = taskWeight(Math.max(1, selectedSkills.length || 3), liveProbe ? 10 : 1); const lbl = { light: { ar: "خفيفة", en: "Light", ku: "سووک" }, medium: { ar: "متوسطة", en: "Medium", ku: "مامناوەند" }, deep: { ar: "عميقة", en: "Deep", ku: "قووڵ" } }[w][locale]; const pct = w === "light" ? 33 : w === "medium" ? 66 : 100; return (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs"><span className="text-muted-foreground">{locale === "en" ? "Task weight" : locale === "ku" ? "قورسایی ئەرک" : "وزن المهمة"}</span><span className="font-semibold">{lbl}</span></div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500" style={{ width: `${pct}%` }} /></div>
+                  </div>); })()}
+                {costLoading ? <p className="mt-2 text-xs text-muted-foreground">{locale === "en" ? "Calculating…" : locale === "ku" ? "خەمڵاندن…" : "جارٍ الحساب…"}</p> : costRun ? <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.mode}</span><span className="font-semibold tabular-nums">{costRun.total} {c.tokens}</span></div>
+                  {costProbe && <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{c.probeCost} ({costProbe.units})</span><span className="font-semibold tabular-nums">{costProbe.total} {c.tokens}</span></div>}
+                  <div className="flex items-center justify-between gap-3 border-t border-border pt-2"><span className="font-medium">{c.balance}</span><span className="tabular-nums">{costRun.balance} {c.tokens}</span></div>
+                  {costRun.metered && !estimateFitsQuota && <p role="alert" className="text-xs text-destructive">{locale === "en" ? "The estimated session and live-check cost exceeds your current balance or remaining quota." : locale === "ku" ? "تێچووی خەمڵێنراو لە باڵانس یان سنووری ماوە زیاترە." : "التكلفة التقديرية للجلسة والفحص تتجاوز الرصيد أو الحصة المتبقية."}</p>}
+                  {costRun.dailyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Daily quota remaining" : locale === "ku" ? "سنووری ڕۆژانەی ماوە" : "المتبقي من الحصة اليومية"}: {costRun.dailyRemaining} {c.tokens}</p>}
+                  {costRun.monthlyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Monthly quota remaining" : locale === "ku" ? "سنووری مانگانەی ماوە" : "المتبقي من الحصة الشهرية"}: {costRun.monthlyRemaining} {c.tokens}</p>}
+                  <p className="text-xs leading-5 text-muted-foreground">{c.toolCostNote}</p>
+                </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
+              </div>
               <div className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="font-semibold">{locale === "en" ? "How Maaroof works" : locale === "ku" ? "چۆنیەتی کارکردنی معروف" : "كيف يعمل معروف؟"}</h2>
                 <ol className="mt-3 space-y-3 text-sm">
