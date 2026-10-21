@@ -5,6 +5,7 @@ import { BookOpen, Wrench, Bot, Globe2, User, Share2 } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 import { HowItWorks } from "@/components/HowItWorks";
 import { usePageGuard } from "@/lib/visibility";
+import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { GUIDE_ESSENTIALS, GUIDE_STEPS, GUIDE_STEPS_TITLE } from "@/lib/guide-personas";
 
 export const Route = createFileRoute("/guide")({
@@ -101,6 +102,17 @@ function GuidePage() {
 
 
         <GuideEssentials L={L} />
+
+        <Section icon={<Wrench className="size-5" />} title={L === "en" ? "Skills" : L === "ku" ? "کارامەییەکان" : "المهارات"}>
+          <p className="text-sm text-muted-foreground">{L === "en" ? "Write your goal in the workspace; Maaroof suggests the matching skills, shows the cost and waits for your approval. You are charged only when it succeeds." : L === "ku" ? "ئامانجەکەت لە شوێنی کار بنووسە؛ مەعروف کارامەیی گونجاو پێشنیار دەکات و تێچوو پیشان دەدات پێش جێبەجێکردن." : "اكتب هدفك في مساحة العمل؛ يقترح معروف المهارات المناسبة، ويعرض الكلفة وينتظر موافقتك. لا خصم إلا عند النجاح."}</p>
+          {MAAROOF_SKILLS.map((s) => (
+            <div key={s.key} className="rounded-2xl border border-border bg-card/70 p-5">
+              <h3 className="font-display text-base font-bold">{s.label[L]}</h3>
+              <p className="mt-1 text-sm text-foreground/85">{s.description[L]}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{L === "en" ? "Tools used: " : L === "ku" ? "ئامرازەکان: " : "الأدوات المستخدمة: "}{s.tools.map((k) => TOOL_CATALOG.find((td) => td.key === k)?.labels[L] || k).join(" · ")}</p>
+            </div>
+          ))}
+        </Section>
 
         <Section icon={<Bot className="size-5" />} title={t("guide_maaroof_title")}>
           <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 p-5">

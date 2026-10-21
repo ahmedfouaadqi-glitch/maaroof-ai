@@ -27,6 +27,7 @@ import { MaaroofAdminTab } from "@/components/admin/MaaroofAdminTab";
 import { MaaroofIntelligenceCenter } from "@/components/admin/MaaroofIntelligenceCenter";
 import { AdminGuideTab } from "@/components/admin/AdminGuideTab";
 import { InterfacesAdminPanel } from "@/components/admin/InterfacesAdminPanel";
+import { SkillsAdminPanel } from "@/components/admin/SkillsAdminPanel";
 import { JobsAdminPanel } from "@/components/admin/JobsAdminPanel";
 import { KnowledgeSpacesPanel } from "@/components/admin/KnowledgeSpacesPanel";
 import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
@@ -162,6 +163,7 @@ function AdminPage() {
         {activeSub === "maaroof" && <MaaroofAdminTab />}
         {activeSub === "maaroof_center" && <MaaroofIntelligenceCenter />}
         {activeSub === "interfaces" && <InterfacesAdminPanel />}
+        {activeSub === "skills" && <SkillsAdminPanel />}
         {activeSub === "jobs" && <JobsAdminPanel />}
         {activeSub === "knowledge_spaces" && <KnowledgeSpacesPanel />}
       </main>
