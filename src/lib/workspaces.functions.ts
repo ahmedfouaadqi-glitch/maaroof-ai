@@ -12,7 +12,7 @@ const Language = z.enum(["ar", "en", "ku"]);
 
 const WORKSPACE_COLUMNS =
   "id, name, kind, brand_url, brand_summary, keywords, language, country, city, " +
-  "profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget, " +
+  "space_kind, parent_id, profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget, " +
   "created_at, updated_at";
 
 export const listWorkspaces = createServerFn({ method: "GET" })
@@ -40,11 +40,24 @@ export const createWorkspace = createServerFn({ method: "POST" })
         language: Language.default("ar"),
         country: z.string().max(80).optional().nullable(),
         city: z.string().max(80).optional().nullable(),
+        space_kind: z.enum(["company", "product", "client"]).default("company"),
+        parent_id: z.string().uuid().optional().nullable(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { canCreateSpace, spaceLimit } = await import("@/lib/space-structure");
+    const [{ count }, { data: prof }] = await Promise.all([
+      supabase.from("workspaces").select("id", { count: "exact", head: true }).eq("owner_id", userId),
+      supabase.from("profiles").select("subscription_tier").eq("id", userId).maybeSingle(),
+    ]);
+    const tier = (prof as any)?.subscription_tier ?? null;
+    if (!canCreateSpace(count ?? 0, tier)) throw new Error(`space_limit_reached:${spaceLimit(tier)}`);
+    if (data.parent_id) {
+      const { data: parent } = await supabase.from("workspaces").select("id, space_kind").eq("id", data.parent_id).eq("owner_id", userId).maybeSingle();
+      if (!parent || (parent as any).space_kind !== "company") throw new Error("invalid_parent");
+    }
     const { data: row, error } = await supabase
       .from("workspaces")
       .insert({
@@ -56,7 +69,9 @@ export const createWorkspace = createServerFn({ method: "POST" })
         language: data.language,
         country: data.country ?? null,
         city: data.city ?? null,
-      })
+        space_kind: data.parent_id ? data.space_kind : "company",
+        parent_id: data.parent_id ?? null,
+      } as any)
       .select(WORKSPACE_COLUMNS)
       .single();
     if (error) throw new Error(error.message);
@@ -118,4 +133,34 @@ export const deleteWorkspace = createServerFn({ method: "POST" })
     const { error } = await supabase.from("workspaces").delete().eq("id", data.id).eq("owner_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// Returns (or creates) the knowledge space linked to a workspace, used by the
+// in-workspace interview. Reuses the existing knowledge space tables.
+export const ensureWorkspaceKnowledgeSpace = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: ws } = await supabase.from("workspaces").select("id, name, language").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle();
+    if (!ws) throw new Error("workspace_not_found");
+    const { data: existing } = await supabase.from("knowledge_spaces").select("id").eq("workspace_id", data.workspaceId).eq("user_id", userId).limit(1).maybeSingle();
+    if (existing) return { spaceId: (existing as any).id as string };
+    const { data: row, error } = await supabase.from("knowledge_spaces")
+      .insert({ user_id: userId, workspace_id: data.workspaceId, name: String((ws as any).name).slice(0, 120), lang: (ws as any).language || "ar" } as any)
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    return { spaceId: (row as any).id as string };
+  });
+
+export const listInterviewQuestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ spaceId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase.from("knowledge_space_interviews")
+      .select("id, question, answer, topic, created_at").eq("space_id", data.spaceId).eq("user_id", userId)
+      .order("created_at", { ascending: true }).limit(60);
+    if (error) throw new Error(error.message);
+    return { items: rows ?? [] };
   });
