@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { FilesManager } from "./FilesManager";
 import { Radio, LoaderCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +11,7 @@ const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l ==
 export function BroadcastPanel({ lang }: { lang: L }) {
   const { user } = useAuth();
   const [packs, setPacks] = useState<any[] | null>(null);
+  const [filesOpen, setFilesOpen] = useState(false);
   const [bots, setBots] = useState<Array<{ bot: string; count: number; last: string }>>([]);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export function BroadcastPanel({ lang }: { lang: L }) {
                 ))}
               </ul>
             )}
-            <Link to="/dashboard" className="mt-3 inline-block text-xs text-primary hover:underline">{tr(lang, "إدارة الملفات", "Manage files", "بەڕێوەبردن")}</Link>
+            <button type="button" onClick={() => setFilesOpen(true)} className="mt-3 inline-block text-xs text-primary hover:underline">{tr(lang, "إدارة الملفات", "Manage files", "بەڕێوەبردن")}</button>
           </div>
           <div className="rounded-xl border border-border bg-background p-3">
             <p className="mb-2 text-sm font-semibold">{tr(lang, "زيارات زواحف الذكاء الاصطناعي (30 يوماً)", "AI crawler visits (30 days)", "سەردانی خشۆکەکان")}</p>
@@ -66,6 +67,7 @@ export function BroadcastPanel({ lang }: { lang: L }) {
           </div>
         </div>
       )}
+      {filesOpen && <FilesManager lang={lang} onClose={() => setFilesOpen(false)} />}
     </section>
   );
 }
