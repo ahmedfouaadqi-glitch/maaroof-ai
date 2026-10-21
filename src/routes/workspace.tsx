@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { AttachmentAnalyzer } from "@/components/workspace/AttachmentAnalyzer";
+import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
@@ -503,16 +504,17 @@ function WorkspacePage() {
               </div>
 
               <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
+              <div className="grid gap-3 lg:grid-cols-3">
               <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="mb-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"}</h2>
+                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"} <HelpTip id="geo" lang={locale} /></h2>
                 <GeoScopeSelector compact />
               </div>
 
 
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
+              <div className="rounded-2xl border border-border bg-card p-4 md:p-5 lg:order-first lg:col-span-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold">{c.suggested}</h2>
+                    <h2 className="flex items-center gap-2 font-semibold">{c.suggested} <HelpTip id="skills" lang={locale} /></h2>
                     <p className="mt-1 text-xs text-muted-foreground">{c.skillsHint}</p>
                   </div>
                   <Sparkles className="size-5 text-primary" />
@@ -532,8 +534,8 @@ function WorkspacePage() {
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
-                <h2 className="mb-3 font-semibold">{c.mode}</h2>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <h2 className="mb-3 flex items-center gap-2 font-semibold">{c.mode} <HelpTip id="mode" lang={locale} /></h2>
+                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
                   {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
                     <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
                   ))}
@@ -541,7 +543,7 @@ function WorkspacePage() {
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="font-semibold">{c.costEstimate}</h2>
+                <h2 className="flex items-center gap-2 font-semibold">{c.costEstimate} <HelpTip id="cost" lang={locale} /></h2>
                 {(() => { const w = taskWeight(Math.max(1, selectedSkills.length || 3), liveProbe ? 10 : 1); const lbl = { light: { ar: "خفيفة", en: "Light", ku: "سووک" }, medium: { ar: "متوسطة", en: "Medium", ku: "مامناوەند" }, deep: { ar: "عميقة", en: "Deep", ku: "قووڵ" } }[w][locale]; const pct = w === "light" ? 33 : w === "medium" ? 66 : 100; return (
                   <div className="mt-2">
                     <div className="flex justify-between text-xs"><span className="text-muted-foreground">{locale === "en" ? "Task weight" : locale === "ku" ? "قورسایی ئەرک" : "وزن المهمة"}</span><span className="font-semibold">{lbl}</span></div>
@@ -556,6 +558,7 @@ function WorkspacePage() {
                   {costRun.monthlyRemaining != null && <p className="text-xs text-muted-foreground">{locale === "en" ? "Monthly quota remaining" : locale === "ku" ? "سنووری مانگانەی ماوە" : "المتبقي من الحصة الشهرية"}: {costRun.monthlyRemaining} {c.tokens}</p>}
                   <p className="text-xs leading-5 text-muted-foreground">{c.toolCostNote}</p>
                 </div> : <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>}
+              </div>
               </div>
 
               {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">

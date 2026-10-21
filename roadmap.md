@@ -24,3 +24,12 @@
 - [ ] C rest: auth glass card, welcome wizard, header balance counter, mobile dock
 - [x] D part: Arabic phase labels, skip vs error, readable tool summaries, filler competitor guard, per-line export direction
 - [ ] D rest: deep discovery job (needs owner review, costs balance), teach-space pricing
+
+## النقاط السبع (2026-10-21)
+- [x] إدارة الملفات داخل مساحة العمل (عرض/حذف)
+- [x] مساحة العمل كبطاقات (نطاق | نمط | كلفة) + تلميحات «؟» بأمثلة
+- [ ] التصفح الآمن مربوط بالمهمة
+- [ ] نشر الحقائق في بطاقة السلطة
+- [ ] القراءة الجماعية للملفات عبر النماذج الداعمة
+- [ ] تجميع معرفة حساب المالك حسب الفئات
+- [ ] جولة تعريفية أولى
