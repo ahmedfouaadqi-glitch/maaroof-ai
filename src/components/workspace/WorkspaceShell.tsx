@@ -1,9 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid } from "lucide-react";
+import { BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe } from "lucide-react";
 import type { ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
-export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "more";
+export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "more";
 
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { tab: "interview", icon: MessagesSquare, label: { ar: "المقابلة", en: "Interview", ku: "چاوپێکەوتن" } },
   { tab: "pulse", icon: Activity, label: { ar: "نبض حسابك", en: "Account pulse", ku: "لێدانی هەژمار" } },
   { tab: "models", icon: Cpu, label: { ar: "اختيار النماذج", en: "Models", ku: "مۆدێلەکان" } },
+  { tab: "browser", icon: Globe, label: { ar: "المتصفح المفوّض", en: "Delegated browser", ku: "وێبگەڕی ڕێگەپێدراو" } },
   { tab: "settings", icon: Settings, label: { ar: "الإعدادات", en: "Settings", ku: "ڕێکخستن" } },
 ];
 const MORE: NavItem = { tab: "more", icon: LayoutGrid, label: { ar: "المزيد", en: "More", ku: "زیاتر" } };
@@ -30,7 +31,7 @@ export function WorkspaceShell({ locale, tab, children }: { locale: Locale; tab:
       </aside>
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 backdrop-blur md:hidden">
-        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "settings"].includes(tab))} compact />)}
+        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "settings"].includes(tab))} compact />)}
       </nav>
     </div>
   );
