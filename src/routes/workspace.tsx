@@ -696,15 +696,15 @@ function SkillCard({ skill, accessMode, locale, selected, onToggle, labelAdd, la
     );
   }
   return (
-    <button type="button" onClick={onToggle} onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`); e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`); }} aria-pressed={selected} className={`rb-workspace-skill rb-spotlight group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
+    <div onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`); e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`); }} className={`rb-workspace-skill rb-spotlight group flex h-full items-start gap-3 rounded-xl border p-4 text-start transition ${selected ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"}`}>
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="size-5" /></span>
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{skill.label[locale]}</span>
         <span className="mt-1 block text-xs leading-5 text-muted-foreground">{skill.description[locale]}</span>
         <SkillDetails skill={skill} locale={locale} />
-        <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${selected ? "text-primary" : "text-muted-foreground"}`}>{selected ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}{selected ? labelAdded : labelAdd}</span>
+        <button type="button" onClick={onToggle} aria-pressed={selected} className={`mt-3 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold ${selected ? "border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{selected ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}{selected ? labelAdded : labelAdd}</button>
       </span>
-    </button>
+    </div>
   );
 }
 
