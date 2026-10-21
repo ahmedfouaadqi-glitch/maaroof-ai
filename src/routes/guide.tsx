@@ -12,9 +12,9 @@ export const Route = createFileRoute("/guide")({
   head: () => ({
     meta: [
       { title: "Guide · MAAROOF Ai" },
-      { name: "description", content: "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more." },
+      { name: "description", content: "How to use the Maaroof workspace: goals, skills, the ten AI models, deep audit, work modes and exports." },
       { property: "og:title", content: "Guide · MAAROOF Ai" },
-      { property: "og:description", content: "How to use every MAAROOF Ai tool and the AI Agent." },
+      { property: "og:description", content: "Guide to the Maaroof workspace and skills." },
       { property: "og:url", content: "https://maaroofai.com/guide" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/guide" }],
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/guide")({
           "@type": "CollectionPage",
           name: "MAAROOF Ai Guide",
           description:
-            "How to use every MAAROOF Ai tool and the AI Agent — analyze, suggest, compare, brand boost, applied ranking and more.",
+            "How to use the Maaroof workspace: goals, skills, the ten AI models, deep audit, work modes and exports.",
           url: "https://maaroofai.com/guide",
           isPartOf: { "@type": "WebSite", name: "MAAROOF Ai", url: "https://maaroofai.com" },
           hasPart: TOOL_CATALOG.filter((td) =>
