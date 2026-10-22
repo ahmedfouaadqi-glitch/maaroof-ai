@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { workspaceSearchForDashboard } from "@/lib/tool-skill-map";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -61,6 +62,10 @@ const TOOLS: ToolDef[] = [
 const isToolKey = (v: unknown): v is ToolKey => TOOLS.some((x) => x.key === v);
 
 export const Route = createFileRoute("/dashboard")({
+  // Tools now live inside skills in Maaroof Space.
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: "/workspace", search: workspaceSearchForDashboard((search as any)?.tool), statusCode: 301 });
+  },
   validateSearch: (s: Record<string, unknown>): { tool?: ToolKey } => ({
     tool: isToolKey(s.tool) ? s.tool : undefined,
   }),

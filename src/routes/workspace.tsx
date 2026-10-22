@@ -9,6 +9,8 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { AttachmentAnalyzer } from "@/components/workspace/AttachmentAnalyzer";
+import { SkillToolsPanel } from "@/components/workspace/SkillToolsPanel";
+import { useVisibility } from "@/lib/visibility";
 import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
@@ -45,7 +47,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { tab?: string; skill?: string } => ({ ...(typeof s.tab === "string" ? { tab: s.tab } : {}), ...(typeof s.skill === "string" ? { skill: s.skill } : {}) }),
+  validateSearch: (s: Record<string, unknown>): { tab?: string; skill?: string; tool?: string } => ({ ...(typeof s.tab === "string" ? { tab: s.tab } : {}), ...(typeof s.skill === "string" ? { skill: s.skill } : {}), ...(typeof s.tool === "string" ? { tool: s.tool } : {}) }),
   component: () => <I18nProvider><AuthProvider><WorkspacePage /></AuthProvider></I18nProvider>,
 });
 
@@ -115,6 +117,7 @@ const SKILL_ICONS = {
 
 function WorkspacePage() {
   const { user, loading, session, profile: authProfile } = useAuth();
+  const canUseKnowledgeSpaces = useVisibility().isAgentFeatureVisible("knowledge");
   const { lang } = useI18n();
   const navigate = useNavigate();
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
@@ -141,7 +144,7 @@ function WorkspacePage() {
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
   const search = Route.useSearch();
-  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "ops", "channels", "approvals", "more"];
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "ops", "channels", "approvals", "more"];
   const tab: WorkspaceTab = TABS.includes(search.tab as WorkspaceTab) ? (search.tab as WorkspaceTab) : "main";
   const goMain = () => navigate({ to: "/workspace", search: {} });
   async function openPastJob(j: PastJob) {
@@ -453,7 +456,7 @@ function WorkspacePage() {
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
-      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} /><section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} /></Suspense></section></div>}
+      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} /></Suspense></section>}</div>}
       {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /></div>}
       {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
@@ -481,6 +484,7 @@ function WorkspacePage() {
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="text-sm">{locale === "en" ? "Day / night mode" : locale === "ku" ? "دۆخی ڕۆژ / شەو" : "الوضع النهاري / الليلي"}</span><ThemeToggle /></div>
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="min-w-0 truncate text-sm">{user.email}</span><Link to="/profile" className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted">{locale === "en" ? "Full profile" : locale === "ku" ? "پرۆفایلی تەواو" : "الملف الكامل"}</Link></div>
       </section></div>}
+      {tab === "skills" && <div className="px-4 py-6 md:px-0 md:py-10"><SkillToolsPanel lang={locale} skill={search.skill} tool={search.tool} /></div>}
       {tab === "ops" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyAgentOps section="tasks" /></Suspense></section></div>}
       {tab === "channels" && <div className="space-y-4 px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyAgentOps section="channels" /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazySchedules workspaceId={null} defaultPrompt={goal} /></Suspense></section></div>}
       {tab === "approvals" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyApprovals /></Suspense></section></div>}
