@@ -60,6 +60,7 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
           <button key={k} onClick={() => setFilter(k)} className={`rounded-full border px-3 py-1 text-xs ${filter === k ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>{k === "all" ? tr(lang, "الكل", "All", "هەموو") : SRC[k]} ({(rows || []).filter((r) => k === "all" || r.source === k).length})</button>
         ))}
       </div>
+      {rows !== null && !rows.some((r) => r.source === "profile") && <p className="mb-3 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs">{tr(lang, "معروف لا يعرف هويتك بعد. أكمل «بطاقة حقيقة الكيان» من الإعدادات (نوع الكيان، بلد المقر، الأسواق، الروابط الرسمية) لتظهر هنا كمعلومات عنك. ما لم يُتحقق منه يبقى فرضية.", "Maaroof doesn't know your identity yet. Complete the Entity Truth Card in Settings (type, HQ country, markets, official links). Unverified items stay hypotheses.", "بطاقەی ناسنامە تەواو بکە لە ڕێکخستنەکان.")}</p>}
       {rows === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : list.length === 0 ? (
         <p className="text-sm text-muted-foreground">{tr(lang, "لا شيء بعد. أكمل المقابلة أو نفّذ مهمة، أو أكمل بطاقة الكيان في ملفك الشخصي.", "Nothing yet. Answer the interview, run a task, or complete your entity card.", "هێشتا هیچ.")}</p>
       ) : (
