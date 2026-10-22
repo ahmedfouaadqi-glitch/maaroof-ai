@@ -57,3 +57,20 @@ export function domainsInText(text: string, max = 3): string[] {
   }
   return [...out];
 }
+
+/** Owner identity fields Maaroof knows from the profile (no invented values). */
+export const OWNER_FIELDS = ["full_name", "brand_name", "account_kind", "specialty", "hq_country", "target_markets", "entity_links"] as const;
+export type OwnerField = (typeof OWNER_FIELDS)[number];
+
+/** Which owner fields are present vs. missing, and completeness 0–100. Verified only when the entity card is verified. */
+export function ownerIdentity(p: Record<string, any> | null | undefined) {
+  const has = (k: OwnerField) => {
+    const v = p?.[k];
+    if (Array.isArray(v)) return v.length > 0;
+    if (v && typeof v === "object") return Object.values(v).some((x) => typeof x === "string" && x.trim());
+    return typeof v === "string" && v.trim().length > 0;
+  };
+  const known = OWNER_FIELDS.filter(has);
+  const missing = OWNER_FIELDS.filter((k) => !has(k));
+  return { known, missing, completeness: Math.round((known.length / OWNER_FIELDS.length) * 100), verified: !!p?.entity_verified_at };
+}
