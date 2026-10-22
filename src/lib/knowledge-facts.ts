@@ -36,3 +36,24 @@ export function interviewFacts(rows: Array<{ question: string; answer: string | 
     confidence: "evidence", created_at: r.answered_at || r.created_at,
   }));
 }
+
+/** Only non-expired evidence facts may be broadcast; hypotheses never are. */
+export function canBroadcast(f: { confidence: string; expires_at?: string | null }, now = Date.now()): boolean {
+  return f.confidence === "evidence" && (!f.expires_at || new Date(f.expires_at).getTime() > now);
+}
+
+/** Markdown section of user-approved facts for the public brand card; empty when none qualify. */
+export function broadcastSection(facts: Array<{ fact: string; confidence: string; broadcast?: boolean; expires_at?: string | null }>, now = Date.now()): string {
+  const ok = facts.filter((f) => f.broadcast === true && canBroadcast(f, now)).slice(0, 20);
+  return ok.length ? `\n\n## Verified facts\n${ok.map((f) => `- ${f.fact.replace(/\s+/g, " ").slice(0, 300)}`).join("\n")}\n` : "";
+}
+
+/** Distinct public http(s) hosts mentioned in a task result (for an in-task safe-browser offer). */
+export function domainsInText(text: string, max = 3): string[] {
+  const out = new Set<string>();
+  for (const m of String(text || "").matchAll(/https?:\/\/[^\s)\]"'<>]+/g)) {
+    try { out.add(new URL(m[0]).hostname.replace(/^www\./, "").toLowerCase()); } catch {}
+    if (out.size >= max) break;
+  }
+  return [...out];
+}
