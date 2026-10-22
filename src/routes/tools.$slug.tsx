@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ArrowRight, Sparkles, Lock, Info, PlayCircle, HelpCircle, CheckCircle2, Zap } from "lucide-react";
 import { TOOL_CATALOG, type ToolKey, toolLabel } from "@/lib/tool-catalog";
+import { workspaceSearchForDashboard } from "@/lib/tool-skill-map";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useVisibility, useToolPrice, usePageGuard } from "@/lib/visibility";
 import { CostBadge } from "@/components/CostBadge";
@@ -234,7 +235,8 @@ function Page() {
 
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Link
-                    to={def.to}
+                    to="/workspace"
+                    search={workspaceSearchForDashboard(def.key)}
                     className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-primary via-primary to-accent px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:shadow-[var(--shadow-glow-strong)]"
                   >
                     <span className="relative z-10">{Lc.start}</span>

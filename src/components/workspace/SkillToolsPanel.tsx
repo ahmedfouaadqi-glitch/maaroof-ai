@@ -5,8 +5,6 @@ import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { useVisibility } from "@/lib/visibility";
 
 type L = "ar" | "en" | "ku";
-const l2 = <T,>(m: Record<string, T>, n: string) => lazy(() => (m as any)[n]);
-void l2;
 
 const TOOL_UI: Record<string, LazyExoticComponent<ComponentType<any>>> = {
   analyze: lazy(() => import("@/components/Sandbox").then((m) => ({ default: m.Sandbox }))),

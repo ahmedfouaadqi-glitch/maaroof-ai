@@ -1,11 +1,12 @@
 import { ClassicLanding } from "@/components/landing/ClassicLanding";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 
 
 export const Route = createFileRoute("/classic")({
+  beforeLoad: () => { throw redirect({ to: "/workspace", statusCode: 301 }); },
   head: () => ({
     meta: [
       { title: "Classic Home · MAAROOF Ai GEO Platform" },
