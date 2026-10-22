@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { BookOpenCheck, LoaderCircle, Trash2, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { freshFacts, interviewFacts, canBroadcast, type Fact } from "@/lib/knowledge-facts";
+import { freshFacts, interviewFacts, canBroadcast, ownerIdentity, type Fact } from "@/lib/knowledge-facts";
+import { ACCOUNT_KINDS } from "@/lib/account-kinds";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -12,16 +13,20 @@ type Row = Fact & { id?: string; broadcast?: boolean };
 export function KnownFactsPanel({ lang }: { lang: L }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [owner, setOwner] = useState<any>(null);
+  const [spaces, setSpaces] = useState<{ name: string; space_kind: string; parent_id: string | null }[]>([]);
   const [filter, setFilter] = useState<"all" | "task" | "interview" | "profile">("all");
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [{ data: kf }, { data: iv }, { data: p }] = await Promise.all([
+      const [{ data: kf }, { data: iv }, { data: p }, { data: ws }] = await Promise.all([
         (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at, broadcast").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
         supabase.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", user.id).limit(100),
-        supabase.from("profiles").select("entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, created_at").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, brand_name, account_kind, specialty, entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, created_at").eq("id", user.id).maybeSingle(),
+        (supabase as any).from("workspaces").select("name, space_kind, parent_id").eq("owner_id", user.id).limit(100),
       ]);
+      setOwner(p || {}); setSpaces((ws || []) as any);
       const out: Row[] = [...freshFacts((kf || []) as Row[]), ...interviewFacts((iv || []) as any)];
       const pr: any = p || {};
       const at = pr.entity_updated_at || pr.created_at || new Date().toISOString();
@@ -55,6 +60,26 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
     <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
       <h2 className="mb-1 flex items-center gap-2 font-semibold"><BookOpenCheck className="size-5 text-primary" />{tr(lang, "ما يعرفه معروف عنك", "What Maaroof knows", "ئەوەی معروف دەیزانێت")}</h2>
       <p className="mb-3 text-xs text-muted-foreground">{tr(lang, "تُستخدم هذه المعلومات كسياق في مهامك القادمة لتقليل التكرار. ما لم يُوثّق يظهر كفرضية.", "Used as context in your next tasks to avoid repetition. Unverified items are marked as hypotheses.", "وەک سیاق بەکاردێت.")}</p>
+      {owner && (() => {
+        const id = ownerIdentity(owner);
+        const kind = ACCOUNT_KINDS.find((a) => a.key === owner.account_kind)?.label[lang];
+        const LBL: Record<string, string> = { full_name: tr(lang, "الاسم", "Name", "ناو"), brand_name: tr(lang, "العلامة", "Brand", "براند"), account_kind: tr(lang, "طبيعة الحساب", "Account type", "جۆری هەژمار"), specialty: tr(lang, "التخصص", "Specialty", "پسپۆڕی"), hq_country: tr(lang, "المقر", "HQ", "بارەگا"), target_markets: tr(lang, "الأسواق", "Markets", "بازاڕ"), entity_links: tr(lang, "الروابط", "Links", "بەستەر") };
+        const val = (k: string) => k === "account_kind" ? kind || owner.account_kind : Array.isArray(owner[k]) ? owner[k].join("، ") : owner[k] && typeof owner[k] === "object" ? Object.values(owner[k]).filter((v) => typeof v === "string").join(" · ") : String(owner[k]);
+        const count = (k: string) => spaces.filter((s) => s.space_kind === k).length;
+        const learned = (rows || []).filter((r) => r.source !== "profile").length;
+        return (
+          <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-sm leading-7">
+              {id.known.length === 0
+                ? tr(lang, "معروف: لا أعرف عنك شيئاً موثّقاً بعد. أكمل بطاقتك أو أجب على المقابلة لأتعرّف عليك.", "Maaroof: I don't know anything documented about you yet. Complete your card or answer the interview.", "معروف: هێشتا هیچ نازانم دەربارەت.")
+                : tr(lang, `معروف: هذا ما أعرفه عنك من ملفك${learned ? ` ومن ${learned} معلومة تعلّمتها من المقابلات والمهام` : ""}. لديك ${spaces.length} مساحة (${count("company")} شركة، ${count("client")} عميل، ${count("subsidiary")} فرعية، ${count("product")} منتج).`, `Maaroof: this is what I know about you from your profile${learned ? ` and ${learned} learned facts` : ""}. You have ${spaces.length} spaces (${count("company")} companies, ${count("client")} clients, ${count("subsidiary")} subsidiaries, ${count("product")} products).`, `معروف: ئەمە ئەوەیە دەیزانم. ${spaces.length} شوێنت هەیە.`)}
+            </p>
+            {id.known.length > 0 && <dl className="mt-3 grid gap-2 sm:grid-cols-2">{id.known.map((k) => <div key={k} className="rounded-lg bg-background p-2 text-xs"><dt className="text-muted-foreground">{LBL[k]} · {tr(lang, "من الملف الشخصي", "from profile", "لە پرۆفایل")} · {id.verified ? tr(lang, "موثّق", "evidence", "بەڵگەدار") : tr(lang, "فرضية", "hypothesis", "گریمانە")}</dt><dd className="mt-0.5 break-words font-medium">{val(k)}</dd></div>)}</dl>}
+            <div className="mt-3 flex items-center gap-2 text-xs"><div className="h-1.5 flex-1 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${id.completeness}%` }} /></div><span>{tr(lang, "اكتمال المعرفة", "Completeness", "تەواوبوون")} {id.completeness}%</span></div>
+            {id.missing.length > 0 && <p className="mt-2 text-xs text-muted-foreground">{tr(lang, "ينقصني", "Missing", "کەمە")}: {id.missing.map((k) => LBL[k]).join("، ")} — <a href="/workspace?tab=settings" className="text-primary underline">{tr(lang, "أكملها", "complete", "تەواوی بکە")}</a></p>}
+          </div>
+        );
+      })()}
       <div className="mb-3 flex flex-wrap gap-2">
         {(["all", "task", "interview", "profile"] as const).map((k) => (
           <button key={k} onClick={() => setFilter(k)} className={`rounded-full border px-3 py-1 text-xs ${filter === k ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>{k === "all" ? tr(lang, "الكل", "All", "هەموو") : SRC[k]} ({(rows || []).filter((r) => k === "all" || r.source === k).length})</button>
