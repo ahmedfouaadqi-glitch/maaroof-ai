@@ -60,7 +60,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
   const publishFn = useServerFn(publishToChannel);
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/maaroof" } });
+    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin", redirect: "/workspace" } });
   }, [loading, user, navigate]);
 
   const load = async () => {
