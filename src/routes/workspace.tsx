@@ -533,8 +533,7 @@ function WorkspacePage() {
                 <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>
               </div>
 
-              <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5 lg:order-first lg:col-span-3">
+              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="flex items-center gap-2 font-semibold">{c.suggested} <HelpTip id="skills" lang={locale} /></h2>
@@ -559,6 +558,7 @@ function WorkspacePage() {
                 </div>
                 {tools.length > 0 && <p className="mt-3 text-xs text-muted-foreground">{c.selectedTools}: {tools.map(toolLabel).join("، ")}</p>}
               </div>
+              <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
               {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">
                 <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 p-4 text-start">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-muted"><BrainCircuit className="size-5" /></div>
