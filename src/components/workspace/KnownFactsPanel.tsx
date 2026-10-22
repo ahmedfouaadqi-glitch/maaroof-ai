@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { BookOpenCheck, LoaderCircle, Trash2 } from "lucide-react";
+import { BookOpenCheck, LoaderCircle, Trash2, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { freshFacts, interviewFacts, type Fact } from "@/lib/knowledge-facts";
+import { freshFacts, interviewFacts, canBroadcast, type Fact } from "@/lib/knowledge-facts";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
-type Row = Fact & { id?: string };
+type Row = Fact & { id?: string; broadcast?: boolean };
 
 /** What Maaroof actually knows, with source and date for every item. */
 export function KnownFactsPanel({ lang }: { lang: L }) {
@@ -18,7 +18,7 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
     if (!user) return;
     (async () => {
       const [{ data: kf }, { data: iv }, { data: p }] = await Promise.all([
-        (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+        (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at, broadcast").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
         supabase.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", user.id).limit(100),
         supabase.from("profiles").select("entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, updated_at").eq("id", user.id).maybeSingle(),
       ]);
@@ -39,6 +39,13 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
   const del = async (id: string) => {
     await (supabase as any).from("knowledge_facts").delete().eq("id", id);
     setRows((r) => (r || []).filter((x) => x.id !== id));
+  };
+
+  const toggleBroadcast = async (r: Row) => {
+    const on = !r.broadcast;
+    if (on && !window.confirm(tr(lang, `سيظهر هذا النص في بطاقة السلطة العامة التي تقرؤها زواحف الذكاء الاصطناعي:\n\n${r.fact}\n\nهل توافق على البث؟`, `This text will appear on your public brand card read by AI crawlers:\n\n${r.fact}\n\nApprove broadcast?`, `ئەم دەقە لە کارتی گشتی دەردەکەوێت:\n\n${r.fact}\n\nڕازیت؟`))) return;
+    const { error } = await (supabase as any).from("knowledge_facts").update({ broadcast: on }).eq("id", r.id);
+    if (!error) setRows((rs) => (rs || []).map((x) => (x.id === r.id ? { ...x, broadcast: on } : x)));
   };
 
   const SRC: Record<string, string> = { task: tr(lang, "من المهام", "From tasks", "لە ئەرکەکان"), interview: tr(lang, "من المقابلة", "From interview", "لە چاوپێکەوتن"), profile: tr(lang, "من الملف الشخصي", "From profile", "لە پرۆفایل") };
@@ -64,6 +71,7 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
                 <span className="rounded-full bg-muted px-2 py-0.5">{SRC[r.source]}</span>
                 <span className={`rounded-full px-2 py-0.5 ${r.confidence === "evidence" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>{r.confidence === "evidence" ? tr(lang, "موثّق", "Evidence", "بەڵگەدار") : tr(lang, "فرضية", "Hypothesis", "گریمانە")}</span>
                 <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                {r.id && canBroadcast(r) && <button onClick={() => toggleBroadcast(r)} className={`flex items-center gap-1 rounded-full border px-2 py-0.5 ${r.broadcast ? "border-primary bg-primary/10 text-primary" : "border-border"}`}><Radio className="size-3" />{r.broadcast ? tr(lang, "مبثوثة — إيقاف", "Broadcasting — stop", "بڵاوکراوە — ڕاگرتن") : tr(lang, "اعتمدها للبث", "Approve for broadcast", "پەسەندی بکە")}</button>}
                 {r.id && <button onClick={() => del(r.id!)} className="ms-auto text-destructive" aria-label="delete"><Trash2 className="size-3.5" /></button>}
               </div>
             </li>

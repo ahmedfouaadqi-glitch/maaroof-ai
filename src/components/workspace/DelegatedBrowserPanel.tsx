@@ -23,14 +23,14 @@ const ERR: Record<string, [string, string, string]> = {
   step_limit: ["بلغت الحد الأقصى للخطوات في هذه الجلسة.", "Step limit reached for this session.", "سنووری هەنگاوەکان."],
 };
 
-export function DelegatedBrowserPanel({ lang }: { lang: L }) {
+export function DelegatedBrowserPanel({ lang, initialDomain, initialPurpose }: { lang: L; initialDomain?: string; initialPurpose?: string }) {
   const [grant, setGrant] = useState<any>(null);
   const [cost, setCost] = useState(0);
   const [steps, setSteps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [domains, setDomains] = useState("");
+  const [domains, setDomains] = useState(initialDomain || "");
   const [minutes, setMinutes] = useState(30);
-  const [purpose, setPurpose] = useState("");
+  const [purpose, setPurpose] = useState(initialPurpose || "");
   const [url, setUrl] = useState("");
   const [instruction, setInstruction] = useState("");
   const [busy, setBusy] = useState(false);

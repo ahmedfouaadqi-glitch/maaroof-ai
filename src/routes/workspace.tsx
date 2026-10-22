@@ -14,6 +14,8 @@ import { useVisibility } from "@/lib/visibility";
 import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
+import { domainsInText } from "@/lib/knowledge-facts";
+import { OnboardingTour } from "@/components/workspace/OnboardingTour";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
 import { WorkspaceShell, formatElapsed, NavLink, MORE_ITEMS, type WorkspaceTab } from "@/components/workspace/WorkspaceShell";
 import { HistoryPanel, BalancePanel, KnowledgePanel, type PastJob } from "@/components/workspace/WorkspacePanels";
@@ -47,7 +49,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { tab?: string; skill?: string; tool?: string } => ({ ...(typeof s.tab === "string" ? { tab: s.tab } : {}), ...(typeof s.skill === "string" ? { skill: s.skill } : {}), ...(typeof s.tool === "string" ? { tool: s.tool } : {}) }),
+  validateSearch: (s: Record<string, unknown>): { tab?: string; skill?: string; tool?: string; domain?: string } => ({ ...(typeof s.domain === "string" ? { domain: s.domain.slice(0, 100) } : {}), ...(typeof s.tab === "string" ? { tab: s.tab } : {}), ...(typeof s.skill === "string" ? { skill: s.skill } : {}), ...(typeof s.tool === "string" ? { tool: s.tool } : {}) }),
   component: () => <I18nProvider><AuthProvider><WorkspacePage /></AuthProvider></I18nProvider>,
 });
 
@@ -488,7 +490,7 @@ function WorkspacePage() {
       {tab === "ops" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyAgentOps section="tasks" /></Suspense></section></div>}
       {tab === "channels" && <div className="space-y-4 px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyAgentOps section="channels" /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazySchedules workspaceId={null} defaultPrompt={goal} /></Suspense></section></div>}
       {tab === "approvals" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyApprovals /></Suspense></section></div>}
-      {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} /></div>}
+      {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} initialDomain={search.domain} initialPurpose={search.domain ? goal.trim().slice(0, 200) : undefined} /></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
       <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" ? "" : "hidden"}`}>
         <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
@@ -641,6 +643,10 @@ function WorkspacePage() {
             {finalEvent && <div className="rounded-2xl border border-primary/25 bg-card p-5 md:p-6">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div><ExportButtons toolKey="maaroof" build={() => ({ title: c.result, subtitle: goal.trim(), sections: [{ heading: c.result, kind: "text", text: String(finalEvent.data?.text || finalEvent.data?.message || "") }] })} /></div>
               <div className="whitespace-pre-wrap text-sm leading-7">{String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)}</div>
+              {domainsInText(String(finalEvent.data?.text || "")).length > 0 && <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3 text-xs">
+                <p className="mb-2 text-muted-foreground">{locale === "en" ? "Want Maaroof to read one of these pages to understand it better? It opens only after you grant temporary read-only access." : locale === "ku" ? "دەتەوێت معروف ئەم پەڕانە بخوێنێتەوە؟ تەنها دوای ڕێگەپێدانت." : "هل تريد أن يقرأ معروف إحدى هذه الصفحات لفهمها أكثر؟ لا يبدأ إلا بعد تفويضك المؤقت للقراءة فقط."}</p>
+                <div className="flex flex-wrap gap-2">{domainsInText(String(finalEvent.data?.text || "")).map((d) => <button key={d} onClick={() => navigate({ to: "/workspace", search: { tab: "browser", domain: d } })} className="rounded-full border border-primary/40 px-3 py-1 text-primary">{d}</button>)}</div>
+              </div>}
             </div>}
 
             {!finalEvent && !running && !error && <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">{c.noResults}</div>}
