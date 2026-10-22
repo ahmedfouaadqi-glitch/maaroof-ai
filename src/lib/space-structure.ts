@@ -28,7 +28,8 @@ export function allowedChildKinds(parent: SpaceKind, account: AccountKind | null
   if (parent === "subsidiary" || parent === "client") return ["product"];
   if (parent !== "company") return [];
   const kinds: SpaceKind[] = ["product", "subsidiary"];
-  if (account === "agency_with_clients" || account === "marketing_company") kinds.push("client");
+  // Unknown account kind stays permissive so the owner can still add clients.
+  if (account === null || account === "agency_with_clients" || account === "marketing_company") kinds.push("client");
   return kinds;
 }
 

@@ -61,8 +61,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
         supabase.from("profiles").select("account_kind").eq("id", userId).maybeSingle(),
       ]);
       const parentKind = ((parent as any)?.space_kind || "company") as any;
-      // Account kind may be unset; agencies are still allowed to add clients in that case.
-      const acct = ((owner as any)?.account_kind ?? "agency_with_clients") as any;
+      const acct = ((owner as any)?.account_kind ?? null) as any;
       if (!parent || !allowedChildKinds(parentKind, acct).includes(data.space_kind)) throw new Error("invalid_parent");
     }
     const { data: row, error } = await supabase
