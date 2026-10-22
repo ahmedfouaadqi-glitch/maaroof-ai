@@ -190,6 +190,14 @@ function GuideEssentials({ L }: { L: "ar" | "en" | "ku" }) {
 type T3 = { ar: string; en: string; ku: string };
 const WS_GUIDE: { title: T3; items: { ar: string[]; en: string[]; ku: string[] } }[] = [
   {
+    title: { ar: "ترتيب مساحة معروف", en: "Maaroof Space layout", ku: "ڕێکخستنی شوێنی معروف" },
+    items: {
+      ar: ["النطاق الجغرافي وطريقة العمل بجانب زر «ابدأ المهمة» مباشرة.", "المهارات تحت مربع الهدف، ويمكنك عرض المقترحة أو الكل.", "الموافقات و«علّمني مرة… أعمل للأبد» داخل «المقابلة» ومرتبطة بمساحة المعرفة.", "قنوات النشر والجدولة والمهام المجدولة في «الإضافات» بالشريط الجانبي؛ واكتب «كل أسبوع…» ليقترح معروف الجدولة."],
+      en: ["Geographic scope and work mode sit right next to “Start task”.", "Skills are under the goal box; view suggested or all.", "Approvals and “Teach once” live in the Interview tab, linked to Knowledge.", "Publishing channels, scheduling and scheduled tasks are under “Add-ons”; write “every week…” to get a schedule proposal."],
+      ku: ["بوار و شێواز لە تەنیشت دوگمەی دەستپێکردنن.", "کارامەییەکان لە ژێر ئامانجن.", "ڕەزامەندییەکان لە چاوپێکەوتندان.", "کەناڵ و خشتە لە «زیادکراوەکان»دان."],
+    },
+  },
+  {
     title: { ar: "كيف تبدأ", en: "Getting started", ku: "چۆن دەست پێبکەیت" },
     items: {
       ar: ["اكتب هدفك بجملة واضحة في مساحة العمل، مثل: «أريد أن تذكر النماذج علامتي عند السؤال عن أفضل مطعم».", "حدد نطاقك الجغرافي بالترتيب: الدولة ثم الإقليم ثم المحافظة ثم المدينة، أو اتركه عالمياً.", "يعرض معروف خطة العمل والكلفة التقديرية ورصيدك، ولا يبدأ إلا بموافقتك.", "تعمل المهمة في الخلفية؛ يمكنك إغلاق الصفحة والعودة لاحقاً."],
