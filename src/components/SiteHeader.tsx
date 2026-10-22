@@ -30,7 +30,7 @@ export function SiteHeader() {
   const { policy: uiPolicy } = useInterfacePolicy();
   const wsOn = uiPolicy.available_interfaces.includes("workbench");
   const proOn = uiPolicy.available_interfaces.includes("professional");
-  const wsLabel = lang === "en" ? "Smart Workspace" : lang === "ku" ? "شوێنی کاری زیرەک" : "مساحة العمل الذكية";
+  const maaroofSpace = lang === "en" ? "Maaroof Space" : lang === "ku" ? "شوێنی معروف" : "مساحة معروف";
   useEffect(() => { setSound(isSoundEnabled()); }, []);
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch { /* not in provider */ }
@@ -63,9 +63,8 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-5 text-sm text-muted-foreground lg:flex xl:gap-6">
           
           {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
-          {auth?.user && wsOn && <Link to="/workspace" className="font-semibold text-accent hover:text-foreground">{wsLabel}</Link>}
           {auth?.user && proOn && uiPolicy.show_professional_link && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
-          {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" className="font-semibold text-primary hover:text-foreground">{t("auto.maaroof")}</Link>}
+          {auth?.user && (wsOn || hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" className="font-semibold text-primary hover:text-foreground">{maaroofSpace}</Link>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
           <Link to="/markets" className="hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
@@ -126,9 +125,8 @@ export function SiteHeader() {
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3 text-sm">
             
             {hdr.show_pricing && <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>}
-            {auth?.user && wsOn && <Link to="/workspace" onClick={close} className="rounded-md px-2 py-2 font-semibold text-accent hover:bg-muted/40">{wsLabel}</Link>}
             {auth?.user && proOn && uiPolicy.show_professional_link && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
-            {auth?.user && (hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{t("auto.maaroof")}</Link>}
+            {auth?.user && (wsOn || hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{maaroofSpace}</Link>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
             <Link to="/markets" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>

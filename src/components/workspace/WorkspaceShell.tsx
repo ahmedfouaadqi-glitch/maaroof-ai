@@ -1,9 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Sparkles, ListChecks, Share2, ShieldCheck, PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe } from "lucide-react";
+import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
-export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "skills" | "ops" | "channels" | "approvals" | "more";
+export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "skills" | "extras" | "more";
 
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
@@ -17,9 +17,7 @@ const NAV: NavItem[] = [
   { tab: "models", icon: Cpu, label: { ar: "اختيار النماذج", en: "Models", ku: "مۆدێلەکان" } },
   { tab: "browser", icon: Globe, label: { ar: "المتصفح المفوّض", en: "Delegated browser", ku: "وێبگەڕی ڕێگەپێدراو" } },
   { tab: "skills", icon: Sparkles, label: { ar: "المهارات", en: "Skills", ku: "کارامەییەکان" } },
-  { tab: "ops", icon: ListChecks, label: { ar: "التشغيل والمهام المجدولة", en: "Runs & scheduled tasks", ku: "کارپێکردن و ئەرکە خشتەکراوەکان" } },
-  { tab: "channels", icon: Share2, label: { ar: "القنوات والجدولة", en: "Channels & schedules", ku: "کەناڵەکان و خشتە" } },
-  { tab: "approvals", icon: ShieldCheck, label: { ar: "الموافقات", en: "Approvals", ku: "ڕەزامەندییەکان" } },
+  { tab: "extras", icon: Share2, label: { ar: "الإضافات", en: "Add-ons", ku: "زیادکراوەکان" } },
   { tab: "settings", icon: Settings, label: { ar: "الإعدادات", en: "Settings", ku: "ڕێکخستن" } },
 ];
 const MORE: NavItem = { tab: "more", icon: LayoutGrid, label: { ar: "المزيد", en: "More", ku: "زیاتر" } };
@@ -34,7 +32,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
   const toggle = () => setUserCollapsed((v) => { const n = !v; try { localStorage.setItem("ws-sidebar-collapsed", n ? "1" : "0"); } catch {} return n; });
   const collapsed = sidebarCollapsed(userCollapsed, autoCollapse) && !hover;
   return (
-    <div className="mx-auto flex max-w-7xl gap-6 px-0 md:px-6">
+    <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-0 md:px-4 xl:gap-6">
       <aside onMouseEnter={() => autoCollapse && !userCollapsed && setHover(true)} onMouseLeave={() => setHover(false)} className={`sticky top-20 hidden h-[calc(100vh-6rem)] shrink-0 flex-col gap-1 rounded-2xl border border-border bg-card/80 p-2 backdrop-blur transition-[width] duration-300 md:flex ${collapsed ? "w-14" : "w-56"}`}>
         <button type="button" onClick={toggle} aria-label={userCollapsed ? (locale === "en" ? "Show menu" : locale === "ku" ? "پیشاندانی لیست" : "إظهار القائمة") : (locale === "en" ? "Hide menu" : locale === "ku" ? "شاردنەوەی لیست" : "إخفاء القائمة")} title={userCollapsed ? "+" : "−"} className="mb-1 flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
           {collapsed ? <PanelRightOpen className="size-4" /> : <PanelRightClose className="size-4" />}
@@ -43,7 +41,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
       </aside>
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 backdrop-blur md:hidden">
-        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "skills", "ops", "channels", "approvals", "settings"].includes(tab))} compact />)}
+        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "skills", "extras", "settings"].includes(tab))} compact />)}
       </nav>
     </div>
   );
