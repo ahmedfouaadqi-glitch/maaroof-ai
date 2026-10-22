@@ -3041,6 +3041,33 @@ export type Database = {
           },
         ]
       }
+      maaroof_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          grounded: Json
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          grounded?: Json
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          grounded?: Json
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       maaroof_evolution_reports: {
         Row: {
           created_at: string

@@ -21,3 +21,14 @@ describe("knowledge facts", () => {
     expect(interviewFacts([{ question: "q1", answer: "a", created_at: "x" }, { question: "q2", answer: null, created_at: "x" }])).toHaveLength(1);
   });
 });
+
+import { ownerIdentity } from "./knowledge-facts";
+describe("ownerIdentity", () => {
+  it("counts only filled fields and never invents", () => {
+    const r = ownerIdentity({ full_name: "Ahmed", brand_name: " ", account_kind: "marketing_company", target_markets: [], entity_links: { site: "https://x.com" } });
+    expect(r.known).toEqual(["full_name", "account_kind", "entity_links"]);
+    expect(r.completeness).toBe(43);
+    expect(r.verified).toBe(false);
+  });
+  it("empty profile is 0%", () => { expect(ownerIdentity(null).completeness).toBe(0); });
+});

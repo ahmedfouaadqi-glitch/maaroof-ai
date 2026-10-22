@@ -373,7 +373,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
                 <div className="space-y-2">
                   <button
                     onClick={() => run("gen", async () => {
-                      const result: any = await genQuestions({ data: { spaceId: active.id } });
+                      const result: any = await genQuestions({ data: { spaceId: active.id, lang: (typeof document !== "undefined" && ["ar","en","ku"].includes(document.documentElement.lang) ? document.documentElement.lang : undefined) as any } });
                       setInterviewEngines(Array.isArray(result?.engines) ? result.engines : []);
                       await refreshActive(active.id);
                     })}

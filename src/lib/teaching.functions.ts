@@ -302,7 +302,7 @@ export const approveSpaceKnowledge = createServerFn({ method: "POST" })
 // ===== Interview mode: ten engine perspectives ============================
 export const generateSpaceInterview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
+  .inputValidator((d: { spaceId: string; lang?: "ar" | "en" | "ku" }) => z.object({ spaceId: uuid, lang: z.enum(["ar", "en", "ku"]).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: space } = await supabase
@@ -361,11 +361,13 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
     // must not prevent the other engine perspectives from returning.
     const engines = [...ENGINE_KEYS] as EngineKey[];
     const models = await resolveEngineModels(engines);
-    const language = String(space.lang || "ar");
+    // The user's currently selected UI language wins over the stored default.
+    const language = String(data.lang || space.lang || "ar");
+    if (data.lang && data.lang !== space.lang) await supabase.from("knowledge_spaces").update({ lang: data.lang }).eq("id", space.id).eq("user_id", userId);
     const languageInstruction: Record<string, string> = {
-      ar: "Write the question in clear Arabic.",
+      ar: "Write the question ONLY in clear Modern Standard Arabic. Do not use English.",
       en: "Write the question in clear English.",
-      ku: "پرسیارەکە بە کوردیی سۆرانیی ڕوون بنووسە.",
+      ku: "Write the question ONLY in Central Kurdish (Sorani, Arabic script). پرسیارەکە بە کوردیی سۆرانیی ڕوون بنووسە.",
     };
     const contextBlock = [
       `Knowledge space: ${String(space.name || "").slice(0, 300)}`,
