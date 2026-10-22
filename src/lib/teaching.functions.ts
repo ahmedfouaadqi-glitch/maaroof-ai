@@ -382,18 +382,13 @@ export const generateSpaceInterview = createServerFn({ method: "POST" })
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 45000);
       try {
-        const reasoning = /^openai\//.test(model) || /gemini-2\.5-pro|gemini-3/.test(model)
-          ? { reasoning_effort: "low" }
-          : {};
-        const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+        const response = await fetchWithFallback(model, {
           method: "POST",
           headers: lovableAiHeaders(apiKey),
           signal: controller.signal,
           body: JSON.stringify({
             model,
-            max_tokens: 800,
-            temperature: 0.35,
-            ...reasoning,
+            ...interviewSamplingParams(model),
             messages: [
               {
                 role: "system",
