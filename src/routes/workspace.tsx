@@ -126,7 +126,7 @@ function WorkspacePage() {
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[locale];
   const [goal, setGoal] = useState("");
-  const [mode, setMode] = useState<"task" | "chat">("task");
+  const [uiMode, setUiMode] = useState<"task" | "chat">("task");
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -512,11 +512,11 @@ function WorkspacePage() {
         )}
         {!finalEvent && events.length === 0 && (
           <div className="mb-4 inline-flex rounded-xl border border-border bg-card p-1 text-sm" role="tablist">
-            {(["task", "chat"] as const).map((m) => <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`rounded-lg px-4 py-1.5 font-semibold ${mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>{m === "task" ? (locale === "en" ? "Run a task" : locale === "ku" ? "جێبەجێکردنی ئەرک" : "تنفيذ مهمة") : (locale === "en" ? "Chat" : locale === "ku" ? "گفتوگۆ" : "محادثة")}</button>)}
+            {(["task", "chat"] as const).map((m) => <button key={m} type="button" role="tab" aria-selected={uiMode === m} onClick={() => setUiMode(m)} className={`rounded-lg px-4 py-1.5 font-semibold ${uiMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>{m === "task" ? (locale === "en" ? "Run a task" : locale === "ku" ? "جێبەجێکردنی ئەرک" : "تنفيذ مهمة") : (locale === "en" ? "Chat" : locale === "ku" ? "گفتوگۆ" : "محادثة")}</button>)}
           </div>
         )}
-        {!finalEvent && events.length === 0 && mode === "chat" && <MaaroofChat lang={locale} onToTask={(t) => { setGoal(t); setMode("task"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} />}
-        {!finalEvent && events.length === 0 && mode === "task" && (
+        {!finalEvent && events.length === 0 && uiMode === "chat" && <MaaroofChat lang={locale} onToTask={(t) => { setGoal(t); setUiMode("task"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} />}
+        {!finalEvent && events.length === 0 && uiMode === "task" && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
