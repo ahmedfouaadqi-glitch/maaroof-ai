@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
+import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
 import { useAuth } from "@/lib/auth";
 import { useCountry } from "@/lib/use-country";
 import type { InterfacePolicy } from "@/lib/interface-policy";
@@ -177,6 +178,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
   useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
   const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
+  const [openSkill, setOpenSkill] = useState<string | null>(null);
   const card = data?.card ?? null;
   const typeLabel = (t: string | null) => t === "person" ? ({ ar: "شخص", en: "Person", ku: "کەس" } as const)[l] : ({ ar: "منشأة", en: "Organization", ku: "دامەزراوە" } as const)[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
@@ -322,13 +324,16 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {skills.map((s) => (
-              <Link key={s.key} to="/workspace" search={{ skill: s.key }} className="block h-full">
+              <button key={s.key} type="button" onClick={() => setOpenSkill(s.key)} className="block h-full text-start">
                 <SpotlightCard className="h-full p-4 transition hover:border-primary/40">
                   <div className="text-sm font-semibold">{s.label[l]}</div>
                   <p className="mt-1 text-xs text-muted-foreground">{s.description[l]}</p>
                 </SpotlightCard>
-              </Link>
+              </button>
             ))}
+          </div>
+          <SkillDetailsDialog skillKey={openSkill} l={l} onClose={() => setOpenSkill(null)} />
+          <div className="hidden">
           </div>
         </section>
 
