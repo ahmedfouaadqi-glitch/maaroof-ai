@@ -136,9 +136,18 @@ export const deleteWorkspace = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("workspaces").delete().eq("id", data.id).eq("owner_id", userId);
+    // Full delete: the space, every descendant, and the knowledge spaces
+    // linked to them (their interviews/nodes/assets cascade in the database).
+    const { data: all } = await supabase.from("workspaces").select("id, parent_id").eq("owner_id", userId);
+    const items = (all ?? []) as { id: string; parent_id: string | null }[];
+    if (!items.some((w) => w.id === data.id)) throw new Error("workspace_not_found");
+    const ids = descendantIds(data.id, items);
+    const { error: ksErr } = await supabase.from("knowledge_spaces").delete().in("workspace_id", ids).eq("user_id", userId);
+    if (ksErr) throw new Error(ksErr.message);
+    const { data: gone, error } = await supabase.from("workspaces").delete().in("id", ids).eq("owner_id", userId).select("id");
     if (error) throw new Error(error.message);
-    return { ok: true };
+    if (!gone || gone.length === 0) throw new Error("delete_failed");
+    return { ok: true, deleted: gone.map((g: any) => g.id as string) };
   });
 
 // Returns (or creates) the knowledge space linked to a workspace, used by the
