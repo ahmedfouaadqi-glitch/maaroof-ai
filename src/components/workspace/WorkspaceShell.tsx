@@ -8,7 +8,7 @@ export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "inter
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
 const NAV: NavItem[] = [
-  { tab: "main", icon: BrainCircuit, label: { ar: "مساحة العمل", en: "Workspace", ku: "شوێنی کار" } },
+  { tab: "main", icon: BrainCircuit, label: { ar: "مساحة معروف", en: "Maaroof Space", ku: "شوێنی معروف" } },
   { tab: "history", icon: History, label: { ar: "المهام السابقة", en: "Previous tasks", ku: "ئەرکە پێشووەکان" } },
   { tab: "balance", icon: Wallet, label: { ar: "الرصيد", en: "Balance", ku: "باڵانس" } },
   { tab: "knowledge", icon: Brain, label: { ar: "مساحة المعرفة", en: "Knowledge", ku: "زانیاری" } },
