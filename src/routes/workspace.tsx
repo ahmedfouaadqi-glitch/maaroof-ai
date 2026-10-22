@@ -535,7 +535,7 @@ function WorkspacePage() {
                   </div>
                   <Sparkles className="size-5 text-primary" />
                 </div>
-                <div className="@container"><div className="grid gap-3 transition-all duration-300 @md:grid-cols-2 @3xl:grid-cols-3">
+                <div className="@container"><div className="grid gap-3 transition-all duration-300 @sm:grid-cols-2 @[33rem]:grid-cols-3">
                   {skillView === "suggested"
                     ? recommendations.map((skill) => <SkillCard key={skill.key} skill={skill} accessMode={getSkillAccessMode(skill, policy.skill_access)} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)
                     : allSkills.map(({ skill, access }) => <SkillCard key={skill.key} skill={skill} accessMode={access} locale={locale} selected={selectedSkills.includes(skill.key)} onToggle={() => access === "self_service" && toggleSkill(skill.key)} labelAdd={c.add} labelAdded={c.added} />)}
