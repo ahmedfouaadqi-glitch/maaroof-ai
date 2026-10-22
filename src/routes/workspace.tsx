@@ -455,6 +455,7 @@ function WorkspacePage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
+      <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
