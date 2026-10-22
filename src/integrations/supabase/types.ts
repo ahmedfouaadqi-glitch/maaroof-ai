@@ -2320,6 +2320,7 @@ export type Database = {
       }
       knowledge_facts: {
         Row: {
+          broadcast: boolean
           confidence: string
           created_at: string
           expires_at: string | null
@@ -2330,6 +2331,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          broadcast?: boolean
           confidence?: string
           created_at?: string
           expires_at?: string | null
@@ -2340,6 +2342,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          broadcast?: boolean
           confidence?: string
           created_at?: string
           expires_at?: string | null
