@@ -100,8 +100,8 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
     setError(null);
     try {
       await remove({ data: { id } });
-      setItems((p) => p.filter((w) => !ids.includes(w.id)));
       if (active && ids.includes(active)) setActive(null);
+      await reload();
     } catch (e: any) { setError(String(e?.message || e)); }
   }
 
@@ -155,7 +155,7 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
     if (!spaceId) return;
     setGenBusy(true); setCost(null); setError(null);
     try {
-      const r = await gen({ data: { spaceId } });
+      const r = await gen({ data: { spaceId, lang } });
       setSilent(r.engines.filter((e: any) => e.status !== "answered").map((e: any) => e.name));
       const q = await listQ({ data: { spaceId } });
       setQuestions(q.items as Q[]);
