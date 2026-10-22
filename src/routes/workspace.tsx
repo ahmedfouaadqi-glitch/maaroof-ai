@@ -146,8 +146,9 @@ function WorkspacePage() {
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
   const search = Route.useSearch();
-  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "ops", "channels", "approvals", "more"];
-  const tab: WorkspaceTab = TABS.includes(search.tab as WorkspaceTab) ? (search.tab as WorkspaceTab) : "main";
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "extras", "more"];
+  const legacyTab = search.tab === "ops" || search.tab === "channels" ? "extras" : search.tab === "approvals" ? "interview" : search.tab;
+  const tab: WorkspaceTab = TABS.includes(legacyTab as WorkspaceTab) ? (legacyTab as WorkspaceTab) : "main";
   const goMain = () => navigate({ to: "/workspace", search: {} });
   async function openPastJob(j: PastJob) {
     const token = (await supabase.auth.getSession()).data.session?.access_token;
@@ -460,7 +461,7 @@ function WorkspacePage() {
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} /></Suspense></section>}</div>}
-      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div></div>}
+      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div><section className="mt-4 rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Approvals" : locale === "ku" ? "ڕەزامەندییەکان" : "الموافقات"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Actions waiting for your decision before Maaroof runs them." : locale === "ku" ? "کردارەکان چاوەڕێی بڕیاری تۆن." : "إجراءات تنتظر قرارك قبل أن ينفذها معروف."}</p><Suspense fallback={null}><LazyApprovals /></Suspense></section><section className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5"><h2 className="font-semibold">{locale === "en" ? "Teach once, work forever" : locale === "ku" ? "جارێک فێرم بکە" : "علّمني مرة… أعمل للأبد"}</h2><p className="mt-1 text-xs text-muted-foreground">{locale === "en" ? "What you teach Maaroof here is saved in the Knowledge space and reused in every task for this account." : locale === "ku" ? "ئەوەی فێری معروفی دەکەیت لە شوێنی زانیاری پاشەکەوت دەکرێت." : "ما تعلّمه لمعروف يُحفظ في مساحة المعرفة ويُستخدم في كل مهمة حسب طبيعة حسابك."}</p><Link to="/workspace" search={{ tab: "knowledge" }} className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">{locale === "en" ? "Open Knowledge" : locale === "ku" ? "کردنەوەی زانیاری" : "فتح مساحة المعرفة"}</Link></section></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /></div>}
       {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
         <h1 className="font-display text-xl font-bold">{c.models}</h1>
@@ -488,9 +489,7 @@ function WorkspacePage() {
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="min-w-0 truncate text-sm">{user.email}</span><Link to="/profile" className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted">{locale === "en" ? "Full profile" : locale === "ku" ? "پرۆفایلی تەواو" : "الملف الكامل"}</Link></div>
       </section></div>}
       {tab === "skills" && <div className="px-4 py-6 md:px-0 md:py-10"><SkillToolsPanel lang={locale} skill={search.skill} tool={search.tool} /></div>}
-      {tab === "ops" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyAgentOps section="tasks" /></Suspense></section></div>}
-      {tab === "channels" && <div className="space-y-4 px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyAgentOps section="channels" /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazySchedules workspaceId={null} defaultPrompt={goal} /></Suspense></section></div>}
-      {tab === "approvals" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyApprovals /></Suspense></section></div>}
+      {tab === "extras" && <div className="space-y-4 px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-3 font-semibold">{locale === "en" ? "Publishing channels" : locale === "ku" ? "کەناڵەکانی بڵاوکردنەوە" : "قنوات النشر"}</h2><Suspense fallback={null}><LazyAgentOps section="channels" /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-3 font-semibold">{locale === "en" ? "Scheduling" : locale === "ku" ? "خشتە" : "الجدولة"}</h2><Suspense fallback={null}><LazySchedules workspaceId={null} defaultPrompt={goal} /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Scheduled agent tasks" : locale === "ku" ? "ئەرکە خشتەکراوەکان" : "مهام الوكيل المجدولة"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Tip: just write “every week…” in your goal and Maaroof will propose a schedule or ask you." : locale === "ku" ? "تەنها بنووسە «هەموو هەفتەیەک…»." : "تلميح: اكتب «كل أسبوع…» في هدفك وسيقترح معروف الجدولة أو يسألك عنها."}</p><Suspense fallback={null}><LazyAgentOps section="tasks" /></Suspense></section></div>}
       {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} initialDomain={search.domain} initialPurpose={search.domain ? goal.trim().slice(0, 200) : undefined} /></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
       <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" ? "" : "hidden"}`}>
@@ -510,35 +509,30 @@ function WorkspacePage() {
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; watcherRef.current += 1; setEvents([]); setJobId(null); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
         {!finalEvent && events.length === 0 && (
-          <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_16rem] xl:grid-cols-[18rem_minmax(0,1fr)_18rem]">
-            <div className="order-3 space-y-3 lg:order-none lg:sticky lg:top-20 lg:self-start">
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"} <HelpTip id="geo" lang={locale} /></h2>
-                <GeoScopeSelector compact />
-              </div>
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
-                <h2 className="mb-3 flex items-center gap-2 font-semibold">{c.mode} <HelpTip id="mode" lang={locale} /></h2>
-                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                  {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
-                    <button key={item.key} type="button" onClick={() => setMode(item.key)} className={`rounded-xl border px-3 py-2 text-sm transition ${mode === item.key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/40"}`}>{item.label}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
+          <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
-                <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={5} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                  <p className="max-w-xl text-xs text-muted-foreground">{c.ask}</p>
-                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={4} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <details className="group relative">
+                    <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"}<ChevronDown className="size-3 transition-transform group-open:rotate-180" /></summary>
+                    <div className="absolute start-0 top-full z-30 mt-2 w-[min(22rem,80vw)] rounded-2xl border border-border bg-card p-4 shadow-xl"><div className="mb-2 flex items-center gap-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"} <HelpTip id="geo" lang={locale} /></div><GeoScopeSelector compact /></div>
+                  </details>
+                  <div role="radiogroup" aria-label={c.mode} className="inline-flex flex-wrap rounded-xl border border-border p-0.5 text-xs">
+                    {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
+                      <button key={item.key} type="button" role="radio" aria-checked={mode === item.key} onClick={() => setMode(item.key)} className={`rounded-lg px-3 py-1.5 font-semibold transition ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>{item.label}</button>
+                    ))}
+                  </div>
+                  <HelpTip id="mode" lang={locale} />
+                  <button type="button" onClick={() => void start()} disabled={!goal.trim() || running || costLoading || !policy.allowed_modes.includes(mode) || (!!costRun && !estimateFitsQuota)} className="ms-auto inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>
               </div>
 
-              <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
-              <div className="rounded-2xl border border-border bg-card p-4 md:p-5 lg:order-first lg:col-span-3">
+              <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="flex items-center gap-2 font-semibold">{c.suggested} <HelpTip id="skills" lang={locale} /></h2>
@@ -563,6 +557,7 @@ function WorkspacePage() {
                 </div>
                 {tools.length > 0 && <p className="mt-3 text-xs text-muted-foreground">{c.selectedTools}: {tools.map(toolLabel).join("، ")}</p>}
               </div>
+              <AttachmentAnalyzer lang={locale} onResult={(text) => setGoal((g) => (g ? g + "\n\n" : "") + (locale === "en" ? "Attached file analysis:\n" : "تحليل الملف المرفق:\n") + text.slice(0, 1500))} />
               {policy.show_live_engine_picker && <div className="rounded-2xl border border-border bg-card">
                 <button type="button" onClick={() => setModelsOpen((open) => !open)} className="flex w-full items-center gap-3 p-4 text-start">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-muted"><BrainCircuit className="size-5" /></div>

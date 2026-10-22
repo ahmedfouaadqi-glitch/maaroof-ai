@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Compass, X } from "lucide-react";
 
 type L = "ar" | "en" | "ku";
-const KEY = "ws-tour-done";
+const KEY = "ws-tour-done-v2";
 
 const STEPS: Record<L, Array<[string, string]>> = {
   ar: [
@@ -10,6 +10,9 @@ const STEPS: Record<L, Array<[string, string]>> = {
     ["اختر المهارة", "كل مهارة تشرح هدفها ومصادرها وكلفتها قبل التشغيل. يمكنك تركها تلقائية."],
     ["النماذج العشرة", "يسأل معروف عشرة نماذج ذكاء اصطناعي افتراضياً، ويمكنك تقليلها من «اختيار النماذج»."],
     ["الكلفة والرصيد", "ترى الكلفة المتوقعة مقابل رصيدك قبل البدء، ولا يُخصم شيء إلا عند النجاح."],
+    ["النطاق وطريقة العمل", "بجانب زر «ابدأ المهمة» تختار البلد والمدينة وطريقة العمل (تنفيذ، توصية، محاكاة)."],
+    ["المقابلة والموافقات", "في «المقابلة» يتعرّف معروف على حسابك، وتجد فيها الموافقات على الإجراءات قبل تنفيذها."],
+    ["الإضافات", "قنوات النشر والجدولة والمهام المجدولة في «الإضافات». ويمكنك كتابة «كل أسبوع…» في هدفك ليقترح معروف جدولة."],
     ["مساحة المعرفة", "ما يتعلمه معروف من مهامك ومقابلتك يظهر هنا مع مصدره، ويمكنك اعتماد الحقائق المؤكدة للبث."],
   ],
   en: [
@@ -17,6 +20,9 @@ const STEPS: Record<L, Array<[string, string]>> = {
     ["Pick a skill", "Each skill shows its goal, sources and cost before running. You can leave it automatic."],
     ["Ten models", "Maaroof asks ten AI models by default; you can reduce them in “Models”."],
     ["Cost and balance", "You see the expected cost against your balance first; nothing is charged unless it succeeds."],
+    ["Scope and mode", "Next to “Start task” pick country/city and the mode (execute, recommend, simulate)."],
+    ["Interview and approvals", "The Interview tab lets Maaroof learn your account and holds approvals before any action runs."],
+    ["Add-ons", "Publishing channels, scheduling and scheduled tasks live under “Add-ons”. Write “every week…” to get a schedule proposal."],
     ["Knowledge space", "What Maaroof learns appears here with its source; you can approve verified facts for broadcast."],
   ],
   ku: [
@@ -24,6 +30,9 @@ const STEPS: Record<L, Array<[string, string]>> = {
     ["تواناییەک هەڵبژێرە", "هەر توانایەک ئامانج و تێچووەکەی پیشان دەدات."],
     ["دە مۆدێل", "معروف بە شێوەی بنەڕەت دە مۆدێل دەپرسێت."],
     ["تێچوو و باڵانس", "هیچ ناکێشرێت تەنها لە کاتی سەرکەوتن."],
+    ["بوار و شێواز", "لە تەنیشت دوگمەی دەستپێکردن وڵات و شێواز هەڵبژێرە."],
+    ["چاوپێکەوتن و ڕەزامەندی", "ڕەزامەندییەکان لە چاوپێکەوتندان."],
+    ["زیادکراوەکان", "کەناڵ و خشتە لە «زیادکراوەکان»دان."],
     ["شوێنی زانیاری", "ئەوەی معروف فێری دەبێت لێرە دەردەکەوێت."],
   ],
 };
