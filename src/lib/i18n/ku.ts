@@ -1452,7 +1452,7 @@ export const ku: Dict = {
   "auto.login_2": "چوونەژوورەوە",
   "auto.low": "نزم",
   "auto.low_balance": "کەمبوونەوەی باڵانس",
-  "auto.maaroof": "مەعرووف ✨",
+  "auto.maaroof": "شوێنی معروف",
   "auto.maaroof_2": "مەعرووف",
   "auto.maaroof_agent": "مەعرووف — بریکار",
   "auto.maaroof_evolution_reports": "ڕاپۆرتەکانی پەرەسەندنی MAAROOF",

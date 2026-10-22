@@ -1386,7 +1386,7 @@ export const en: Dict = {
   "auto.login_2": "Login",
   "auto.low": "Low",
   "auto.low_balance": "Low balance",
-  "auto.maaroof": "MAAROOF ✨",
+  "auto.maaroof": "Maaroof Space",
   "auto.maaroof_2": "MAAROOF",
   "auto.maaroof_agent": "MAAROOF — Agent",
   "auto.maaroof_evolution_reports": "MAAROOF evolution reports",

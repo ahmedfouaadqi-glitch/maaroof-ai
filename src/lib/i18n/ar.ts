@@ -1380,7 +1380,7 @@ export const ar: Dict = {
   "auto.login_2": "تسجيل الدخول",
   "auto.low": "منخفضة",
   "auto.low_balance": "رصيد منخفض",
-  "auto.maaroof": "معروف ✨",
+  "auto.maaroof": "مساحة معروف",
   "auto.maaroof_2": "معروف",
   "auto.maaroof_agent": "معروف — الوكيل",
   "auto.maaroof_evolution_reports": "تقارير تطور معروف",
