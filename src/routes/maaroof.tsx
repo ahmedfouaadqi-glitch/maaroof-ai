@@ -1,5 +1,6 @@
 import { ProgressLine } from "@/components/TrinityPanel";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { mapLegacyMaaroofTab } from "@/lib/legacy-maaroof";
 import { useEffect, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -34,6 +35,12 @@ const TABS = ["chat", "tasks", "channels", "approvals", "knowledge"] as const;
 type TabKey = (typeof TABS)[number];
 
 export const Route = createFileRoute("/maaroof")({
+  // The Maaroof page now lives inside Maaroof Space (/workspace).
+  beforeLoad: ({ location }) => {
+    if (location.pathname.replace(/\/$/, "") !== "/maaroof") return;
+    const tab = mapLegacyMaaroofTab((location.search as any)?.tab);
+    throw redirect({ to: "/workspace", search: tab ? { tab } : {}, statusCode: 301 });
+  },
   validateSearch: (s: Record<string, unknown>): { tab?: TabKey } => ({
     tab: (TABS as readonly string[]).includes(String(s.tab)) ? (String(s.tab) as TabKey) : ("chat" as TabKey),
   }),
