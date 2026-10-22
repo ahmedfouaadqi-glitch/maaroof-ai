@@ -54,7 +54,12 @@ export const Route = createFileRoute("/api/public/brand/$slug")({
         }).then(() => {}, () => {});
 
         const jsonLd = (pack as any).json_ld || {};
-        const md = String((pack as any).markdown || "");
+        let md = String((pack as any).markdown || "");
+        try {
+          const { broadcastSection } = await import("@/lib/knowledge-facts");
+          const { data: bf } = await (admin as any).from("knowledge_facts").select("fact, confidence, broadcast, expires_at").eq("user_id", (pack as any).user_id).eq("broadcast", true).limit(20);
+          md += broadcastSection(bf || []);
+        } catch {}
         const summary = String((pack as any).summary || "");
         const brand = String((pack as any).brand_name || slug);
         const kw = String((pack as any).brand_keywords || "");
