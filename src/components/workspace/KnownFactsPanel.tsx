@@ -20,11 +20,11 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
       const [{ data: kf }, { data: iv }, { data: p }] = await Promise.all([
         (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at, broadcast").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
         supabase.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", user.id).limit(100),
-        supabase.from("profiles").select("entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, updated_at").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, created_at").eq("id", user.id).maybeSingle(),
       ]);
       const out: Row[] = [...freshFacts((kf || []) as Row[]), ...interviewFacts((iv || []) as any)];
       const pr: any = p || {};
-      const at = pr.entity_updated_at || pr.updated_at || new Date().toISOString();
+      const at = pr.entity_updated_at || pr.created_at || new Date().toISOString();
       const conf = pr.entity_verified_at ? "evidence" : "hypothesis";
       if (pr.entity_type) out.push({ source: "profile", fact: `${tr(lang, "نوع الكيان", "Entity type", "جۆر")}: ${pr.entity_type}`, confidence: conf, created_at: at });
       if (pr.hq_country) out.push({ source: "profile", fact: `${tr(lang, "بلد المقر", "HQ country", "وڵات")}: ${pr.hq_country}`, confidence: conf, created_at: at });

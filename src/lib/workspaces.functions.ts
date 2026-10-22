@@ -40,7 +40,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
         language: Language.default("ar"),
         country: z.string().max(80).optional().nullable(),
         city: z.string().max(80).optional().nullable(),
-        space_kind: z.enum(["company", "product", "client"]).default("company"),
+        space_kind: z.enum(["company", "subsidiary", "product", "client"]).default("company"),
         parent_id: z.string().uuid().optional().nullable(),
       })
       .parse(input),
@@ -55,8 +55,14 @@ export const createWorkspace = createServerFn({ method: "POST" })
     const tier = (prof as any)?.subscription_tier ?? null;
     if (!canCreateSpace(count ?? 0, tier)) throw new Error(`space_limit_reached:${spaceLimit(tier)}`);
     if (data.parent_id) {
-      const { data: parent } = await supabase.from("workspaces").select("id, space_kind").eq("id", data.parent_id).eq("owner_id", userId).maybeSingle();
-      if (!parent || (parent as any).space_kind !== "company") throw new Error("invalid_parent");
+      const { allowedChildKinds } = await import("@/lib/space-structure");
+      const [{ data: parent }, { data: owner }] = await Promise.all([
+        supabase.from("workspaces").select("id, space_kind").eq("id", data.parent_id).eq("owner_id", userId).maybeSingle(),
+        supabase.from("profiles").select("account_kind").eq("id", userId).maybeSingle(),
+      ]);
+      const parentKind = ((parent as any)?.space_kind || "company") as any;
+      const acct = ((owner as any)?.account_kind ?? null) as any;
+      if (!parent || !allowedChildKinds(parentKind, acct).includes(data.space_kind)) throw new Error("invalid_parent");
     }
     const { data: row, error } = await supabase
       .from("workspaces")

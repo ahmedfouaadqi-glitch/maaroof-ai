@@ -2,11 +2,12 @@
 // Reuses existing workspace + knowledge-space interview functions; no new billing path.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Package, Users, Plus, LoaderCircle, MessageSquareText, Check, CircleAlert } from "lucide-react";
-import { listWorkspaces, createWorkspace, ensureWorkspaceKnowledgeSpace, listInterviewQuestions } from "@/lib/workspaces.functions";
+import { Building2, Package, Users, Plus, LoaderCircle, MessageSquareText, Check, CircleAlert, GitBranch, Trash2, ChevronDown, ChevronLeft } from "lucide-react";
+import { listWorkspaces, createWorkspace, deleteWorkspace, ensureWorkspaceKnowledgeSpace, listInterviewQuestions } from "@/lib/workspaces.functions";
 import { generateSpaceInterview, answerSpaceInterview } from "@/lib/teaching.functions";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
-import { allowedChildKinds, inferAccountKind, type SpaceKind, type StructureAnswers } from "@/lib/space-structure";
+import { supabase } from "@/integrations/supabase/client";
+import { allowedChildKinds, descendantIds, inferAccountKind, type SpaceKind, type StructureAnswers } from "@/lib/space-structure";
 import { ACCOUNT_KINDS, type AccountKind } from "@/lib/account-kinds";
 
 type L = "ar" | "en" | "ku";
@@ -14,18 +15,21 @@ type Ws = { id: string; name: string; space_kind: SpaceKind; parent_id: string |
 type Q = { id: string; question: string; answer: string | null; topic: string | null };
 
 const T = {
-  ar: { title: "مساحاتك", company: "شركة", product: "منتج", client: "عميل", add: "إضافة", name: "الاسم", url: "رابط (اختياري)", save: "حفظ", cancel: "إلغاء", none: "لا توجد مساحة بعد. أجب عن الأسئلة لنقترح الهيكل المناسب.", limit: "بلغت الحد الأقصى لعدد المساحات في خطتك.", qs: ["هل تبيع منتجاً أو خدمة؟", "هل تدير حسابات عملاء؟", "هل لديك أكثر من منتج؟", "هل الحساب لشخص؟", "هل أنت جهة إعلامية؟"], suggest: "النوع المقترح", interview: "المقابلة التأسيسية", gen: "توليد الأسئلة من النماذج العشرة", cost: "الكلفة المتوقعة", balance: "رصيدك", tokens: "توكن", confirm: "موافق، ابدأ", answer: "إجابتك…", send: "حفظ الإجابة", answered: "تمت الإجابة", progress: "تمت الإجابة على", of: "من", noAnswer: "لم تجب", engines: "النماذج التي لم تُرجع سؤالاً", pickFirst: "اختر مساحة لبدء مقابلتها.", yes: "نعم", no: "لا", deep: "بعد الإجابة يمكنك تشغيل الفحص العميق من «نبض الحساب» بطلبك.", short: "الرصيد لا يكفي." },
-  en: { title: "Your spaces", company: "Company", product: "Product", client: "Client", add: "Add", name: "Name", url: "Link (optional)", save: "Save", cancel: "Cancel", none: "No space yet. Answer a few questions and we'll suggest a structure.", limit: "You reached your plan's space limit.", qs: ["Do you sell a product or service?", "Do you manage client accounts?", "More than one product?", "Is this account a person?", "Are you a media outlet?"], suggest: "Suggested type", interview: "Founding interview", gen: "Generate questions from the ten models", cost: "Expected cost", balance: "Balance", tokens: "tokens", confirm: "Approve and start", answer: "Your answer…", send: "Save answer", answered: "Answered", progress: "Answered", of: "of", noAnswer: "Unanswered", engines: "Models that returned no question", pickFirst: "Pick a space to start its interview.", yes: "Yes", no: "No", deep: "After answering, run the deep audit from the account pulse on request.", short: "Balance is not enough." },
-  ku: { title: "شوێنەکانت", company: "کۆمپانیا", product: "بەرهەم", client: "کڕیار", add: "زیادکردن", name: "ناو", url: "بەستەر (ئارەزوومەندانە)", save: "پاشەکەوت", cancel: "پاشگەزبوونەوە", none: "هێشتا شوێن نییە. وەڵامی چەند پرسیارێک بدەوە.", limit: "گەیشتیتە سنووری پلانەکەت.", qs: ["بەرهەم یان خزمەتگوزاری دەفرۆشیت؟", "هەژماری کڕیاران بەڕێوە دەبەیت؟", "زیاتر لە بەرهەمێک؟", "هەژمارەکە بۆ کەسێکە؟", "دەزگای ڕاگەیاندنیت؟"], suggest: "جۆری پێشنیارکراو", interview: "چاوپێکەوتنی بنەڕەتی", gen: "دروستکردنی پرسیار لە دە مۆدێلەکە", cost: "تێچووی چاوەڕوانکراو", balance: "باڵانس", tokens: "تۆکن", confirm: "ڕازیم، دەست پێبکە", answer: "وەڵامەکەت…", send: "پاشەکەوتی وەڵام", answered: "وەڵامدراوە", progress: "وەڵامدراوە", of: "لە", noAnswer: "وەڵام نەدراوە", engines: "مۆدێلەکان کە پرسیاریان نەگەڕاندەوە", pickFirst: "شوێنێک هەڵبژێرە.", yes: "بەڵێ", no: "نەخێر", deep: "دوای وەڵامدانەوە پشکنینی قووڵ لە نەبزی هەژمار بکە.", short: "باڵانس بەس نییە." },
+  ar: { title: "مساحاتك", subsidiary: "شركة فرعية", del: "حذف", delConfirm: "سيتم حذف هذه المساحة وكل ما يتبعها. عدد المساحات المحذوفة:", company: "شركة", product: "منتج", client: "عميل", add: "إضافة", name: "الاسم", url: "رابط (اختياري)", save: "حفظ", cancel: "إلغاء", none: "لا توجد مساحة بعد. أجب عن الأسئلة لنقترح الهيكل المناسب.", limit: "بلغت الحد الأقصى لعدد المساحات في خطتك.", qs: ["هل تبيع منتجاً أو خدمة؟", "هل تدير حسابات عملاء؟", "هل لديك أكثر من منتج؟", "هل الحساب لشخص؟", "هل أنت جهة إعلامية؟"], suggest: "النوع المقترح", interview: "المقابلة التأسيسية", gen: "توليد الأسئلة من النماذج العشرة", cost: "الكلفة المتوقعة", balance: "رصيدك", tokens: "توكن", confirm: "موافق، ابدأ", answer: "إجابتك…", send: "حفظ الإجابة", answered: "تمت الإجابة", progress: "تمت الإجابة على", of: "من", noAnswer: "لم تجب", engines: "النماذج التي لم تُرجع سؤالاً", pickFirst: "اختر مساحة لبدء مقابلتها.", yes: "نعم", no: "لا", deep: "بعد الإجابة يمكنك تشغيل الفحص العميق من «نبض الحساب» بطلبك.", short: "الرصيد لا يكفي." },
+  en: { title: "Your spaces", subsidiary: "Subsidiary", del: "Delete", delConfirm: "This space and everything under it will be deleted. Spaces removed:", company: "Company", product: "Product", client: "Client", add: "Add", name: "Name", url: "Link (optional)", save: "Save", cancel: "Cancel", none: "No space yet. Answer a few questions and we'll suggest a structure.", limit: "You reached your plan's space limit.", qs: ["Do you sell a product or service?", "Do you manage client accounts?", "More than one product?", "Is this account a person?", "Are you a media outlet?"], suggest: "Suggested type", interview: "Founding interview", gen: "Generate questions from the ten models", cost: "Expected cost", balance: "Balance", tokens: "tokens", confirm: "Approve and start", answer: "Your answer…", send: "Save answer", answered: "Answered", progress: "Answered", of: "of", noAnswer: "Unanswered", engines: "Models that returned no question", pickFirst: "Pick a space to start its interview.", yes: "Yes", no: "No", deep: "After answering, run the deep audit from the account pulse on request.", short: "Balance is not enough." },
+  ku: { title: "شوێنەکانت", subsidiary: "کۆمپانیای لاوەکی", del: "سڕینەوە", delConfirm: "ئەم شوێنە و هەموو لقەکانی دەسڕێنەوە. ژمارە:", company: "کۆمپانیا", product: "بەرهەم", client: "کڕیار", add: "زیادکردن", name: "ناو", url: "بەستەر (ئارەزوومەندانە)", save: "پاشەکەوت", cancel: "پاشگەزبوونەوە", none: "هێشتا شوێن نییە. وەڵامی چەند پرسیارێک بدەوە.", limit: "گەیشتیتە سنووری پلانەکەت.", qs: ["بەرهەم یان خزمەتگوزاری دەفرۆشیت؟", "هەژماری کڕیاران بەڕێوە دەبەیت؟", "زیاتر لە بەرهەمێک؟", "هەژمارەکە بۆ کەسێکە؟", "دەزگای ڕاگەیاندنیت؟"], suggest: "جۆری پێشنیارکراو", interview: "چاوپێکەوتنی بنەڕەتی", gen: "دروستکردنی پرسیار لە دە مۆدێلەکە", cost: "تێچووی چاوەڕوانکراو", balance: "باڵانس", tokens: "تۆکن", confirm: "ڕازیم، دەست پێبکە", answer: "وەڵامەکەت…", send: "پاشەکەوتی وەڵام", answered: "وەڵامدراوە", progress: "وەڵامدراوە", of: "لە", noAnswer: "وەڵام نەدراوە", engines: "مۆدێلەکان کە پرسیاریان نەگەڕاندەوە", pickFirst: "شوێنێک هەڵبژێرە.", yes: "بەڵێ", no: "نەخێر", deep: "دوای وەڵامدانەوە پشکنینی قووڵ لە نەبزی هەژمار بکە.", short: "باڵانس بەس نییە." },
 } as const;
 
-const ICON: Record<SpaceKind, typeof Building2> = { company: Building2, product: Package, client: Users };
+const ICON: Record<SpaceKind, typeof Building2> = { company: Building2, subsidiary: GitBranch, product: Package, client: Users };
 const KEY = "maaroof.active_workspace_id";
 
 export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
   const t = T[lang];
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
+  const remove = useServerFn(deleteWorkspace);
+  const [profileKind, setProfileKind] = useState<AccountKind | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const ensure = useServerFn(ensureWorkspaceKnowledgeSpace);
   const listQ = useServerFn(listInterviewQuestions);
   const gen = useServerFn(generateSpaceInterview);
@@ -61,6 +65,14 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
     } catch (e: any) { setError(String(e?.message || e)); } finally { setLoading(false); }
   }, [list]);
   useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: p } = await supabase.from("profiles").select("account_kind").eq("id", u.user.id).maybeSingle();
+      setProfileKind(((p as any)?.account_kind ?? null) as AccountKind | null);
+    })();
+  }, []);
 
   useEffect(() => {
     if (!active) { setSpaceId(null); setQuestions([]); return; }
@@ -80,7 +92,45 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
 
   const companies = items.filter((w) => !w.parent_id);
   const childrenOf = (id: string) => items.filter((w) => w.parent_id === id);
-  const accountKind: AccountKind | null = companies.length ? suggested : null;
+  const accountKind: AccountKind | null = profileKind;
+
+  async function removeSpace(id: string) {
+    const ids = descendantIds(id, items);
+    if (!window.confirm(`${t.delConfirm} ${ids.length}`)) return;
+    setError(null);
+    try {
+      await remove({ data: { id } });
+      setItems((p) => p.filter((w) => !ids.includes(w.id)));
+      if (active && ids.includes(active)) setActive(null);
+    } catch (e: any) { setError(String(e?.message || e)); }
+  }
+
+  const renderNode = (w: Ws, depth: number): React.ReactNode => {
+    const kids = childrenOf(w.id);
+    const addKinds = allowedChildKinds(w.space_kind, accountKind);
+    const open = !collapsed[w.id];
+    return (
+      <li key={w.id} className="space-y-1">
+        <div className="flex items-center gap-1">
+          {kids.length > 0 ? (
+            <button type="button" aria-label="toggle" onClick={() => setCollapsed((c) => ({ ...c, [w.id]: open }))} className="rounded p-0.5 hover:bg-muted">
+              {open ? <ChevronDown className="size-3" /> : <ChevronLeft className="size-3 rtl:rotate-0 ltr:rotate-180" />}
+            </button>
+          ) : <span className="w-4" />}
+          <div className="flex-1"><SpaceRow w={w} active={active === w.id} onPick={() => setActive(w.id)} label={kindLabel(w.space_kind)} /></div>
+          <button type="button" aria-label={t.del} title={t.del} onClick={() => void removeSpace(w.id)} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>
+        </div>
+        {open && kids.length > 0 && <ul className="ms-5 space-y-1 border-s border-border ps-2">{kids.map((k) => renderNode(k, depth + 1))}</ul>}
+        {addKinds.length > 0 && (
+          <div className="ms-9 flex flex-wrap gap-x-3 gap-y-1">
+            {addKinds.map((k) => (
+              <button key={k} type="button" onClick={() => setForm({ kind: k, parent: w.id })} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Plus className="size-3" />{t.add} {kindLabel(k)}</button>
+            ))}
+          </div>
+        )}
+      </li>
+    );
+  };
 
   async function submit() {
     if (!form || !name.trim()) return;
@@ -147,19 +197,7 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
         </div>
       ) : (
         <ul className="space-y-2 text-sm">
-          {companies.map((c) => (
-            <li key={c.id} className="space-y-1">
-              <SpaceRow w={c} active={active === c.id} onPick={() => setActive(c.id)} label={kindLabel("company")} />
-              <ul className="ms-5 space-y-1">
-                {childrenOf(c.id).map((ch) => <li key={ch.id}><SpaceRow w={ch} active={active === ch.id} onPick={() => setActive(ch.id)} label={kindLabel(ch.space_kind)} /></li>)}
-              </ul>
-              <div className="ms-5 flex gap-2">
-                {allowedChildKinds("company", accountKind).map((k) => (
-                  <button key={k} type="button" onClick={() => setForm({ kind: k, parent: c.id })} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Plus className="size-3" />{t.add} {kindLabel(k)}</button>
-                ))}
-              </div>
-            </li>
-          ))}
+          {companies.map((c) => renderNode(c, 0))}
         </ul>
       )}
 
