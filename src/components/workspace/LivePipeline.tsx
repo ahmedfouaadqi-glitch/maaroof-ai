@@ -140,25 +140,52 @@ function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineVie
   );
 }
 
-function StageDetails({ stage, events, lang }: { stage: StageKey; events: Array<{ type: string; data?: any }>; lang: L }) {
-  const mine = events.filter((e) => stageOf(e) === stage);
-  const tools = events.filter((e) => e.type === "tool_result" && e.data?.tool);
-  const final = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
-  const errors = events.filter((e) => e.type === "phase_error" || e.type === "error");
-  if (stage === "result") return final
-    ? <div className="whitespace-pre-wrap rounded-xl bg-muted/30 p-4 text-sm leading-6">{final.slice(0, 4000)}</div>
-    : <p className="text-sm text-muted-foreground">{tr(lang, "لم تُكتب النتيجة بعد.", "The result is not written yet.", "ئەنجام هێشتا نەنووسراوە.")}</p>;
-  if (stage === "evidence" || stage === "plan") return tools.length || mine.length
-    ? <ul className="space-y-2 text-sm">{(stage === "evidence" ? tools : events.filter((e) => e.type === "tool_call")).map((e, n) => (
-        <li key={n} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-          <span>{String(e.data?.tool)}</span>
-          {stage === "evidence" && <span className={e.data?.ok === false ? "text-destructive" : "text-success"}>{e.data?.ok === false ? tr(lang, "لم تكتمل", "Not completed", "تەواو نەبوو") : tr(lang, "نجحت", "Succeeded", "سەرکەوتوو")}</span>}
-        </li>))}</ul>
-    : <p className="text-sm text-muted-foreground">{tr(lang, "لم تُسجَّل خطوات لهذه المرحلة بعد.", "No steps recorded for this stage yet.", "هێشتا هەنگاو نییە.")}</p>;
+function LinkList({ links }: { links: { url: string; title: string }[] }) {
+  if (!links.length) return null;
   return (
-    <div className="space-y-2 text-sm">
-      <p className="text-muted-foreground">{mine.length ? tr(lang, "بدأت هذه المرحلة وسُجّل تقدّمها.", "This stage started and its progress was recorded.", "ئەم قۆناغە دەستی پێکرد.") : tr(lang, "لم تبدأ هذه المرحلة بعد.", "This stage has not started yet.", "هێشتا دەستی پێنەکردووە.")}</p>
-      {errors.length > 0 && stage === "understand" && <p className="text-xs text-muted-foreground">{tr(lang, "تأخّر نموذج فاستُخدم بديل أو خطة أساسية، وأكملت المهمة.", "A model was slow, so a backup or basic plan was used and the task continued.", "مۆدێلێکی جێگرەوە بەکارهات.")}</p>}
+    <ul className="mt-1.5 space-y-1">
+      {links.map((s) => (
+        <li key={s.url} className="flex items-center gap-1.5 text-xs">
+          <ExternalLink className="size-3 shrink-0 text-primary" />
+          <a href={s.url} target="_blank" rel="noopener noreferrer" className="truncate text-primary underline-offset-2 hover:underline">{s.title || s.url}</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const KIND_DOT: Record<TimelineItem["kind"], string> = { say: "bg-primary", step: "bg-primary/60", done: "bg-success", fail: "bg-destructive", info: "bg-muted-foreground/50" };
+
+function StageDetails({ stage, events, lang }: { stage: StageKey; events: Array<{ type: string; data?: any; at?: number }>; lang: L }) {
+  const reduced = useReducedMotion();
+  const items = stageTimeline(events, stage, lang);
+  if (!items.length) return <p className="text-sm text-muted-foreground">{tr(lang, "لم تبدأ هذه المرحلة بعد، أو لم يُسجَّل لها شيء حتى الآن.", "This stage has not started or has nothing recorded yet.", "هێشتا هیچ تۆمار نەکراوە.")}</p>;
+  const clock = (t: number) => new Date(t).toLocaleTimeString(lang === "en" ? "en-GB" : "ar-IQ", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return (
+    <ol className="relative space-y-3 border-s border-border ps-4">
+      {items.map((it, n) => (
+        <motion.li key={n} initial={reduced ? false : { opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: reduced ? 0 : Math.min(n * 0.04, 0.6) }} className="relative">
+          <span className={`absolute -start-[21px] top-1.5 size-2.5 rounded-full ${KIND_DOT[it.kind]}`} />
+          {it.at != null && <span className="text-[11px] tabular-nums text-muted-foreground">{clock(it.at)}</span>}
+          <p className={`whitespace-pre-wrap text-sm leading-6 ${it.kind === "say" ? "font-medium" : ""} ${it.kind === "fail" ? "text-destructive" : ""}`}>{it.text}</p>
+          <LinkList links={it.links} />
+        </motion.li>
+      ))}
+    </ol>
+  );
+}
+
+function NarrationTicker({ events, running, lang }: { events: Array<{ type: string; data?: any }>; running: boolean; lang: L }) {
+  const text = latestNarration(events);
+  const reduced = useReducedMotion();
+  if (!text) return null;
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 text-sm" aria-live="polite">
+      <span className={`size-2 shrink-0 rounded-full bg-primary ${running && !reduced ? "animate-pulse" : ""}`} />
+      <span className="sr-only">{tr(lang, "معروف يقول:", "Maaroof says:", "معروف دەڵێت:")}</span>
+      <AnimatePresence mode="wait">
+        <motion.span key={text} initial={reduced ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }}>{text}</motion.span>
+      </AnimatePresence>
     </div>
   );
 }
