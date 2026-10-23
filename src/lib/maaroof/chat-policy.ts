@@ -27,3 +27,11 @@ Be concise.
 Knowledge:
 ${kb}`;
 }
+
+/** Remaining free messages today and the next UTC reset. Metered/subscribed users have no message cap. */
+export function chatQuota(o: { metered: boolean; subscribed: boolean; todayUserMessages: number; cap?: number; now?: number }) {
+  const cap = o.cap ?? FREE_CHAT_DAILY;
+  const d = new Date(o.now ?? Date.now()); d.setUTCHours(24, 0, 0, 0);
+  const unlimited = o.metered || o.subscribed;
+  return { unlimited, cap, used: o.todayUserMessages, remaining: unlimited ? null : Math.max(0, cap - o.todayUserMessages), resets_at: d.toISOString() };
+}
