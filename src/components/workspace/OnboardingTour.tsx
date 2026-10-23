@@ -46,17 +46,19 @@ export function OnboardingTour({ lang }: { lang: L }) {
   const t = (ar: string, en: string, ku: string) => (lang === "en" ? en : lang === "ku" ? ku : ar);
 
   if (step === null) return (
-    <button onClick={() => setStep(0)} className="fixed bottom-4 end-4 z-40 flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-xs shadow-md" aria-label="tour">
+    <button onClick={() => setStep(0)} className="fixed bottom-4 start-4 z-30 flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-xs shadow-md [@media(max-height:760px)]:bottom-2 [@media(max-height:760px)]:px-2 [@media(max-height:760px)]:py-1" aria-label="tour">
       <Compass className="size-4 text-primary" />{t("جولة تعريفية", "Quick tour", "گەشت")}
     </button>
   );
   const [title, body] = steps[step];
+  // Non-modal card: no page overlay, kept small and in a corner on short/narrow screens
+  // so it never covers the goal field or the start button.
   return (
-    <div className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-primary/30 bg-card p-5 shadow-xl" role="dialog">
+    <div className="pointer-events-auto fixed bottom-4 start-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-primary/30 bg-card p-4 shadow-xl [@media(max-height:760px)]:top-2 [@media(max-height:760px)]:bottom-auto [@media(max-height:760px)]:w-[min(17rem,calc(100vw-1rem))] [@media(max-height:760px)]:p-3" role="dialog" aria-modal="false">
       <button onClick={done} className="absolute end-3 top-3 text-muted-foreground" aria-label="close"><X className="size-4" /></button>
       <p className="text-xs text-muted-foreground">{step + 1} / {steps.length}</p>
-      <h3 className="mt-1 font-semibold">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+      <h3 className="mt-1 text-sm font-semibold">{title}</h3>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground [@media(max-height:760px)]:line-clamp-3">{body}</p>
       <div className="mt-4 flex justify-between gap-2">
         <button onClick={done} className="text-xs text-muted-foreground">{t("تخطَّ", "Skip", "تێپەڕاندن")}</button>
         <div className="flex gap-2">

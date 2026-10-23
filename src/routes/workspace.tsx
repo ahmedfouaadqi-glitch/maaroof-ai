@@ -325,9 +325,12 @@ function WorkspacePage() {
     watcherRef.current += 1;
     const watcherId = watcherRef.current;
     let cursor = after;
+    let failures = 0;
+    const { shouldRetryPoll, pollBackoffMs } = await import("@/lib/maaroof/jobs");
     while (watcherRef.current === watcherId) {
-      let response: Response;
+      let response: Response | null = null;
       try {
+        // Always read the freshest token: background refreshes must not break tracking.
         const { data: s } = await supabase.auth.getSession();
         const tk = s.session?.access_token || token;
         response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
@@ -335,14 +338,18 @@ function WorkspacePage() {
           cache: "no-store",
         });
       } catch {
-        await new Promise(resolve => setTimeout(resolve, 2500));
-        continue; // transient network hiccup: keep watching
+        response = null;
       }
-      if (!response.ok) {
-        if (response.status >= 500) { await new Promise(resolve => setTimeout(resolve, 2500)); continue; }
-        const body = await response.json().catch(() => ({}));
+      if (!response || !response.ok) {
+        if (shouldRetryPoll(response ? response.status : null)) {
+          failures += 1;
+          await new Promise(resolve => setTimeout(resolve, pollBackoffMs(failures)));
+          continue; // transient: keep watching from the same cursor
+        }
+        const body = await response!.json().catch(() => ({}));
         throw new Error(String(body?.error || c.failed));
       }
+      failures = 0;
       const body = await response.json();
       const incoming = Array.isArray(body?.events) ? body.events : [];
       if (incoming.length) {
@@ -395,11 +402,14 @@ function WorkspacePage() {
       const payload = recent.request_payload || {};
       setSelectedSkills(Array.isArray(payload.selected_skills) ? payload.selected_skills.filter((key: unknown) => typeof key === "string") : []);
       setRunning(recent.status === "dispatching" || recent.status === "queued" || recent.status === "running");
-      setError(recent.status === "failed" ? String(recent.error || c.failed) : "");
+      setError("");
+      setEvents([]);
       try { await watchJob(String(recent.id), 0, token); } catch (e: any) { if (active) { setRunning(false); setError(String(e?.message || c.failed)); } }
     })().catch(() => {});
     return () => { active = false; watcherRef.current += 1; };
-  }, [user?.id, loading, session?.access_token]);
+    // Only re-attach when the signed-in user changes; token refreshes must not cancel a running task's tracking.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, loading]);
 
   const [skillAsk, setSkillAsk] = useState<string[]>([]);
   async function start(clarifications?: Record<string, string>, skillsOverride?: string[]) {
@@ -414,11 +424,11 @@ function WorkspacePage() {
     setEvents([]);
     setJobId(null);
     try {
-      const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+      let token = (await supabase.auth.getSession()).data.session?.access_token || session?.access_token;
       if (!token) throw new Error("auth_required");
-      const response = await fetch("/api/maaroof", {
+      const post = (tk: string) => fetch("/api/maaroof", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + tk },
         body: JSON.stringify({
           goal: goal.trim(),
           lang: locale,
@@ -437,10 +447,20 @@ function WorkspacePage() {
           resume_job_id: resumeFrom?.id,
         }),
       });
+      let response = await post(token);
+      if (response.status === 401) {
+        // Sign-in token may have just expired: refresh once and retry before failing.
+        const refreshed = (await supabase.auth.refreshSession()).data.session?.access_token;
+        if (refreshed) { token = refreshed; response = await post(token); }
+      }
       const body = await response.json().catch(() => ({}));
-      if (response.ok && body?.needs_skill) { setSkillAsk(Array.isArray(body.options) ? body.options : []); setRunning(false); return; }
+      if (response.ok && body?.needs_skill) {
+        setSkillAsk(Array.isArray(body.options) ? body.options : []); setRunning(false);
+        setError(locale === "en" ? "Choose a skill below so Maaroof knows what to run — nothing was charged." : locale === "ku" ? "تواناییەک لە خوارەوە هەڵبژێرە — هیچ نەکێشرا." : "اختر مهارة من الأسفل ليعرف معروف ما يشغّله — لم يُخصم شيء.");
+        return;
+      }
       if (!response.ok || !body?.job_id) {
-        const message = body?.message?.[locale] || body?.message?.ar || body?.error || c.failed;
+        const message = body?.message?.[locale] || body?.message?.ar || (body?.error === "auth_required" ? (locale === "en" ? "Your session expired. Please sign in again." : locale === "ku" ? "دانیشتنەکەت بەسەرچوو، دووبارە بچۆ ژوورەوە." : "انتهت جلسة الدخول، يرجى تسجيل الدخول مجدداً.") : body?.error) || c.failed;
         throw new Error(String(message));
       }
       setJobId(String(body.job_id)); setResumeFrom(null);

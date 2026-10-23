@@ -79,7 +79,14 @@ export const Route = createFileRoute("/api/maaroof")({
         if (body?.interface_mode === "workspace") {
           const db = admin as any;
           const probeEngines = Array.isArray(body?.probe_engines) ? body.probe_engines.filter((x: unknown) => typeof x === "string").slice(0, 10) : undefined;
-          const pickedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
+          let pickedSkills: string[] = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
+          const resumeRef = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
+          if (resumeRef && !pickedSkills.length) {
+            // A follow-up keeps the skills of the task it continues instead of asking again.
+            const { data: prevPayload } = await db.from("maaroof_jobs").select("request_payload").eq("id", resumeRef).eq("user_id", userId).maybeSingle();
+            const prevSkills = (prevPayload as any)?.request_payload?.selected_skills;
+            if (Array.isArray(prevSkills)) pickedSkills = prevSkills.filter((x: unknown) => typeof x === "string").slice(0, 20);
+          }
           const { inferSkills } = await import("@/lib/maaroof/skill-inference");
           const skillChoice = inferSkills(goal, pickedSkills);
           const selectedSkills = skillChoice.skills;
