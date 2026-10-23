@@ -69,3 +69,30 @@ export function formatDuration(ms: number, lang: "ar" | "en" | "ku" = "ar"): str
   const [sec, min] = lang === "en" ? ["s", "m"] : lang === "ku" ? ["چ", "خ"] : ["ث", "د"];
   return m ? `${m} ${min} ${r} ${sec}` : `${r} ${sec}`;
 }
+
+// ---- Ten-model council: per-engine status derived from recorded probe events only. ----
+export type EngineStatus = "waiting" | "asking" | "answered" | "unresponsive";
+export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; brands: string[]; reason: string | null };
+
+function probeOf(out: any): { asked?: string[]; answers?: any[] } | null {
+  if (!out || typeof out !== "object") return null;
+  if (out.probe && Array.isArray(out.probe.answers)) return out.probe;
+  if (Array.isArray(out.answers) && out.answers.some((a: any) => a && typeof a.engine === "string")) return out;
+  return null;
+}
+
+/** Pure. Engines with no recorded answer stay "waiting" (or "asking" while the probe runs); never invented. */
+export function councilEngines(events: Ev[], engineKeys: readonly string[], running: boolean): EngineView[] {
+  const asking = running && events.some((e) => e.type === "tool_call" && e.data?.tool === "visibility")
+    && !events.some((e) => e.type === "tool_result" && e.data?.tool === "visibility");
+  let probe: { asked?: string[]; answers?: any[] } | null = null;
+  for (const e of events) if (e.type === "tool_result") probe = probeOf(e.data?.output) ?? probe;
+  const answers = new Map<string, any>((probe?.answers || []).filter((a: any) => a?.engine).map((a: any) => [String(a.engine), a]));
+  const asked = new Set(probe?.asked || []);
+  return engineKeys.map((key) => {
+    const a = answers.get(key);
+    if (a) return { key, status: "answered", mentioned: !!a.mentioned, rank: typeof a.rank === "number" ? a.rank : null, answer: String(a.answer || ""), brands: Array.isArray(a.brands) ? a.brands.map(String) : [], reason: a.reason ? String(a.reason) : null };
+    const status: EngineStatus = probe && asked.has(key) ? "unresponsive" : asking ? "asking" : "waiting";
+    return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null };
+  });
+}
