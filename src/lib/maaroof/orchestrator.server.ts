@@ -1678,13 +1678,30 @@ Rules:
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
-async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[] } = {}): Promise<{ text: string; tokens: number; usd: number }> {
-  const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: lovableAiHeaders(apiKey),
-    body: JSON.stringify({ model, messages }),
-    signal: opts.signal,
-  });
+const FAST_FALLBACK_MODEL = "google/gemini-2.5-flash";
+/** Planning-type phases get a short per-call limit; others a generous one. */
+function phaseTimeoutMs(phase: string): number {
+  return /envision|plan|understand|intent/i.test(phase) ? 35_000 : 120_000;
+}
+
+async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[]; timeoutMs?: number } = {}): Promise<{ text: string; tokens: number; usd: number }> {
+  const tctl = new AbortController();
+  const timer = opts.timeoutMs ? setTimeout(() => tctl.abort(new Error(`model_timeout_${opts.timeoutMs}ms`)), opts.timeoutMs) : null;
+  const onAbort = () => tctl.abort();
+  if (opts.signal?.aborted) tctl.abort();
+  opts.signal?.addEventListener("abort", onAbort);
+  let resp: Response;
+  try {
+    resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: lovableAiHeaders(apiKey),
+      body: JSON.stringify({ model, messages }),
+      signal: tctl.signal,
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+    opts.signal?.removeEventListener("abort", onAbort);
+  }
   if (!resp.ok) {
     const t = await resp.text().catch(() => "");
     throw new Error(`gateway_${resp.status}: ${t.slice(0, 200)}`);
