@@ -83,6 +83,10 @@ export const Route = createFileRoute("/api/maaroof")({
           const { inferSkills } = await import("@/lib/maaroof/skill-inference");
           const skillChoice = inferSkills(goal, pickedSkills);
           const selectedSkills = skillChoice.skills;
+          if (skillChoice.kind === "clarify" && !String(clarifications?.tools || "").trim()) {
+            // No evidence in the task text: ask before any charge instead of guessing.
+            return Response.json({ needs_skill: true, options: ["presence_audit", "entity_readiness", "growth_roadmap"] });
+          }
           if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
             user_id: userId, goal, mode: executionMode || "execution", status: "running",
