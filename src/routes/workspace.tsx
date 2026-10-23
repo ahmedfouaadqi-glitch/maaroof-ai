@@ -402,11 +402,14 @@ function WorkspacePage() {
       const payload = recent.request_payload || {};
       setSelectedSkills(Array.isArray(payload.selected_skills) ? payload.selected_skills.filter((key: unknown) => typeof key === "string") : []);
       setRunning(recent.status === "dispatching" || recent.status === "queued" || recent.status === "running");
-      setError(recent.status === "failed" ? String(recent.error || c.failed) : "");
+      setError("");
+      setEvents([]);
       try { await watchJob(String(recent.id), 0, token); } catch (e: any) { if (active) { setRunning(false); setError(String(e?.message || c.failed)); } }
     })().catch(() => {});
     return () => { active = false; watcherRef.current += 1; };
-  }, [user?.id, loading, session?.access_token]);
+    // Only re-attach when the signed-in user changes; token refreshes must not cancel a running task's tracking.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, loading]);
 
   const [skillAsk, setSkillAsk] = useState<string[]>([]);
   async function start(clarifications?: Record<string, string>, skillsOverride?: string[]) {
