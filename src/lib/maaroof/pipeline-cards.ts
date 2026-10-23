@@ -72,9 +72,11 @@ export function formatDuration(ms: number, lang: "ar" | "en" | "ku" = "ar"): str
 
 // ---- Ten-model council: per-engine status derived from recorded probe events only. ----
 export type EngineStatus = "waiting" | "asking" | "answered" | "unresponsive";
-export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; brands: string[]; reason: string | null };
+/** Why an asked engine has no answer, exactly as recorded: empty reply, timeout, or error. */
+export type EngineMiss = "empty" | "timeout" | "error" | null;
+export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; brands: string[]; reason: string | null; miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null };
 
-function probeOf(out: any): { asked?: string[]; answers?: any[] } | null {
+function probeOf(out: any): { asked?: string[]; answers?: any[]; statuses?: Record<string, { status: string; ms?: number }> } | null {
   if (!out || typeof out !== "object") return null;
   if (out.probe && Array.isArray(out.probe.answers)) return out.probe;
   if (Array.isArray(out.answers) && out.answers.some((a: any) => a && typeof a.engine === "string")) return out;
@@ -83,17 +85,26 @@ function probeOf(out: any): { asked?: string[]; answers?: any[] } | null {
 
 /** Pure. Engines with no recorded answer stay "waiting" (or "asking" while the probe runs); never invented. */
 export function councilEngines(events: Ev[], engineKeys: readonly string[], running: boolean): EngineView[] {
-  const asking = running && events.some((e) => e.type === "tool_call" && e.data?.tool === "visibility")
-    && !events.some((e) => e.type === "tool_result" && e.data?.tool === "visibility");
-  let probe: { asked?: string[]; answers?: any[] } | null = null;
-  for (const e of events) if (e.type === "tool_result") probe = probeOf(e.data?.output) ?? probe;
+  const calls = events.filter((e) => e.type === "tool_call" && e.data?.tool === "visibility").length;
+  const results = events.filter((e) => e.type === "tool_result" && e.data?.tool === "visibility").length;
+  const asking = running && calls > results;
+  let probe: ReturnType<typeof probeOf> = null;
+  for (const e of events) if (e.type === "tool_result") {
+    const p = probeOf(e.data?.output);
+    // Keep the probe with the most answers (a later smaller re-check must not hide earlier answers).
+    if (p && (!probe || (p.answers?.length || 0) >= (probe.answers?.length || 0))) probe = p;
+  }
   const answers = new Map<string, any>((probe?.answers || []).filter((a: any) => a?.engine).map((a: any) => [String(a.engine), a]));
   const asked = new Set(probe?.asked || []);
+  const statuses = probe?.statuses || {};
   return engineKeys.map((key) => {
     const a = answers.get(key);
-    if (a) return { key, status: "answered", mentioned: !!a.mentioned, rank: typeof a.rank === "number" ? a.rank : null, answer: String(a.answer || ""), brands: Array.isArray(a.brands) ? a.brands.map(String) : [], reason: a.reason ? String(a.reason) : null };
+    const ms = typeof statuses[key]?.ms === "number" ? statuses[key].ms! : typeof a?.ms === "number" ? a.ms : null;
+    if (a) return { key, status: "answered", mentioned: !!a.mentioned, rank: typeof a.rank === "number" ? a.rank : null, answer: String(a.answer || ""), brands: Array.isArray(a.brands) ? a.brands.map(String) : [], reason: a.reason ? String(a.reason) : null, miss: null, sources: Array.isArray(a.sources) ? a.sources.filter((s: any) => isUrl(s?.url)).map((s: any) => ({ url: String(s.url), title: String(s.title || s.url) })) : [], ms };
+    const st = String(statuses[key]?.status || "");
+    const miss: EngineMiss = st === "empty" || st === "timeout" || st === "error" ? st : probe && asked.has(key) ? "empty" : null;
     const status: EngineStatus = probe && asked.has(key) ? "unresponsive" : asking ? "asking" : "waiting";
-    return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null };
+    return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms };
   });
 }
 
