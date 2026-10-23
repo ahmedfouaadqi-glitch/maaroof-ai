@@ -113,6 +113,9 @@ export function ExportButtons({
         }
       }
       const all = [...loc.filter((s) => !/^(Glossary|فەرهەنگ|معجم المصطلحات)$/.test(s.heading)), ...extra];
+      const { brandModelIds } = await import("@/lib/maaroof/model-council");
+      const bm = (x: any) => (typeof x === "string" ? brandModelIds(x, exportLang) : x);
+      for (const s of all) { s.text = bm(s.text); s.list = s.list?.map(bm); s.rows = s.rows?.map(([k, v]) => [k, bm(v)] as [string, string | number]); if (s.table) s.table = { ...s.table, data: s.table.data.map((r) => r.map(bm)) }; }
       const g = glossarySection(all, exportLang);
       p.sections = g ? [...all, g] : all;
     } catch {}
