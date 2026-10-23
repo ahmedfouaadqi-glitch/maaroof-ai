@@ -195,37 +195,77 @@ export const Route = createFileRoute("/api/visibility")({
             const market = describeMarket(body.scope);
             const models = await resolveEngineModels(engines);
             const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
-            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[] }[] = [];
-            const askAll = () => Promise.allSettled(engines.map(async (e) => {
-              const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+            const PA = await import("@/lib/maaroof/probe-answer");
+            // Evidence first (MCI gate): reuse verified knowledge; search the web only when it is missing.
+            let evidence: { url: string; title: string }[] = [];
+            let evidenceText = "";
+            let evidenceSource: "knowledge" | "web" | "none" = "none";
+            try {
+              const { evidenceGate } = await import("@/lib/mci/evidence-gate");
+              const { data: kf } = await admin.from("knowledge_facts").select("id, fact, confidence, created_at, source").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+              const items = ((kf || []) as any[]).map((f) => ({ id: String(f.id), source: "knowledge" as const, claimType: (Number(f.confidence) >= 0.85 ? "verified_fact" : "hypothesis") as any, content: String(f.fact || ""), reliability: Number(f.confidence) || 0, createdAt: f.created_at }));
+              const gate = evidenceGate(items);
+              if (!gate.needWeb) {
+                evidenceText = items.filter((i) => i.claimType === "verified_fact").slice(0, 6).map((i) => `- ${i.content.slice(0, 240)}`).join("\n");
+                evidenceSource = "knowledge";
+              }
+              if (gate.needWeb && process.env.FIRECRAWL_API_KEY) {
+                const { fcSearch } = await import("@/lib/firecrawl");
+                const sr: any = await fcSearch(`${keywords || brand} ${market.region}`, { limit: 6 }, { userId, toolKey: "visibility" } as any);
+                const raw: any[] = sr?.data?.web || sr?.web || (Array.isArray(sr?.data) ? sr.data : []);
+                evidence = raw.map((it: any) => ({ url: String(it?.url || ""), title: String(it?.title || it?.metadata?.title || "").slice(0, 160) })).filter((x) => /^https?:\/\//.test(x.url)).slice(0, 6);
+                evidenceText = raw.slice(0, 6).map((it: any) => `- ${String(it?.title || "").slice(0, 120)}: ${String(it?.description || it?.markdown || "").replace(/\s+/g, " ").slice(0, 200)} (${it?.url || ""})`).join("\n");
+                evidenceSource = evidence.length ? "web" : "none";
+              }
+            } catch {}
+            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[]; status: string; sources: { url: string; title: string }[]; ms: number }[] = [];
+            const statuses: Record<string, { status: string; ms: number }> = {};
+            const askOne = async (e: string, model: string | undefined) => {
+              const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), PA.PROBE_TIMEOUT_MS);
               try {
                 const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                   method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
-                  body: JSON.stringify({ model: models[e]?.model, max_tokens: 500, messages: [
-                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en} Return JSON only: {"answer":"short answer","brands":["brand names you would recommend, in order"]}` },
+                  body: JSON.stringify({ model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages: [
+                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. Answer directly as you would to a real user; never ask for clarification. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}${evidenceText ? `\nPublic web results you may rely on (cite their URLs when you use them):\n${evidenceText}` : ""}\nReturn JSON only: {"answer":"2-4 sentence answer","brands":["brand names you would recommend, in order"],"urls":["source URLs you relied on"]}` },
                     { role: "user", content: q },
                   ] }),
                 });
-                if (!r.ok) return;
+                if (!r.ok) return { kind: "error" as const };
                 const j: any = await r.json();
-                const p = extractJsonObject<any>(j?.choices?.[0]?.message?.content) || {};
-                const brands: string[] = Array.isArray(p.brands) ? p.brands.map((x: any) => String(x).slice(0, 80)).slice(0, 8) : [];
-                const idx = brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
-                const ans = String(p.answer || "").slice(0, 600);
-                answers.push({ engine: e, mentioned: idx >= 0 || ans.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: ans, brands });
-              } catch {} finally { clearTimeout(t); }
+                const p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
+                return p ? { kind: "ok" as const, p } : { kind: "empty" as const };
+              } catch (err: any) {
+                return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const) };
+              } finally { clearTimeout(t); }
+            };
+            const askAll = () => Promise.allSettled(engines.map(async (e) => {
+              const t0 = Date.now();
+              let res = await askOne(e, models[e]?.model);
+              // One retry with the fast backup model when the reply was empty or broken.
+              if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash");
+              const ms = Date.now() - t0;
+              if (res.kind !== "ok") { statuses[e] = { status: res.kind, ms }; return; }
+              const { p } = res;
+              const idx = p.brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
+              statuses[e] = { status: "answered", ms };
+              answers.push({ engine: e, mentioned: idx >= 0 || p.answer.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: p.answer, brands: p.brands, status: "answered", sources: PA.linkSources(p, evidence), ms });
             }));
-            // Background mode: finish after the response, save to tool history, notify; refund if nothing came back.
-            if (body.background && policy.backgroundAllowed) {
+            const settle = async () => {
+              const refund = PA.probeRefund(Number(pChg.tokens || 0), engines.length, answers.length);
+              if (refund > 0) { try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun, _meta: { refund: true, partial: true, answered: answers.length, asked: engines.length, endpoint: "/api/visibility#probe" } } as any); } catch {} }
+              return Number(pChg.tokens || 0) - refund;
+            };
+            // Background mode (only when a person asks for it from the tool page): finish after the response.
+            if (body.background === true && policy.backgroundAllowed) {
               const work = (async () => {
                 await askAll();
+                const charged = await settle();
                 const { notifyUser } = await import("@/lib/notify.server");
                 if (!answers.length) {
-                  try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -Number(pChg.tokens || 0), _usd: 0, _run_id: pRun, _meta: { refund: true, endpoint: "/api/visibility#probe" } } as any); } catch {}
                   try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
                   return;
                 }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, charged: pChg.tokens } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, statuses, evidence, charged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
               })().catch(() => {});
@@ -238,6 +278,10 @@ export const Route = createFileRoute("/api/visibility")({
               return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
             }
             await askAll();
+            const charged = await settle();
+            if (!answers.length) {
+              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+            }
             if (body.notify) {
               try {
                 const { notifyUser } = await import("@/lib/notify.server");
@@ -247,9 +291,9 @@ export const Route = createFileRoute("/api/visibility")({
             }
             const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
-            const reasoned = withReasons(answers, brand, lang as any);
+            const reasoned = withReasons(answers as any, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
+            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();

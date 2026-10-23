@@ -437,7 +437,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     let envision: any = null;
     if (settings.council?.envision_enabled !== false) {
       try {
-        await ctx.emit("phase", { phase: "envision" });
+        await ctx.emit("phase", { phase: "envision" }); try { const _n = (await import("./narration")).narratePhase("envision", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "envision", text: _n }); } catch {}
         const eResp = await call("envision", [
           { role: "system", content: systemPrompt },
           {
@@ -464,7 +464,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
     // 3) PLAN (uses envision output when present)
-    await ctx.emit("phase", { phase: "planning" });
+    await ctx.emit("phase", { phase: "planning" }); try { const _n = (await import("./narration")).narratePhase("planning", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "planning", text: _n }); } catch {}
     // MCI planning hints (additive, fail-open): tools with a fresh result for this user.
     let mciHintLine = "";
     try {
@@ -751,7 +751,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
     if (settings.council?.enabled && ctx.useSubagents !== false) {
-      await ctx.emit("phase", { phase: "council" });
+      await ctx.emit("phase", { phase: "council" }); try { const _n = (await import("./narration")).narratePhase("council", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "council", text: _n }); } catch {}
       const requiredCaps = new Set<Capability>();
       for (const s of steps) {
         const def = TOOL_CATALOG.find((t) => t.key === s.tool);
@@ -840,7 +840,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           const threshold = Number(exec.conflict_threshold ?? 25);
           const conflicted = objections > 0 || spread > threshold || divergentTools;
           if (conflicted && opinions.length > 1) {
-            await ctx.emit("phase", { phase: "conflict" });
+            await ctx.emit("phase", { phase: "conflict" }); try { const _n = (await import("./narration")).narratePhase("conflict", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "conflict", text: _n }); } catch {}
             const xResp = await call("conflict", [
               {
                 role: "system",
@@ -1070,7 +1070,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       return;
       }
       try {
-        const body = { ...normalizeToolInput(enforceEnums(step.tool, filled)), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        const { stripAgentOnlyFields } = await import("./probe-answer");
+        const N = await import("./narration");
+        const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolStart(step.tool, ctx.language as any, Array.isArray((body as any).probe_engines) ? (body as any).probe_engines.length : 0) }); } catch {}
         const toolCtl = new AbortController();
         const baseMs = Math.max(settings.tool_timeout_ms || 0, 90_000);
         const toolTimer = setTimeout(() => toolCtl.abort(), HEAVY_TOOLS.has(step.tool) ? Math.max(baseMs, 240_000) : baseMs);
@@ -1108,6 +1111,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const ok = resp.ok && !sseError;
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
+        try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolDone(step.tool, ok, json, ctx.language as any) }); } catch {}
         // Brand agent: identity consistency vs the Entity Truth Card (pure rules, no model cost).
         try {
           if (ok && entityProfile) {
@@ -1184,7 +1188,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 5) FINAL ANSWER
     //    Part 7 — Trust Engine is folded into THIS call (no extra request):
     //    the model appends a structured envelope after a ---TRUST--- marker.
-    await ctx.emit("phase", { phase: "summarizing" });
+    await ctx.emit("phase", { phase: "summarizing" }); try { const _n = (await import("./narration")).narratePhase("summarizing", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "summarizing", text: _n }); } catch {}
     const trustEnabled = !!(exec.enabled && exec.trust_enabled);
     const trustInstruction = trustEnabled
       ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`

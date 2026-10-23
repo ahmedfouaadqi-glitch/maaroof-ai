@@ -1,8 +1,8 @@
 // Live stage cards (React Bits AnimatedList + SpotlightCard + StarBorder style), driven only by recorded events.
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { Brain, ListChecks, Users, Search, Scale, FileCheck2, Timer } from "lucide-react";
-import { pipelineCards, taskDuration, formatDuration, councilEngines, stageOf, type StageKey, type StageState, type EngineView } from "@/lib/maaroof/pipeline-cards";
+import { motion, useReducedMotion, AnimatePresence } from "motion/react";
+import { Brain, ListChecks, Users, Search, Scale, FileCheck2, Timer, ExternalLink } from "lucide-react";
+import { pipelineCards, taskDuration, formatDuration, councilEngines, stageTimeline, latestNarration, type StageKey, type StageState, type EngineView, type TimelineItem } from "@/lib/maaroof/pipeline-cards";
 import { ENGINE_KEYS, ENGINE_CATALOG } from "@/lib/ai-engines";
 import { ENGINE_LOGOS } from "@/components/engine-logos";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -44,6 +44,7 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
       {total && <span className="text-muted-foreground tabular-nums">{tr(lang, "البدء", "Started", "دەستپێک")}: {clock(total.startedAt)}</span>}
       {total?.endedAt != null && <span className="text-muted-foreground tabular-nums">{tr(lang, "الانتهاء", "Ended", "کۆتایی")}: {clock(total.endedAt)}</span>}
     </div>
+    <NarrationTicker events={events} running={running} lang={lang} />
     <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-live="polite">
       {cards.map((c, n) => {
         const M = META[c.key]; const Icon = M.icon;
@@ -78,7 +79,10 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
             <DialogDescription>{META[open].d[i]}</DialogDescription>
           </DialogHeader>
           {open === "council"
-            ? <CouncilGrid engines={engines} lang={lang} selected={eng} onSelect={setEng} />
+            ? <div className="space-y-5">
+                <CouncilGrid engines={engines} lang={lang} selected={eng} onSelect={setEng} />
+                <div><p className="mb-2 text-sm font-semibold">{tr(lang, "ما حدث في مراجعة الخبراء", "What happened in the expert review", "پێداچوونەوەی پسپۆڕان")}</p><StageDetails stage="council" events={events} lang={lang} /></div>
+              </div>
             : <StageDetails stage={open} events={events} lang={lang} />}
         </>}
       </DialogContent>
@@ -94,7 +98,19 @@ const ENG_LABEL: Record<EngineView["status"], [string, string, string]> = {
 const ENG_DOT: Record<EngineView["status"], string> = { waiting: "bg-muted-foreground/40", asking: "bg-primary animate-pulse", answered: "bg-success", unresponsive: "bg-destructive" };
 
 function EngineDots({ engines }: { engines: EngineView[] }) {
-  return <div className="mt-2 flex flex-wrap gap-1">{engines.map((e) => <span key={e.key} title={(ENGINE_CATALOG as any)[e.key]?.name} className={`size-2 rounded-full ${ENG_DOT[e.status]}`} />)}</div>;
+  const reduced = useReducedMotion();
+  const answered = engines.filter((e) => e.status === "answered").length;
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <div className="flex flex-wrap gap-1">{engines.map((e, n) => (
+        <motion.span key={e.key} title={(ENGINE_CATALOG as any)[e.key]?.name}
+          animate={reduced ? undefined : e.status === "answered" ? { scale: [1, 1.6, 1] } : undefined}
+          transition={{ duration: 0.5, delay: n * 0.05 }}
+          className={`size-2 rounded-full ${ENG_DOT[e.status]}`} />
+      ))}</div>
+      {answered > 0 && <span className="text-[11px] tabular-nums text-muted-foreground">{answered}/10</span>}
+    </div>
+  );
 }
 
 function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineView[]; lang: L; selected: string | null; onSelect: (k: string | null) => void }) {
@@ -120,45 +136,83 @@ function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineVie
         })}
       </div>
       {sel && (
-        <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-4 text-sm">
-          <p className="font-semibold">{(ENGINE_CATALOG as any)[sel.key]?.name}</p>
+        <motion.div key={sel.key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-muted/30 p-4 text-sm">
+          <p className="flex items-center justify-between font-semibold">
+            <span>{(ENGINE_CATALOG as any)[sel.key]?.name}</span>
+            {sel.ms != null && <span className="text-xs font-normal tabular-nums text-muted-foreground">{formatDuration(sel.ms, lang)}</span>}
+          </p>
           {sel.status !== "answered"
-            ? <p className="text-muted-foreground">{sel.status === "unresponsive" ? tr(lang, "سُئل هذا النموذج لكنه لم يرد ضمن المهلة، فلم يُحتسب.", "This model was asked but did not reply in time, so it was not counted.", "وەڵامی نەدایەوە.") : tr(lang, "لا توجد إجابة مسجّلة لهذا النموذج بعد.", "No recorded answer for this model yet.", "هێشتا وەڵام نییە.")}</p>
+            ? <p className="text-muted-foreground">{sel.status === "unresponsive"
+                ? (sel.miss === "timeout" ? tr(lang, "سُئل هذا النموذج لكنه لم يرد خلال 30 ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but no reply within 30 seconds — not counted or charged.", "لە 30 چرکەدا وەڵامی نەدایەوە.")
+                  : sel.miss === "error" ? tr(lang, "سُئل هذا النموذج لكن الطلب تعذّر حتى بعد محاولة ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but the request failed even after a second try — not counted or charged.", "داواکاری سەرکەوتوو نەبوو.")
+                  : tr(lang, "سُئل هذا النموذج لكنه أعاد رداً فارغاً حتى بعد محاولة ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but it returned an empty reply even after a second try — not counted or charged.", "وەڵامی بەتاڵ بوو."))
+                : sel.status === "asking" ? tr(lang, "يُسأل الآن… ستظهر إجابته هنا فور وصولها.", "Being asked now… its answer appears here as soon as it arrives.", "ئێستا پرسیاری لێدەکرێت…")
+                : tr(lang, "لم يُسأل هذا النموذج بعد في هذه المهمة.", "This model has not been asked in this task yet.", "هێشتا پرسیاری لێنەکراوە.")}</p>
             : <>
               <p>{sel.mentioned
                 ? tr(lang, `ذكر علامتك${sel.rank ? ` في المرتبة ${sel.rank}` : ""}.`, `Mentioned your brand${sel.rank ? ` at position ${sel.rank}` : ""}.`, `ناوی هێنا${sel.rank ? ` (${sel.rank})` : ""}.`)
                 : tr(lang, "لم يذكر علامتك في إجابته.", "Did not mention your brand.", "ناوی نەهێنا.")}</p>
-              <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><div className="h-full bg-primary" style={{ width: `${sel.mentioned ? (sel.rank ? Math.max(20, 100 - (sel.rank - 1) * 15) : 60) : 4}%` }} /></div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><motion.div className="h-full bg-primary" initial={{ width: 0 }} animate={{ width: `${sel.mentioned ? (sel.rank ? Math.max(20, 100 - (sel.rank - 1) * 15) : 60) : 4}%` }} transition={{ duration: 0.6 }} /></div>
               {sel.answer && <blockquote className="border-s-2 border-primary ps-3 text-muted-foreground">«{sel.answer}»</blockquote>}
               {sel.brands.length > 0 && <p className="text-xs text-muted-foreground">{tr(lang, "الأسماء التي اقترحها: ", "Names it suggested: ", "ناوەکان: ")}{sel.brands.join("، ")}</p>}
               {sel.reason && <p className="text-xs text-muted-foreground">{sel.reason}</p>}
+              {sel.sources.length > 0
+                ? <div><p className="text-xs font-medium">{tr(lang, "مصادر حقيقية مرتبطة بإجابته:", "Real sources linked to its answer:", "سەرچاوە ڕاستەقینەکان:")}</p><LinkList links={sel.sources} /></div>
+                : <p className="text-xs text-muted-foreground">{tr(lang, "لم يستند إلى رابط من نتائج البحث الحية.", "It did not rely on a link from the live search results.", "بەستەری نەبوو.")}</p>}
               <p className="text-[11px] text-muted-foreground">{tr(lang, "مقاس حي من هذه المهمة", "Measured live in this task", "پێوانەی ڕاستەوخۆ")}</p>
             </>}
-        </div>
+        </motion.div>
       )}
     </div>
   );
 }
 
-function StageDetails({ stage, events, lang }: { stage: StageKey; events: Array<{ type: string; data?: any }>; lang: L }) {
-  const mine = events.filter((e) => stageOf(e) === stage);
-  const tools = events.filter((e) => e.type === "tool_result" && e.data?.tool);
-  const final = [...events].reverse().find((e) => e.type === "final")?.data?.text as string | undefined;
-  const errors = events.filter((e) => e.type === "phase_error" || e.type === "error");
-  if (stage === "result") return final
-    ? <div className="whitespace-pre-wrap rounded-xl bg-muted/30 p-4 text-sm leading-6">{final.slice(0, 4000)}</div>
-    : <p className="text-sm text-muted-foreground">{tr(lang, "لم تُكتب النتيجة بعد.", "The result is not written yet.", "ئەنجام هێشتا نەنووسراوە.")}</p>;
-  if (stage === "evidence" || stage === "plan") return tools.length || mine.length
-    ? <ul className="space-y-2 text-sm">{(stage === "evidence" ? tools : events.filter((e) => e.type === "tool_call")).map((e, n) => (
-        <li key={n} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-          <span>{String(e.data?.tool)}</span>
-          {stage === "evidence" && <span className={e.data?.ok === false ? "text-destructive" : "text-success"}>{e.data?.ok === false ? tr(lang, "لم تكتمل", "Not completed", "تەواو نەبوو") : tr(lang, "نجحت", "Succeeded", "سەرکەوتوو")}</span>}
-        </li>))}</ul>
-    : <p className="text-sm text-muted-foreground">{tr(lang, "لم تُسجَّل خطوات لهذه المرحلة بعد.", "No steps recorded for this stage yet.", "هێشتا هەنگاو نییە.")}</p>;
+function LinkList({ links }: { links: { url: string; title: string }[] }) {
+  if (!links.length) return null;
   return (
-    <div className="space-y-2 text-sm">
-      <p className="text-muted-foreground">{mine.length ? tr(lang, "بدأت هذه المرحلة وسُجّل تقدّمها.", "This stage started and its progress was recorded.", "ئەم قۆناغە دەستی پێکرد.") : tr(lang, "لم تبدأ هذه المرحلة بعد.", "This stage has not started yet.", "هێشتا دەستی پێنەکردووە.")}</p>
-      {errors.length > 0 && stage === "understand" && <p className="text-xs text-muted-foreground">{tr(lang, "تأخّر نموذج فاستُخدم بديل أو خطة أساسية، وأكملت المهمة.", "A model was slow, so a backup or basic plan was used and the task continued.", "مۆدێلێکی جێگرەوە بەکارهات.")}</p>}
+    <ul className="mt-1.5 space-y-1">
+      {links.map((s) => (
+        <li key={s.url} className="flex items-center gap-1.5 text-xs">
+          <ExternalLink className="size-3 shrink-0 text-primary" />
+          <a href={s.url} target="_blank" rel="noopener noreferrer" className="truncate text-primary underline-offset-2 hover:underline">{s.title || s.url}</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const KIND_DOT: Record<TimelineItem["kind"], string> = { say: "bg-primary", step: "bg-primary/60", done: "bg-success", fail: "bg-destructive", info: "bg-muted-foreground/50" };
+
+function StageDetails({ stage, events, lang }: { stage: StageKey; events: Array<{ type: string; data?: any; at?: number }>; lang: L }) {
+  const reduced = useReducedMotion();
+  const items = stageTimeline(events, stage, lang);
+  if (!items.length) return <p className="text-sm text-muted-foreground">{tr(lang, "لم تبدأ هذه المرحلة بعد، أو لم يُسجَّل لها شيء حتى الآن.", "This stage has not started or has nothing recorded yet.", "هێشتا هیچ تۆمار نەکراوە.")}</p>;
+  const clock = (t: number) => new Date(t).toLocaleTimeString(lang === "en" ? "en-GB" : "ar-IQ", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return (
+    <ol className="relative space-y-3 border-s border-border ps-4">
+      {items.map((it, n) => (
+        <motion.li key={n} initial={reduced ? false : { opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: reduced ? 0 : Math.min(n * 0.04, 0.6) }} className="relative">
+          <span className={`absolute -start-[21px] top-1.5 size-2.5 rounded-full ${KIND_DOT[it.kind]}`} />
+          {it.at != null && <span className="text-[11px] tabular-nums text-muted-foreground">{clock(it.at)}</span>}
+          <p className={`whitespace-pre-wrap text-sm leading-6 ${it.kind === "say" ? "font-medium" : ""} ${it.kind === "fail" ? "text-destructive" : ""}`}>{it.text}</p>
+          <LinkList links={it.links} />
+        </motion.li>
+      ))}
+    </ol>
+  );
+}
+
+function NarrationTicker({ events, running, lang }: { events: Array<{ type: string; data?: any }>; running: boolean; lang: L }) {
+  const text = latestNarration(events);
+  const reduced = useReducedMotion();
+  if (!text) return null;
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 text-sm" aria-live="polite">
+      <span className={`size-2 shrink-0 rounded-full bg-primary ${running && !reduced ? "animate-pulse" : ""}`} />
+      <span className="sr-only">{tr(lang, "معروف يقول:", "Maaroof says:", "معروف دەڵێت:")}</span>
+      <AnimatePresence mode="wait">
+        <motion.span key={text} initial={reduced ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }}>{text}</motion.span>
+      </AnimatePresence>
     </div>
   );
 }
