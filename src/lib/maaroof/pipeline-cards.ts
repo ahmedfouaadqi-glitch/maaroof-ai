@@ -13,6 +13,7 @@ const PHASE_TO_STAGE: Record<string, StageKey> = {
 
 export function stageOf(e: { type: string; data?: any }): StageKey | null {
   if (e.type === "phase") return PHASE_TO_STAGE[String(e.data?.phase)] ?? null;
+  if (e.type === "stage" || e.type === "skill_choice") return "understand";
   if (e.type === "tool_call" || e.type === "tool_result") return "evidence";
   if (e.type === "final" || e.type === "done") return "result";
   return null;
@@ -156,7 +157,8 @@ export function stageTimeline(events: Ev[], stage: StageKey, lang: "ar" | "en" |
   for (const e of events) {
     if (timelineStageOf(e) !== stage) continue;
     const d = e.data || {}; const at = typeof e.at === "number" ? e.at : null;
-    if (e.type === "narration" && d.text) out.push({ at, kind: "say", text: brandModelIds(String(d.text), lang), links: [] });
+    if (e.type === "stage") out.push({ at, kind: "step", text: d.stage === "setup_done" ? t("تحميل الإعدادات اكتمل", "Settings loaded", "ڕێکخستنەکان بارکران") : t("بدء فهم الطلب", "Understanding the request", "دەستپێکردنی تێگەیشتن"), links: [] });
+    else if (e.type === "narration" && d.text) out.push({ at, kind: "say", text: brandModelIds(String(d.text), lang), links: [] });
     else if (e.type === "decision" && d.summary) out.push({ at, kind: "info", text: brandModelIds(String(d.summary), lang).slice(0, 300), links: [] });
     else if (e.type === "skill_choice") out.push({ at, kind: "info", text: t("المهارات: ", "Skills: ", "شارەزایی: ") + (Array.isArray(d.skills) ? d.skills.map((k: string) => `${k}${d.reasons?.[k] && d.reasons[k] !== "user_selected" ? ` (${d.reasons[k]})` : ""}`).join("، ") : ""), links: [] });
     else if (e.type === "envision" && d.future_goal) out.push({ at, kind: "info", text: String(d.future_goal).slice(0, 400), links: [] });
