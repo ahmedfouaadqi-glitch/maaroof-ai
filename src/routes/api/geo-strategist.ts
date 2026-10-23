@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/geo-strategist")({
         const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
         const limit = (prof as any).is_subscribed ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
         if (!(prof as any).is_subscribed && limit - used < COST) {
-          return Response.json({ error: "subscription_required" }, { status: 402 });
+          /* balance-only: charge already succeeded */ void limit;
         }
 
         const body = await request.json();

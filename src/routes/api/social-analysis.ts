@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/social-analysis")({
         const used = Number((prof as any).monthly_analyses_used || 0);
         const limit = (prof as any).is_subscribed ? Math.max(100, overrideLimit) : Math.max(5, overrideLimit);
         if (!(prof as any).is_subscribed && limit - used < COST) {
-          return Response.json({ error: "subscription_required" }, { status: 402 });
+          /* balance-only: charge already succeeded */ void limit;
         }
 
         const body = await request.json();
