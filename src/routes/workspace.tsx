@@ -16,6 +16,7 @@ import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { MaaroofChat } from "@/components/workspace/MaaroofChat";
 import { LiveSkillHints } from "@/components/workspace/LiveSkillHints";
+import { DebateCard } from "@/components/workspace/DebateCard";
 import { LivePipeline } from "@/components/workspace/LivePipeline";
 import { domainsInText } from "@/lib/knowledge-facts";
 import { OnboardingTour } from "@/components/workspace/OnboardingTour";
