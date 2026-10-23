@@ -23,3 +23,15 @@ export function parseAfter(v: string | null): number {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
+
+/** Successful tool outputs from earlier tool_result payloads, keyed by tool (last wins). Pure. */
+export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; output?: unknown } | null | undefined>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const p of payloads) {
+    if (!p || p.ok !== true || typeof p.tool !== "string") continue;
+    const o: any = p.output;
+    if (o && typeof o === "object" && (o.error || o.skipped || o.needs_input)) continue;
+    out[p.tool] = o;
+  }
+  return out;
+}

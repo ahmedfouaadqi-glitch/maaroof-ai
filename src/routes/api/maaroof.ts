@@ -88,9 +88,22 @@ export const Route = createFileRoute("/api/maaroof")({
             return Response.json({ needs_skill: true, options: ["presence_audit", "entity_readiness", "growth_roadmap"] });
           }
           if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
+          const ro = body?.run_options || {};
+          const runOptions = { salvageOnFailure: ro.salvage_on_failure === true, focusedPlan: ro.focused_plan === true, parallelTools: ro.parallel_tools === true };
+          // Smart resume: reuse successful tool outputs of an earlier attempt owned by this user.
+          let reusedResults: Record<string, any> | undefined;
+          const resumeId = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
+          if (resumeId) {
+            const { data: prevJob } = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
+            if (prevJob) {
+              const { data: evs } = await db.from("maaroof_job_events").select("payload").eq("job_id", resumeId).eq("event_type", "tool_result").order("seq").limit(200);
+              const { reusableResults } = await import("@/lib/maaroof/jobs");
+              reusedResults = reusableResults((evs || []).map((e: any) => e.payload));
+            }
+          }
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
             user_id: userId, goal, mode: executionMode || "execution", status: "running",
-            request_payload: { selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
+            request_payload: { run_options: runOptions, resume_job_id: resumeId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
           }).select("id").single();
           if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
           const jobId = job.id as string;
@@ -112,16 +125,18 @@ export const Route = createFileRoute("/api/maaroof")({
           };
           const work = (async () => {
             let status = "completed"; let err: string | null = null;
+            // Heartbeat: a long healthy tool call must not look stale.
+            const hb = setInterval(() => { db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("status", "running").then(() => {}, () => {}); }, 60_000);
             try {
               await emit("skill_choice", skillChoice);
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: ctl.signal, executionMode, useSubagents, liveProbe, clarifications, selectedSkills,
+                authBearer: auth, origin, emit, signal: ctl.signal, executionMode, useSubagents, liveProbe, clarifications, selectedSkills, reusedResults, runOptions,
               });
             } catch (e: any) {
               status = "failed"; err = String(e?.message || e).slice(0, 500);
               await emit("error", { message: err });
-            }
+            } finally { clearInterval(hb); }
             await chain;
             const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
             if (j?.status !== "cancelled") {
