@@ -116,7 +116,7 @@ export const Route = createFileRoute("/api/maaroof")({
             if (event === "final" && typeof data?.text === "string") finalText = data.text;
             const seq = next();
             chain = chain.then(() => db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq, event_type: event, payload: data ?? {} })).catch(() => {});
-            if (seq % 5 === 0) {
+            if (seq % 3 === 0 || event === "tool_result" || event === "step") {
               const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
               if (j?.status === "cancelled") ctl.abort();
               else await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
@@ -152,7 +152,9 @@ export const Route = createFileRoute("/api/maaroof")({
             }
           })();
           const { runAfterResponse } = await import("@/lib/request-ctx.server");
-          if (!runAfterResponse(work)) await work;
+          // Never block the response on the job; the client polls for events.
+          const safeWork = work.catch(() => {});
+          runAfterResponse(safeWork);
           return Response.json({ job_id: jobId });
         }
 

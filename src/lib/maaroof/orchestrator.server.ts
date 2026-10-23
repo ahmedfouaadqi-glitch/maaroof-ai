@@ -297,10 +297,11 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   // model health. Behaviour with governance off is identical to before.
   const call = async (phase: ModelPhase, messages: any[]) => {
     const choice = await modelFor(phase);
+    const timeoutMs = phaseTimeoutMs(String(phase));
     const t0 = Date.now();
     try {
       const r = await callGateway(apiKey, choice.model, messages, {
-        signal: ctx.signal,
+        signal: ctx.signal, timeoutMs,
         registry: mg.use_registry_pricing ? modelRegistry : undefined,
       });
       if (mg.health_tracking !== false) {
@@ -311,13 +312,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       if (mg.health_tracking !== false) {
         void recordModelCall({ model: choice.model, ok: false, latencyMs: Date.now() - t0, error: String(e?.message || e) });
       }
-      // Governed fallback: retry once on the phase fallback model.
-      if (choice.governed && choice.fallback && choice.fallback !== choice.model) {
-        const r = await callGateway(apiKey, choice.fallback, messages, {
-          signal: ctx.signal,
+      if (ctx.signal?.aborted) throw e;
+      void Promise.resolve(ctx.emit("phase_error", { phase, model: choice.model, message: String(e?.message || e).slice(0, 200) })).catch(() => {});
+      // Fallback: governed phase fallback, or a fast default for planning phases.
+      const fb = choice.governed && choice.fallback && choice.fallback !== choice.model
+        ? choice.fallback
+        : (timeoutMs < 60_000 && choice.model !== FAST_FALLBACK_MODEL ? FAST_FALLBACK_MODEL : null);
+      if (fb) {
+        return await callGateway(apiKey, fb, messages, {
+          signal: ctx.signal, timeoutMs,
           registry: mg.use_registry_pricing ? modelRegistry : undefined,
         });
-        return r;
       }
       throw e;
     }
@@ -1673,13 +1678,30 @@ Rules:
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
-async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[] } = {}): Promise<{ text: string; tokens: number; usd: number }> {
-  const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: lovableAiHeaders(apiKey),
-    body: JSON.stringify({ model, messages }),
-    signal: opts.signal,
-  });
+const FAST_FALLBACK_MODEL = "google/gemini-3.8-flash";
+/** Planning-type phases get a short per-call limit; others a generous one. */
+function phaseTimeoutMs(phase: string): number {
+  return /envision|plan|understand|intent/i.test(phase) ? 35_000 : 120_000;
+}
+
+async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[]; timeoutMs?: number } = {}): Promise<{ text: string; tokens: number; usd: number }> {
+  const tctl = new AbortController();
+  const timer = opts.timeoutMs ? setTimeout(() => tctl.abort(new Error(`model_timeout_${opts.timeoutMs}ms`)), opts.timeoutMs) : null;
+  const onAbort = () => tctl.abort();
+  if (opts.signal?.aborted) tctl.abort();
+  opts.signal?.addEventListener("abort", onAbort);
+  let resp: Response;
+  try {
+    resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: lovableAiHeaders(apiKey),
+      body: JSON.stringify({ model, messages }),
+      signal: tctl.signal,
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+    opts.signal?.removeEventListener("abort", onAbort);
+  }
   if (!resp.ok) {
     const t = await resp.text().catch(() => "");
     throw new Error(`gateway_${resp.status}: ${t.slice(0, 200)}`);

@@ -319,11 +319,20 @@ function WorkspacePage() {
     const watcherId = watcherRef.current;
     let cursor = after;
     while (watcherRef.current === watcherId) {
-      const response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
-        headers: { Authorization: "Bearer " + token },
-        cache: "no-store",
-      });
+      let response: Response;
+      try {
+        const { data: s } = await supabase.auth.getSession();
+        const tk = s.session?.access_token || token;
+        response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
+          headers: { Authorization: "Bearer " + tk },
+          cache: "no-store",
+        });
+      } catch {
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        continue; // transient network hiccup: keep watching
+      }
       if (!response.ok) {
+        if (response.status >= 500) { await new Promise(resolve => setTimeout(resolve, 2500)); continue; }
         const body = await response.json().catch(() => ({}));
         throw new Error(String(body?.error || c.failed));
       }
