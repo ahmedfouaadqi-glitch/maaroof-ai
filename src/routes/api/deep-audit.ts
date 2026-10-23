@@ -105,7 +105,10 @@ export const Route = createFileRoute("/api/deep-audit")({
           user_id: a.userId, goal: "الفحص العميق للحساب", mode: "deep_audit", status: "running", request_payload: { targets: targets.map((t) => t.url) },
         }).select("id").single();
         if (error || !job) return Response.json({ error: "job_create_failed" }, { status: 500 });
-        const work = runAudit(db, a.userId, job.id, targets, String(p.brand_name || ""), p.account_kind || null);
+        // Start handshake: the first event is saved before the id is returned, so the job never looks "not started".
+        const { error: startErr } = await db.from("maaroof_job_events").insert({ job_id: job.id, user_id: a.userId, seq: 1, event_type: "audit_start", payload: { total: targets.length, targets: targets.map((t) => t.url) } });
+        if (startErr) console.error("[deep-audit] start event failed", startErr);
+        const work = runAudit(db, a.userId, job.id, targets, String(p.brand_name || ""), p.account_kind || null, 1);
         const { runAfterResponse } = await import("@/lib/request-ctx.server");
         if (!runAfterResponse(work)) await work;
         return Response.json({ job_id: job.id });
