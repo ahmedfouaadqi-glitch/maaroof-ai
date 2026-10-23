@@ -1,3 +1,4 @@
+import { buildTaskExportPayload } from "@/lib/maaroof/task-export";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 const LazyAgentOps = lazy(() => import("@/components/maaroof/tabs/AgentOps").then((m) => ({ default: m.AgentOps })));
@@ -731,7 +732,7 @@ function WorkspacePage() {
 
             <DebateCard data={[...events].reverse().find((e: any) => e.type === "debate")?.data} locale={locale} />
             {finalEvent && <div className="rounded-2xl border border-primary/25 bg-card p-5 md:p-6">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div><ExportButtons toolKey="maaroof" build={() => ({ title: c.result, subtitle: goal.trim(), sections: [{ heading: c.result, kind: "text", text: String(finalEvent.data?.text || finalEvent.data?.message || "") }] })} /></div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div><ExportButtons toolKey="maaroof" build={() => buildTaskExportPayload({ title: c.result, goal: goal.trim(), finalText: String(finalEvent.data?.text || finalEvent.data?.message || ""), results: events.filter((e) => e.type === "tool_result").map((e) => ({ tool: String(e.data?.tool || ""), ok: e.data?.ok !== false, output: e.data?.output })), lang: (locale === "en" || locale === "ku" ? locale : "ar") as any })} /></div>
               <div className="whitespace-pre-wrap text-sm leading-7">{String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)}</div>
               {domainsInText(String(finalEvent.data?.text || "")).length > 0 && <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3 text-xs">
                 <p className="mb-2 text-muted-foreground">{locale === "en" ? "Want Maaroof to read one of these pages to understand it better? It opens only after you grant temporary read-only access." : locale === "ku" ? "دەتەوێت معروف ئەم پەڕانە بخوێنێتەوە؟ تەنها دوای ڕێگەپێدانت." : "هل تريد أن يقرأ معروف إحدى هذه الصفحات لفهمها أكثر؟ لا يبدأ إلا بعد تفويضك المؤقت للقراءة فقط."}</p>

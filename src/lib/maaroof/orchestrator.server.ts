@@ -1047,8 +1047,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       return;
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
-      const { fillFromTask } = await import("./agent-input");
-      const filled = fillFromTask(step.tool, fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results);
+      const { fillFromTask, taskEntity, taskEntityInput } = await import("./agent-input");
+      const filled = fillFromTask(step.tool, fillToolInput(step.tool, taskEntityInput(step.tool, step.input, results), { goalBrand: clarBrand || taskEntity(results)?.brand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results);
       const missing = missingFields(step.tool, filled);
       // No competitors anywhere: skip before any charge with a clear reason instead of failing.
       if ((step.tool === "compare" || (step.tool === "competitor_monitor" && (filled as any).action === "create"))
@@ -1080,7 +1080,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       return;
       }
       // Default: ask all ten engines live (entitlement/plan limits are enforced server-side).
-      if (step.tool === "visibility" && ctx.liveProbe !== false && !(Array.isArray((filled as any).probe_engines) && (filled as any).probe_engines.length)) {
+      // Every task asks all ten engines; a shorter list chosen by the planner is ignored.
+      if (step.tool === "visibility" && ctx.liveProbe !== false) {
         try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
       }
       if (missing.length) {
