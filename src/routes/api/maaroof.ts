@@ -87,11 +87,22 @@ export const Route = createFileRoute("/api/maaroof")({
             const prevSkills = (prevPayload as any)?.request_payload?.selected_skills;
             if (Array.isArray(prevSkills)) pickedSkills = prevSkills.filter((x: unknown) => typeof x === "string").slice(0, 20);
           }
-          const { inferSkills } = await import("@/lib/maaroof/skill-inference");
-          const skillChoice = inferSkills(goal, pickedSkills);
+          const { chooseSkillsAutonomously } = await import("@/lib/maaroof/skill-inference");
+          // Maaroof reads the user's own profile, knowledge and interview before choosing tools.
+          let own: { brand?: string | null; profileText?: string; knowledgeText?: string[] } = {};
+          try {
+            const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
+            const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+            own = {
+              brand: (ep as any)?.brand_name || null,
+              profileText: [ (ep as any)?.brand_keywords, (ep as any)?.specialty_scope, (ep as any)?.entity_type, JSON.stringify((ep as any)?.target_markets || "") ].filter(Boolean).join(" "),
+              knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
+            };
+          } catch {}
+          const skillChoice = chooseSkillsAutonomously(goal, pickedSkills, own);
           const selectedSkills = skillChoice.skills;
           if (skillChoice.kind === "clarify" && !String(clarifications?.tools || "").trim()) {
-            // No evidence in the task text: ask before any charge instead of guessing.
+            // Only when the brand itself is unknown: ask before any charge instead of guessing.
             return Response.json({ needs_skill: true, options: ["presence_audit", "entity_readiness", "growth_roadmap"] });
           }
           if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
