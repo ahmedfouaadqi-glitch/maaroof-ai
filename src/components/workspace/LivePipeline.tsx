@@ -21,11 +21,21 @@ const STATE_LABEL: Record<StageState, [string, string, string]> = {
 };
 const idx = (l: L) => (l === "en" ? 1 : l === "ku" ? 2 : 0);
 
-export function LivePipeline({ events, running, lang }: { events: Array<{ type: string; data?: any }>; running: boolean; lang: L }) {
+export function LivePipeline({ events, running, lang }: { events: Array<{ type: string; data?: any; at?: number }>; running: boolean; lang: L }) {
   const reduced = useReducedMotion();
-  const cards = pipelineCards(events, running);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { if (!running) return; const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, [running]);
+  const cards = pipelineCards(events, running, now);
+  const total = taskDuration(events, running, now);
   const i = idx(lang);
+  const clock = (t: number) => new Date(t).toLocaleTimeString(lang === "en" ? "en-GB" : "ar-IQ", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   return (
+    <div className="space-y-3">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-muted/40 px-4 py-2 text-xs">
+      <span className="flex items-center gap-1.5 font-semibold"><Timer className="size-3.5 text-primary" />{tr(lang, "المدة الكلية", "Total time", "کۆی کات")}: <span className="tabular-nums">{total ? formatDuration(total.durationMs, lang) : tr(lang, "يبدأ الآن…", "starting…", "دەستپێدەکات…")}</span></span>
+      {total && <span className="text-muted-foreground tabular-nums">{tr(lang, "البدء", "Started", "دەستپێک")}: {clock(total.startedAt)}</span>}
+      {total?.endedAt != null && <span className="text-muted-foreground tabular-nums">{tr(lang, "الانتهاء", "Ended", "کۆتایی")}: {clock(total.endedAt)}</span>}
+    </div>
     <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-live="polite">
       {cards.map((c, n) => {
         const M = META[c.key]; const Icon = M.icon;
