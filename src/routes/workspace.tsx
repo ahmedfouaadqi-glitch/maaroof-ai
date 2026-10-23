@@ -325,9 +325,12 @@ function WorkspacePage() {
     watcherRef.current += 1;
     const watcherId = watcherRef.current;
     let cursor = after;
+    let failures = 0;
+    const { shouldRetryPoll, pollBackoffMs } = await import("@/lib/maaroof/jobs");
     while (watcherRef.current === watcherId) {
-      let response: Response;
+      let response: Response | null = null;
       try {
+        // Always read the freshest token: background refreshes must not break tracking.
         const { data: s } = await supabase.auth.getSession();
         const tk = s.session?.access_token || token;
         response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
@@ -335,14 +338,18 @@ function WorkspacePage() {
           cache: "no-store",
         });
       } catch {
-        await new Promise(resolve => setTimeout(resolve, 2500));
-        continue; // transient network hiccup: keep watching
+        response = null;
       }
-      if (!response.ok) {
-        if (response.status >= 500) { await new Promise(resolve => setTimeout(resolve, 2500)); continue; }
+      if (!response || !response.ok) {
+        if (shouldRetryPoll(response ? response.status : null)) {
+          failures += 1;
+          await new Promise(resolve => setTimeout(resolve, pollBackoffMs(failures)));
+          continue; // transient: keep watching from the same cursor
+        }
         const body = await response.json().catch(() => ({}));
         throw new Error(String(body?.error || c.failed));
       }
+      failures = 0;
       const body = await response.json();
       const incoming = Array.isArray(body?.events) ? body.events : [];
       if (incoming.length) {

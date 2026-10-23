@@ -36,6 +36,20 @@ export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; 
   return out;
 }
 
+/**
+ * Polling decision for a job watcher. `status` is the HTTP status, or null for a network error.
+ * Transient problems (network, auth refresh, rate limit, server errors) keep watching. Pure.
+ */
+export function shouldRetryPoll(status: number | null): boolean {
+  if (status === null) return true;
+  return status === 401 || status === 408 || status === 429 || status >= 500;
+}
+
+/** Wait before the next poll after `failures` consecutive transient errors (2s → 10s). Pure. */
+export function pollBackoffMs(failures: number): number {
+  return Math.min(10_000, 2_000 * Math.max(1, failures));
+}
+
 /** Expected cost of tools still to run on resume; reused tools cost nothing. Pure. */
 export function remainingCost(tools: string[], reused: string[], prices: Record<string, number>): { tools: string[]; tokens: number } {
   const done = new Set(reused);
