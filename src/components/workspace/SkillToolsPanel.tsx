@@ -19,6 +19,10 @@ export const TOOL_UI: Record<string, LazyExoticComponent<ComponentType<any>>> = 
   competitor_monitor: lazy(() => import("@/components/CompetitorMonitor").then((m) => ({ default: m.CompetitorMonitor }))),
   geo_strategist: lazy(() => import("@/components/GeoStrategist").then((m) => ({ default: m.GeoStrategist }))),
   what_if: lazy(() => import("@/components/WhatIfSimulator").then((m) => ({ default: m.WhatIfSimulator }))),
+  visibility: lazy(() => import("@/components/AIVisibility").then((m) => ({ default: m.AIVisibility }))),
+  research: lazy(() => import("@/components/SmartResearch").then((m) => ({ default: m.SmartResearch }))),
+  company_email: lazy(() => import("@/components/CompanyOutreach").then((m) => ({ default: m.CompanyOutreach }))),
+  security_scan: lazy(() => import("@/components/SecurityScanCard").then((m) => ({ default: (p: any) => m.SecurityScanCard({ lang: p?.lang || "ar" }) }))),
   report: lazy(() => import("@/components/ReportBuilder").then((m) => ({ default: m.ReportBuilder }))),
 };
 
@@ -28,10 +32,15 @@ const T = {
   ku: { title: "کارامەییەکان و ئامرازەکانیان", pick: "کارامەیییەک هەڵبژێرە", tools: "ئامرازەکان", open: "کردنەوە", viaTask: "تەنها لە ئەرکەکاندا", report: "دروستکەری ڕاپۆرت", back: "هەموو کارامەییەکان" },
 };
 
+const EXTRA_NAMES: Record<string, Record<L, string>> = {
+  security_scan: { ar: "الفحص الأمني", en: "Security Scan", ku: "پشکنینی ئاسایش" },
+};
+
 export function toolName(key: string, l: L): string {
   if (key === "report") return T[l].report;
-  const t: any = (TOOL_CATALOG as any)[key];
-  return t?.label?.[l] ?? t?.name?.[l] ?? t?.label ?? key;
+  if (EXTRA_NAMES[key]) return EXTRA_NAMES[key][l];
+  const t = TOOL_CATALOG.find((x) => x.key === key);
+  return t?.labels[l] ?? key;
 }
 
 /** Skills tab: each skill opens its real tools inline, same components and logic as before. */

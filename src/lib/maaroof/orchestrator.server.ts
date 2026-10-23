@@ -147,16 +147,27 @@ export type RunContext = {
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const apiKey = process.env.LOVABLE_API_KEY!;
-  const settings = await getMaaroofSettings();
+  const { withTimeout, STAGE_TIMEOUTS } = await import("@/lib/maaroof/timeouts");
+  await ctx.emit("stage", { stage: "understand" });
+  let settings: Awaited<ReturnType<typeof getMaaroofSettings>>;
+  try {
+    settings = await withTimeout(getMaaroofSettings(), STAGE_TIMEOUTS.setup, "settings");
+  } catch (e: any) {
+    console.error("[maaroof] settings stage failed", e?.message || e);
+    throw new Error("تعذّر تحميل إعدادات معروف قبل التخطيط؛ لم يُخصم شيء. أعد المحاولة.");
+  }
   if (settings.kill_switch) {
     await ctx.emit("error", { message: "تم تعطيل معروف مؤقتاً من قبل الإدارة." });
     throw new Error("maaroof_disabled");
   }
   const MODEL = settings.planner_model;
-  // Part 12 — model governance. When disabled, every phase resolves to MODEL,
-  // pricing keeps the legacy estimate and no telemetry is written.
   const mg = settings.model_governance || ({} as any);
-  const modelRegistry = mg.enabled || mg.use_registry_pricing ? await loadModelRegistry() : [];
+  let modelRegistry: any[] = [];
+  if (mg.enabled || mg.use_registry_pricing) {
+    try { modelRegistry = await withTimeout(loadModelRegistry(), STAGE_TIMEOUTS.setup, "registry"); }
+    catch (e: any) { console.error("[maaroof] registry stage failed, using default model", e?.message || e); }
+  }
+  await ctx.emit("stage", { stage: "setup_done" });
   const phaseModels = new Map<ModelPhase, ModelChoice>();
   const modelChoices: any[] = [];
   async function modelFor(phase: ModelPhase): Promise<ModelChoice> {
@@ -1097,8 +1108,9 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolStart(step.tool, ctx.language as any, Array.isArray((body as any).probe_engines) ? (body as any).probe_engines.length : 0) }); } catch {}
         const toolCtl = new AbortController();
-        const baseMs = Math.max(settings.tool_timeout_ms || 0, 90_000);
-        const toolTimer = setTimeout(() => toolCtl.abort(), HEAVY_TOOLS.has(step.tool) ? Math.max(baseMs, 240_000) : baseMs);
+        const { toolTimeoutMs } = await import("./timeouts");
+        const budgetMs = Math.max(settings.tool_timeout_ms || 0, toolTimeoutMs(step.tool), HEAVY_TOOLS.has(step.tool) ? 240_000 : 0);
+        const toolTimer = setTimeout(() => toolCtl.abort(), budgetMs);
         const onAbort = () => toolCtl.abort();
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
