@@ -1690,7 +1690,7 @@ Rules:
 const FAST_FALLBACK_MODEL = "google/gemini-3.8-flash";
 /** Planning-type phases get a short per-call limit; others a generous one. */
 function phaseTimeoutMs(phase: string): number {
-  return /envision|plan|understand|intent/i.test(phase) ? 35_000 : 120_000;
+  return /envision|plan|understand|intent/i.test(phase) ? 30_000 : /council|engine|probe/i.test(phase) ? 25_000 : 120_000;
 }
 
 async function callGateway(apiKey: string, model: string, messages: any[], opts: { signal?: AbortSignal; registry?: any[]; timeoutMs?: number } = {}): Promise<{ text: string; tokens: number; usd: number }> {
