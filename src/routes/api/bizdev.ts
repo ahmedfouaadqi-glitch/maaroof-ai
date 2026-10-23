@@ -187,7 +187,7 @@ export const Route = createFileRoute("/api/bizdev")({
               if (prof.subscription_expires_at && new Date(prof.subscription_expires_at) < new Date()) limit = 2;
             }
             if ((prof.monthly_analyses_used || 0) >= limit) {
-              return Response.json({ error: "limit", limit }, { status: 402 });
+              /* balance-only: legacy monthly limit no longer blocks */ void limit;
             }
           }
 
