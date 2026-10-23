@@ -314,6 +314,7 @@ function WorkspacePage() {
         setEvents((current) => [...current, { type: eventType, data: parsed, at: Date.now() }]);
         if (eventType === "clarify") {
           setClarifyField(String(parsed?.field || ""));
+          void import("@/lib/sound").then((m) => m.playNotify()).catch(() => {});
           setClarification("");
         }
         if (eventType === "error") setError(String(parsed?.message || c.failed));
@@ -366,6 +367,7 @@ function WorkspacePage() {
         for (const event of mapped) {
           if (event.type === "clarify") {
             setClarifyField(String(event.data?.field || ""));
+            void import("@/lib/sound").then((m) => m.playNotify()).catch(() => {});
             setClarification("");
           }
           if (event.type === "error") setError(String(event.data?.message || c.failed));
@@ -570,7 +572,8 @@ function WorkspacePage() {
       {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} initialDomain={search.domain} initialPurpose={search.domain ? goal.trim().slice(0, 200) : undefined} /></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
       <main id="skills" className={`px-4 py-6 md:px-0 md:py-10 ${tab === "main" ? "" : "hidden"}`}>
-        <header className="rb-workspace-fade mb-7 flex flex-wrap items-center gap-3">
+        <header className="rb-workspace-fade relative isolate mb-7 flex flex-wrap items-center gap-3">
+          <div aria-hidden className="ws-aurora" />
           <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <BrainCircuit className="size-6" />
           </div>

@@ -524,3 +524,12 @@
 }
 @keyframes sb-spin { to { --sb-angle: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .star-border { animation: none; background: var(--primary); } }
+
+/* Aurora — soft light behind the workspace header (React Bits inspired, CSS only). */
+.ws-aurora { position: absolute; inset: -2rem -1rem auto; height: 14rem; pointer-events: none; z-index: -1; filter: blur(48px); opacity: .55;
+  background: radial-gradient(40% 60% at 20% 40%, color-mix(in oklab, var(--primary) 35%, transparent), transparent 70%),
+              radial-gradient(35% 55% at 75% 30%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 70%);
+  background-size: 200% 200%; animation: ws-aurora 14s ease-in-out infinite alternate; }
+@keyframes ws-aurora { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+@media (prefers-reduced-motion: reduce) { .ws-aurora { animation: none; } }
+@media (max-width: 767px) { .ws-aurora { opacity: .35; filter: blur(32px); } }
