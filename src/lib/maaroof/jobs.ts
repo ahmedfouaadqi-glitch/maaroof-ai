@@ -64,3 +64,11 @@ export function remainingCost(tools: string[], reused: string[], prices: Record<
   const left = Array.from(new Set(tools)).filter((t) => !done.has(t));
   return { tools: left, tokens: left.reduce((s, t) => s + (Number(prices[t]) || 0), 0) };
 }
+
+/** Agent jobs send a heartbeat every 10s; no update for AGENT_STALE_MS means the runner died. Pure. */
+export const AGENT_STALE_MS = 60_000;
+export function isStaleAgentJob(job: { status: string; updated_at: string }, now = Date.now()): boolean {
+  if (isTerminalJobStatus(job.status)) return false;
+  const t = new Date(job.updated_at).getTime();
+  return Number.isFinite(t) && now - t > AGENT_STALE_MS;
+}

@@ -36,8 +36,10 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         }
         const { isStaleAuditJob } = await import("@/lib/maaroof/jobs");
         const auditStuck = job.mode === "deep_audit" && isStaleAuditJob(job);
-        if (notStarted || auditStuck || isStaleJob(job)) {
-          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : auditStuck ? "توقف الفحص دون تقدّم؛ لم يُخصم شيء. اضغط «إعادة المحاولة»." : "انتهت مهلة المهمة دون تقدّم.";
+        const { isStaleAgentJob } = await import("@/lib/maaroof/jobs");
+        const agentStuck = job.mode !== "deep_audit" && isStaleAgentJob(job);
+        if (notStarted || auditStuck || agentStuck || isStaleJob(job)) {
+          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : auditStuck ? "توقف الفحص دون تقدّم؛ لم يُخصم شيء. اضغط «إعادة المحاولة»." : agentStuck ? "توقف المنفّذ دون تقدّم؛ لم يُخصم إلا ما اكتمل. اضغط «استئناف» لإكمال الباقي دون إعادة خصم." : "انتهت مهلة المهمة دون تقدّم.";
           await db.from("maaroof_jobs").update({ status: "failed", error: msg, finished_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
           job.status = "failed"; job.error = msg;
         }
