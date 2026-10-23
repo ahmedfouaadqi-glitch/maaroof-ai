@@ -824,6 +824,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           await ctx.emit("council", entry);
         }
       }
+      // Critical debate (pure, zero cost): agreement vs contest, evidence vs hypothesis.
+      try {
+        const { debateFromOpinions } = await import("./debate");
+        const debate = debateFromOpinions(decisionLog.filter((d: any) => d.phase === "council") as any);
+        if (debate) { decisionLog.push({ phase: "debate", ...debate, at: new Date().toISOString() }); await ctx.emit("debate", debate); }
+      } catch {}
 
       // 3.6) PART 7 — COGNITIVE CONFLICT ENGINE.
       //      Runs ONE extra deliberation pass only when the council actually
