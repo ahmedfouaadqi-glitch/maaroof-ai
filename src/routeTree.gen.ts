@@ -46,6 +46,7 @@ import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
 import { Route as ApiMaaroofChatRouteImport } from './routes/api/maaroof-chat'
 import { Route as ApiMaaroofJobsRouteImport } from './routes/api/maaroof-jobs'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
+import { Route as ApiSecurityScanRouteImport } from './routes/api/security-scan'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
@@ -249,6 +250,11 @@ const ApiResearchRoute = ApiResearchRouteImport.update({
   path: '/api/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSecurityScanRoute = ApiSecurityScanRouteImport.update({
+  id: '/api/security-scan',
+  path: '/api/security-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSocialAnalysisRoute = ApiSocialAnalysisRouteImport.update({
   id: '/api/social-analysis',
   path: '/api/social-analysis',
@@ -376,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/api/maaroof-chat': typeof ApiMaaroofChatRoute
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
+  '/api/security-scan': typeof ApiSecurityScanRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
@@ -432,6 +439,7 @@ export interface FileRoutesByTo {
   '/api/maaroof-chat': typeof ApiMaaroofChatRoute
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
+  '/api/security-scan': typeof ApiSecurityScanRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
@@ -489,6 +497,7 @@ export interface FileRoutesById {
   '/api/maaroof-chat': typeof ApiMaaroofChatRoute
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
+  '/api/security-scan': typeof ApiSecurityScanRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
@@ -547,6 +556,7 @@ export interface FileRouteTypes {
     | '/api/maaroof-chat'
     | '/api/maaroof-jobs'
     | '/api/research'
+    | '/api/security-scan'
     | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
@@ -603,6 +613,7 @@ export interface FileRouteTypes {
     | '/api/maaroof-chat'
     | '/api/maaroof-jobs'
     | '/api/research'
+    | '/api/security-scan'
     | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
@@ -659,6 +670,7 @@ export interface FileRouteTypes {
     | '/api/maaroof-chat'
     | '/api/maaroof-jobs'
     | '/api/research'
+    | '/api/security-scan'
     | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
@@ -716,6 +728,7 @@ export interface RootRouteChildren {
   ApiMaaroofChatRoute: typeof ApiMaaroofChatRoute
   ApiMaaroofJobsRoute: typeof ApiMaaroofJobsRoute
   ApiResearchRoute: typeof ApiResearchRoute
+  ApiSecurityScanRoute: typeof ApiSecurityScanRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
@@ -992,6 +1005,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/security-scan': {
+      id: '/api/security-scan'
+      path: '/api/security-scan'
+      fullPath: '/api/security-scan'
+      preLoaderRoute: typeof ApiSecurityScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/social-analysis': {
       id: '/api/social-analysis'
       path: '/api/social-analysis'
@@ -1177,6 +1197,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMaaroofChatRoute: ApiMaaroofChatRoute,
   ApiMaaroofJobsRoute: ApiMaaroofJobsRoute,
   ApiResearchRoute: ApiResearchRoute,
+  ApiSecurityScanRoute: ApiSecurityScanRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
