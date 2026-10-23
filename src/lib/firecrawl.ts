@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 
 const BASE = "https://api.firecrawl.dev/v2";
+import { FETCH_TIMEOUT_MS, scrapeOrder, searchOrder } from "./fetch-order";
 
 export class FirecrawlError extends Error {
   status: number;
@@ -154,7 +155,7 @@ async function checkLimits(userId: string | null | undefined, toolKey: string | 
 
 export type FcCtx = { userId?: string | null; toolKey?: string | null };
 
-export async function fcSearch(query: string, opts: { limit?: number; lang?: string; location?: string } = {}, ctx: FcCtx = {}) {
+async function fcSearchRaw(query: string, opts: { limit?: number; lang?: string; location?: string } = {}, ctx: FcCtx = {}) {
   const limit = Math.min(opts.limit ?? 4, 10); // lowered default 6 -> 4
   const payload: any = { query, limit, lang: opts.lang, ...(opts.location ? { location: opts.location } : {}), scrapeOptions: { formats: ["markdown"], onlyMainContent: true } };
   const hash = hashKey("search", payload);
@@ -169,7 +170,7 @@ export async function fcSearch(query: string, opts: { limit?: number; lang?: str
 
   const t0 = Date.now();
   const res = await fetch(`${BASE}/search`, {
-    method: "POST",
+    method: "POST", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getKey()}` },
     body: JSON.stringify(payload),
   });
@@ -188,7 +189,7 @@ export async function fcSearch(query: string, opts: { limit?: number; lang?: str
   return json;
 }
 
-export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?: boolean } = {}, ctx: FcCtx = {}) {
+async function fcScrapeRaw(url: string, opts: { deep?: boolean; screenshot?: boolean } = {}, ctx: FcCtx = {}) {
   const deep = !!opts.deep;
   const formats = deep ? ["markdown", "html", "links"] : ["markdown"];
   if (opts.screenshot) formats.push("screenshot@fullPage");
@@ -205,7 +206,7 @@ export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?:
 
   const t0 = Date.now();
   const res = await fetch(`${BASE}/scrape`, {
-    method: "POST",
+    method: "POST", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getKey()}` },
     body: JSON.stringify(payload),
   });
@@ -223,4 +224,56 @@ export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?:
     await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units, latencyMs: latency, endpoint: "fc.scrape" });
   } catch {}
   return json;
+}
+
+
+function available() {
+  return { firecrawl: !!process.env.FIRECRAWL_API_KEY, apidirect: !!process.env.APIDIRECT_API_KEY };
+}
+
+async function directHttp(url: string) {
+  const u = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  const r = await fetch(u, { headers: { "User-Agent": "MaaroofBot/1.0" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!r.ok) throw new Error(`direct ${r.status}`);
+  const html = await r.text();
+  const pick = (re: RegExp) => (html.match(re)?.[1] || "").trim();
+  const title = pick(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const description = pick(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i);
+  const body = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<h1[^>]*>/gi, "\n# ").replace(/<h([23])[^>]*>/gi, (_m, n) => "\n" + "#".repeat(+n) + " ")
+    .replace(/<li[^>]*>/gi, "\n- ").replace(/<\/(p|div|h\d|li|section)>/gi, "\n\n").replace(/<[^>]+>/g, " ")
+    .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  if (body.length < 40) throw new Error("direct_empty");
+  return { success: true, data: { markdown: body, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
+}
+
+/** Scrape with fallback chain (see fetch-order.ts). Result carries `fetch_source`. */
+export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?: boolean } = {}, ctx: FcCtx = {}) {
+  let last: unknown = null;
+  for (const src of scrapeOrder(url, available())) {
+    try {
+      let r: any;
+      if (src === "firecrawl") r = await fcScrapeRaw(url, opts, ctx);
+      else if (src === "linkedin_direct") { const { adLinkedIn } = await import("./apidirect.server"); r = await adLinkedIn(url, FETCH_TIMEOUT_MS); }
+      else r = await directHttp(url);
+      if (r && typeof r === "object") r.fetch_source = src;
+      return r;
+    } catch (e) { last = e; }
+  }
+  throw last || new Error("no_fetch_source");
+}
+
+/** Search with fallback chain. Result carries `fetch_source`. */
+export async function fcSearch(query: string, opts: { limit?: number; lang?: string; location?: string } = {}, ctx: FcCtx = {}) {
+  let last: unknown = null;
+  for (const src of searchOrder(available())) {
+    try {
+      let r: any;
+      if (src === "firecrawl") r = await fcSearchRaw(query, opts, ctx);
+      else { const { adSearch } = await import("./apidirect.server"); r = await adSearch(query, Math.min(opts.limit ?? 4, 10), FETCH_TIMEOUT_MS); }
+      if (r && typeof r === "object") r.fetch_source = src;
+      return r;
+    } catch (e) { last = e; }
+  }
+  throw last || new Error("no_search_source");
 }
