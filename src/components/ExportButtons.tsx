@@ -92,7 +92,7 @@ export function ExportButtons({
       const { linksSection, packSections } = await import("@/lib/machine-pack");
       const base = p.sections.filter((s) => !/^(حزمة قراءة الآلة|Machine-readable pack|پاکێجی)/.test(s.heading));
       // Localize fixed labels/values into the chosen export language (model answer text stays as-is).
-      const loc = base.map((s) => ({
+      const loc: import("@/lib/exports").ExportSection[] = base.map((s) => ({
         ...s,
         heading: labelFor(s.heading, exportLang),
         rows: s.rows?.map(([k, v]) => [labelFor(String(k), exportLang), localizeValue(v, exportLang)] as [string, string | number]),
