@@ -17,4 +17,12 @@ describe("pipeline cards", () => {
   it("counts finished tool results as evidence", () => {
     expect(pipelineCards([{ type: "tool_call" }, { type: "tool_result" }, { type: "tool_result" }], true)[4].count).toBe(2);
   });
+  it("startup events alone show understanding as running", () => {
+    expect(st(pipelineCards([{ type: "stage", data: { stage: "understand" } }, { type: "skill_choice", data: {} }], true)))
+      .toEqual(["running", "waiting", "waiting", "waiting", "waiting", "waiting"]);
+  });
+  it("failure during startup fails understanding and stops the rest", () => {
+    expect(st(pipelineCards([{ type: "stage", data: { stage: "understand" } }, { type: "error", data: {} }], false)))
+      .toEqual(["failed", "stopped", "stopped", "stopped", "stopped", "stopped"]);
+  });
 });
