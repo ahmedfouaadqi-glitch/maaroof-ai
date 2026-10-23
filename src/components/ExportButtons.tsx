@@ -60,6 +60,7 @@ export function ExportButtons({
   });
   const [open, setOpen] = useState(false);
   const [exportLang, setExportLang] = useState<"ar" | "en" | "ku">(lang === "en" || lang === "ku" ? lang : "ar");
+  const [withPack, setWithPack] = useState(true);
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
 
   if (!vis.loading && !vis.isWidgetVisible("results_export")) return null;
@@ -86,6 +87,35 @@ export function ExportButtons({
     p.lang = exportLang;
     p.identity = identity;
     setOpen(false);
+    try {
+      const { labelFor, localizeValue, glossarySection } = await import("@/lib/maaroof/report-sections");
+      const { linksSection, packSections } = await import("@/lib/machine-pack");
+      const base = p.sections.filter((s) => !/^(حزمة قراءة الآلة|Machine-readable pack|پاکێجی)/.test(s.heading));
+      // Localize fixed labels/values into the chosen export language (model answer text stays as-is).
+      const loc = base.map((s) => ({
+        ...s,
+        heading: labelFor(s.heading, exportLang),
+        rows: s.rows?.map(([k, v]) => [labelFor(String(k), exportLang), localizeValue(v, exportLang)] as [string, string | number]),
+        table: s.table ? { ...s.table, columns: s.table.columns.map((c) => labelFor(c, exportLang)) } : undefined,
+      }));
+      const extra: typeof loc = [linksSection(base, exportLang)];
+      if (withPack) {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: u } = await supabase.auth.getUser();
+        if (u.user) {
+          const [{ data: prof }, { data: mk }] = await Promise.all([
+            supabase.from("profiles").select("brand_name, full_name, target_markets, onboarding").eq("id", u.user.id).maybeSingle(),
+            supabase.from("entity_market_names").select("name, status").eq("user_id", u.user.id),
+          ]);
+          const pr: any = prof || {};
+          const confirmed = ((mk || []) as any[]).filter((m) => m.status === "confirmed" || m.status === "evidence_confirmed").map((m) => m.name);
+          extra.push(...packSections({ brand: pr.brand_name || pr.full_name || "", markets: [...(pr.target_markets || []), ...confirmed], onboarding: pr.onboarding || {} }, exportLang));
+        }
+      }
+      const all = [...loc.filter((s) => !/^(Glossary|فەرهەنگ|معجم المصطلحات)$/.test(s.heading)), ...extra];
+      const g = glossarySection(all, exportLang);
+      p.sections = g ? [...all, g] : all;
+    } catch {}
     await RUNNERS[f](p);
   };
 
