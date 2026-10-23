@@ -96,8 +96,13 @@ export const Route = createFileRoute("/api/deep-audit")({
         const body = await request.json().catch(() => ({} as any));
         if (body?.approved !== true) return Response.json({ error: "approval_required" }, { status: 400 });
         const db = a.admin;
-        const { data: active } = await db.from("maaroof_jobs").select("id").eq("user_id", a.userId).eq("mode", "deep_audit").in("status", ["queued", "running"]).limit(1).maybeSingle();
-        if (active) return Response.json({ job_id: active.id, reused: true });
+        const { data: active } = await db.from("maaroof_jobs").select("id, status, updated_at").eq("user_id", a.userId).eq("mode", "deep_audit").in("status", ["queued", "running"]).limit(1).maybeSingle();
+        if (active) {
+          const { isStaleAuditJob } = await import("@/lib/maaroof/jobs");
+          if (!isStaleAuditJob(active)) return Response.json({ job_id: active.id, reused: true });
+          const now = new Date().toISOString();
+          await db.from("maaroof_jobs").update({ status: "failed", error: "توقف الفحص دون تقدّم؛ لم يُخصم شيء.", finished_at: now, updated_at: now }).eq("id", active.id);
+        }
         const p = await loadProfile(db, a.userId);
         const targets = auditTargets(p.entity_links);
         if (!targets.length) return Response.json({ error: "no_links" }, { status: 400 });
@@ -108,9 +113,8 @@ export const Route = createFileRoute("/api/deep-audit")({
         // Start handshake: the first event is saved before the id is returned, so the job never looks "not started".
         const { error: startErr } = await db.from("maaroof_job_events").insert({ job_id: job.id, user_id: a.userId, seq: 1, event_type: "audit_start", payload: { total: targets.length, targets: targets.map((t) => t.url) } });
         if (startErr) console.error("[deep-audit] start event failed", startErr);
-        const work = runAudit(db, a.userId, job.id, targets, String(p.brand_name || ""), p.account_kind || null, 1);
-        const { runAfterResponse } = await import("@/lib/request-ctx.server");
-        if (!runAfterResponse(work)) await work;
+        // Audits take seconds: run inside the request so the final event is always saved before it closes.
+        await runAudit(db, a.userId, job.id, targets, String(p.brand_name || ""), p.account_kind || null, 1);
         return Response.json({ job_id: job.id });
       },
     },

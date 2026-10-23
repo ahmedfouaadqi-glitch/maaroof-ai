@@ -34,8 +34,10 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           const { count } = await db.from("maaroof_job_events").select("id", { count: "exact", head: true }).eq("job_id", id);
           notStarted = startStale(job, count || 0);
         }
-        if (notStarted || isStaleJob(job)) {
-          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : "انتهت مهلة المهمة دون تقدّم.";
+        const { isStaleAuditJob } = await import("@/lib/maaroof/jobs");
+        const auditStuck = job.mode === "deep_audit" && isStaleAuditJob(job);
+        if (notStarted || auditStuck || isStaleJob(job)) {
+          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : auditStuck ? "توقف الفحص دون تقدّم؛ لم يُخصم شيء. اضغط «إعادة المحاولة»." : "انتهت مهلة المهمة دون تقدّم.";
           await db.from("maaroof_jobs").update({ status: "failed", error: msg, finished_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
           job.status = "failed"; job.error = msg;
         }

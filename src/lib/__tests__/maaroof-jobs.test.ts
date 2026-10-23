@@ -22,4 +22,11 @@ describe("workspace jobs", () => {
     expect(parseAfter("-3")).toBe(0);
     expect(parseAfter(null)).toBe(0);
   });
+  it("deep audit idle over 30s is stuck", async () => {
+    const { isStaleAuditJob } = await import("@/lib/maaroof/jobs");
+    const now = Date.now();
+    expect(isStaleAuditJob({ status: "running", updated_at: new Date(now - 31_000).toISOString() }, now)).toBe(true);
+    expect(isStaleAuditJob({ status: "running", updated_at: new Date(now - 10_000).toISOString() }, now)).toBe(false);
+    expect(isStaleAuditJob({ status: "failed", updated_at: new Date(now - 99_000).toISOString() }, now)).toBe(false);
+  });
 });
