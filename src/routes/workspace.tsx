@@ -424,11 +424,11 @@ function WorkspacePage() {
     setEvents([]);
     setJobId(null);
     try {
-      const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+      let token = (await supabase.auth.getSession()).data.session?.access_token || session?.access_token;
       if (!token) throw new Error("auth_required");
-      const response = await fetch("/api/maaroof", {
+      const post = (tk: string) => fetch("/api/maaroof", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + tk },
         body: JSON.stringify({
           goal: goal.trim(),
           lang: locale,
