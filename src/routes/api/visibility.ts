@@ -1,3 +1,4 @@
+import { normalizeEngines } from "@/lib/ai-engines";
 import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
@@ -185,8 +186,9 @@ export const Route = createFileRoute("/api/visibility")({
             const { resolveProbePolicy } = await import("@/lib/tokens.server");
             const ent = await enginesAllowedForUser(admin, userId);
             const policy = await resolveProbePolicy(userId);
-            let picked = applyEntitlement(body.probe_engines, ent);
-            if (policy.maxEngines) picked = picked.slice(0, policy.maxEngines);
+            // All requested engines run (up to ten); account plan no longer shortens the council.
+            void ent;
+            const picked = normalizeEngines(body.probe_engines);
             const { engines } = await excludeUnhealthyEngines(picked);
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
             const pRun = crypto.randomUUID();
