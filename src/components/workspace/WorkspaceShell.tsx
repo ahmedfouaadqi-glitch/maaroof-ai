@@ -3,12 +3,13 @@ import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, Histor
 import { useEffect, useState, type ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
-export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "skills" | "extras" | "more";
+export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "skills" | "tools" | "extras" | "more";
 
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
 const NAV: NavItem[] = [
   { tab: "main", icon: BrainCircuit, label: { ar: "مساحة معروف", en: "Maaroof Space", ku: "شوێنی معروف" } },
+  { tab: "tools", icon: Wrench, label: { ar: "الأدوات المباشرة", en: "Direct tools", ku: "ئامرازەکان" } },
   { tab: "history", icon: History, label: { ar: "المهام السابقة", en: "Previous tasks", ku: "ئەرکە پێشووەکان" } },
   { tab: "balance", icon: Wallet, label: { ar: "الرصيد", en: "Balance", ku: "باڵانس" } },
   { tab: "knowledge", icon: Brain, label: { ar: "مساحة المعرفة", en: "Knowledge", ku: "زانیاری" } },

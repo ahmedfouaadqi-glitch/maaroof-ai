@@ -6,7 +6,7 @@ import { useVisibility } from "@/lib/visibility";
 
 type L = "ar" | "en" | "ku";
 
-const TOOL_UI: Record<string, LazyExoticComponent<ComponentType<any>>> = {
+export const TOOL_UI: Record<string, LazyExoticComponent<ComponentType<any>>> = {
   analyze: lazy(() => import("@/components/Sandbox").then((m) => ({ default: m.Sandbox }))),
   suggest: lazy(() => import("@/components/PostSuggester").then((m) => ({ default: m.PostSuggester }))),
   compare: lazy(() => import("@/components/CompetitorCompare").then((m) => ({ default: m.CompetitorCompare }))),
@@ -28,7 +28,7 @@ const T = {
   ku: { title: "کارامەییەکان و ئامرازەکانیان", pick: "کارامەیییەک هەڵبژێرە", tools: "ئامرازەکان", open: "کردنەوە", viaTask: "تەنها لە ئەرکەکاندا", report: "دروستکەری ڕاپۆرت", back: "هەموو کارامەییەکان" },
 };
 
-function toolName(key: string, l: L): string {
+export function toolName(key: string, l: L): string {
   if (key === "report") return T[l].report;
   const t: any = (TOOL_CATALOG as any)[key];
   return t?.label?.[l] ?? t?.name?.[l] ?? t?.label ?? key;

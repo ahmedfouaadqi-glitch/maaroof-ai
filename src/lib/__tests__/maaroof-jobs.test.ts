@@ -32,10 +32,10 @@ describe("workspace jobs", () => {
 });
 
 describe("agent watchdog", () => {
-  it("agent job with no heartbeat for over 60s is stuck", async () => {
+  it("agent job with no heartbeat for over 3 minutes is stuck", async () => {
     const { isStaleAgentJob } = await import("@/lib/maaroof/jobs");
     const now = Date.now();
-    expect(isStaleAgentJob({ status: "running", updated_at: new Date(now - 61_000).toISOString() }, now)).toBe(true);
+    expect(isStaleAgentJob({ status: "running", updated_at: new Date(now - 181_000).toISOString() }, now)).toBe(true);
     expect(isStaleAgentJob({ status: "running", updated_at: new Date(now - 20_000).toISOString() }, now)).toBe(false);
     expect(isStaleAgentJob({ status: "completed", updated_at: new Date(now - 99_000).toISOString() }, now)).toBe(false);
   });
