@@ -140,6 +140,10 @@ export function ExportButtons({
                 </button>
               ))}
             </div>
+            <label className="mb-1 flex items-center gap-2 border-b border-border px-2 py-1.5 text-[11px] text-foreground">
+              <input type="checkbox" checked={withPack} onChange={(e) => setWithPack(e.target.checked)} />
+              {exportLang === "en" ? "Add llms.txt + JSON-LD + FAQPage with how-to" : exportLang === "ku" ? "زیادکردنی llms.txt و JSON-LD و FAQPage" : "إضافة llms.txt وJSON-LD وFAQPage مع طريقة الاستخدام"}
+            </label>
             {available.map((f) => {
               const Icon = ICONS[f];
               return (
