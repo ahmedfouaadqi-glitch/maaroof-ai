@@ -256,7 +256,7 @@ export const Route = createFileRoute("/api/visibility")({
               return Number(pChg.tokens || 0) - refund;
             };
             // Background mode (only when a person asks for it from the tool page): finish after the response.
-            if (body.background && policy.backgroundAllowed) {
+            if (body.background === true && policy.backgroundAllowed) {
               const work = (async () => {
                 await askAll();
                 const charged = await settle();
