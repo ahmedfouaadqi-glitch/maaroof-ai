@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseProbeContent, linkSources, probeRefund, stripAgentOnlyFields, PROBE_MAX_TOKENS } from "@/lib/maaroof/probe-answer";
 import { chooseSkillsAutonomously } from "@/lib/maaroof/skill-inference";
 import { councilEngines, linksOf, stageTimeline } from "@/lib/maaroof/pipeline-cards";
-import { getToolOptions } from "@/lib/tool-options";
+import { TOOL_OPTIONS } from "@/lib/tool-options";
 
 describe("ten-model probe answers", () => {
   it("output budget leaves room for thinking models to write (was 500)", () => {
@@ -28,7 +28,7 @@ describe("ten-model probe answers", () => {
   });
   it("background mode is removed from agent visibility input", () => {
     expect(stripAgentOnlyFields("visibility", { brand: "x", background: "some text" } as any)).toEqual({ brand: "x" });
-    expect(getToolOptions?.("visibility")?.fields || []).not.toContain("background");
+    expect(TOOL_OPTIONS.visibility.fields).not.toContain("background");
   });
 });
 
