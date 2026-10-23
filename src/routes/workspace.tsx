@@ -128,6 +128,9 @@ function WorkspacePage() {
   const c = COPY[locale];
   const [goal, setGoal] = useState("");
   const [uiMode, setUiMode] = useState<"task" | "chat">("task");
+  useEffect(() => { try { const m = localStorage.getItem("ws-ui-mode"); if (m === "chat" || m === "task") setUiMode(m); const d = localStorage.getItem("ws-goal-draft"); if (d) setGoal((g) => g || d); } catch {} }, []);
+  useEffect(() => { try { localStorage.setItem("ws-ui-mode", uiMode); } catch {} }, [uiMode]);
+  useEffect(() => { try { if (goal) localStorage.setItem("ws-goal-draft", goal); else localStorage.removeItem("ws-goal-draft"); } catch {} }, [goal]);
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -354,7 +357,8 @@ function WorkspacePage() {
       const jobs = Array.isArray(body?.jobs) ? body.jobs : [];
       const now = Date.now();
       const recent = jobs.find((job: any) => job.status === "dispatching" || job.status === "queued" || job.status === "running")
-        || jobs.find((job: any) => now - new Date(job.created_at).getTime() < 24 * 60 * 60 * 1000);
+;
+      void now;
       if (!recent || !active) return;
       setJobId(String(recent.id));
       setGoal(String(recent.goal || ""));
@@ -517,11 +521,12 @@ function WorkspacePage() {
           </div>
         )}
         {!finalEvent && events.length === 0 && uiMode === "chat" && <MaaroofChat lang={locale} onToTask={(t) => { setGoal(t); setUiMode("task"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} />}
-        {!finalEvent && events.length === 0 && uiMode === "task" && (
+        {!finalEvent && !running && events.length === 0 && uiMode === "task" && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
+                {goal && <div className="mb-2 flex justify-end"><button type="button" onClick={() => { setGoal(""); setSelectedSkills([]); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 30); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{locale === "en" ? "New blank task" : locale === "ku" ? "ئەرکی نوێی بەتاڵ" : "مهمة جديدة فارغة"}</button></div>}
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={4} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <details className="group relative">
@@ -643,7 +648,7 @@ function WorkspacePage() {
               {!running && <button type="button" onClick={() => { setEvents([]); setError(""); setGoal(""); setSelectedSkills([]); setJobId(null); }} className="rounded-lg border px-3 py-2 text-xs">{c.runAgain}</button>}
             </div>
 
-            {events.length > 0 && <LivePipeline events={events} running={running} lang={locale as any} />}
+            {(running || events.length > 0) && <LivePipeline events={events} running={running} lang={locale as any} />}
 
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 

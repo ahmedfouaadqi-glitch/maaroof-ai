@@ -1,3 +1,4 @@
+import { formatDuration } from "@/lib/maaroof/pipeline-cards";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Coins, History, LoaderCircle, Play, RotateCcw, TrendingDown, Wallet, Brain, Building2 } from "lucide-react";
@@ -23,7 +24,7 @@ const STATUS: Record<string, { ar: string; en: string; ku: string; cls: string }
   dispatching: { ar: "جارٍ", en: "Running", ku: "بەردەوامە", cls: "bg-primary/15 text-primary" },
 };
 
-export type PastJob = { id: string; goal: string; mode: string; status: string; error: string | null; created_at: string; request_payload: any };
+export type PastJob = { id: string; goal: string; mode: string; status: string; error: string | null; created_at: string; updated_at?: string | null; request_payload: any };
 
 export function HistoryPanel({ lang, onOpen, onContinue }: { lang: L; onOpen: (j: PastJob) => void; onContinue: (j: PastJob) => void }) {
   const [jobs, setJobs] = useState<PastJob[] | null>(null);
@@ -69,7 +70,7 @@ export function HistoryPanel({ lang, onOpen, onContinue }: { lang: L; onOpen: (j
                   <p className="min-w-0 flex-1 text-sm font-medium line-clamp-2">{j.goal || "—"}</p>
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.cls}`}>{s[lang]}</span>
                 </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">{new Date(j.created_at).toLocaleString(lang === "en" ? "en" : "ar")}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{new Date(j.created_at).toLocaleString(lang === "en" ? "en" : "ar")}{["completed", "failed", "cancelled"].includes(j.status) && j.updated_at && <span className="ms-2 tabular-nums">· {tr(lang, "المدة", "Duration", "ماوە")}: {formatDuration(new Date(j.updated_at).getTime() - new Date(j.created_at).getTime(), lang === "en" || lang === "ku" ? lang : "ar")}</span>}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button type="button" onClick={() => onOpen(j)} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:bg-muted"><Play className="size-3" />{tr(lang, "فتح", "Open", "کردنەوە")}</button>
                   <button type="button" onClick={() => onContinue(j)} className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"><RotateCcw className="size-3" />{tr(lang, "استكمال كمهمة جديدة", "Continue as new task", "بەردەوامبوون")}</button>
