@@ -2,6 +2,10 @@
 
 > Global Generative Engine Optimization (GEO) platform — score, optimize and publish content so ChatGPT, Gemini, Claude and Perplexity cite your brand. Works worldwide: users choose a global scope or target a specific country, region, province or city. Available in English, Arabic and Kurdish, with strong coverage of Middle East markets including Iraq. Part of Marouf Intelligence.
 
+## Markets (owner-confirmed)
+
+Maaroof Ai serves: Iraq, Lebanon, Saudi Arabia, United Arab Emirates, Egypt, Jordan, Syria, Kuwait.
+
 ## Pages
 
 - [Home](/): Overview of MAAROOF Ai, the engines we target and how AI citation works.

@@ -1,0 +1,1 @@
+UPDATE public.profiles SET monthly_analyses_used = 0 WHERE id = 'cc1c25ba-5cf4-4f0a-8e03-245e870002a2';

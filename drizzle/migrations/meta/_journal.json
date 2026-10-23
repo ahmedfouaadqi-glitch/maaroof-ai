@@ -78,6 +78,13 @@
       "when": 1792733803154,
       "tag": "0010_entity_market_names",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792760999424,
+      "tag": "0011_reset_legacy_analysis_counter",
+      "breakpoints": true
     }
   ]
 }
