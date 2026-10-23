@@ -581,7 +581,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       });
       await tracer.trace({
         stage: "model_selection",
-        summary: `تخطيط: ${plannerChoice.model} — إجابة: ${finalChoice.model}`,
+        summary: "تخطيط: معروف — إجابة: معروف",
         models: [
           { phase: "planning", model: plannerChoice.model, reason: plannerChoice.reason },
           { phase: "final", model: finalChoice.model, reason: finalChoice.reason },
