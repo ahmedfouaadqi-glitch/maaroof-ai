@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/delegated-browser")({
 
           try {
             const { fcScrape } = await import("@/lib/firecrawl");
-            const res: any = await fcScrape(url, { deep: true }, { userId: a.userId, toolKey: "delegated_browser" });
+            const res: any = await fcScrape(url, { deep: true, screenshot: body.visual === true }, { userId: a.userId, toolKey: "delegated_browser" });
             const d = res?.data || res || {};
             const md = String(d.markdown || "");
             const links = allowedLinks(d.links, grant.domains);
@@ -83,7 +83,8 @@ export const Route = createFileRoute("/api/delegated-browser")({
               const c: any = await chargeTokens({ userId: a.userId, toolKey: "browser.read", meta: { url: url.slice(0, 200) } });
               if (c?.ok) charged = Number(c.tokens ?? c.charged ?? 0) || 0;
             } catch {}
-            return Response.json({ step, links, charged });
+            const screenshot = typeof d.screenshot === "string" && /^https:\/\//.test(d.screenshot) ? d.screenshot : null;
+            return Response.json({ step, links, charged, screenshot, markdown: md.slice(0, 20000) });
           } catch (e: any) {
             return Response.json({ step: await log({ status: "failed", error: String(e?.message || e).slice(0, 200) }) }, { status: 502 });
           }
