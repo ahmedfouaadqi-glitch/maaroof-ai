@@ -136,10 +136,9 @@ export const ENGINE_LIMIT_BY_PLAN: Record<string, number> = {
 /** Free / trial / unknown plans get the Starter allowance. */
 export const DEFAULT_ENGINE_LIMIT = 3;
 
-export function engineLimitForPlan(plan?: string | null, isAdmin = false): number {
-  if (isAdmin) return ENGINE_KEYS.length;
-  const key = String(plan || "").trim();
-  return ENGINE_LIMIT_BY_PLAN[key] ?? DEFAULT_ENGINE_LIMIT;
+/** The full ten-engine council is asked for every account (owner decision). */
+export function engineLimitForPlan(_plan?: string | null, _isAdmin = false): number {
+  return ENGINE_KEYS.length;
 }
 
 /** The engines a plan may use, in catalog order (direct engines come first). */

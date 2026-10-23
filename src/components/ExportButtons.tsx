@@ -60,7 +60,7 @@ export function ExportButtons({
   });
   const [open, setOpen] = useState(false);
   const [exportLang, setExportLang] = useState<"ar" | "en" | "ku">(lang === "en" || lang === "ku" ? lang : "ar");
-  const [withPack, setWithPack] = useState(true);
+  const withPack = true;
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
 
   if (!vis.loading && !vis.isWidgetVisible("results_export")) return null;
@@ -109,7 +109,14 @@ export function ExportButtons({
           ]);
           const pr: any = prof || {};
           const confirmed = ((mk || []) as any[]).filter((m) => m.status === "owner_confirmed" || m.status === "evidence_confirmed").map((m) => m.name);
-          extra.push(...packSections({ brand: pr.brand_name || pr.full_name || "", markets: [...(pr.target_markets || []), ...confirmed], onboarding: pr.onboarding || {} }, exportLang));
+          const ent = p.entity;
+          const own = !ent?.brand || ent.brand.trim().toLowerCase() === String(pr.brand_name || "").trim().toLowerCase();
+          extra.push(...packSections(ent?.brand
+            ? { brand: ent.brand, site: ent.site, summary: ent.summary, markets: own ? [...(pr.target_markets || []), ...confirmed] : [], onboarding: own ? { ...(pr.onboarding || {}), faqs: ent.faqs?.length ? ent.faqs : pr.onboarding?.faqs } : { faqs: ent.faqs, facts: (ent.facts || []).join("\n"), links: (ent.links || []).join("\n") } }
+            : { brand: pr.brand_name || pr.full_name || "", markets: [...(pr.target_markets || []), ...confirmed], onboarding: pr.onboarding || {} }, exportLang));
+        } else if (p.entity?.brand) {
+          const ent = p.entity;
+          extra.push(...packSections({ brand: ent.brand, site: ent.site, summary: ent.summary, onboarding: { faqs: ent.faqs, facts: (ent.facts || []).join("\n"), links: (ent.links || []).join("\n") } }, exportLang));
         }
       }
       const all = [...loc.filter((s) => !/^(Glossary|فەرهەنگ|معجم المصطلحات)$/.test(s.heading)), ...extra];
@@ -143,10 +150,9 @@ export function ExportButtons({
                 </button>
               ))}
             </div>
-            <label className="mb-1 flex items-center gap-2 border-b border-border px-2 py-1.5 text-[11px] text-foreground">
-              <input type="checkbox" checked={withPack} onChange={(e) => setWithPack(e.target.checked)} />
-              {exportLang === "en" ? "Add llms.txt + JSON-LD + FAQPage with how-to" : exportLang === "ku" ? "زیادکردنی llms.txt و JSON-LD و FAQPage" : "إضافة llms.txt وJSON-LD وFAQPage مع طريقة الاستخدام"}
-            </label>
+            <p className="mb-1 border-b border-border px-2 py-1.5 text-[11px] text-muted-foreground">
+              {exportLang === "en" ? "Every export includes llms.txt + JSON-LD + FAQPage with how-to" : exportLang === "ku" ? "هەموو هەناردەیەک llms.txt و JSON-LD و FAQPage لەخۆدەگرێت" : "كل تصدير يتضمن llms.txt وJSON-LD وFAQPage مع طريقة الاستخدام"}
+            </p>
             {available.map((f) => {
               const Icon = ICONS[f];
               return (
