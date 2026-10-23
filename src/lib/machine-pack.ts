@@ -120,3 +120,56 @@ export function packSections(i: PackInput, lang: ExportLang): ExportSection[] {
       : [{ heading: `${T.pack} — FAQPage Schema`, kind: "kv" as const, rows: [[T.what, T.faqWhat], [T.why, T.faqWhy], [T.how, T.faqHow], [T.check, T.noFaq]] as [string, string][] }]),
   ];
 }
+
+/* ── Entity + per-engine sections taken from the tool result itself (any brand, no profile needed) ── */
+export type ResultEntity = { brand: string; site?: string; summary?: string; facts?: string[]; links?: string[]; faqs?: { q: string; a: string }[] };
+
+const str = (v: any) => (typeof v === "string" ? v.trim() : "");
+function findFaqs(v: any, depth = 0, out: { q: string; a: string }[] = []): { q: string; a: string }[] {
+  if (!v || depth > 4 || out.length >= 10) return out;
+  if (Array.isArray(v)) { for (const x of v) findFaqs(x, depth + 1, out); return out; }
+  if (typeof v === "object") {
+    const q = str(v.q) || str(v.question); const a = str(v.a) || str(v.answer);
+    if (q && a && q.length < 300) { out.push({ q, a: a.slice(0, 600) }); return out; }
+    for (const [k, x] of Object.entries(v)) if (/faq|question/i.test(k) || Array.isArray(x)) findFaqs(x, depth + 1, out);
+  }
+  return out;
+}
+
+/** Pulls the examined entity from a tool result. Returns null when no brand name is present (never invents one). */
+export function entityFromResult(r: any): ResultEntity | null {
+  if (!r || typeof r !== "object") return null;
+  const brand = str(r.brand) || str(r.brand_name) || str(r.entity?.name) || str(r.company) || str(r.name);
+  if (!brand) return null;
+  const siteRaw = str(r.url) || str(r.site) || str(r.website) || str(r.entity?.url);
+  const site = isUrl(siteRaw) ? siteRaw : undefined;
+  const summary = (str(r.summary) || str(r.description) || str(r.entity?.description)).slice(0, 300) || undefined;
+  const facts = (Array.isArray(r.facts) ? r.facts : []).map((f: any) => str(typeof f === "string" ? f : f?.fact)).filter(Boolean).slice(0, 8);
+  const links = Array.from(new Set((JSON.stringify(r).match(/https?:\/\/[^\s"'<>\\)\]]+/g) || []).map((u) => u.replace(/[.,;:]+$/, "")))).filter((u) => u !== site).slice(0, 10);
+  return { brand, site, summary, facts, links, faqs: findFaqs(r) };
+}
+
+const ENGINE_NAMES: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity", claude: "Claude", copilot: "Copilot", grok: "Grok", mistral: "Mistral", deepseek: "DeepSeek", kimi: "Kimi", qwen: "Qwen" };
+
+/** One export section per answering engine: verbatim answer, mention/rank, real sources, and what to do next. */
+export function engineAnswerSections(r: any): ExportSection[] {
+  const answers: any[] = r?.probe?.answers || (Array.isArray(r?.answers) && r.answers[0]?.engine ? r.answers : []);
+  if (!Array.isArray(answers)) return [];
+  return answers.filter((a) => a && a.engine).map((a) => {
+    const name = ENGINE_NAMES[String(a.engine).toLowerCase()] || String(a.engine);
+    const srcs = (a.sources || []).map((s: any) => str(s?.url)).filter(isUrl);
+    const next = a.mentioned
+      ? (a.rank && a.rank > 1 ? `ذُكرت في المرتبة ${a.rank}: عزّز الحقائق والأرقام في أول 150 كلمة من صفحاتك لتتقدم.` : "ذُكرت في المقدمة: حافظ على تحديث llms.txt والبيانات المنظمة.")
+      : `لم تُذكر: انشر صفحة تعريفية موثقة وFAQPage وروابط رسمية${(a.brands || []).length ? `، فالمحرك رشّح: ${(a.brands || []).slice(0, 3).join("، ")}` : ""}.`;
+    return {
+      heading: name, kind: "kv",
+      rows: [
+        ["الحالة", a.mentioned ? "مذكورة" : "غير مذكورة"],
+        ["الترتيب", a.rank ?? "—"],
+        ["الإجابة", String(a.answer || a.reason || "—").slice(0, 4000)],
+        ["المصادر", srcs.length ? srcs.join("\n") : "لا يوجد مصدر مسجل"],
+        ["الخطوة التالية", next],
+      ],
+    } as ExportSection;
+  });
+}
