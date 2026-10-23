@@ -135,3 +135,27 @@ export function sanitizeReflection(text: unknown): string {
   s = s.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").replace(/[{}\[\]"]/g, " ").replace(/\s+/g, " ").trim();
   return s.slice(0, 500);
 }
+
+type StepResult = { tool: string; ok: boolean; output: any };
+const ENTITY_SKIP = new Set(["research", "suggest", "security_scan"]);
+
+/** The examined entity: name/link from the first successful tool that named one (never the account). */
+export function taskEntity(results: StepResult[]): { brand: string; url?: string } | null {
+  for (const r of results) {
+    if (!r.ok || ENTITY_SKIP.has(r.tool) || !r.output || typeof r.output !== "object") continue;
+    const o = r.output;
+    const brand = [o.brand, o.brand_name, o.company, o.business_name, o.entity?.name].map(str).find((x) => x.length >= 2);
+    if (!brand) continue;
+    const url = [o.url, o.website, o.site, o.entity?.url].map(str).find((u) => /^https?:\/\//.test(u));
+    return { brand, ...(url ? { url } : {}) };
+  }
+  return null;
+}
+
+/** Pre-fill a later step with the examined entity's link when the tool reads one. Pure; never overwrites. */
+export function taskEntityInput(tool: string, input: any, results: StepResult[]): Record<string, any> {
+  const out: Record<string, any> = input && typeof input === "object" && !Array.isArray(input) ? { ...input } : {};
+  const e = taskEntity(results);
+  if (e?.url && !str(out.url) && ["analyze", "known", "brand_authority", "social_analysis", "brand_boost"].includes(tool)) out.url = e.url;
+  return out;
+}
