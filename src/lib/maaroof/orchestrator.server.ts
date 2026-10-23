@@ -137,6 +137,8 @@ export type RunContext = {
   liveProbe?: boolean;
   /** Answers to earlier clarify questions, e.g. { brand: "X" }. */
   clarifications?: Record<string, string>;
+  /** Skills chosen by the user, or inferred from the task text with evidence. */
+  selectedSkills?: string[];
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
@@ -506,6 +508,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
       steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
+    }
+    // Skill tools (selected or inferred from the task text) are guaranteed in the plan.
+    if (!userTools.length && ctx.selectedSkills?.length) {
+      try {
+        const { executableToolsFor } = await import("./skill-inference");
+        for (const k of executableToolsFor(ctx.selectedSkills)) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "مطلوبة للمهارة المختارة لهذه المهمة." } as PlanStep);
+        steps = steps.slice(0, Math.max(MAX_STEPS, steps.length));
+      } catch {}
     }
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
