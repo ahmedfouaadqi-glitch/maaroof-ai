@@ -3895,6 +3895,7 @@ export type Database = {
           monthly_analyses_used: number
           monthly_suggestions_used: number
           notify_onboarded: boolean
+          onboarding: Json
           per_user_tool_overrides: Json
           preferred_notify_channel: string
           quota_overrides: Json
@@ -3944,6 +3945,7 @@ export type Database = {
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
           notify_onboarded?: boolean
+          onboarding?: Json
           per_user_tool_overrides?: Json
           preferred_notify_channel?: string
           quota_overrides?: Json
@@ -3993,6 +3995,7 @@ export type Database = {
           monthly_analyses_used?: number
           monthly_suggestions_used?: number
           notify_onboarded?: boolean
+          onboarding?: Json
           per_user_tool_overrides?: Json
           preferred_notify_channel?: string
           quota_overrides?: Json
