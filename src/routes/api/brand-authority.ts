@@ -173,6 +173,13 @@ ${evidenceText || "(no source content)"}`;
           // Ensure name + url present
           (json_ld as any).name = (json_ld as any).name || brand_name;
           if (source_url && !(json_ld as any).url) (json_ld as any).url = source_url;
+          // GEO/AEO: areaServed from the owner's declared target markets (any country).
+          try {
+            const { data: prof } = await (admin as any).from("profiles").select("target_markets, hq_country").eq("id", userId).maybeSingle();
+            const tm = Array.isArray(prof?.target_markets) ? prof.target_markets : String(prof?.target_markets || "").split(/[,،]/);
+            const markets = tm.map((m: unknown) => String(m || "").trim()).filter(Boolean).slice(0, 30);
+            if (markets.length && !(json_ld as any).areaServed) (json_ld as any).areaServed = markets.map((name: string) => ({ "@type": "Country", name }));
+          } catch {}
 
           // Step 3: upsert
           const { data: existing } = await admin

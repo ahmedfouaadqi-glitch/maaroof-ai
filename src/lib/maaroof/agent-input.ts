@@ -7,7 +7,7 @@ export type EntityContext = {
   /** Brand explicitly named in the user's goal (highest priority). */
   goalBrand?: string | null;
   workspace?: { name?: string | null; brand_url?: string | null; keywords?: any; country?: string | null; city?: string | null } | null;
-  profile?: { brand_name?: string | null; brand_keywords?: string | null; hq_country?: string | null; entity_type?: string | null; entity_links?: any } | null;
+  profile?: { brand_name?: string | null; brand_keywords?: string | null; hq_country?: string | null; entity_type?: string | null; entity_links?: any; target_markets?: any } | null;
   goal?: string;
 };
 
@@ -68,6 +68,9 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
   if (tool === "research" && !str(out.query) && ctx.goal) out.query = ctx.goal.slice(0, 300);
   // Planning tools receive the user's own horizon (any unit), never a fixed one.
   if (["geo_strategist", "what_if", "brand_boost"].includes(tool) && !out.timeframe && ctx.goal) out.timeframe = ctx.goal.slice(0, 300);
+  // Markets come from the entity card (any country), never a fixed default.
+  if (!str(out.target_markets) && str(ctx.profile?.target_markets)) out.target_markets = str(ctx.profile?.target_markets);
+  if (!str(out.country) && str(ctx.workspace?.country)) out.country = str(ctx.workspace?.country);
   return out;
 }
 
