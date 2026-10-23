@@ -1,7 +1,8 @@
 // Live stage cards (React Bits AnimatedList + SpotlightCard + StarBorder style), driven only by recorded events.
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Brain, ListChecks, Users, Search, Scale, FileCheck2 } from "lucide-react";
-import { pipelineCards, type StageKey, type StageState } from "@/lib/maaroof/pipeline-cards";
+import { Brain, ListChecks, Users, Search, Scale, FileCheck2, Timer } from "lucide-react";
+import { pipelineCards, taskDuration, formatDuration, type StageKey, type StageState } from "@/lib/maaroof/pipeline-cards";
 import { PulseBadge, SpotlightCard } from "@/components/motion/effects";
 
 type L = "ar" | "en" | "ku";
@@ -50,10 +51,12 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{M.d[i]}</p>
               {c.key === "evidence" && c.count > 0 && <p className="mt-2 text-xs font-medium tabular-nums">{tr(lang, `${c.count} نتيجة أداة محفوظة`, `${c.count} tool results kept`, `${c.count} ئەنجام`)}</p>}
+              {c.durationMs != null && <p className="mt-2 flex items-center gap-1 text-xs tabular-nums text-muted-foreground"><Timer className="size-3" />{formatDuration(c.durationMs, lang)}</p>}
             </SpotlightCard>
           </motion.li>
         );
       })}
     </ol>
+    </div>
   );
 }
