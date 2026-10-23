@@ -40,8 +40,6 @@ export const Route = createFileRoute("/api/research")({
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
           const _mci = await mciReuse(admin as any, "research", userId, [limited, lang, scope, mode], !!(reqBody as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
-          const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           const userCtx = await getUserContext(admin, userId);
 
           const geo = scope?.country ? ` ${scope.country}` : "";
@@ -50,7 +48,16 @@ export const Route = createFileRoute("/api/research")({
           const channelTypes: string[] = Array.isArray(reqBody?.channel_types) && reqBody.channel_types.length
             ? reqBody.channel_types : ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"];
 
-          const sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang });
+          // Search BEFORE charging: if live web search is unavailable, return a clear error and charge nothing.
+          let sr: any;
+          try {
+            sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang });
+          } catch (e: any) {
+            console.error("[api/research] search unavailable", e?.status, e?.message);
+            return Response.json({ error: "search_unavailable", charged: false, message: lang === "en" ? "Live web search is temporarily unavailable. Nothing was charged." : "البحث الحي على الويب غير متاح مؤقتاً. لم يُخصم أي رصيد." }, { status: 503 });
+          }
+          const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
+          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
           // Firecrawl v2 returns { data: { web: [...], news: [...] } } OR legacy { data: [...] }
           const pickArr = (v: any): any[] => {
             if (Array.isArray(v)) return v;
