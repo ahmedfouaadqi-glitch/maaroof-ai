@@ -10,6 +10,7 @@ import { verifyEntityCard, requestEntityUnlock, getEntityPrices } from "@/lib/en
 import { CostBadge } from "@/components/CostBadge";
 import { useEffect } from "react";
 import { DeepAuditRunner } from "@/components/DeepAuditRunner";
+import { MarketNamesPanel } from "@/components/MarketNamesPanel";
 
 const TX = {
   ar: { unlock: "فتح للتعديل (يُخصم من رصيدك)", nobal: "رصيدك غير كافٍ", err: "حدث خطأ، حاول مجدداً", unlocked: "تم فتح البطاقة للتعديل. بعد التعديل اضغط «توثيق وتثبيت».", h: "هوية علامتك (بطاقة الحقيقة)", hint: "تُستخدم في كل الأدوات لتنبيهك عند تعارض النص مع هويتك. الروابط اختيارية ولا نطلب تعديل البايو.", type: "نوع الكيان", org: "منشأة / شركة", person: "شخص / صانع محتوى", hq: "المقر الرئيسي", mk: "الأسواق التي تخدمها", sp: "التخصص ونطاق الخدمات", links: "روابط الموقع أو الحسابات (سطر لكل رابط)", save: "حفظ الهوية", verify: "توثيق وتثبيت (مرة واحدة، يُخصم من رصيدك)", locked: "البطاقة موثّقة ومقفلة. لتعديلها استخدم «فتح للتعديل» بالكلفة الظاهرة.", ok: "تم التوثيق", conf: "مؤكد من المصدر", unconf: "غير مؤكد", incomplete: "أكمل اسم العلامة والمقر أولاً", none: "—" },
@@ -123,6 +124,7 @@ export function EntityFields({ profile, value, onChange, onSaveAll, onSaved }: {
           })}
         </div>
       </div>
+      <MarketNamesPanel markets={mk} lang={L} />
       <label className="block text-xs">{T.sp}<input value={sp} disabled={locked} onChange={(e) => setSp(e.target.value)} className={cls} /></label>
       <label className="block text-xs">{T.links}<textarea rows={3} value={links} disabled={locked} onChange={(e) => setLinks(e.target.value)} className={cls} /></label>
       {(() => {
