@@ -297,10 +297,11 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   // model health. Behaviour with governance off is identical to before.
   const call = async (phase: ModelPhase, messages: any[]) => {
     const choice = await modelFor(phase);
+    const timeoutMs = phaseTimeoutMs(String(phase));
     const t0 = Date.now();
     try {
       const r = await callGateway(apiKey, choice.model, messages, {
-        signal: ctx.signal,
+        signal: ctx.signal, timeoutMs,
         registry: mg.use_registry_pricing ? modelRegistry : undefined,
       });
       if (mg.health_tracking !== false) {
@@ -311,13 +312,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       if (mg.health_tracking !== false) {
         void recordModelCall({ model: choice.model, ok: false, latencyMs: Date.now() - t0, error: String(e?.message || e) });
       }
-      // Governed fallback: retry once on the phase fallback model.
-      if (choice.governed && choice.fallback && choice.fallback !== choice.model) {
-        const r = await callGateway(apiKey, choice.fallback, messages, {
-          signal: ctx.signal,
+      if (ctx.signal?.aborted) throw e;
+      void Promise.resolve(ctx.emit("phase_error", { phase, model: choice.model, message: String(e?.message || e).slice(0, 200) })).catch(() => {});
+      // Fallback: governed phase fallback, or a fast default for planning phases.
+      const fb = choice.governed && choice.fallback && choice.fallback !== choice.model
+        ? choice.fallback
+        : (timeoutMs < 60_000 && choice.model !== FAST_FALLBACK_MODEL ? FAST_FALLBACK_MODEL : null);
+      if (fb) {
+        return await callGateway(apiKey, fb, messages, {
+          signal: ctx.signal, timeoutMs,
           registry: mg.use_registry_pricing ? modelRegistry : undefined,
         });
-        return r;
       }
       throw e;
     }
