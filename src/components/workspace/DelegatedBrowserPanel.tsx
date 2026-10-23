@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Globe, LoaderCircle, ShieldCheck, ShieldOff, CheckCircle2, XCircle, Ban } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
+import { isUrlAllowed } from "@/lib/delegated-browser";
+import { BrowserViewer, type BrowserView } from "./BrowserViewer";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -37,6 +39,8 @@ export function DelegatedBrowserPanel({ lang, initialDomain, initialPurpose }: {
   const [msg, setMsg] = useState("");
   const [links, setLinks] = useState<string[]>([]);
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
+  const [history, setHistory] = useState<BrowserView[]>([]);
+  const [hIdx, setHIdx] = useState(0);
 
   const load = async () => { const r = await call("GET"); setGrant(r.json.grant || null); setSteps(r.json.steps || []); setCost(Number(r.json.cost_per_page) || 0); setLoading(false); };
   useEffect(() => { void load(); }, []);
@@ -50,7 +54,8 @@ export function DelegatedBrowserPanel({ lang, initialDomain, initialPurpose }: {
   const revoke = async () => { setBusy(true); await call("POST", { action: "revoke" }); setLinks([]); await load(); setBusy(false); };
   const read = async (target: string) => {
     setConfirmUrl(null); setBusy(true); setMsg("");
-    const r = await call("POST", { action: "read", url: target, instruction });
+    const r = await call("POST", { action: "read", url: target, instruction, visual: true });
+    if (r.ok && r.json.step) { const v: BrowserView = { url: target, screenshot: r.json.screenshot || null, markdown: r.json.markdown || r.json.step.excerpt || "", links: r.json.links || [], title: r.json.step.title }; setHistory((h) => { const next = [...h.slice(0, hIdx + 1), v]; setHIdx(next.length - 1); return next; }); setUrl(target); }
     const e = r.json.step?.error || r.json.error;
     if (!r.ok && e) { const m = ERR[e]; setMsg(m ? tr(lang, ...m) : tr(lang, "تعذّرت قراءة الصفحة.", "Could not read the page.", "نەتوانرا بخوێنرێتەوە.")); }
     setLinks(r.json.links || []);
@@ -94,6 +99,8 @@ export function DelegatedBrowserPanel({ lang, initialDomain, initialPurpose }: {
             </div>
             <button onClick={revoke} disabled={busy} className="flex items-center gap-2 rounded-xl border border-destructive/40 px-3 py-2 text-sm font-semibold text-destructive"><ShieldOff className="size-4" />{tr(lang, "إلغاء التفويض الآن", "Revoke now", "هەڵوەشاندنەوە")}</button>
           </section>
+
+          <BrowserViewer lang={lang} history={history} index={hIdx} onIndex={setHIdx} busy={busy} onOpen={(u) => setConfirmUrl(u)} isAllowed={(u) => isUrlAllowed(u, grant.domains)} />
 
           <section className={`${card} grid gap-3`}>
             <label className="text-sm font-semibold">{tr(lang, "تعليمتك لهذه الخطوة", "Your instruction for this step", "ڕێنمایی")}</label>
