@@ -1,10 +1,10 @@
 // Pure: turns recorded task events into the six live stage cards. No I/O, no invented progress.
 export type StageKey = "understand" | "plan" | "council" | "evidence" | "conflict" | "result";
-export type StageState = "waiting" | "running" | "done" | "skipped" | "failed";
-export type StageCard = { key: StageKey; state: StageState; count: number; startedAt: number | null; endedAt: number | null; durationMs: number | null };
+export type StageState = "waiting" | "running" | "done" | "skipped" | "failed" | "stopped";
+export type StageCard = { key: StageKey; state: StageState; count: number; startedAt: number | null; endedAt: number | null; durationMs: number | null; failedTools: string[]; reused: number };
 type Ev = { type: string; data?: any; at?: number };
 
-const ORDER: StageKey[] = ["understand", "plan", "council", "evidence", "conflict", "result"];
+const ORDER: StageKey[] = ["understand", "plan", "council", "conflict", "evidence", "result"];
 const PHASE_TO_STAGE: Record<string, StageKey> = {
   envision: "understand", planning: "plan", recommendation: "plan", simulation: "plan",
   council: "council", conflict: "conflict", summarizing: "result",
@@ -48,15 +48,18 @@ export function pipelineCards(events: Ev[], running: boolean, now = Date.now()):
     if (finished) state = seen ? "done" : "skipped";
     else if (i < last) state = seen ? "done" : "skipped";
     else if (i === last) state = failed ? "failed" : running ? "running" : "done";
-    else state = failed || !running ? "skipped" : "waiting";
+    // Stages after the point the task stopped were needed but never reached.
+    else state = failed || !running ? "stopped" : "waiting";
     const startedAt = first.get(key) ?? null;
     let endedAt: number | null = null;
     if (startedAt != null && state !== "running") {
       const next = seenStarts.filter((t) => t > startedAt).sort((a, b) => a - b)[0];
       endedAt = next ?? lastAt ?? startedAt;
     }
-    const durationMs = startedAt == null || state === "skipped" || state === "waiting" ? null : Math.max(0, (endedAt ?? now) - startedAt);
-    return { key, state, count: counts.get(key) || 0, startedAt, endedAt, durationMs };
+    const durationMs = startedAt == null || state === "skipped" || state === "waiting" || state === "stopped" ? null : Math.max(0, (endedAt ?? now) - startedAt);
+    const failedTools = key === "evidence" ? [...new Set(events.filter((e) => e.type === "tool_result" && e.data?.ok === false && !e.data?.output?.skipped && e.data?.tool).map((e) => String(e.data.tool)))] : [];
+    const reused = key === "evidence" ? events.filter((e) => e.type === "tool_result" && e.data?.reused).length : 0;
+    return { key, state, count: counts.get(key) || 0, startedAt, endedAt, durationMs, failedTools, reused };
   });
 }
 

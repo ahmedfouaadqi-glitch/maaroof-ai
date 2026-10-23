@@ -139,6 +139,10 @@ export type RunContext = {
   clarifications?: Record<string, string>;
   /** Skills chosen by the user, or inferred from the task text with evidence. */
   selectedSkills?: string[];
+  /** Successful tool outputs from an earlier attempt of the same task (smart resume). */
+  reusedResults?: Record<string, any>;
+  /** Optional user choices before starting; all off = current behaviour. */
+  runOptions?: { salvageOnFailure?: boolean; focusedPlan?: boolean; parallelTools?: boolean };
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
@@ -490,7 +494,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
-      `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse as many steps as the task needs (up to the platform limit). Only use tool keys from the list. Return JSON only.`;
+      `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     const planResp = await call("planning", [
       { role: "system", content: systemPrompt },
       { role: "user", content: planUserMsg },
@@ -964,8 +968,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
     const specialists = new Set<string>();
-    for (let i = 0; i < steps.length; i++) {
-      if (ctx.signal.aborted) break;
+    const runStep = async (i: number) => {
       const step = steps[i];
       await ctx.emit("tool_call", { index: i, tool: step.tool, input: step.input, reason: step.reason });
       await logMsg("tool_call", step);
@@ -1007,7 +1010,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         results.push({ tool: step.tool, ok, output });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output });
         await logMsg("tool_result", output);
-        continue;
+      return;
       }
 
       const path = toolPath(step.tool);
@@ -1016,7 +1019,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
         await logMsg("tool_result", err);
-        continue;
+      return;
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
@@ -1039,7 +1042,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const skip = { skipped: "live_probe_disabled_by_user", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: skip });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
-        continue;
+      return;
       }
       // Default: ask all ten engines live (entitlement/plan limits are enforced server-side).
       if (step.tool === "visibility" && ctx.liveProbe !== false && !(Array.isArray((filled as any).probe_engines) && (filled as any).probe_engines.length)) {
@@ -1050,7 +1053,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         results.push({ tool: step.tool, ok: false, output: { needs_input: missing } });
         await ctx.emit("clarify", q);
         await logMsg("clarify", q);
-        continue;
+      return;
       }
       try {
         const body = { ...normalizeToolInput(enforceEnums(step.tool, filled)), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
@@ -1119,6 +1122,38 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
         await logMsg("tool_result", err);
       }
+
+    };
+    const reusedOut = ctx.reusedResults || {};
+    const startedExec = Date.now();
+    const SALVAGE_BUDGET_MS = 8 * 60 * 1000;
+    const overBudget = () => !!ctx.runOptions?.salvageOnFailure && Date.now() - startedExec > SALVAGE_BUDGET_MS;
+    const reuseStep = async (i: number) => {
+      const step = steps[i];
+      if (!Object.prototype.hasOwnProperty.call(reusedOut, step.tool)) return false;
+      await ctx.emit("tool_call", { index: i, tool: step.tool, input: step.input, reason: step.reason, reused: true });
+      results.push({ tool: step.tool, ok: true, output: reusedOut[step.tool] });
+      await ctx.emit("tool_result", { index: i, tool: step.tool, ok: true, output: reusedOut[step.tool], reused: true });
+      return true;
+    };
+    const salvageSkip = async (i: number) => {
+      const step = steps[i];
+      const skip = { skipped: "time_budget_salvage", tool: step.tool };
+      results.push({ tool: step.tool, ok: false, output: skip });
+      await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+    };
+    if (ctx.runOptions?.parallelTools) {
+      for (let b = 0; b < steps.length; b += 3) {
+        if (ctx.signal.aborted) break;
+        const batch = Array.from({ length: Math.min(3, steps.length - b) }, (_, k) => b + k);
+        await Promise.allSettled(batch.map(async (i) => { if (await reuseStep(i)) return; if (overBudget()) return salvageSkip(i); return runStep(i); }));
+      }
+    } else for (let i = 0; i < steps.length; i++) {
+      if (ctx.signal.aborted) break;
+      const step = steps[i];
+      if (await reuseStep(i)) continue;
+      if (overBudget()) { await salvageSkip(i); continue; }
+      await runStep(i);
 
       // Reflect every 3 steps
       if ((i + 1) % 3 === 0 && i < steps.length - 1) {

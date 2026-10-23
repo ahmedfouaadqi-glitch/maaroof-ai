@@ -19,6 +19,7 @@ const META: Record<StageKey, { icon: typeof Brain; t: [string, string, string]; 
 const STATE_LABEL: Record<StageState, [string, string, string]> = {
   waiting: ["بانتظار دوره", "Waiting", "چاوەڕێ"], running: ["يعمل الآن", "Running", "کاردەکات"], done: ["اكتمل", "Done", "تەواو"],
   skipped: ["تخطّى (غير مطلوب)", "Skipped (not needed)", "تێپەڕێندرا"], failed: ["تعذّر", "Failed", "سەرکەوتوو نەبوو"],
+  stopped: ["توقفت قبل الإكمال", "Stopped before completion", "پێش تەواوبوون وەستا"],
 };
 const idx = (l: L) => (l === "en" ? 1 : l === "ku" ? 2 : 0);
 
@@ -42,15 +43,17 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
         const M = META[c.key]; const Icon = M.icon;
         const active = c.state === "running";
         return (
-          <motion.li key={c.key} initial={reduced ? false : { opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: c.state === "waiting" || c.state === "skipped" ? 0.55 : 1, y: 0, scale: 1 }} transition={{ delay: reduced ? 0 : n * 0.06, duration: 0.35 }}
+          <motion.li key={c.key} initial={reduced ? false : { opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: c.state === "waiting" || c.state === "skipped" || c.state === "stopped" ? 0.55 : 1, y: 0, scale: 1 }} transition={{ delay: reduced ? 0 : n * 0.06, duration: 0.35 }}
             className={`rounded-2xl p-px ${active ? "star-border" : ""}`}>
             <SpotlightCard className={`h-full p-4 ${active ? "bg-card" : ""} ${c.state === "failed" ? "border-destructive/40" : ""}`}>
               <div className="flex items-start justify-between gap-2">
                 <span className="flex items-center gap-2 font-semibold"><Icon className={`size-4 ${active ? "text-primary" : "text-muted-foreground"}`} />{M.t[i]}</span>
-                <PulseBadge state={c.state === "waiting" ? "skipped" : c.state} label={STATE_LABEL[c.state][i]} />
+                <PulseBadge state={c.state === "waiting" || c.state === "stopped" ? "skipped" : c.state} label={STATE_LABEL[c.state][i]} />
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{M.d[i]}</p>
               {c.key === "evidence" && c.count > 0 && <p className="mt-2 text-xs font-medium tabular-nums">{tr(lang, `${c.count} نتيجة أداة محفوظة`, `${c.count} tool results kept`, `${c.count} ئەنجام`)}</p>}
+              {c.reused > 0 && <p className="mt-1 text-xs text-muted-foreground">{tr(lang, `${c.reused} نتيجة مُعاد استخدامها من المحاولة السابقة`, `${c.reused} reused from the earlier attempt`, `${c.reused} دووبارە بەکارهاتەوە`)}</p>}
+              {c.failedTools.length > 0 && <p className="mt-1 text-xs font-medium text-destructive">{tr(lang, "لم تكتمل: ", "Not completed: ", "تەواو نەبوو: ")}{c.failedTools.join("، ")}</p>}
               {c.durationMs != null && <p className="mt-2 flex items-center gap-1 text-xs tabular-nums text-muted-foreground"><Timer className="size-3" />{formatDuration(c.durationMs, lang)}</p>}
             </SpotlightCard>
           </motion.li>
