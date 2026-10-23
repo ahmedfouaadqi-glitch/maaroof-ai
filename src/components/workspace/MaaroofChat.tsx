@@ -29,7 +29,7 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { void call("GET").then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setTasks(r.json.tasks || []); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task })))); }); inputRef.current?.focus(); }, []);
+  useEffect(() => { void call("GET").then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setTasks(r.json.tasks || []); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task }))); }); inputRef.current?.focus(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
 
   const send = async () => {
