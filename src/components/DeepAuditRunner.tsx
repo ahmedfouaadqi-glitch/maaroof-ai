@@ -93,7 +93,12 @@ export function DeepAuditRunner({ lang, hasLinks }: { lang: L; hasLinks: boolean
           <div className="h-1.5 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${progress ? (progress.i / progress.n) * 100 : 5}%` }} /></div>
         </div>
       )}
-      {status === "failed" && err && <p className="text-destructive">{err}</p>}
+      {status === "failed" && err && (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-destructive">{err}</p>
+          <button type="button" onClick={start} className="rounded-md border border-border px-3 py-1">{lang === "en" ? "Retry" : lang === "ku" ? "دووبارە هەوڵبدەوە" : "إعادة المحاولة"}</button>
+        </div>
+      )}
       {result && (
         <div className="space-y-2 rounded-lg border border-border bg-background/60 p-2">
           <div className="font-semibold">{t.done} — {t.overall}: {result.overall ?? t.un}</div>

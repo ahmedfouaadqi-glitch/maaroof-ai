@@ -13,6 +13,14 @@ export function isStaleJob(job: { status: string; updated_at: string }, now = Da
   return Number.isFinite(t) && now - t > JOB_STALE_MS;
 }
 
+/** Deep audits finish in seconds; one with no update for AUDIT_STALE_MS is stuck. Pure. */
+export const AUDIT_STALE_MS = 30_000;
+export function isStaleAuditJob(job: { status: string; updated_at: string }, now = Date.now()): boolean {
+  if (isTerminalJobStatus(job.status)) return false;
+  const t = new Date(job.updated_at).getTime();
+  return Number.isFinite(t) && now - t > AUDIT_STALE_MS;
+}
+
 /** Sequential event numbering starting at 1. */
 export function createSeqCounter(start = 0) {
   let n = start;
