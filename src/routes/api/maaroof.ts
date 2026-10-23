@@ -147,7 +147,7 @@ export const Route = createFileRoute("/api/maaroof")({
           const work = (async () => {
             let status = "completed"; let err: string | null = null;
             // Heartbeat: a long healthy tool call must not look stale.
-            const hb = setInterval(() => { db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("status", "running").then(() => {}, () => {}); }, 20_000);
+            const hb = setInterval(() => { db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("status", "running").then(() => {}, () => {}); }, 10_000);
             try {
               await emit("skill_choice", skillChoice);
               await runMaaroof({
