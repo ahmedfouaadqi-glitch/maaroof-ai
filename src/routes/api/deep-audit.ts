@@ -31,15 +31,18 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       if (j?.status === "cancelled") return;
       const t = targets[i];
       let ev: any = null;
+      let source: string | null = null;
       try {
         const r: any = await fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY });
         const d = r?.data ?? r;
+        source = r?.fetch_source ?? null;
         ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
       } catch { ev = null; }
       const findings = scoreTarget(t, ev, brand);
       const ok = findings.some((f) => f.score != null);
       results.push({ url: t.url, kind: t.kind, platform: t.platform, ok, findings });
-      await emit("audit_target", { index: i + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform, ok, findings });
+      const { sourceLabel } = await import("@/lib/fetch-order");
+      await emit("audit_target", { index: i + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform, ok, findings, source, source_label: sourceLabel(ok ? (source as any) : null) });
       await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
     }
     const axes = aggregateAxes(results.map((r) => r.findings));
