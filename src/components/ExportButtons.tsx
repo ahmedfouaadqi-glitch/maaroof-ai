@@ -108,7 +108,7 @@ export function ExportButtons({
             supabase.from("entity_market_names").select("name, status").eq("user_id", u.user.id),
           ]);
           const pr: any = prof || {};
-          const confirmed = ((mk || []) as any[]).filter((m) => m.status === "confirmed" || m.status === "evidence_confirmed").map((m) => m.name);
+          const confirmed = ((mk || []) as any[]).filter((m) => m.status === "owner_confirmed" || m.status === "evidence_confirmed").map((m) => m.name);
           extra.push(...packSections({ brand: pr.brand_name || pr.full_name || "", markets: [...(pr.target_markets || []), ...confirmed], onboarding: pr.onboarding || {} }, exportLang));
         }
       }
