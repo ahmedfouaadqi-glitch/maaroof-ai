@@ -79,7 +79,10 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
             <DialogDescription>{META[open].d[i]}</DialogDescription>
           </DialogHeader>
           {open === "council"
-            ? <CouncilGrid engines={engines} lang={lang} selected={eng} onSelect={setEng} />
+            ? <div className="space-y-5">
+                <CouncilGrid engines={engines} lang={lang} selected={eng} onSelect={setEng} />
+                <div><p className="mb-2 text-sm font-semibold">{tr(lang, "ما حدث في مراجعة الخبراء", "What happened in the expert review", "پێداچوونەوەی پسپۆڕان")}</p><StageDetails stage="council" events={events} lang={lang} /></div>
+              </div>
             : <StageDetails stage={open} events={events} lang={lang} />}
         </>}
       </DialogContent>
@@ -95,7 +98,19 @@ const ENG_LABEL: Record<EngineView["status"], [string, string, string]> = {
 const ENG_DOT: Record<EngineView["status"], string> = { waiting: "bg-muted-foreground/40", asking: "bg-primary animate-pulse", answered: "bg-success", unresponsive: "bg-destructive" };
 
 function EngineDots({ engines }: { engines: EngineView[] }) {
-  return <div className="mt-2 flex flex-wrap gap-1">{engines.map((e) => <span key={e.key} title={(ENGINE_CATALOG as any)[e.key]?.name} className={`size-2 rounded-full ${ENG_DOT[e.status]}`} />)}</div>;
+  const reduced = useReducedMotion();
+  const answered = engines.filter((e) => e.status === "answered").length;
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <div className="flex flex-wrap gap-1">{engines.map((e, n) => (
+        <motion.span key={e.key} title={(ENGINE_CATALOG as any)[e.key]?.name}
+          animate={reduced ? undefined : e.status === "answered" ? { scale: [1, 1.6, 1] } : undefined}
+          transition={{ duration: 0.5, delay: n * 0.05 }}
+          className={`size-2 rounded-full ${ENG_DOT[e.status]}`} />
+      ))}</div>
+      {answered > 0 && <span className="text-[11px] tabular-nums text-muted-foreground">{answered}/10</span>}
+    </div>
+  );
 }
 
 function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineView[]; lang: L; selected: string | null; onSelect: (k: string | null) => void }) {
