@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { AttachmentAnalyzer } from "@/components/workspace/AttachmentAnalyzer";
 import { SkillToolsPanel } from "@/components/workspace/SkillToolsPanel";
+import { DirectToolsPanel } from "@/components/workspace/DirectToolsPanel";
 import { useVisibility } from "@/lib/visibility";
 import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
