@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe } from "lucide-react";
+import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe, Wrench } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
