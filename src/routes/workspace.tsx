@@ -447,10 +447,20 @@ function WorkspacePage() {
           resume_job_id: resumeFrom?.id,
         }),
       });
+      let response = await post(token);
+      if (response.status === 401) {
+        // Sign-in token may have just expired: refresh once and retry before failing.
+        const refreshed = (await supabase.auth.refreshSession()).data.session?.access_token;
+        if (refreshed) { token = refreshed; response = await post(token); }
+      }
       const body = await response.json().catch(() => ({}));
-      if (response.ok && body?.needs_skill) { setSkillAsk(Array.isArray(body.options) ? body.options : []); setRunning(false); return; }
+      if (response.ok && body?.needs_skill) {
+        setSkillAsk(Array.isArray(body.options) ? body.options : []); setRunning(false);
+        setError(locale === "en" ? "Choose a skill below so Maaroof knows what to run — nothing was charged." : locale === "ku" ? "تواناییەک لە خوارەوە هەڵبژێرە — هیچ نەکێشرا." : "اختر مهارة من الأسفل ليعرف معروف ما يشغّله — لم يُخصم شيء.");
+        return;
+      }
       if (!response.ok || !body?.job_id) {
-        const message = body?.message?.[locale] || body?.message?.ar || body?.error || c.failed;
+        const message = body?.message?.[locale] || body?.message?.ar || (body?.error === "auth_required" ? (locale === "en" ? "Your session expired. Please sign in again." : locale === "ku" ? "دانیشتنەکەت بەسەرچوو، دووبارە بچۆ ژوورەوە." : "انتهت جلسة الدخول، يرجى تسجيل الدخول مجدداً.") : body?.error) || c.failed;
         throw new Error(String(message));
       }
       setJobId(String(body.job_id)); setResumeFrom(null);
