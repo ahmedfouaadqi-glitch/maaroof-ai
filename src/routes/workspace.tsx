@@ -346,7 +346,7 @@ function WorkspacePage() {
           await new Promise(resolve => setTimeout(resolve, pollBackoffMs(failures)));
           continue; // transient: keep watching from the same cursor
         }
-        const body = await response.json().catch(() => ({}));
+        const body = await response!.json().catch(() => ({}));
         throw new Error(String(body?.error || c.failed));
       }
       failures = 0;
