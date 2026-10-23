@@ -96,3 +96,68 @@ export function councilEngines(events: Ev[], engineKeys: readonly string[], runn
     return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null };
   });
 }
+
+// ---- Per-card timeline + live narration + real links (pure, from recorded events only). ----
+export type TimelineItem = { at: number | null; kind: "say" | "step" | "done" | "fail" | "info"; text: string; links: { url: string; title: string }[] };
+
+const DECISION_STAGE: Record<string, StageKey> = {
+  goal_understanding: "understand", context_analysis: "understand", workspace_analysis: "understand", user_analysis: "understand",
+  memory_analysis: "understand", knowledge_analysis: "understand", future_impact: "understand",
+  expert_selection: "plan", capability_selection: "plan", tool_selection: "plan", mcp_selection: "plan", model_selection: "plan",
+  execution_strategy: "plan", cost_analysis: "plan", risk_analysis: "plan",
+};
+
+export function timelineStageOf(e: { type: string; data?: any }): StageKey | null {
+  const d = e.data || {};
+  if (e.type === "narration") return d.tool ? "evidence" : (PHASE_TO_STAGE[String(d.phase)] ?? null);
+  if (e.type === "decision") return DECISION_STAGE[String(d.stage)] ?? null;
+  if (e.type === "skill_choice" || e.type === "envision" || e.type === "knowledge" || e.type === "memory") return "understand";
+  if (e.type === "plan" || e.type === "tool_catalog" || e.type === "mci_hints") return "plan";
+  if (e.type === "council" || e.type === "capability_choice") return "council";
+  if (e.type === "conflict" || e.type === "timing") return "conflict";
+  if (e.type === "trust" || e.type === "compliance") return "result";
+  return stageOf(e);
+}
+
+const isUrl = (u: unknown): u is string => typeof u === "string" && /^https?:\/\/[^\s]+$/i.test(u);
+
+/** Real links found in a tool output: known sources, probe evidence, per-answer sources. Deduplicated. */
+export function linksOf(out: any, max = 12): { url: string; title: string }[] {
+  const seen = new Set<string>(); const res: { url: string; title: string }[] = [];
+  const add = (u: any, t: any) => { if (isUrl(u) && !seen.has(u) && res.length < max) { seen.add(u); res.push({ url: u, title: String(t || "").slice(0, 140) || u }); } };
+  if (!out || typeof out !== "object") return res;
+  for (const s of Array.isArray(out.sources) ? out.sources : []) add(s?.url, s?.title);
+  for (const s of Array.isArray(out.result?.sources) ? out.result.sources : []) add(s?.url, s?.title);
+  const p = out.probe;
+  for (const s of Array.isArray(p?.evidence) ? p.evidence : []) add(s?.url, s?.title);
+  for (const a of Array.isArray(p?.answers) ? p.answers : []) for (const s of Array.isArray(a?.sources) ? a.sources : []) add(s?.url, s?.title);
+  return res;
+}
+
+export function stageTimeline(events: Ev[], stage: StageKey, lang: "ar" | "en" | "ku" = "ar"): TimelineItem[] {
+  const t = (ar: string, en: string, ku: string) => (lang === "en" ? en : lang === "ku" ? ku : ar);
+  const out: TimelineItem[] = [];
+  for (const e of events) {
+    if (timelineStageOf(e) !== stage) continue;
+    const d = e.data || {}; const at = typeof e.at === "number" ? e.at : null;
+    if (e.type === "narration" && d.text) out.push({ at, kind: "say", text: String(d.text), links: [] });
+    else if (e.type === "decision" && d.summary) out.push({ at, kind: "info", text: String(d.summary).slice(0, 300), links: [] });
+    else if (e.type === "skill_choice") out.push({ at, kind: "info", text: t("المهارات: ", "Skills: ", "شارەزایی: ") + (Array.isArray(d.skills) ? d.skills.map((k: string) => `${k}${d.reasons?.[k] && d.reasons[k] !== "user_selected" ? ` (${d.reasons[k]})` : ""}`).join("، ") : ""), links: [] });
+    else if (e.type === "envision" && d.future_goal) out.push({ at, kind: "info", text: String(d.future_goal).slice(0, 400), links: [] });
+    else if (e.type === "knowledge" && Array.isArray(d.items)) out.push({ at, kind: "info", text: t(`قرأتُ ${d.items.length} عناصر من معرفتك`, `Read ${d.items.length} items from your knowledge`, `${d.items.length} زانیاری خوێندرایەوە`), links: [] });
+    else if (e.type === "plan" && Array.isArray(d.plan?.steps)) out.push({ at, kind: "info", text: t("الخطوات: ", "Steps: ", "هەنگاوەکان: ") + d.plan.steps.map((s: any) => s?.tool).filter(Boolean).join(" ← "), links: [] });
+    else if (e.type === "council" && (d.opinion || d.error)) out.push({ at, kind: d.error ? "fail" : "info", text: d.error ? t(`تعذّر رأي الخبير ${d.expert || ""}`, `Expert ${d.expert || ""} unavailable`, "پسپۆڕ بەردەست نییە") : `${d.expert ? `${d.expert}: ` : ""}${String(d.opinion).slice(0, 300)}`, links: [] });
+    else if (e.type === "conflict" && d.why) out.push({ at, kind: "info", text: String(d.why).slice(0, 300), links: [] });
+    else if (e.type === "tool_call") out.push({ at, kind: "step", text: `${d.tool}${d.reason ? ` — ${String(d.reason).slice(0, 200)}` : ""}`, links: [] });
+    else if (e.type === "tool_result") out.push({ at, kind: d.ok === false ? "fail" : "done", text: `${d.tool}: ${d.ok === false ? t("لم تكتمل", "not completed", "تەواو نەبوو") : t("نجحت", "succeeded", "سەرکەوتوو")}`, links: linksOf(d.output) });
+    else if (e.type === "final" && d.text) out.push({ at, kind: "done", text: String(d.text).slice(0, 4000), links: [] });
+    else if (e.type === "phase_error" || e.type === "error") out.push({ at, kind: "fail", text: t("تأخّر أو تعذّر جزء؛ استُخدم بديل وأكملت المهمة.", "A part was slow or failed; a backup was used.", "بەشێک دواکەوت؛ جێگرەوە بەکارهات."), links: [] });
+  }
+  return out;
+}
+
+/** Latest thing Maaroof said, for the live ticker. */
+export function latestNarration(events: Ev[]): string | null {
+  for (let k = events.length - 1; k >= 0; k--) if (events[k].type === "narration" && events[k].data?.text) return String(events[k].data.text);
+  return null;
+}
