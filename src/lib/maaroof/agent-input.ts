@@ -79,6 +79,37 @@ export function missingFields(tool: string, input: Record<string, any>): string[
   return (REQUIRED_FIELDS[tool] || []).filter((k) => str(input[k]).length < 2);
 }
 
+/** Competitor names recorded by earlier successful steps of the same task (never invented). */
+export function priorCompetitors(results: Array<{ tool: string; ok: boolean; output: any }>, brand: string, max = 5): string[] {
+  const own = brand.trim().toLowerCase();
+  const seen = new Map<string, string>();
+  const add = (v: unknown) => {
+    const n = typeof v === "string" ? v.trim() : v && typeof v === "object" ? String((v as any).name || (v as any).brand || "").trim() : "";
+    if (n.length < 2 || n.length > 60 || n.toLowerCase() === own || n.toLowerCase().includes(own) && own) return;
+    if (!seen.has(n.toLowerCase())) seen.set(n.toLowerCase(), n);
+  };
+  const walk = (o: any, depth = 0) => {
+    if (!o || typeof o !== "object" || depth > 4) return;
+    for (const [k, v] of Object.entries(o)) {
+      if (["competitors", "brands", "suggested_competitors"].includes(k) && Array.isArray(v)) v.forEach(add);
+      else if (typeof v === "object") walk(v, depth + 1);
+    }
+  };
+  for (const r of results) if (r.ok) walk(r.output);
+  return [...seen.values()].slice(0, max);
+}
+
+/** Fill inputs that depend on earlier steps or tool defaults. Pure; never overwrites set values. */
+export function fillFromTask(tool: string, input: Record<string, any>, results: Array<{ tool: string; ok: boolean; output: any }>): Record<string, any> {
+  const out = { ...input };
+  if (tool === "competitor_monitor" && !["create", "list", "recheck", "delete", "policy"].includes(String(out.action))) out.action = "create";
+  if ((tool === "compare" || tool === "competitor_monitor") && !(Array.isArray(out.competitors) ? out.competitors.length : str(out.competitors))) {
+    const c = priorCompetitors(results, str(out.brand));
+    if (c.length) { out.competitors = c; out.competitors_source = "prior_steps"; }
+  }
+  return out;
+}
+
 const Q: Record<string, Record<"ar" | "en" | "ku", string>> = {
   brand: { ar: "لم نجد اسم العلامة لهذه الخطوة، ما هو؟", en: "We couldn't find the brand name for this step — what is it?", ku: "ناوی براند بۆ ئەم هەنگاوە نەدۆزرایەوە، چییە؟" },
   description: { ar: "ما موضوع المحتوى الذي تريد منشورات عنه؟", en: "What should the posts be about?", ku: "پۆستەکان دەربارەی چی بن؟" },
