@@ -68,3 +68,11 @@ export function stripAgentOnlyFields<T extends Record<string, any>>(tool: string
   const { background: _b, ...rest } = input as any;
   return rest as T;
 }
+
+/** Split engines into small batches so the ten-model probe never fires all at once. */
+export function probeBatches<T>(items: T[], size = 3): T[][] {
+  const n = Math.max(1, Math.floor(size));
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += n) out.push(items.slice(i, i + n));
+  return out;
+}

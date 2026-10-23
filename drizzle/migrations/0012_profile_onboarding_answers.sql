@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding jsonb NOT NULL DEFAULT '{}'::jsonb;
+COMMENT ON COLUMN public.profiles.onboarding IS 'Owner-entered onboarding answers: aliases, markets, facts, competitors, links, faqs[{q,a}]';
