@@ -72,3 +72,10 @@ export function isStaleAgentJob(job: { status: string; updated_at: string }, now
   const t = new Date(job.updated_at).getTime();
   return Number.isFinite(t) && now - t > AGENT_STALE_MS;
 }
+
+export const AGENT_STUCK_MSG = "توقف المنفّذ دون تقدّم؛ لم يُخصم إلا ما اكتمل. اضغط «استئناف» لإكمال الباقي دون إعادة خصم.";
+/** A watchdog-stopped job may be resumed automatically once, and never a job that was itself an auto-resume. Pure. */
+export function canAutoResume(job: { status: string; error?: string | null; request_payload?: any }, claimed = false): boolean {
+  const slot = job.request_payload?.auto_resume_job_id;
+  return job.status === "failed" && job.error === AGENT_STUCK_MSG && job.request_payload?.auto_resumed !== true && (claimed ? slot === "pending" : slot == null);
+}

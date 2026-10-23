@@ -59,7 +59,15 @@ export const Route = createFileRoute("/api/maaroof")({
         if ((cost.source as any) === "disabled_by_admin") {
           return Response.json(chargeFailureBody("tool_disabled"), { status: 403 });
         }
-        if (hasMeter) {
+        // Free automatic resume: only for an owned job the watchdog stopped, and only once.
+        let freeAutoResume = false;
+        if (body?.auto_resume === true && typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id)) {
+          const { data: pj } = await (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId).maybeSingle();
+          const { canAutoResume } = await import("@/lib/maaroof/jobs");
+          freeAutoResume = !!pj && canAutoResume(pj, true);
+          if (!freeAutoResume) return Response.json({ error: "auto_resume_not_allowed" }, { status: 409 });
+        }
+        if (hasMeter && !freeAutoResume) {
           const charge = await chargeTokens({ userId, toolKey: priceKey, meta: { goal: goal.slice(0, 200), mode: executionMode || "execution" } });
           if (!charge.ok) {
             const status = charge.reason === "unpriced" ? 402 : charge.reason === "balance" || charge.reason === "daily_limit" || charge.reason === "monthly_limit" ? 402 : 403;
@@ -121,7 +129,7 @@ export const Route = createFileRoute("/api/maaroof")({
           }
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
             user_id: userId, goal, mode: executionMode || "execution", status: "running",
-            request_payload: { run_options: runOptions, resume_job_id: resumeId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
+            request_payload: { run_options: runOptions, resume_job_id: resumeId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang, auto_resumed: freeAutoResume },
           }).select("id").single();
           if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
           const jobId = job.id as string;

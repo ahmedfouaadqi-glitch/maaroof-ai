@@ -39,9 +39,26 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const { isStaleAgentJob } = await import("@/lib/maaroof/jobs");
         const agentStuck = job.mode !== "deep_audit" && isStaleAgentJob(job);
         if (notStarted || auditStuck || agentStuck || isStaleJob(job)) {
-          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : auditStuck ? "توقف الفحص دون تقدّم؛ لم يُخصم شيء. اضغط «إعادة المحاولة»." : agentStuck ? "توقف المنفّذ دون تقدّم؛ لم يُخصم إلا ما اكتمل. اضغط «استئناف» لإكمال الباقي دون إعادة خصم." : "انتهت مهلة المهمة دون تقدّم.";
+          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : auditStuck ? "توقف الفحص دون تقدّم؛ لم يُخصم شيء. اضغط «إعادة المحاولة»." : agentStuck ? (await import("@/lib/maaroof/jobs")).AGENT_STUCK_MSG : "انتهت مهلة المهمة دون تقدّم.";
           await db.from("maaroof_jobs").update({ status: "failed", error: msg, finished_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
           job.status = "failed"; job.error = msg;
+          if (agentStuck) {
+            // One free automatic resume from the last successful tool; claim it first so it never runs twice.
+            const { canAutoResume } = await import("@/lib/maaroof/jobs");
+            if (canAutoResume(job)) {
+              const payload = { ...(job.request_payload || {}), auto_resume_job_id: "pending" };
+              const { data: claimed } = await db.from("maaroof_jobs").update({ request_payload: payload }).eq("id", id).is("request_payload->>auto_resume_job_id", null).select("id");
+              if (claimed?.length) {
+                try {
+                  const rp = job.request_payload || {};
+                  const r = await fetch(new URL("/api/maaroof", request.url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: request.headers.get("authorization") || "" }, body: JSON.stringify({ goal: job.goal, lang: rp.lang || "ar", interface_mode: "workspace", execution_mode: job.mode === "execution" ? undefined : job.mode, selected_skills: rp.selected_skills, probe_engines: rp.probe_engines, live_probe: rp.live_probe, resume_job_id: id, auto_resume: true }) });
+                  const j: any = await r.json().catch(() => ({}));
+                  const newId = j?.job_id || j?.id;
+                  if (newId) { await db.from("maaroof_jobs").update({ request_payload: { ...payload, auto_resume_job_id: newId } }).eq("id", id); (job as any).auto_resume_job_id = newId; }
+                } catch {}
+              }
+            }
+          }
         }
         const { data: events } = await db.from("maaroof_job_events").select("seq, event_type, payload, created_at")
           .eq("job_id", id).gt("seq", parseAfter(url.searchParams.get("after"))).order("seq", { ascending: true }).limit(200);
