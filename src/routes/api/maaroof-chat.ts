@@ -16,7 +16,13 @@ export const Route = createFileRoute("/api/maaroof-chat")({
       GET: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
         const { data } = await a.admin.from("maaroof_chat_messages").select("id, role, content, grounded, created_at").eq("user_id", a.userId).order("created_at", { ascending: true }).limit(100);
-        return Response.json({ items: data ?? [] });
+        const { data: prof } = await a.admin.from("profiles").select("is_subscribed, tokens_balance, tokens_daily_limit, tokens_monthly_limit").eq("id", a.userId).maybeSingle();
+        const p: any = prof || {};
+        const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+        const { count } = await a.admin.from("maaroof_chat_messages").select("id", { count: "exact", head: true }).eq("user_id", a.userId).eq("role", "user").gte("created_at", today.toISOString());
+        const { chatQuota } = await import("@/lib/maaroof/chat-policy");
+        const { data: jobs } = await a.admin.from("maaroof_jobs").select("id, goal, status, created_at").eq("user_id", a.userId).eq("status", "completed").order("created_at", { ascending: false }).limit(15);
+        return Response.json({ items: data ?? [], tasks: jobs ?? [], quota: chatQuota({ metered: Number(p.tokens_balance) > 0 || p.tokens_daily_limit != null || p.tokens_monthly_limit != null, subscribed: !!p.is_subscribed, todayUserMessages: count || 0 }) });
       },
       DELETE: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
@@ -41,6 +47,19 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         if (!chatAllowed({ metered, subscribed: !!p.is_subscribed, todayUserMessages: count || 0 })) {
           return Response.json({ error: "chat_limit" }, { status: 402 });
         }
+        const { chatQuota } = await import("@/lib/maaroof/chat-policy");
+        const quota = chatQuota({ metered, subscribed: !!p.is_subscribed, todayUserMessages: (count || 0) + 1 });
+        // Optional task context: the user's own completed job goal + final result.
+        let taskCtx: string[] = [];
+        const taskId = typeof body?.task_id === "string" ? body.task_id : "";
+        if (taskId) {
+          const { data: job } = await admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId).maybeSingle();
+          if (job) {
+            const { data: fin } = await admin.from("maaroof_job_events").select("payload").eq("job_id", taskId).eq("event_type", "final").order("seq", { ascending: false }).limit(1);
+            const txt = JSON.stringify((fin as any)?.[0]?.payload ?? "").slice(0, 3000);
+            taskCtx = [`[task, evidence] ${String((job as any).goal).slice(0, 300)}`, `[task result] ${txt}`];
+          }
+        }
 
         // Knowledge actually held for this user — the only ground Maaroof speaks from.
         const [{ data: kf }, { data: iv }, { data: ws }, { data: hist }] = await Promise.all([
@@ -57,6 +76,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           ...freshFacts((kf || []) as any[]).map((f: any) => `[${f.source}, ${f.confidence}] ${String(f.fact).slice(0, 300)}`),
           ...interviewFacts((iv || []) as any).map((f) => `[interview] ${f.fact.slice(0, 300)}`),
         ].slice(0, 60);
+        knowledge.unshift(...taskCtx);
 
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
@@ -84,7 +104,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           { user_id: userId, role: "user", content: message },
           { user_id: userId, role: "assistant", content: reply.text, grounded },
         ]);
-        return Response.json({ text: reply.text, needs_task: reply.needsTask, knowledge_items: knowledge.length });
+        return Response.json({ text: reply.text, needs_task: reply.needsTask, knowledge_items: knowledge.length, quota });
       },
     },
   },

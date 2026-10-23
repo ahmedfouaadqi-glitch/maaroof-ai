@@ -16,3 +16,14 @@ describe("chat policy", () => {
     expect(groundedSystemPrompt("ar", [])).toContain("nothing is known yet");
   });
 });
+
+import { chatQuota } from "./chat-policy";
+describe("chat quota", () => {
+  it("free user with 3 sent has 7 left and resets at next UTC midnight", () => {
+    const q = chatQuota({ metered: false, subscribed: false, todayUserMessages: 3, now: Date.UTC(2026, 9, 23, 5) });
+    expect(q.remaining).toBe(7);
+    expect(q.resets_at).toBe("2026-10-24T00:00:00.000Z");
+  });
+  it("never negative", () => { expect(chatQuota({ metered: false, subscribed: false, todayUserMessages: 15 }).remaining).toBe(0); });
+  it("metered users are unlimited", () => { expect(chatQuota({ metered: true, subscribed: false, todayUserMessages: 50 }).remaining).toBeNull(); });
+});

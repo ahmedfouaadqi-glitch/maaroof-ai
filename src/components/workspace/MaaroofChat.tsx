@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Send, Trash2, ArrowLeftRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
+import { ShinyText } from "@/components/motion/effects";
+
+type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 
 type L = "ar" | "en" | "ku";
 type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean };
@@ -20,17 +23,20 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [quota, setQuota] = useState<Quota | null>(null);
+  const [tasks, setTasks] = useState<Array<{ id: string; goal: string }>>([]);
+  const [taskId, setTaskId] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { void call("GET").then((r) => r.ok && setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task })))); inputRef.current?.focus(); }, []);
+  useEffect(() => { void call("GET").then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setTasks(r.json.tasks || []); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task }))); }); inputRef.current?.focus(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
 
   const send = async () => {
     const m = text.trim(); if (!m || busy) return;
     setText(""); setErr(""); setBusy(true);
     setMsgs((p) => [...p, { role: "user", content: m }]);
-    const r = await call("POST", { message: m, lang });
+    const r = await call("POST", { message: m, lang, task_id: taskId || undefined });
     setBusy(false); inputRef.current?.focus();
     if (!r.ok) {
       const e = r.json?.error;
@@ -39,6 +45,7 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
         : tr(lang, "تعذّر الرد الآن، لم يُخصم شيء. حاول مجدداً.", "Couldn't reply; nothing charged. Try again.", "وەڵام نەدرایەوە."));
       return;
     }
+    if (r.json.quota) setQuota(r.json.quota);
     setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task }]);
   };
 
@@ -53,6 +60,13 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
         </div>
         {msgs.length > 0 && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف المحادثة؟", "Clear chat?", "سڕینەوە؟"))) { await call("DELETE"); setMsgs([]); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
       </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <select value={taskId} onChange={(e) => setTaskId(e.target.value)} className="max-w-full flex-1 rounded-lg border border-border bg-background px-2 py-1.5" aria-label="context">
+          <option value="">{tr(lang, "محادثة عامة", "General chat", "گفتوگۆی گشتی")}</option>
+          {tasks.map((t) => <option key={t.id} value={t.id}>{tr(lang, "عن مهمة: ", "About task: ", "دەربارەی ئەرک: ")}{t.goal.slice(0, 60)}</option>)}
+        </select>
+        {quota && <span className="rounded-full bg-muted px-3 py-1 tabular-nums">{quota.unlimited ? tr(lang, "تُحتسب من رصيدك عند نجاح الرد", "Charged from balance on success", "لە باڵانس") : tr(lang, `متبقٍ اليوم ${quota.remaining} من ${quota.cap} · يتجدد ${new Date(quota.resets_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`, `${quota.remaining}/${quota.cap} left today · resets ${new Date(quota.resets_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`, `${quota.remaining}/${quota.cap} ماوە`)}</span>}
+      </div>
       <div className="max-h-[55vh] min-h-48 space-y-3 overflow-y-auto rounded-xl bg-background p-3">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «ماذا تعرف عن علامتي؟» أو «ما الذي ينقص ملفي ليقتبسني ChatGPT؟»", "Example: “What do you know about my brand?”", "نموونە: «چی دەزانیت دەربارەی براندەکەم؟»")}</p>}
         {msgs.map((m, i) => (
@@ -65,7 +79,7 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
             </div>
           </div>
         ))}
-        {busy && <LoaderCircle className="size-4 animate-spin text-muted-foreground" />}
+        {busy && <div className="flex items-center gap-2 text-sm"><LoaderCircle className="size-4 animate-spin text-primary" /><ShinyText>{tr(lang, "معروف يفكّر من معرفتك…", "Maaroof is thinking from your knowledge…", "معروف بیر دەکاتەوە…")}</ShinyText></div>}
         <div ref={endRef} />
       </div>
       {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
