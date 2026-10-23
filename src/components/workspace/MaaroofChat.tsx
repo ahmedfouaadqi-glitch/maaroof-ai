@@ -7,7 +7,8 @@ import { ShinyText } from "@/components/motion/effects";
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 
 type L = "ar" | "en" | "ku";
-type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean };
+type Task = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
+type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null };
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 
 async function call(method: string, body?: unknown) {
@@ -29,7 +30,7 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { void call("GET").then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setTasks(r.json.tasks || []); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task }))); }); inputRef.current?.focus(); }, []);
+  useEffect(() => { void call("GET").then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setTasks(r.json.tasks || []); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null }))); }); inputRef.current?.focus(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
 
   const send = async () => {
@@ -46,7 +47,7 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
       return;
     }
     if (r.json.quota) setQuota(r.json.quota);
-    setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task }]);
+    setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null }]);
   };
 
   const lastUser = [...msgs].reverse().find((m) => m.role === "user")?.content || "";
@@ -73,7 +74,15 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
           <div key={m.id || i} className={m.role === "user" ? "flex justify-end" : ""}>
             <div className={m.role === "user" ? "max-w-[85%] rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full whitespace-pre-wrap text-sm leading-7"}>
               {m.content}
-              {m.role === "assistant" && m.needs_task && (
+              {m.role === "assistant" && m.task && (
+                <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-xs">
+                  <p className="font-semibold text-primary">{tr(lang, "مهمة مقترحة", "Proposed task", "ئەرکی پێشنیارکراو")} · {({ scan: tr(lang, "فحص", "Scan", "پشکنین"), plan: tr(lang, "تخطيط", "Plan", "پلان"), recommend: tr(lang, "توصية", "Recommendation", "ڕاسپاردە"), simulate: tr(lang, "محاكاة", "Simulation", "لاساییکردنەوە") } as Record<string, string>)[m.task.kind]}</p>
+                  <p className="mt-1 text-foreground">{m.task.goal}</p>
+                  <p className="mt-1 text-muted-foreground">{tr(lang, "تُعرض الكلفة مقابل رصيدك قبل التنفيذ، ولا يُخصم شيء إلا عند النجاح.", "Cost vs. your balance is shown before running; nothing is charged unless it succeeds.", "تێچوو بەراورد بە باڵانسەکەت پێش جێبەجێکردن پیشان دەدرێت؛ تەنها لە کاتی سەرکەوتن دەبڕدرێت.")}</p>
+                  <button type="button" onClick={() => onToTask(m.task!.goal)} className="mt-2 flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground"><ArrowLeftRight className="size-3" />{tr(lang, "اعتماد وبدء التنفيذ", "Approve and start", "پەسەندکردن و دەستپێکردن")}</button>
+                </div>
+              )}
+              {m.role === "assistant" && m.needs_task && !m.task && (
                 <button type="button" onClick={() => onToTask(lastUser)} className="mt-2 flex items-center gap-1 rounded-lg border border-primary/40 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"><ArrowLeftRight className="size-3" />{tr(lang, "حوّلها إلى مهمة (تُعرض الكلفة قبل التنفيذ)", "Turn into a task (cost shown first)", "بیکە بە ئەرک")}</button>
               )}
             </div>
