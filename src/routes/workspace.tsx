@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { AuthGate } from "@/components/AuthGate";
 import { AttachmentAnalyzer } from "@/components/workspace/AttachmentAnalyzer";
 import { SkillToolsPanel } from "@/components/workspace/SkillToolsPanel";
+import { DirectToolsPanel } from "@/components/workspace/DirectToolsPanel";
 import { useVisibility } from "@/lib/visibility";
 import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
@@ -176,7 +177,7 @@ function WorkspacePage() {
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
   const search = Route.useSearch();
-  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "extras", "more"];
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "tools", "extras", "more"];
   const legacyTab = search.tab === "ops" || search.tab === "channels" ? "extras" : search.tab === "approvals" ? "interview" : search.tab;
   const tab: WorkspaceTab = TABS.includes(legacyTab as WorkspaceTab) ? (legacyTab as WorkspaceTab) : "main";
   const goMain = () => navigate({ to: "/workspace", search: {} });
@@ -570,6 +571,7 @@ function WorkspacePage() {
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="min-w-0 truncate text-sm">{user.email}</span><Link to="/profile" className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted">{locale === "en" ? "Full profile" : locale === "ku" ? "پرۆفایلی تەواو" : "الملف الكامل"}</Link></div>
       </section></div>}
       {tab === "skills" && <div className="px-4 py-6 md:px-0 md:py-10"><SkillToolsPanel lang={locale} skill={search.skill} tool={search.tool} /></div>}
+      {tab === "tools" && <div className="px-4 py-6 md:px-0 md:py-10"><DirectToolsPanel lang={locale} tool={search.tool} /></div>}
       {tab === "extras" && <div className="space-y-4 px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-3 font-semibold">{locale === "en" ? "Publishing channels" : locale === "ku" ? "کەناڵەکانی بڵاوکردنەوە" : "قنوات النشر"}</h2><Suspense fallback={null}><LazyAgentOps section="channels" /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-3 font-semibold">{locale === "en" ? "Scheduling" : locale === "ku" ? "خشتە" : "الجدولة"}</h2><Suspense fallback={null}><LazySchedules workspaceId={null} defaultPrompt={goal} /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Scheduled agent tasks" : locale === "ku" ? "ئەرکە خشتەکراوەکان" : "مهام الوكيل المجدولة"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Tip: just write “every week…” in your goal and Maaroof will propose a schedule or ask you." : locale === "ku" ? "تەنها بنووسە «هەموو هەفتەیەک…»." : "تلميح: اكتب «كل أسبوع…» في هدفك وسيقترح معروف الجدولة أو يسألك عنها."}</p><Suspense fallback={null}><LazyAgentOps section="tasks" /></Suspense></section></div>}
       {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} initialDomain={search.domain} initialPurpose={search.domain ? goal.trim().slice(0, 200) : undefined} /></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
