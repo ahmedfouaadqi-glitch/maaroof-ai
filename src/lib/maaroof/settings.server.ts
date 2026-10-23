@@ -461,6 +461,8 @@ export async function getMaaroofSettings(force = false): Promise<MaaroofSettings
     for (const row of (data as any[]) || []) {
       if (row.key in DEFAULTS) out[row.key] = row.value;
     }
+    // Core discovery tool must never silently drop out of a saved list.
+    if (Array.isArray(out.enabled_tools) && out.enabled_tools.length && !out.enabled_tools.includes("known")) out.enabled_tools = [...out.enabled_tools, "known"];
     // The admin "free plan policy" owns the free daily session cap.
     try {
       const { data: policy } = await db()

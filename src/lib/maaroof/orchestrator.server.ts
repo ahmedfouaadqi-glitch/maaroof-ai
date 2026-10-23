@@ -137,6 +137,8 @@ export type RunContext = {
   liveProbe?: boolean;
   /** Answers to earlier clarify questions, e.g. { brand: "X" }. */
   clarifications?: Record<string, string>;
+  /** Skills chosen by the user, or inferred from the task text with evidence. */
+  selectedSkills?: string[];
 };
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
@@ -488,7 +490,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
-      `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse as many steps as the task needs (up to the platform limit). Only use tool keys from the list. Return JSON only.`;
+      `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse as many steps as the task needs (up to the platform limit). Only use tool keys from the list. Return JSON only.`;
     const planResp = await call("planning", [
       { role: "system", content: systemPrompt },
       { role: "user", content: planUserMsg },
@@ -506,6 +508,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
       steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
+    }
+    // Skill tools (selected or inferred from the task text) are guaranteed in the plan.
+    if (!userTools.length && ctx.selectedSkills?.length) {
+      try {
+        const { executableToolsFor } = await import("./skill-inference");
+        for (const k of executableToolsFor(ctx.selectedSkills)) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "مطلوبة للمهارة المختارة لهذه المهمة." } as PlanStep);
+        steps = steps.slice(0, Math.max(MAX_STEPS, steps.length));
+      } catch {}
     }
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);

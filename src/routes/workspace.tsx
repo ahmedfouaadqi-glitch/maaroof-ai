@@ -134,7 +134,7 @@ function WorkspacePage() {
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
-  const [liveProbe, setLiveProbe] = useState(false);
+  const [liveProbe, setLiveProbe] = useState(true);
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);

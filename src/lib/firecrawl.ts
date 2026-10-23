@@ -188,9 +188,10 @@ export async function fcSearch(query: string, opts: { limit?: number; lang?: str
   return json;
 }
 
-export async function fcScrape(url: string, opts: { deep?: boolean } = {}, ctx: FcCtx = {}) {
+export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?: boolean } = {}, ctx: FcCtx = {}) {
   const deep = !!opts.deep;
   const formats = deep ? ["markdown", "html", "links"] : ["markdown"];
+  if (opts.screenshot) formats.push("screenshot@fullPage");
   const payload = { url, formats, onlyMainContent: true }; // force onlyMainContent always
   const hash = hashKey("scrape", payload);
   const policy = await getPolicy();

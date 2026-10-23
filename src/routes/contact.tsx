@@ -31,7 +31,7 @@ export const Route = createFileRoute("/contact")({
             addressLocality: "Baghdad",
             addressCountry: "IQ",
           },
-          areaServed: "IQ",
+          areaServed: "Worldwide",
         }),
       },
     ],
