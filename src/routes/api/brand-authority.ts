@@ -97,7 +97,7 @@ export const Route = createFileRoute("/api/brand-authority")({
           const overrideLimit = Number((profile as any)?.quota_overrides?.monthly_analyses || 0);
           const used = Number((profile as any).monthly_analyses_used || 0);
           if (!allowed && overrideLimit - used < AUTHORITY_COST) {
-            /* balance-only: charge already succeeded */ void limit;
+            /* balance-only: charge already succeeded */ void overrideLimit;
           }
 
           const body = await request.json();
