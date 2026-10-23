@@ -55,8 +55,8 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         if (taskId) {
           const { data: job } = await admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId).maybeSingle();
           if (job) {
-            const { data: fin } = await admin.from("maaroof_job_events").select("data").eq("job_id", taskId).eq("type", "final").order("created_at", { ascending: false }).limit(1);
-            const txt = JSON.stringify((fin as any)?.[0]?.data ?? "").slice(0, 3000);
+            const { data: fin } = await admin.from("maaroof_job_events").select("payload").eq("job_id", taskId).eq("event_type", "final").order("seq", { ascending: false }).limit(1);
+            const txt = JSON.stringify((fin as any)?.[0]?.payload ?? "").slice(0, 3000);
             taskCtx = [`[task, evidence] ${String((job as any).goal).slice(0, 300)}`, `[task result] ${txt}`];
           }
         }
