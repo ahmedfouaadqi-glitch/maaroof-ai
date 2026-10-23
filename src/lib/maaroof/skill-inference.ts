@@ -7,7 +7,7 @@ import { MAAROOF_SKILLS, recommendMaaroofSkills } from "./skill-catalog";
 export const EXECUTABLE_TOOLS = new Set([
   "suggest", "geo_rewrite", "analyze", "research", "feasibility", "bizdev", "brand_boost", "what_if",
   "applied_ranking", "visibility", "social_analysis", "compare", "company_email", "geo_strategist",
-  "competitor_monitor", "brand_authority", "known",
+  "competitor_monitor", "brand_authority", "known", "translate", "teach_space",
 ]);
 
 export type SkillInference =

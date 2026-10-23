@@ -13,8 +13,9 @@ describe("inferSkills", () => {
     expect(r.skills).toContain("entity_readiness");
     expect(r.reasons.entity_readiness).toContain("maaroofai.com");
   });
-  it("drops tools without a real route", () => {
-    expect(executableToolsFor(["localization"])).toEqual([]);
+  it("maps internal skills to executable steps", () => {
+    expect(executableToolsFor(["localization"])).toEqual(["translate"]);
+    expect(executableToolsFor(["knowledge_training"])).toEqual(["teach_space"]);
     expect(executableToolsFor(["presence_audit"])).toEqual(["known", "visibility"]);
   });
 });
