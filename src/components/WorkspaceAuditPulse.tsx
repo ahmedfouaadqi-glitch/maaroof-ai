@@ -23,7 +23,14 @@ async function authed(path: string, init: RequestInit = {}) {
   return fetch(path, { ...init, headers: { ...(init.headers || {}), "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) } });
 }
 
-const tone = (s: number | null | undefined) => s == null ? "text-muted-foreground" : s >= 70 ? "text-primary" : s >= 40 ? "text-accent-foreground" : "text-destructive";
+export const tone = (s: number | null | undefined) => s == null ? "text-muted-foreground" : s >= 70 ? "text-primary font-bold" : s >= 40 ? "text-warning font-bold" : "text-destructive font-bold";
+const VERDICT: Record<L, [string, string, string, string]> = {
+  ar: ["جيد", "ضعيف", "مفقود", "لم يُقَس"],
+  en: ["Good", "Weak", "Missing", "Unmeasured"],
+  ku: ["باش", "لاواز", "نییە", "نەپێوراو"],
+};
+const verdict = (lang: L, s: number | null | undefined) => { const v = VERDICT[lang]; return s == null ? v[3] : s >= 70 ? v[0] : s >= 40 ? v[1] : v[2]; };
+const NOTE: Record<L, string> = { ar: "النتيجة تعكس الموقع المنشور بتاريخ الفحص", en: "The result reflects the published site at scan time", ku: "ئەنجامەکە ماڵپەڕی بڵاوکراوە لە کاتی پشکنیندا پیشان دەدات" };
 
 function Ring({ value, size = 92 }: { value: number | null; size?: number }) {
   const r = size / 2 - 7, c = 2 * Math.PI * r, v = value ?? 0;
@@ -109,12 +116,14 @@ export function WorkspaceAuditPulse({ lang, onTask }: { lang: L; onTask: (text: 
             </div>
             <div className="grid flex-1 grid-cols-5 gap-1 text-center text-[11px]">
               {AX.map((a) => { const v = result?.axes?.[a]; return (
-                <div key={a} className="rounded-lg bg-muted/60 p-1.5"><div className="font-semibold">{a.toUpperCase()}</div><div className={tone(v)}>{v ?? "—"}</div>
+                <div key={a} className="rounded-lg bg-muted/60 p-1.5"><div className="font-semibold">{a.toUpperCase()}</div><div className={`text-sm ${tone(v)}`}>{v ?? "—"}</div>
+                  {result && <div className="text-[9px] text-muted-foreground">{verdict(lang, v)}</div>}
                   <div className="mt-1 h-1 overflow-hidden rounded bg-background"><div className="h-full bg-primary transition-all duration-700" style={{ width: `${v ?? 0}%` }} /></div></div>
               ); })}
             </div>
           </div>
           {delta != null && <p className="mt-1 text-[11px] text-muted-foreground">{delta >= 0 ? "+" : ""}{delta} {t.delta}</p>}
+          {result && <p className="mt-1 text-[11px] text-muted-foreground">{NOTE[lang]}</p>}
 
           <ul className="mt-4 space-y-1.5" dir="ltr">
             {targets.map((tg) => {
