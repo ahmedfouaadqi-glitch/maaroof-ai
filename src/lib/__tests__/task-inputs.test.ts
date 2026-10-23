@@ -18,3 +18,15 @@ describe("tool inputs from earlier task steps", () => {
     expect(fillFromTask("compare", { brand: "x", competitors: ["A"] }, prior).competitors).toEqual(["A"]);
   });
 });
+
+import { councilEngines } from "@/lib/maaroof/pipeline-cards";
+describe("ten-model card says why a model was not asked", () => {
+  it("probe disabled by user", () => {
+    const ev = [{ type: "tool_result", data: { tool: "visibility", ok: false, output: { skipped: "live_probe_disabled_by_user" } } }];
+    expect(councilEngines(ev as any, ["chatgpt"], false)[0].why).toBe("probe_disabled");
+  });
+  it("task ended before probe vs still running", () => {
+    expect(councilEngines([], ["chatgpt"], false)[0].why).toBe("job_ended");
+    expect(councilEngines([], ["chatgpt"], true)[0].why).toBe("not_reached");
+  });
+});
