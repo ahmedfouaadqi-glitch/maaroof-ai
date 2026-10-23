@@ -1,4 +1,4 @@
-import { engineAnswerSections, entityFromResult, type ResultEntity } from "@/lib/machine-pack";
+import { engineAnswersOf, entityFromResult, type ResultEntity } from "@/lib/machine-pack";
 // Session-wide bus of the latest result of every tool, so the Report Builder
 // can combine live tool results with its database metrics.
 import { useEffect, useSyncExternalStore } from "react";
@@ -112,8 +112,8 @@ export function sectionsFromResult(value: any, heading = "Result", depth = 0): E
 /** Build a full ExportPayload from an arbitrary tool result. */
 export function payloadFromResult(title: string, result: any, subtitle?: string): ExportPayload {
   const base = sectionsFromResult(result, title);
-  let engines: ExportSection[] = [];
+  let engineAnswers: any[] = [];
   let entity: ResultEntity | undefined;
-  try { engines = engineAnswerSections(result); entity = entityFromResult(result) || undefined; } catch {}
-  return { title, subtitle, sections: engines.length ? [...engines, ...base] : base, entity };
+  try { engineAnswers = engineAnswersOf(result); entity = entityFromResult(result) || undefined; } catch {}
+  return { title, subtitle, sections: base, entity, engineAnswers };
 }

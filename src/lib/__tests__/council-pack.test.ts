@@ -22,6 +22,11 @@ describe("engine sections in export", () => {
     expect(s[0].heading).toBe("Gemini");
     expect(JSON.stringify(s)).toContain("لا يوجد مصدر مسجل");
   });
+  it("labels follow the export language", () => {
+    const r = { probe: { answers: [{ engine: "claude", mentioned: true, rank: 2, answer: "x", sources: [] }] } };
+    expect(engineAnswerSections(r, "en")[0].rows![0][0]).toBe("Status");
+    expect(engineAnswerSections(r, "ku")[0].rows![0][0]).toBe("دۆخ");
+  });
 });
 describe("chat identity", () => {
   it("names the founder", () => { expect(groundedSystemPrompt("ar", [])).toContain("Ahmed Maaroof"); });

@@ -89,7 +89,7 @@ export function ExportButtons({
     setOpen(false);
     try {
       const { labelFor, localizeValue, glossarySection } = await import("@/lib/maaroof/report-sections");
-      const { linksSection, packSections } = await import("@/lib/machine-pack");
+      const { linksSection, packSections, engineAnswerSections } = await import("@/lib/machine-pack");
       const base = p.sections.filter((s) => !/^(حزمة قراءة الآلة|Machine-readable pack|پاکێجی)/.test(s.heading));
       // Localize fixed labels/values into the chosen export language (model answer text stays as-is).
       const loc: import("@/lib/exports").ExportSection[] = base.map((s) => ({
@@ -119,7 +119,8 @@ export function ExportButtons({
           extra.push(...packSections({ brand: ent.brand, site: ent.site, summary: ent.summary, onboarding: { faqs: ent.faqs, facts: (ent.facts || []).join("\n"), links: (ent.links || []).join("\n") } }, exportLang));
         }
       }
-      const all = [...loc.filter((s) => !/^(Glossary|فەرهەنگ|معجم المصطلحات)$/.test(s.heading)), ...extra];
+      const engineSecs = p.engineAnswers?.length ? engineAnswerSections({ probe: { answers: p.engineAnswers } }, exportLang) : [];
+      const all = [...engineSecs, ...loc.filter((s) => !/^(Glossary|فەرهەنگ|معجم المصطلحات)$/.test(s.heading)), ...extra];
       const { brandModelIds } = await import("@/lib/maaroof/model-council");
       const bm = (x: any) => (typeof x === "string" ? brandModelIds(x, exportLang) : x);
       for (const s of all) { s.text = bm(s.text); s.list = s.list?.map(bm); s.rows = s.rows?.map(([k, v]) => [k, bm(v)] as [string, string | number]); if (s.table) s.table = { ...s.table, data: s.table.data.map((r) => r.map(bm)) }; }

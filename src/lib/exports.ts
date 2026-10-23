@@ -32,6 +32,8 @@ export type ExportPayload = {
   identity?: ExportIdentityInfo;
   /** The entity the tool examined; drives the machine-readable pack for any brand. */
   entity?: import("@/lib/machine-pack").ResultEntity;
+  /** Raw per-engine answers; labelled in the export language at export time. */
+  engineAnswers?: any[];
 };
 
 const BRAND = "MAAROOF Ai";
