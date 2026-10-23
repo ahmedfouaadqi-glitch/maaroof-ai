@@ -50,7 +50,7 @@ export function BrowserViewer({ lang, history, index, onIndex, onOpen, busy, isA
       <div ref={scroller} onScroll={onScroll} className="h-[28rem] overflow-y-auto bg-background">
         {view.screenshot
           ? <img src={view.screenshot} alt={view.title || view.url} className="w-full" />
-          : <pre dir="auto" className="whitespace-pre-wrap p-4 text-sm leading-7">{view.markdown || tr(lang, "لا يوجد محتوى مقروء.", "No readable content.", "ناوەڕۆک نییە.")}</pre>}
+          : <><div className="sticky top-0 flex items-center justify-between gap-2 border-b border-warning/40 bg-warning/10 px-3 py-1.5 text-xs"><span>{tr(lang, "عرض نصي — اللقطة غير متاحة لهذه الصفحة", "Text view — no page capture available", "پیشاندانی دەق — وێنە بەردەست نییە")}</span><button disabled={busy} onClick={() => onOpen(view.url)} className="rounded-md border border-border px-2 py-0.5 disabled:opacity-40">{tr(lang, "حاول بلقطة مجدداً", "Retry capture", "دووبارە")}</button></div><pre dir="auto" className="whitespace-pre-wrap p-4 text-sm leading-7">{view.markdown || tr(lang, "لا يوجد محتوى مقروء.", "No readable content.", "ناوەڕۆک نییە.")}</pre></>}
       </div>
       {view.links.length > 0 && (
         <div className="max-h-40 overflow-y-auto border-t border-border p-3">

@@ -372,7 +372,8 @@ function WorkspacePage() {
     return () => { active = false; watcherRef.current += 1; };
   }, [user?.id, loading, session?.access_token]);
 
-  async function start(clarifications?: Record<string, string>) {
+  const [skillAsk, setSkillAsk] = useState<string[]>([]);
+  async function start(clarifications?: Record<string, string>, skillsOverride?: string[]) {
     if (!goal.trim() || running || !user || !policy.allowed_modes.includes(mode)) return;
     if (liveProbe && selectedModels.length === 0) {
       setError(locale === "en" ? "Select at least one model or turn off live checking." : locale === "ku" ? "مۆدێلێک هەڵبژێرە یان پشکنینی ڕاستەوخۆ ناچالاک بکە." : "اختر نموذجاً واحداً على الأقل أو أوقف الفحص المباشر.");
@@ -380,6 +381,7 @@ function WorkspacePage() {
     }
     setRunning(true);
     setError("");
+    setSkillAsk([]);
     setEvents([]);
     setJobId(null);
     try {
@@ -401,10 +403,11 @@ function WorkspacePage() {
           },
           interface_mode: "workspace",
           geo_scope: toServerGeo(getEffectiveScope(authProfile)),
-          selected_skills: selectedSkills,
+          selected_skills: skillsOverride || selectedSkills,
         }),
       });
       const body = await response.json().catch(() => ({}));
+      if (response.ok && body?.needs_skill) { setSkillAsk(Array.isArray(body.options) ? body.options : []); setRunning(false); return; }
       if (!response.ok || !body?.job_id) {
         const message = body?.message?.[locale] || body?.message?.ar || body?.error || c.failed;
         throw new Error(String(message));
@@ -455,6 +458,10 @@ function WorkspacePage() {
     }
     if (event.type === "error") return String(d.message || c.failed);
     if (event.type === "clarify") return String(d.question || c.clarify);
+    if (event.type === "skill_choice") {
+      const names = (Array.isArray(d.skills) ? d.skills : []).map((k: string) => { const sk = MAAROOF_SKILLS.find((x) => x.key === k); const why = d.reasons?.[k]; return (sk?.label[locale] || k) + (why && why !== "user_selected" ? ` (${why})` : ""); }).join("، ");
+      return d.kind === "selected" ? `${locale === "en" ? "Skills you chose" : locale === "ku" ? "تواناکانی هەڵبژێردراو" : "المهارات التي اخترتها"}: ${names}` : `${locale === "en" ? "Chose these skills because the task mentions" : locale === "ku" ? "ئەم توانایانە هەڵبژێردران چونکە ئەرکەکە باسی دەکات" : "اخترت هذه المهارات لأن المهمة تذكر"}: ${names}`;
+    }
     return String(d.text || d.message || d.phase || c.unknown);
   }
 
@@ -663,6 +670,12 @@ function WorkspacePage() {
 
             {!finalEvent && !running && !error && <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">{c.noResults}</div>}
 
+            {skillAsk.length > 0 && !running && (
+              <div className="rounded-2xl border border-primary/30 bg-card p-4">
+                <p className="mb-3 font-semibold">{locale === "en" ? "Your task doesn't say which skill fits. Which one do you want?" : locale === "ku" ? "ئەرکەکە ڕوون ناکاتەوە کام توانا گونجاوە. کامیان دەتەوێت؟" : "لم توضّح المهمة المهارة المناسبة. أيّها تريد؟"}</p>
+                <div className="flex flex-wrap gap-2">{skillAsk.map((k) => { const sk = MAAROOF_SKILLS.find((x) => x.key === k); return sk ? <button key={k} type="button" onClick={() => { setSelectedSkills([k]); void start(undefined, [k]); }} className="rounded-full border border-primary/40 px-3 py-1.5 text-sm text-primary hover:bg-primary/10">{sk.label[locale]}</button> : null; })}</div>
+              </div>
+            )}
             {clarifyEvents.length > 0 && !running && (
               <form className="rounded-2xl border border-primary/30 bg-card p-4" onSubmit={(event) => { event.preventDefault(); if (clarifyField && clarification.trim()) void start({ [clarifyField]: clarification.trim() }); }}>
                 <label className="mb-2 block font-semibold">{c.clarify}</label>

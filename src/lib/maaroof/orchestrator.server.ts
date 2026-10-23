@@ -970,6 +970,46 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("tool_call", { index: i, tool: step.tool, input: step.input, reason: step.reason });
       await logMsg("tool_call", step);
 
+      // Internal skills without an HTTP route: localization + knowledge training.
+      if (step.tool === "translate" || step.tool === "teach_space") {
+        const textOf = (o: any): string => typeof o === "string" ? o : Array.isArray(o) ? o.map(textOf).join(" ") : o && typeof o === "object" ? Object.values(o).map(textOf).join(" ") : "";
+        const prior = results.filter((r) => r.ok).map((r) => `${r.tool}: ${textOf(r.output).replace(/\s+/g, " ").slice(0, 1500)}`).filter((x) => x.length > 30);
+        let output: any; let ok = false;
+        try {
+          if (!prior.length) output = { skipped: "no_prior_results" };
+          else if (step.tool === "translate") {
+            const target = ["ar", "en", "ku"].includes(String(step.input?.target_lang)) ? String(step.input.target_lang) : ctx.language;
+            const name = target === "en" ? "English" : target === "ku" ? "Kurdish Sorani" : "Arabic";
+            const r = await call("final", [
+              { role: "system", content: `Translate faithfully into ${name}. Keep brand names, URLs and numbers unchanged. Add nothing. Output only the translation.` },
+              { role: "user", content: prior.join("\n\n").slice(0, 6000) },
+            ]);
+            totalUsd += r.usd; totalTokens += r.tokens;
+            if (r.text.trim()) {
+              const { chargeTokens } = await import("@/lib/tokens.server");
+              const c: any = await chargeTokens({ userId: ctx.userId, toolKey: "translate", meta: { run_id: runId } }).catch(() => null);
+              output = { target_lang: target, text: r.text.trim(), charged: c?.ok ? Number(c.tokens ?? c.charged ?? 0) || 0 : 0 };
+              ok = true;
+            } else output = { error: "empty_translation" };
+          } else {
+            const { taskFact } = await import("@/lib/knowledge-facts");
+            let saved = 0;
+            for (const line of prior.slice(0, 8)) {
+              const f = taskFact(ctx.goal, line);
+              if (!f) continue;
+              const { error } = await (db() as any).from("knowledge_facts").insert({ user_id: ctx.userId, source: "task", source_ref: runId, ...f });
+              if (!error) saved++;
+            }
+            output = { saved_facts: saved };
+            ok = saved > 0;
+          }
+        } catch (e: any) { output = { error: String(e?.message || e).slice(0, 200) }; }
+        results.push({ tool: step.tool, ok, output });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output });
+        await logMsg("tool_result", output);
+        continue;
+      }
+
       const path = toolPath(step.tool);
       if (!path || (settings.enabled_tools.length && !settings.enabled_tools.includes(step.tool))) {
         const err = { error: path ? "tool_disabled" : "unknown_tool", tool: step.tool };
