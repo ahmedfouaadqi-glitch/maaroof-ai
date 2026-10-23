@@ -22,7 +22,21 @@ describe("engine sections in export", () => {
     expect(s[0].heading).toBe("Gemini");
     expect(JSON.stringify(s)).toContain("لا يوجد مصدر مسجل");
   });
+  it("labels follow the export language", () => {
+    const r = { probe: { answers: [{ engine: "claude", mentioned: true, rank: 2, answer: "x", sources: [] }] } };
+    expect(engineAnswerSections(r, "en")[0].rows![0][0]).toBe("Status");
+    expect(engineAnswerSections(r, "ku")[0].rows![0][0]).toBe("دۆخ");
+  });
 });
 describe("chat identity", () => {
   it("names the founder", () => { expect(groundedSystemPrompt("ar", [])).toContain("Ahmed Maaroof"); });
+});
+import { parseReply } from "@/lib/maaroof/chat-policy";
+describe("chat task marker", () => {
+  it("parses a proposed task and hides the marker", () => {
+    const r = parseReply('سأفحص. [[TASK:{"kind":"scan","goal":"افحص ظهور X في السعودية"}]]');
+    expect(r.task).toEqual({ kind: "scan", goal: "افحص ظهور X في السعودية" });
+    expect(r.text).toBe("سأفحص.");
+  });
+  it("rejects unknown kinds", () => { expect(parseReply('[[TASK:{"kind":"buy","goal":"x"}]]').task).toBeNull(); });
 });

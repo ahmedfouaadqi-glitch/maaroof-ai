@@ -151,24 +151,40 @@ export function entityFromResult(r: any): ResultEntity | null {
 
 const ENGINE_NAMES: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity", claude: "Claude", copilot: "Copilot", grok: "Grok", mistral: "Mistral", deepseek: "DeepSeek", kimi: "Kimi", qwen: "Qwen" };
 
-/** One export section per answering engine: verbatim answer, mention/rank, real sources, and what to do next. */
-export function engineAnswerSections(r: any): ExportSection[] {
-  const answers: any[] = r?.probe?.answers || (Array.isArray(r?.answers) && r.answers[0]?.engine ? r.answers : []);
-  if (!Array.isArray(answers)) return [];
-  return answers.filter((a) => a && a.engine).map((a) => {
+const ENG_TX = {
+  ar: { status: "الحالة", rank: "الترتيب", answer: "الإجابة", sources: "المصادر", next: "الخطوة التالية", yes: "مذكورة", no: "غير مذكورة", noSrc: "لا يوجد مصدر مسجل",
+    top: "ذُكرت في المقدمة: حافظ على تحديث llms.txt والبيانات المنظمة.", ranked: (n: number) => `ذُكرت في المرتبة ${n}: عزّز الحقائق والأرقام في أول 150 كلمة من صفحاتك لتتقدم.`,
+    missing: (b: string) => `لم تُذكر: انشر صفحة تعريفية موثقة وFAQPage وروابط رسمية${b ? `، فالمحرك رشّح: ${b}` : ""}.` },
+  en: { status: "Status", rank: "Rank", answer: "Answer", sources: "Sources", next: "Next step", yes: "Mentioned", no: "Not mentioned", noSrc: "No recorded source",
+    top: "Mentioned at the top: keep llms.txt and structured data up to date.", ranked: (n: number) => `Mentioned at rank ${n}: add facts and numbers in the first 150 words of your pages to move up.`,
+    missing: (b: string) => `Not mentioned: publish a verified about page, FAQPage and official links${b ? `; the engine recommended: ${b}` : ""}.` },
+  ku: { status: "دۆخ", rank: "پلە", answer: "وەڵام", sources: "سەرچاوەکان", next: "هەنگاوی داهاتوو", yes: "ئاماژەی پێکراوە", no: "ئاماژەی پێنەکراوە", noSrc: "هیچ سەرچاوەیەک تۆمار نەکراوە",
+    top: "لە سەرەوە ئاماژەی پێکراوە: llms.txt و داتای ڕێکخراو نوێ بهێڵەرەوە.", ranked: (n: number) => `لە پلەی ${n} ئاماژەی پێکراوە: ڕاستی و ژمارە لە یەکەم 150 وشەی پەڕەکانت زیاد بکە.`,
+    missing: (b: string) => `ئاماژەی پێنەکراوە: پەڕەیەکی ناساندنی پشتڕاستکراو و FAQPage و بەستەری فەرمی بڵاو بکەرەوە${b ? `؛ بزوێنەرەکە پێشنیاری کرد: ${b}` : ""}.` },
+} as const;
+
+/** Raw engine answers inside a tool result (or []). */
+export function engineAnswersOf(r: any): any[] {
+  const a = r?.probe?.answers || (Array.isArray(r?.answers) && r.answers[0]?.engine ? r.answers : []);
+  return Array.isArray(a) ? a.filter((x: any) => x && x.engine) : [];
+}
+
+/** One export section per answering engine, labelled in the export language; the verbatim answer stays as given. */
+export function engineAnswerSections(r: any, lang: ExportLang = "ar"): ExportSection[] {
+  const T = ENG_TX[lang as keyof typeof ENG_TX] || ENG_TX.en;
+  const sep = lang === "en" ? ", " : "، ";
+  return engineAnswersOf(r).map((a) => {
     const name = ENGINE_NAMES[String(a.engine).toLowerCase()] || String(a.engine);
     const srcs = (a.sources || []).map((s: any) => str(s?.url)).filter(isUrl);
-    const next = a.mentioned
-      ? (a.rank && a.rank > 1 ? `ذُكرت في المرتبة ${a.rank}: عزّز الحقائق والأرقام في أول 150 كلمة من صفحاتك لتتقدم.` : "ذُكرت في المقدمة: حافظ على تحديث llms.txt والبيانات المنظمة.")
-      : `لم تُذكر: انشر صفحة تعريفية موثقة وFAQPage وروابط رسمية${(a.brands || []).length ? `، فالمحرك رشّح: ${(a.brands || []).slice(0, 3).join("، ")}` : ""}.`;
+    const next = a.mentioned ? (a.rank && a.rank > 1 ? T.ranked(a.rank) : T.top) : T.missing((a.brands || []).slice(0, 3).join(sep));
     return {
       heading: name, kind: "kv",
       rows: [
-        ["الحالة", a.mentioned ? "مذكورة" : "غير مذكورة"],
-        ["الترتيب", a.rank ?? "—"],
-        ["الإجابة", String(a.answer || a.reason || "—").slice(0, 4000)],
-        ["المصادر", srcs.length ? srcs.join("\n") : "لا يوجد مصدر مسجل"],
-        ["الخطوة التالية", next],
+        [T.status, a.mentioned ? T.yes : T.no],
+        [T.rank, a.rank ?? "—"],
+        [T.answer, String(a.answer || a.reason || "—").slice(0, 4000)],
+        [T.sources, srcs.length ? srcs.join("\n") : T.noSrc],
+        [T.next, next],
       ],
     } as ExportSection;
   });

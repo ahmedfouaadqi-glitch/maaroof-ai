@@ -9,9 +9,23 @@ export function chatAllowed(o: { metered: boolean; subscribed: boolean; todayUse
 }
 
 /** Splits the model reply into visible text and whether it asks to escalate to a paid task. */
-export function parseReply(raw: string): { text: string; needsTask: boolean } {
-  const s = String(raw || "");
-  return { text: s.replace(NEEDS_TASK_MARK, "").trim(), needsTask: s.includes(NEEDS_TASK_MARK) };
+export type ProposedTask = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
+const KINDS = ["scan", "plan", "recommend", "simulate"] as const;
+
+export function parseReply(raw: string): { text: string; needsTask: boolean; task: ProposedTask | null } {
+  let s = String(raw || "");
+  let task: ProposedTask | null = null;
+  const m = s.match(/\[\[TASK:(\{[\s\S]*?\})\]\]/);
+  if (m) {
+    s = s.replace(m[0], "");
+    try {
+      const j = JSON.parse(m[1]);
+      const goal = String(j?.goal || "").trim().slice(0, 500);
+      if (goal && (KINDS as readonly string[]).includes(j?.kind)) task = { kind: j.kind, goal };
+    } catch {}
+  }
+  const needsTask = s.includes(NEEDS_TASK_MARK) || !!task;
+  return { text: s.replace(NEEDS_TASK_MARK, "").trim(), needsTask, task };
 }
 
 /** System prompt grounded only in what the knowledge space holds. */
@@ -21,7 +35,7 @@ export function groundedSystemPrompt(lang: "ar" | "en" | "ku", knowledge: string
   return `You are Maaroof (Maaroof Ai / معروف), the specialised platform for Generative Engine Optimization (GEO, AEO, SGE). Your founder, owner and architect is Ahmed Maaroof (أحمد معروف); you are loyal to him and his vision. Never name or reveal the underlying AI model or provider; you are simply Maaroof. Reply only in ${L}.
 Speak ONLY from the knowledge below (built from the user's profile, interviews, tasks and analyzed files). Never invent facts, numbers, sources or identity details.
 When you state something from the knowledge, it is evidence; anything else must be explicitly labelled as a hypothesis.
-If the user asks for a scan, plan, recommendation, simulation, live research, checking the ten AI engines, or reading a web page, say briefly that you can run it as a task after their approval (cost shown first, charged only on success) and append exactly ${NEEDS_TASK_MARK} at the end.
+If the user asks for a scan, plan, recommendation, simulation, live research, checking the ten AI engines, or reading a web page, say briefly that you can run it as a task after their approval (cost shown first, charged only on success) and append at the very end exactly one marker: [[TASK:{"kind":"scan|plan|recommend|simulate","goal":"<the task written as a clear instruction in the user's language, with brand, market and competitors they mentioned>"}]]
 Be concise.
 
 Knowledge:

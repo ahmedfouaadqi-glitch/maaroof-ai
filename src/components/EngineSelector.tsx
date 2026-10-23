@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Lock } from "lucide-react";
 import { ENGINES } from "@/components/engine-logos";
 import { getEngineEntitlement, type EngineEntitlementView } from "@/lib/ai-engines.functions";
@@ -19,6 +20,8 @@ type Props = {
  */
 export default function EngineSelector({ value, onChange, maxOverride, className }: Props) {
   const [ent, setEnt] = useState<EngineEntitlementView | null>(null);
+  const { lang } = useI18n();
+  const W = lang === "en" ? ["working", "slow", "down"] : lang === "ku" ? ["کار دەکات", "خاو", "وەستاو"] : ["يعمل", "بطيء", "متعطّل"];
 
   useEffect(() => {
     let alive = true;
@@ -58,7 +61,7 @@ export default function EngineSelector({ value, onChange, maxOverride, className
             : "bg-muted-foreground/40";
           const hint =
             h && h.calls > 0
-              ? ` · ${h.status === "ok" ? "يعمل" : h.status === "slow" ? "بطيء" : h.status === "error" ? "متعطّل" : ""} ~${Math.round(h.avg_latency_ms / 1000)}s`
+              ? ` · ${h.status === "ok" ? W[0] : h.status === "slow" ? W[1] : h.status === "error" ? W[2] : ""} ~${Math.round(h.avg_latency_ms / 1000)}s`
               : "";
           return (
             <button

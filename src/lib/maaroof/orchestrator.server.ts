@@ -581,7 +581,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       });
       await tracer.trace({
         stage: "model_selection",
-        summary: "تخطيط: معروف — إجابة: معروف",
+        summary: ctx.language === "en" ? "Planning: Maaroof — Answer: Maaroof" : ctx.language === "ku" ? "پلاندانان: معروف — وەڵام: معروف" : "تخطيط: معروف — إجابة: معروف",
         models: [
           { phase: "planning", model: plannerChoice.model, reason: plannerChoice.reason },
           { phase: "final", model: finalChoice.model, reason: finalChoice.reason },

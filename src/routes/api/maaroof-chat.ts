@@ -100,12 +100,12 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           const charge = await chargeTokens({ userId, toolKey: "maaroof.chat", meta: { chars: message.length } });
           if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status: 402 });
         }
-        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask };
+        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task };
         await admin.from("maaroof_chat_messages").insert([
           { user_id: userId, role: "user", content: message },
           { user_id: userId, role: "assistant", content: reply.text, grounded },
         ]);
-        return Response.json({ text: reply.text, needs_task: reply.needsTask, knowledge_items: knowledge.length, quota });
+        return Response.json({ text: reply.text, needs_task: reply.needsTask, task: reply.task, knowledge_items: knowledge.length, quota });
       },
     },
   },
