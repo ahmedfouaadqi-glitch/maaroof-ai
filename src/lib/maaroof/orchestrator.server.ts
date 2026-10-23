@@ -1108,8 +1108,9 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolStart(step.tool, ctx.language as any, Array.isArray((body as any).probe_engines) ? (body as any).probe_engines.length : 0) }); } catch {}
         const toolCtl = new AbortController();
-        const baseMs = Math.max(settings.tool_timeout_ms || 0, 90_000);
-        const toolTimer = setTimeout(() => toolCtl.abort(), HEAVY_TOOLS.has(step.tool) ? Math.max(baseMs, 240_000) : baseMs);
+        const { toolTimeoutMs } = await import("./timeouts");
+        const budgetMs = Math.max(settings.tool_timeout_ms || 0, toolTimeoutMs(step.tool), HEAVY_TOOLS.has(step.tool) ? 240_000 : 0);
+        const toolTimer = setTimeout(() => toolCtl.abort(), budgetMs);
         const onAbort = () => toolCtl.abort();
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
