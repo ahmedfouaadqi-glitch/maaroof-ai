@@ -147,7 +147,9 @@ function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineVie
                   : sel.miss === "error" ? tr(lang, "سُئل هذا النموذج لكن الطلب تعذّر حتى بعد محاولة ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but the request failed even after a second try — not counted or charged.", "داواکاری سەرکەوتوو نەبوو.")
                   : tr(lang, "سُئل هذا النموذج لكنه أعاد رداً فارغاً حتى بعد محاولة ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but it returned an empty reply even after a second try — not counted or charged.", "وەڵامی بەتاڵ بوو."))
                 : sel.status === "asking" ? tr(lang, "يُسأل الآن… ستظهر إجابته هنا فور وصولها.", "Being asked now… its answer appears here as soon as it arrives.", "ئێستا پرسیاری لێدەکرێت…")
-                : tr(lang, "لم يُسأل هذا النموذج بعد في هذه المهمة.", "This model has not been asked in this task yet.", "هێشتا پرسیاری لێنەکراوە.")}</p>
+                : sel.why === "probe_disabled" ? tr(lang, "لم يُسأل لأنك أوقفت الاستجواب الحي للنماذج في هذه المهمة.", "Not asked: you turned off live model questioning for this task.", "پرسیار نەکرا چونکە پرسیاری ڕاستەوخۆت ڕاگرت.")
+                : sel.why === "job_ended" ? tr(lang, "لم يُسأل لأن المهمة انتهت أو توقفت قبل الوصول إلى خطوة استجواب النماذج.", "Not asked: the task ended or stopped before reaching the model questioning step.", "پرسیار نەکرا چونکە ئەرکەکە پێشتر کۆتایی هات.")
+                : tr(lang, "لم تصل المهمة إلى خطوة استجواب النماذج بعد؛ ستُسأل تلقائياً.", "The task hasn't reached the model questioning step yet; it will be asked automatically.", "هێشتا نەگەیشتووەتە هەنگاوی پرسیار.")}</p>
             : <>
               <p>{sel.mentioned
                 ? tr(lang, `ذكر علامتك${sel.rank ? ` في المرتبة ${sel.rank}` : ""}.`, `Mentioned your brand${sel.rank ? ` at position ${sel.rank}` : ""}.`, `ناوی هێنا${sel.rank ? ` (${sel.rank})` : ""}.`)

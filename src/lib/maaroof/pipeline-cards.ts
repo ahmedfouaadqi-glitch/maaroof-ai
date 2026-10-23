@@ -74,7 +74,9 @@ export function formatDuration(ms: number, lang: "ar" | "en" | "ku" = "ar"): str
 export type EngineStatus = "waiting" | "asking" | "answered" | "unresponsive";
 /** Why an asked engine has no answer, exactly as recorded: empty reply, timeout, or error. */
 export type EngineMiss = "empty" | "timeout" | "error" | null;
-export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; brands: string[]; reason: string | null; miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null };
+/** Why an engine was never asked, from recorded events only. */
+export type EngineNotAsked = "probe_disabled" | "job_ended" | "not_reached" | null;
+export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; brands: string[]; reason: string | null; miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null; why?: EngineNotAsked };
 
 function probeOf(out: any): { asked?: string[]; answers?: any[]; statuses?: Record<string, { status: string; ms?: number }> } | null {
   if (!out || typeof out !== "object") return null;
@@ -88,6 +90,7 @@ export function councilEngines(events: Ev[], engineKeys: readonly string[], runn
   const calls = events.filter((e) => e.type === "tool_call" && e.data?.tool === "visibility").length;
   const results = events.filter((e) => e.type === "tool_result" && e.data?.tool === "visibility").length;
   const asking = running && calls > results;
+  const disabled = events.some((e) => e.type === "tool_result" && e.data?.tool === "visibility" && e.data?.output?.skipped === "live_probe_disabled_by_user");
   let probe: ReturnType<typeof probeOf> = null;
   for (const e of events) if (e.type === "tool_result") {
     const p = probeOf(e.data?.output);
@@ -104,7 +107,8 @@ export function councilEngines(events: Ev[], engineKeys: readonly string[], runn
     const st = String(statuses[key]?.status || "");
     const miss: EngineMiss = st === "empty" || st === "timeout" || st === "error" ? st : probe && asked.has(key) ? "empty" : null;
     const status: EngineStatus = probe && asked.has(key) ? "unresponsive" : asking ? "asking" : "waiting";
-    return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms };
+    const why: EngineNotAsked = status !== "waiting" ? null : disabled ? "probe_disabled" : running ? "not_reached" : "job_ended";
+    return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms, why };
   });
 }
 
