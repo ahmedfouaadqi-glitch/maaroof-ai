@@ -10,7 +10,7 @@ describe("chat policy", () => {
     expect(chatAllowed({ metered: true, subscribed: false, todayUserMessages: 999 })).toBe(true);
   });
   it("detects escalation mark", () => {
-    expect(parseReply("needs search [[NEEDS_TASK]]")).toEqual({ text: "needs search", needsTask: true });
+    expect(parseReply("needs search [[NEEDS_TASK]]")).toEqual({ text: "needs search", needsTask: true, task: null });
   });
   it("empty knowledge is declared, not invented", () => {
     expect(groundedSystemPrompt("ar", [])).toContain("nothing is known yet");
