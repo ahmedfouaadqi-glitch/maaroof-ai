@@ -987,6 +987,11 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
+    // The ten-model council is asked by default on every task unless the user turned the live probe off.
+    if (ctx.liveProbe !== false && !steps.some((st: any) => st.tool === "visibility") && toolPath("visibility")
+      && (!settings.enabled_tools.length || settings.enabled_tools.includes("visibility"))) {
+      steps.push({ tool: "visibility", input: {}, reason: ctx.language === "en" ? "Ask the ten AI models directly (default)." : "استجواب النماذج العشرة مباشرة (افتراضي)." } as any);
+    }
     const specialists = new Set<string>();
     const runStep = async (i: number) => {
       const step = steps[i];
@@ -1042,8 +1047,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       return;
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
-      const filled = fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal });
+      const { fillFromTask } = await import("./agent-input");
+      const filled = fillFromTask(step.tool, fillToolInput(step.tool, step.input, { goalBrand: clarBrand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results);
       const missing = missingFields(step.tool, filled);
+      // No competitors anywhere: skip before any charge with a clear reason instead of failing.
+      if ((step.tool === "compare" || (step.tool === "competitor_monitor" && (filled as any).action === "create"))
+        && !(Array.isArray((filled as any).competitors) && (filled as any).competitors.length) && !String((filled as any).competitors || "").trim()) {
+        const skip = { skipped: "no_competitors_found", tool: step.tool };
+        results.push({ tool: step.tool, ok: false, output: skip });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+        await logMsg("tool_result", skip);
+        return;
+      }
       // Specialised sub-agent per tool (reused once created). Fail-open.
       if (ctx.useSubagents !== false && !specialists.has(step.tool)) {
         specialists.add(step.tool);
