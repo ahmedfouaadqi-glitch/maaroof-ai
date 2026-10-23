@@ -176,7 +176,15 @@ export const Route = createFileRoute("/api/maaroof")({
           // Never block the response on the job; the client polls for events.
           const safeWork = work.catch(() => {});
           runAfterResponse(safeWork);
-          return Response.json({ job_id: jobId });
+          // Confirm the job really started (first event saved) before handing back its id.
+          let started = false;
+          for (let i = 0; i < 10 && !started; i++) {
+            const { count } = await db.from("maaroof_job_events").select("id", { count: "exact", head: true }).eq("job_id", jobId);
+            started = (count || 0) > 0;
+            if (!started) await new Promise((r) => setTimeout(r, 300));
+          }
+          if (!started) console.error("[maaroof job] no start event within 3s", jobId);
+          return Response.json({ job_id: jobId, started });
         }
 
         const encoder = new TextEncoder();
