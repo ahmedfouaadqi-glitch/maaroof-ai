@@ -79,11 +79,14 @@ export const Route = createFileRoute("/api/maaroof")({
         if (body?.interface_mode === "workspace") {
           const db = admin as any;
           const probeEngines = Array.isArray(body?.probe_engines) ? body.probe_engines.filter((x: unknown) => typeof x === "string").slice(0, 10) : undefined;
-          const selectedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
+          const pickedSkills = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
+          const { inferSkills } = await import("@/lib/maaroof/skill-inference");
+          const skillChoice = inferSkills(goal, pickedSkills);
+          const selectedSkills = skillChoice.skills;
           if (probeEngines?.length) clarifications.probe_engines = probeEngines.join(",");
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
             user_id: userId, goal, mode: executionMode || "execution", status: "running",
-            request_payload: { selected_skills: selectedSkills, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
+            request_payload: { selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang },
           }).select("id").single();
           if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
           const jobId = job.id as string;
@@ -106,9 +109,10 @@ export const Route = createFileRoute("/api/maaroof")({
           const work = (async () => {
             let status = "completed"; let err: string | null = null;
             try {
+              await emit("skill_choice", skillChoice);
               await runMaaroof({
                 userId, goal, language: lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
-                authBearer: auth, origin, emit, signal: ctl.signal, executionMode, useSubagents, liveProbe, clarifications,
+                authBearer: auth, origin, emit, signal: ctl.signal, executionMode, useSubagents, liveProbe, clarifications, selectedSkills,
               });
             } catch (e: any) {
               status = "failed"; err = String(e?.message || e).slice(0, 500);

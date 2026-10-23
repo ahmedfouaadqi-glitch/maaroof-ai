@@ -490,7 +490,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
-      `Goal: ${ctx.goal}\n\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse as many steps as the task needs (up to the platform limit). Only use tool keys from the list. Return JSON only.`;
+      `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\nUse as many steps as the task needs (up to the platform limit). Only use tool keys from the list. Return JSON only.`;
     const planResp = await call("planning", [
       { role: "system", content: systemPrompt },
       { role: "user", content: planUserMsg },
