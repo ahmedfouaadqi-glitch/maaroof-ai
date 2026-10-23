@@ -35,3 +35,10 @@ export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; 
   }
   return out;
 }
+
+/** Expected cost of tools still to run on resume; reused tools cost nothing. Pure. */
+export function remainingCost(tools: string[], reused: string[], prices: Record<string, number>): { tools: string[]; tokens: number } {
+  const done = new Set(reused);
+  const left = Array.from(new Set(tools)).filter((t) => !done.has(t));
+  return { tools: left, tokens: left.reduce((s, t) => s + (Number(prices[t]) || 0), 0) };
+}
