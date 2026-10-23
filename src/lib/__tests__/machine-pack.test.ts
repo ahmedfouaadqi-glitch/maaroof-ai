@@ -30,3 +30,10 @@ describe("machine pack", () => {
     expect(en).not.toContain("طريقة الاستخدام");
   });
 });
+
+import { probeBatches } from "@/lib/maaroof/probe-answer";
+describe("probeBatches", () => {
+  it("splits ten engines into batches of 3,3,3,1", () => {
+    expect(probeBatches(Array.from({ length: 10 }, (_, i) => i), 3).map((b) => b.length)).toEqual([3, 3, 3, 1]);
+  });
+});

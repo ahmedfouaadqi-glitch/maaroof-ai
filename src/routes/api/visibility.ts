@@ -241,8 +241,8 @@ export const Route = createFileRoute("/api/visibility")({
             const askEngine = async (e: string) => {
               const t0 = Date.now();
               let res = await askOne(e, models[e]?.model);
-              // One retry with the fast backup model when the reply was empty, broken or timed out.
-              if (res.kind !== "ok") res = await askOne(e, "google/gemini-3-flash-preview");
+              // One retry with the fast backup model when the reply was empty or broken.
+              if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash");
               const ms = Date.now() - t0;
               if (res.kind !== "ok") { statuses[e] = { status: res.kind, ms }; return; }
               const { p } = res;
