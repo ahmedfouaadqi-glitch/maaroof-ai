@@ -1,8 +1,8 @@
 // Live stage cards (React Bits AnimatedList + SpotlightCard + StarBorder style), driven only by recorded events.
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { Brain, ListChecks, Users, Search, Scale, FileCheck2, Timer } from "lucide-react";
-import { pipelineCards, taskDuration, formatDuration, councilEngines, stageOf, type StageKey, type StageState, type EngineView } from "@/lib/maaroof/pipeline-cards";
+import { motion, useReducedMotion, AnimatePresence } from "motion/react";
+import { Brain, ListChecks, Users, Search, Scale, FileCheck2, Timer, ExternalLink } from "lucide-react";
+import { pipelineCards, taskDuration, formatDuration, councilEngines, stageTimeline, latestNarration, type StageKey, type StageState, type EngineView, type TimelineItem } from "@/lib/maaroof/pipeline-cards";
 import { ENGINE_KEYS, ENGINE_CATALOG } from "@/lib/ai-engines";
 import { ENGINE_LOGOS } from "@/components/engine-logos";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -44,6 +44,7 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
       {total && <span className="text-muted-foreground tabular-nums">{tr(lang, "البدء", "Started", "دەستپێک")}: {clock(total.startedAt)}</span>}
       {total?.endedAt != null && <span className="text-muted-foreground tabular-nums">{tr(lang, "الانتهاء", "Ended", "کۆتایی")}: {clock(total.endedAt)}</span>}
     </div>
+    <NarrationTicker events={events} running={running} lang={lang} />
     <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-live="polite">
       {cards.map((c, n) => {
         const M = META[c.key]; const Icon = M.icon;
@@ -120,21 +121,32 @@ function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineVie
         })}
       </div>
       {sel && (
-        <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-4 text-sm">
-          <p className="font-semibold">{(ENGINE_CATALOG as any)[sel.key]?.name}</p>
+        <motion.div key={sel.key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-muted/30 p-4 text-sm">
+          <p className="flex items-center justify-between font-semibold">
+            <span>{(ENGINE_CATALOG as any)[sel.key]?.name}</span>
+            {sel.ms != null && <span className="text-xs font-normal tabular-nums text-muted-foreground">{formatDuration(sel.ms, lang)}</span>}
+          </p>
           {sel.status !== "answered"
-            ? <p className="text-muted-foreground">{sel.status === "unresponsive" ? tr(lang, "سُئل هذا النموذج لكنه لم يرد ضمن المهلة، فلم يُحتسب.", "This model was asked but did not reply in time, so it was not counted.", "وەڵامی نەدایەوە.") : tr(lang, "لا توجد إجابة مسجّلة لهذا النموذج بعد.", "No recorded answer for this model yet.", "هێشتا وەڵام نییە.")}</p>
+            ? <p className="text-muted-foreground">{sel.status === "unresponsive"
+                ? (sel.miss === "timeout" ? tr(lang, "سُئل هذا النموذج لكنه لم يرد خلال 30 ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but no reply within 30 seconds — not counted or charged.", "لە 30 چرکەدا وەڵامی نەدایەوە.")
+                  : sel.miss === "error" ? tr(lang, "سُئل هذا النموذج لكن الطلب تعذّر حتى بعد محاولة ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but the request failed even after a second try — not counted or charged.", "داواکاری سەرکەوتوو نەبوو.")
+                  : tr(lang, "سُئل هذا النموذج لكنه أعاد رداً فارغاً حتى بعد محاولة ثانية، فلم يُحتسب ولم يُخصم عنه.", "Asked, but it returned an empty reply even after a second try — not counted or charged.", "وەڵامی بەتاڵ بوو."))
+                : sel.status === "asking" ? tr(lang, "يُسأل الآن… ستظهر إجابته هنا فور وصولها.", "Being asked now… its answer appears here as soon as it arrives.", "ئێستا پرسیاری لێدەکرێت…")
+                : tr(lang, "لم يُسأل هذا النموذج بعد في هذه المهمة.", "This model has not been asked in this task yet.", "هێشتا پرسیاری لێنەکراوە.")}</p>
             : <>
               <p>{sel.mentioned
                 ? tr(lang, `ذكر علامتك${sel.rank ? ` في المرتبة ${sel.rank}` : ""}.`, `Mentioned your brand${sel.rank ? ` at position ${sel.rank}` : ""}.`, `ناوی هێنا${sel.rank ? ` (${sel.rank})` : ""}.`)
                 : tr(lang, "لم يذكر علامتك في إجابته.", "Did not mention your brand.", "ناوی نەهێنا.")}</p>
-              <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><div className="h-full bg-primary" style={{ width: `${sel.mentioned ? (sel.rank ? Math.max(20, 100 - (sel.rank - 1) * 15) : 60) : 4}%` }} /></div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><motion.div className="h-full bg-primary" initial={{ width: 0 }} animate={{ width: `${sel.mentioned ? (sel.rank ? Math.max(20, 100 - (sel.rank - 1) * 15) : 60) : 4}%` }} transition={{ duration: 0.6 }} /></div>
               {sel.answer && <blockquote className="border-s-2 border-primary ps-3 text-muted-foreground">«{sel.answer}»</blockquote>}
               {sel.brands.length > 0 && <p className="text-xs text-muted-foreground">{tr(lang, "الأسماء التي اقترحها: ", "Names it suggested: ", "ناوەکان: ")}{sel.brands.join("، ")}</p>}
               {sel.reason && <p className="text-xs text-muted-foreground">{sel.reason}</p>}
+              {sel.sources.length > 0
+                ? <div><p className="text-xs font-medium">{tr(lang, "مصادر حقيقية مرتبطة بإجابته:", "Real sources linked to its answer:", "سەرچاوە ڕاستەقینەکان:")}</p><LinkList links={sel.sources} /></div>
+                : <p className="text-xs text-muted-foreground">{tr(lang, "لم يستند إلى رابط من نتائج البحث الحية.", "It did not rely on a link from the live search results.", "بەستەری نەبوو.")}</p>}
               <p className="text-[11px] text-muted-foreground">{tr(lang, "مقاس حي من هذه المهمة", "Measured live in this task", "پێوانەی ڕاستەوخۆ")}</p>
             </>}
-        </div>
+        </motion.div>
       )}
     </div>
   );
