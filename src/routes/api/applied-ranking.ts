@@ -157,7 +157,7 @@ export const Route = createFileRoute("/api/applied-ranking")({
               allowed = true;
             }
           }
-          if (!allowed) return Response.json({ error: "limit", limit }, { status: 402 });
+          void allowed; void limit; // balance-only
 
           const market = describeMarket(body.scope);
 

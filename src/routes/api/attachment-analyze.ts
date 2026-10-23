@@ -65,7 +65,7 @@ export const Route = createFileRoute("/api/attachment-analyze")({
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) throw new Error("not_configured");
           const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-            method: "POST", headers: lovableAiHeaders(apiKey),
+            method: "POST", headers: lovableAiHeaders(apiKey), signal: AbortSignal.timeout(60_000),
             body: JSON.stringify({ model: "google/gemini-3.8-flash", messages: [{ role: "user", content }] }),
           });
           if (!r.ok) throw new Error(`ai_${r.status}`);

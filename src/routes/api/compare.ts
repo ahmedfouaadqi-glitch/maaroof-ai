@@ -113,7 +113,7 @@ export const Route = createFileRoute("/api/compare")({
               const { data: plan } = await admin.from("subscription_plans").select("monthly_analyses").eq("name", prof!.subscription_tier).maybeSingle();
               const override = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
               const limit = Math.max(plan?.monthly_analyses || 200, override);
-              if ((prof!.monthly_analyses_used || 0) >= limit) return Response.json({ error: "limit", limit }, { status: 402 });
+              if ((prof!.monthly_analyses_used || 0) >= limit) /* balance-only: legacy monthly limit no longer blocks */ void limit;
               chargeUsage = async () => { await admin.from("profiles").update({ monthly_analyses_used: (prof!.monthly_analyses_used || 0) + 1 }).eq("id", userId); };
             } else {
               const { data: sub } = await admin.from("user_agent_subscriptions").select("*, agent_addons(*)").eq("user_id", userId).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();

@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/geo-rewrite")({
               limit = Math.max(plan?.monthly_analyses || 200, Number((prof as any)?.quota_overrides?.monthly_analyses || 0));
             }
             if ((prof.monthly_analyses_used || 0) >= limit) {
-              return Response.json({ error: "limit", limit }, { status: 402 });
+              /* balance-only: legacy monthly limit no longer blocks */ void limit;
             }
           }
 

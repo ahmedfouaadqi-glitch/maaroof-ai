@@ -132,7 +132,7 @@ export const Route = createFileRoute("/api/analyze")({
               }
             }
             if (prof.monthly_analyses_used >= limit) {
-              return Response.json({ error: "limit", limit }, { status: 402 });
+              /* balance-only: legacy monthly limit no longer blocks */ void limit;
             }
           }
 

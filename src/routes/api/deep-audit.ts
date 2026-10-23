@@ -6,6 +6,7 @@ import { auditTargets, scoreTarget, aggregateAxes, billableUnits, weightedScore,
 import { isAccountKind } from "@/lib/account-kinds";
 
 const TOOL_KEY = "analyze.deep_audit"; // falls back to the parent tool price when not priced separately
+const TARGET_TIMEOUT_MS = 40_000; // per link, covers the full provider fallback chain (15s per attempt)
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";
@@ -20,8 +21,8 @@ async function loadProfile(db: any, userId: string) {
   return data || {};
 }
 
-async function runAudit(db: any, userId: string, jobId: string, targets: AuditTarget[], brand: string, kind: string | null) {
-  let seq = 0;
+async function runAudit(db: any, userId: string, jobId: string, targets: AuditTarget[], brand: string, kind: string | null, startSeq = 0) {
+  let seq = startSeq;
   const emit = (event_type: string, payload: any) => db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq: ++seq, event_type, payload });
   const results: { url: string; kind: string; platform: string | null; ok: boolean; findings: ReturnType<typeof scoreTarget> }[] = [];
   try {
@@ -30,10 +31,13 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
       if (j?.status === "cancelled") return;
       const t = targets[i];
+      await emit("audit_progress", { index: i + 1, total: targets.length, url: t.url, phase: "reading" });
+      await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
       let ev: any = null;
       let source: string | null = null;
       try {
-        const r: any = await fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY });
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("target_timeout")), TARGET_TIMEOUT_MS));
+        const r: any = await Promise.race([fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY }), timeout]);
         const d = r?.data ?? r;
         source = r?.fetch_source ?? null;
         ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
@@ -101,7 +105,10 @@ export const Route = createFileRoute("/api/deep-audit")({
           user_id: a.userId, goal: "الفحص العميق للحساب", mode: "deep_audit", status: "running", request_payload: { targets: targets.map((t) => t.url) },
         }).select("id").single();
         if (error || !job) return Response.json({ error: "job_create_failed" }, { status: 500 });
-        const work = runAudit(db, a.userId, job.id, targets, String(p.brand_name || ""), p.account_kind || null);
+        // Start handshake: the first event is saved before the id is returned, so the job never looks "not started".
+        const { error: startErr } = await db.from("maaroof_job_events").insert({ job_id: job.id, user_id: a.userId, seq: 1, event_type: "audit_start", payload: { total: targets.length, targets: targets.map((t) => t.url) } });
+        if (startErr) console.error("[deep-audit] start event failed", startErr);
+        const work = runAudit(db, a.userId, job.id, targets, String(p.brand_name || ""), p.account_kind || null, 1);
         const { runAfterResponse } = await import("@/lib/request-ctx.server");
         if (!runAfterResponse(work)) await work;
         return Response.json({ job_id: job.id });

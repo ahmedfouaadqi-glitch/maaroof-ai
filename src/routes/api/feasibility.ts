@@ -181,7 +181,7 @@ export const Route = createFileRoute("/api/feasibility")({
               }
             }
             if ((prof.monthly_analyses_used || 0) >= limit) {
-              return Response.json({ error: "limit", limit }, { status: 402 });
+              /* balance-only: legacy monthly limit no longer blocks */ void limit;
             }
           }
 

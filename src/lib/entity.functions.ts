@@ -39,12 +39,27 @@ export const verifyEntityCard = createServerFn({ method: "POST" })
         const check = (label: string, ok: boolean) => (ok ? facts.confirmed : facts.unconfirmed).push(label);
         check("brand_name", low.includes(String(prof.brand_name).toLowerCase()));
         check("hq_country", seen.includes(String(prof.hq_country).toUpperCase()));
-        for (const m of prof.target_markets || []) check(`market:${m}`, seen.includes(String(m).toUpperCase()));
+        facts.site_markets = seen;
       } catch (e) {
         facts.unconfirmed.push("source_unreachable");
       }
     } else {
       facts.unconfirmed.push("no_website");
+    }
+    // Markets: evidence from the site, or owner/evidence-confirmed names in the market registry.
+    const { data: names } = await (supabaseAdmin as any).from("entity_market_names").select("country_code, status").eq("user_id", userId);
+    const byCountry = new Map<string, string>();
+    for (const n of names || []) {
+      const cc = String(n.country_code || "").toUpperCase();
+      if (n.status === "evidence_confirmed" || (n.status === "owner_confirmed" && byCountry.get(cc) !== "evidence_confirmed")) byCountry.set(cc, n.status);
+    }
+    const siteSeen: string[] = facts.site_markets || [];
+    facts.market_status = {};
+    for (const m of prof.target_markets || []) {
+      const cc = String(m).toUpperCase();
+      const st = siteSeen.includes(cc) ? "evidence_confirmed" : byCountry.get(cc) || "unconfirmed";
+      facts.market_status[cc] = st;
+      (st === "unconfirmed" ? facts.unconfirmed : facts.confirmed).push(`market:${m}`);
     }
 
     await supabaseAdmin.from("profiles").update({
