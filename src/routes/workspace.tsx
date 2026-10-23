@@ -15,6 +15,7 @@ import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { MaaroofChat } from "@/components/workspace/MaaroofChat";
+import { LiveSkillHints } from "@/components/workspace/LiveSkillHints";
 import { LivePipeline } from "@/components/workspace/LivePipeline";
 import { domainsInText } from "@/lib/knowledge-facts";
 import { OnboardingTour } from "@/components/workspace/OnboardingTour";
@@ -379,6 +380,7 @@ function WorkspacePage() {
         continue;
       }
       if (status === "completed" || status === "failed" || status === "cancelled") {
+        void import("@/lib/sound").then((s) => (status === "completed" ? s.playSuccess() : status === "failed" ? s.playError() : null)).catch(() => {});
         if (status === "failed") setError(String(body?.job?.error || c.failed));
         if (status === "cancelled") setError(locale === "en" ? "Task cancelled." : locale === "ku" ? "ئەرکەکە ڕاگیرا." : "تم إيقاف المهمة.");
         setRunning(false);
@@ -595,6 +597,7 @@ function WorkspacePage() {
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
                 {goal && <div className="mb-2 flex justify-end"><button type="button" onClick={() => { setGoal(""); setSelectedSkills([]); setResumeFrom(null); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 30); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{locale === "en" ? "New blank task" : locale === "ku" ? "ئەرکی نوێی بەتاڵ" : "مهمة جديدة فارغة"}</button></div>}
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={4} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
+                {selectedSkills.length === 0 && <LiveSkillHints text={goal} lang={locale} onPick={(k) => setSelectedSkills([k])} />}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <details className="group relative">
                     <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"}<ChevronDown className="size-3 transition-transform group-open:rotate-180" /></summary>
