@@ -500,10 +500,19 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
-    const planResp = await call("planning", [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: planUserMsg },
-    ]);
+    let planResp: { text: string; tokens: number; usd: number };
+    try {
+      planResp = await call("planning", [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: planUserMsg },
+      ]);
+    } catch (e: any) {
+      if (ctx.signal?.aborted) throw e;
+      // Both models failed: continue with the skill's own tools instead of stopping.
+      if (!ctx.selectedSkills?.length) throw e;
+      await ctx.emit("phase_error", { phase: "planning", kind: "fallback_plan", message: "تعذّر التخطيط بالنموذج، فاعتمد معروف أدوات المهارة المختارة." });
+      planResp = { text: "", tokens: 0, usd: 0 };
+    }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
     let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
