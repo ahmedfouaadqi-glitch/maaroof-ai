@@ -1147,6 +1147,48 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_market_names: {
+        Row: {
+          country_code: string
+          created_at: string
+          evidence_url: string | null
+          id: string
+          kind: string
+          lang: string
+          name: string
+          status: string
+          updated_at: string
+          user_id: string
+          verified_by: string | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          evidence_url?: string | null
+          id?: string
+          kind?: string
+          lang?: string
+          name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          verified_by?: string | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          evidence_url?: string | null
+          id?: string
+          kind?: string
+          lang?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       evidence_items: {
         Row: {
           business_value: number

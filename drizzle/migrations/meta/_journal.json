@@ -71,6 +71,13 @@
       "when": 1792653717907,
       "tag": "0009_maaroof_chat_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792733803154,
+      "tag": "0010_entity_market_names",
+      "breakpoints": true
     }
   ]
 }
