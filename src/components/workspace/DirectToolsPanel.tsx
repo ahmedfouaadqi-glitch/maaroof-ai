@@ -28,7 +28,7 @@ export function DirectToolsPanel({ lang, tool }: { lang: L; tool?: string }) {
         <Link to="/workspace" search={{ tab: "tools" }} className="text-xs text-primary hover:underline">{c.back}</Link>
         <h2 className="text-lg font-semibold">{toolName(tool!, lang)}</h2>
         <section className="rounded-2xl border border-border bg-card p-5">
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool /></Suspense>
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool lang={lang} /></Suspense>
         </section>
       </div>
     );
