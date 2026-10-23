@@ -1678,7 +1678,7 @@ Rules:
 - Reply concisely in JSON when asked.${wsBlock}${memBlock}`;
 }
 
-const FAST_FALLBACK_MODEL = "google/gemini-2.5-flash";
+const FAST_FALLBACK_MODEL = "google/gemini-3.8-flash";
 /** Planning-type phases get a short per-call limit; others a generous one. */
 function phaseTimeoutMs(phase: string): number {
   return /envision|plan|understand|intent/i.test(phase) ? 35_000 : 120_000;
