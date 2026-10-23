@@ -28,9 +28,16 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
         const { data: job } = await db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId).maybeSingle();
         if (!job) return Response.json({ error: "not_found" }, { status: 404 });
-        if (isStaleJob(job)) {
-          await db.from("maaroof_jobs").update({ status: "failed", error: "انتهت مهلة المهمة دون تقدّم.", finished_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
-          job.status = "failed"; job.error = "انتهت مهلة المهمة دون تقدّم.";
+        let notStarted = false;
+        if (job.status === "running") {
+          const { startStale } = await import("@/lib/market-names");
+          const { count } = await db.from("maaroof_job_events").select("id", { count: "exact", head: true }).eq("job_id", id);
+          notStarted = startStale(job, count || 0);
+        }
+        if (notStarted || isStaleJob(job)) {
+          const msg = notStarted ? "تعذّر بدء المهمة. اضغط «إعادة المحاولة»." : "انتهت مهلة المهمة دون تقدّم.";
+          await db.from("maaroof_jobs").update({ status: "failed", error: msg, finished_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
+          job.status = "failed"; job.error = msg;
         }
         const { data: events } = await db.from("maaroof_job_events").select("seq, event_type, payload, created_at")
           .eq("job_id", id).gt("seq", parseAfter(url.searchParams.get("after"))).order("seq", { ascending: true }).limit(200);

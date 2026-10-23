@@ -133,7 +133,10 @@ export const Route = createFileRoute("/api/maaroof")({
           const emit = async (event: string, data: any) => {
             if (event === "final" && typeof data?.text === "string") finalText = data.text;
             const seq = next();
-            chain = chain.then(() => db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq, event_type: event, payload: data ?? {} })).catch(() => {});
+            chain = chain.then(async () => {
+              const { error } = await db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq, event_type: event, payload: data ?? {} });
+              if (error) console.error("[maaroof job] event save failed", jobId, event, error.message);
+            }).catch((e) => console.error("[maaroof job] event save failed", jobId, e));
             if (seq % 3 === 0 || event === "tool_result" || event === "step") {
               const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
               if (j?.status === "cancelled") ctl.abort();
