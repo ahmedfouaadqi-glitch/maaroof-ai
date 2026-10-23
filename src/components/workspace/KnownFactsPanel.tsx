@@ -46,6 +46,22 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
     setRows((r) => (r || []).filter((x) => x.id !== id));
   };
 
+  /** Only the owner turns a hypothesis into evidence, explicitly. */
+  const confirmFact = async (r: Row) => {
+    if (!window.confirm(tr(lang, `تأكيد أن هذه المعلومة صحيحة؟\n\n${r.fact}`, `Confirm this is true?\n\n${r.fact}`, `پشتڕاستی دەکەیتەوە؟\n\n${r.fact}`))) return;
+    const { error } = await (supabase as any).from("knowledge_facts").update({ confidence: "evidence" }).eq("id", r.id);
+    if (!error) setRows((rs) => (rs || []).map((x) => (x.id === r.id ? { ...x, confidence: "evidence" } : x)));
+  };
+
+  const exportPack = () => {
+    const lines = (rows || []).map((r) => `- [${r.confidence === "evidence" ? tr(lang, "موثّق", "Evidence", "بەڵگەدار") : tr(lang, "فرضية", "Hypothesis", "گریمانە")}] ${r.fact}`);
+    const md = `# ${tr(lang, "حزمة معرفة معروف", "Maaroof knowledge pack", "زانیاری معروف")}\n\n${lines.join("\n")}\n`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown;charset=utf-8" }));
+    a.download = "maaroof-knowledge.md"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
   const toggleBroadcast = async (r: Row) => {
     const on = !r.broadcast;
     if (on && !window.confirm(tr(lang, `سيظهر هذا النص في بطاقة السلطة العامة التي تقرؤها زواحف الذكاء الاصطناعي:\n\n${r.fact}\n\nهل توافق على البث؟`, `This text will appear on your public brand card read by AI crawlers:\n\n${r.fact}\n\nApprove broadcast?`, `ئەم دەقە لە کارتی گشتی دەردەکەوێت:\n\n${r.fact}\n\nڕازیت؟`))) return;
@@ -81,6 +97,7 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
         );
       })()}
       <div className="mb-3 flex flex-wrap gap-2">
+        {(rows || []).length > 0 && <button onClick={exportPack} className="order-last ms-auto rounded-full border border-primary/40 px-3 py-1 text-xs text-primary">{tr(lang, "تنزيل حزمة المعرفة", "Download knowledge pack", "داگرتنی زانیاری")}</button>}
         {(["all", "task", "interview", "profile"] as const).map((k) => (
           <button key={k} onClick={() => setFilter(k)} className={`rounded-full border px-3 py-1 text-xs ${filter === k ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>{k === "all" ? tr(lang, "الكل", "All", "هەموو") : SRC[k]} ({(rows || []).filter((r) => k === "all" || r.source === k).length})</button>
         ))}
@@ -97,6 +114,7 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
                 <span className="rounded-full bg-muted px-2 py-0.5">{SRC[r.source]}</span>
                 <span className={`rounded-full px-2 py-0.5 ${r.confidence === "evidence" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>{r.confidence === "evidence" ? tr(lang, "موثّق", "Evidence", "بەڵگەدار") : tr(lang, "فرضية", "Hypothesis", "گریمانە")}</span>
                 <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                {r.id && r.confidence === "hypothesis" && <button onClick={() => confirmFact(r)} className="rounded-full border border-success/40 px-2 py-0.5 text-success">{tr(lang, "أؤكدها", "Confirm", "پشتڕاستی دەکەمەوە")}</button>}
                 {r.id && canBroadcast(r) && <button onClick={() => toggleBroadcast(r)} className={`flex items-center gap-1 rounded-full border px-2 py-0.5 ${r.broadcast ? "border-primary bg-primary/10 text-primary" : "border-border"}`}><Radio className="size-3" />{r.broadcast ? tr(lang, "مبثوثة — إيقاف", "Broadcasting — stop", "بڵاوکراوە — ڕاگرتن") : tr(lang, "اعتمدها للبث", "Approve for broadcast", "پەسەندی بکە")}</button>}
                 {r.id && <button onClick={() => del(r.id!)} className="ms-auto text-destructive" aria-label="delete"><Trash2 className="size-3.5" /></button>}
               </div>
