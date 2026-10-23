@@ -135,6 +135,18 @@ function WorkspacePage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [liveProbe, setLiveProbe] = useState(true);
+  const [runOpts, setRunOpts] = useState<{ salvage_on_failure: boolean; focused_plan: boolean; parallel_tools: boolean }>({ salvage_on_failure: false, focused_plan: false, parallel_tools: false });
+  useEffect(() => { try { const v = JSON.parse(localStorage.getItem("ws-run-options") || "null"); if (v && typeof v === "object") setRunOpts((o) => ({ ...o, ...v })); } catch {} }, []);
+  const setOpt = (k: "salvage_on_failure" | "focused_plan" | "parallel_tools", v: boolean) => setRunOpts((o) => { const n = { ...o, [k]: v }; try { localStorage.setItem("ws-run-options", JSON.stringify(n)); } catch {} return n; });
+  const [resumeFrom, setResumeFrom] = useState<{ id: string; reused: number; total: number } | null>(null);
+  async function prepareResume(id: string) {
+    setResumeFrom({ id, reused: 0, total: 0 });
+    const { data } = await (supabase as any).from("maaroof_job_events").select("payload").eq("job_id", id).eq("event_type", "tool_result").limit(200);
+    const { reusableResults } = await import("@/lib/maaroof/jobs");
+    const payloads = (data || []).map((e: any) => e.payload);
+    const tools = new Set(payloads.map((p: any) => p?.tool).filter(Boolean));
+    setResumeFrom({ id, reused: Object.keys(reusableResults(payloads)).length, total: tools.size });
+  }
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -169,6 +181,7 @@ function WorkspacePage() {
     setEvents([]); setJobId(null); setRunning(false);
     const prefix = locale === "en" ? "Follow-up on previous task: " : locale === "ku" ? "بەردەوامی ئەرکی پێشوو: " : "استكمال للمهمة السابقة: ";
     setGoal(prefix + (j.goal || "") + "\n");
+    if (j.status !== "completed") void prepareResume(j.id); else setResumeFrom(null);
     goMain();
     setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50);
   }
@@ -404,6 +417,8 @@ function WorkspacePage() {
           interface_mode: "workspace",
           geo_scope: toServerGeo(getEffectiveScope(authProfile)),
           selected_skills: skillsOverride || selectedSkills,
+          run_options: runOpts,
+          resume_job_id: resumeFrom?.id,
         }),
       });
       const body = await response.json().catch(() => ({}));
@@ -412,7 +427,7 @@ function WorkspacePage() {
         const message = body?.message?.[locale] || body?.message?.ar || body?.error || c.failed;
         throw new Error(String(message));
       }
-      setJobId(String(body.job_id));
+      setJobId(String(body.job_id)); setResumeFrom(null);
       await watchJob(String(body.job_id), 0, token);
     } catch (e: any) {
       setRunning(false);
@@ -520,7 +535,7 @@ function WorkspacePage() {
         </header>
 
         {(finalEvent || events.length > 0) && !running && (
-          <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; watcherRef.current += 1; setEvents([]); setJobId(null); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
+          <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; const prevJob = jobId; const prevDone = events.some((e: any) => e.type === "final"); watcherRef.current += 1; setEvents([]); setJobId(null); if (prevJob && !prevDone) void prepareResume(prevJob); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
         {!finalEvent && events.length === 0 && (
           <div className="mb-4 inline-flex rounded-xl border border-border bg-card p-1 text-sm" role="tablist">
@@ -533,7 +548,7 @@ function WorkspacePage() {
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
-                {goal && <div className="mb-2 flex justify-end"><button type="button" onClick={() => { setGoal(""); setSelectedSkills([]); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 30); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{locale === "en" ? "New blank task" : locale === "ku" ? "ئەرکی نوێی بەتاڵ" : "مهمة جديدة فارغة"}</button></div>}
+                {goal && <div className="mb-2 flex justify-end"><button type="button" onClick={() => { setGoal(""); setSelectedSkills([]); setResumeFrom(null); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 30); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{locale === "en" ? "New blank task" : locale === "ku" ? "ئەرکی نوێی بەتاڵ" : "مهمة جديدة فارغة"}</button></div>}
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={4} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <details className="group relative">
@@ -550,6 +565,8 @@ function WorkspacePage() {
                     {running ? <LoaderCircle className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}{c.run}
                   </button>
                 </div>
+                {resumeFrom && !running && <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs"><span className="font-semibold">{locale === "en" ? `Smart resume: ${resumeFrom.reused} earlier result(s) will be reused at no extra charge; Maaroof runs only what is missing.` : locale === "ku" ? `بەردەوامبوونی زیرەک: ${resumeFrom.reused} ئەنجام دووبارە بەکاردێتەوە بێ تێچوو.` : `استكمال ذكي: سيُعاد استخدام ${resumeFrom.reused} نتيجة سابقة دون خصم جديد عليها، ويُشغّل معروف ما نقص فقط.`}</span> <button type="button" onClick={() => setResumeFrom(null)} className="ms-2 underline">{locale === "en" ? "Start fresh instead" : locale === "ku" ? "لە سەرەتاوە" : "ابدأ من الصفر بدلاً من ذلك"}</button></div>}
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">{locale === "en" ? "Optional before starting:" : locale === "ku" ? "هەڵبژاردە پێش دەستپێکردن:" : "خيارات اختيارية قبل البدء:"}</span><label title={locale === "en" ? "If a tool stalls or time runs long, Maaroof writes the report from what was gathered and notes what is missing." : locale === "ku" ? "ئەگەر ئامرازێک وەستا، ڕاپۆرت لەوەی کۆکراوەتەوە دەنووسرێت." : "إذا تعثرت أداة أو طال الوقت كثيراً، يكتب معروف التقرير مما جُمع ويوضح ما لم يكتمل."} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5"><input type="checkbox" className="accent-primary" checked={runOpts.salvage_on_failure} disabled={running} onChange={(e) => setOpt("salvage_on_failure", e.target.checked)} />{locale === "en" ? "Rescue results if a step stalls" : locale === "ku" ? "ئەنجامەکان ڕزگار بکە" : "أنقذ النتائج عند التعثر"}</label><label title={locale === "en" ? "Asks Maaroof to use only the tools essential to the goal; Maaroof still chooses them." : locale === "ku" ? "تەنها ئامرازە سەرەکییەکان." : "يطلب من معروف الاكتفاء بالأدوات الأساسية للهدف، ويبقى هو من يختارها."} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5"><input type="checkbox" className="accent-primary" checked={runOpts.focused_plan} disabled={running} onChange={(e) => setOpt("focused_plan", e.target.checked)} />{locale === "en" ? "Focused plan" : locale === "ku" ? "پلانی چڕ" : "خطة مركّزة"}</label><label title={locale === "en" ? "Tools run together (three at a time) to speed up the task." : locale === "ku" ? "ئامرازەکان پێکەوە کاردەکەن." : "تعمل الأدوات معاً (ثلاثاً في كل دفعة) لتسريع المهمة."} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5"><input type="checkbox" className="accent-primary" checked={runOpts.parallel_tools} disabled={running} onChange={(e) => setOpt("parallel_tools", e.target.checked)} />{locale === "en" ? "Run tools in parallel" : locale === "ku" ? "کارپێکردنی هاوتەریب" : "تشغيل متوازٍ"}</label></div>
                 <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>
               </div>
 
