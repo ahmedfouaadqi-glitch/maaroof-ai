@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/maaroof")({
         if (body?.auto_resume === true && typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id)) {
           const { data: pj } = await (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId).maybeSingle();
           const { canAutoResume } = await import("@/lib/maaroof/jobs");
-          freeAutoResume = !!pj && canAutoResume(pj);
+          freeAutoResume = !!pj && canAutoResume(pj, true);
           if (!freeAutoResume) return Response.json({ error: "auto_resume_not_allowed" }, { status: 409 });
         }
         if (hasMeter && !freeAutoResume) {
