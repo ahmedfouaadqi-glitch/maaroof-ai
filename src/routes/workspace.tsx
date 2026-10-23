@@ -369,6 +369,14 @@ function WorkspacePage() {
         }
       }
       const status = String(body?.job?.status || "running");
+      const autoNext = body?.job?.auto_resume_job_id || body?.job?.request_payload?.auto_resume_job_id;
+      if (status === "failed" && typeof autoNext === "string" && /^[0-9a-f-]{36}$/i.test(autoNext)) {
+        // The runner stopped; Maaroof resumed automatically from the last successful step at no extra charge.
+        setEvents(current => [...current, { type: "narration", data: { text: locale === "en" ? "The runner stopped; resuming automatically from the last successful step (no extra charge)…" : locale === "ku" ? "بەردەوامبوونی خۆکار لە دوایین هەنگاوی سەرکەوتوو…" : "توقف المنفّذ؛ معروف يستأنف تلقائياً من آخر خطوة ناجحة دون خصم إضافي…" }, at: Date.now() } as WorkspaceEvent]);
+        setJobId(autoNext);
+        id = autoNext; cursor = 0;
+        continue;
+      }
       if (status === "completed" || status === "failed" || status === "cancelled") {
         if (status === "failed") setError(String(body?.job?.error || c.failed));
         if (status === "cancelled") setError(locale === "en" ? "Task cancelled." : locale === "ku" ? "ئەرکەکە ڕاگیرا." : "تم إيقاف المهمة.");
