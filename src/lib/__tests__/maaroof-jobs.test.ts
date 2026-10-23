@@ -40,3 +40,15 @@ describe("agent watchdog", () => {
     expect(isStaleAgentJob({ status: "completed", updated_at: new Date(now - 99_000).toISOString() }, now)).toBe(false);
   });
 });
+
+describe("auto resume", () => {
+  it("allows one free resume only for a watchdog-stopped job", async () => {
+    const { canAutoResume, AGENT_STUCK_MSG } = await import("@/lib/maaroof/jobs");
+    const j = { status: "failed", error: AGENT_STUCK_MSG, request_payload: {} };
+    expect(canAutoResume(j)).toBe(true);
+    expect(canAutoResume({ ...j, request_payload: { auto_resume_job_id: "pending" } })).toBe(false);
+    expect(canAutoResume({ ...j, request_payload: { auto_resume_job_id: "pending" } }, true)).toBe(true);
+    expect(canAutoResume({ ...j, request_payload: { auto_resumed: true } })).toBe(false);
+    expect(canAutoResume({ ...j, error: "other" })).toBe(false);
+  });
+});
