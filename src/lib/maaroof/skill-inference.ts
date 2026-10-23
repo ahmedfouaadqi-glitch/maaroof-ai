@@ -38,6 +38,40 @@ export function inferSkills(goal: string, selected: string[] = [], limit = 3): S
   return { kind: "inferred", skills, reasons };
 }
 
+export type OwnContext = {
+  /** Brand name from the Entity Truth Card (or the task). */
+  brand?: string | null;
+  /** Profile keywords, specialty, target markets — free text. */
+  profileText?: string;
+  /** Saved knowledge facts and interview answers. */
+  knowledgeText?: string[];
+};
+
+/**
+ * Maaroof chooses by itself when the task text has no keywords: it reads the
+ * user's own profile, knowledge and interview text. If that still names nothing,
+ * it runs the core presence audit for the known brand. It only asks when the
+ * brand itself is unknown (a required fact it cannot discover).
+ */
+export function chooseSkillsAutonomously(goal: string, selected: string[], own: OwnContext, limit = 3): SkillInference {
+  const first = inferSkills(goal, selected, limit);
+  if (first.kind !== "clarify") return first;
+  const brand = String(own.brand || "").trim();
+  if (brand.length < 2) return first;
+  const ownText = [own.profileText || "", ...(own.knowledgeText || [])].join(" \n ").slice(0, 6000);
+  const fromOwn = inferSkills(ownText, [], limit);
+  if (fromOwn.kind === "inferred") {
+    const reasons: Record<string, string> = {};
+    for (const k of fromOwn.skills) reasons[k] = `ملفك/معرفتك: ${fromOwn.reasons[k]}`;
+    if (!fromOwn.skills.includes("presence_audit") && fromOwn.skills.length < limit) {
+      fromOwn.skills.unshift("presence_audit");
+      reasons.presence_audit = `الهوية: ${brand}`;
+    }
+    return { kind: "inferred", skills: fromOwn.skills.slice(0, limit), reasons };
+  }
+  return { kind: "inferred", skills: ["presence_audit"], reasons: { presence_audit: `الهوية: ${brand}` } };
+}
+
 /** Executable tools for the given skills (drops tools without a route). */
 export function executableToolsFor(skills: string[]): string[] {
   const out: string[] = [];
