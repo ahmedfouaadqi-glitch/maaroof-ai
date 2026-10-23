@@ -19,7 +19,7 @@ export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   feasibility: { fields: ["project_name", "sector", "city", "problem", "solution", "target_audience", "revenue_model", "budget_iqd", "team_size", "timeline_months", "competitors", "notes"] },
   bizdev: { fields: ["business_name", "sector", "stage", "city", "goals", "challenges", "channels", "budget_iqd", "current_revenue_iqd", "monthly_customers", "team_size", "notes"] },
   research: { fields: ["query", "mode"], enums: { mode: ["web", "company"] } },
-  visibility: { tabs: ["visibility", "share_of_voice", "history", "live_probe"], fields: ["brand", "keywords", "probe_engines", "background", "notify"] },
+  visibility: { tabs: ["visibility", "share_of_voice", "history", "live_probe"], fields: ["brand", "keywords", "probe_engines", "notify"] },
   brand_boost: { tabs: ["visibility", "research", "outreach", "run", "authority", "propagation", "logs"], fields: ["brand_name", "brand_keywords", "platforms"] },
   company_email: { fields: ["company", "sector", "notes", "goal", "mode"], enums: { mode: ["search", "email", "brand"] } },
   applied_ranking: { fields: ["brand_name", "brand_keywords", "app_name", "app_url", "website", "sector", "notes"] },
