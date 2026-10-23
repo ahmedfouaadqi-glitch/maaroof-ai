@@ -278,6 +278,10 @@ export const Route = createFileRoute("/api/visibility")({
               return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
             }
             await askAll();
+            const charged = await settle();
+            if (!answers.length) {
+              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+            }
             if (body.notify) {
               try {
                 const { notifyUser } = await import("@/lib/notify.server");
@@ -287,9 +291,9 @@ export const Route = createFileRoute("/api/visibility")({
             }
             const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
-            const reasoned = withReasons(answers, brand, lang as any);
+            const reasoned = withReasons(answers as any, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, council, charged: pChg.tokens, basis: "measured" } });
+            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
