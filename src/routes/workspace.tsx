@@ -15,6 +15,7 @@ import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { MaaroofChat } from "@/components/workspace/MaaroofChat";
+import { LivePipeline } from "@/components/workspace/LivePipeline";
 import { domainsInText } from "@/lib/knowledge-facts";
 import { OnboardingTour } from "@/components/workspace/OnboardingTour";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
@@ -641,6 +642,8 @@ function WorkspacePage() {
               {running && <button type="button" onClick={stop} className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-xs text-destructive"><Square className="size-3" />{c.stop}</button>}
               {!running && <button type="button" onClick={() => { setEvents([]); setError(""); setGoal(""); setSelectedSkills([]); setJobId(null); }} className="rounded-lg border px-3 py-2 text-xs">{c.runAgain}</button>}
             </div>
+
+            {events.length > 0 && <LivePipeline events={events} running={running} lang={locale as any} />}
 
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 

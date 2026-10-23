@@ -512,3 +512,12 @@
 .rb-spotlight:hover::before { opacity: 1; }
 #workspace-goal:focus { box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 25%, transparent), 0 0 24px color-mix(in oklab, var(--primary) 18%, transparent); }
 @media (prefers-reduced-motion: reduce) { .rb-spotlight::before { display: none; } }
+
+/* StarBorder (React Bits inspired): rotating light ring around the active stage card. */
+@property --sb-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.star-border {
+  background: conic-gradient(from var(--sb-angle), transparent 70%, var(--primary) 85%, transparent 100%);
+  animation: sb-spin 2.4s linear infinite;
+}
+@keyframes sb-spin { to { --sb-angle: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .star-border { animation: none; background: var(--primary); } }
