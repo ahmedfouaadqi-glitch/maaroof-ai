@@ -269,13 +269,10 @@ export const Route = createFileRoute("/api/visibility")({
                 const hit = answers.filter((a) => a.mentioned).length;
                 try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
               })().catch(() => {});
-              let scheduled = false;
-              try {
-                const { runAfterResponse } = await import("@/lib/request-ctx.server");
-                scheduled = runAfterResponse(work);
-              } catch {}
-              if (!scheduled) await work; // fallback: same as notify mode
-              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers: scheduled ? [] : answers, charged: pChg.tokens } });
+              // Safe start: run inline (each engine is capped at 30s) so the work can never be
+              // detached after the response; results + notification are saved before we reply.
+              await work;
+              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers, charged: pChg.tokens } });
             }
             await askAll();
             const charged = await settle();
