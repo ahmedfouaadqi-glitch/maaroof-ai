@@ -40,7 +40,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
         {NAV.map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={n.tab ? path === "/workspace" && tab === n.tab : path === n.to} compact={false} iconOnly={collapsed} />)}
       </aside>
       <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-40 flex rounded-2xl border border-border bg-card/90 shadow-lg backdrop-blur-md md:hidden">
         {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "skills", "extras", "settings"].includes(tab))} compact />)}
       </nav>
     </div>
@@ -50,7 +50,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
 export function NavLink({ n, locale, on, compact, iconOnly = false }: { n: NavItem; locale: Locale; on: boolean; compact: boolean; iconOnly?: boolean }) {
   const Icon = n.icon;
   const cls = compact
-    ? `flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${on ? "text-primary" : "text-muted-foreground"}`
+    ? `flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-transform active:scale-90 ${on ? "text-primary -translate-y-0.5" : "text-muted-foreground"}`
     : `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${on ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
   const label = n.label[locale];
   const inner = <><Icon className={`${compact ? "size-5" : "size-4"} shrink-0`} /><span className={iconOnly ? "sr-only" : "truncate"}>{label}</span></>;
