@@ -1,4 +1,5 @@
 // Pure: turns recorded task events into the six live stage cards. No I/O, no invented progress.
+import { brandModelIds } from "@/lib/maaroof/model-council";
 export type StageKey = "understand" | "plan" | "council" | "evidence" | "conflict" | "result";
 export type StageState = "waiting" | "running" | "done" | "skipped" | "failed" | "stopped";
 export type StageCard = { key: StageKey; state: StageState; count: number; startedAt: number | null; endedAt: number | null; durationMs: number | null; failedTools: string[]; reused: number };
@@ -155,8 +156,8 @@ export function stageTimeline(events: Ev[], stage: StageKey, lang: "ar" | "en" |
   for (const e of events) {
     if (timelineStageOf(e) !== stage) continue;
     const d = e.data || {}; const at = typeof e.at === "number" ? e.at : null;
-    if (e.type === "narration" && d.text) out.push({ at, kind: "say", text: String(d.text), links: [] });
-    else if (e.type === "decision" && d.summary) out.push({ at, kind: "info", text: String(d.summary).slice(0, 300), links: [] });
+    if (e.type === "narration" && d.text) out.push({ at, kind: "say", text: brandModelIds(String(d.text), lang), links: [] });
+    else if (e.type === "decision" && d.summary) out.push({ at, kind: "info", text: brandModelIds(String(d.summary), lang).slice(0, 300), links: [] });
     else if (e.type === "skill_choice") out.push({ at, kind: "info", text: t("المهارات: ", "Skills: ", "شارەزایی: ") + (Array.isArray(d.skills) ? d.skills.map((k: string) => `${k}${d.reasons?.[k] && d.reasons[k] !== "user_selected" ? ` (${d.reasons[k]})` : ""}`).join("، ") : ""), links: [] });
     else if (e.type === "envision" && d.future_goal) out.push({ at, kind: "info", text: String(d.future_goal).slice(0, 400), links: [] });
     else if (e.type === "knowledge" && Array.isArray(d.items)) out.push({ at, kind: "info", text: t(`قرأتُ ${d.items.length} عناصر من معرفتك`, `Read ${d.items.length} items from your knowledge`, `${d.items.length} زانیاری خوێندرایەوە`), links: [] });

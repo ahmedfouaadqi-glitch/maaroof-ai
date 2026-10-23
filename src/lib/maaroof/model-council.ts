@@ -58,3 +58,10 @@ export function scrubModelNames(s: string): string {
     .replace(PROXY, "")
     .replace(/\s{2,}/g, " ");
 }
+
+/** User-facing: the model running behind Maaroof is shown as "Maaroof" / «معروف», never its technical id. */
+export function brandModelIds(s: string, lang: "ar" | "en" | "ku" = "ar"): string {
+  if (!s) return s;
+  const name = lang === "en" ? "Maaroof" : "معروف";
+  return s.replace(MODEL_ID, name).replace(PROXY, "").replace(/\s{2,}/g, " ");
+}
