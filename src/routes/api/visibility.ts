@@ -238,18 +238,25 @@ export const Route = createFileRoute("/api/visibility")({
                 return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const) };
               } finally { clearTimeout(t); }
             };
-            const askAll = () => Promise.allSettled(engines.map(async (e) => {
+            const askEngine = async (e: string) => {
               const t0 = Date.now();
               let res = await askOne(e, models[e]?.model);
-              // One retry with the fast backup model when the reply was empty or broken.
-              if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash");
+              // One retry with the fast backup model when the reply was empty, broken or timed out.
+              if (res.kind !== "ok") res = await askOne(e, "google/gemini-3-flash-preview");
               const ms = Date.now() - t0;
               if (res.kind !== "ok") { statuses[e] = { status: res.kind, ms }; return; }
               const { p } = res;
               const idx = p.brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
               statuses[e] = { status: "answered", ms };
               answers.push({ engine: e, mentioned: idx >= 0 || p.answer.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: p.answer, brands: p.brands, status: "answered", sources: PA.linkSources(p, evidence), ms });
-            }));
+            };
+            // Throttled batches (3 at a time, short gap) instead of firing all ten at once.
+            const askAll = async () => {
+              for (const batch of PA.probeBatches(engines, 3)) {
+                await Promise.allSettled(batch.map(askEngine));
+                await new Promise((r) => setTimeout(r, 200));
+              }
+            };
             const settle = async () => {
               const refund = PA.probeRefund(Number(pChg.tokens || 0), engines.length, answers.length);
               if (refund > 0) { try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun, _meta: { refund: true, partial: true, answered: answers.length, asked: engines.length, endpoint: "/api/visibility#probe" } } as any); } catch {} }
