@@ -92,6 +92,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const raw = String(j?.choices?.[0]?.message?.content || "").trim();
         if (!raw) return Response.json({ error: "ai_failed" }, { status: 502 });
         const reply = parseReply(raw);
+        try { const { brandModelIds } = await import("@/lib/maaroof/model-council"); reply.text = brandModelIds(reply.text, lang); } catch {}
 
         // Charge only after a successful reply, for metered accounts.
         if (metered) {

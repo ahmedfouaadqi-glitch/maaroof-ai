@@ -50,7 +50,6 @@ export default function EngineSelector({ value, onChange, maxOverride, className
           const on = value.includes(e.key);
           const locked = !!ent && !allowed.has(e.key);
           const full = !on && value.length >= limit;
-          const model = ent?.models?.[e.key]?.model;
           const h = ent?.health?.[e.key];
           const dot =
             h?.status === "ok" ? "bg-emerald-500"
@@ -67,7 +66,7 @@ export default function EngineSelector({ value, onChange, maxOverride, className
               type="button"
               onClick={() => toggle(e.key)}
               disabled={locked || full}
-              title={locked ? "Available on a higher plan" : `${e.name}${model ? ` · ${model}${e.proxy ? " (proxy)" : ""}` : ""}${hint}`}
+              title={locked ? "Available on a higher plan" : `${e.name}${hint}`}
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
                 on ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground"
               }`}
