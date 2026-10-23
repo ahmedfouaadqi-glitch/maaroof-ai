@@ -147,16 +147,27 @@ export type RunContext = {
 
 export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const apiKey = process.env.LOVABLE_API_KEY!;
-  const settings = await getMaaroofSettings();
+  const { withTimeout, STAGE_TIMEOUTS } = await import("@/lib/maaroof/timeouts");
+  await ctx.emit("stage", { stage: "understand" });
+  let settings: Awaited<ReturnType<typeof getMaaroofSettings>>;
+  try {
+    settings = await withTimeout(getMaaroofSettings(), STAGE_TIMEOUTS.setup, "settings");
+  } catch (e: any) {
+    console.error("[maaroof] settings stage failed", e?.message || e);
+    throw new Error("تعذّر تحميل إعدادات معروف قبل التخطيط؛ لم يُخصم شيء. أعد المحاولة.");
+  }
   if (settings.kill_switch) {
     await ctx.emit("error", { message: "تم تعطيل معروف مؤقتاً من قبل الإدارة." });
     throw new Error("maaroof_disabled");
   }
   const MODEL = settings.planner_model;
-  // Part 12 — model governance. When disabled, every phase resolves to MODEL,
-  // pricing keeps the legacy estimate and no telemetry is written.
   const mg = settings.model_governance || ({} as any);
-  const modelRegistry = mg.enabled || mg.use_registry_pricing ? await loadModelRegistry() : [];
+  let modelRegistry: any[] = [];
+  if (mg.enabled || mg.use_registry_pricing) {
+    try { modelRegistry = await withTimeout(loadModelRegistry(), STAGE_TIMEOUTS.setup, "registry"); }
+    catch (e: any) { console.error("[maaroof] registry stage failed, using default model", e?.message || e); }
+  }
+  await ctx.emit("stage", { stage: "setup_done" });
   const phaseModels = new Map<ModelPhase, ModelChoice>();
   const modelChoices: any[] = [];
   async function modelFor(phase: ModelPhase): Promise<ModelChoice> {
