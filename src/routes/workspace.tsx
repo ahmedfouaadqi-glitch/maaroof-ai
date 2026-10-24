@@ -359,7 +359,7 @@ function WorkspacePage() {
         // Always read the freshest token: background refreshes must not break tracking.
         const { data: s } = await supabase.auth.getSession();
         const tk = s.session?.access_token || token;
-        response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor, {
+        response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor + "&workspace_id=" + encodeURIComponent(activeWorkspaceId || ""), {
           headers: { Authorization: "Bearer " + tk },
           cache: "no-store",
         });
