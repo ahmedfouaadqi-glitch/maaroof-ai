@@ -37,12 +37,22 @@ export const Route = createFileRoute("/api/attachment-analyze")({
         const a = await auth(request);
         if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
         const body = await request.json().catch(() => ({} as any));
+        let workspaceId: string | null = null;
+        if (body.workspace_id != null && body.workspace_id !== "") {
+          if (typeof body.workspace_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.workspace_id)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          const { data: owned } = await a.db.from("workspaces").select("id").eq("id", body.workspace_id).eq("owner_id", a.userId).maybeSingle();
+          if (!owned) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          workspaceId = owned.id;
+        }
         const path = String(body.path || ""); const name = String(body.name || "file").slice(0, 120);
         const mime = String(body.mime || ""); const question = String(body.question || "").slice(0, 1000);
         const context = body.context === "interview" ? "interview" : "task";
         const lang = body.lang === "en" ? "English" : body.lang === "ku" ? "Kurdish (Sorani)" : "Arabic";
         const kind = attachmentKind(mime);
-        if (!ownsPath(a.userId, path) || !kind) return Response.json({ error: "bad_file" }, { status: 400 });
+        const pathIsScoped = workspaceId
+          ? ownsPath(a.userId, path) && !path.includes("..") && path.startsWith(a.userId + "/" + workspaceId + "/")
+          : ownsPath(a.userId, path) && !path.includes("..") && path.slice(a.userId.length + 1).indexOf("/") === -1;
+        if (!pathIsScoped || !kind) return Response.json({ error: "bad_file" }, { status: 400 });
 
         const { resolveToolCost, chargeTokens } = await import("@/lib/tokens.server");
         const cost = await resolveToolCost(a.userId, TOOL);
@@ -55,7 +65,8 @@ export const Route = createFileRoute("/api/attachment-analyze")({
         const buf = await file.arrayBuffer();
         if (buf.byteLength > ATTACHMENT_MAX_BYTES) return Response.json({ error: "too_large" }, { status: 400 });
 
-        const { data: row } = await a.db.from("task_attachments").insert({ user_id: a.userId, context, path, name, mime, size: buf.byteLength, question, status: "analyzing" }).select("id").single();
+        const { data: row, error: insertError } = await a.db.from("task_attachments").insert({ user_id: a.userId, workspace_id: workspaceId, context, path, name, mime, size: buf.byteLength, question, status: "analyzing" }).select("id").single();
+        if (insertError || !row) return Response.json({ error: "attachment_record_failed" }, { status: 500 });
         const prompt = `${FACTUAL_SAFETY_PROMPT}\nYou analyze a file the user uploaded for a GEO/SEO/AEO task. Describe only what is visible in the file, then answer the user's question. Mark anything not directly visible as a hypothesis. Answer in ${lang}.\nUser question: ${question || "Summarize and extract the useful facts for brand visibility in AI answers."}`;
         const content: any[] = [{ type: "text", text: prompt }];
         if (kind === "text") content.push({ type: "text", text: new TextDecoder().decode(buf).slice(0, 60000) });
@@ -78,7 +89,7 @@ export const Route = createFileRoute("/api/attachment-analyze")({
           try {
             const { taskFact } = await import("@/lib/knowledge-facts");
             const f = taskFact(`${name}`, analysis);
-            if (f) await a.db.from("knowledge_facts").insert({ user_id: a.userId, source: context === "interview" ? "interview" : "task", source_ref: row?.id, ...f });
+            if (f) await a.db.from("knowledge_facts").insert({ user_id: a.userId, workspace_id: workspaceId, source: context === "interview" ? "interview" : "task", source_ref: row?.id, ...f });
           } catch {}
           return Response.json({ id: row?.id, analysis, charged });
         } catch (e: any) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyClaim, debateFromOpinions } from "../maaroof/debate";
+import { classifyClaim, debateFromOpinions, hasMaterialEngineConflict, debateFromEngineAnswers } from "../maaroof/debate";
 import { inferSkills } from "../maaroof/skill-inference";
 
 describe("debate", () => {
@@ -10,6 +10,19 @@ describe("debate", () => {
   it("needs at least two opinions", () => {
     expect(debateFromOpinions([{ expert: "a", opinion: "x" }])).toBeNull();
   });
+  it("starts a live debate only when engine answers disagree", () => {
+    expect(hasMaterialEngineConflict([{ engine: "ChatGPT", mentioned: true }, { engine: "Claude", mentioned: true }])).toBe(false);
+    const answers = [
+      { engine: "ChatGPT", mentioned: true, answer: "A", status: "answered", sources: [{ url: "https://example.com" }] },
+      { engine: "Claude", mentioned: false, answer: "B", status: "answered", sources: [] },
+    ];
+    expect(hasMaterialEngineConflict(answers)).toBe(true);
+    const debate = debateFromEngineAnswers(answers);
+    expect(debate.engineNames).toEqual(["ChatGPT", "Claude"]);
+    expect(debate.evidenceCount).toBe(1);
+    expect(debate.hypothesisCount).toBe(1);
+  });
+
   it("splits agreed vs contested tools and ignores failed experts", () => {
     const d = debateFromOpinions([
       { expert: "a", opinion: "x https://a.com", suggest_tools: ["visibility", "analyze"] },

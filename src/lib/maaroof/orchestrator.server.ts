@@ -197,23 +197,40 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     try {
       const { data } = await db()
         .from("workspaces")
-        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
+        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, entity_truth_card, onboarding, settings, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
         .eq("id", ctx.workspaceId)
+        .eq("owner_id", ctx.userId)
         .maybeSingle();
       workspaceProfile = data || null;
     } catch {}
   }
-  // Entity Truth Card fallback for tool inputs (fail-open).
+  // Use the active workspace's identity only while that workspace is selected.
   let entityProfile: any = null;
-  try {
-    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
-    entityProfile = data || null;
-  } catch {}
+  if (ctx.workspaceId) {
+    const truth = workspaceProfile?.entity_truth_card && typeof workspaceProfile.entity_truth_card === "object" ? workspaceProfile.entity_truth_card : {};
+    const links = Array.isArray(truth.links) ? truth.links : (workspaceProfile?.brand_url ? [{ url: workspaceProfile.brand_url, type: "official" }] : []);
+    entityProfile = {
+      brand_name: truth.entity_name || workspaceProfile?.name || null,
+      brand_keywords: Array.isArray(truth.keywords) ? truth.keywords.join(", ") : (truth.keywords || workspaceProfile?.keywords || null),
+      hq_country: truth.country || workspaceProfile?.country || null,
+      entity_type: truth.entity_type || workspaceProfile?.kind || null,
+      target_markets: Array.isArray(truth.markets) ? truth.markets : [],
+      specialty_scope: truth.sector || workspaceProfile?.brand_summary || null,
+      entity_links: links,
+    };
+  } else {
+    try {
+      const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
+      entityProfile = data || null;
+    } catch {}
+  }
   // Saved clarification answers (only stored with the user's memory consent): reuse instead of asking again.
   try {
     const fresh = Object.entries(ctx.clarifications || {}).filter(([k, v]) => k !== "tools" && String(v || "").trim());
-    for (const [k, v] of fresh) await remember({ userId: ctx.userId, kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
-    const { data: saved } = await db().from("maaroof_memory").select("content").eq("user_id", ctx.userId).like("content", "clarify:%").order("created_at", { ascending: false }).limit(20);
+    for (const [k, v] of fresh) await remember({ userId: ctx.userId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
+    let clarifyQuery = db().from("maaroof_memory").select("content").eq("user_id", ctx.userId);
+    clarifyQuery = ctx.workspaceId ? clarifyQuery.eq("workspace_id", ctx.workspaceId) : clarifyQuery.is("workspace_id", null);
+    const { data: saved } = await clarifyQuery.like("content", "clarify:%").order("created_at", { ascending: false }).limit(20);
     const reused: Record<string, string> = {};
     for (const r of (saved as any[]) || []) {
       const m = String(r.content).match(/^clarify:([a-z_]+)=([\s\S]+)$/);
@@ -357,7 +374,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (workspaceProfile ?
+      "\n\n[WORKSPACE ENTITY TRUTH CARD — values are user-supplied and not verified unless marked otherwise]\n" + JSON.stringify(workspaceProfile.entity_truth_card || {}).slice(0, 5000) +
+      "\n\n[WORKSPACE ONBOARDING CONTEXT]\n" + JSON.stringify(workspaceProfile.onboarding || {}).slice(0, 3000) +
+      "\n\n[WORKSPACE SETTINGS]\n" + JSON.stringify(workspaceProfile.settings || {}).slice(0, 1500) : "");
 
     // Part 13 — pipeline stages 1..6 (understanding & context).
     if (tracer.enabled) {
@@ -850,7 +870,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       //      Runs ONE extra deliberation pass only when the council actually
       //      disagrees (objection, wide confidence spread, or divergent tool
       //      suggestions). No conflict → zero extra cost, identical to Part 6.
-      if (exec.enabled && exec.conflict_enabled) {
+      if (exec.enabled) {
         try {
           const opinions = decisionLog.filter((d: any) => d.phase === "council" && !d.error);
           const confs = opinions.map((d: any) => (typeof d.confidence === "number" ? d.confidence : null)).filter((v: any) => v != null) as number[];
@@ -859,7 +879,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           const toolSets = opinions.map((d: any) => JSON.stringify((d.suggest_tools || []).slice().sort()));
           const divergentTools = new Set(toolSets).size > 1;
           const threshold = Number(exec.conflict_threshold ?? 25);
-          const conflicted = objections > 0 || spread > threshold || divergentTools;
+          const conflicted = objections > 0 || spread >= threshold || divergentTools;
           if (conflicted && opinions.length > 1) {
             await ctx.emit("phase", { phase: "conflict" }); try { const _n = (await import("./narration")).narratePhase("conflict", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "conflict", text: _n }); } catch {}
             const xResp = await call("conflict", [
@@ -914,7 +934,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           if (settings.council.log_decisions) {
             try {
               await remember({
-                userId: ctx.userId, runId, kind: "decision",
+                userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "decision",
                 content: `${d.decision || ""} — ${d.rationale || ""}`.slice(0, 500),
                 importance: 3, sourceRunId: runId,
               });
@@ -1109,7 +1129,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const { stripAgentOnlyFields } = await import("./probe-answer");
         const N = await import("./narration");
-        const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language, workspace_id: ctx.workspaceId || null };
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolStart(step.tool, ctx.language as any, Array.isArray((body as any).probe_engines) ? (body as any).probe_engines.length : 0) }); } catch {}
         const toolCtl = new AbortController();
         const { toolTimeoutMs } = await import("./timeouts");
@@ -1147,6 +1167,34 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           json = await resp.json().catch(() => ({}));
         }
         const ok = resp.ok && !sseError;
+        // Live debate: only run when real visibility probe answers split on entity mention.
+        if (ok && step.tool === "visibility" && Array.isArray(json?.probe?.answers)) {
+          try {
+            const debateLib = await import("./debate");
+            const answers = json.probe.answers;
+            if (debateLib.hasMaterialEngineConflict(answers)) {
+              await ctx.emit("debate_stage", { stage: "engine_disagreement", count: answers.length });
+              const summary = debateLib.debateFromEngineAnswers(answers);
+              let resolution: any = { chosen: "unresolved", why: "لم تتوفر أدلة كافية لحسم الخلاف.", residual_risk: "تحتاج النتيجة إلى مراجعة مصادر مستقلة." };
+              try {
+                const dr = await call("conflict", [
+                  { role: "system", content: "You are Maaroof's critical moderator. Compare the supplied engine answers using source quality, concrete evidence, contradictions, and uncertainty. Do not use majority vote. If the evidence is inadequate, choose unresolved. Return JSON with chosen, why, residual_risk, and positions (engine, claim, evidence, score). Answer in " + ctx.language + "." },
+                  { role: "user", content: "Goal: " + ctx.goal + "\nAnswers: " + JSON.stringify(answers.map((a: any) => ({ engine: a.engine, mentioned: a.mentioned, answer: String(a.answer || "").slice(0, 650), grounded_answer: String(a.grounded_answer || "").slice(0, 650), sources: (a.sources || []).slice(0, 4) }))).slice(0, 6000) },
+                ]);
+                totalUsd += dr.usd;
+                totalTokens += dr.tokens;
+                resolution = extractJsonObject<any>(dr.text) || { ...resolution, why: dr.text.slice(0, 350) };
+              } catch (debateError: any) {
+                resolution.residual_risk = String(debateError?.message || debateError).slice(0, 180);
+              }
+              const debateEvent = { ...summary, resolution, at: new Date().toISOString() };
+              await ctx.emit("debate", debateEvent);
+              await logMsg("debate", debateEvent);
+            }
+          } catch (debateError: any) {
+            await ctx.emit("debate_error", { message: String(debateError?.message || debateError).slice(0, 160) });
+          }
+        }
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolDone(step.tool, ok, json, ctx.language as any) }); } catch {}
@@ -1571,8 +1619,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       });
     } catch {}
 
-    await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
-    if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+    await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
+    if (geo.country) await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
 
     // 6.5) Capture the run into the living knowledge graph (Part 11).
     if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {

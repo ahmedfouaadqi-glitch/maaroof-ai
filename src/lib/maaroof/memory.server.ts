@@ -82,12 +82,15 @@ export async function recall(
   opts: { capability?: string; workspaceId?: string | null } = {},
 ): Promise<string[]> {
   // Pull a wider candidate set, then rank in JS with the blended score.
-  const { data } = await db()
+  let query = db()
     .from("maaroof_memory")
     .select(
       "id, content, kind, importance, capability, workspace_id, confidence, freshness_at, reliability, usage_count, decision_impact, learning_score, last_accessed_at",
     )
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+  // Strict partition: workspace sessions never recall owner-level or sibling-workspace memories.
+  query = opts.workspaceId ? query.eq("workspace_id", opts.workspaceId) : query.is("workspace_id", null);
+  const { data } = await query
     .order("importance", { ascending: false })
     .order("last_accessed_at", { ascending: false })
     .limit(Math.max(limit * 4, 40));

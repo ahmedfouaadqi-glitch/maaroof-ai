@@ -12,7 +12,7 @@ import { asText } from "@/lib/input-coerce";
 import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
 
 
-type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean };
+type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -181,6 +181,20 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
 
+          const workspaceRaw = body.workspace_id;
+          if (workspaceRaw != null && workspaceRaw !== "" && (typeof workspaceRaw !== "string" || !/^[0-9a-f-]{36}$/i.test(workspaceRaw))) {
+            return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          }
+          const workspaceId = typeof workspaceRaw === "string" && workspaceRaw ? workspaceRaw : null;
+          let workspace: any = null;
+          if (workspaceId) {
+            const { data: ws, error: wsError } = await admin.from("workspaces")
+              .select("id, owner_id, name, brand_url, brand_summary, keywords, country, city, entity_truth_card, onboarding, settings")
+              .eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+            if (wsError || !ws) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+            workspace = ws;
+          }
+
           // Micro-probe (optional): live question to the engines the user selected.
           // Absent `probe_engines` → the original visibility flow below runs unchanged.
           if (Array.isArray(body.probe_engines) && body.probe_engines.length) {
@@ -192,8 +206,17 @@ export const Route = createFileRoute("/api/visibility")({
             const picked = normalizeEngines(body.probe_engines);
             const { engines } = await excludeUnhealthyEngines(picked);
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
-            const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
-            const probeTopic = (keywords || String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim()).slice(0, 400);
+            let probeTopic = keywords;
+            if (!probeTopic && workspace) {
+              const card = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
+              const cardKeywords = Array.isArray(card.keywords) ? card.keywords.join(", ") : String(card.keywords || "");
+              probeTopic = [card.entity_name || workspace.name, cardKeywords, card.sector || workspace.brand_summary]
+                .filter(Boolean).join(" ").slice(0, 400);
+            }
+            if (!probeTopic && !workspace) {
+              const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
+              probeTopic = String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim().slice(0, 400);
+            }
             if (!probeTopic) return Response.json({ error: "probe_category_required" }, { status: 400 });
             const probeUnits = engines.length * 2;
             const pRun = crypto.randomUUID();
@@ -210,7 +233,9 @@ export const Route = createFileRoute("/api/visibility")({
               // MCI evidence gate runs only after the blind phase; reuse verified facts and search only when needed.
               try {
                 const { evidenceGate } = await import("@/lib/mci/evidence-gate");
-                const { data: kf } = await admin.from("knowledge_facts").select("id, fact, confidence, created_at, source").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+                let factQuery = admin.from("knowledge_facts").select("id, fact, confidence, created_at, source").eq("user_id", userId);
+                factQuery = workspaceId ? factQuery.eq("workspace_id", workspaceId) : factQuery.is("workspace_id", null);
+                const { data: kf } = await factQuery.order("created_at", { ascending: false }).limit(20);
                 const items = ((kf || []) as any[]).map((f) => ({ id: String(f.id), source: "knowledge" as const, claimType: (Number(f.confidence) >= 0.85 ? "verified_fact" : "hypothesis") as any, content: String(f.fact || ""), reliability: Number(f.confidence) || 0, createdAt: f.created_at }));
                 const gate = evidenceGate(items);
                 if (!gate.needWeb) {
@@ -340,7 +365,7 @@ export const Route = createFileRoute("/api/visibility")({
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
-          const _mci = await mciReuse(admin as any, "visibility", userId, [brand, keywords, lang, body.scope], !!(body as any)?.force);
+          const _mci = await mciReuse(admin as any, "visibility", userId, [brand, keywords, lang, body.scope, workspaceId], !!(body as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });

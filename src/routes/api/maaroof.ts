@@ -30,7 +30,9 @@ export const Route = createFileRoute("/api/maaroof")({
         if (!goal) return Response.json({ error: "goal_required" }, { status: 400 });
         const lang = (body?.lang as "ar" | "en" | "ku") || "ar";
         const geoScope = (body?.geo_scope as GeoScope) || undefined;
-        const workspaceId = typeof body?.workspace_id === "string" && /^[0-9a-f-]{36}$/i.test(body.workspace_id) ? body.workspace_id : null;
+        const workspaceRaw = body?.workspace_id;
+        if (workspaceRaw != null && workspaceRaw !== "" && (typeof workspaceRaw !== "string" || !/^[0-9a-f-]{36}$/i.test(workspaceRaw))) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+        const workspaceId = typeof workspaceRaw === "string" && workspaceRaw ? workspaceRaw : null;
         const executionMode = (["simulation","recommendation","execution"] as const).includes(body?.execution_mode) ? body.execution_mode as "simulation"|"recommendation"|"execution" : undefined;
 
         // Verify workspace ownership if provided.
@@ -63,7 +65,9 @@ export const Route = createFileRoute("/api/maaroof")({
         // Free automatic resume: only for an owned job the watchdog stopped, and only once.
         let freeAutoResume = false;
         if (body?.auto_resume === true && typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id)) {
-          const { data: pj } = await (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId).maybeSingle();
+          let autoResumeQuery = (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId);
+          autoResumeQuery = verifiedWorkspaceId ? autoResumeQuery.eq("workspace_id", verifiedWorkspaceId) : autoResumeQuery.is("workspace_id", null);
+          const { data: pj } = await autoResumeQuery.maybeSingle();
           const { canAutoResume } = await import("@/lib/maaroof/jobs");
           freeAutoResume = !!pj && canAutoResume(pj, true);
           if (!freeAutoResume) return Response.json({ error: "auto_resume_not_allowed" }, { status: 409 });
@@ -90,23 +94,38 @@ export const Route = createFileRoute("/api/maaroof")({
           const probeEngines = Array.isArray(body?.probe_engines) ? body.probe_engines.filter((x: unknown) => typeof x === "string").slice(0, 10) : undefined;
           let pickedSkills: string[] = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
           const resumeRef = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
-          if (resumeRef && !pickedSkills.length) {
-            // A follow-up keeps the skills of the task it continues instead of asking again.
-            const { data: prevPayload } = await db.from("maaroof_jobs").select("request_payload").eq("id", resumeRef).eq("user_id", userId).maybeSingle();
-            const prevSkills = (prevPayload as any)?.request_payload?.selected_skills;
-            if (Array.isArray(prevSkills)) pickedSkills = prevSkills.filter((x: unknown) => typeof x === "string").slice(0, 20);
+          if (resumeRef) {
+            let previousQuery = db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId);
+            previousQuery = verifiedWorkspaceId ? previousQuery.eq("workspace_id", verifiedWorkspaceId) : previousQuery.is("workspace_id", null);
+            const { data: prevPayload } = await previousQuery.maybeSingle();
+            if (!prevPayload) return Response.json({ error: "resume_job_not_found" }, { status: 404 });
+            if (!pickedSkills.length) {
+              const prevSkills = (prevPayload as any)?.request_payload?.selected_skills;
+              if (Array.isArray(prevSkills)) pickedSkills = prevSkills.filter((x: unknown) => typeof x === "string").slice(0, 20);
+            }
           }
           const { chooseSkillsAutonomously } = await import("@/lib/maaroof/skill-inference");
           // Maaroof reads the user's own profile, knowledge and interview before choosing tools.
           let own: { brand?: string | null; profileText?: string; knowledgeText?: string[] } = {};
           try {
-            const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
-            const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
-            own = {
-              brand: (ep as any)?.brand_name || null,
-              profileText: [ (ep as any)?.brand_keywords, (ep as any)?.specialty_scope, (ep as any)?.entity_type, JSON.stringify((ep as any)?.target_markets || "") ].filter(Boolean).join(" "),
-              knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
-            };
+            if (verifiedWorkspaceId) {
+              const { data: ws } = await db.from("workspaces").select("name, brand_url, brand_summary, keywords, country, entity_truth_card, profile").eq("id", verifiedWorkspaceId).eq("owner_id", userId).maybeSingle();
+              const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).eq("workspace_id", verifiedWorkspaceId).order("created_at", { ascending: false }).limit(20);
+              const card = (ws as any)?.entity_truth_card || {};
+              own = {
+                brand: card.entity_name || (ws as any)?.name || null,
+                profileText: [card.sector, card.country, JSON.stringify(card.markets || []), JSON.stringify(card.key_facts || []), (ws as any)?.brand_url, (ws as any)?.brand_summary, JSON.stringify((ws as any)?.keywords || []), JSON.stringify((ws as any)?.profile || {})].filter(Boolean).join(" "),
+                knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
+              };
+            } else {
+              const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
+              const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).is("workspace_id", null).order("created_at", { ascending: false }).limit(20);
+              own = {
+                brand: (ep as any)?.brand_name || null,
+                profileText: [ (ep as any)?.brand_keywords, (ep as any)?.specialty_scope, (ep as any)?.entity_type, JSON.stringify((ep as any)?.target_markets || "") ].filter(Boolean).join(" "),
+                knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
+              };
+            }
           } catch {}
           const skillChoice = chooseSkillsAutonomously(goal, pickedSkills, own);
           const selectedSkills = skillChoice.skills;

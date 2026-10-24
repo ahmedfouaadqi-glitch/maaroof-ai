@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const { chatQuota } = await import("@/lib/maaroof/chat-policy");
         const { isUnlimitedAccount } = await import("@/lib/tokens.server");
         const unlimited = await isUnlimitedAccount(a.userId);
-        const { data: jobs } = await a.admin.from("maaroof_jobs").select("id, goal, status, created_at").eq("user_id", a.userId).eq("status", "completed").order("created_at", { ascending: false }).limit(15);
+        const { data: jobs } = await scopeWorkspace(a.admin.from("maaroof_jobs").select("id, goal, status, created_at").eq("user_id", a.userId).eq("status", "completed"), workspace.id).order("created_at", { ascending: false }).limit(15);
         return Response.json({ items: data ?? [], tasks: jobs ?? [], quota: chatQuota({ metered: Number(p.tokens_balance) > 0 || p.tokens_daily_limit != null || p.tokens_monthly_limit != null, subscribed: !!p.is_subscribed, todayUserMessages: count || 0, unlimited }) });
       },
       DELETE: async ({ request }) => {
@@ -74,7 +74,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         let taskCtx: string[] = [];
         const taskId = typeof body?.task_id === "string" ? body.task_id : "";
         if (taskId) {
-          const { data: job } = await admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId).maybeSingle();
+          const { data: job } = await scopeWorkspace(admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId), workspaceId).maybeSingle();
           if (job) {
             const { data: fin } = await admin.from("maaroof_job_events").select("payload").eq("job_id", taskId).eq("event_type", "final").order("seq", { ascending: false }).limit(1);
             const txt = JSON.stringify((fin as any)?.[0]?.payload ?? "").slice(0, 3000);
@@ -86,14 +86,14 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const [{ data: kf }, { data: iv }, { data: ws }, { data: hist }] = await Promise.all([
           scopeWorkspace(admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(120),
           workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
-          workspaceId ? admin.from("workspaces").select("name, space_kind, profile, goals").eq("owner_id", userId).eq("id", workspaceId).limit(1) : Promise.resolve({ data: [] as any[] }),
-          admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId).order("created_at", { ascending: false }).limit(40),
+          workspaceId ? admin.from("workspaces").select("name, space_kind, profile, goals, entity_truth_card, onboarding, settings, brand_url, brand_summary, keywords, country, city").eq("owner_id", userId).eq("id", workspaceId).limit(1) : Promise.resolve({ data: [] as any[] }),
+          scopeWorkspace(admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(40),
         ]);
         const id = ownerIdentity(p);
         const conf = id.verified ? "evidence" : "unverified profile entry";
         const knowledge: string[] = [
           ...(!workspaceId ? id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`) : []),
-          ...(ws || []).map((w: any) => `[workspace identity] ${w.space_kind}: ${w.name}; profile=${JSON.stringify(w.profile || {})}; goals=${JSON.stringify(w.goals || [])}`),
+          ...(ws || []).map((w: any) => `[workspace identity — user-entered, not independently verified] ${w.space_kind}: ${w.name}; profile=${JSON.stringify(w.profile || {})}; truth_card=${JSON.stringify(w.entity_truth_card || {})}; onboarding=${JSON.stringify(w.onboarding || {})}; settings=${JSON.stringify(w.settings || {})}; goals=${JSON.stringify(w.goals || [])}; website=${w.brand_url || ""}; sector=${w.brand_summary || ""}; keywords=${JSON.stringify(w.keywords || [])}; country=${w.country || ""}; city=${w.city || ""}`),
           ...freshFacts((kf || []) as any[]).map((f: any) => `[${f.source}, ${f.confidence}] ${String(f.fact).slice(0, 300)}`),
           ...interviewFacts((iv || []) as any).map((f) => `[interview] ${f.fact.slice(0, 300)}`),
         ].slice(0, 120);
