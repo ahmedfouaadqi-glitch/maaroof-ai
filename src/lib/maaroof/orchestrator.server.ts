@@ -1167,6 +1167,34 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           json = await resp.json().catch(() => ({}));
         }
         const ok = resp.ok && !sseError;
+        // Live debate: only run when real visibility probe answers split on entity mention.
+        if (ok && step.tool === "visibility" && Array.isArray(json?.probe?.answers)) {
+          try {
+            const debateLib = await import("./debate");
+            const answers = json.probe.answers;
+            if (debateLib.hasMaterialEngineConflict(answers)) {
+              await ctx.emit("debate_stage", { stage: "engine_disagreement", count: answers.length });
+              const summary = debateLib.debateFromEngineAnswers(answers);
+              let resolution: any = { chosen: "unresolved", why: "لم تتوفر أدلة كافية لحسم الخلاف.", residual_risk: "تحتاج النتيجة إلى مراجعة مصادر مستقلة." };
+              try {
+                const dr = await call("conflict", [
+                  { role: "system", content: "You are Maaroof's critical moderator. Compare the supplied engine answers using source quality, concrete evidence, contradictions, and uncertainty. Do not use majority vote. If the evidence is inadequate, choose unresolved. Return JSON with chosen, why, residual_risk, and positions (engine, claim, evidence, score). Answer in " + ctx.language + "." },
+                  { role: "user", content: "Goal: " + ctx.goal + "\nAnswers: " + JSON.stringify(answers.map((a: any) => ({ engine: a.engine, mentioned: a.mentioned, answer: String(a.answer || "").slice(0, 650), grounded_answer: String(a.grounded_answer || "").slice(0, 650), sources: (a.sources || []).slice(0, 4) }))).slice(0, 6000) },
+                ]);
+                totalUsd += dr.usd;
+                totalTokens += dr.tokens;
+                resolution = extractJsonObject<any>(dr.text) || { ...resolution, why: dr.text.slice(0, 350) };
+              } catch (debateError: any) {
+                resolution.residual_risk = String(debateError?.message || debateError).slice(0, 180);
+              }
+              const debateEvent = { ...summary, resolution, at: new Date().toISOString() };
+              await ctx.emit("debate", debateEvent);
+              await logMsg("debate", debateEvent);
+            }
+          } catch (debateError: any) {
+            await ctx.emit("debate_error", { message: String(debateError?.message || debateError).slice(0, 160) });
+          }
+        }
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolDone(step.tool, ok, json, ctx.language as any) }); } catch {}
