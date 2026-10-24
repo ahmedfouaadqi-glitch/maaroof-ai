@@ -13,6 +13,7 @@ export type Workspace = {
   language: "ar" | "en" | "ku";
   country: string | null;
   city?: string | null;
+  space_kind?: "company" | "subsidiary" | "product" | "client";
   brand_summary?: string | null;
   keywords?: string[] | string | null;
   profile?: Record<string, unknown> | null;
@@ -35,8 +36,11 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<"own" | "client" | "brand">("brand");
+  const [kind, setKind] = useState<"own" | "client" | "product">("own");
   const [brandUrl, setBrandUrl] = useState("");
+  const [sector, setSector] = useState("");
+  const [formError, setFormError] = useState("");
+  const copy = (ar: string, en: string, ku: string) => lang === "en" ? en : lang === "ku" ? ku : ar;
 
   useEffect(() => {
     (async () => {
@@ -76,12 +80,25 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
   async function submit() {
     if (!name.trim()) return;
     setCreating(true);
+    setFormError("");
     try {
-      const res = await create({ data: { name: name.trim(), kind, brand_url: brandUrl.trim() || undefined, keywords: [], language: "ar" } });
+      const persistedKind: Workspace["kind"] = kind === "client" ? "client" : kind === "product" ? "brand" : "own";
+      const spaceKind: NonNullable<Workspace["space_kind"]> = kind === "product" ? "product" : kind === "client" ? "client" : "company";
+      const res = await create({ data: {
+        name: name.trim(),
+        kind: persistedKind,
+        space_kind: spaceKind,
+        brand_url: brandUrl.trim() || undefined,
+        brand_summary: sector.trim() || undefined,
+        keywords: [],
+        language: lang === "en" || lang === "ku" ? lang : "ar",
+      } });
       const w = res.workspace as unknown as Workspace;
       setItems((p) => [w, ...p]);
-      pick(w);
-      setName(""); setBrandUrl(""); setShowForm(false);
+      await pick(w);
+      setName(""); setBrandUrl(""); setSector(""); setShowForm(false);
+    } catch (e: any) {
+      setFormError(String(e?.message || copy("تعذر إنشاء مساحة العمل.", "Could not create the workspace.", "دروستکردنی شوێنی کار سەرکەوتوو نەبوو.")).slice(0, 240));
     } finally {
       setCreating(false);
     }
@@ -104,18 +121,39 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
 
 
       {showForm && (
-        <div className="space-y-2 p-2 rounded border bg-background/50">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auto.brand_customer_name")} className="w-full border rounded px-2 py-1 bg-background text-sm" />
-          <select value={kind} onChange={(e) => setKind(e.target.value as "own" | "client" | "brand")} className="w-full border rounded px-2 py-1 bg-background text-sm">
-            <option value="brand">{t("auto.brand_3")}</option>
-            <option value="client">{t("auto.client")}</option>
-            <option value="own">{t("auto.mine")}</option>
-          </select>
-          <input value={brandUrl} onChange={(e) => setBrandUrl(e.target.value)} placeholder={t("auto.website_link_optional")} className="w-full border rounded px-2 py-1 bg-background text-sm" />
+        <div className="space-y-3 rounded-xl border border-border bg-background/70 p-3">
+          <p className="text-xs text-muted-foreground">{copy("اختر نوع مساحة العمل؛ سيُحفظ لكل نوع سياقه وذاكرته وتقاريره الخاصة.", "Choose a workspace type. Its context, memory, and reports will remain scoped to it.", "جۆری شوێنی کار هەڵبژێرە؛ پاشبنەما و بیرگە و ڕاپۆرتەکانی تایبەتی دەبن.")}</p>
+          <div role="radiogroup" aria-label={copy("نوع مساحة العمل", "Workspace type", "جۆری شوێنی کار")} className="grid gap-2">
+            <button type="button" role="radio" aria-checked={kind === "own"} onClick={() => setKind("own")} className={`rounded-lg border p-3 text-start transition ${kind === "own" ? "border-primary bg-primary/10 ring-1 ring-primary/40" : "border-border hover:border-primary/50"}`}>
+              <span className="block text-sm font-semibold">{copy("خاصة بي / علامتي التجارية", "My business / brand", "کار و براندی من")}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{copy("مثال: شركتك أو متجرك الخاص لتتبع حضوره واقتباساته في إجابات محركات الذكاء الاصطناعي.", "Example: your company or shop; track its presence and citations in AI answers.", "نموونە: کۆمپانیا یان فرۆشگاکەت بۆ بەدواداچوونی دەرکەوتن و ئاماژەکانی لە وەڵامی زیرەکی دەستکرد.")}</span>
+            </button>
+            <button type="button" role="radio" aria-checked={kind === "client"} onClick={() => setKind("client")} className={`rounded-lg border p-3 text-start transition ${kind === "client" ? "border-primary bg-primary/10 ring-1 ring-primary/40" : "border-border hover:border-primary/50"}`}>
+              <span className="block text-sm font-semibold">{copy("عميل (Client)", "Client", "کڕیار")}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{copy("مثال: عميل تدير له الحملات أو تحسين GEO؛ هويته وأهدافه وتقاريره منفصلة عن بقية الحسابات.", "Example: a client whose campaigns or GEO work you manage; identity, goals, and reports stay separate.", "نموونە: کڕیارێک کە ڕیکلام یان GEO ـی بۆ بەڕێوە دەبەیت؛ ناسنامە و ئامانج و ڕاپۆرتی جیاواز.")}</span>
+            </button>
+            <button type="button" role="radio" aria-checked={kind === "product"} onClick={() => setKind("product")} className={`rounded-lg border p-3 text-start transition ${kind === "product" ? "border-primary bg-primary/10 ring-1 ring-primary/40" : "border-border hover:border-primary/50"}`}>
+              <span className="block text-sm font-semibold">{copy("منتج (Product)", "Product", "بەرهەم")}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{copy("مثال: منتج جديد تدرس فرصه ومنافسيه وظهوره في إجابات النماذج بصورة مستقلة.", "Example: a product whose market opportunity, competitors, and visibility you analyze independently.", "نموونە: بەرهەمێکی نوێ کە دەرفەت و کێبڕکێکار و دەرکەوتنی بە جیاوازی دەخوێنیتەوە.")}</span>
+            </button>
+          </div>
+          <label className="block text-xs font-medium">
+            {copy("اسم الشركة أو العميل أو المنتج", "Company, client, or product name", "ناوی کۆمپانیا یان کڕیار یان بەرهەم")}
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={copy("مثال: متجر معروف للأجهزة", "Example: Maaroof Electronics Shop", "نموونە: فرۆشگای ئەلیکترۆنیاتی معروف")} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          </label>
+          <label className="block text-xs font-medium">
+            {copy("رابط الموقع الرسمي (اختياري)", "Official website (optional)", "ماڵپەڕی فەرمی (ئارەزوومەندانە)")}
+            <input type="url" value={brandUrl} onChange={(e) => setBrandUrl(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          </label>
+          <label className="block text-xs font-medium">
+            {copy("نطاق العمل / القطاع", "Business scope / sector", "بواری کار")}
+            <textarea rows={2} value={sector} onChange={(e) => setSector(e.target.value)} placeholder={copy("مثال: تجارة الأجهزة وتتبع الظهور في ChatGPT وGemini", "Example: electronics retail; track visibility in ChatGPT and Gemini", "نموونە: بازرگانی ئامێر و بەدواداچوونی دەرکەوتن لە ChatGPT و Gemini")} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          </label>
+          {formError && <p role="alert" className="text-xs text-destructive">{formError}</p>}
           <div className="flex justify-end gap-2">
-            <button onClick={() => setShowForm(false)} className="text-xs px-2 py-1 rounded hover:bg-muted">{t("auto.cancel")}</button>
-            <button onClick={submit} disabled={!name.trim() || creating} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-1">
-              {creating && <Loader2 className="w-3 h-3 animate-spin" />} {t("auto.save")}
+            <button type="button" onClick={() => { setShowForm(false); setFormError(""); }} className="rounded-lg px-3 py-2 text-xs hover:bg-muted">{t("auto.cancel")}</button>
+            <button type="button" onClick={() => void submit()} disabled={!name.trim() || creating} className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">
+              {creating && <Loader2 className="size-3 animate-spin" />} {t("auto.save")}
             </button>
           </div>
         </div>
@@ -135,7 +173,7 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
                   <span className="truncate">{w.name}</span>
                 </div>
                 <div className="text-[10px] text-muted-foreground">
-                  {w.kind === "brand" ? t("auto.tag") : w.kind === "client" ? t("auto.client") : t("auto.special")}
+                  {w.space_kind === "product" ? copy("منتج", "Product", "بەرهەم") : w.kind === "client" ? t("auto.client") : w.kind === "own" ? copy("خاص بي", "My business", "کاری من") : t("auto.tag")}
                   {w.brand_url ? ` · ${new URL(w.brand_url).hostname.replace("www.", "")}` : ""}
                 </div>
               </button>

@@ -2,6 +2,17 @@ import { describe, it, expect } from "vitest";
 import { createSeqCounter, isStaleJob, isTerminalJobStatus, parseAfter, JOB_STALE_MS } from "@/lib/maaroof/jobs";
 
 describe("workspace jobs", () => {
+  it("falls back after scoped query errors", async () => {
+    const { shouldFallbackFromWorkspaceScope } = await import("@/lib/maaroof/jobs");
+    expect(shouldFallbackFromWorkspaceScope({ code: "42703", message: 'column "workspace_id" does not exist' })).toBe(true);
+    expect(shouldFallbackFromWorkspaceScope(null)).toBe(false);
+  });
+  it("recognizes missing workspace_id for legacy inserts only", async () => {
+    const { isMissingWorkspaceIdColumn } = await import("@/lib/maaroof/jobs");
+    expect(isMissingWorkspaceIdColumn({ code: "42703", message: 'column "workspace_id" does not exist' })).toBe(true);
+    expect(isMissingWorkspaceIdColumn({ code: "PGRST204", message: "Could not find the workspace_id column in schema cache" })).toBe(true);
+    expect(isMissingWorkspaceIdColumn({ code: "23505", message: "duplicate key value violates unique constraint" })).toBe(false);
+  });
   it("numbers events sequentially from 1", () => {
     const n = createSeqCounter();
     expect([n(), n(), n()]).toEqual([1, 2, 3]);

@@ -37,6 +37,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
         name: z.string().trim().min(1).max(100),
         kind: WorkspaceKind.default("own"),
         brand_url: z.string().url().optional().nullable(),
+        brand_summary: z.string().max(4000).optional().nullable(),
         keywords: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
         language: Language.default("ar"),
         country: z.string().max(80).optional().nullable(),
@@ -72,6 +73,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
         name: data.name,
         kind: data.kind,
         brand_url: data.brand_url ?? null,
+        brand_summary: data.brand_summary ?? null,
         keywords: data.keywords,
         language: data.language,
         country: data.country ?? null,
@@ -81,6 +83,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
           entity_type: data.kind === "client" ? "client" : data.kind === "own" ? "organization" : "brand",
           website_url: data.brand_url ?? null,
           links: data.brand_url ? [{ url: data.brand_url, type: "official" }] : [],
+          sector: data.brand_summary ?? null,
           keywords: data.keywords,
           country: data.country ?? null,
           markets: data.country ? [data.country] : [],
@@ -90,7 +93,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
         },
         onboarding: { status: "in_progress", answers: {}, started_at: new Date().toISOString() },
         settings: { language: data.language, scope: "workspace", memory_isolation: "strict" },
-        space_kind: data.parent_id ? data.space_kind : "company",
+        space_kind: data.space_kind,
         parent_id: data.parent_id ?? null,
       } as any)
       .select(WORKSPACE_COLUMNS)

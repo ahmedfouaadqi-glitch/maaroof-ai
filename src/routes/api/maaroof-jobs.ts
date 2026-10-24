@@ -1,7 +1,7 @@
 // Workspace background jobs: GET list / events, POST cancel. Owner-only.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { isStaleJob, isTerminalJobStatus, parseAfter } from "@/lib/maaroof/jobs";
+import { isStaleJob, isTerminalJobStatus, parseAfter, shouldFallbackFromWorkspaceScope } from "@/lib/maaroof/jobs";
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";
@@ -29,15 +29,38 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           workspaceId = owned.id;
         }
         if (!id) {
-          let q = db.from("maaroof_jobs").select("id, goal, mode, status, error, request_payload, created_at, updated_at").eq("user_id", a.userId);
+          const columns = "id, goal, mode, status, error, request_payload, created_at, updated_at";
+          let q = db.from("maaroof_jobs").select(columns).eq("user_id", a.userId);
           q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
-          const { data } = await q.order("created_at", { ascending: false }).limit(10);
-          return Response.json({ jobs: data || [] });
+          let { data: jobs, error: scopedError } = await q.order("created_at", { ascending: false }).limit(1000);
+          let scopeFallback = false;
+          if (shouldFallbackFromWorkspaceScope(scopedError)) {
+            console.warn("[maaroof-jobs] scoped list failed; retrying owner-wide", scopedError.message);
+            const fallback = await db.from("maaroof_jobs").select(columns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
+            jobs = fallback.data;
+            scopeFallback = true;
+            if (fallback.error) {
+              console.error("[maaroof-jobs] owner-wide list failed", fallback.error.message);
+              return Response.json({ jobs: [], degraded: true, error: "jobs_unavailable" }, { status: 503 });
+            }
+          }
+          return Response.json({ jobs: jobs || [], scope_fallback: scopeFallback });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
+        const hasWorkspaceScope = url.searchParams.has("workspace_id");
         let jobQuery = db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId);
-        if (url.searchParams.has("workspace_id")) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
-        const { data: job } = await jobQuery.maybeSingle();
+        if (hasWorkspaceScope) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
+        let { data: job, error: jobLookupError } = await jobQuery.maybeSingle();
+        if (jobLookupError && hasWorkspaceScope && shouldFallbackFromWorkspaceScope(jobLookupError)) {
+          console.warn("[maaroof-jobs] scoped lookup failed; retrying by user_id", jobLookupError.message);
+          const fallback = await db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId).maybeSingle();
+          job = fallback.data;
+          jobLookupError = fallback.error;
+        }
+        if (jobLookupError) {
+          console.error("[maaroof-jobs] job lookup failed", jobLookupError.message);
+          return Response.json({ error: "job_lookup_failed" }, { status: 503 });
+        }
         if (!job) return Response.json({ error: "not_found" }, { status: 404 });
         let notStarted = false;
         if (job.status === "running") {
@@ -62,7 +85,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
               if (claimed?.length) {
                 try {
                   const rp = job.request_payload || {};
-                  const r = await fetch(new URL("/api/maaroof", request.url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: request.headers.get("authorization") || "" }, body: JSON.stringify({ goal: job.goal, lang: rp.lang || "ar", interface_mode: "workspace", workspace_id: job.workspace_id || null, execution_mode: job.mode === "execution" ? undefined : job.mode, selected_skills: rp.selected_skills, probe_engines: rp.probe_engines, live_probe: rp.live_probe, resume_job_id: id, auto_resume: true }) });
+                  const r = await fetch(new URL("/api/maaroof", request.url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: request.headers.get("authorization") || "" }, body: JSON.stringify({ goal: job.goal, lang: rp.lang || "ar", interface_mode: "workspace", workspace_id: job.workspace_id || rp.workspace_id || null, execution_mode: job.mode === "execution" ? undefined : job.mode, selected_skills: rp.selected_skills, probe_engines: rp.probe_engines, live_probe: rp.live_probe, resume_job_id: id, auto_resume: true }) });
                   const j: any = await r.json().catch(() => ({}));
                   const newId = j?.job_id || j?.id;
                   if (newId) { await db.from("maaroof_jobs").update({ request_payload: { ...payload, auto_resume_job_id: newId } }).eq("id", id); (job as any).auto_resume_job_id = newId; }

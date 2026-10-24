@@ -491,6 +491,27 @@ function WorkspacePage() {
         const refreshed = (await supabase.auth.refreshSession()).data.session?.access_token;
         if (refreshed) { token = refreshed; response = await post(token); }
       }
+      // If the queue table is unavailable, the server streams the run directly instead of failing.
+      if (response.ok && (response.headers.get("content-type") || "").includes("text/event-stream")) {
+        setJobId(null);
+        setResumeFrom(null);
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("inline_stream_unavailable");
+        const decoder = new TextDecoder();
+        let buffer = "";
+        try {
+          while (true) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+            buffer = parseEventStreamChunk(buffer + decoder.decode(chunk.value, { stream: true }));
+          }
+          buffer = parseEventStreamChunk(buffer + decoder.decode() + "\n\n");
+        } finally {
+          reader.releaseLock();
+        }
+        setRunning(false);
+        return;
+      }
       const body = await response.json().catch(() => ({}));
       if (response.ok && body?.needs_skill) {
         setSkillAsk(Array.isArray(body.options) ? body.options : []); setRunning(false);
