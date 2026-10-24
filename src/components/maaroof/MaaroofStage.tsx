@@ -1,0 +1,399 @@
+import { TermHint } from "@/components/TermHint";
+// Architecture & Concept: Ahmed Maaroof
+// MaaroofStage — interactive visual replacement for the raw JSON stream.
+import { Component, useMemo, useState, type ReactNode } from "react";
+import { useI18n } from "@/lib/i18n";
+import { MatrixRain } from "./MatrixRain";
+import { AgentPulse } from "@/components/agent/AgentPulse";
+import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { cardsForStep } from "@/lib/engine-card-adapters";
+import { directAnswer, sectionsForTool, councilCards } from "@/lib/maaroof/report-sections";
+import { ExportButtons } from "@/components/ExportButtons";
+import { Bot, FileDown, Code2, CheckCircle2, XCircle, Brain, Wrench, Lightbulb, Sparkles } from "lucide-react";
+
+export type StageEvent = { type: string; data: any; t: number };
+
+/**
+ * Keeps one malformed streamed card from taking down the whole page:
+ * a render error inside the boundary hides that card only, instead of
+ * bubbling to the root error boundary.
+ */
+class CardBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("[MaaroofStage] card render failed", error);
+  }
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
+
+type Props = {
+  events: StageEvent[];
+  running: boolean;
+  geoMode: "auto" | "country" | "world";
+  country?: string;
+  detected?: { country?: string; city?: string } | null;
+  finalText?: string;
+  onExport?: () => void;
+  onPickCountry?: (code: string) => void;
+  /** User is typing the goal — pulses the agent ribbon before execution starts. */
+  typing?: boolean;
+};
+
+const TOOL_ICON: Record<string, string> = {
+  analyze: "🔎", suggest: "💡", compare: "⚖️", feasibility: "📊", bizdev: "💼",
+  research: "📚", visibility: "👁️", brand_boost: "🚀", company_email: "✉️",
+  applied_ranking: "🏆", geo_strategist: "🗺️", competitor_monitor: "🛰️",
+  social_analysis: "📱", what_if: "🧪", brand_authority: "👑", geo_rewrite: "✍️",
+};
+
+export function MaaroofStage({ events, running, geoMode, country, detected, finalText, onExport, onPickCountry, typing }: Props) {
+  const { t, lang: L } = useI18n();
+  const [showRaw, setShowRaw] = useState(false);
+
+  const plan = useMemo(() => {
+    const ev = [...events].reverse().find((e) => e.type === "plan");
+    return ev?.data?.plan?.steps as Array<{ tool: string; reason?: string; input?: any }> | undefined;
+  }, [events]);
+
+  const stepStatus = useMemo(() => {
+    const map = new Map<number, { ok?: boolean; output?: any }>();
+    for (const e of events) {
+      if (e.type === "tool_result" && typeof e.data?.index === "number") {
+        map.set(e.data.index, { ok: !!e.data.ok, output: e.data.output });
+      }
+    }
+    return map;
+  }, [events]);
+
+  const phase = useMemo(() => {
+    const last = [...events].reverse().find((e) => e.type === "phase");
+    return last?.data?.phase as string | undefined;
+  }, [events]);
+
+  const reflections = events.filter((e) => e.type === "reflection");
+  const lastReflection = reflections[reflections.length - 1]?.data?.text as string | undefined;
+
+  const highlight = geoMode === "auto" ? detected?.country : geoMode === "country" ? country : undefined;
+  const worldMode = geoMode === "world";
+
+  const intensity = Math.min(1, (plan?.length || 1) / 8);
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border bg-gradient-to-b from-background to-card min-h-[420px]">
+      {/* Matrix backdrop */}
+      <MatrixRain active={running} intensity={running ? intensity : 0.15} className="absolute inset-0 w-full h-full opacity-25 pointer-events-none" />
+
+      <div className="relative grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 p-4">
+        {/* Agent activity — strands trace the word معروف while Maaroof works */}
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-[280px]">
+            <AgentPulse
+              variant="word"
+              square
+              events={events}
+              running={running}
+              typing={typing}
+              settled={!!finalText}
+              className="hidden md:block"
+            />
+            <AgentPulse
+              variant="word"
+              events={events}
+              running={running}
+              typing={typing}
+              settled={!!finalText}
+              height={110}
+              className="md:hidden"
+            />
+          </div>
+          <div className="text-center mt-2 text-xs text-muted-foreground">
+            {worldMode ? t("auto.global_scope") : highlight ? `الإضاءة: ${highlight}${detected?.city && geoMode === "auto" ? ` · ${detected.city}` : ""}` : t("auto.not_discovered_yet")}
+          </div>
+          <PhasePill phase={phase} running={running} />
+        </div>
+
+        {/* Steps orbit / cards */}
+        <div className="relative space-y-3">
+          <div className="relative z-10 space-y-3">
+
+          {!plan && !running && events.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">
+              <Bot className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p>مرحباً، أنا <strong className="text-foreground">{t("auto.maaroof_2")}</strong>{t("auto.define_your_goal_and_i_will")}</p>
+            </div>
+          )}
+
+          {!plan && running && (
+            <div className="text-center py-10 animate-pulse">
+              <Sparkles className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <p className="text-sm">{t("auto.i_analyze_your_goal_and_build")}</p>
+            </div>
+          )}
+
+          {plan && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {plan.map((step, i) => {
+                const st = stepStatus.get(i);
+                const running_ = !st && running;
+                const ok = st?.ok;
+                const fail = st && !st.ok;
+                return (
+                  <div key={i} style={{ animationDelay: `${Math.min(i, 8) * 70}ms` }} className={[
+                    "rounded-lg border p-3 text-xs transition-all motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both",
+                    ok ? "border-green-500/40 bg-green-500/5" : fail ? "border-destructive/40 bg-destructive/5" : running_ ? "border-amber-500/40 bg-amber-500/5 animate-pulse" : "border-border bg-card/60",
+                  ].join(" ")}>
+                    <div className="flex items-center gap-2 font-semibold mb-1">
+                      <span className="text-lg leading-none">{TOOL_ICON[step.tool] || "🔧"}</span>
+                      <span className="flex-1 truncate">{step.tool}</span>
+                      {ok && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      {fail && <XCircle className="w-4 h-4 text-destructive" />}
+                      {running_ && <Wrench className="w-4 h-4 text-amber-500 animate-spin" />}
+                    </div>
+                    {step.reason && <div className="text-muted-foreground line-clamp-2 mb-1">{step.reason}</div>}
+                    {ok && st?.output?.mci?.reused && (
+                      <div className="text-[10px] text-primary mb-1">♻ <TermHint term="cached">{L === "en" ? "Previous result reused — no charge" : L === "ku" ? "ئەنجامی پێشوو — بێ تێچوون" : "نتيجة سابقة — بلا خصم"}</TermHint></div>
+                    )}
+                    {ok && <StepAnswer tool={step.tool} output={st?.output} lang={L} />}
+                    {ok && <StepEngines tool={step.tool} output={st?.output} lang={L} />}
+                    {fail && (
+                      <div className="text-destructive line-clamp-3">
+                        ⚠ {String(st?.output?.error || "") === "internal_error"
+                          ? t("maaroof_tool_failed_internal")
+                          : t("maaroof_tool_failed")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {lastReflection && (
+            <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 p-3 text-xs">
+              <div className="flex items-center gap-2 font-semibold mb-1 text-purple-400"><Brain className="w-4 h-4" /> تأمل</div>
+              <div className="whitespace-pre-wrap text-muted-foreground">{lastReflection}</div>
+            </div>
+          )}
+
+          <CardBoundary><CouncilPanel events={events} lang={L} /></CardBoundary>
+          <CardBoundary><ConflictCard events={events} /></CardBoundary>
+          <CardBoundary><TimingChip events={events} /></CardBoundary>
+          <CardBoundary><ComplianceCard events={events} /></CardBoundary>
+
+
+
+          {finalText && (
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 font-semibold text-primary"><Lightbulb className="w-4 h-4" /> {t("auto.final_answer")}</div>
+                {onExport && (
+                  <button onClick={onExport} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><FileDown className="w-3 h-3" /> تصدير PDF</button>
+                )}
+              </div>
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{finalText}</div>
+              <CardBoundary><TrustPanel events={events} /></CardBoundary>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <button onClick={() => setShowRaw((s) => !s)} className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"><Code2 className="w-3 h-3" /> {showRaw ? t("auto.hide_raw_log") : t("auto.view_raw_history_json")}</button>
+          </div>
+
+          {showRaw && (
+            <pre className="text-[10px] bg-muted/40 border rounded p-2 max-h-72 overflow-auto whitespace-pre-wrap">
+              {events.map((e) => `[${e.type}] ${JSON.stringify(e.data).slice(0, 400)}`).join("\n")}
+            </pre>
+          )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhasePill({ phase, running }: { phase?: string; running: boolean }) {
+  const { t } = useI18n();
+  if (!running && !phase) return null;
+  const label = phase === "planning" ? t("auto.planning_2") : phase === "summarizing" ? t("auto.formulating_answer") : phase === "loading_history" ? t("auto.loading_session") : running ? t("auto.working") : phase || "";
+  return <div className="mt-3 text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">{label}</div>;
+}
+
+/** Part 7 — Strategic Time Engine verdict chip. */
+function TimingChip({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
+  const timing = [...events].reverse().find((e) => e.type === "timing")?.data as any;
+  if (!timing?.verdict) return null;
+  const LABEL: Record<string, string> = {
+    execute_now: t("auto.execute_now"), delay: t("auto.postpone"), schedule: t("auto.scheduling"), observe: t("auto.monitoring"), cancel: t("auto.cancel"),
+  };
+  const tone = timing.verdict === "execute_now" ? "border-green-500/40 bg-green-500/5 text-green-500"
+    : timing.verdict === "cancel" ? "border-destructive/40 bg-destructive/5 text-destructive"
+    : "border-amber-500/40 bg-amber-500/5 text-amber-500";
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${tone}`}>
+      <div className="font-semibold mb-1">قرار التوقيت: {LABEL[timing.verdict] || timing.verdict}</div>
+      {timing.reason && <div className="text-muted-foreground">{timing.reason}</div>}
+    </div>
+  );
+}
+
+
+/** Part 8 — Constitutional compliance (30 Laws of Cognitive Intelligence). */
+function ComplianceCard({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const c = [...events].reverse().find((e) => e.type === "compliance")?.data as any;
+  if (!c) return null;
+  const tone = c.verdict !== "compliant" ? "border-amber-500/40 bg-amber-500/5 text-amber-600"
+    : c.verdict === "warning" ? "border-amber-500/40 bg-amber-500/5 text-amber-500"
+    : "border-green-500/40 bg-green-500/5 text-green-500";
+  const label = c.verdict === "violation" ? "توصية: راجع النتائج قبل اعتمادها" : c.verdict === "warning" ? t("auto.constitutional_notes") : t("auto.committed_to_the_constitution");
+  const violations: any[] = Array.isArray(c.violations) ? c.violations : [];
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${tone}`}>
+      <button onClick={() => setOpen((o) => !o)} className="w-full text-start font-semibold">
+        مراجعة الجودة: {label} — {c.score}% ({c.satisfied?.length ?? 0}/{c.checked} قانون)
+      </button>
+      {open && violations.length > 0 && (
+        <ul className="list-disc ms-4 mt-2 space-y-1 text-muted-foreground">
+          {violations.map((v, i) => (
+            <li key={i}>
+              <span className="font-medium">{v.ar}</span>
+              {v.severity === "hard" && <span className="ms-1 text-[10px] rounded px-1 border border-destructive/50">{t("auto.mandatory")}</span>}
+              <span className="block">{v.detail}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Part 7 — Cognitive Conflict Engine resolution card. */
+
+function ConflictCard({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
+  const c = [...events].reverse().find((e) => e.type === "conflict")?.data as any;
+  if (!c) return null;
+  return (
+    <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 text-xs">
+      <div className="font-semibold mb-1 text-orange-400">{t("auto.resolve_cognitive_conflict")}</div>
+      {c.why && <div className="text-muted-foreground mb-1">{c.why}</div>}
+      {c.chosen && <div className="text-muted-foreground">الموقف المعتمد: <span className="font-mono">{c.chosen}</span></div>}
+      {c.residual_risk && <div className="text-muted-foreground">مخاطرة متبقية: {c.residual_risk}</div>}
+    </div>
+  );
+}
+
+/** Part 7 — Trust Engine: why this recommendation. */
+function TrustPanel({ events }: { events: StageEvent[] }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const trust = [...events].reverse().find((e) => e.type === "trust")?.data as any;
+  if (!trust) return null;
+  const List = ({ label, items }: { label: string; items?: any[] }) =>
+    Array.isArray(items) && items.length ? (
+      <div className="mb-2">
+        <div className="font-semibold text-foreground/80">{label}</div>
+        <ul className="list-disc ms-4 text-muted-foreground">
+          {items.slice(0, 6).map((x, i) => <li key={i}>{typeof x === "string" ? x : JSON.stringify(x).slice(0, 160)}</li>)}
+        </ul>
+      </div>
+    ) : null;
+  return (
+    <div className="mt-3 border-t border-border/50 pt-2 text-xs">
+      <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground">
+        {open ? t("auto.hide") : t("auto.why_this_recommendation")}{typeof trust.confidence === "number" ? ` — ثقة ${trust.confidence}%` : ""}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          <List label={t("auto.evidence")} items={trust.evidence} />
+          <List label={t("auto.assumptions")} items={trust.assumptions} />
+          <List label={t("auto.limits")} items={trust.limitations} />
+          <List label={t("auto.alternatives")} items={trust.alternatives} />
+          <List label={t("auto.risks_2")} items={trust.risks} />
+          {trust.expected_outcome && (
+            <div><span className="font-semibold text-foreground/80">النتيجة المتوقعة: </span><span className="text-muted-foreground">{trust.expected_outcome}</span></div>
+          )}
+          {Array.isArray(trust.evidence_graph) && trust.evidence_graph.length > 0 && (
+            <div className="pt-1">
+              <div className="font-semibold text-foreground/80">{t("auto.guides_grid")}</div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {trust.evidence_graph.slice(0, 16).map((n: any, i: number) => (
+                  <span key={i} className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-mono text-muted-foreground" title={n?.detail || ""}>
+                    {n?.kind}:{n?.ref}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function StepEngines({ tool, output, lang }: { tool: string; output: any; lang: string }) {
+  const [open, setOpen] = useState(false);
+  const cards = useMemo(() => cardsForStep(tool, output), [tool, output]);
+  if (!cards.length) return null;
+  return (
+    <div className="mt-1">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="text-[11px] text-primary underline-offset-2 hover:underline">
+        {open ? (lang === "en" ? "Hide models" : lang === "ku" ? "شاردنەوەی مۆدێلەکان" : "إخفاء النماذج") : (lang === "en" ? "Show models" : lang === "ku" ? "پیشاندانی مۆدێلەکان" : "عرض النماذج")}
+      </button>
+      {open && <div className="mt-2 sm:col-span-2"><CardBoundary><EngineResponseFlow answers={cards} compact /></CardBoundary></div>}
+    </div>
+  );
+}
+
+
+/** Direct, readable answer of one tool + optional single-step export. */
+function StepAnswer({ tool, output, lang }: { tool: string; output: any; lang: string }) {
+  const ans = useMemo(() => directAnswer(output), [output]);
+  if (!ans) return null;
+  return (
+    <div className="mb-1 rounded-md bg-background/60 p-2">
+      <div className="text-[10px] uppercase tracking-wide text-primary mb-0.5">{lang === "en" ? "Direct answer" : lang === "ku" ? "وەڵامی ڕاستەوخۆ" : "الإجابة المباشرة"}</div>
+      <div className="text-foreground leading-relaxed">{ans}</div>
+      <div className="mt-1">
+        <ExportButtons toolKey={`maaroof-${tool}`} size="xs" build={() => ({ title: tool, lang: lang as any, sections: [{ heading: lang === "en" ? "Direct answer" : "الإجابة المباشرة", kind: "text", text: ans }, ...sectionsForTool(tool, output)] })} />
+      </div>
+    </div>
+  );
+}
+
+function CouncilPanel({ events, lang }: { events: StageEvent[]; lang: string }) {
+  const cards = useMemo(() => councilCards(events), [events]);
+  const [open, setOpen] = useState(false);
+  if (!cards.length) return null;
+  const T = lang === "en" ? { h: "How we got there — expert council", o: "Opinion", x: "Objection", c: "Conflict resolved", d: "Decision", r: "Self-review", m: "Show all", l: "Show less" }
+    : lang === "ku" ? { h: "چۆن گەیشتین — ئەنجومەنی پسپۆڕان", o: "ڕا", x: "ناڕەزایی", c: "چارەسەری ناکۆکی", d: "بڕیار", r: "پێداچوونەوە", m: "هەموو", l: "کەمتر" }
+    : { h: "كيف وصلنا — مجلس الخبراء", o: "رأي", x: "اعتراض", c: "حل تعارض", d: "قرار", r: "مراجعة ذاتية", m: "عرض الكل", l: "عرض أقل" };
+  const label = { opinion: T.o, objection: T.x, conflict: T.c, decision: T.d, reflection: T.r } as const;
+  const tone = { opinion: "border-border", objection: "border-orange-500/40", conflict: "border-amber-500/40", decision: "border-primary/40", reflection: "border-purple-500/40" } as const;
+  const shown = open ? cards : cards.slice(0, 4);
+  return (
+    <div className="rounded-lg border bg-card/60 p-3 text-xs space-y-2">
+      <div className="flex items-center gap-2 font-semibold"><Brain className="w-4 h-4 text-primary" /> {T.h}</div>
+      {shown.map((c, i) => (
+        <div key={i} style={{ animationDelay: `${i * 60}ms` }} className={`rounded border-s-2 ${tone[c.kind]} ps-2 py-1 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:fill-mode-both`}>
+          <div className="text-[10px] text-muted-foreground">{label[c.kind]}{c.who ? ` · ${c.who}` : ""}{c.confidence ? ` · ${c.confidence}%` : ""}</div>
+          <div className="whitespace-pre-wrap line-clamp-4">{c.text}</div>
+        </div>
+      ))}
+      {cards.length > 4 && <button onClick={() => setOpen(!open)} className="text-primary text-[11px]">{open ? T.l : `${T.m} (${cards.length})`}</button>}
+    </div>
+  );
+}

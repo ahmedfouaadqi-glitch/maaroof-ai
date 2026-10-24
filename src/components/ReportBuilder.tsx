@@ -1,0 +1,362 @@
+import { useEffect, useMemo, useState } from "react";
+import { FileText, Loader2, Save, RefreshCw, Trash2, BarChart3, LineChart as LineIcon, Radar as RadarIcon } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
+import { ExportButtons } from "@/components/ExportButtons";
+import type { ExportPayload } from "@/lib/exports";
+import { useCapturedResults } from "@/lib/export-bus";
+import { listToolHistory, getToolResult } from "@/lib/tool-history.functions";
+
+import {
+  LineChart, Line, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis,
+  XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid, Legend,
+} from "recharts";
+
+type MetricId = "suggestions" | "strategies" | "whatif" | "watch" | "visibility" | "compare";
+type ChartType = "bar" | "line" | "radar";
+
+function range(days: number) {
+  return new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+}
+
+function bucketByDay(rows: any[]): { day: string; count: number }[] {
+  const map = new Map<string, number>();
+  for (const r of rows) {
+    const d = (r.created_at || "").slice(0, 10);
+    if (!d) continue;
+    map.set(d, (map.get(d) || 0) + 1);
+  }
+  return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([day, count]) => ({ day, count }));
+}
+
+export function ReportBuilder() {
+  const { t } = useI18n();
+  let auth: ReturnType<typeof useAuth> | null = null;
+  try { auth = useAuth(); } catch {}
+  const user = auth?.user;
+
+  const METRICS: { id: MetricId; label: string; table: string }[] = [
+    { id: "suggestions", label: t("report_metric_suggestions"), table: "suggestions" },
+    { id: "strategies", label: t("report_metric_strategies"), table: "geo_strategies" },
+    { id: "whatif", label: t("report_metric_whatif"), table: "whatif_scenarios" },
+    { id: "watch", label: t("report_metric_watch"), table: "competitor_watch" },
+    { id: "visibility", label: t("report_metric_visibility"), table: "analyses" },
+    { id: "compare", label: t("report_metric_compare"), table: "brand_boost_runs" },
+  ];
+
+  const [selected, setSelected] = useState<MetricId[]>(["suggestions", "visibility"]);
+  const [days, setDays] = useState(30);
+  const [title, setTitle] = useState(t("report_title_default"));
+  const [chart, setChart] = useState<ChartType>("bar");
+  const [busy, setBusy] = useState(false);
+  const [data, setData] = useState<Record<string, any[]>>({});
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [tplName, setTplName] = useState("");
+  // Live results captured from the tools during this session.
+  const captured = useCapturedResults();
+  const [pickedTools, setPickedTools] = useState<string[]>([]);
+  useEffect(() => {
+    setPickedTools((prev) => {
+      const keys = captured.map((c) => c.toolKey);
+      const kept = prev.filter((k) => keys.includes(k));
+      const added = keys.filter((k) => !prev.includes(k));
+      return [...kept, ...added];
+    });
+  }, [captured.length]);
+  function toggleTool(k: string) {
+    setPickedTools((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  }
+
+  // Saved results from the per-tool history.
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [pickedSaved, setPickedSaved] = useState<string[]>([]);
+  const [savedPayloads, setSavedPayloads] = useState<Record<string, any>>({});
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const r: any = await listToolHistory({ data: { limit: 50 } });
+        setSavedItems(r?.items || []);
+      } catch {}
+    })();
+  }, [user?.id]);
+  async function toggleSaved(id: string) {
+    if (pickedSaved.includes(id)) { setPickedSaved((s) => s.filter((x) => x !== id)); return; }
+    if (!savedPayloads[id]) {
+      try {
+        const row: any = await getToolResult({ data: { id } });
+        setSavedPayloads((m) => ({ ...m, [id]: row?.payload }));
+      } catch { return; }
+    }
+    setPickedSaved((s) => [...s, id]);
+  }
+
+
+  function toggle(id: MetricId) { setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
+
+  async function loadData() {
+    if (!user) return;
+    setBusy(true);
+    const since = range(days);
+    const out: Record<string, any[]> = {};
+    for (const k of selected) {
+      const m = METRICS.find((x) => x.id === k);
+      if (!m) continue;
+      try {
+        const { data: rows } = await supabase.from(m.table as any).select("*").gte("created_at", since).order("created_at", { ascending: false }).limit(200);
+        out[k] = rows || [];
+      } catch { out[k] = []; }
+    }
+    setData(out);
+    setBusy(false);
+  }
+
+  async function loadTemplates() {
+    if (!user) return;
+    const { data: rows } = await supabase.from("report_templates").select("*").order("updated_at", { ascending: false });
+    setTemplates(rows || []);
+  }
+
+  useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id]);
+
+  async function saveTemplate() {
+    if (!user || !tplName.trim()) return;
+    await supabase.from("report_templates").insert({ user_id: user.id, name: tplName.trim(), config: { selected, days, chart, title } });
+    setTplName("");
+    loadTemplates();
+  }
+  function applyTemplate(tpl: any) {
+    const c = tpl.config || {};
+    if (Array.isArray(c.selected)) setSelected(c.selected);
+    if (c.days) setDays(c.days);
+    if (c.chart) setChart(c.chart);
+    if (c.title) setTitle(c.title);
+    setTimeout(loadData, 50);
+  }
+  async function delTemplate(id: string) {
+    await supabase.from("report_templates").delete().eq("id", id);
+    loadTemplates();
+  }
+
+  const chartData = useMemo(() => {
+    const byDay: Record<string, any> = {};
+    for (const k of selected) {
+      const series = bucketByDay(data[k] || []);
+      for (const { day, count } of series) {
+        if (!byDay[day]) byDay[day] = { day };
+        byDay[day][k] = count;
+      }
+    }
+    return Object.values(byDay).sort((a: any, b: any) => a.day.localeCompare(b.day));
+  }, [data, selected]);
+
+  const radarData = useMemo(
+    () => selected.map((k) => ({ metric: METRICS.find((m) => m.id === k)?.label || k, value: (data[k] || []).length })),
+    [data, selected],
+  );
+
+  // High-contrast palette (OKLCH-derived hex), distinct in both light/dark
+  const palette = ["#3b82f6", "#f97316", "#10b981", "#a855f7", "#ef4444", "#eab308"];
+
+  const payload = useMemo<() => ExportPayload>(() => () => {
+    const sections: any[] = [];
+    // 1) Live tool results captured from the tools themselves.
+    for (const c of captured) {
+      if (!pickedTools.includes(c.toolKey)) continue;
+      sections.push({ kind: "text", heading: c.title, text: new Date(c.at).toLocaleString() });
+      sections.push(...c.payload.sections);
+    }
+    // 1b) Saved results from the per-tool history.
+    for (const id of pickedSaved) {
+      const p = savedPayloads[id];
+      const it = savedItems.find((x) => x.id === id);
+      if (!p?.sections) continue;
+      sections.push({ kind: "text", heading: p.title || it?.title || "", text: new Date(it?.created_at || Date.now()).toLocaleString() });
+      sections.push(...p.sections);
+    }
+    // 2) Database metrics — complete, nothing truncated.
+    for (const k of selected) {
+      const rows = data[k] || [];
+      const label = METRICS.find((m) => m.id === k)?.label || k;
+      if (rows.length === 0) {
+        sections.push({ kind: "text", heading: label, text: t("report_no_data") });
+        continue;
+      }
+      const cols = Array.from(new Set(rows.flatMap((r) => Object.keys(r)))).filter((c) => !["user_id", "id"].includes(c));
+      sections.push({
+        kind: "table",
+        heading: label,
+        table: {
+          columns: cols,
+          data: rows.map((r) => cols.map((c) => {
+            const v = (r as any)[c];
+            if (v == null) return "";
+            if (typeof v === "object") return JSON.stringify(v);
+            return String(v);
+          })),
+        },
+      });
+    }
+    sections.push({ kind: "kv", heading: t("report_preview_title"), rows: selected.map((k) => [METRICS.find((m) => m.id === k)?.label || k, (data[k] || []).length]) });
+    return { title, sections };
+  }, [selected, data, title, t, captured, pickedTools, pickedSaved, savedPayloads, savedItems]);
+
+
+  const chartButtons: { id: ChartType; label: string; Icon: any }[] = [
+    { id: "bar", label: t("report_chart_bar"), Icon: BarChart3 },
+    { id: "line", label: t("report_chart_line"), Icon: LineIcon },
+    { id: "radar", label: t("report_chart_radar"), Icon: RadarIcon },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-card/60 to-card/30 p-4 shadow-sm">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FileText className="size-4 text-primary"/> {t("dash_tool_report_t")}</div>
+        <p className="mb-3 text-xs text-muted-foreground">{t("report_intro")}</p>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("report_title_label")} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+            {[7, 30, 90, 180, 365].map((d) => <option key={d} value={d}>{t("report_period_last").replace("{n}", String(d))}</option>)}
+          </select>
+        </div>
+
+        {/* Metric pills */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {METRICS.map((m) => (
+            <button key={m.id} onClick={() => toggle(m.id)} className={`rounded-full px-3 py-1 text-xs border transition ${selected.includes(m.id) ? "bg-primary text-primary-foreground border-primary shadow-sm" : "border-border hover:border-primary/40"}`}>{m.label}</button>
+          ))}
+        </div>
+
+        {/* Live tool results */}
+        {captured.length > 0 && (
+          <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <div className="text-xs font-semibold text-primary">{t("report_src_tools")}</div>
+            <p className="mb-2 text-[11px] text-muted-foreground">{t("report_src_tools_hint")}</p>
+            <div className="flex flex-wrap gap-2">
+              {captured.map((c) => (
+                <button
+                  key={c.toolKey}
+                  onClick={() => toggleTool(c.toolKey)}
+                  className={`rounded-full px-3 py-1 text-xs border transition ${pickedTools.includes(c.toolKey) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"}`}
+                >
+                  {c.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Saved results from tool history */}
+        {savedItems.length > 0 && (
+          <div className="mt-3 rounded-xl border border-border bg-background/40 p-3">
+            <div className="text-xs font-semibold">{t("report_src_saved")}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {savedItems.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => toggleSaved(it.id)}
+                  className={`rounded-full px-3 py-1 text-[11px] border transition ${pickedSaved.includes(it.id) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"}`}
+                >
+                  {it.title} · {new Date(it.created_at).toLocaleDateString()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chart-type segmented */}
+        <div className="mt-3 inline-flex rounded-full border border-border bg-background p-1">
+          {chartButtons.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setChart(id)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition ${chart === id ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Icon className="size-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button onClick={loadData} disabled={busy} className="inline-flex items-center gap-1 rounded-full border border-border px-4 py-1.5 text-xs hover:border-primary/40">
+            {busy ? <Loader2 className="size-3 animate-spin"/> : <RefreshCw className="size-3"/>} {t("report_refresh")}
+          </button>
+          <ExportButtons build={payload} />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder={t("report_tpl_name_ph")} className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs" />
+          <button onClick={saveTemplate} disabled={!tplName.trim()} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary disabled:opacity-50">
+            <Save className="size-3"/> {t("report_tpl_save")}
+          </button>
+          {templates.map((tpl) => (
+            <span key={tpl.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px]">
+              <button onClick={() => applyTemplate(tpl)} className="hover:text-primary">{tpl.name}</button>
+              <button onClick={() => delTemplate(tpl.id)} className="text-destructive hover:opacity-70"><Trash2 className="size-3"/></button>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Visual preview */}
+      <div className="rounded-2xl border-2 border-border bg-background p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-sm font-semibold text-foreground">{t("report_preview_title")}</div>
+          <div className="text-[11px] font-mono text-muted-foreground">{selected.length} · {chart}</div>
+        </div>
+        <div className="h-80 w-full rounded-xl bg-card/60 p-3">
+          <ResponsiveContainer width="100%" height="100%">
+            {chart === "bar" ? (
+              <BarChart data={chartData} margin={{ top: 8, right: 12, left: -6, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} allowDecimals={false} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "2px solid hsl(var(--primary))", borderRadius: 10, fontSize: 12, color: "hsl(var(--foreground))" }} cursor={{ fill: "hsl(var(--primary) / 0.08)" }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                {selected.map((k, i) => <Bar key={k} dataKey={k} fill={palette[i % palette.length]} name={METRICS.find((m) => m.id === k)?.label} radius={[6, 6, 0, 0]} />)}
+              </BarChart>
+            ) : chart === "line" ? (
+              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -6, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.6} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} allowDecimals={false} stroke="hsl(var(--foreground))" strokeOpacity={0.5} />
+                <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "2px solid hsl(var(--primary))", borderRadius: 10, fontSize: 12, color: "hsl(var(--foreground))" }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                {selected.map((k, i) => <Line key={k} type="monotone" dataKey={k} stroke={palette[i % palette.length]} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} name={METRICS.find((m) => m.id === k)?.label} />)}
+              </LineChart>
+            ) : (
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.7} />
+                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12, fill: "hsl(var(--foreground))", fontWeight: 600 }} />
+                <Radar dataKey="value" stroke={palette[0]} fill={palette[0]} fillOpacity={0.45} strokeWidth={2.5} />
+                <RTooltip contentStyle={{ background: "hsl(var(--background))", border: "2px solid hsl(var(--primary))", borderRadius: 10, fontSize: 12, color: "hsl(var(--foreground))" }} />
+              </RadarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Metric summary cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {selected.map((k, i) => {
+          const rows = data[k] || [];
+          const label = METRICS.find((m) => m.id === k)?.label;
+          return (
+            <div key={k} className="rounded-xl border border-border bg-card/40 p-4">
+              <div className="flex items-center gap-2">
+                <span className="size-2.5 rounded-full" style={{ background: palette[i % palette.length] }} />
+                <div className="text-sm font-semibold">{label}</div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-1">
+                <div className="font-display text-2xl font-bold text-gradient">{rows.length}</div>
+                <div className="text-[11px] text-muted-foreground">/ {days}d</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
