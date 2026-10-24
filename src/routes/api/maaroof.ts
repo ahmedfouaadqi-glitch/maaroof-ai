@@ -247,7 +247,7 @@ export const Route = createFileRoute("/api/maaroof")({
           }
           const jobPayload = {
             user_id: userId, workspace_id: verifiedWorkspaceId, goal, mode: executionMode || "execution", status: "running",
-            request_payload: { run_options: runOptions, resume_job_id: resumeId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang, auto_resumed: freeAutoResume },
+            request_payload: { run_options: runOptions, resume_job_id: resumeId, workspace_id: verifiedWorkspaceId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang, auto_resumed: freeAutoResume },
           };
           let { data: job, error: jobErr } = await db.from("maaroof_jobs").insert(jobPayload).select("id").single();
           if (jobErr && isMissingWorkspaceIdColumn(jobErr)) {
