@@ -36,7 +36,10 @@ export function Dardasha({ lang, onApproveTask, busyTask }: { lang: L; onApprove
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { void call("GET").then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null }))); }); }, []);
-  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
+  const boxRef = useRef<HTMLDivElement>(null);
+  // Scroll only inside the message box; never move the page.
+  useEffect(() => { const b = boxRef.current; if (b) b.scrollTo({ top: b.scrollHeight, behavior: "smooth" }); }, [msgs, busy]);
+  useEffect(() => { const t = inputRef.current; if (!t) return; t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 160)}px`; }, [text]);
 
   const addFiles = async (files: File[]) => {
     if (!user) return;
@@ -93,11 +96,11 @@ export function Dardasha({ lang, onApproveTask, busyTask }: { lang: L; onApprove
           <p className="text-xs text-muted-foreground">{tr(lang, "اكتب، الصق، أو اسحب ملفاً. معروف يفهم طلبك ويختار المهارات والأدوات بنفسه، ولا يبدأ أي مهمة إلا بموافقتك.", "Type, paste or drop a file. Maaroof understands, picks skills and tools itself, and starts nothing without your approval.", "بنووسە، بلکێنە یان فایل ڕابکێشە. معروف بەبێ ڕەزامەندیت هیچ دەست پێناکات.")}</p>
         </div>
         <div className="flex items-center gap-2">
-          {quota && <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums">{quota.unlimited ? tr(lang, "من رصيدك عند النجاح", "From balance on success", "لە باڵانس") : `${quota.remaining}/${quota.cap}`}</span>}
+          {quota && <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums">{(quota as any).approved ? tr(lang, "غير محدود", "Unlimited", "بێسنوور") : quota.unlimited ? tr(lang, "من رصيدك عند النجاح", "From balance on success", "لە باڵانس") : `${quota.remaining}/${quota.cap}`}</span>}
           {msgs.length > 0 && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف المحادثة؟", "Clear chat?", "سڕینەوە؟"))) { await call("DELETE"); setMsgs([]); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
         </div>
       </div>
-      <div className="max-h-[55vh] min-h-48 space-y-3 overflow-y-auto rounded-xl bg-background p-3">
+      <div ref={boxRef} className="max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
         {msgs.map((m, i) => (
           <div key={m.id || i} className={m.role === "user" ? "flex justify-end" : ""}>
@@ -134,9 +137,9 @@ export function Dardasha({ lang, onApproveTask, busyTask }: { lang: L; onApprove
         <textarea ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { const fs = Array.from(e.clipboardData.files || []); if (fs.length) { e.preventDefault(); void addFiles(fs); } }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-          rows={2} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
-          className="flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
-        <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50" aria-label="send"><Send className="size-4" /></button>
+          rows={3} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
+          className="min-h-20 flex-1 resize-none rounded-2xl border-2 border-border bg-background px-4 py-3 text-base leading-7 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15" />
+        <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-50" aria-label="send"><Send className="size-5" /></button>
       </div>
     </section>
   );
