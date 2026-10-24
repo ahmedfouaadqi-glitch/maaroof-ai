@@ -10,7 +10,7 @@ const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l ==
 type Row = Fact & { id?: string; broadcast?: boolean };
 
 /** What Maaroof actually knows, with source and date for every item. */
-export function KnownFactsPanel({ lang }: { lang: L }) {
+export function KnownFactsPanel({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [owner, setOwner] = useState<any>(null);
@@ -20,15 +20,20 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
   useEffect(() => {
     if (!user) return;
     (async () => {
+      let factQuery = (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at, broadcast, workspace_id").eq("user_id", user.id);
+      factQuery = workspaceId ? factQuery.eq("workspace_id", workspaceId) : factQuery.is("workspace_id", null);
+      let spacesQuery = (supabase as any).from("workspaces").select("name, space_kind, parent_id").eq("owner_id", user.id);
+      spacesQuery = workspaceId ? spacesQuery.eq("parent_id", workspaceId) : spacesQuery.limit(100);
       const [{ data: kf }, { data: iv }, { data: p }, { data: ws }] = await Promise.all([
-        (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at, broadcast").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-        supabase.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", user.id).limit(100),
-        supabase.from("profiles").select("full_name, brand_name, account_kind, specialty, entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, created_at").eq("id", user.id).maybeSingle(),
-        (supabase as any).from("workspaces").select("name, space_kind, parent_id").eq("owner_id", user.id).limit(100),
+        factQuery.order("created_at", { ascending: false }).limit(50),
+        workspaceId ? Promise.resolve({ data: [] as any[] }) : supabase.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", user.id).limit(100),
+        workspaceId ? (supabase as any).from("workspaces").select("id,name,kind,space_kind,parent_id,brand_url,brand_summary,keywords,profile,goals,success_metrics,country,created_at,updated_at").eq("id", workspaceId).eq("owner_id", user.id).maybeSingle() : supabase.from("profiles").select("full_name, brand_name, account_kind, specialty, entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, created_at").eq("id", user.id).maybeSingle(),
+        spacesQuery,
       ]);
-      setOwner(p || {}); setSpaces((ws || []) as any);
+      const raw: any = p || {};
+      const pr: any = workspaceId ? { ...(raw.profile || {}), full_name: raw.name, brand_name: raw.profile?.brand_name || raw.name, account_kind: raw.kind, specialty: raw.brand_summary, entity_type: raw.profile?.entity_type || raw.space_kind || raw.kind, hq_country: raw.country, target_markets: raw.profile?.target_markets || [], entity_links: raw.profile?.entity_links || (raw.brand_url ? { website: raw.brand_url } : {}), entity_facts: raw.profile?.entity_facts || [], entity_verified_at: null, entity_updated_at: raw.updated_at, created_at: raw.created_at } : raw;
+      setOwner(pr); setSpaces((ws || []) as any);
       const out: Row[] = [...freshFacts((kf || []) as Row[]), ...interviewFacts((iv || []) as any)];
-      const pr: any = p || {};
       const at = pr.entity_updated_at || pr.created_at || new Date().toISOString();
       const conf = pr.entity_verified_at ? "evidence" : "hypothesis";
       if (pr.entity_type) out.push({ source: "profile", fact: `${tr(lang, "نوع الكيان", "Entity type", "جۆر")}: ${pr.entity_type}`, confidence: conf, created_at: at });
@@ -39,7 +44,7 @@ export function KnownFactsPanel({ lang }: { lang: L }) {
       if (Array.isArray(pr.entity_facts)) for (const f of pr.entity_facts.slice(0, 10)) { const t = typeof f === "string" ? f : f?.text || f?.value; if (t) out.push({ source: "profile", fact: String(t), confidence: conf, created_at: at }); }
       setRows(out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))));
     })().catch(() => setRows([]));
-  }, [user?.id, lang]);
+  }, [user?.id, lang, workspaceId]);
 
   const del = async (id: string) => {
     await (supabase as any).from("knowledge_facts").delete().eq("id", id);
