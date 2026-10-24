@@ -26,4 +26,13 @@ describe("chat quota", () => {
   });
   it("never negative", () => { expect(chatQuota({ metered: false, subscribed: false, todayUserMessages: 15 }).remaining).toBe(0); });
   it("metered users are unlimited", () => { expect(chatQuota({ metered: true, subscribed: false, todayUserMessages: 50 }).remaining).toBeNull(); });
+  it("approved accounts are never capped", () => {
+    expect(chatAllowed({ metered: false, subscribed: false, todayUserMessages: 500, unlimited: true })).toBe(true);
+    expect(chatQuota({ metered: false, subscribed: false, todayUserMessages: 500, unlimited: true }).remaining).toBeNull();
+  });
+  it("broken task marker never leaks into text", () => {
+    const r = parseReply('Answer here. TASK:{"kind[]');
+    expect(r.text).toBe("Answer here.");
+    expect(r.needsTask).toBe(true);
+  });
 });
