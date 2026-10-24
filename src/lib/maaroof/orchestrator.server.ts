@@ -197,23 +197,40 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     try {
       const { data } = await db()
         .from("workspaces")
-        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
+        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, entity_truth_card, onboarding, settings, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
         .eq("id", ctx.workspaceId)
+        .eq("owner_id", ctx.userId)
         .maybeSingle();
       workspaceProfile = data || null;
     } catch {}
   }
-  // Entity Truth Card fallback for tool inputs (fail-open).
+  // Use the active workspace's identity only while that workspace is selected.
   let entityProfile: any = null;
-  try {
-    const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
-    entityProfile = data || null;
-  } catch {}
+  if (ctx.workspaceId) {
+    const truth = workspaceProfile?.entity_truth_card && typeof workspaceProfile.entity_truth_card === "object" ? workspaceProfile.entity_truth_card : {};
+    const links = Array.isArray(truth.links) ? truth.links : (workspaceProfile?.brand_url ? [{ url: workspaceProfile.brand_url, type: "official" }] : []);
+    entityProfile = {
+      brand_name: truth.entity_name || workspaceProfile?.name || null,
+      brand_keywords: Array.isArray(truth.keywords) ? truth.keywords.join(", ") : (truth.keywords || workspaceProfile?.keywords || null),
+      hq_country: truth.country || workspaceProfile?.country || null,
+      entity_type: truth.entity_type || workspaceProfile?.kind || null,
+      target_markets: Array.isArray(truth.markets) ? truth.markets : [],
+      specialty_scope: truth.sector || workspaceProfile?.brand_summary || null,
+      entity_links: links,
+    };
+  } else {
+    try {
+      const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
+      entityProfile = data || null;
+    } catch {}
+  }
   // Saved clarification answers (only stored with the user's memory consent): reuse instead of asking again.
   try {
     const fresh = Object.entries(ctx.clarifications || {}).filter(([k, v]) => k !== "tools" && String(v || "").trim());
-    for (const [k, v] of fresh) await remember({ userId: ctx.userId, kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
-    const { data: saved } = await db().from("maaroof_memory").select("content").eq("user_id", ctx.userId).like("content", "clarify:%").order("created_at", { ascending: false }).limit(20);
+    for (const [k, v] of fresh) await remember({ userId: ctx.userId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
+    let clarifyQuery = db().from("maaroof_memory").select("content").eq("user_id", ctx.userId);
+    clarifyQuery = ctx.workspaceId ? clarifyQuery.eq("workspace_id", ctx.workspaceId) : clarifyQuery.is("workspace_id", null);
+    const { data: saved } = await clarifyQuery.like("content", "clarify:%").order("created_at", { ascending: false }).limit(20);
     const reused: Record<string, string> = {};
     for (const r of (saved as any[]) || []) {
       const m = String(r.content).match(/^clarify:([a-z_]+)=([\s\S]+)$/);
@@ -357,7 +374,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile);
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (workspaceProfile ?
+      "\n\n[WORKSPACE ENTITY TRUTH CARD — values are user-supplied and not verified unless marked otherwise]\n" + JSON.stringify(workspaceProfile.entity_truth_card || {}).slice(0, 5000) +
+      "\n\n[WORKSPACE ONBOARDING CONTEXT]\n" + JSON.stringify(workspaceProfile.onboarding || {}).slice(0, 3000) +
+      "\n\n[WORKSPACE SETTINGS]\n" + JSON.stringify(workspaceProfile.settings || {}).slice(0, 1500) : "");
 
     // Part 13 — pipeline stages 1..6 (understanding & context).
     if (tracer.enabled) {
