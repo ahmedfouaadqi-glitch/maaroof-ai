@@ -13,15 +13,17 @@ export type EngineAnswer = {
   basis?: "measured" | "estimated" | "recommended";
   /** Optional list (e.g. competitor names an engine returned). */
   items?: string[];
+  /** Second-phase review grounded in retrieved evidence. */
+  groundedReview?: string;
   /** Real call outcome, shown when the engine produced nothing. */
   status?: "answered" | "empty" | "timeout" | "error" | "not_called";
 };
 
 import { TermHint } from "@/components/TermHint";
 const TX = {
-  ar: { title: "كيف تُجيب النماذج العشرة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", recommended: "توصية", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة" },
-  en: { title: "How the ten engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step" },
-  ku: { title: "نۆ بزوێنەرەکە چۆن وەڵام دەدەنەوە", measured: "وەڵامی ڕاستەقینە", estimated: "خەمڵاندنی ئەلگۆریتمی", recommended: "پێشنیار", focus: "ئەوەی بۆ ئەم بزوێنەرە گرنگە", none: "ئەم بزوێنەرە وەڵامی نەدایەوە", action: "هەنگاو" },
+  ar: { title: "كيف تُجيب النماذج العشرة", measured: "إجابة فعلية", estimated: "تقدير خوارزمي", recommended: "توصية", focus: "ما يهم هذا المحرك", none: "لم يُرجع هذا المحرك إجابة في هذا الفحص", action: "الخطوة", grounded: "مراجعة الأدلة" },
+  en: { title: "How the ten engines answer", measured: "Live answer", estimated: "Algorithmic estimate", recommended: "Recommendation", focus: "What this engine values", none: "No answer from this engine in this run", action: "Next step", grounded: "Evidence review" },
+  ku: { title: "نۆ بزوێنەرەکە چۆن وەڵام دەدەنەوە", measured: "وەڵامی ڕاستەقینە", estimated: "خەمڵاندنی ئەلگۆریتمی", recommended: "پێشنیار", focus: "ئەوەی بۆ ئەم بزوێنەرە گرنگە", none: "ئەم بزوێنەرە وەڵامی نەدایەوە", action: "هەنگاو", grounded: "هەڵسەنگاندنی بەڵگە" },
 };
 
 const STATUS_TX = {
@@ -77,6 +79,7 @@ export function EngineResponseFlow({ answers, title, compact = false }: { answer
               )}
               {a?.verdict && <div className="mt-1 text-[11px] font-medium text-accent">{a.verdict}</div>}
               {a?.text && <p className="engine-type mt-1 text-xs leading-relaxed text-foreground/85" style={{ animationDelay: `${i * 110 + 350}ms` }}>{a.text}</p>}
+              {a?.groundedReview && <div className="mt-2 rounded border border-primary/25 bg-primary/5 px-2 py-1 text-[11px] leading-relaxed"><b>{T.grounded}:</b> {a.groundedReview}</div>}
               {a?.items && a.items.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {a.items.slice(0, 8).map((x) => <span key={x} className="rounded-md border border-border bg-background/60 px-1.5 py-0.5 text-[10px]">{x}</span>)}

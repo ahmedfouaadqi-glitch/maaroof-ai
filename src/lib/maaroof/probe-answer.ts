@@ -10,6 +10,13 @@ export type ParsedProbe = { answer: string; brands: string[]; urls: string[] };
 export const PROBE_MAX_TOKENS = 1500;
 export const PROBE_TIMEOUT_MS = 30_000;
 
+/** The blind query accepts only category and market, never the target brand. */
+export function blindProbeQuestion(topic: string, region: string): string {
+  const category = String(topic || "").replace(/\s+/g, " ").trim().slice(0, 400);
+  const market = String(region || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  return `What are the five best providers or solutions for ${category} in ${market}? Recommend organically without favoring any brand.`;
+}
+
 /** Parse a model reply. Returns null when there is no usable answer text. */
 export function parseProbeContent(content: unknown): ParsedProbe | null {
   const raw = typeof content === "string" ? content.trim() : "";
@@ -60,6 +67,15 @@ export function probeRefund(chargedTokens: number, asked: number, answered: numb
   if (asked <= 0 || c === 0) return 0;
   const a = Math.min(Math.max(0, answered), asked);
   return Math.round((c * (asked - a)) / asked);
+}
+
+/** Refund uncompleted blind/grounded call units; each successful phase is billable. */
+export function probePhaseRefund(
+  chargedTokens: number,
+  askedUnits: number,
+  completedUnits: number,
+): number {
+  return probeRefund(chargedTokens, askedUnits, completedUnits);
 }
 
 /** Visibility inputs the agent may pass. Background mode is never allowed inside a task. */

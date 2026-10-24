@@ -9,6 +9,7 @@ import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-q
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
+import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
 
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean };
@@ -191,45 +192,57 @@ export const Route = createFileRoute("/api/visibility")({
             const picked = normalizeEngines(body.probe_engines);
             const { engines } = await excludeUnhealthyEngines(picked);
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
+            const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
+            const probeTopic = (keywords || String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim()).slice(0, 400);
+            if (!probeTopic) return Response.json({ error: "probe_category_required" }, { status: 400 });
+            const probeUnits = engines.length * 2;
             const pRun = crypto.randomUUID();
-            const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: engines.length, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, endpoint: "/api/visibility#probe" } });
+            const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: probeUnits, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, phases: ["blind", "evidence_grounded"], endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
             const market = describeMarket(body.scope);
             const models = await resolveEngineModels(engines);
-            const q = keywords ? `${keywords} — ${market.region}` : `${brand} ${market.region}`;
+            const q = blindProbeQuestion(probeTopic, market.region);
             const PA = await import("@/lib/maaroof/probe-answer");
-            // Evidence first (MCI gate): reuse verified knowledge; search the web only when it is missing.
             let evidence: { url: string; title: string }[] = [];
             let evidenceText = "";
             let evidenceSource: "knowledge" | "web" | "none" = "none";
-            try {
-              const { evidenceGate } = await import("@/lib/mci/evidence-gate");
-              const { data: kf } = await admin.from("knowledge_facts").select("id, fact, confidence, created_at, source").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
-              const items = ((kf || []) as any[]).map((f) => ({ id: String(f.id), source: "knowledge" as const, claimType: (Number(f.confidence) >= 0.85 ? "verified_fact" : "hypothesis") as any, content: String(f.fact || ""), reliability: Number(f.confidence) || 0, createdAt: f.created_at }));
-              const gate = evidenceGate(items);
-              if (!gate.needWeb) {
-                evidenceText = items.filter((i) => i.claimType === "verified_fact").slice(0, 6).map((i) => `- ${i.content.slice(0, 240)}`).join("\n");
-                evidenceSource = "knowledge";
-              }
-              if (gate.needWeb && process.env.FIRECRAWL_API_KEY) {
-                const { fcSearch } = await import("@/lib/firecrawl");
-                const sr: any = await fcSearch(`${keywords || brand} ${market.region}`, { limit: 6 }, { userId, toolKey: "visibility" } as any);
-                const raw: any[] = sr?.data?.web || sr?.web || (Array.isArray(sr?.data) ? sr.data : []);
-                evidence = raw.map((it: any) => ({ url: String(it?.url || ""), title: String(it?.title || it?.metadata?.title || "").slice(0, 160) })).filter((x) => /^https?:\/\//.test(x.url)).slice(0, 6);
-                evidenceText = raw.slice(0, 6).map((it: any) => `- ${String(it?.title || "").slice(0, 120)}: ${String(it?.description || it?.markdown || "").replace(/\s+/g, " ").slice(0, 200)} (${it?.url || ""})`).join("\n");
-                evidenceSource = evidence.length ? "web" : "none";
-              }
-            } catch {}
-            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[]; status: string; sources: { url: string; title: string }[]; ms: number }[] = [];
-            const statuses: Record<string, { status: string; ms: number }> = {};
-            const askOne = async (e: string, model: string | undefined) => {
+            const collectEvidence = async () => {
+              // MCI evidence gate runs only after the blind phase; reuse verified facts and search only when needed.
+              try {
+                const { evidenceGate } = await import("@/lib/mci/evidence-gate");
+                const { data: kf } = await admin.from("knowledge_facts").select("id, fact, confidence, created_at, source").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+                const items = ((kf || []) as any[]).map((f) => ({ id: String(f.id), source: "knowledge" as const, claimType: (Number(f.confidence) >= 0.85 ? "verified_fact" : "hypothesis") as any, content: String(f.fact || ""), reliability: Number(f.confidence) || 0, createdAt: f.created_at }));
+                const gate = evidenceGate(items);
+                if (!gate.needWeb) {
+                  const verified = items.filter((i) => i.claimType === "verified_fact").slice(0, 6);
+                  evidence = verified.map((i: any) => ({ url: String(i.source || ""), title: String(i.content || "").slice(0, 120) })).filter((x) => /^https?:\/\//.test(x.url));
+                  evidenceText = verified.map((i: any) => `- ${i.content.slice(0, 240)}${/^https?:\/\//.test(String(i.source || "")) ? ` (${i.source})` : ""}`).join("\n");
+                  evidenceSource = "knowledge";
+                }
+                if (gate.needWeb && process.env.FIRECRAWL_API_KEY) {
+                  const { fcSearch } = await import("@/lib/firecrawl");
+                  const sr: any = await fcSearch(`${probeTopic} ${market.region}`, { limit: 6 }, { userId, toolKey: "visibility" } as any);
+                  const raw: any[] = sr?.data?.web || sr?.web || (Array.isArray(sr?.data) ? sr.data : []);
+                  evidence = raw.map((it: any) => ({ url: String(it?.url || ""), title: String(it?.title || it?.metadata?.title || "").slice(0, 160) })).filter((x: any) => /^https?:\/\//.test(x.url)).slice(0, 6);
+                  evidenceText = raw.slice(0, 6).map((it: any) => `- ${String(it?.title || "").slice(0, 120)}: ${String(it?.description || it?.markdown || "").replace(/\s+/g, " ").slice(0, 200)} (${it?.url || ""})`).join("\n");
+                  evidenceSource = evidence.length ? "web" : "none";
+                }
+              } catch { evidenceSource = "none"; }
+            };
+            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string; brands: string[]; status: string; blind_status: string; grounded_status: string; sources: { url: string; title: string }[]; ms: number }[] = [];
+            const statuses: Record<string, { status: string; ms: number; blind_status?: string; grounded_status?: string }> = {};
+            let completedUnits = 0;
+            const askOne = async (e: string, model: string | undefined, phase: "blind" | "grounded", blindAnswer?: string) => {
               const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), PA.PROBE_TIMEOUT_MS);
               try {
+                const phaseRules = phase === "blind"
+                  ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
+                  : `PHASE 2 — EVIDENCE-GROUNDED REVIEW: The target entity is \"${brand}\". Review the public evidence and the blind answer below. Decide whether the evidence is sufficient to cite this entity as a reliable source in future answers; state the exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof. Public evidence (may be empty):\n${evidenceText || "No public evidence was retrieved."}\nBlind answer (for comparison only):\n${blindAnswer || "Unavailable."}`;
                 const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                   method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
                   body: JSON.stringify({ model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages: [
-                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. Answer directly as you would to a real user; never ask for clarification. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}${evidenceText ? `\nPublic web results you may rely on (cite their URLs when you use them):\n${evidenceText}` : ""}\nReturn JSON only: {"answer":"2-4 sentence answer","brands":["brand names you would recommend, in order"],"urls":["source URLs you relied on"]}` },
-                    { role: "user", content: q },
+                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence organic recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
+                    { role: "user", content: phase === "blind" ? q : `Assess the target entity against the retrieved evidence. The original blind question was: ${q}` },
                   ] }),
                 });
                 if (!r.ok) return { kind: "error" as const };
@@ -240,28 +253,48 @@ export const Route = createFileRoute("/api/visibility")({
                 return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const) };
               } finally { clearTimeout(t); }
             };
-            const askEngine = async (e: string) => {
-              const t0 = Date.now();
-              let res = await askOne(e, models[e]?.model);
-              // One retry with the fast backup model when the reply was empty or broken.
-              if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash");
-              const ms = Date.now() - t0;
-              if (res.kind !== "ok") { statuses[e] = { status: res.kind, ms }; return; }
-              const { p } = res;
-              const idx = p.brands.findIndex((b) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
-              statuses[e] = { status: "answered", ms };
-              answers.push({ engine: e, mentioned: idx >= 0 || p.answer.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: p.answer, brands: p.brands, status: "answered", sources: PA.linkSources(p, evidence), ms });
+            const blindResults = new Map<string, { p: any; startedAt: number }>();
+            const askEngine = async (e: string, phase: "blind" | "grounded") => {
+              const previous = blindResults.get(e);
+              const startedAt = previous?.startedAt ?? Date.now();
+              const askPhase = async (answer?: string) => {
+                let res = await askOne(e, models[e]?.model, phase, answer);
+                if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash", phase, answer);
+                return res;
+              };
+              const res = await askPhase(previous?.p.answer);
+              const ms = Date.now() - startedAt;
+              if (phase === "blind") {
+                if (res.kind !== "ok") { statuses[e] = { status: res.kind, blind_status: res.kind, ms }; return; }
+                completedUnits++;
+                blindResults.set(e, { p: res.p, startedAt });
+                statuses[e] = { status: "blind_answered", blind_status: "answered", ms };
+                return;
+              }
+              if (!previous) return;
+              if (res.kind === "ok") completedUnits++;
+              const p = previous.p;
+              const idx = p.brands.findIndex((b: string) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
+              const sources = [...PA.linkSources(p, evidence), ...(res.kind === "ok" ? PA.linkSources(res.p, evidence) : [])].filter((s: any, i: number, all: any[]) => all.findIndex((x) => x.url === s.url) === i);
+              statuses[e] = { status: res.kind === "ok" ? "answered" : "partial", blind_status: "answered", grounded_status: res.kind, ms };
+              answers.push({ engine: e, mentioned: idx >= 0 || p.answer.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: p.answer, grounded_answer: res.kind === "ok" ? res.p.answer : undefined, brands: p.brands, status: res.kind === "ok" ? "answered" : "partial", blind_status: "answered", grounded_status: res.kind, sources, ms });
             };
             // Throttled batches (3 at a time, short gap) instead of firing all ten at once.
             const askAll = async () => {
               for (const batch of PA.probeBatches(engines, 3)) {
-                await Promise.allSettled(batch.map(askEngine));
+                await Promise.allSettled(batch.map((e) => askEngine(e, "blind")));
+                await new Promise((r) => setTimeout(r, 200));
+              }
+              await collectEvidence();
+              const groundedEngines = engines.filter((e) => blindResults.has(e));
+              for (const batch of PA.probeBatches(groundedEngines, 3)) {
+                await Promise.allSettled(batch.map((e) => askEngine(e, "grounded")));
                 await new Promise((r) => setTimeout(r, 200));
               }
             };
             const settle = async () => {
-              const refund = PA.probeRefund(Number(pChg.tokens || 0), engines.length, answers.length);
-              if (refund > 0) { try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun, _meta: { refund: true, partial: true, answered: answers.length, asked: engines.length, endpoint: "/api/visibility#probe" } } as any); } catch {} }
+              const refund = PA.probePhaseRefund(Number(pChg.tokens || 0), probeUnits, completedUnits);
+              if (refund > 0) { try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun, _meta: { refund: true, partial: true, completed_units: completedUnits, asked_units: probeUnits, endpoint: "/api/visibility#probe" } } as any); } catch {} }
               return Number(pChg.tokens || 0) - refund;
             };
             // Background mode (only when a person asks for it from the tool page): finish after the response.

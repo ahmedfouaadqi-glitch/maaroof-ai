@@ -18,16 +18,19 @@ const TX = {
   ku: { title: "پشکنینی ڕاستەوخۆ لەگەڵ بزوێنەرەکان", hint: "ئەو بزوێنەرانە هەڵبژێرە کە دەتەوێت بپرسیت.", all: "هەموو", none: "هیچ", cost: "تێچووی چاوەڕوانکراو", bal: "باڵانسەکەت", low: "باڵانس بەس نییە", run: "پرسیار لە هەڵبژێردراوەکان", mode: "شێوازی کارکردن", instant: "دەستبەجێ", notify: "ئاگادارکردنەوە", bg: "لە پاشبنەمادا", bgOk: "لە پاشبنەمادا دەستی پێکرد — ئەنجام لە ئاگادارکردنەوەکاندا دێت.", brandPh: "ناوی براندەکەت بنووسە", save: "لە هەژمارەکەمدا پاشەکەوتی بکە", locked: "لە پلانەکەتدا نییە", max: "زۆرترین", res: "وەڵامی ڕاستەقینە", rank: "پلەت", miss: "ناوی تۆی نەهێنا", free: "نەژمێردراو", signIn: "تکایە بچۆ ژوورەوە بۆ بەکارهێنانی پشکنینی ڕاستەوخۆ.", login: "چوونەژوورەوە" },
 };
 
-type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; brands: string[]; reason?: string };
+type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string; status?: string; brands: string[]; reason?: string };
 type Council = { agreement: string; disagreement: string | null; decision: string };
 
 export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean }) {
   const [typed, setTyped] = useState("");
+  const [topic, setTopic] = useState(keywords || "");
   const [saveIt, setSaveIt] = useState(true);
   const brand = brandProp.trim() || typed;
+  const probeTopic = topic.trim();
   const { lang } = useI18n();
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const T = TX[L];
+  const topicRequired = L === "en" ? "Enter a service/category so the blind question is not biased by your brand name." : L === "ku" ? "خزمەتگوزاری یان پۆل بنووسە بۆ ئەوەی پرسیاری کوێرانە بە ناوی براندەکەت ئاراستە نەکرێت." : "أدخل الخدمة أو الفئة حتى لا يتأثر السؤال الأعمى باسم علامتك.";
   const entFn = useServerFn(getEngineEntitlement);
   const costFn = useServerFn(getCostPreview);
   const [allowed, setAllowed] = useState<EngineKey[] | null>(null);
@@ -45,11 +48,12 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   useEffect(() => {
     entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 10)); }).catch(() => setAllowed([]));
   }, []);
+  useEffect(() => { if (keywords && !topic) setTopic(keywords); }, [keywords, topic]);
 
   const maxN = cost?.maxEngines ?? 9;
   useEffect(() => {
     if (!sel.length) { setCost(null); return; }
-    costFn({ data: { toolKey: "visibility.probe", units: sel.length } }).then(setCost).catch(() => setCost(null));
+    costFn({ data: { toolKey: "visibility.probe", units: sel.length * 2 } }).then(setCost).catch(() => setCost(null));
   }, [sel.length]);
 
   useEffect(() => { try { localStorage.setItem("run_mode:visibility.probe", mode); } catch {} }, [mode]);
@@ -60,6 +64,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
 
   async function run() {
     if (!sel.length || busy) return;
+    if (!probeTopic) { setErr(topicRequired); return; }
     setBusy(true); setErr(null); setAnswers(null); setBgMsg(false);
     if (!brandProp.trim() && typed.trim() && saveIt) {
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id); } catch {}
@@ -71,7 +76,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       const r = await apiFetch("/api/visibility", {
         method: "POST",
         headers,
-        body: JSON.stringify({ brand, keywords, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
+        body: JSON.stringify({ brand, keywords: probeTopic, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
@@ -88,6 +93,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
     verdict: a.rank ? `${T.rank}: #${a.rank}` : T.miss,
     action: a.mentioned ? undefined : a.reason,
     text: a.answer,
+    groundedReview: a.grounded_answer || (a.status === "partial" ? (L === "en" ? "Evidence review did not return; only the blind result is available." : L === "ku" ? "هەڵسەنگاندنی بەڵگە نەگەڕایەوە؛ تەنها ئەنجامی کوێرانە بەردەستە." : "لم تُرجع مراجعة الأدلة؛ المتاح هو نتيجة السبر الأعمى فقط.") : undefined),
     items: a.brands.slice(0, 5),
   })), [answers, L]);
 
@@ -96,13 +102,17 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   return (
     <div className="rounded-xl border border-primary/30 bg-card/50 p-3 space-y-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Radar className="size-4" /> {T.title}</div>
-      <p className="text-xs text-muted-foreground">{T.hint}</p>
+      <p className="text-xs text-muted-foreground">{L === "en" ? "Stage 1 asks for organic recommendations without your brand name. Stage 2 reviews the result against retrieved evidence. Cost preview includes both calls per engine." : L === "ku" ? "قۆناغی ١ پێشنیاری سروشتی بەبێ ناوی براندەکەت دەپرسی؛ قۆناغی ٢ ئەنجامەکە بە بەڵگە هەڵدەسەنگێنێت. تێچوو هەردوو پەیوەندییەکە بۆ هەر مۆدێلێک دەگرێتەوە." : "المرحلة الأولى تسأل عن توصيات طبيعية دون اسم علامتك، والثانية تراجع النتيجة مقابل الأدلة المستخرجة. معاينة التكلفة تشمل الاستدعاءين لكل محرك."}</p>
       {!brandProp.trim() && (
         <div className="flex flex-wrap items-center gap-2">
           <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={T.brandPh} className="flex-1 min-w-40 rounded-md border border-border bg-background px-2 py-1 text-xs" />
           <label className="flex items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={saveIt} onChange={(e) => setSaveIt(e.target.checked)} /> {T.save}</label>
         </div>
       )}
+      <label className="block space-y-1 text-xs">
+        <span>{L === "en" ? "Service or category to measure" : L === "ku" ? "خزمەتگوزاری یان پۆل" : "الخدمة أو الفئة المراد قياسها"}</span>
+        <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={L === "en" ? "e.g. digital marketing agencies in Beirut" : L === "ku" ? "نموونە: ئاژانسەکانی بازاڕکردنی دیجیتاڵ" : "مثال: وكالات التسويق الرقمي في بيروت"} className="w-full rounded-md border border-border bg-background px-2 py-1.5" />
+      </label>
       <div className="flex flex-wrap gap-2">
         {ENGINES.map((e) => {
           const ok = allowed?.includes(e.key);

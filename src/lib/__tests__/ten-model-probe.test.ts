@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseProbeContent, linkSources, probeRefund, stripAgentOnlyFields, PROBE_MAX_TOKENS } from "@/lib/maaroof/probe-answer";
+import { parseProbeContent, linkSources, probeRefund, probePhaseRefund, blindProbeQuestion, stripAgentOnlyFields, PROBE_MAX_TOKENS } from "@/lib/maaroof/probe-answer";
 import { chooseSkillsAutonomously } from "@/lib/maaroof/skill-inference";
 import { councilEngines, linksOf, stageTimeline } from "@/lib/maaroof/pipeline-cards";
 import { TOOL_OPTIONS } from "@/lib/tool-options";
@@ -25,6 +25,17 @@ describe("ten-model probe answers", () => {
     expect(probeRefund(240, 10, 4)).toBe(144);
     expect(probeRefund(240, 10, 10)).toBe(0);
     expect(probeRefund(240, 10, 0)).toBe(240);
+  });
+  it("charges and refunds blind/grounded calls as separate units", () => {
+    expect(probePhaseRefund(200, 10, 7)).toBe(60);
+    expect(probePhaseRefund(200, 10, 10)).toBe(0);
+    expect(probePhaseRefund(200, 10, 0)).toBe(200);
+  });
+  it("blind query uses only service category and market, with no target-brand input", () => {
+    const q = blindProbeQuestion("  digital   marketing agencies ", "Beirut");
+    expect(q).toContain("digital marketing agencies");
+    expect(q).toContain("Beirut");
+    expect(q).toContain("without favoring any brand");
   });
   it("background mode is removed from agent visibility input", () => {
     expect(stripAgentOnlyFields("visibility", { brand: "x", background: "some text" } as any)).toEqual({ brand: "x" });

@@ -24,7 +24,7 @@ export const getCostPreview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { toolKey: string; units?: number }) => ({
     toolKey: String(d?.toolKey || "").slice(0, 60),
-    units: Math.max(1, Math.min(ENGINE_KEYS.length, Math.round(Number(d?.units) || 1))),
+    units: Math.max(1, Math.min(ENGINE_KEYS.length * (String(d?.toolKey || "") === "visibility.probe" ? 2 : 1), Math.round(Number(d?.units) || 1))),
   }))
   .handler(async ({ data, context }): Promise<CostPreview> => {
     const { resolveToolCost, resolveProbePolicy } = await import("@/lib/tokens.server");

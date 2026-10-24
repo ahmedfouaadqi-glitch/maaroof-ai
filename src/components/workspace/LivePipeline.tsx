@@ -156,6 +156,7 @@ function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineVie
                 : tr(lang, "لم يذكر علامتك في إجابته.", "Did not mention your brand.", "ناوی نەهێنا.")}</p>
               <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><motion.div className="h-full bg-primary" initial={{ width: 0 }} animate={{ width: `${sel.mentioned ? (sel.rank ? Math.max(20, 100 - (sel.rank - 1) * 15) : 60) : 4}%` }} transition={{ duration: 0.6 }} /></div>
               {sel.answer && <blockquote className="border-s-2 border-primary ps-3 text-muted-foreground">«{sel.answer}»</blockquote>}
+              {sel.groundedAnswer && <div className="rounded-lg border border-primary/25 bg-primary/5 p-2 text-xs"><b>{tr(lang, "مراجعة الأدلة:", "Evidence review:", "هەڵسەنگاندنی بەڵگە:")}</b> {sel.groundedAnswer}</div>}
               {sel.brands.length > 0 && <p className="text-xs text-muted-foreground">{tr(lang, "الأسماء التي اقترحها: ", "Names it suggested: ", "ناوەکان: ")}{sel.brands.join("، ")}</p>}
               {sel.reason && <p className="text-xs text-muted-foreground">{sel.reason}</p>}
               {sel.sources.length > 0

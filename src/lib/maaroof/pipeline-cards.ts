@@ -78,7 +78,7 @@ export type EngineStatus = "waiting" | "asking" | "answered" | "unresponsive";
 export type EngineMiss = "empty" | "timeout" | "error" | null;
 /** Why an engine was never asked, from recorded events only. */
 export type EngineNotAsked = "probe_disabled" | "job_ended" | "not_reached" | null;
-export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; brands: string[]; reason: string | null; miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null; why?: EngineNotAsked };
+export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; groundedAnswer: string; brands: string[]; reason: string | null; miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null; why?: EngineNotAsked };
 
 function probeOf(out: any): { asked?: string[]; answers?: any[]; statuses?: Record<string, { status: string; ms?: number }> } | null {
   if (!out || typeof out !== "object") return null;
@@ -105,12 +105,12 @@ export function councilEngines(events: Ev[], engineKeys: readonly string[], runn
   return engineKeys.map((key) => {
     const a = answers.get(key);
     const ms = typeof statuses[key]?.ms === "number" ? statuses[key].ms! : typeof a?.ms === "number" ? a.ms : null;
-    if (a) return { key, status: "answered", mentioned: !!a.mentioned, rank: typeof a.rank === "number" ? a.rank : null, answer: String(a.answer || ""), brands: Array.isArray(a.brands) ? a.brands.map(String) : [], reason: a.reason ? String(a.reason) : null, miss: null, sources: Array.isArray(a.sources) ? a.sources.filter((s: any) => isUrl(s?.url)).map((s: any) => ({ url: String(s.url), title: String(s.title || s.url) })) : [], ms };
+    if (a) return { key, status: "answered", mentioned: !!a.mentioned, rank: typeof a.rank === "number" ? a.rank : null, answer: String(a.answer || ""), groundedAnswer: String(a.grounded_answer || ""), brands: Array.isArray(a.brands) ? a.brands.map(String) : [], reason: a.reason ? String(a.reason) : null, miss: null, sources: Array.isArray(a.sources) ? a.sources.filter((s: any) => isUrl(s?.url)).map((s: any) => ({ url: String(s.url), title: String(s.title || s.url) })) : [], ms };
     const st = String(statuses[key]?.status || "");
     const miss: EngineMiss = st === "empty" || st === "timeout" || st === "error" ? st : probe && asked.has(key) ? "empty" : null;
     const status: EngineStatus = probe && asked.has(key) ? "unresponsive" : asking ? "asking" : "waiting";
     const why: EngineNotAsked = status !== "waiting" ? null : disabled ? "probe_disabled" : running ? "not_reached" : "job_ended";
-    return { key, status, mentioned: null, rank: null, answer: "", brands: [], reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms, why };
+    return { key, status, mentioned: null, rank: null, answer: "", groundedAnswer: "", brands: [], reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms, why };
   });
 }
 
