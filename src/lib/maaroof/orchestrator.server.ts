@@ -870,7 +870,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       //      Runs ONE extra deliberation pass only when the council actually
       //      disagrees (objection, wide confidence spread, or divergent tool
       //      suggestions). No conflict → zero extra cost, identical to Part 6.
-      if (exec.enabled && exec.conflict_enabled) {
+      if (exec.enabled) {
         try {
           const opinions = decisionLog.filter((d: any) => d.phase === "council" && !d.error);
           const confs = opinions.map((d: any) => (typeof d.confidence === "number" ? d.confidence : null)).filter((v: any) => v != null) as number[];
@@ -879,7 +879,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           const toolSets = opinions.map((d: any) => JSON.stringify((d.suggest_tools || []).slice().sort()));
           const divergentTools = new Set(toolSets).size > 1;
           const threshold = Number(exec.conflict_threshold ?? 25);
-          const conflicted = objections > 0 || spread > threshold || divergentTools;
+          const conflicted = objections > 0 || spread >= threshold || divergentTools;
           if (conflicted && opinions.length > 1) {
             await ctx.emit("phase", { phase: "conflict" }); try { const _n = (await import("./narration")).narratePhase("conflict", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "conflict", text: _n }); } catch {}
             const xResp = await call("conflict", [
