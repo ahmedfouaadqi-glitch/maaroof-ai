@@ -137,8 +137,6 @@ function WorkspacePage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [pendingApproved, setPendingApproved] = useState("");
   useEffect(() => { try { const d = localStorage.getItem("ws-goal-draft"); if (d) setGoal((g) => g || d); } catch {} }, []);
-  // Explicit approval from «دردشة» starts the task once the goal state has updated.
-  useEffect(() => { if (canStartTask({ approved: !!pendingApproved, goal, running }) && goal === pendingApproved) { setPendingApproved(""); void start(); } }, [pendingApproved, goal, running]);
   useEffect(() => { try { if (goal) localStorage.setItem("ws-goal-draft", goal); else localStorage.removeItem("ws-goal-draft"); } catch {} }, [goal]);
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -165,6 +163,8 @@ function WorkspacePage() {
   }
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
+  // Explicit approval from «دردشة» starts the task once the goal state has updated.
+  useEffect(() => { if (canStartTask({ approved: !!pendingApproved, goal, running }) && goal === pendingApproved) { setPendingApproved(""); void start(); } }, [pendingApproved, goal, running]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [events, setEvents] = useState<WorkspaceEvent[]>([]);
   const [clarification, setClarification] = useState("");
