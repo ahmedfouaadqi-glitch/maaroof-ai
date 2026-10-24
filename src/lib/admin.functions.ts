@@ -16,7 +16,7 @@ const requireAdmin = createMiddleware({ type: "function" })
     if (error) throw new Response("Auth check failed", { status: 500 });
     if (!data) throw new Response("Forbidden: admin only", { status: 403 });
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return next({ context: { supabaseAdmin } as any });
+    return next({ context: { supabaseAdmin, userId } as any });
   });
 
 const uuid = z.string().uuid();
@@ -636,3 +636,28 @@ export const adminListKnowledgeSpaces = createServerFn({ method: "GET" })
     };
   });
 
+
+
+const approvedEmail = z.string().trim().email().max(254).transform((v) => v.toLowerCase());
+export const adminListApprovedAccounts = createServerFn({ method: "GET" }).middleware([requireAdmin]).handler(async ({ context }) => {
+ const { supabaseAdmin } = context as any;
+ const { data, error } = await supabaseAdmin.from("approved_accounts").select("id,email,created_at,added_by").order("created_at", { ascending: false }).limit(500);
+ if (error) throw new Response("Approved accounts could not be loaded", { status: 400 });
+ return { accounts: data ?? [] };
+});
+export const adminAddApprovedAccount = createServerFn({ method: "POST" }).middleware([requireAdmin])
+ .inputValidator((input: unknown) => z.object({ email: approvedEmail }).parse(input))
+ .handler(async ({ data, context }) => {
+  const { supabaseAdmin, userId } = context as any;
+  const { data: row, error } = await supabaseAdmin.from("approved_accounts").upsert({ email: data.email, added_by: userId }, { onConflict: "email" }).select("id,email,created_at,added_by").single();
+  if (error) throw new Response("Approved account could not be added", { status: 400 });
+  return { account: row };
+ });
+export const adminRemoveApprovedAccount = createServerFn({ method: "POST" }).middleware([requireAdmin])
+ .inputValidator((input: unknown) => z.object({ id: uuid }).parse(input))
+ .handler(async ({ data, context }) => {
+  const { supabaseAdmin } = context as any;
+  const { error } = await supabaseAdmin.from("approved_accounts").delete().eq("id", data.id);
+  if (error) throw new Response("Approved account could not be removed", { status: 400 });
+  return { ok: true };
+ });

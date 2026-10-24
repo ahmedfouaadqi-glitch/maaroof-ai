@@ -20,7 +20,7 @@ type Space = any;
 const TABS = ["assets", "nodes", "prompts", "interview"] as const;
 type Tab = (typeof TABS)[number];
 
-export function KnowledgeSpaces({ userId }: { userId: string | null }) {
+export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string | null; workspaceId?: string | null }) {
   const { t, lang } = useI18n();
   const list = useServerFn(listKnowledgeSpaces);
   const create = useServerFn(createKnowledgeSpace);
@@ -56,11 +56,11 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
 
   const refreshSpaces = useCallback(async () => {
     try {
-      const r: any = await list();
+      const r: any = await list({ data: { workspaceId } });
       setSpaces(r.spaces || []);
       setActiveId((cur) => cur || r.spaces?.[0]?.id || null);
     } catch (e: any) { setErr(String(e?.message || e)); }
-  }, [list]);
+  }, [list, workspaceId]);
 
   const refreshActive = useCallback(async (id: string) => {
     try {
@@ -94,7 +94,7 @@ export function KnowledgeSpaces({ userId }: { userId: string | null }) {
   const onCreate = () =>
     run("create", async () => {
       if (newName.trim().length < 2) return;
-      const r: any = await create({ data: { name: newName.trim() } });
+      const r: any = await create({ data: { name: newName.trim(), workspaceId } });
       setNewName("");
       await refreshSpaces();
       setActiveId(r.space?.id || null);

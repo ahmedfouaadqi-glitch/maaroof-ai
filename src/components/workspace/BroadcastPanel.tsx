@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FilesManager } from "./FilesManager";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Radio, LoaderCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -8,15 +9,21 @@ type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 
 /** "Intelligence broadcast": the machine-readable files you publish, and real AI-crawler visits to them. */
-export function BroadcastPanel({ lang }: { lang: L }) {
+export function BroadcastPanel({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const { user } = useAuth();
   const [packs, setPacks] = useState<any[] | null>(null);
   const [filesOpen, setFilesOpen] = useState(false);
   const [bots, setBots] = useState<Array<{ bot: string; count: number; last: string }>>([]);
+  const [workspaceProfile, setWorkspaceProfile] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
+      if (workspaceId) {
+        const { data } = await (supabase as any).from("workspaces").select("id,name,brand_url,brand_summary,keywords,profile,goals,success_metrics,language,country,city").eq("id", workspaceId).eq("owner_id", user.id).maybeSingle();
+        setWorkspaceProfile(data || null); setPacks([]); setBots([]); return;
+      }
+      setWorkspaceProfile(null);
       const since = new Date(Date.now() - 30 * 86400000).toISOString();
       const [{ data: p }, { data: h }] = await Promise.all([
         supabase.from("brand_authority_packs").select("brand_slug, brand_name, updated_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(10),
@@ -27,13 +34,13 @@ export function BroadcastPanel({ lang }: { lang: L }) {
       for (const r of (h || []) as any[]) { const k = r.bot_name || "?"; const e = m.get(k); if (e) e.count++; else m.set(k, { count: 1, last: r.hit_at }); }
       setBots([...m.entries()].map(([bot, v]) => ({ bot, ...v })).sort((a, b) => b.count - a.count));
     })().catch(() => setPacks([]));
-  }, [user?.id]);
+  }, [user?.id, workspaceId]);
 
   return (
     <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
       <h2 className="mb-1 flex items-center gap-2 font-semibold"><Radio className="size-5 text-primary" />{tr(lang, "بث الذكاء وتتبع الانتشار", "Intelligence broadcast & reach", "بڵاوکردنەوەی زیرەکی")}</h2>
       <p className="mb-3 text-xs text-muted-foreground">{tr(lang, "ملفات قراءة الآلة المنشورة لعلامتك، وزيارات زواحف الذكاء الاصطناعي الفعلية لها خلال آخر 30 يوماً. لا يُنشر أي ملف إلا بعد موافقتك من أداة تعزيز العلامة.", "Your published machine-readable files and real AI-crawler visits in the last 30 days. Nothing is published without your approval in Brand Boost.", "فایلە بڵاوکراوەکان و سەردانی خشۆکەکان.")}</p>
-      {packs === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : (
+      {workspaceId ? <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">{!workspaceProfile ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : <><h3 className="font-semibold">{workspaceProfile.profile?.brand_name || workspaceProfile.name}</h3><p className="mt-1 text-xs text-muted-foreground">{tr(lang, "هوية مستقلة لهذه المساحة. التصدير يتضمن حزم قراءة الآلة المتاحة.", "Independent identity for this workspace. Export includes available machine-readable packs.", "ناسنامەی جیاواز بۆ ئەم شوێنە.")}</p><div className="mt-3"><ExportButtons size="xs" build={() => ({ title: workspaceProfile.profile?.brand_name || workspaceProfile.name, lang, entity: { brand: workspaceProfile.profile?.brand_name || workspaceProfile.name, site: workspaceProfile.brand_url || undefined, summary: workspaceProfile.brand_summary || undefined, facts: Array.isArray(workspaceProfile.keywords) ? workspaceProfile.keywords : [], links: workspaceProfile.brand_url ? [workspaceProfile.brand_url] : [], faqs: Array.isArray(workspaceProfile.profile?.faqs) ? workspaceProfile.profile.faqs : [] }, sections: [{ heading: tr(lang, "هوية مساحة العمل", "Workspace identity", "ناسنامەی شوێن"), kind: "kv", rows: [[tr(lang, "الاسم", "Name", "ناو"), workspaceProfile.profile?.brand_name || workspaceProfile.name], ["Website", workspaceProfile.brand_url || "—"], [tr(lang, "الوصف", "Description", "وەسف"), workspaceProfile.brand_summary || "—"]] }] })} /></div></>}</div> : packs === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border border-border bg-background p-3">
             <p className="mb-2 text-sm font-semibold">{tr(lang, "الملفات المنشورة", "Published files", "فایلەکان")}</p>
@@ -67,7 +74,7 @@ export function BroadcastPanel({ lang }: { lang: L }) {
           </div>
         </div>
       )}
-      {filesOpen && <FilesManager lang={lang} onClose={() => setFilesOpen(false)} />}
+      {filesOpen && <FilesManager lang={lang} workspaceId={workspaceId} onClose={() => setFilesOpen(false)} />}
     </section>
   );
 }

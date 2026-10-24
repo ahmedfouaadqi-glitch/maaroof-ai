@@ -10,12 +10,24 @@ async function authed(request: Request) {
   return data.user?.id ? { admin: admin as any, userId: data.user.id } : null;
 }
 
+async function resolveWorkspace(db: any, userId: string, raw: unknown): Promise<{ id: string | null; error?: string }> {
+  if (raw == null || raw === "") return { id: null };
+  if (typeof raw !== "string" || !/^[0-9a-f-]{36}$/i.test(raw)) return { id: null, error: "invalid_workspace" };
+  const { data } = await db.from("workspaces").select("id").eq("id", raw).eq("owner_id", userId).maybeSingle();
+  return data ? { id: data.id } : { id: null, error: "workspace_not_found" };
+}
+function scopeWorkspace(query: any, workspaceId: string | null) {
+  return workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+}
+
 export const Route = createFileRoute("/api/maaroof-chat")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
-        const { data } = await a.admin.from("maaroof_chat_messages").select("id, role, content, grounded, created_at").eq("user_id", a.userId).order("created_at", { ascending: true }).limit(100);
+        const workspace = await resolveWorkspace(a.admin, a.userId, new URL(request.url).searchParams.get("workspace_id"));
+        if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
+        const { data } = await scopeWorkspace(a.admin.from("maaroof_chat_messages").select("id, role, content, grounded, created_at").eq("user_id", a.userId), workspace.id).order("created_at", { ascending: true }).limit(100);
         const { data: prof } = await a.admin.from("profiles").select("is_subscribed, tokens_balance, tokens_daily_limit, tokens_monthly_limit").eq("id", a.userId).maybeSingle();
         const p: any = prof || {};
         const today = new Date(); today.setUTCHours(0, 0, 0, 0);
@@ -28,13 +40,18 @@ export const Route = createFileRoute("/api/maaroof-chat")({
       },
       DELETE: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
-        await a.admin.from("maaroof_chat_messages").delete().eq("user_id", a.userId);
+        const workspace = await resolveWorkspace(a.admin, a.userId, new URL(request.url).searchParams.get("workspace_id"));
+        if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
+        await scopeWorkspace(a.admin.from("maaroof_chat_messages").delete().eq("user_id", a.userId), workspace.id);
         return Response.json({ ok: true });
       },
       POST: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
         const { admin, userId } = a;
         const body = await request.json().catch(() => ({} as any));
+        const workspace = await resolveWorkspace(admin, userId, body?.workspace_id ?? new URL(request.url).searchParams.get("workspace_id"));
+        if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
+        const workspaceId = workspace.id;
         const message = String(body?.message || "").trim().slice(0, 2000);
         if (!message) return Response.json({ error: "message_required" }, { status: 400 });
         const lang = (["ar", "en", "ku"].includes(body?.lang) ? body.lang : "ar") as "ar" | "en" | "ku";
@@ -67,16 +84,16 @@ export const Route = createFileRoute("/api/maaroof-chat")({
 
         // Knowledge actually held for this user — the only ground Maaroof speaks from.
         const [{ data: kf }, { data: iv }, { data: ws }, { data: hist }] = await Promise.all([
-          admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(120),
-          admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
-          admin.from("workspaces").select("name, space_kind").eq("owner_id", userId).limit(50),
+          scopeWorkspace(admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(120),
+          workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
+          workspaceId ? admin.from("workspaces").select("name, space_kind, profile, goals").eq("owner_id", userId).eq("id", workspaceId).limit(1) : Promise.resolve({ data: [] as any[] }),
           admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId).order("created_at", { ascending: false }).limit(40),
         ]);
         const id = ownerIdentity(p);
         const conf = id.verified ? "evidence" : "unverified profile entry";
         const knowledge: string[] = [
-          ...id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`),
-          ...(ws || []).map((w: any) => `[workspace] ${w.space_kind}: ${w.name}`),
+          ...(!workspaceId ? id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`) : []),
+          ...(ws || []).map((w: any) => `[workspace identity] ${w.space_kind}: ${w.name}; profile=${JSON.stringify(w.profile || {})}; goals=${JSON.stringify(w.goals || [])}`),
           ...freshFacts((kf || []) as any[]).map((f: any) => `[${f.source}, ${f.confidence}] ${String(f.fact).slice(0, 300)}`),
           ...interviewFacts((iv || []) as any).map((f) => `[interview] ${f.fact.slice(0, 300)}`),
         ].slice(0, 120);
@@ -113,8 +130,8 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         }
         const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task };
         await admin.from("maaroof_chat_messages").insert([
-          { user_id: userId, role: "user", content: message },
-          { user_id: userId, role: "assistant", content: reply.text, grounded },
+          { user_id: userId, workspace_id: workspaceId, role: "user", content: message },
+          { user_id: userId, workspace_id: workspaceId, role: "assistant", content: reply.text, grounded },
         ]);
         return Response.json({ text: reply.text, needs_task: reply.needsTask, task: reply.task, knowledge_items: knowledge.length, quota });
       },

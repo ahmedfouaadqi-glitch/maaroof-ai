@@ -17,7 +17,7 @@ export type Workspace = {
 const STORAGE_KEY = "maaroof.active_workspace_id";
 
 export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | null) => void }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
   const del = useServerFn(deleteWorkspace);
@@ -38,7 +38,7 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
         const arr = (res.items as unknown as Workspace[]) || [];
         setItems(arr);
         const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-        const found = arr.find((w) => w.id === saved) || arr[0] || null;
+        const found = saved ? arr.find((w) => w.id === saved) || null : null;
         setActiveId(found?.id ?? null);
         onChange(found);
       } finally {
@@ -106,10 +106,10 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
 
       {loading ? (
         <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> {t("auto.loading")}</div>
-      ) : items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t("auto.no_spaces_yet_create_the_first")}</p>
       ) : (
         <ul className="space-y-1 text-sm">
+          <li><button type="button" onClick={() => pick(null)} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-start ${!activeId ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}><span className="flex-1">{lang === "en" ? "Main account" : lang === "ku" ? "هەژماری سەرەکی" : "الحساب الأساسي"}</span>{!activeId && <Check className="size-3.5" />}</button></li>
+          {items.length === 0 && <li className="px-2 py-2 text-xs text-muted-foreground">{t("auto.no_spaces_yet_create_the_first")}</li>}
           {items.map((w) => (
             <li key={w.id} className={`group flex items-center gap-2 p-2 rounded ${activeId === w.id ? "bg-primary/10 border border-primary/40" : "hover:bg-muted"}`}>
               <button onClick={() => pick(w)} className="flex-1 text-start truncate">
