@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const { chatQuota } = await import("@/lib/maaroof/chat-policy");
         const { isUnlimitedAccount } = await import("@/lib/tokens.server");
         const unlimited = await isUnlimitedAccount(a.userId);
-        const { data: jobs } = await a.admin.from("maaroof_jobs").select("id, goal, status, created_at").eq("user_id", a.userId).eq("status", "completed").order("created_at", { ascending: false }).limit(15);
+        const { data: jobs } = await scopeWorkspace(a.admin.from("maaroof_jobs").select("id, goal, status, created_at").eq("user_id", a.userId).eq("status", "completed"), workspace.id).order("created_at", { ascending: false }).limit(15);
         return Response.json({ items: data ?? [], tasks: jobs ?? [], quota: chatQuota({ metered: Number(p.tokens_balance) > 0 || p.tokens_daily_limit != null || p.tokens_monthly_limit != null, subscribed: !!p.is_subscribed, todayUserMessages: count || 0, unlimited }) });
       },
       DELETE: async ({ request }) => {
@@ -74,7 +74,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         let taskCtx: string[] = [];
         const taskId = typeof body?.task_id === "string" ? body.task_id : "";
         if (taskId) {
-          const { data: job } = await admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId).maybeSingle();
+          const { data: job } = await scopeWorkspace(admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId), workspaceId).maybeSingle();
           if (job) {
             const { data: fin } = await admin.from("maaroof_job_events").select("payload").eq("job_id", taskId).eq("event_type", "final").order("seq", { ascending: false }).limit(1);
             const txt = JSON.stringify((fin as any)?.[0]?.payload ?? "").slice(0, 3000);
