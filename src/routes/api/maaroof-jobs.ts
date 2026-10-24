@@ -85,7 +85,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
               if (claimed?.length) {
                 try {
                   const rp = job.request_payload || {};
-                  const r = await fetch(new URL("/api/maaroof", request.url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: request.headers.get("authorization") || "" }, body: JSON.stringify({ goal: job.goal, lang: rp.lang || "ar", interface_mode: "workspace", workspace_id: job.workspace_id || null, execution_mode: job.mode === "execution" ? undefined : job.mode, selected_skills: rp.selected_skills, probe_engines: rp.probe_engines, live_probe: rp.live_probe, resume_job_id: id, auto_resume: true }) });
+                  const r = await fetch(new URL("/api/maaroof", request.url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: request.headers.get("authorization") || "" }, body: JSON.stringify({ goal: job.goal, lang: rp.lang || "ar", interface_mode: "workspace", workspace_id: job.workspace_id || rp.workspace_id || null, execution_mode: job.mode === "execution" ? undefined : job.mode, selected_skills: rp.selected_skills, probe_engines: rp.probe_engines, live_probe: rp.live_probe, resume_job_id: id, auto_resume: true }) });
                   const j: any = await r.json().catch(() => ({}));
                   const newId = j?.job_id || j?.id;
                   if (newId) { await db.from("maaroof_jobs").update({ request_payload: { ...payload, auto_resume_job_id: newId } }).eq("id", id); (job as any).auto_resume_job_id = newId; }
