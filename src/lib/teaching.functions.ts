@@ -24,13 +24,16 @@ async function assertOwnedSpace(supabase: any, spaceId: string, userId: string) 
 // ===== Spaces ==============================================================
 export const listKnowledgeSpaces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => z.object({ workspaceId: uuid.nullable().optional() }).parse(d ?? {}))
+  .handler(async ({ data: input, context }) => {
     const { supabase, userId } = context as any;
-    const { data, error } = await supabase
-      .from("knowledge_spaces")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+    if (input.workspaceId) {
+      const { data: owned } = await supabase.from("workspaces").select("id").eq("id", input.workspaceId).eq("owner_id", userId).maybeSingle();
+      if (!owned) throw new Error("workspace_not_found");
+    }
+    let query = supabase.from("knowledge_spaces").select("*").eq("user_id", userId);
+    query = input.workspaceId ? query.eq("workspace_id", input.workspaceId) : query.is("workspace_id", null);
+    const { data, error } = await query.order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return { spaces: data || [] };
   });
