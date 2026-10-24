@@ -229,9 +229,11 @@ export const Route = createFileRoute("/api/maaroof")({
           let reusedResults: Record<string, any> | undefined;
           const resumeId = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
           if (resumeId) {
-            let { data: prevJob, error: previousJobLookupError } = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
+            let previousJobQuery = db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId);
+            previousJobQuery = verifiedWorkspaceId ? previousJobQuery.eq("workspace_id", verifiedWorkspaceId) : previousJobQuery.is("workspace_id", null);
+            let { data: prevJob, error: previousJobLookupError } = await previousJobQuery.maybeSingle();
             if (previousJobLookupError) {
-              console.warn("[maaroof] resume reuse lookup failed; retrying by user_id", previousJobLookupError.message);
+              console.warn("[maaroof] resume reuse scope failed; retrying by user_id", previousJobLookupError.message);
               const fallback = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
               prevJob = fallback.data;
               previousJobLookupError = fallback.error;
