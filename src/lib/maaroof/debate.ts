@@ -37,3 +37,34 @@ export function debateFromOpinions(all: Opinion[]): DebateSummary | null {
     hypothesisCount: claims.filter((c) => c.kind === "hypothesis").length,
   };
 }
+
+export type EngineDebateAnswer = {
+  engine: string;
+  mentioned?: boolean;
+  answer?: string;
+  grounded_answer?: string;
+  status?: string;
+  sources?: Array<{ url?: string; title?: string }>;
+};
+
+/** True only when usable engine answers actually split on whether the entity appeared. */
+export function hasMaterialEngineConflict(answers: EngineDebateAnswer[]): boolean {
+  const valid = (answers || []).filter((a) => !!a && typeof a.engine === "string" &&
+    a.status !== "error" && a.status !== "timeout" && typeof a.mentioned === "boolean");
+  return valid.length >= 2 && valid.some((a) => a.mentioned === true) && valid.some((a) => a.mentioned === false);
+}
+
+/** Convert real visibility-probe records into display data; no facts are inferred or invented. */
+export function debateFromEngineAnswers(answers: EngineDebateAnswer[]) {
+  const valid = (answers || []).filter((a) => !!a && typeof a.engine === "string" &&
+    a.status !== "error" && a.status !== "timeout" && typeof a.mentioned === "boolean");
+  const claims = valid.map((a) => {
+    const links = Array.from(new Set((a.sources || []).map((s) => String(s?.url || "")).filter((u) => /^https?:\/\//i.test(u))));
+    const text = String(a.grounded_answer || a.answer || "").trim().slice(0, 1000);
+    return { expert: a.engine, engine: a.engine, text: text || (a.mentioned ? "Entity mentioned in blind answer; no grounded text returned." : "Entity not mentioned in blind answer; no grounded text returned."),
+      kind: links.length ? "evidence" as const : "hypothesis" as const, links, mentioned: !!a.mentioned, verdict: a.mentioned ? "mentioned" : "not_mentioned" };
+  });
+  return { experts: valid.length, engineNames: valid.map((a) => a.engine), agreedTools: [], contestedTools: ["entity_appearance"], objections: [], claims,
+    evidenceCount: claims.filter((c) => c.kind === "evidence").length, hypothesisCount: claims.filter((c) => c.kind === "hypothesis").length,
+    conflictType: "engine_visibility_disagreement" };
+}
