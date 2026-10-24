@@ -39,7 +39,7 @@ export function HistoryPanel({ lang, onOpen, onContinue, workspaceId = null }: {
 
   const buildExport = (j: PastJob) => async () => {
     const t = await token();
-    const r = await fetch("/api/maaroof-jobs?id=" + j.id + "&after=0" + (workspaceId ? "&workspace_id=" + encodeURIComponent(workspaceId) : ""), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+    const r = await fetch("/api/maaroof-jobs?id=" + j.id + "&after=0&workspace_id=" + encodeURIComponent(workspaceId || ""), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
     const b = r.ok ? await r.json() : { events: [] };
     const evs: any[] = b.events || [];
     const fin = [...evs].reverse().find((e) => e.event_type === "final");
