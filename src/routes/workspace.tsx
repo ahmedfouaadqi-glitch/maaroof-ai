@@ -18,6 +18,7 @@ import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { Dardasha } from "@/components/workspace/Dardasha";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
+import { WorkspaceAccountPanel } from "@/components/workspace/WorkspaceAccountPanel";
 import { canStartTask, AUTO_RUN_OPTIONS } from "@/lib/maaroof/dardasha";
 import { LiveSkillHints } from "@/components/workspace/LiveSkillHints";
 import { DebateCard } from "@/components/workspace/DebateCard";
@@ -139,8 +140,8 @@ function WorkspacePage() {
   const activeWorkspaceId = activeWorkspace?.id ?? null;
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [pendingApproved, setPendingApproved] = useState("");
-  useEffect(() => { try { const d = localStorage.getItem("ws-goal-draft"); if (d) setGoal((g) => g || d); } catch {} }, []);
-  useEffect(() => { try { if (goal) localStorage.setItem("ws-goal-draft", goal); else localStorage.removeItem("ws-goal-draft"); } catch {} }, [goal]);
+  useEffect(() => { try { setGoal(localStorage.getItem("ws-goal-draft:" + (activeWorkspaceId || "main")) || ""); } catch { setGoal(""); } }, [activeWorkspaceId]);
+  useEffect(() => { try { const key = "ws-goal-draft:" + (activeWorkspaceId || "main"); if (goal) localStorage.setItem(key, goal); else localStorage.removeItem(key); } catch {} }, [goal, activeWorkspaceId]);
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -302,6 +303,18 @@ function WorkspacePage() {
       (costRun.dailyRemaining == null || costRun.dailyRemaining >= estimatedTotal) &&
       (costRun.monthlyRemaining == null || costRun.monthlyRemaining >= estimatedTotal)
     ));
+
+  function handleWorkspaceChange(ws: Workspace | null) {
+    if (running && ws?.id !== activeWorkspaceId) return;
+    try {
+      const previousKey = "ws-goal-draft:" + (activeWorkspaceId || "main");
+      if (goal) localStorage.setItem(previousKey, goal); else localStorage.removeItem(previousKey);
+      setGoal(localStorage.getItem("ws-goal-draft:" + (ws?.id || "main")) || "");
+    } catch { setGoal(""); }
+    setActiveWorkspace(ws);
+    setSelectedSkills([]); setEvents([]); setJobId(null); setResumeFrom(null);
+    setError(""); setClarification(""); setClarifyField(""); setPendingApproved(""); setSkillAsk([]);
+  }
 
   function toggleSkill(key: string) {
     setSelectedSkills((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
@@ -548,11 +561,11 @@ function WorkspacePage() {
       <SiteHeader />
       <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
-      <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={setActiveWorkspace} /></div>
+      <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={handleWorkspaceChange} disabled={running} /></div>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} workspaceId={activeWorkspaceId} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /><BroadcastPanel lang={locale} workspaceId={activeWorkspaceId} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} workspaceId={activeWorkspaceId} /></Suspense></section>}</div>}
-      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><OnboardingWizard lang={locale as any} /><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div><section className="mt-4 rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Approvals" : locale === "ku" ? "ڕەزامەندییەکان" : "الموافقات"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Actions waiting for your decision before Maaroof runs them." : locale === "ku" ? "کردارەکان چاوەڕێی بڕیاری تۆن." : "إجراءات تنتظر قرارك قبل أن ينفذها معروف."}</p><Suspense fallback={null}><LazyApprovals /></Suspense></section><section className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5"><h2 className="font-semibold">{locale === "en" ? "Teach once, work forever" : locale === "ku" ? "جارێک فێرم بکە" : "علّمني مرة… أعمل للأبد"}</h2><p className="mt-1 text-xs text-muted-foreground">{locale === "en" ? "What you teach Maaroof here is saved in the Knowledge space and reused in every task for this account." : locale === "ku" ? "ئەوەی فێری معروفی دەکەیت لە شوێنی زانیاری پاشەکەوت دەکرێت." : "ما تعلّمه لمعروف يُحفظ في مساحة المعرفة ويُستخدم في كل مهمة حسب طبيعة حسابك."}</p><KnownFactsPanel lang={locale} /></section></div>}
+      {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><OnboardingWizard lang={locale as any} /><WorkspaceAccountPanel workspace={activeWorkspace} lang={locale} onSaved={(saved) => setActiveWorkspace(saved as Workspace)} /><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div><section className="mt-4 rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Approvals" : locale === "ku" ? "ڕەزامەندییەکان" : "الموافقات"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Actions waiting for your decision before Maaroof runs them." : locale === "ku" ? "کردارەکان چاوەڕێی بڕیاری تۆن." : "إجراءات تنتظر قرارك قبل أن ينفذها معروف."}</p><Suspense fallback={null}><LazyApprovals /></Suspense></section><section className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5"><h2 className="font-semibold">{locale === "en" ? "Teach once, work forever" : locale === "ku" ? "جارێک فێرم بکە" : "علّمني مرة… أعمل للأبد"}</h2><p className="mt-1 text-xs text-muted-foreground">{locale === "en" ? "What you teach Maaroof here is saved in the Knowledge space and reused in every task for this account." : locale === "ku" ? "ئەوەی فێری معروفی دەکەیت لە شوێنی زانیاری پاشەکەوت دەکرێت." : "ما تعلّمه لمعروف يُحفظ في مساحة المعرفة ويُستخدم في كل مهمة حسب طبيعة حسابك."}</p><KnownFactsPanel lang={locale} /></section></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /><SecurityScanCard lang={locale} /></div>}
       {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
         <h1 className="font-display text-xl font-bold">{c.models}</h1>
