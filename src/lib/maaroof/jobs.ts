@@ -6,6 +6,21 @@ export function isTerminalJobStatus(s: string): boolean {
   return (JOB_TERMINAL as readonly string[]).includes(s);
 }
 
+/** True when a scoped read failed and retrying with user_id is appropriate. */
+export function shouldFallbackFromWorkspaceScope(error: unknown): boolean {
+  return error !== null && error !== undefined;
+}
+
+/** Detect a missing workspace_id schema column without masking unrelated insert failures. */
+export function isMissingWorkspaceIdColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown };
+  const code = String(e.code || "");
+  const text = [e.message, e.details, e.hint].map((x) => String(x || "")).join(" ").toLowerCase();
+  return text.includes("workspace_id") &&
+    (code === "42703" || code === "PGRST204" || /does not exist|not found|schema cache|unknown column|undefined column/.test(text));
+}
+
 /** A non-terminal job with no update for JOB_STALE_MS is considered stuck. */
 export function isStaleJob(job: { status: string; updated_at: string }, now = Date.now()): boolean {
   if (isTerminalJobStatus(job.status)) return false;
