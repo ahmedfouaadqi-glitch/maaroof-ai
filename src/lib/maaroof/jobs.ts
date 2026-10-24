@@ -66,7 +66,7 @@ export function remainingCost(tools: string[], reused: string[], prices: Record<
 }
 
 /** Agent jobs send a heartbeat every 10s; no update for AGENT_STALE_MS means the runner died. Pure. */
-export const AGENT_STALE_MS = 180_000;
+export const AGENT_STALE_MS = 600_000;
 export function isStaleAgentJob(job: { status: string; updated_at: string }, now = Date.now()): boolean {
   if (isTerminalJobStatus(job.status)) return false;
   const t = new Date(job.updated_at).getTime();

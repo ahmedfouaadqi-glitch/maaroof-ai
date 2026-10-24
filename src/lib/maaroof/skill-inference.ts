@@ -17,7 +17,7 @@ export type SkillInference =
 
 const URL_RE = /https?:\/\/[^\s]+|\b[a-z0-9-]+\.(com|net|org|io|ai|iq|sa|ae)\b/i;
 
-export function inferSkills(goal: string, selected: string[] = [], limit = 3): SkillInference {
+export function inferSkills(goal: string, selected: string[] = [], limit = 50): SkillInference {
   const valid = selected.filter((k) => MAAROOF_SKILLS.some((s) => s.key === k));
   if (valid.length) return { kind: "selected", skills: valid, reasons: Object.fromEntries(valid.map((k) => [k, "user_selected"])) };
   const text = String(goal || "").toLowerCase();
@@ -53,7 +53,7 @@ export type OwnContext = {
  * it runs the core presence audit for the known brand. It only asks when the
  * brand itself is unknown (a required fact it cannot discover).
  */
-export function chooseSkillsAutonomously(goal: string, selected: string[], own: OwnContext, limit = 3): SkillInference {
+export function chooseSkillsAutonomously(goal: string, selected: string[], own: OwnContext, limit = 50): SkillInference {
   const first = inferSkills(goal, selected, limit);
   if (first.kind !== "clarify") return first;
   const brand = String(own.brand || "").trim();
