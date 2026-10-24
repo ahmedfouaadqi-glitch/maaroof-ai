@@ -69,17 +69,22 @@ export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: 
     if (!m || busy || atts.some((a) => a.busy)) return;
     setText(""); setAtts([]); setErr(""); setBusy(true);
     setMsgs((p) => [...p, { role: "user", content: m }]);
-    const r = await call("POST", { message: m, lang, workspace_id: workspaceId }, workspaceId);
-    setBusy(false); inputRef.current?.focus();
-    if (!r.ok) {
-      const e = r.json?.error;
-      setErr(e === "chat_limit" ? tr(lang, "انتهى حد المحادثة لليوم.", "Daily chat limit reached.", "سنووری ڕۆژانە تەواو بوو.")
-        : r.status === 402 ? tr(lang, "الرصيد غير كافٍ. لم يُخصم شيء.", "Not enough balance. Nothing was charged.", "باڵانس بەس نییە.")
-        : tr(lang, "تعذّر الرد الآن، لم يُخصم شيء. حاول مجدداً.", "Couldn't reply; nothing charged.", "وەڵام نەدرایەوە."));
-      return;
+    try {
+      const r = await call("POST", { message: m, lang, workspace_id: workspaceId }, workspaceId);
+      if (!r.ok) {
+        const e = r.json?.error;
+        setErr(e === "chat_limit" ? tr(lang, "انتهى حد المحادثة لليوم.", "Daily chat limit reached.", "سنووری ڕۆژانە تەواو بوو.")
+          : r.status === 402 ? tr(lang, "الرصيد غير كافٍ. لم يُخصم شيء.", "Not enough balance. Nothing was charged.", "باڵانس بەس نییە.")
+          : tr(lang, "تعذّر الرد الآن، لم يُخصم شيء. حاول مجدداً.", "Could not reply; nothing charged. Try again.", "وەڵام نەدرایەوە. دووبارە هەوڵ بدە."));
+        return;
+      }
+      if (r.json.quota) setQuota(r.json.quota);
+      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null }]);
+    } catch {
+      setErr(tr(lang, "انقطع الاتصال بالدردشة. تحقق من الاتصال وحاول مجدداً.", "Chat connection failed. Check your connection and retry.", "پەیوەندی گفتوگۆ کێشەی هەبوو. دووبارە هەوڵ بدە."));
+    } finally {
+      setBusy(false); inputRef.current?.focus();
     }
-    if (r.json.quota) setQuota(r.json.quota);
-    setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null }]);
   };
 
   const lastUser = [...msgs].reverse().find((m) => m.role === "user")?.content || "";
@@ -104,6 +109,19 @@ export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: 
       </div>
       <div ref={boxRef} className="max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
+        {busy && <div role="status" aria-live="polite" className="mb-3 overflow-hidden rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary"><LoaderCircle className="size-4 animate-spin" />{tr(lang, "بطاقة الأداة: استشارة معروف", "Tool card: Maaroof consultation", "کارتی ئامراز: ڕاوێژکاری معروف")}</div>
+          <p className="mt-1 text-xs text-muted-foreground">{tr(lang, "يُرسل الطلب ويُنتظر الرد. هذا مؤشر نشاط حي وليس نسبة إنجاز محسوبة من الخادم.", "The request is running. This is a live activity indicator, not a server-measured completion percentage.", "داواکاری لە جێبەجێکردندایە. ئەمە نیشاندەری چالاکییە، نە ڕێژەی تەواوبوونی پێوانەکراو.")}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={tr(lang, "نشاط الاستشارة", "Consultation activity", "چالاکی ڕاوێژکاری")}>
+            <div className="h-full w-1/3 rounded-full bg-primary animate-[pulse_1.2s_ease-in-out_infinite]" />
+          </div>
+          <details className="mt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">{tr(lang, "عرض مراحل النشاط", "Show activity stages", "پیشاندانی قۆناغەکان")}</summary><ol className="mt-2 list-decimal space-y-1 ps-5"><li>{tr(lang, "استلام الطلب والسياق", "Receive request and context", "وەرگرتنی داواکاری و پاشبنەما")}</li><li className="font-semibold text-primary">{tr(lang, "استشارة النموذج وصياغة الرد", "Consult model and draft response", "ڕاوێژ لەگەڵ مۆدێل و ئامادەکردنی وەڵام")}</li><li>{tr(lang, "عرض النتيجة أو اقتراح مهمة تتطلب موافقتك", "Show a result or propose a task requiring your approval", "پیشاندانی ئەنجام یان پێشنیاری ئەرک بە ڕەزامەندی تۆ")}</li></ol></details>
+        </div>}
+        {atts.some((a) => a.busy) && <div role="status" aria-live="polite" className="mb-3 rounded-xl border border-border p-3 text-xs">
+          <div className="flex items-center gap-2 font-semibold"><LoaderCircle className="size-3.5 animate-spin text-primary" />{tr(lang, "استخراج محتوى الملف", "Extracting file content", "دەرهێنانی ناوەڕۆکی فایل")}</div>
+          <p className="mt-1 text-muted-foreground">{tr(lang, "رفع الملف ثم تحليل المحتوى وإلحاقه بسياق الدردشة قبل الإرسال.", "Uploading, analyzing, then attaching the extracted content to the chat before sending.", "بارکردن و شیکردنەوە و زیادکردنی ناوەڕۆک بۆ گفتوگۆ پێش ناردن.")}</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-1/3 rounded-full bg-primary animate-[pulse_1.2s_ease-in-out_infinite]" /></div>
+        </div>}
         {msgs.map((m, i) => (
           <div key={m.id || i} className={m.role === "user" ? "flex justify-end" : ""}>
             <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full whitespace-pre-wrap text-sm leading-7"}>
