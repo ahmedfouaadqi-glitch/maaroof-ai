@@ -102,13 +102,24 @@ export const Route = createFileRoute("/api/maaroof")({
           // Maaroof reads the user's own profile, knowledge and interview before choosing tools.
           let own: { brand?: string | null; profileText?: string; knowledgeText?: string[] } = {};
           try {
-            const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
-            const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
-            own = {
-              brand: (ep as any)?.brand_name || null,
-              profileText: [ (ep as any)?.brand_keywords, (ep as any)?.specialty_scope, (ep as any)?.entity_type, JSON.stringify((ep as any)?.target_markets || "") ].filter(Boolean).join(" "),
-              knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
-            };
+            if (verifiedWorkspaceId) {
+              const { data: ws } = await db.from("workspaces").select("name, brand_url, brand_summary, keywords, country, entity_truth_card, profile").eq("id", verifiedWorkspaceId).eq("owner_id", userId).maybeSingle();
+              const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).eq("workspace_id", verifiedWorkspaceId).order("created_at", { ascending: false }).limit(20);
+              const card = (ws as any)?.entity_truth_card || {};
+              own = {
+                brand: card.entity_name || (ws as any)?.name || null,
+                profileText: [card.sector, card.country, JSON.stringify(card.markets || []), JSON.stringify(card.key_facts || []), (ws as any)?.brand_url, (ws as any)?.brand_summary, JSON.stringify((ws as any)?.keywords || []), JSON.stringify((ws as any)?.profile || {})].filter(Boolean).join(" "),
+                knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
+              };
+            } else {
+              const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
+              const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).is("workspace_id", null).order("created_at", { ascending: false }).limit(20);
+              own = {
+                brand: (ep as any)?.brand_name || null,
+                profileText: [ (ep as any)?.brand_keywords, (ep as any)?.specialty_scope, (ep as any)?.entity_type, JSON.stringify((ep as any)?.target_markets || "") ].filter(Boolean).join(" "),
+                knowledgeText: ((kf || []) as any[]).map((f) => String(f.fact || "")),
+              };
+            }
           } catch {}
           const skillChoice = chooseSkillsAutonomously(goal, pickedSkills, own);
           const selectedSkills = skillChoice.skills;
