@@ -20,24 +20,13 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const db = a.admin as any;
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
-        const workspaceRaw = url.searchParams.get("workspace_id");
-        let workspaceId: string | null = null;
-        if (workspaceRaw) {
-          if (!/^[0-9a-f-]{36}$/i.test(workspaceRaw)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
-          const { data: owned } = await db.from("workspaces").select("id").eq("id", workspaceRaw).eq("owner_id", a.userId).maybeSingle();
-          if (!owned) return Response.json({ error: "workspace_not_found" }, { status: 404 });
-          workspaceId = owned.id;
-        }
         if (!id) {
-          let q = db.from("maaroof_jobs").select("id, goal, mode, status, error, request_payload, created_at, updated_at").eq("user_id", a.userId);
-          q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
-          const { data } = await q.order("created_at", { ascending: false }).limit(10);
+          const { data } = await db.from("maaroof_jobs").select("id, goal, mode, status, error, request_payload, created_at, updated_at")
+            .eq("user_id", a.userId).order("created_at", { ascending: false }).limit(10);
           return Response.json({ jobs: data || [] });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
-        let jobQuery = db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId);
-        if (url.searchParams.has("workspace_id")) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
-        const { data: job } = await jobQuery.maybeSingle();
+        const { data: job } = await db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId).maybeSingle();
         if (!job) return Response.json({ error: "not_found" }, { status: 404 });
         let notStarted = false;
         if (job.status === "running") {
