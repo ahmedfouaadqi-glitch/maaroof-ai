@@ -130,7 +130,14 @@ export const Route = createFileRoute("/api/maaroof")({
         if (body?.auto_resume === true && typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id)) {
           let autoResumeQuery = (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId);
           autoResumeQuery = verifiedWorkspaceId ? autoResumeQuery.eq("workspace_id", verifiedWorkspaceId) : autoResumeQuery.is("workspace_id", null);
-          const { data: pj } = await autoResumeQuery.maybeSingle();
+          let { data: pj, error: autoResumeLookupError } = await autoResumeQuery.maybeSingle();
+          if (autoResumeLookupError) {
+            console.warn("[maaroof] scoped auto-resume lookup failed; retrying by user_id", autoResumeLookupError.message);
+            const fallback = await (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId).maybeSingle();
+            pj = fallback.data;
+            autoResumeLookupError = fallback.error;
+          }
+          if (autoResumeLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
           const { canAutoResume } = await import("@/lib/maaroof/jobs");
           freeAutoResume = !!pj && canAutoResume(pj, true);
           if (!freeAutoResume) return Response.json({ error: "auto_resume_not_allowed" }, { status: 409 });
@@ -160,7 +167,14 @@ export const Route = createFileRoute("/api/maaroof")({
           if (resumeRef) {
             let previousQuery = db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId);
             previousQuery = verifiedWorkspaceId ? previousQuery.eq("workspace_id", verifiedWorkspaceId) : previousQuery.is("workspace_id", null);
-            const { data: prevPayload } = await previousQuery.maybeSingle();
+            let { data: prevPayload, error: previousLookupError } = await previousQuery.maybeSingle();
+            if (previousLookupError) {
+              console.warn("[maaroof] scoped resume lookup failed; retrying by user_id", previousLookupError.message);
+              const fallback = await db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId).maybeSingle();
+              prevPayload = fallback.data;
+              previousLookupError = fallback.error;
+            }
+            if (previousLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
             if (!prevPayload) return Response.json({ error: "resume_job_not_found" }, { status: 404 });
             if (!pickedSkills.length) {
               const prevSkills = (prevPayload as any)?.request_payload?.selected_skills;
@@ -173,7 +187,13 @@ export const Route = createFileRoute("/api/maaroof")({
           try {
             if (verifiedWorkspaceId) {
               const { data: ws } = await db.from("workspaces").select("name, brand_url, brand_summary, keywords, country, entity_truth_card, profile").eq("id", verifiedWorkspaceId).eq("owner_id", userId).maybeSingle();
-              const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).eq("workspace_id", verifiedWorkspaceId).order("created_at", { ascending: false }).limit(20);
+              let { data: kf, error: workspaceFactsError } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).eq("workspace_id", verifiedWorkspaceId).order("created_at", { ascending: false }).limit(20);
+              if (workspaceFactsError) {
+                console.warn("[maaroof] workspace knowledge lookup failed; retrying by user_id", workspaceFactsError.message);
+                const fallbackFacts = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+                kf = fallbackFacts.data;
+                workspaceFactsError = fallbackFacts.error;
+              }
               const card = (ws as any)?.entity_truth_card || {};
               own = {
                 brand: card.entity_name || (ws as any)?.name || null,
@@ -182,7 +202,13 @@ export const Route = createFileRoute("/api/maaroof")({
               };
             } else {
               const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
-              const { data: kf } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).is("workspace_id", null).order("created_at", { ascending: false }).limit(20);
+              let { data: kf, error: accountFactsError } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).is("workspace_id", null).order("created_at", { ascending: false }).limit(20);
+              if (accountFactsError) {
+                console.warn("[maaroof] account knowledge scope failed; retrying by user_id", accountFactsError.message);
+                const fallbackFacts = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+                kf = fallbackFacts.data;
+                accountFactsError = fallbackFacts.error;
+              }
               own = {
                 brand: (ep as any)?.brand_name || null,
                 profileText: [ (ep as any)?.brand_keywords, (ep as any)?.specialty_scope, (ep as any)?.entity_type, JSON.stringify((ep as any)?.target_markets || "") ].filter(Boolean).join(" "),
@@ -203,7 +229,14 @@ export const Route = createFileRoute("/api/maaroof")({
           let reusedResults: Record<string, any> | undefined;
           const resumeId = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
           if (resumeId) {
-            const { data: prevJob } = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
+            let { data: prevJob, error: previousJobLookupError } = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
+            if (previousJobLookupError) {
+              console.warn("[maaroof] resume reuse lookup failed; retrying by user_id", previousJobLookupError.message);
+              const fallback = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
+              prevJob = fallback.data;
+              previousJobLookupError = fallback.error;
+            }
+            if (previousJobLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
             if (prevJob) {
               const { data: evs } = await db.from("maaroof_job_events").select("payload").eq("job_id", resumeId).eq("event_type", "tool_result").order("seq").limit(200);
               const { reusableResults } = await import("@/lib/maaroof/jobs");
