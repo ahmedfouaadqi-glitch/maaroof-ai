@@ -37,7 +37,8 @@ export const Route = createFileRoute("/api/maaroof")({
         let verifiedWorkspaceId: string | null = null;
         if (workspaceId) {
           const { data: ws } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
-          if (ws) verifiedWorkspaceId = workspaceId;
+          if (!ws) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          verifiedWorkspaceId = workspaceId;
         }
 
         const useSubagents = body?.use_subagents === false ? false : undefined;
@@ -128,7 +129,7 @@ export const Route = createFileRoute("/api/maaroof")({
             }
           }
           const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
-            user_id: userId, goal, mode: executionMode || "execution", status: "running",
+            user_id: userId, workspace_id: verifiedWorkspaceId, goal, mode: executionMode || "execution", status: "running",
             request_payload: { run_options: runOptions, resume_job_id: resumeId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang, auto_resumed: freeAutoResume },
           }).select("id").single();
           if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
@@ -178,7 +179,7 @@ export const Route = createFileRoute("/api/maaroof")({
                 try {
                   const { taskFact } = await import("@/lib/knowledge-facts");
                   const f = taskFact(goal, finalText);
-                  if (f) await db.from("knowledge_facts").insert({ user_id: userId, source: "task", source_ref: jobId, ...f });
+                  if (f) await db.from("knowledge_facts").insert({ user_id: userId, workspace_id: verifiedWorkspaceId, source: "task", source_ref: jobId, ...f });
                 } catch {}
               }
             }
