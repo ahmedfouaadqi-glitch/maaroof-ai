@@ -50,8 +50,8 @@ export const Route = createFileRoute("/api/attachment-analyze")({
         const lang = body.lang === "en" ? "English" : body.lang === "ku" ? "Kurdish (Sorani)" : "Arabic";
         const kind = attachmentKind(mime);
         const pathIsScoped = workspaceId
-          ? path.startsWith(a.userId + "/" + workspaceId + "/")
-          : ownsPath(a.userId, path) && path.slice(a.userId.length + 1).indexOf("/") === -1;
+          ? ownsPath(a.userId, path) && !path.includes("..") && path.startsWith(a.userId + "/" + workspaceId + "/")
+          : ownsPath(a.userId, path) && !path.includes("..") && path.slice(a.userId.length + 1).indexOf("/") === -1;
         if (!pathIsScoped || !kind) return Response.json({ error: "bad_file" }, { status: 400 });
 
         const { resolveToolCost, chargeTokens } = await import("@/lib/tokens.server");
