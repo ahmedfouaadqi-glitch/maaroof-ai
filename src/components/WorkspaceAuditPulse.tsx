@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Activity, Loader2, X, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ExportButtons } from "@/components/ExportButtons";
 
 type L = "ar" | "en" | "ku";
 const T = {
@@ -124,6 +125,10 @@ export function WorkspaceAuditPulse({ lang, onTask }: { lang: L; onTask: (text: 
           </div>
           {delta != null && <p className="mt-1 text-[11px] text-muted-foreground">{delta >= 0 ? "+" : ""}{delta} {t.delta}</p>}
           {result && <p className="mt-1 text-[11px] text-muted-foreground">{NOTE[lang]}</p>}
+          {result && <div className="mt-2 flex justify-end"><ExportButtons size="xs" toolKey="maaroof" build={() => ({ title: t.title, lang, entity: { brand: targets[0]?.url ? new URL(targets[0].url).hostname : "Maaroof audit", site: targets[0]?.url, links: targets.map((x: any) => x.url) }, sections: [
+            { heading: lang === "en" ? "Five-axis summary" : lang === "ku" ? "پوختەی پێنج تەوەر" : "ملخص المحاور الخمسة", kind: "kv", rows: [["SEO", result.axes?.seo ?? "unmeasured"], ["AEO", result.axes?.aeo ?? "unmeasured"], ["GEO", result.axes?.geo ?? "unmeasured"], ["SGE", result.axes?.sge ?? "unmeasured"], ["GSEO", result.axes?.gseo ?? "unmeasured"], [lang === "en" ? "Overall" : lang === "ku" ? "گشتی" : "الإجمالي", result.overall ?? "unmeasured"]] },
+            { heading: lang === "en" ? "Audited targets and evidence" : lang === "ku" ? "ئامانج و بەڵگە پشکنراوەکان" : "الأهداف والأدلة المفحوصة", kind: "text", text: JSON.stringify((result.targets || []).map((x: any) => ({ url: x.url, ok: x.ok, findings: (x.findings || []).map((f: any) => ({ axis: f.axis, score: f.score, evidence: f.evidence })) })), null, 2) },
+          ] })} /></div>}
 
           <ul className="mt-4 space-y-1.5" dir="ltr">
             {targets.map((tg) => {

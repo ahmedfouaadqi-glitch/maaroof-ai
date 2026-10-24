@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { isUrlAllowed } from "@/lib/delegated-browser";
 import { BrowserViewer, type BrowserView } from "./BrowserViewer";
+import { ExportButtons } from "@/components/ExportButtons";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -100,6 +101,11 @@ export function DelegatedBrowserPanel({ lang, initialDomain, initialPurpose }: {
             <button onClick={revoke} disabled={busy} className="flex items-center gap-2 rounded-xl border border-destructive/40 px-3 py-2 text-sm font-semibold text-destructive"><ShieldOff className="size-4" />{tr(lang, "إلغاء التفويض الآن", "Revoke now", "هەڵوەشاندنەوە")}</button>
           </section>
 
+          {history[hIdx] && <div className="flex justify-end"><ExportButtons size="xs" build={() => ({ title: tr(lang, "تقرير المتصفح الآمن", "Safe browser report", "ڕاپۆرتی وێبگەڕی پارێزراو"), lang, entity: { brand: history[hIdx].title || new URL(history[hIdx].url).hostname, site: history[hIdx].url, links: history[hIdx].links }, sections: [
+            { heading: tr(lang, "الصفحة المقروءة", "Read page", "پەڕەی خوێندراو"), kind: "kv", rows: [["URL", history[hIdx].url], [tr(lang, "العنوان", "Title", "ناونیشان"), history[hIdx].title || "—"]] },
+            { heading: tr(lang, "المحتوى المستخرج", "Extracted content", "ناوەڕۆکی دەرهێنراو"), kind: "text", text: history[hIdx].markdown },
+            { heading: tr(lang, "الروابط المكتشفة", "Discovered links", "بەستەرە دۆزراوەکان"), kind: "list", list: history[hIdx].links },
+          ] })} /></div>}
           <BrowserViewer lang={lang} history={history} index={hIdx} onIndex={setHIdx} busy={busy} onOpen={(u) => setConfirmUrl(u)} isAllowed={(u) => isUrlAllowed(u, grant.domains)} />
 
           <section className={`${card} grid gap-3`}>
