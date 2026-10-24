@@ -16,7 +16,8 @@ import { useVisibility } from "@/lib/visibility";
 import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
-import { MaaroofChat } from "@/components/workspace/MaaroofChat";
+import { Dardasha } from "@/components/workspace/Dardasha";
+import { canStartTask, AUTO_RUN_OPTIONS } from "@/lib/maaroof/dardasha";
 import { LiveSkillHints } from "@/components/workspace/LiveSkillHints";
 import { DebateCard } from "@/components/workspace/DebateCard";
 import { LivePipeline } from "@/components/workspace/LivePipeline";
@@ -133,9 +134,11 @@ function WorkspacePage() {
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[locale];
   const [goal, setGoal] = useState("");
-  const [uiMode, setUiMode] = useState<"task" | "chat">("task");
-  useEffect(() => { try { const m = localStorage.getItem("ws-ui-mode"); if (m === "chat" || m === "task") setUiMode(m); const d = localStorage.getItem("ws-goal-draft"); if (d) setGoal((g) => g || d); } catch {} }, []);
-  useEffect(() => { try { localStorage.setItem("ws-ui-mode", uiMode); } catch {} }, [uiMode]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [pendingApproved, setPendingApproved] = useState("");
+  useEffect(() => { try { const d = localStorage.getItem("ws-goal-draft"); if (d) setGoal((g) => g || d); } catch {} }, []);
+  // Explicit approval from «دردشة» starts the task once the goal state has updated.
+  useEffect(() => { if (canStartTask({ approved: !!pendingApproved, goal, running }) && goal === pendingApproved) { setPendingApproved(""); void start(); } }, [pendingApproved, goal, running]);
   useEffect(() => { try { if (goal) localStorage.setItem("ws-goal-draft", goal); else localStorage.removeItem("ws-goal-draft"); } catch {} }, [goal]);
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -460,7 +463,7 @@ function WorkspacePage() {
           interface_mode: "workspace",
           geo_scope: toServerGeo(getEffectiveScope(authProfile)),
           selected_skills: skillsOverride || selectedSkills,
-          run_options: runOpts,
+          run_options: AUTO_RUN_OPTIONS,
           resume_job_id: resumeFrom?.id,
         }),
       });
@@ -592,13 +595,11 @@ function WorkspacePage() {
         {(finalEvent || events.length > 0) && !running && (
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; const prevJob = jobId; const prevDone = events.some((e: any) => e.type === "final"); watcherRef.current += 1; setEvents([]); setJobId(null); if (prevJob && !prevDone) void prepareResume(prevJob); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
-        {!finalEvent && events.length === 0 && (
-          <div className="mb-4 inline-flex rounded-xl border border-border bg-card p-1 text-sm" role="tablist">
-            {(["task", "chat"] as const).map((m) => <button key={m} type="button" role="tab" aria-selected={uiMode === m} onClick={() => setUiMode(m)} className={`rounded-lg px-4 py-1.5 font-semibold ${uiMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>{m === "task" ? (locale === "en" ? "Run a task" : locale === "ku" ? "جێبەجێکردنی ئەرک" : "تنفيذ مهمة") : (locale === "en" ? "Chat" : locale === "ku" ? "گفتوگۆ" : "محادثة")}</button>)}
-          </div>
+        {!finalEvent && !running && events.length === 0 && <div className="mb-4"><Dardasha lang={locale} busyTask={running} onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }} /></div>}
+        {!finalEvent && !running && events.length === 0 && (
+          <div className="mb-3"><button type="button" onClick={() => setShowAdvanced((v) => !v)} className="text-xs font-semibold text-muted-foreground underline-offset-4 hover:underline">{showAdvanced ? (locale === "en" ? "Hide manual settings" : locale === "ku" ? "شاردنەوەی ڕێکخستنەکان" : "إخفاء الإعدادات اليدوية") : (locale === "en" ? "Manual settings (optional)" : locale === "ku" ? "ڕێکخستنی دەستی (ئارەزوومەندانە)" : "إعدادات يدوية (اختيارية)")}</button></div>
         )}
-        {!finalEvent && events.length === 0 && uiMode === "chat" && <MaaroofChat lang={locale} onToTask={(t) => { setGoal(t); setUiMode("task"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} />}
-        {!finalEvent && !running && events.length === 0 && uiMode === "task" && (
+        {!finalEvent && !running && events.length === 0 && showAdvanced && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
@@ -622,7 +623,6 @@ function WorkspacePage() {
                   </button>
                 </div>
                 {resumeFrom && !running && <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">{resumeFrom.reused === 0 && <span className="block mb-1 font-semibold text-warning">{locale === "en" ? "The earlier attempt saved no tool results, so this resume starts from the beginning at the full expected cost." : locale === "ku" ? "هیچ ئەنجامێک پاشەکەوت نەکرابوو، لە سەرەتاوە دەست پێدەکات." : "المحاولة السابقة لم تحفظ أي نتيجة أداة، لذا سيبدأ الاستكمال من البداية بالكلفة المتوقعة كاملة."}</span>}<span className="font-semibold">{locale === "en" ? `Smart resume: ${resumeFrom.reused} earlier result(s) will be reused at no extra charge; Maaroof runs only what is missing.` : locale === "ku" ? `بەردەوامبوونی زیرەک: ${resumeFrom.reused} ئەنجام دووبارە بەکاردێتەوە بێ تێچوو.` : `استكمال ذكي: سيُعاد استخدام ${resumeFrom.reused} نتيجة سابقة دون خصم جديد عليها، ويُشغّل معروف ما نقص فقط.`}</span>{resumeFrom.left != null && <span className="block mt-1">{locale === "en" ? `Remaining: ${resumeFrom.left} tool(s), about ${resumeFrom.leftTokens} tokens${resumeFrom.balance != null ? ` of your ${resumeFrom.balance} balance` : ""}, charged only on success.` : locale === "ku" ? `ماوە: ${resumeFrom.left} ئامراز، نزیکەی ${resumeFrom.leftTokens} تۆکن${resumeFrom.balance != null ? ` لە باڵانسی ${resumeFrom.balance}` : ""}.` : `المتبقي: ${resumeFrom.left} أداة، بكلفة متوقعة نحو ${resumeFrom.leftTokens} توكن${resumeFrom.balance != null ? ` من رصيدك ${resumeFrom.balance}` : ""}، تُخصم بعد النجاح فقط.`}</span>} <button type="button" onClick={() => setResumeFrom(null)} className="ms-2 underline">{locale === "en" ? "Start fresh instead" : locale === "ku" ? "لە سەرەتاوە" : "ابدأ من الصفر بدلاً من ذلك"}</button></div>}
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">{locale === "en" ? "Optional before starting:" : locale === "ku" ? "هەڵبژاردە پێش دەستپێکردن:" : "خيارات اختيارية قبل البدء:"}</span><label title={locale === "en" ? "If a tool stalls or time runs long, Maaroof writes the report from what was gathered and notes what is missing." : locale === "ku" ? "ئەگەر ئامرازێک وەستا، ڕاپۆرت لەوەی کۆکراوەتەوە دەنووسرێت." : "إذا تعثرت أداة أو طال الوقت كثيراً، يكتب معروف التقرير مما جُمع ويوضح ما لم يكتمل."} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5"><input type="checkbox" className="accent-primary" checked={runOpts.salvage_on_failure} disabled={running} onChange={(e) => setOpt("salvage_on_failure", e.target.checked)} />{locale === "en" ? "Rescue results if a step stalls" : locale === "ku" ? "ئەنجامەکان ڕزگار بکە" : "أنقذ النتائج عند التعثر"}</label><label title={locale === "en" ? "Asks Maaroof to use only the tools essential to the goal; Maaroof still chooses them." : locale === "ku" ? "تەنها ئامرازە سەرەکییەکان." : "يطلب من معروف الاكتفاء بالأدوات الأساسية للهدف، ويبقى هو من يختارها."} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5"><input type="checkbox" className="accent-primary" checked={runOpts.focused_plan} disabled={running} onChange={(e) => setOpt("focused_plan", e.target.checked)} />{locale === "en" ? "Focused plan" : locale === "ku" ? "پلانی چڕ" : "خطة مركّزة"}</label><label title={locale === "en" ? "Tools run together (three at a time) to speed up the task." : locale === "ku" ? "ئامرازەکان پێکەوە کاردەکەن." : "تعمل الأدوات معاً (ثلاثاً في كل دفعة) لتسريع المهمة."} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5"><input type="checkbox" className="accent-primary" checked={runOpts.parallel_tools} disabled={running} onChange={(e) => setOpt("parallel_tools", e.target.checked)} />{locale === "en" ? "Run tools in parallel" : locale === "ku" ? "کارپێکردنی هاوتەریب" : "تشغيل متوازٍ"}</label></div>
                 <p className="mt-2 text-xs text-muted-foreground">{c.ask}</p>
               </div>
 
