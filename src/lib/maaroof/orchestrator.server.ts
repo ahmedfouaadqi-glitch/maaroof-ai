@@ -934,7 +934,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           if (settings.council.log_decisions) {
             try {
               await remember({
-                userId: ctx.userId, runId, kind: "decision",
+                userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "decision",
                 content: `${d.decision || ""} — ${d.rationale || ""}`.slice(0, 500),
                 importance: 3, sourceRunId: runId,
               });
@@ -1619,8 +1619,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       });
     } catch {}
 
-    await remember({ userId: ctx.userId, runId, kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
-    if (geo.country) await remember({ userId: ctx.userId, runId, kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+    await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
+    if (geo.country) await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
 
     // 6.5) Capture the run into the living knowledge graph (Part 11).
     if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {
