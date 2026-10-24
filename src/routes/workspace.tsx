@@ -17,6 +17,7 @@ import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { Dardasha } from "@/components/workspace/Dardasha";
+import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { canStartTask, AUTO_RUN_OPTIONS } from "@/lib/maaroof/dardasha";
 import { LiveSkillHints } from "@/components/workspace/LiveSkillHints";
 import { DebateCard } from "@/components/workspace/DebateCard";
@@ -134,6 +135,8 @@ function WorkspacePage() {
   const locale: SkillLocale = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[locale];
   const [goal, setGoal] = useState("");
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const activeWorkspaceId = activeWorkspace?.id ?? null;
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [pendingApproved, setPendingApproved] = useState("");
   useEffect(() => { try { const d = localStorage.getItem("ws-goal-draft"); if (d) setGoal((g) => g || d); } catch {} }, []);
@@ -407,7 +410,7 @@ function WorkspacePage() {
     (async () => {
       const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
       if (!token || !active) return;
-      const response = await fetch("/api/maaroof-jobs", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+      const response = await fetch("/api/maaroof-jobs?workspace_id=" + encodeURIComponent(activeWorkspaceId || ""), { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
       if (!response.ok || !active) return;
       const body = await response.json();
       const jobs = Array.isArray(body?.jobs) ? body.jobs : [];
@@ -415,7 +418,8 @@ function WorkspacePage() {
       const recent = jobs.find((job: any) => job.status === "dispatching" || job.status === "queued" || job.status === "running")
 ;
       void now;
-      if (!recent || !active) return;
+      if (!active) return;
+      if (!recent) { setRunning(false); setJobId(null); setEvents([]); return; }
       setJobId(String(recent.id));
       setGoal(String(recent.goal || ""));
       setMode(["execution", "recommendation", "simulation"].includes(recent.mode) ? recent.mode : "execution");
@@ -429,7 +433,7 @@ function WorkspacePage() {
     return () => { active = false; watcherRef.current += 1; };
     // Only re-attach when the signed-in user changes; token refreshes must not cancel a running task's tracking.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, loading]);
+  }, [user?.id, loading, activeWorkspaceId]);
 
   const [skillAsk, setSkillAsk] = useState<string[]>([]);
   async function start(clarifications?: Record<string, string>, skillsOverride?: string[]) {
@@ -461,6 +465,7 @@ function WorkspacePage() {
             ...(clarifications || {}),
           },
           interface_mode: "workspace",
+          workspace_id: activeWorkspaceId,
           geo_scope: toServerGeo(getEffectiveScope(authProfile)),
           selected_skills: skillsOverride || selectedSkills,
           run_options: AUTO_RUN_OPTIONS,
@@ -543,9 +548,10 @@ function WorkspacePage() {
       <SiteHeader />
       <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
-      {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
+      <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={setActiveWorkspace} /></div>
+      {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} workspaceId={activeWorkspaceId} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
-      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} /><BroadcastPanel lang={locale} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} /></Suspense></section>}</div>}
+      {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /><BroadcastPanel lang={locale} workspaceId={activeWorkspaceId} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} workspaceId={activeWorkspaceId} /></Suspense></section>}</div>}
       {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><OnboardingWizard lang={locale as any} /><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div><section className="mt-4 rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Approvals" : locale === "ku" ? "ڕەزامەندییەکان" : "الموافقات"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Actions waiting for your decision before Maaroof runs them." : locale === "ku" ? "کردارەکان چاوەڕێی بڕیاری تۆن." : "إجراءات تنتظر قرارك قبل أن ينفذها معروف."}</p><Suspense fallback={null}><LazyApprovals /></Suspense></section><section className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5"><h2 className="font-semibold">{locale === "en" ? "Teach once, work forever" : locale === "ku" ? "جارێک فێرم بکە" : "علّمني مرة… أعمل للأبد"}</h2><p className="mt-1 text-xs text-muted-foreground">{locale === "en" ? "What you teach Maaroof here is saved in the Knowledge space and reused in every task for this account." : locale === "ku" ? "ئەوەی فێری معروفی دەکەیت لە شوێنی زانیاری پاشەکەوت دەکرێت." : "ما تعلّمه لمعروف يُحفظ في مساحة المعرفة ويُستخدم في كل مهمة حسب طبيعة حسابك."}</p><KnownFactsPanel lang={locale} /></section></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} onTask={(text) => { setGoal(text); goMain(); }} /><SecurityScanCard lang={locale} /></div>}
       {tab === "models" && <div className="px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5">
@@ -595,7 +601,7 @@ function WorkspacePage() {
         {(finalEvent || events.length > 0) && !running && (
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; const prevJob = jobId; const prevDone = events.some((e: any) => e.type === "final"); watcherRef.current += 1; setEvents([]); setJobId(null); if (prevJob && !prevDone) void prepareResume(prevJob); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
-        {!finalEvent && !running && events.length === 0 && <div className="mb-4"><Dardasha lang={locale} busyTask={running} onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }} /></div>}
+        {!finalEvent && !running && events.length === 0 && <div className="mb-4"><Dardasha lang={locale} workspaceId={activeWorkspaceId} busyTask={running} onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }} /></div>}
         {!finalEvent && !running && events.length === 0 && showAdvanced && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">

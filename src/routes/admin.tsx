@@ -30,7 +30,6 @@ import { InterfacesAdminPanel } from "@/components/admin/InterfacesAdminPanel";
 import { SkillsAdminPanel } from "@/components/admin/SkillsAdminPanel";
 import { JobsAdminPanel } from "@/components/admin/JobsAdminPanel";
 import { KnowledgeSpacesPanel } from "@/components/admin/KnowledgeSpacesPanel";
-import { ApprovedAccountsPanel } from "@/components/admin/ApprovedAccountsPanel";
 import { AdminSectionHelp } from "@/components/admin/AdminSectionHelp";
 import { ADMIN_GROUPS, type L3 } from "@/components/admin/admin-guide-content";
 
@@ -1108,7 +1107,6 @@ function AccessTab() {
           </>
         )}
       </div>
-      <ApprovedAccountsPanel />
     </div>
   );
 }

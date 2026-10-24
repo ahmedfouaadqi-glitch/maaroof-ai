@@ -18,10 +18,9 @@ export function validateAttachment(f: { size: number; type: string }): "ok" | "t
 }
 
 /** Storage path is always inside the owner's folder. */
-export function attachmentPath(userId: string, fileName: string, stamp: number, workspaceId?: string | null): string {
+export function attachmentPath(userId: string, fileName: string, stamp: number): string {
   const safe = fileName.replace(/[^\w.\-]+/g, "_").slice(-80) || "file";
-  if (!workspaceId || !/^[0-9a-f-]{36}$/i.test(workspaceId)) return `${userId}/${stamp}-${safe}`;
-  return `${userId}/${workspaceId}/${stamp}-${safe}`;
+  return `${userId}/${stamp}-${safe}`;
 }
 
 /** True only when the path belongs to the user's own folder (no traversal). */
