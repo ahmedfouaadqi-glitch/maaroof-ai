@@ -37,6 +37,13 @@ export const Route = createFileRoute("/api/attachment-analyze")({
         const a = await auth(request);
         if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
         const body = await request.json().catch(() => ({} as any));
+        let workspaceId: string | null = null;
+        if (body.workspace_id != null && body.workspace_id !== "") {
+          if (typeof body.workspace_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.workspace_id)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          const { data: owned } = await a.db.from("workspaces").select("id").eq("id", body.workspace_id).eq("owner_id", a.userId).maybeSingle();
+          if (!owned) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          workspaceId = owned.id;
+        }
         const path = String(body.path || ""); const name = String(body.name || "file").slice(0, 120);
         const mime = String(body.mime || ""); const question = String(body.question || "").slice(0, 1000);
         const context = body.context === "interview" ? "interview" : "task";
