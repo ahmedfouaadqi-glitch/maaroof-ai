@@ -99,6 +99,20 @@
       "when": 1792824286464,
       "tag": "0013_approved_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792874094000,
+      "tag": "0014_workspace_scoping",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792874460000,
+      "tag": "0015_workspace_account_identity",
+      "breakpoints": true
     }
   ]
 }

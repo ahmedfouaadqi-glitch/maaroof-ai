@@ -13,7 +13,7 @@ const Language = z.enum(["ar", "en", "ku"]);
 
 const WORKSPACE_COLUMNS =
   "id, name, kind, brand_url, brand_summary, keywords, language, country, city, " +
-  "space_kind, parent_id, profile, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget, " +
+  "space_kind, parent_id, profile, entity_truth_card, onboarding, settings, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget, " +
   "created_at, updated_at";
 
 export const listWorkspaces = createServerFn({ method: "GET" })
@@ -76,6 +76,20 @@ export const createWorkspace = createServerFn({ method: "POST" })
         language: data.language,
         country: data.country ?? null,
         city: data.city ?? null,
+        entity_truth_card: {
+          entity_name: data.name,
+          entity_type: data.kind === "client" ? "client" : data.kind === "own" ? "organization" : "brand",
+          website_url: data.brand_url ?? null,
+          links: data.brand_url ? [{ url: data.brand_url, type: "official" }] : [],
+          keywords: data.keywords,
+          country: data.country ?? null,
+          markets: data.country ? [data.country] : [],
+          key_facts: [],
+          verification_state: "UNVERIFIED",
+          evidence: [],
+        },
+        onboarding: { status: "in_progress", answers: {}, started_at: new Date().toISOString() },
+        settings: { language: data.language, scope: "workspace", memory_isolation: "strict" },
         space_kind: data.parent_id ? data.space_kind : "company",
         parent_id: data.parent_id ?? null,
       } as any)
@@ -105,6 +119,9 @@ export const updateWorkspace = createServerFn({ method: "POST" })
         city: z.string().max(80).nullable().optional(),
         // Part 2 (Cognitive Architecture) fields — all optional.
         profile: JsonObject.optional(),
+        entity_truth_card: JsonObject.optional(),
+        onboarding: JsonObject.optional(),
+        settings: JsonObject.optional(),
         policies: JsonObject.optional(),
         goals: JsonArray.optional(),
         success_metrics: JsonArray.optional(),
