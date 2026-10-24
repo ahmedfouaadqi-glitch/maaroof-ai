@@ -3,6 +3,69 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
+import { isMissingWorkspaceIdColumn } from "@/lib/maaroof/jobs";
+
+type InlineRunOptions = {
+  request: Request;
+  userId: string;
+  goal: string;
+  lang: "ar" | "en" | "ku";
+  detectedGeo: any;
+  geoScope?: GeoScope;
+  workspaceId: string | null;
+  authBearer: string;
+  origin: string;
+  executionMode?: "simulation" | "recommendation" | "execution";
+  useSubagents?: boolean;
+  liveProbe?: boolean;
+  clarifications: Record<string, string>;
+  reason: string;
+};
+
+/** Last-resort path when the background-job table/schema is unavailable: execute directly over SSE. */
+function inlineRunResponse(options: InlineRunOptions): Response {
+  const encoder = new TextEncoder();
+  const abortCtl = new AbortController();
+  options.request.signal.addEventListener("abort", () => abortCtl.abort(), { once: true });
+  const stream = new ReadableStream({
+    async start(controller) {
+      const emit = async (event: string, data: any) => {
+        try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch {}
+      };
+      await emit("fallback", {
+        mode: "inline",
+        reason: options.reason,
+        message: "The background queue was unavailable; this run is executing directly and will not appear in persistent job history.",
+      });
+      try {
+        await runMaaroof({
+          userId: options.userId,
+          goal: options.goal,
+          language: options.lang,
+          detectedGeo: options.detectedGeo,
+          geoScope: options.geoScope,
+          workspaceId: options.workspaceId,
+          authBearer: options.authBearer,
+          origin: options.origin,
+          emit,
+          signal: abortCtl.signal,
+          executionMode: options.executionMode,
+          useSubagents: options.useSubagents,
+          liveProbe: options.liveProbe,
+          clarifications: options.clarifications,
+        });
+      } catch (e: any) {
+        await emit("error", { message: String(e?.message || e).slice(0, 500) });
+      } finally {
+        try { controller.close(); } catch {}
+      }
+    },
+    cancel() { abortCtl.abort(); },
+  });
+  return new Response(stream, {
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
+  });
+}
 
 export const Route = createFileRoute("/api/maaroof")({
   server: {
@@ -147,11 +210,28 @@ export const Route = createFileRoute("/api/maaroof")({
               reusedResults = reusableResults((evs || []).map((e: any) => e.payload));
             }
           }
-          const { data: job, error: jobErr } = await db.from("maaroof_jobs").insert({
+          const jobPayload = {
             user_id: userId, workspace_id: verifiedWorkspaceId, goal, mode: executionMode || "execution", status: "running",
             request_payload: { run_options: runOptions, resume_job_id: resumeId, selected_skills: selectedSkills, skill_choice: skillChoice, probe_engines: probeEngines || [], live_probe: liveProbe !== false, lang, auto_resumed: freeAutoResume },
-          }).select("id").single();
-          if (jobErr || !job) return Response.json({ error: "background_jobs_migration_required" }, { status: 500 });
+          };
+          let { data: job, error: jobErr } = await db.from("maaroof_jobs").insert(jobPayload).select("id").single();
+          if (jobErr && isMissingWorkspaceIdColumn(jobErr)) {
+            // Older production schemas may not have the additive workspace_id column yet.
+            // Retry once without that column, retaining owner-only access and existing task data.
+            console.warn("[maaroof] workspace_id unavailable on maaroof_jobs; retrying legacy insert", jobErr.message);
+            const { workspace_id: _workspaceId, ...legacyPayload } = jobPayload;
+            const retry = await db.from("maaroof_jobs").insert(legacyPayload).select("id").single();
+            job = retry.data;
+            jobErr = retry.error;
+          }
+          if (jobErr || !job) {
+            console.error("[maaroof] background job insert failed; executing inline", jobErr?.message || "no row returned");
+            return inlineRunResponse({
+              request, userId, goal, lang, detectedGeo, geoScope, workspaceId: verifiedWorkspaceId,
+              authBearer: auth, origin, executionMode, useSubagents, liveProbe, clarifications,
+              reason: String(jobErr?.message || "background_job_insert_failed").slice(0, 240),
+            });
+          }
           const jobId = job.id as string;
           const { createSeqCounter } = await import("@/lib/maaroof/jobs");
           const next = createSeqCounter();
