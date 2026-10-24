@@ -9,7 +9,7 @@ const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l ==
 type Row = { id: string; name: string; mime: string; size: number; created_at: string; status: string; analysis: string | null; path: string };
 
 /** In-workspace file manager: lists the user's uploads, shows analysis, deletes after confirmation. */
-export function FilesManager({ lang, onClose }: { lang: L; onClose: () => void }) {
+export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; onClose: () => void; workspaceId?: string | null }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [view, setView] = useState<Row | null>(null);
@@ -17,9 +17,11 @@ export function FilesManager({ lang, onClose }: { lang: L; onClose: () => void }
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("task_attachments").select("id,name,mime,size,created_at,status,analysis,path").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100)
+    let query = supabase.from("task_attachments").select("id,name,mime,size,created_at,status,analysis,path,workspace_id").eq("user_id", user.id);
+    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    query.order("created_at", { ascending: false }).limit(100)
       .then(({ data, error }) => { if (error) setErr(error.message); setRows((data as Row[]) || []); });
-  }, [user?.id]);
+  }, [user?.id, workspaceId]);
 
   async function remove(r: Row) {
     if (!confirm(tr(lang, `حذف «${r.name}» نهائياً؟`, `Delete "${r.name}" permanently?`, `«${r.name}» بسڕدرێتەوە؟`))) return;

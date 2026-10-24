@@ -84,16 +84,16 @@ export const Route = createFileRoute("/api/maaroof-chat")({
 
         // Knowledge actually held for this user — the only ground Maaroof speaks from.
         const [{ data: kf }, { data: iv }, { data: ws }, { data: hist }] = await Promise.all([
-          scopeWorkspace(admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(120),
-          workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
-          workspaceId ? admin.from("workspaces").select("name, space_kind, profile, goals").eq("owner_id", userId).eq("id", workspaceId).limit(1) : Promise.resolve({ data: [] as any[] }),
+          admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(120),
+          admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
+          admin.from("workspaces").select("name, space_kind").eq("owner_id", userId).limit(50),
           admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId).order("created_at", { ascending: false }).limit(40),
         ]);
         const id = ownerIdentity(p);
         const conf = id.verified ? "evidence" : "unverified profile entry";
         const knowledge: string[] = [
-          ...(!workspaceId ? id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`) : []),
-          ...(ws || []).map((w: any) => `[workspace identity] ${w.space_kind}: ${w.name}; profile=${JSON.stringify(w.profile || {})}; goals=${JSON.stringify(w.goals || [])}`),
+          ...id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`),
+          ...(ws || []).map((w: any) => `[workspace] ${w.space_kind}: ${w.name}`),
           ...freshFacts((kf || []) as any[]).map((f: any) => `[${f.source}, ${f.confidence}] ${String(f.fact).slice(0, 300)}`),
           ...interviewFacts((iv || []) as any).map((f) => `[interview] ${f.fact.slice(0, 300)}`),
         ].slice(0, 120);

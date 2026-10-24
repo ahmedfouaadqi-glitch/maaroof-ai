@@ -491,9 +491,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // Facts learned from earlier tasks (MCI memory) — read-only, fail-open.
     try {
       const { freshFacts, factsContextLine } = await import("@/lib/knowledge-facts");
-      let factsQuery = (db() as any).from("knowledge_facts").select("fact, source, expires_at").eq("user_id", ctx.userId);
-      factsQuery = ctx.workspaceId ? factsQuery.eq("workspace_id", ctx.workspaceId) : factsQuery.is("workspace_id", null);
-      const { data: kf } = await factsQuery.order("created_at", { ascending: false }).limit(20);
+      const { data: kf } = await (db() as any).from("knowledge_facts").select("fact, source, expires_at").eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(20);
       mciHintLine += factsContextLine(freshFacts((kf || []) as Array<{ fact: string; source: string; expires_at?: string | null }>));
     } catch {}
     // User's own recent tool runs (saved results + chosen options) — read-only, fail-open.
@@ -1040,7 +1038,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
             for (const line of prior.slice(0, 8)) {
               const f = taskFact(ctx.goal, line);
               if (!f) continue;
-              const { error } = await (db() as any).from("knowledge_facts").insert({ user_id: ctx.userId, workspace_id: ctx.workspaceId || null, source: "task", source_ref: runId, ...f });
+              const { error } = await (db() as any).from("knowledge_facts").insert({ user_id: ctx.userId, source: "task", source_ref: runId, ...f });
               if (!error) saved++;
             }
             output = { saved_facts: saved };

@@ -17,4 +17,11 @@ describe("attachments", () => {
     expect(ownsPath("u2", p)).toBe(false);
     expect(ownsPath("u1", "u1/../u2/x")).toBe(false);
   });
+  it("separates workspace uploads while keeping them inside the owner folder", () => {
+    const workspaceId = "123e4567-e89b-12d3-a456-426614174000";
+    const p = attachmentPath("u1", "brief.pdf", 9, workspaceId);
+    expect(p).toBe(`u1/${workspaceId}/9-brief.pdf`);
+    expect(ownsPath("u1", p)).toBe(true);
+    expect(ownsPath("u2", p)).toBe(false);
+  });
 });
