@@ -12,11 +12,19 @@ export type Workspace = {
   brand_url: string | null;
   language: "ar" | "en" | "ku";
   country: string | null;
+  city?: string | null;
+  brand_summary?: string | null;
+  keywords?: string[] | string | null;
+  profile?: Record<string, unknown> | null;
+  entity_truth_card?: Record<string, any> | null;
+  onboarding?: Record<string, any> | null;
+  settings?: Record<string, any> | null;
+  goals?: unknown[] | null;
 };
 
 const STORAGE_KEY = "maaroof.active_workspace_id";
 
-export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | null) => void }) {
+export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (ws: Workspace | null) => void; disabled?: boolean }) {
   const { t, lang } = useI18n();
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
@@ -47,7 +55,16 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
     })();
   }, []);
 
-  function pick(w: Workspace | null) {
+  async function pick(w: Workspace | null) {
+    if (disabled) return;
+    if (w) {
+      try {
+        const latest = await list();
+        const refreshed = (latest.items as unknown as Workspace[]) || [];
+        setItems(refreshed);
+        w = refreshed.find((item) => item.id === w!.id) || w;
+      } catch {}
+    }
     setActiveId(w?.id ?? null);
     if (typeof window !== "undefined") {
       if (w) localStorage.setItem(STORAGE_KEY, w.id);
@@ -79,7 +96,7 @@ export function WorkspaceSwitcher({ onChange }: { onChange: (ws: Workspace | nul
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3 space-y-2">
+    <div className={`rounded-lg border bg-card p-3 space-y-2 ${disabled ? "opacity-60 pointer-events-none" : ""}`}>
       <h2 className="flex items-center justify-between gap-2 font-semibold text-base m-0">
         <span className="flex items-center gap-2"><Building2 className="w-4 h-4" /> {t("auto.workspaces")}</span>
         <button onClick={() => setShowForm((v) => !v)} className="text-xs text-primary hover:underline flex items-center gap-1"><Plus className="w-3 h-3" /> {t("auto.new")}</button>
