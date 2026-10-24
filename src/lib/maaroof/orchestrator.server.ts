@@ -1129,7 +1129,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const { stripAgentOnlyFields } = await import("./probe-answer");
         const N = await import("./narration");
-        const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language };
+        const body = { ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any), scope: geo.country ? { scope: geo.city ? "city" : "country", country: geo.country, city: geo.city } : { scope: "world" }, lang: ctx.language, workspace_id: ctx.workspaceId || null };
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolStart(step.tool, ctx.language as any, Array.isArray((body as any).probe_engines) ? (body as any).probe_engines.length : 0) }); } catch {}
         const toolCtl = new AbortController();
         const { toolTimeoutMs } = await import("./timeouts");
