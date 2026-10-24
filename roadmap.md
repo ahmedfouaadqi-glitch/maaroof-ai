@@ -6,3 +6,8 @@
 - [x] 2 الأمن السيبراني (فحص الموقع + تقوية الخادم)
 - [ ] 3 واجهة مساحة معروف بإلهام React Bits
 - [ ] 4 المناظرة النقدية
+
+- [x] «دردشة» unified chat + tasks
+- [ ] Workspaces as switchable accounts
+- [ ] Admin field for approved accounts
+- [ ] Safe browser five-dimension report
