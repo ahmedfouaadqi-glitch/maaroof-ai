@@ -93,6 +93,20 @@ export async function resolveToolCost(userId: string, toolKey: string): Promise<
  *  - If the tool is unpriced for this user (no override, no plan price),
  *    rejects with reason="unpriced". The route should return HTTP 402.
  */
+/** Owner (admin role) and approved accounts have unlimited balance. Fail-closed on errors. */
+export async function isUnlimitedAccount(userId: string): Promise<boolean> {
+  try {
+    const db = admin();
+    const { data: role } = await db.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+    if (role) return true;
+    const { data: u } = await db.auth.admin.getUserById(userId);
+    const email = String(u?.user?.email || "").toLowerCase();
+    if (!email) return false;
+    const { data: ok } = await (db.from as any)("approved_accounts").select("id").ilike("email", email).maybeSingle();
+    return !!ok;
+  } catch { return false; }
+}
+
 export async function chargeTokens(opts: {
   userId: string;
   toolKey: string;
@@ -104,6 +118,9 @@ export async function chargeTokens(opts: {
   unitTokens?: number;
 }): Promise<ChargeResult> {
   const db = admin();
+  if (await isUnlimitedAccount(opts.userId)) {
+    return { ok: true, balance: 0, used_today: 0, used_month: 0, tokens: 0, usd: 0, source: "unpriced" } as ChargeResult;
+  }
   const { data: prof } = await db
     .from("profiles")
     .select("tokens_balance, tokens_daily_limit, tokens_monthly_limit")

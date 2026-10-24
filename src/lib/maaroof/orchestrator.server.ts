@@ -310,6 +310,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const choice = await modelFor(phase);
     const timeoutMs = phaseTimeoutMs(String(phase));
     const t0 = Date.now();
+    // Progress signal before every model call so no stage is silent.
+    try { await ctx.emit("stage", { stage: `thinking:${String(phase)}` }); } catch {}
     try {
       const r = await callGateway(apiKey, choice.model, messages, {
         signal: ctx.signal, timeoutMs,

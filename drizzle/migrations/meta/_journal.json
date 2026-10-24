@@ -92,6 +92,13 @@
       "when": 1792766250578,
       "tag": "0012_profile_onboarding_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792824286464,
+      "tag": "0013_approved_accounts",
+      "breakpoints": true
     }
   ]
 }
