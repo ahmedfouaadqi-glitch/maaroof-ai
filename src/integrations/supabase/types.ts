@@ -533,6 +533,27 @@ export type Database = {
         }
         Relationships: []
       }
+      approved_accounts: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       benchmark_results: {
         Row: {
           benchmark_id: string
