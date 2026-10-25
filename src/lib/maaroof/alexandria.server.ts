@@ -44,6 +44,16 @@ function apiKey(): string {
   return key;
 }
 
+/** Organization admins maintain this semicolon-separated allow-list outside code deployment.
+ * Entries must be exact provider names or exact provider/capability pairs from the discovered contract.
+ */
+export function isAlexandriaTermsAccepted(provider: string, capability: string): boolean {
+  const entries = String(process.env.MAAROOF_ALEXANDRIA_TERMS_ACCEPTED || "")
+    .split(";").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return entries.includes(provider.trim().toLowerCase()) ||
+    entries.includes((provider.trim() + "/" + capability.trim()).toLowerCase());
+}
+
 export function normalizeAlexandriaCandidates(payload: any): AlexandriaCandidate[] {
   const roots = [payload?.data ?? payload, payload].filter(Boolean);
   const candidates: any[] = [];
@@ -215,7 +225,7 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
     discoveredCostCredits: input.estimatedCredits,
     maxCredits: input.maxCredits,
     userConfirmedPaidRun: input.userConfirmedPaidRun,
-    adminTermsAccepted: input.adminTermsAccepted && process.env.MAAROOF_ALEXANDRIA_TERMS_ACCEPTED === "true",
+    adminTermsAccepted: input.adminTermsAccepted && isAlexandriaTermsAccepted(input.provider, input.capability),
     requestId: input.requestId,
   });
   if (!gate.allowed) throw new SpecializedSourceGateError(gate.reason || "specialized_source_blocked");
