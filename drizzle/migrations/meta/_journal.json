@@ -120,6 +120,13 @@
       "when": 1792878000000,
       "tag": "0016_job_recovery_workspace_compat",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792888336424,
+      "tag": "0017_workspace_account_isolation",
+      "breakpoints": true
     }
   ]
 }

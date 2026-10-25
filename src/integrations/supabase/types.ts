@@ -2392,6 +2392,7 @@ export type Database = {
           source: string
           source_ref: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           broadcast?: boolean
@@ -2403,6 +2404,7 @@ export type Database = {
           source: string
           source_ref?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           broadcast?: boolean
@@ -2414,8 +2416,17 @@ export type Database = {
           source?: string
           source_ref?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_facts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_nodes: {
         Row: {
@@ -3112,6 +3123,7 @@ export type Database = {
           id: string
           role: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           content: string
@@ -3120,6 +3132,7 @@ export type Database = {
           id?: string
           role: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           content?: string
@@ -3128,8 +3141,17 @@ export type Database = {
           id?: string
           role?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_chat_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       maaroof_evolution_reports: {
         Row: {
@@ -3208,6 +3230,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
@@ -3220,6 +3243,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
@@ -3232,8 +3256,17 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "maaroof_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       maaroof_memory: {
         Row: {
@@ -4984,6 +5017,7 @@ export type Database = {
           status: string
           tokens_charged: number
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           analysis?: string | null
@@ -4998,6 +5032,7 @@ export type Database = {
           status?: string
           tokens_charged?: number
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           analysis?: string | null
@@ -5012,8 +5047,17 @@ export type Database = {
           status?: string
           tokens_charged?: number
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       token_ledger: {
         Row: {
@@ -5520,6 +5564,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          entity_truth_card: Json
           goals: Json
           id: string
           keywords: string[]
@@ -5527,6 +5572,7 @@ export type Database = {
           language: string
           meta: Json
           name: string
+          onboarding: Json
           owner_id: string
           parent_id: string | null
           policies: Json
@@ -5535,6 +5581,7 @@ export type Database = {
           preferred_models: Json
           profile: Json
           risk_level: string | null
+          settings: Json
           space_kind: string
           success_metrics: Json
           updated_at: string
@@ -5546,6 +5593,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          entity_truth_card?: Json
           goals?: Json
           id?: string
           keywords?: string[]
@@ -5553,6 +5601,7 @@ export type Database = {
           language?: string
           meta?: Json
           name: string
+          onboarding?: Json
           owner_id: string
           parent_id?: string | null
           policies?: Json
@@ -5561,6 +5610,7 @@ export type Database = {
           preferred_models?: Json
           profile?: Json
           risk_level?: string | null
+          settings?: Json
           space_kind?: string
           success_metrics?: Json
           updated_at?: string
@@ -5572,6 +5622,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          entity_truth_card?: Json
           goals?: Json
           id?: string
           keywords?: string[]
@@ -5579,6 +5630,7 @@ export type Database = {
           language?: string
           meta?: Json
           name?: string
+          onboarding?: Json
           owner_id?: string
           parent_id?: string | null
           policies?: Json
@@ -5587,6 +5639,7 @@ export type Database = {
           preferred_models?: Json
           profile?: Json
           risk_level?: string | null
+          settings?: Json
           space_kind?: string
           success_metrics?: Json
           updated_at?: string
