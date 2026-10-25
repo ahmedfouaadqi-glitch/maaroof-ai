@@ -1,5 +1,5 @@
 // SchedulesPanel — list + create scheduled auto-runs for Maaroof.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarClock, Plus, Pause, Play, Trash2, Loader2 } from "lucide-react";
@@ -16,6 +16,7 @@ type Schedule = {
   name: string;
   prompt: string;
   cadence: "once" | "hourly" | "daily" | "weekly" | "custom_cron";
+  cron_expr?: string | null;
   next_run_at: string | null;
   last_run_at: string | null;
   runs_done: number;
@@ -54,16 +55,29 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
   const [cadence, setCadence] = useState<Schedule["cadence"]>("daily");
   const [approval, setApproval] = useState<Schedule["approval_mode"]>("per_run");
   const [maxRuns, setMaxRuns] = useState<number>(0);
+  const [cronExpr, setCronExpr] = useState("0 9 * * 1-5");
+  const requestSeq = useRef(0);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    requestSeq.current += 1;
+    setItems([]);
+    void refresh();
+    return () => { requestSeq.current += 1; };
+  }, [workspaceId]);
   useEffect(() => { if (defaultPrompt && !prompt) setPrompt(defaultPrompt); }, [defaultPrompt]);
 
   async function refresh() {
+    const seq = ++requestSeq.current;
     setLoading(true);
     try {
-      const res = await list();
-      setItems((res.items as Schedule[]) || []);
-    } finally { setLoading(false); }
+      const res = await list({ data: { workspace_id: workspaceId } });
+      if (seq === requestSeq.current) {
+        const rows = (res.items as Schedule[]) || [];
+        setItems(rows.filter((item) => (item.workspace_id ?? null) === (workspaceId ?? null)));
+      }
+    } finally {
+      if (seq === requestSeq.current) setLoading(false);
+    }
   }
 
   async function submit() {
@@ -77,27 +91,28 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
         language: "ar",
         force_tools: [],
         cadence,
+        cron_expr: cadence === "custom_cron" ? cronExpr.trim() : null,
         max_runs: maxRuns,
         approval_mode: approval,
       } });
-      setName(""); setPrompt(""); setShowForm(false);
+      setName(""); setPrompt(""); setCronExpr("0 9 * * 1-5"); setShowForm(false);
       await refresh();
     } finally { setSaving(false); }
   }
 
   async function toggle(s: Schedule) {
     const next = s.status === "active" ? "paused" : "active";
-    await setStatus({ data: { id: s.id, status: next } });
+    await setStatus({ data: { id: s.id, workspace_id: workspaceId, status: next } });
     await refresh();
   }
 
   async function remove(id: string) {
     if (!confirm(t("auto.delete_schedule"))) return;
-    await del({ data: { id } });
+    await del({ data: { id, workspace_id: workspaceId } });
     await refresh();
   }
 
-  const filtered = workspaceId ? items.filter((s) => s.workspace_id === workspaceId || !s.workspace_id) : items;
+  const filtered = items.filter((s) => (s.workspace_id ?? null) === (workspaceId ?? null));
 
   return (
     <div className="rounded-lg border bg-card p-3 space-y-2">
@@ -110,6 +125,13 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
         <div className="space-y-2 p-2 rounded border bg-background/50">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auto.short_name_example_daily_competitor_monitoring")} className="w-full border rounded px-2 py-1 bg-background text-sm" />
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={t("auto.prompt_to_be_executed_every_time")} className="w-full min-h-[70px] border rounded px-2 py-1 bg-background text-sm resize-y" />
+          {cadence === "custom_cron" && (
+            <label className="block space-y-1 text-xs">
+              <span>Cron (UTC، خمس خانات)</span>
+              <input value={cronExpr} onChange={(e) => setCronExpr(e.target.value)} placeholder="0 9 * * 1-5" className="w-full border rounded px-2 py-1 bg-background font-mono" />
+              <span className="block text-[10px] text-muted-foreground">مثال: 0 9 * * 1-5 = أيام العمل الساعة 09:00 UTC</span>
+            </label>
+          )}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <label className="space-y-1">
               <span>{t("auto.iteration")}</span>
@@ -130,7 +152,7 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
           </div>
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowForm(false)} className="text-xs px-2 py-1 rounded hover:bg-muted">{t("auto.cancel")}</button>
-            <button onClick={submit} disabled={!name.trim() || !prompt.trim() || saving} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-1">
+            <button onClick={submit} disabled={!name.trim() || !prompt.trim() || saving || (cadence === "custom_cron" && !cronExpr.trim())} className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-1">
               {saving && <Loader2 className="w-3 h-3 animate-spin" />} إنشاء
             </button>
           </div>
