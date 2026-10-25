@@ -30,6 +30,16 @@ describe("scrape quality gate", () => {
     })).toBe(false);
   });
 
+  it("accepts descriptive profile metadata when the extracted body mentions login controls", () => {
+    expect(hasUsableScrapeEvidence({
+      data: { markdown: "Public profile. Log in to Instagram to follow this account.", metadata: {
+        title: "Example Couture (@example) · Instagram",
+        description: "Official Example Couture profile sharing fashion collections, product details, and new seasonal releases.",
+        statusCode: 200,
+      } },
+    })).toBe(true);
+  });
+
   it("rejects empty responses and HTTP errors", () => {
     expect(hasUsableScrapeEvidence({ data: { markdown: "", metadata: {} } })).toBe(false);
     expect(hasUsableScrapeEvidence({ data: { markdown: "This would otherwise be long enough to count", metadata: { statusCode: 403 } } })).toBe(false);
