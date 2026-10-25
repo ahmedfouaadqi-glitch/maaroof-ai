@@ -347,13 +347,22 @@ export async function decayEvidence(limit = 500): Promise<number> {
 }
 
 /** Aggregates for the Reality Lab / Evidence panel. */
-export async function evidenceOverview(limit = 400) {
+export async function evidenceOverview(limit = 400, scope?: { userId?: string | null; workspaceId?: string | null }) {
   try {
-    const { data } = await db()
+    // Never use another user's history as corroboration. A workspace scope is only meaningful with its owner.
+    if (scope?.workspaceId && !scope.userId) {
+      return { total: 0, by_type: {}, by_category: {}, validation: crossValidate([]) };
+    }
+    let q = db()
       .from("evidence_items")
-      .select("id, evidence_type, category, weight, freshness, reproducible, contradicts, created_at")
+      .select("id, user_id, workspace_id, source_ref, source_kind, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, created_at, retrieved_at")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(Math.max(1, Math.min(1000, Math.floor(limit) || 400)));
+    if (scope?.userId) q = q.eq("user_id", scope.userId);
+    if (scope && Object.prototype.hasOwnProperty.call(scope, "workspaceId")) {
+      q = scope.workspaceId ? q.eq("workspace_id", scope.workspaceId) : q.is("workspace_id", null);
+    }
+    const { data } = await q;
     const rows = (data as any[]) || [];
     const byType: Record<string, number> = {};
     const byCategory: Record<string, number> = {};
