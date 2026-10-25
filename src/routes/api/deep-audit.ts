@@ -93,6 +93,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
   try {
     // Bounded concurrency keeps larger multi-link audits practical without flooding crawl providers.
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker()));
+    if (cancelled) return;
     const axes = aggregateAxes(results.map((r) => r.findings));
     const overall = weightedScore(axes, isAccountKind(kind) ? kind : null);
     const units = billableUnits(results);
