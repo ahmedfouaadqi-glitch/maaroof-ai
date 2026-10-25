@@ -3,6 +3,26 @@ export type ScrapeSource = "linkedin_direct" | "firecrawl" | "direct_http";
 export type SearchSource = "firecrawl" | "apidirect";
 export const FETCH_TIMEOUT_MS = 15_000;
 
+/** True only when a scrape exposes usable text or meaningful title+description metadata. */
+export function hasUsableScrapeEvidence(result: any, url = ""): boolean {
+  const data = result?.data ?? result;
+  const meta = data?.metadata ?? {};
+  const markdown = String(data?.markdown ?? "").trim();
+  const title = String(meta.title ?? "").trim();
+  const description = String(meta.description ?? "").trim();
+  const status = Number(meta.statusCode);
+  if (Number.isFinite(status) && status >= 400) return false;
+  const combined = [title, description, markdown].join("\n");
+  const blockedShell = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn.t available|log in to instagram|sign in to instagram|instagram\.com\/accounts\/login)/i.test(combined);
+  const profileMetadata = title.length >= 3 && description.length >= 20;
+  // Reject provider/login placeholders, but preserve public profile OG metadata when it is substantive.
+  if (blockedShell && !profileMetadata) return false;
+  if (markdown.length > 40) return true;
+  if (profileMetadata) return true;
+  // Title-only results are not enough to claim that the entity profile was read.
+  return false;
+}
+
 export function isLinkedIn(url: string): boolean {
   try { return /(^|\.)linkedin\.com$/i.test(new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname); } catch { return false; }
 }
