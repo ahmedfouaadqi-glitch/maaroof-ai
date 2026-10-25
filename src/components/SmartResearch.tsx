@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 import { fromResearch } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
-import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe } from "lucide-react";
+import { Search, Loader2, ExternalLink, Sparkles, Radio, Zap, TrendingUp, Building2, Globe, Database, ShieldCheck, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 
@@ -24,7 +24,35 @@ const CHANNEL_OPTIONS = [
 
 type SearchMode = "web" | "company";
 
-export function SmartResearch() {
+function initialOptionsFromSchema(schema: any): string {
+  const properties = schema?.properties && typeof schema.properties === "object" ? schema.properties : {};
+  const required = new Set(Array.isArray(schema?.required) ? schema.required.map(String) : []);
+  const result: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(properties) as Array<[string, any]>) {
+    if (!required.has(key) && field?.default === undefined && field?.examples === undefined) continue;
+    if (field?.default !== undefined) result[key] = field.default;
+    else if (Array.isArray(field?.examples) && field.examples.length) result[key] = field.examples[0];
+    else if (Array.isArray(field?.enum) && field.enum.length) result[key] = field.enum[0];
+    else if (field?.type === "integer" || field?.type === "number") result[key] = Number(field?.minimum ?? 1);
+    else if (field?.type === "boolean") result[key] = false;
+    else if (field?.type === "array") result[key] = [];
+    else if (field?.type === "object") result[key] = {};
+    else result[key] = "";
+  }
+  return JSON.stringify(result, null, 2);
+}
+
+function schemaSummary(schema: any, lang: string): string[] {
+  const properties = schema?.properties && typeof schema.properties === "object" ? schema.properties : {};
+  const required = new Set(Array.isArray(schema?.required) ? schema.required.map(String) : []);
+  return Object.entries(properties).map(([key, field]: [string, any]) =>
+    key + (required.has(key) ? " *" : "") + " — " + String(field?.type || "value") +
+    (Array.isArray(field?.enum) ? " (" + field.enum.map(String).join(", ") + ")" : "") +
+    (field?.description ? ": " + String(field.description).slice(0, 120) : "")
+  );
+}
+
+export function SmartResearch({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t, lang } = useI18n();
   const { profile, session } = useAuth();
   const specialty = (profile as any)?.specialty || "";
@@ -35,6 +63,27 @@ export function SmartResearch() {
   const [err, setErr] = useState("");
   const [includeChannels, setIncludeChannels] = useState(false);
   const [channelTypes, setChannelTypes] = useState<string[]>(["website", "linkedin", "instagram", "email"]);
+  const [requestSpecializedDiscovery, setRequestSpecializedDiscovery] = useState(false);
+  const [selectedSpecializedId, setSelectedSpecializedId] = useState("");
+  const [specializedOptionsJson, setSpecializedOptionsJson] = useState("{}");
+  const [confirmSpecializedPaidRun, setConfirmSpecializedPaidRun] = useState(false);
+  const [specializedBusy, setSpecializedBusy] = useState(false);
+  const [specializedError, setSpecializedError] = useState("");
+  const [specializedResult, setSpecializedResult] = useState<any>(null);
+  const [specializedRequestId, setSpecializedRequestId] = useState("");
+  const workspaceEpoch = useRef(0);
+  const phrase = (ar: string, en: string, ku: string) => lang === "en" ? en : lang === "ku" ? ku : ar;
+
+  useEffect(() => {
+    workspaceEpoch.current += 1;
+    setLoading(false);
+    setOut(null);
+    setErr("");
+    setSpecializedError("");
+    setSpecializedResult(null);
+    setSelectedSpecializedId("");
+    setSpecializedRequestId("");
+  }, [workspaceId]);
 
   const toggleChannel = (c: string) =>
     setChannelTypes((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
@@ -52,6 +101,7 @@ export function SmartResearch() {
 
   const run = async () => {
     if (!q.trim()) return;
+    const epoch = workspaceEpoch.current;
     setLoading(true); setErr(""); setOut(null);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -59,17 +109,81 @@ export function SmartResearch() {
       const res = await apiFetch("/api/research", {
         method: "POST", headers,
         body: JSON.stringify({
-          query: q, lang, scope: getEffectiveScope(profile, "research"),
+          query: q, lang, workspace_id: workspaceId, scope: getEffectiveScope(profile, "research"),
           mode,
           include_channels: includeChannels || mode === "company",
           channel_types: (includeChannels || mode === "company") ? channelTypes : undefined,
+          request_specialized_discovery: requestSpecializedDiscovery,
         }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");
-      setOut(j);
-    } catch (e: any) { setErr(e?.message || "failed"); }
-    finally { setLoading(false); }
+      if (epoch === workspaceEpoch.current) setOut(j);
+    } catch (e: any) {
+      if (epoch === workspaceEpoch.current) setErr(e?.message || "failed");
+    } finally {
+      if (epoch === workspaceEpoch.current) setLoading(false);
+    }
+  };
+
+  const runSpecializedSource = async () => {
+    const epoch = workspaceEpoch.current;
+    const candidate = (out?.specialized_source_options?.candidates || []).find((item: any) => item.candidate_id === selectedSpecializedId);
+    if (!candidate || !candidate.executable) return;
+    if (!confirmSpecializedPaidRun) {
+      setSpecializedError(phrase("أكد موافقتك على تشغيل المصدر المدفوع أولًا.", "Confirm the paid source run first.", "سەرەتا ڕەزامەندی بە کارپێکردنی سەرچاوەی پارەدان پشتڕاست بکە."));
+      return;
+    }
+    let options: any;
+    try {
+      options = JSON.parse(specializedOptionsJson);
+      if (!options || typeof options !== "object" || Array.isArray(options)) throw new Error("options_object_required");
+    } catch {
+      setSpecializedError(phrase("مدخلات الخيارات ليست كائن JSON صالحًا.", "Options must be a valid JSON object.", "هەڵبژاردەکان دەبێت کۆمەڵەیەکی JSONی دروست بن."));
+      return;
+    }
+    const requestId = specializedRequestId || (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "");
+    if (!requestId) {
+      setSpecializedError(phrase("تعذّر إنشاء معرّف آمن للطلب. أعد تحميل الصفحة.", "Could not create a safe request ID. Reload the page.", "نەتوانرا ناسنامەی داواکاری دروست بکرێت؛ پەڕەکە نوێ بکەرەوە."));
+      return;
+    }
+    setSpecializedRequestId(requestId);
+    setSpecializedBusy(true);
+    setSpecializedError("");
+    setSpecializedResult(null);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+      const res = await apiFetch("/api/research", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          query: q, lang, workspace_id: workspaceId, scope: getEffectiveScope(profile, "research"), mode,
+          specialized_execution: {
+            candidate_id: candidate.candidate_id,
+            options,
+            confirm_paid_run: true,
+            max_credits: candidate.estimated_credits,
+            request_id: requestId,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        const message = json.message || json.error || "specialized_source_failed";
+        if (json.new_request_required) setSpecializedRequestId("");
+        else if (json.retry_with_same_request_id) setSpecializedRequestId(requestId);
+        throw new Error(String(message));
+      }
+      if (epoch === workspaceEpoch.current) {
+        setSpecializedResult(json.specialized_execution);
+        setSpecializedRequestId("");
+        setConfirmSpecializedPaidRun(false);
+      }
+    } catch (error: any) {
+      if (epoch === workspaceEpoch.current) setSpecializedError(String(error?.message || "specialized_source_failed"));
+    } finally {
+      if (epoch === workspaceEpoch.current) setSpecializedBusy(false);
+    }
   };
 
   return (
@@ -111,6 +225,15 @@ export function SmartResearch() {
 
       <div className="mt-3 rounded-lg border border-border/70 bg-background/40 p-3">
         <label className="flex items-center gap-2 text-xs font-semibold">
+          <input type="checkbox" checked={requestSpecializedDiscovery} onChange={(e) => { setRequestSpecializedDiscovery(e.target.checked); setSpecializedError(""); setSpecializedResult(null); }} />
+          <Database className="size-3.5 text-accent" />
+          {phrase("اكتشف مصادر بيانات متخصصة (الاكتشاف فقط مجاني)", "Discover specialized data sources (discovery only is free)", "سەرچاوەی داتای تایبەت بدۆزەوە (دۆزینەوە بەخۆڕاییە)")}
+        </label>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {phrase("لن يجري تشغيل أي مصدر متخصص أثناء البحث العادي. سيُعرض الخيار والتكلفة أولًا، ثم يلزم تأكيد منفصل.", "No specialized source runs during normal research. Options and estimated cost appear first; execution requires separate confirmation.", "هیچ سەرچاوەیەکی تایبەت لە گەڕانی ئاساییدا کار ناکات؛ سەرەتا هەڵبژاردە و تێچوو پیشان دەدرێت و پەسەندکردنی جیاواز دەوێت.")}
+        </p>
+        <div className="mt-3 border-t border-border/70 pt-3">
+        <label className="flex items-center gap-2 text-xs font-semibold">
           <input type="checkbox" checked={includeChannels} onChange={(e) => setIncludeChannels(e.target.checked)} />
           <Radio className="size-3.5 text-accent" /> {t("research_include_channels")}
         </label>
@@ -130,11 +253,86 @@ export function SmartResearch() {
             </div>
           </>
         )}
+        </div>
       </div>
 
       {err && <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
       {out && <MciReuseBadge mci={out.mci} path="/api/research" onRefresh={run} />}
       {out && <div className="mb-2 flex justify-end"><ToolResultExport toolKey="research" result={out} /></div>}
+
+      {out?.source_plan && (
+        <div className="mt-3 rounded-xl border border-border bg-background/50 p-3">
+          <div className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="size-4 text-primary" />{phrase("منهجية جمع المصادر", "Source collection method", "شێوازی کۆکردنەوەی سەرچاوە")}</div>
+          <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+            <div className="rounded-lg bg-muted/40 p-2">{phrase("المصدر المختار", "Selected route", "ڕێڕەوی هەڵبژێردراو")}: <b>{out.source_plan.retrieved_source_profile || out.source_plan.route}</b></div>
+            <div className="rounded-lg bg-muted/40 p-2">{phrase("النتائج المستلمة", "Results returned", "ئەنجامە وەرگیراوەکان")}: <b>{out.source_plan.sample_size}</b></div>
+          </div>
+          {out.source_plan.limitation && <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{out.source_plan.limitation}</p>}
+        </div>
+      )}
+
+      {requestSpecializedDiscovery && out?.specialized_source_options && (
+        <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold"><Database className="size-4" />{phrase("مصادر متخصصة مقترحة", "Suggested specialized sources", "سەرچاوە تایبەتە پێشنیارکراوەکان")}</div>
+          <p className="mt-1 text-[11px] text-muted-foreground">{phrase("عرض الاكتشاف لا ينفذ المصدر. لا يظهر التشغيل إلا عندما تتوفر تكلفة مؤكدة وعقد خيارات وشروط الجهة.", "Discovery does not execute the source. Execution is shown only when a quote, option contract, and organization terms are available.", "دۆزینەوە سەرچاوەکە کارپێناکات؛ تەنها کاتێک تێچوو و گرێبەستی هەڵبژاردە و مەرجەکان بەردەست بن کارپێکردن پیشان دەدرێت.")}</p>
+          {out.specialized_source_options.limitation && <p className="mt-2 text-[11px] text-muted-foreground">{out.specialized_source_options.limitation}</p>}
+          <div className="mt-3 space-y-2">
+            {(out.specialized_source_options.candidates || []).map((candidate: any) => (
+              <div key={candidate.candidate_id} className="rounded-lg border border-border bg-background p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold">{candidate.label}</div>
+                    {candidate.description && <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{candidate.description}</p>}
+                  </div>
+                  <div className="shrink-0 rounded-md bg-muted px-2 py-1 text-[11px]">{candidate.estimated_credits == null ? phrase("التكلفة غير معروفة", "Cost unknown", "تێچوو نادیارە") : phrase("التكلفة المقدرة", "Estimated credits", "تێچووی خەمڵێنراو") + ": " + candidate.estimated_credits}</div>
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">{candidate.terms_configured ? phrase("شروط الجهة مؤكدة في إعدادات النظام", "Organization terms are configured", "مەرجەکانی دامەزراوە لە ڕێکخستنەکان پشتڕاست کراون") : phrase("يتطلب إعداد الشروط من مسؤول النظام", "Administrator must configure accepted terms", "بەڕێوەبەری سیستەم دەبێت مەرجە پەسەندکراوەکان ڕێکبخات")}</p>
+                {candidate.executable && (
+                  <div className="mt-2">
+                    <button type="button" onClick={() => { setSelectedSpecializedId(candidate.candidate_id); setSpecializedOptionsJson(initialOptionsFromSchema(candidate.options_schema)); setConfirmSpecializedPaidRun(false); setSpecializedError(""); setSpecializedResult(null); setSpecializedRequestId(""); }}
+                      className="rounded-lg border border-primary/40 px-3 py-1.5 text-[11px] font-semibold text-primary">
+                      {selectedSpecializedId === candidate.candidate_id ? phrase("المصدر المحدد", "Selected source", "سەرچاوەی هەڵبژێردراو") : phrase("اختيار المصدر", "Select source", "سەرچاوە هەڵبژێرە")}
+                    </button>
+                  </div>
+                )}
+                {!candidate.executable && <p className="mt-2 text-[10px] text-muted-foreground">{phrase("غير قابل للتشغيل الآن: التكلفة أو مخطط الخيارات أو شروط الجهة غير متاحة.", "Not executable yet: cost, input schema, or organization terms are unavailable.", "ئێستا ناکرێت کارپێبکرێت: تێچوو، گرێبەستی هەڵبژاردە، یان مەرجەکانی دامەزراوە بەردەست نین.")}</p>}
+                {selectedSpecializedId === candidate.candidate_id && candidate.executable && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <div className="text-[11px] font-medium">{phrase("خيارات المصدر (JSON)", "Source options (JSON)", "هەڵبژاردەکانی سەرچاوە (JSON)")}</div>
+                    <div className="mt-1 space-y-1">
+                      {schemaSummary(candidate.options_schema, lang).map((line: string) => <div key={line} className="text-[10px] leading-4 text-muted-foreground">{line}</div>)}
+                    </div>
+                    <textarea value={specializedOptionsJson} onChange={(e) => setSpecializedOptionsJson(e.target.value)} rows={5} spellCheck={false}
+                      className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs" />
+                    <label className="mt-2 flex items-start gap-2 text-[11px] leading-5">
+                      <input type="checkbox" checked={confirmSpecializedPaidRun} onChange={(e) => setConfirmSpecializedPaidRun(e.target.checked)} className="mt-1" />
+                      <span>{phrase("أوافق على تنفيذ هذا المصدر بتكلفة تقديرية ", "I approve running this source at an estimated cost of ", "ڕازیم بە کارپێکردنی ئەم سەرچاوەیە بە تێچووی خەمڵێنراوی ") + candidate.estimated_credits + phrase(" رصيد. قد تختلف التكلفة الفعلية المبلّغ عنها؛ سيظهر أي تجاوز بوضوح.", " credits. Reported final cost may differ; any overrun will be disclosed.", " خاڵ. تێچووی کۆتایی ڕەنگە جیاواز بێت؛ هەر زیادەڕۆییەک ڕوون دەکرێتەوە.")}</span>
+                    </label>
+                    <button type="button" disabled={!confirmSpecializedPaidRun || specializedBusy} onClick={runSpecializedSource}
+                      className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+                      {specializedBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Database className="size-3.5" />}
+                      {phrase("تنفيذ المصدر المحدد", "Run selected source", "سەرچاوەی هەڵبژێردراو کارپێبکە")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {specializedError && <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" />{specializedError}</div>}
+      {specializedResult && (
+        <div className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-semibold">{specializedResult.label}</div>
+            <div className="text-[11px] text-muted-foreground">{phrase("النتائج", "Results", "ئەنجامەکان")}: {specializedResult.result_count} · {phrase("التكلفة المقدرة", "Estimate", "خەمڵاندن")}: {specializedResult.estimated_credits} · {phrase("التكلفة المبلّغ عنها", "Reported", "ڕاپۆرتکراوە")}: {specializedResult.reported_credits ?? phrase("غير متاحة", "Unavailable", "بەردەست نییە")}</div>
+          </div>
+          {specializedResult.budget_overrun_detected && <p className="mt-2 rounded-md bg-amber-500/10 p-2 text-[11px] text-amber-800">{phrase("أبلغ المصدر عن تكلفة أعلى من التقدير؛ يلزم مراجعة الفاتورة قبل تشغيل جديد.", "The source reported a cost above the estimate; review the bill before another run.", "سەرچاوەکە تێچوویەکی زیاتر لە خەمڵاندن ڕاپۆرت کرد؛ پێش کارپێکردنی نوێ پێداچوونەوە بکە.")}</p>}
+          <p className="mt-2 text-[11px] text-muted-foreground">{specializedResult.limitation}</p>
+          <pre className="mt-2 max-h-80 overflow-auto rounded-lg bg-background p-3 text-[11px] whitespace-pre-wrap break-words">{JSON.stringify(specializedResult.result, null, 2)}</pre>
+        </div>
+      )}
       <ToolHistory toolKey="research" />
       {out && (
         <div className="mt-4 space-y-3" id="research-result">
