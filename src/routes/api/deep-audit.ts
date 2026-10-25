@@ -102,7 +102,20 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
   try {
     // Bounded concurrency keeps larger multi-link audits practical without flooding crawl providers.
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker()));
-    if (cancelled) return;
+    // A cancel may arrive while the last (or only) workers are still fetching, leaving no next loop iteration to observe it.
+    const { data: completionState, error: completionStateError } = await db.from("maaroof_jobs")
+      .select("status").eq("id", jobId).eq("user_id", userId).maybeSingle();
+    if (cancelled || completionState?.status === "cancelled") return;
+    if (completionStateError || !completionState) {
+      const now = new Date().toISOString();
+      await db.from("maaroof_jobs").update({
+        status: "failed",
+        error: "تعذّر التحقق من حالة الفحص؛ لم يُخصم شيء.",
+        finished_at: now,
+        updated_at: now,
+      }).eq("id", jobId).eq("user_id", userId);
+      return;
+    }
     const axes = aggregateAxes(results.map((r) => r.findings));
     const overall = weightedScore(axes, isAccountKind(kind) ? kind : null);
     const units = billableUnits(results);
