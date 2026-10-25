@@ -172,7 +172,8 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
   // Social/profile scrapers often return Open Graph metadata but little markdown.
   // Metadata is enough for entity identity (GEO/GSEO), not for claims about FAQ or section structure.
   const hasMetadata = title.length >= 3 && desc.length >= 20;
-  const has = hasBody || hasMetadata;
+  const blockedContent = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn't available|log in to instagram|sign in to instagram|instagram\.com\/accounts\/login)/i.test([title, desc, md].join("\n"));
+  const has = !blockedContent && (hasBody || hasMetadata);
   const normalizedBrand = brand.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const normalizeMatch = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const brandIn = (s: string) => !!normalizedBrand && normalizeMatch(s).includes(normalizedBrand);
