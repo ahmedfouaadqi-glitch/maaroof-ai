@@ -44,10 +44,13 @@ describe("reality labels require explicit measurement evidence", () => {
     expect(isMeasuredToolResult({ score: 99 })).toBe(false);
     expect(isMeasuredToolResult({ reality_kind: "measurement" })).toBe(true);
     expect(isMeasuredToolResult({ measurement: { status: "measured" } })).toBe(true);
+    expect(isMeasuredToolResult({ probe: { measurement: { reality_kind: "measurement" } } })).toBe(true);
+    expect(isMeasuredToolResult({ result: { methodology: { reality_kind: "estimate" } } })).toBe(false);
   });
 
   it("only recognizes cited URLs as external evidence", () => {
     expect(hasExternalEvidence({ answer: "A confident answer" })).toBe(false);
     expect(hasExternalEvidence({ sources: [{ title: "Evidence", url: "https://example.com" }] })).toBe(true);
+    expect(hasExternalEvidence({ probe: { evidence: [{ url: "https://example.com" }] } })).toBe(true);
   });
 });
