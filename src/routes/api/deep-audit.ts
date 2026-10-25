@@ -43,7 +43,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
   const CONCURRENCY = 3;
   const emit = (event_type: string, payload: any) =>
     db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq: ++seq, event_type, payload });
-  const results: { url: string; kind: string; platform: string | null; ok: boolean; findings: ReturnType<typeof scoreTarget> }[] = [];
+  const results: { url: string; kind: string; platform: string | null; ok: boolean; read_status: "measured" | "unmeasured"; read_issue: string | null; findings: ReturnType<typeof scoreTarget> }[] = [];
 
   async function auditOne(index: number) {
     const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).eq("user_id", userId).maybeSingle();
@@ -55,6 +55,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
 
     let ev: any = null;
     let source: string | null = null;
+    let readIssue: string | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const { fcScrape } = await import("@/lib/firecrawl");
@@ -65,19 +66,27 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       const d = r?.data ?? r;
       source = r?.fetch_source ?? null;
       ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
-    } catch {
+    } catch (error) {
       ev = null;
+      const message = String((error as any)?.message || error || "").toLowerCase();
+      if (/401|403|login|challenge|captcha|blocked|scrape_empty_or_blocked/.test(message)) readIssue = "access_restricted";
+      else if (/429|rate.?limit|quota/.test(message)) readIssue = "rate_limited";
+      else if (/timeout|timed out|abort/.test(message)) readIssue = "timeout";
+      else readIssue = "source_unavailable";
     } finally {
       if (timer) clearTimeout(timer);
     }
 
     const findings = scoreTarget(t, ev, brand);
     const ok = findings.some((f) => f.score != null);
-    results.push({ url: t.url, kind: t.kind, platform: t.platform, ok, findings });
+    if (!ok && !readIssue) readIssue = "insufficient_public_content";
+    const readStatus = ok ? "measured" as const : "unmeasured" as const;
+    results.push({ url: t.url, kind: t.kind, platform: t.platform, ok, read_status: readStatus, read_issue: ok ? null : readIssue, findings });
     const { sourceLabel } = await import("@/lib/fetch-order");
     await emit("audit_target", {
       index: index + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform,
-      ok, findings, source, source_label: sourceLabel(ok ? (source as any) : null),
+      ok, read_status: readStatus, read_issue: ok ? null : readIssue,
+      findings, source, source_label: sourceLabel(ok ? (source as any) : null),
     });
     await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
   }
