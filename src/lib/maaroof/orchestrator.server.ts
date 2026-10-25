@@ -29,6 +29,7 @@ import {
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
+import { getToolRoute } from "./tool-contracts";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -46,27 +47,7 @@ type PlanStep = ToolCall;
 const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking"]);
 
 function toolPath(toolKey: string): string | null {
-  const map: Record<string, string> = {
-    analyze: "/api/analyze",
-    suggest: "/api/suggest",
-    compare: "/api/compare",
-    competitor_compare: "/api/compare",
-    known: "/api/known",
-    feasibility: "/api/feasibility",
-    bizdev: "/api/bizdev",
-    research: "/api/research",
-    visibility: "/api/visibility",
-    brand_boost: "/api/brand-boost",
-    company_email: "/api/company-email",
-    applied_ranking: "/api/applied-ranking",
-    geo_strategist: "/api/geo-strategist",
-    competitor_monitor: "/api/competitor-monitor",
-    social_analysis: "/api/social-analysis",
-    what_if: "/api/what-if",
-    brand_authority: "/api/brand-authority",
-    geo_rewrite: "/api/geo-rewrite",
-  };
-  return map[toolKey] || null;
+  return getToolRoute(toolKey);
 }
 
 // Fields every tool endpoint expects as a plain string. The planner is an LLM
