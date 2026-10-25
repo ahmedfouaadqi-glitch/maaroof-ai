@@ -134,23 +134,41 @@ export async function recordBenchmark(input: {
 export type TrendPoint = { at: string; value: number; passed: boolean | null };
 
 /** Time-series comparison for one benchmark: trend direction and volatility. */
-export async function benchmarkTrend(subjectKind: BenchmarkSubjectKind, subject: string, metric: string, limit = 30) {
+export async function benchmarkTrend(
+  subjectKind: BenchmarkSubjectKind,
+  subject: string,
+  metric: string,
+  limit = 30,
+  scope?: { userId?: string | null; workspaceId?: string | null; comparisonKey?: string | null },
+) {
   try {
-    const { data: bm } = await db()
+    // Scoped verification fails closed: a user must never inherit another user's benchmark baseline.
+    if (scope && !scope.userId) return null;
+    let benchmarkQuery = db()
       .from("benchmarks")
-      .select("id, baseline, target, unit, higher_is_better")
+      .select("id, baseline, target, unit, higher_is_better, user_id, workspace_id")
       .eq("subject_kind", subjectKind)
       .eq("subject", subject)
-      .eq("metric", metric)
-      .maybeSingle();
+      .eq("metric", metric);
+    if (scope?.userId) benchmarkQuery = benchmarkQuery.eq("user_id", scope.userId);
+    if (scope && Object.prototype.hasOwnProperty.call(scope, "workspaceId")) {
+      benchmarkQuery = scope.workspaceId ? benchmarkQuery.eq("workspace_id", scope.workspaceId) : benchmarkQuery.is("workspace_id", null);
+    }
+    const { data: bm } = await benchmarkQuery.maybeSingle();
     if (!bm) return null;
     const { data } = await db()
       .from("benchmark_results")
-      .select("value, passed, created_at")
+      .select("value, passed, created_at, meta, user_id")
       .eq("benchmark_id", (bm as any).id)
       .order("created_at", { ascending: false })
-      .limit(limit);
-    const rows = ((data as any[]) || []).reverse();
+      .limit(Math.max(1, Math.min(200, Math.floor(limit) || 30)));
+    let scopedRows = ((data as any[]) || []);
+    if (scope?.userId) scopedRows = scopedRows.filter((r) => r.user_id === scope.userId);
+    const requestedKey = String(scope?.comparisonKey || "");
+    // When measurement conditions differ, only compare points made with the same signature.
+    const latestKey = requestedKey || String(scopedRows[0]?.meta?.comparison_key || "");
+    if (latestKey) scopedRows = scopedRows.filter((r) => String(r.meta?.comparison_key || "") === latestKey);
+    const rows = scopedRows.reverse();
     const points: TrendPoint[] = rows.map((r) => ({ at: r.created_at, value: Number(r.value), passed: r.passed }));
     if (!points.length) return { ...(bm as any), points, latest: null, trend: "flat" as const, pass_rate: 0 };
     const first = points[0].value;
