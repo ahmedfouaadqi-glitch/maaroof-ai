@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
@@ -58,11 +58,12 @@ type Result = {
   seo_sge?: Record<string, SeoSge>;
   platform_measured?: Record<string, string[]>;
   live_search?: { ok: boolean; sources_count: number; failed_queries: number };
+  source_plan?: { method_version: string; request_count: number; estimated_credits: number; request_cap: number; estimated_credit_cap: number; budget_limited: boolean; limitations: string[] };
 };
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi","qwen"] as const;
 
-export function CompetitorCompare() {
+export function CompetitorCompare({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -75,6 +76,14 @@ export function CompetitorCompare() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const requestSeq = useRef(0);
+
+  useEffect(() => {
+    requestSeq.current += 1;
+    setResult(null);
+    setError(null);
+    setBusy(false);
+  }, [workspaceId]);
 
   const parseWebsites = (): Record<string, string> => {
     const out: Record<string, string> = {};
@@ -109,6 +118,7 @@ export function CompetitorCompare() {
     const list = competitors.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 4);
     if (list.length === 0) { setError(t("compare_brand_required")); return; }
 
+    const seq = ++requestSeq.current;
     setBusy(true);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -116,9 +126,10 @@ export function CompetitorCompare() {
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
       const r = await apiFetch("/api/compare", {
         method: "POST", headers,
-        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare"), websites: parseWebsites() }),
+        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare"), websites: parseWebsites(), workspace_id: workspaceId }),
       });
       const data = await r.json();
+      if (seq !== requestSeq.current) return;
       if (!r.ok) { setError(errorText(data?.error || "error")); return; }
       setResult(data.result);
       {
@@ -129,8 +140,10 @@ export function CompetitorCompare() {
       }
       if (auth) auth.refreshProfile();
     } catch (e: any) {
-      setError(e.message);
-    } finally { setBusy(false); }
+      if (seq === requestSeq.current) setError(e.message);
+    } finally {
+      if (seq === requestSeq.current) setBusy(false);
+    }
   };
 
   const buildExport = (): ExportPayload => {
