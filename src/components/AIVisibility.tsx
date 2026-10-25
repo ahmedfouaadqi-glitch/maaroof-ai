@@ -32,9 +32,10 @@ type PanelProps = {
   embedded?: boolean;
   /** Override which tool's geo-scope is used. */
   toolKey?: "research" | "brand";
+  workspaceId?: string | null;
 };
 
-export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research" }: PanelProps) {
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null }: PanelProps) {
   const { t, lang: uiLang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
   useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
@@ -60,6 +61,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
+  useEffect(() => { setOut(null); setErr(""); }, [workspaceId]);
 
   const run = async () => {
     if (!brand.trim() || busy) return;
@@ -70,7 +72,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey) }),
+        body: JSON.stringify({ brand, keywords, lang: outLang, workspace_id: workspaceId, scope: getEffectiveScope(auth?.profile, toolKey) }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
@@ -166,7 +168,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             />
           </div>
 
-          <EngineProbePanel brand={brand} keywords={keywords} scope={getEffectiveScope(auth?.profile, toolKey)} />
+          <EngineProbePanel brand={brand} keywords={keywords} workspaceId={workspaceId} scope={getEffectiveScope(auth?.profile, toolKey)} />
 
           {out.recommendations?.length > 0 && (
             <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
@@ -195,6 +197,6 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 }
 
 // Back-compat: keep standalone export used by /agent route.
-export function AIVisibility() {
-  return <VisibilityPanel />;
+export function AIVisibility({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+  return <VisibilityPanel workspaceId={workspaceId} />;
 }
