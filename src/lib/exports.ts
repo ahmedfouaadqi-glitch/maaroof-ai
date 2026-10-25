@@ -518,9 +518,56 @@ export async function exportToExcel(payload: ExportPayload) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND;
   workbook.subject = payload.title;
+  const logoData = await optionalLogo(payload);
+  const createUniqueSheetName = (requested: string) => {
+    const base = requested.slice(0, 31).replace(/[\\/?*\[\]:]/g, "_").trim() || "Data";
+    let candidate = base;
+    let suffix = 2;
+    while (workbook.getWorksheet(candidate)) {
+      const tail = " (" + suffix + ")";
+      candidate = base.slice(0, 31 - tail.length) + tail;
+      suffix += 1;
+    }
+    return candidate;
+  };
+  const summary = buildExportExecutiveSummary(payload);
+  const summarySheetName = lang === "en" ? "Executive Summary" : lang === "ku" ? "پوختە" : "الملخص التنفيذي";
+  const summarySheet = workbook.addWorksheet(summarySheetName, { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 1 }] });
+  summarySheet.columns = [{ width: 34 }, { width: 24 }, { width: 34 }, { width: 20 }];
+  summarySheet.mergeCells("A1:D1");
+  summarySheet.getCell("A1").value = summary.heading;
+  summarySheet.getCell("A1").font = { name: "Arial", size: 20, bold: true, color: { argb: "FF0F2454" } };
+  summarySheet.addRow([payload.title]);
+  if (payload.subtitle) summarySheet.addRow([payload.subtitle]);
+  summarySheet.addRow([UI[lang].generated, new Date().toLocaleString()]);
+  summarySheet.addRow([]);
+  const summaryHeader = lang === "en" ? ["Indicator", "Value"] : lang === "ku" ? ["پێوەر", "بەها"] : ["المؤشر", "القيمة"];
+  const metricHeader = summarySheet.addRow(summaryHeader);
+  metricHeader.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+  metricHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+  summary.metrics.forEach((metric) => summarySheet.addRow([metric.label, metric.value]));
+  if (summary.measuredItems.length) {
+    summarySheet.addRow([]);
+    summarySheet.addRow([summary.measuredHeading]);
+    const scoreHeader = summarySheet.addRow([summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel]);
+    scoreHeader.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+    scoreHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+    summary.measuredItems.forEach((item) => summarySheet.addRow([item.section, item.title, item.score, item.status]));
+    if (summary.omittedMeasuredCount) summarySheet.addRow([lang === "en" ? "Additional scored indicators remain in detailed sheets" : lang === "ku" ? "پێوەرە نمرەدارەکانی تر لە شیتە وردەکارییەکانن" : "مؤشرات أخرى بدرجات رقمية موجودة في أوراق التفاصيل", summary.omittedMeasuredCount]);
+  }
+  if (summary.unmeasuredItems.length) {
+    summarySheet.addRow([]);
+    summarySheet.addRow([summary.unmeasuredHeading]);
+    const unmeasuredHeader = summarySheet.addRow([summary.sectionLabel, summary.itemLabel, summary.statusLabel]);
+    unmeasuredHeader.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+    unmeasuredHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF64748B" } };
+    summary.unmeasuredItems.forEach((item) => summarySheet.addRow([item.section, item.title, item.status]));
+  }
+  summarySheet.addRow([]);
+  summarySheet.addRow([summary.note]);
+  summarySheet.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" }; });
   const sheet = workbook.addWorksheet("Report", { views: [{ rightToLeft: lang !== "en" }] });
   sheet.columns = [{ width: 28 }, { width: 60 }, { width: 28 }, { width: 28 }];
-  const logoData = await optionalLogo(payload);
   if (logoData) {
     const imageId = workbook.addImage({ base64: logoData, extension: "png" });
     sheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 72, height: 72 } });
@@ -568,9 +615,10 @@ export async function exportToExcel(payload: ExportPayload) {
   payload.sections.forEach((section, index) => {
     if (section.kind === "cards" && section.cards) {
       const name = (section.heading || "Cards " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
-      const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
+      const dataSheet = workbook.addWorksheet(createUniqueSheetName(name), { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 1 }] });
       const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
       dataSheet.addRow(columns);
+      dataSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
       section.cards.forEach((card) => {
         if (card.fields?.length) card.fields.forEach(([metric, value]) =>
           dataSheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, (card.evidence || []).join(" | "), (card.notes || []).join(" | ")])
@@ -585,8 +633,9 @@ export async function exportToExcel(payload: ExportPayload) {
     }
     if (section.kind !== "table" || !section.table) return;
     const name = (section.heading || "Table " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
-    const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
+    const dataSheet = workbook.addWorksheet(createUniqueSheetName(name), { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 1 }] });
     dataSheet.addRows([section.table.columns, ...section.table.data]);
+    dataSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: Math.max(1, section.table.columns.length) } };
     dataSheet.columns = section.table.columns.map(() => ({ width: 24 }));
     dataSheet.getRow(1).font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
     dataSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
