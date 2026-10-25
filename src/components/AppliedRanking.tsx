@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { useI18n } from "@/lib/i18n";
@@ -180,10 +180,13 @@ export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | 
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const requestSeq = useRef(0);
 
   useEffect(() => {
+    requestSeq.current += 1;
     setResult(null);
     setError(null);
+    setRunning(false);
   }, [workspaceId]);
 
   useEffect(() => {
@@ -204,6 +207,7 @@ export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | 
     setError(null);
     if (!user) { setError(t.needLogin); return; }
     if (brand.trim().length < 2) { setError(t.needBrand); return; }
+    const seq = ++requestSeq.current;
     setRunning(true); setResult(null);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -217,6 +221,7 @@ export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | 
         }),
       });
       const data = await r.json();
+      if (seq !== requestSeq.current) return;
       if (!r.ok) {
         setError(data?.error === "limit" ? "limit" : data?.error || "error");
       } else {
@@ -224,8 +229,10 @@ export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | 
         if (auth) auth.refreshProfile();
       }
     } catch (e: any) {
-      setError(e.message || "error");
-    } finally { setRunning(false); }
+      if (seq === requestSeq.current) setError(e.message || "error");
+    } finally {
+      if (seq === requestSeq.current) setRunning(false);
+    }
   };
 
   return (
