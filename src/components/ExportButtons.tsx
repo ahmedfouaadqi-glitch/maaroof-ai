@@ -425,6 +425,7 @@ export function ExportButtons({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2 text-xs font-semibold"><FileCode2 className="size-4 text-primary" />{exportLang === "en" ? "Append machine-readable asset drafts" : exportLang === "ku" ? "ڕەشنووسی فایلە تەکنیکییەکان زیاد بکە" : "إرفاق مسودات الأصول التقنية"}</span>
                   <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{exportLang === "en" ? "Only generated from this report's entity. FAQPage is omitted without actual Q&A; nothing is published automatically." : exportLang === "ku" ? "تەنها لە زانیاریی قەوارەی ئەم ڕاپۆرتەوە دروست دەکرێت؛ بەبێ پرسیار و وەڵام FAQPage دروست ناکرێت." : "تُبنى من كيان هذا التقرير فقط. لا تُنشأ FAQPage دون أسئلة وأجوبة فعلية، ولا يُنشر شيء تلقائياً."}</span>
+                  <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{exportLang === "en" ? "Structured asset contents (facts, Q&A, URLs and code) stay in their source form; the optional translation applies to report prose, not to rewrite website facts." : exportLang === "ku" ? "ناوەڕۆکی فایلە ڕێکخراوەکان (ڕاستی، پرسیار و وەڵام، بەستەر و کۆد) بە شێوەی سەرچاوەکە دەمێنێتەوە؛ وەرگێڕانی ئارەزوومەندانە تەنها بۆ دەقی ڕاپۆرتە." : "تبقى حقائق الأصول المنظمة وأسئلتها وروابطها وكودها كما وردت في المصدر؛ فالترجمة الاختيارية تخص نص التقرير، ولا تعيد صياغة حقائق الموقع."}</span>
                 </span>
               </label>
             ) : (
