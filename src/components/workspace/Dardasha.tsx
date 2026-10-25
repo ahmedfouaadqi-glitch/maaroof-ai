@@ -146,7 +146,7 @@ export function Dardasha({
         <div className="mb-2 text-xs font-semibold text-muted-foreground">{tr(lang, "النطاق الجغرافي الذي سيُوجّه الدردشة والبحث", "Geographic scope for chat and research", "بواری جوگرافی بۆ گفتوگۆ و گەڕان")}</div>
         <GeoScopeSelector compact value={geoScope} onChange={onGeoScopeChange} />
       </div>
-      <div ref={boxRef} className="max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3">
+      <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "var(--border) transparent" }} className="max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
         {busy && <div role="status" aria-live="polite" className="mb-3 overflow-hidden rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary"><LoaderCircle className="size-4 animate-spin" />{tr(lang, "بطاقة الأداة: استشارة معروف", "Tool card: Maaroof consultation", "کارتی ئامراز: ڕاوێژکاری معروف")}</div>
