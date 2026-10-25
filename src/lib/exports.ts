@@ -479,6 +479,7 @@ export function exportToJSON(payload: ExportPayload) {
 
 export function payloadToMarkdown(payload: ExportPayload): string {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const out: string[] = [`# ${payload.title}`];
   if (payload.subtitle) out.push(`_${payload.subtitle}_`);
   out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`);
