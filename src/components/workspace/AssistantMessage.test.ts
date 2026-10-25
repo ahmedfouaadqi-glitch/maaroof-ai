@@ -22,7 +22,7 @@ describe("assistant markdown blocks", () => {
   it("normalizes inline headings, numbered sections and field bullets from compact model output", () => {
     const compact = "المقدمة. ### --- تفاصيل البيانات المحفوظة في مساحة العمل: 1. الهوية الجغرافية والقطاع: * **الكيان:** Mengotti Couture * **القطاع:** التجارة الإلكترونية الفاخرة 2. الأصول الرقمية المسجلة: * **الموقع الإلكتروني:** https://example.com";
     const normalized = normalizeAssistantMarkdown(compact);
-    expect(normalized).toContain("\\n\\n### تفاصيل البيانات المحفوظة في مساحة العمل:");
+    expect(normalized).toContain("\n\n### تفاصيل البيانات المحفوظة في مساحة العمل:");
     expect(normalized).toContain("#### 1. الهوية الجغرافية والقطاع:");
     expect(normalized).toContain("* **الكيان:** Mengotti Couture");
 
@@ -35,9 +35,10 @@ describe("assistant markdown blocks", () => {
   });
 
   it("preserves code blocks while normalizing surrounding prose", () => {
-    const content = "قبل ذلك. ### العنوان\n\\n\\n```md\n### Keep this literal\n* not a chat bullet\n```";
+    const fence = "```";
+    const content = ["قبل ذلك. ### العنوان", "", "", fence + "md", "### Keep this literal", "* not a chat bullet", fence].join("\n");
     const normalized = normalizeAssistantMarkdown(content);
-    expect(normalized).toContain("```md\n### Keep this literal\n* not a chat bullet\n```");
+    expect(normalized).toContain([fence + "md", "### Keep this literal", "* not a chat bullet", fence].join("\n"));
   });
 
   it("does not treat raw HTML as a special render instruction", () => {
