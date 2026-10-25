@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import { createSeqCounter, isStaleJob, isTerminalJobStatus, parseAfter, JOB_STALE_MS } from "@/lib/maaroof/jobs";
 
 describe("workspace jobs", () => {
-  it("falls back after scoped query errors", async () => {
+  it("never widens workspace-scoped reads into owner-wide history after an error", async () => {
     const { shouldFallbackFromWorkspaceScope } = await import("@/lib/maaroof/jobs");
-    expect(shouldFallbackFromWorkspaceScope({ code: "42703", message: 'column "workspace_id" does not exist' })).toBe(true);
+    expect(shouldFallbackFromWorkspaceScope({ code: "42703", message: 'column "workspace_id" does not exist' })).toBe(false);
+    expect(shouldFallbackFromWorkspaceScope({ code: "PGRST116", message: "query failed" })).toBe(false);
     expect(shouldFallbackFromWorkspaceScope(null)).toBe(false);
   });
   it("recognizes missing workspace_id for legacy inserts only", async () => {
