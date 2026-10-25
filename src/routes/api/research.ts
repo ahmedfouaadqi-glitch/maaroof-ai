@@ -48,10 +48,14 @@ export const Route = createFileRoute("/api/research")({
           const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
           const userId = userData?.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          let workspaceContext: any = null;
           if (workspaceId) {
             if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
-            const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
-            if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+            const { data: ownedWorkspace, error: workspaceError } = await admin.from("workspaces")
+              .select("id, owner_id, name, brand_url, brand_summary, keywords, country, city, entity_truth_card, onboarding, settings")
+              .eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+            if (workspaceError || !ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+            workspaceContext = ownedWorkspace;
           }
 
           // Paid specialized source execution is a separate, explicit action. Normal research never invokes it.
@@ -63,14 +67,7 @@ export const Route = createFileRoute("/api/research")({
             if (specializedRun.confirm_paid_run !== true) {
               return Response.json({ error: "explicit_paid_confirmation_required" }, { status: 400 });
             }
-            if (process.env.MAAROOF_ALEXANDRIA_ENABLED !== "true" || !process.env.FIRECRAWL_API_KEY) {
-              return Response.json({ error: "specialized_source_not_enabled" }, { status: 503 });
-            }
-            const hardCap = Number(process.env.MAAROOF_ALEXANDRIA_MAX_CREDITS);
-            if (!Number.isFinite(hardCap) || hardCap < 0) {
-              return Response.json({ error: "specialized_source_cost_cap_not_configured" }, { status: 503 });
-            }
-            const requestId = String(specializedRun.request_id || "").trim();
+              const requestId = String(specializedRun.request_id || "").trim();
             if (!/^[A-Za-z0-9._:-]{1,128}$/.test(requestId)) {
               return Response.json({ error: "specialized_request_id_required" }, { status: 400 });
             }
@@ -99,6 +96,14 @@ export const Route = createFileRoute("/api/research")({
                   ? "The prior request outcome is uncertain. The source will not be invoked again with this request ID."
                   : "This request ID is already reserved or processed; it cannot trigger another source execution.",
               }, { status: 409 });
+            }
+            // A successful request can be replayed even if the source is later disabled in admin settings.
+            if (process.env.MAAROOF_ALEXANDRIA_ENABLED !== "true" || !process.env.FIRECRAWL_API_KEY) {
+              return Response.json({ error: "specialized_source_not_enabled" }, { status: 503 });
+            }
+            const hardCap = Number(process.env.MAAROOF_ALEXANDRIA_MAX_CREDITS);
+            if (!Number.isFinite(hardCap) || hardCap < 0) {
+              return Response.json({ error: "specialized_source_cost_cap_not_configured" }, { status: 503 });
             }
             const requestedCap = Number(specializedRun.max_credits);
             if (!Number.isFinite(requestedCap) || requestedCap < 0 || requestedCap > hardCap) {
@@ -300,8 +305,18 @@ export const Route = createFileRoute("/api/research")({
           const _mci = await mciReuse(admin as any, "research", userId, [limited, lang, scope, mode, workspaceId], !!(reqBody as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const userCtx = await getUserContext(admin, userId);
+          if (workspaceContext) {
+            const card = workspaceContext.entity_truth_card && typeof workspaceContext.entity_truth_card === "object"
+              ? workspaceContext.entity_truth_card : {};
+            const answers = workspaceContext.onboarding?.answers && typeof workspaceContext.onboarding.answers === "object"
+              ? workspaceContext.onboarding.answers : {};
+            // The selected client identity takes precedence over the user's main profile.
+            userCtx.brand_name = String(workspaceContext.name || card.brand_name || card.name || "").trim() || null;
+            userCtx.brand_keywords = String(workspaceContext.keywords || card.brand_keywords || card.keywords || answers.brand_keywords || "").trim() || null;
+            userCtx.specialty = String(card.specialty || card.industry || workspaceContext.brand_summary || "").trim() || null;
+          }
 
-          const geo = scope?.country ? ` ${scope.country}` : "";
+          const geo = scope?.country ? ` ${scope.country}` : (workspaceContext?.country ? ` ${workspaceContext.country}` : "");
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
           const channelTypes = requestedChannelTypes;
           const discoveryRequested = reqBody?.request_specialized_discovery === true;
