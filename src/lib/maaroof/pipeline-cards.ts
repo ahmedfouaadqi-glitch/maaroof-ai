@@ -5,16 +5,24 @@ export type StageState = "waiting" | "running" | "done" | "skipped" | "failed" |
 export type StageCard = { key: StageKey; state: StageState; count: number; startedAt: number | null; endedAt: number | null; durationMs: number | null; failedTools: string[]; reused: number };
 type Ev = { type: string; data?: any; at?: number };
 
-const ORDER: StageKey[] = ["understand", "plan", "council", "conflict", "evidence", "result"];
+const ORDER: StageKey[] = ["understand", "plan", "evidence", "council", "conflict", "result"];
 const PHASE_TO_STAGE: Record<string, StageKey> = {
   envision: "understand", planning: "plan", recommendation: "plan", simulation: "plan",
   council: "council", conflict: "conflict", summarizing: "result",
 };
 
 export function stageOf(e: { type: string; data?: any }): StageKey | null {
-  if (e.type === "phase") return PHASE_TO_STAGE[String(e.data?.phase)] ?? null;
+  if (e.type === "phase") {
+    const phase = String(e.data?.phase);
+    // The planner's specialist/expert consultation happens before tools run.
+    // Keep it with planning; the ten-model council is driven by the actual live visibility probe.
+    if (phase === "council") return "plan";
+    return PHASE_TO_STAGE[phase] ?? null;
+  }
   if (e.type === "stage" || e.type === "skill_choice") return "understand";
-  if (e.type === "tool_call" || e.type === "tool_result") return "evidence";
+  if (e.type === "tool_call" || e.type === "tool_result") {
+    return e.data?.tool === "visibility" ? "council" : "evidence";
+  }
   if (e.type === "final" || e.type === "done") return "result";
   return null;
 }
@@ -78,9 +86,24 @@ export type EngineStatus = "waiting" | "asking" | "answered" | "unresponsive";
 export type EngineMiss = "empty" | "timeout" | "error" | null;
 /** Why an engine was never asked, from recorded events only. */
 export type EngineNotAsked = "probe_disabled" | "job_ended" | "not_reached" | null;
-export type EngineView = { key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null; answer: string; groundedAnswer: string; brands: string[]; reason: string | null; miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null; why?: EngineNotAsked };
+export type EngineView = {
+  key: string; status: EngineStatus; mentioned: boolean | null; rank: number | null;
+  answer: string; groundedAnswer: string; brands: string[]; reason: string | null;
+  miss: EngineMiss; sources: { url: string; title: string }[]; ms: number | null;
+  blindStatus: string | null; groundedStatus: string | null;
+  blindQuery: string; groundedQuery: string;
+  blindMs: number | null; groundedMs: number | null;
+  why?: EngineNotAsked;
+};
 
-function probeOf(out: any): { asked?: string[]; answers?: any[]; statuses?: Record<string, { status: string; ms?: number }> } | null {
+function probeOf(out: any): {
+  query?: string; blind_query?: string; grounded_question_template?: string;
+  asked?: string[]; answers?: any[];
+  statuses?: Record<string, {
+    status: string; ms?: number; blind_status?: string; grounded_status?: string;
+    blind_ms?: number; grounded_ms?: number; blind_query?: string; grounded_query?: string;
+  }>;
+} | null {
   if (!out || typeof out !== "object") return null;
   if (out.probe && Array.isArray(out.probe.answers)) return out.probe;
   if (Array.isArray(out.answers) && out.answers.some((a: any) => a && typeof a.engine === "string")) return out;
@@ -105,12 +128,35 @@ export function councilEngines(events: Ev[], engineKeys: readonly string[], runn
   return engineKeys.map((key) => {
     const a = answers.get(key);
     const ms = typeof statuses[key]?.ms === "number" ? statuses[key].ms! : typeof a?.ms === "number" ? a.ms : null;
-    if (a) return { key, status: "answered", mentioned: !!a.mentioned, rank: typeof a.rank === "number" ? a.rank : null, answer: String(a.answer || ""), groundedAnswer: String(a.grounded_answer || ""), brands: Array.isArray(a.brands) ? a.brands.map(String) : [], reason: a.reason ? String(a.reason) : null, miss: null, sources: Array.isArray(a.sources) ? a.sources.filter((s: any) => isUrl(s?.url)).map((s: any) => ({ url: String(s.url), title: String(s.title || s.url) })) : [], ms };
+    const phaseStatus = statuses[key] || {};
+    if (a) return {
+      key, status: "answered", mentioned: !!a.mentioned,
+      rank: typeof a.rank === "number" ? a.rank : null,
+      answer: String(a.answer || ""), groundedAnswer: String(a.grounded_answer || ""),
+      brands: Array.isArray(a.brands) ? a.brands.map(String) : [],
+      reason: a.reason ? String(a.reason) : null, miss: null,
+      sources: Array.isArray(a.sources) ? a.sources.filter((s: any) => isUrl(s?.url)).map((src: any) => ({ url: String(src.url), title: String(src.title || src.url) })) : [],
+      ms, blindStatus: String(a.blind_status || phaseStatus.blind_status || "answered"),
+      groundedStatus: String(a.grounded_status || phaseStatus.grounded_status || ""),
+      blindQuery: String(a.blind_query || phaseStatus.blind_query || probe?.blind_query || probe?.query || ""),
+      groundedQuery: String(a.grounded_query || phaseStatus.grounded_query || probe?.grounded_question_template || ""),
+      blindMs: typeof a.blind_ms === "number" ? a.blind_ms : typeof phaseStatus.blind_ms === "number" ? phaseStatus.blind_ms : null,
+      groundedMs: typeof a.grounded_ms === "number" ? a.grounded_ms : typeof phaseStatus.grounded_ms === "number" ? phaseStatus.grounded_ms : null,
+    };
     const st = String(statuses[key]?.status || "");
     const miss: EngineMiss = st === "empty" || st === "timeout" || st === "error" ? st : probe && asked.has(key) ? "empty" : null;
     const status: EngineStatus = probe && asked.has(key) ? "unresponsive" : asking ? "asking" : "waiting";
     const why: EngineNotAsked = status !== "waiting" ? null : disabled ? "probe_disabled" : running ? "not_reached" : "job_ended";
-    return { key, status, mentioned: null, rank: null, answer: "", groundedAnswer: "", brands: [], reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms, why };
+    return {
+      key, status, mentioned: null, rank: null, answer: "", groundedAnswer: "", brands: [],
+      reason: null, miss: status === "unresponsive" ? miss : null, sources: [], ms, why,
+      blindStatus: typeof statuses[key]?.blind_status === "string" ? statuses[key].blind_status : null,
+      groundedStatus: typeof statuses[key]?.grounded_status === "string" ? statuses[key].grounded_status : null,
+      blindQuery: String(statuses[key]?.blind_query || probe?.blind_query || probe?.query || ""),
+      groundedQuery: String(statuses[key]?.grounded_query || probe?.grounded_question_template || ""),
+      blindMs: typeof statuses[key]?.blind_ms === "number" ? statuses[key].blind_ms! : null,
+      groundedMs: typeof statuses[key]?.grounded_ms === "number" ? statuses[key].grounded_ms! : null,
+    };
   });
 }
 
