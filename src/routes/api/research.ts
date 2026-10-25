@@ -14,6 +14,7 @@ import {
   validateAlexandriaOptions,
   isAlexandriaTermsAccepted,
   SpecializedSourceGateError,
+  decideSpecializedRunReplay,
 } from "@/lib/maaroof/alexandria.server";
 import { recordEvidence } from "@/lib/maaroof/evidence.server";
 
@@ -77,6 +78,28 @@ export const Route = createFileRoute("/api/research")({
             if (!/^[a-f0-9]{24}$/i.test(candidateId)) {
               return Response.json({ error: "specialized_candidate_required" }, { status: 400 });
             }
+
+            // Check the durable idempotency ledger before any provider call or charge.
+            const { data: priorRun, error: priorRunError } = await admin
+              .from("specialized_source_runs")
+              .select("candidate_id,status,response,error_code,workspace_id")
+              .eq("user_id", userId)
+              .eq("request_id", requestId)
+              .maybeSingle();
+            if (priorRunError) return Response.json({ error: "specialized_idempotency_unavailable", charged: false }, { status: 503 });
+            const replay = decideSpecializedRunReplay(priorRun as any, candidateId);
+            if (replay.action === "replay") return Response.json({ ...replay.response, replayed: true });
+            if (replay.action === "block") {
+              return Response.json({
+                error: replay.reason,
+                status: replay.status,
+                request_id: requestId,
+                new_request_required: replay.reason === "request_already_processed" && replay.status === "rejected",
+                message: replay.status === "uncertain"
+                  ? "The prior request outcome is uncertain. The source will not be invoked again with this request ID."
+                  : "This request ID is already reserved or processed; it cannot trigger another source execution.",
+              }, { status: 409 });
+            }
             const requestedCap = Number(specializedRun.max_credits);
             if (!Number.isFinite(requestedCap) || requestedCap < 0 || requestedCap > hardCap) {
               return Response.json({ error: "specialized_cost_cap_exceeded" }, { status: 400 });
@@ -100,6 +123,30 @@ export const Route = createFileRoute("/api/research")({
               return Response.json({ error: "specialized_options_invalid", reasons: optionCheck.errors }, { status: 400 });
             }
 
+            // Claim the idempotency key before charging. A unique constraint resolves concurrent duplicate POSTs.
+            const { error: reserveError } = await admin.from("specialized_source_runs").insert({
+              user_id: userId,
+              workspace_id: workspaceId,
+              request_id: requestId,
+              candidate_id: candidateId,
+              status: "reserved",
+              estimated_credits: candidate.estimatedCredits,
+              charged_tokens: 0,
+            });
+            if (reserveError) {
+              if (reserveError.code === "23505") {
+                const { data: racedRun } = await admin.from("specialized_source_runs")
+                  .select("candidate_id,status,response,error_code,workspace_id")
+                  .eq("user_id", userId).eq("request_id", requestId).maybeSingle();
+                const racedReplay = decideSpecializedRunReplay(racedRun as any, candidateId);
+                if (racedReplay.action === "replay") return Response.json({ ...racedReplay.response, replayed: true });
+                if (racedReplay.action === "block") {
+                  return Response.json({ error: racedReplay.reason, status: racedReplay.status, request_id: requestId, new_request_required: racedReplay.status === "rejected" }, { status: 409 });
+                }
+              }
+              return Response.json({ error: "specialized_idempotency_reservation_failed", charged: false }, { status: 503 });
+            }
+
             const charge = await chargeTokens({
               userId,
               toolKey: "research",
@@ -113,7 +160,24 @@ export const Route = createFileRoute("/api/research")({
                 workspace_id: workspaceId,
               },
             });
-            if (!charge.ok) return Response.json(chargeFailureBody(charge.reason as any, charge.left), { status: 402 });
+            if (!charge.ok) {
+              await admin.from("specialized_source_runs").update({
+                status: "rejected", error_code: String(charge.reason || "charge_failed"), updated_at: new Date().toISOString(),
+              }).eq("user_id", userId).eq("request_id", requestId);
+              return Response.json({ ...chargeFailureBody(charge.reason as any, charge.left), new_request_required: true }, { status: 402 });
+            }
+            const { error: startRunError } = await admin.from("specialized_source_runs").update({
+              status: "running", charged_tokens: Number(charge.tokens || 0), updated_at: new Date().toISOString(),
+            }).eq("user_id", userId).eq("request_id", requestId).eq("status", "reserved");
+            if (startRunError) {
+              try {
+                await admin.rpc("charge_tokens", {
+                  _user_id: userId, _tool_key: "research", _tokens: -Number(charge.tokens || 0), _usd: 0,
+                  _run_id: requestId, _meta: { refund: true, idempotency_state_update_failed: true },
+                } as any);
+              } catch {}
+              return Response.json({ error: "specialized_idempotency_state_update_failed", charged: false }, { status: 503 });
+            }
 
             try {
               const executed = await executeAlexandriaCapability({
@@ -161,7 +225,7 @@ export const Route = createFileRoute("/api/research")({
                 businessImportance: 65,
                 language: String(lang),
               });
-              return Response.json({
+              const responseBody = {
                 ok: true,
                 specialized_execution: {
                   label: candidate.label,
@@ -176,7 +240,17 @@ export const Route = createFileRoute("/api/research")({
                   reality_kind: "observation",
                   limitation: "The result is source output. It is not a verified claim until independently checked.",
                 },
-              });
+              };
+              const { error: completeRunError } = await admin.from("specialized_source_runs").update({
+                status: "succeeded",
+                response: responseBody,
+                charged_tokens: Number(charge.tokens || 0),
+                updated_at: new Date().toISOString(),
+              }).eq("user_id", userId).eq("request_id", requestId).eq("status", "running");
+              if (completeRunError) {
+                console.error("[api/research] idempotency completion persistence failed", completeRunError.message);
+              }
+              return Response.json({ ...responseBody, idempotency_persistence_warning: !!completeRunError });
             } catch (error: any) {
               // For definitive HTTP/policy errors the provider reports that the action was not accepted.
               // Transport failures can be ambiguous; clients must retry with the same request ID only.
@@ -187,20 +261,33 @@ export const Route = createFileRoute("/api/research")({
                     _run_id: requestId, _meta: { refund: true, specialized_source_rejected: true, endpoint: "/api/research#specialized" },
                   } as any);
                 } catch {}
+                await admin.from("specialized_source_runs").update({
+                  status: "rejected",
+                  error_code: String(error.code || "specialized_source_rejected").slice(0, 120),
+                  charged_tokens: 0,
+                  updated_at: new Date().toISOString(),
+                }).eq("user_id", userId).eq("request_id", requestId);
                 return Response.json({
                   error: error.code === "specialized_source_access_required" ? "specialized_source_access_required"
                     : error.code === "specialized_source_rate_limited" ? "specialized_source_rate_limited"
                     : error.code === "provider_cost_exceeded_declared_cap" ? "specialized_source_cost_review_required"
                     : "specialized_source_not_completed",
-                  retry_with_same_request_id: true,
+                  request_id: requestId,
+                  new_request_required: true,
                 }, { status: 502 });
               }
               console.error("[api/research] specialized request outcome uncertain", String(error?.message || error).slice(0, 160));
+              await admin.from("specialized_source_runs").update({
+                status: "uncertain",
+                error_code: "specialized_source_outcome_uncertain",
+                charged_tokens: Number(charge.tokens || 0),
+                updated_at: new Date().toISOString(),
+              }).eq("user_id", userId).eq("request_id", requestId);
               return Response.json({
                 error: "specialized_source_outcome_uncertain",
                 request_id: requestId,
                 retry_with_same_request_id: true,
-                message: "The final source outcome could not be confirmed. Retry only with the same request ID to avoid duplicate execution.",
+                message: "The final source outcome could not be confirmed. The request ID is retained to prevent duplicate execution; the source will not be run again automatically.",
               }, { status: 503 });
             }
           }
