@@ -72,7 +72,12 @@ export async function verifyReality(input: {
   let validation: any = { total: 0, independent_sources: 0, agreement: 0, contradicting: 0, weighted_score: 0, stale: 0, verdict: "none" };
   try {
     const { validateEvidenceFor } = await import("@/lib/maaroof/evidence.server");
-    const r = await validateEvidenceFor({ realityRecordId: input.realityRecordId, executionId: input.executionId });
+    const r = await validateEvidenceFor({
+      realityRecordId: input.realityRecordId,
+      executionId: input.executionId,
+      userId: input.userId || null,
+      workspaceId: input.workspaceId ?? null,
+    });
     validation = r.validation;
     stages.push({ stage: "collect_evidence", ok: r.items.length > 0, note: `${r.items.length} عنصر دليل` });
     stages.push({ stage: "classify_evidence", ok: !!validation.strongest_type, note: String(validation.strongest_type || "غير مصنّف") });
