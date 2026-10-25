@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
+import { planSourceRoute } from "@/lib/maaroof/source-intelligence";
+import { recordEvidence } from "@/lib/maaroof/evidence.server";
 import { chargeTokens, chargeFailureBody, resolveToolCost } from "@/lib/tokens.server";
 import { resolveMonitorPolicy, checkMonitorPolicy } from "@/lib/monitor-policy";
 
@@ -9,7 +11,7 @@ const COST = 2;
 const SEARCH_COUNT_LIMIT = 8;
 const BASELINE_METHOD = "search_result_count_proxy_v1";
 
-async function buildBaseline(brand: string, competitors: string[], lang: string) {
+async function buildBaseline(brand: string, competitors: string[], lang: string, userId?: string, workspaceId?: string | null) {
   const targets = [brand, ...competitors].slice(0, 6);
   const out: Record<string, {
     mentions: number; top: string[]; metric_kind: string; sample_size: number;
@@ -19,12 +21,29 @@ async function buildBaseline(brand: string, competitors: string[], lang: string)
     const retrievedAt = new Date().toISOString();
     const query = `"${t}"`;
     try {
-      const sr: any = await fcSearch(query, { limit: SEARCH_COUNT_LIMIT, lang }, { toolKey: "competitor_monitor" });
+      const routePlan = planSourceRoute({
+        goal: query,
+        capability: "web_search",
+        language: lang,
+        market: null,
+        available: { webSearch: true, directRead: true, alexandria: false },
+        budget: { maxRequests: 1, maxEstimatedCredits: 10 },
+      });
+      if (routePlan.primary === "none" || routePlan.searchSources.length === 0) {
+        out[t] = {
+          mentions: 0, top: [], metric_kind: BASELINE_METHOD, sample_size: 0,
+          retrieved_at: retrievedAt, query, language: String(lang), status: "unavailable",
+          limitation: "لم يُنفذ البحث لأن خطة المصدر لم تسمح بطلب ضمن الميزانية المتاحة.",
+        };
+        continue;
+      }
+      const sr: any = await fcSearch(query, { limit: SEARCH_COUNT_LIMIT, lang, sources: routePlan.searchSources }, { userId, toolKey: "competitor_monitor" });
       const raw = sr?.data?.web ?? sr?.web ?? sr?.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
+      const top = list.slice(0, 5).map((r: any) => String(r?.url || "")).filter((url: string) => /^https?:\/\//i.test(url));
       out[t] = {
         mentions: list.length,
-        top: list.slice(0, 5).map((r: any) => String(r?.url || "")).filter(Boolean),
+        top,
         metric_kind: BASELINE_METHOD,
         sample_size: list.length,
         retrieved_at: retrievedAt,
@@ -33,6 +52,36 @@ async function buildBaseline(brand: string, competitors: string[], lang: string)
         status: list.length ? "success" : "empty",
         limitation: "عدد نتائج البحث مؤشر تقريبي متغير؛ لا يثبت حصة السوق أو الوعي أو الظهور الفعلي في إجابات النماذج.",
       };
+      if (userId && list.length) {
+        await Promise.allSettled(list.slice(0, 8).map((result: any) => {
+          const url = String(result?.url || "");
+          if (!/^https?:\/\//i.test(url)) return Promise.resolve(null);
+          return recordEvidence({
+            userId,
+            workspaceId: workspaceId || null,
+            title: String(result?.title || t).slice(0, 300),
+            claim: "A public search result was returned for a branded query; the result count is only a search proxy.",
+            sourceKind: "external",
+            sourceRef: url,
+            evidenceType: "external",
+            category: "market",
+            collectionMethod: BASELINE_METHOD,
+            provider: "public_web",
+            capability: "competitor_monitor",
+            retrievedAt,
+            locale: String(lang),
+            measurementUnit: "search_result",
+            sampleSize: list.length,
+            realityKind: "observation",
+            status: "success",
+            limitation: "Search-result counts vary with index, query, language and time; they are not market share or direct AI-answer visibility.",
+            sourceReliability: 55,
+            relevanceScore: 70,
+            businessImportance: 55,
+            language: String(lang),
+          });
+        }));
+      }
     } catch {
       out[t] = {
         mentions: 0, top: [], metric_kind: BASELINE_METHOD, sample_size: 0,
@@ -115,7 +164,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
             return Response.json({ error: "subscription_required" }, { status: 402 });
           }
           { const f = await charge(); if (f) return f; }
-          const baseline = await buildBaseline(brand, competitors, lang);
+          const baseline = await buildBaseline(brand, competitors, lang, userId, workspaceId || null);
           const { data: row, error } = await admin.from("competitor_watch").insert({
             user_id: userId, brand, competitors, frequency_hours, scope, baseline, last_run_at: new Date().toISOString(),
           }).select().single();
@@ -129,7 +178,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const { data: w } = await admin.from("competitor_watch").select("*").eq("id", id).eq("user_id", userId).maybeSingle();
           if (!w) return Response.json({ error: "not_found" }, { status: 404 });
           { const f = await charge(); if (f) return f; }
-          const fresh = await buildBaseline((w as any).brand, (w as any).competitors as string[], lang);
+          const fresh = await buildBaseline((w as any).brand, (w as any).competitors as string[], lang, userId, workspaceId || null);
           const baseline = (w as any).baseline || {};
           const newAlerts: any[] = [];
           for (const k of Object.keys(fresh)) {
