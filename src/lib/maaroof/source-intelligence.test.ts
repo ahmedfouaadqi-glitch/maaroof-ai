@@ -38,6 +38,16 @@ describe("Source Intelligence Router", () => {
     expect(noRequests.limitations).toContain("request_budget_exhausted");
   });
 
+  it("honors an explicit bounded mixed web/news source profile", () => {
+    const plan = planSourceRoute({
+      goal: "compare public competitor evidence",
+      requestedSources: ["web", "news", "web"],
+      budget: { maxRequests: 1, maxEstimatedCredits: 8 },
+    });
+    expect(plan.primary).toBe("web");
+    expect(plan.searchSources).toEqual(["web", "news"]);
+  });
+
   it("uses a news-aware route for recent queries without increasing the call budget", () => {
     const plan = planSourceRoute({ goal: "latest news about the Iraqi mobile market", budget: { maxRequests: 1, maxEstimatedCredits: 2 } });
     expect(plan.primary).toBe("news");
