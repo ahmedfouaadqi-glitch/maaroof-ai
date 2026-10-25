@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  hasUsableScrapeEvidence, classifyUnusableScrape, preferredReadFailure, PublicReadFailure, sourceLabel,
+  hasUsableScrapeEvidence, classifyUnusableScrape, preferredReadFailure, PublicReadFailure, sourceLabel, parseRetryAfterMs,
 } from "./fetch-order";
 
 describe("scrape quality gate", () => {
@@ -87,6 +87,17 @@ describe("provider-neutral read failure explanations", () => {
     expect(labels).not.toContain("firecrawl");
     expect(labels).not.toContain("apidirect");
     expect(labels).not.toContain("api direct");
+  });
+});
+
+describe("retry-after handling", () => {
+  it("parses a delay in seconds without waiting", () => {
+    expect(parseRetryAfterMs("2")).toBe(2000);
+  });
+
+  it("treats an invalid or absent retry-after as unknown", () => {
+    expect(parseRetryAfterMs(null)).toBeUndefined();
+    expect(parseRetryAfterMs("not-a-delay")).toBeUndefined();
   });
 });
 
