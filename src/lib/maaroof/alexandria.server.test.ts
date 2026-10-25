@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { normalizeAlexandriaCandidates, normalizeAlexandriaExecutionResponse, validateAlexandriaOptions } from "./alexandria.server";
+import {
+  normalizeAlexandriaCandidates, normalizeAlexandriaExecutionResponse, validateAlexandriaOptions,
+  decideSpecializedRunReplay,
+} from "./alexandria.server";
 
 describe("optional specialized-source connector", () => {
   it("normalizes the documented data.tools discovery response and retains private candidate IDs", () => {
@@ -74,5 +77,27 @@ describe("optional specialized-source connector", () => {
     ] } }] } });
     expect(found[0]?.provider).toBe("example");
     expect(found[0]?.estimatedCredits).toBe(2);
+  });
+
+  it("replays a completed result only for the same request, candidate, and workspace", () => {
+    const response = { ok: true };
+    const row = { candidate_id: "candidate-123", workspace_id: "workspace-a", status: "succeeded", response };
+    expect(decideSpecializedRunReplay(row, "candidate-123", "workspace-a")).toEqual({ action: "replay", response });
+    expect(decideSpecializedRunReplay(row, "candidate-123", "workspace-b")).toEqual({
+      action: "block", reason: "request_id_conflict", status: "succeeded",
+    });
+    expect(decideSpecializedRunReplay(row, "candidate-456", "workspace-a")).toEqual({
+      action: "block", reason: "request_id_conflict", status: "succeeded",
+    });
+  });
+
+  it("does not automatically repeat requests in an uncertain or running state", () => {
+    for (const status of ["reserved", "running", "uncertain", "rejected"]) {
+      expect(decideSpecializedRunReplay({
+        candidate_id: "candidate-123", workspace_id: null, status,
+      }, "candidate-123", null)).toEqual({
+        action: "block", reason: "request_already_processed", status,
+      });
+    }
   });
 });
