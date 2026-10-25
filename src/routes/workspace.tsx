@@ -483,6 +483,7 @@ function WorkspacePage() {
           selected_skills: skillsOverride || selectedSkills,
           run_options: AUTO_RUN_OPTIONS,
           resume_job_id: resumeFrom?.id,
+          keep_alive: true,
         }),
       });
       let response = await post(token);
@@ -490,6 +491,17 @@ function WorkspacePage() {
         // Sign-in token may have just expired: refresh once and retry before failing.
         const refreshed = (await supabase.auth.refreshSession()).data.session?.access_token;
         if (refreshed) { token = refreshed; response = await post(token); }
+      }
+      const liveJob = response.ok ? response.headers.get("x-maaroof-job") : null;
+      if (liveJob && response.body) {
+        // Hold the connection open (keeps the server run alive) while polling recorded events.
+        setJobId(liveJob); setResumeFrom(null);
+        const reader = response.body.getReader();
+        const drain = (async () => { try { while (!(await reader.read()).done) {} } catch {} })();
+        await watchJob(liveJob, 0, token);
+        try { await reader.cancel(); } catch {}
+        void drain;
+        return;
       }
       // If the queue table is unavailable, the server streams the run directly instead of failing.
       if (response.ok && (response.headers.get("content-type") || "").includes("text/event-stream")) {
