@@ -152,10 +152,10 @@ export function ExportButtons({
   };
 
   const run = async (f: ExportFormat) => {
+    setOpen(false);
     const p = await build();
     p.lang = exportLang;
     p.identity = identity;
-    setOpen(false);
     try {
       const { labelFor, localizeValue, glossarySection } = await import("@/lib/maaroof/report-sections");
       const { linksSection, packSections, engineAnswerSections } = await import("@/lib/machine-pack");

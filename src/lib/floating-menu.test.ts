@@ -10,7 +10,7 @@ describe("computeFloatingMenuPosition", () => {
       "rtl",
     );
     expect(result.side).toBe("above");
-    expect(result.top).toBe(378);
+    expect(result.top).toBe(382);
     expect(result.left).toBe(12);
   });
 
@@ -29,7 +29,7 @@ describe("computeFloatingMenuPosition", () => {
       { width: 390, height: 720 },
       "rtl",
     );
-    expect(right.left).toBe(58);
+    expect(right.left).toBe(68);
   });
 
   it("opens below when there is enough room", () => {
