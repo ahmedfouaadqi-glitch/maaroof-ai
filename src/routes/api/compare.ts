@@ -434,6 +434,49 @@ export const Route = createFileRoute("/api/compare")({
                 console.warn("[api/compare] scrape failed for", n, chosenUrl, e instanceof Error ? e.message : e);
               }
             }));
+
+            // Persist the collected public sources in the existing evidence layer with strict workspace scope.
+            const uniqueEvidence = new Map<string, any>();
+            for (const source of sources) {
+              const key = String(source.brand || "") + "|" + String(source.url || "");
+              if (source.url && !uniqueEvidence.has(key)) uniqueEvidence.set(key, source);
+            }
+            await Promise.allSettled(Array.from(uniqueEvidence.values()).slice(0, 80).map((source: any) => recordEvidence({
+              userId,
+              workspaceId,
+              title: String(source.title || source.url || source.brand).slice(0, 300),
+              claim: "A public search result or page was observed during a bounded competitor comparison.",
+              sourceKind: "external",
+              sourceRef: String(source.url),
+              evidenceType: "external",
+              category: "market",
+              collectionMethod: "source_intelligence_router_compare",
+              provider: "public_web",
+              capability: "competitor_compare",
+              retrievedAt: source.retrieved_at || new Date().toISOString(),
+              locale: lang,
+              market: market.region,
+              measurementUnit: "search_result_or_public_page",
+              sampleSize: 1,
+              realityKind: "observation",
+              status: "success",
+              limitation: "Public search results and website content are observations; they do not establish market share or actual consumer-product AI citations.",
+              sourceReliability: source.kind === "official" && officialSites[source.brand]?.status === "confirmed" ? 70 : 55,
+              relevanceScore: 70,
+              businessImportance: 60,
+              language: lang,
+            })));
+
+            // Recompute category counts after official-site reads have been appended.
+            for (const n of allBrands) {
+              const mine = sources.filter((source) => source.brand === n);
+              const count = (kind: string) => mine.filter((source) => source.kind === kind).length;
+              platformEvidence[n] = {
+                news: count("news"), linkedin: count("linkedin"), x: count("x"),
+                reddit: count("reddit"), wiki: count("wiki"), youtube: count("youtube"),
+                reviews: count("reviews"), geo: count("geo"), official: count("official"), general: count("general"),
+              };
+            }
           } catch (e) {
             console.warn("[api/compare] sources gather failed:", e instanceof Error ? e.message : e);
           }
@@ -679,6 +722,20 @@ export const Route = createFileRoute("/api/compare")({
               ok: sources.length > 0,
               sources_count: sources.length,
               failed_queries: liveSearchFailures.length,
+            },
+            source_plan: {
+              method_version: "bounded-competitor-source-router-v1",
+              request_count: sourceBudget.requestsUsed,
+              estimated_credits: sourceBudget.estimatedCredits,
+              request_cap: sourceBudget.maxRequests,
+              estimated_credit_cap: sourceBudget.maxEstimatedCredits,
+              budget_limited: sourceBudget.limited,
+              source_types: ["web", "news"],
+              limitations: [
+                "Search-result counts are changing proxies, not market-share measurements.",
+                "Model endpoint probes describe sampled API responses, not guaranteed consumer-facing AI product behavior.",
+                ...(sourceBudget.limited ? ["Some secondary source checks were skipped to remain within the declared budget."] : []),
+              ],
             },
           };
 
