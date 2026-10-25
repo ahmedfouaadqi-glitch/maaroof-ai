@@ -44,7 +44,7 @@ function apiKey(): string {
   return key;
 }
 
-function pickCandidates(payload: any): AlexandriaCandidate[] {
+export function normalizeAlexandriaCandidates(payload: any): AlexandriaCandidate[] {
   const roots = [payload?.data ?? payload, payload].filter(Boolean);
   const candidates: any[] = [];
   const visit = (value: any) => {
@@ -128,10 +128,61 @@ export async function discoverAlexandriaCapabilities(input: {
       };
     }
     const body = await response.json();
-    return { enabled: true, candidates: pickCandidates(body).slice(0, limit), limitation: null };
+    return { enabled: true, candidates: normalizeAlexandriaCandidates(body).slice(0, limit), limitation: null };
   } catch {
     return { enabled: true, candidates: [], limitation: "specialized_discovery_unavailable" };
   }
+}
+
+export type AlexandriaOptionValidation = { valid: boolean; errors: string[] };
+
+/** Strict, bounded validation against the discovered tool's JSON Schema contract. Unknown contracts fail closed. */
+export function validateAlexandriaOptions(schema: Record<string, any> | null, value: unknown): AlexandriaOptionValidation {
+  const errors: string[] = [];
+  if (!schema || typeof schema !== "object" || schema.type !== "object" || !schema.properties || typeof schema.properties !== "object") {
+    return { valid: false, errors: ["options_schema_unavailable"] };
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { valid: false, errors: ["options_must_be_object"] };
+  const options = value as Record<string, unknown>;
+  const properties = schema.properties as Record<string, any>;
+  const required = Array.isArray(schema.required) ? schema.required.map(String) : [];
+  if (Object.keys(options).length > 40) errors.push("too_many_options");
+  for (const key of required) {
+    if (!(key in options) || options[key] == null || options[key] === "") errors.push("required:" + key);
+  }
+  for (const [key, item] of Object.entries(options)) {
+    const rule = properties[key];
+    if (!rule) {
+      if (schema.additionalProperties !== true) errors.push("unknown_option:" + key);
+      continue;
+    }
+    if (typeof item === "string" && item.length > 10000) { errors.push("string_too_long:" + key); continue; }
+    if (Array.isArray(item) && item.length > 100) { errors.push("array_too_long:" + key); continue; }
+    const type = rule?.type;
+    const typeOkay =
+      !type ||
+      (type === "string" && typeof item === "string") ||
+      (type === "number" && typeof item === "number" && Number.isFinite(item)) ||
+      (type === "integer" && typeof item === "number" && Number.isInteger(item)) ||
+      (type === "boolean" && typeof item === "boolean") ||
+      (type === "array" && Array.isArray(item)) ||
+      (type === "object" && !!item && typeof item === "object" && !Array.isArray(item));
+    if (!typeOkay) { errors.push("wrong_type:" + key); continue; }
+    if (Array.isArray(rule.enum) && !rule.enum.some((v: unknown) => Object.is(v, item))) errors.push("invalid_enum:" + key);
+    if (typeof item === "number") {
+      if (Number.isFinite(rule.minimum) && item < rule.minimum) errors.push("below_minimum:" + key);
+      if (Number.isFinite(rule.maximum) && item > rule.maximum) errors.push("above_maximum:" + key);
+    }
+    if (typeof item === "string") {
+      if (Number.isFinite(rule.minLength) && item.length < rule.minLength) errors.push("below_min_length:" + key);
+      if (Number.isFinite(rule.maxLength) && item.length > rule.maxLength) errors.push("above_max_length:" + key);
+    }
+    if (Array.isArray(item)) {
+      if (Number.isFinite(rule.minItems) && item.length < rule.minItems) errors.push("below_min_items:" + key);
+      if (Number.isFinite(rule.maxItems) && item.length > rule.maxItems) errors.push("above_max_items:" + key);
+    }
+  }
+  return { valid: errors.length === 0, errors: errors.slice(0, 40) };
 }
 
 export type AlexandriaExecutionInput = {
