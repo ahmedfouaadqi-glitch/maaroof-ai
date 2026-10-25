@@ -61,7 +61,7 @@ async function post(path: string, body: any) {
   return j;
 }
 
-export function KnownDiscovery() {
+export function KnownDiscovery({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { lang } = useI18n();
   const L = TX[(lang as "ar" | "en" | "ku") || "ar"] || TX.ar;
   const [brand, setBrand] = useState("");
@@ -87,7 +87,7 @@ export function KnownDiscovery() {
       const r = await apiFetch("/api/known", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ brand, website: site, sector, depth, lang, force, scope: getEffectiveScope(auth?.profile, "known") }),
+        body: JSON.stringify({ brand, website: site, sector, depth, lang, force, workspace_id: workspaceId, scope: getEffectiveScope(auth?.profile, "known") }),
       });
       if (!r.ok || !r.body) {
         const j = await r.json().catch(() => ({}));
@@ -120,7 +120,7 @@ export function KnownDiscovery() {
   const startWatch = async () => {
     setErr(""); setNote("");
     try {
-      await post("/api/competitor-monitor", { action: "create", brand: result?.brand || brand, competitors: picked, frequency_hours: Math.max(24, policy?.policy?.min_frequency_hours || 24), lang });
+      await post("/api/competitor-monitor", { action: "create", workspace_id: workspaceId, brand: result?.brand || brand, competitors: picked, frequency_hours: Math.max(24, policy?.policy?.min_frequency_hours || 24), lang });
       setNote(L.started); setPicked([]);
       post("/api/competitor-monitor", { action: "policy" }).then(setPolicy).catch(() => {});
     } catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
