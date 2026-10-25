@@ -484,9 +484,9 @@ export function payloadToMarkdown(payload: ExportPayload): string {
       out.push("| | |", "|---|---|", ...s.rows.map(([k, v]) => `| ${k} | ${v} |`), "");
     } else if (s.kind === "table" && s.table) {
       out.push(
-        \`| \${s.table.columns.join(" | ")} |\`,
-        \`| \${s.table.columns.map(() => "---").join(" | ")} |\`,
-        ...s.table.data.map((r) => \`| \${r.join(" | ")} |\`),
+        `| ${s.table.columns.join(" | ")} |`,
+        `| ${s.table.columns.map(() => "---").join(" | ")} |`,
+        ...s.table.data.map((r) => `| ${r.join(" | ")} |`),
         "",
       );
     } else if (s.kind === "cards" && s.cards) {
