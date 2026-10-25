@@ -597,61 +597,9 @@ export async function exportToExcel(payload: ExportPayload) {
 }
 
 /** Build and download a CSV file. Flattens sections (kv/list/text/table) into rows. */
+/** Download the normalized CSV representation shared by every section type. */
 export function exportToCSV(payload: ExportPayload) {
-  const lang = payload.lang || "ar";
-  const cardLabels = CARD_LABELS[lang];
-  const lines: string[] = [];
-  const esc = (v: any) => {
-    const s = String(v ?? "");
-    if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-    return s;
-  };
-  lines.push(esc(BRAND));
-  lines.push(esc(payload.title));
-  if (payload.subtitle) lines.push(esc(payload.subtitle));
-  lines.push(esc(`${UI[lang].generated}: ${new Date().toLocaleString()}`));
-  if (identityLine(payload, lang)) lines.push(esc(identityLine(payload, lang)));
-  lines.push(esc(`${BRAND} · ${SITE}`));
-  if (payload.identity?.showLogo !== false) lines.push(esc(`Logo: ${LOGO_URL}`));
-  lines.push("");
-
-
-  payload.sections.forEach((s) => {
-    lines.push(esc(`# ${s.heading}`));
-    if (s.kind === "kv" && s.rows) {
-      lines.push(["key", "value"].map(esc).join(","));
-      s.rows.forEach(([k, v]) => lines.push([esc(k), esc(v)].join(",")));
-    } else if (s.kind === "text" && s.text) {
-      s.text.split("\n").forEach((l) => lines.push(esc(l)));
-    } else if (s.kind === "list" && s.list) {
-      s.list.forEach((x) => lines.push(esc(x)));
-    } else if (s.kind === "table" && s.table) {
-      lines.push(s.table.columns.map(esc).join(","));
-      s.table.data.forEach((r) => lines.push(r.map(esc).join(",")));
-    } else if (s.kind === "cards" && s.cards) {
-      const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
-      lines.push(columns.map(esc).join(","));
-      s.cards.forEach((card) => {
-        const evidence = (card.evidence || []).join(" | ");
-        const notes = (card.notes || []).join(" | ");
-        if (card.fields?.length) card.fields.forEach(([metric, value]) =>
-          lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, evidence, notes].map(esc).join(","))
-        );
-        else lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", "", "", evidence, notes].map(esc).join(","));
-      });
-    }
-    lines.push("");
-  });
-  lines.push(esc(DISCLAIMER[lang]));
-
-  const csv = "\ufeff" + lines.join("\n"); // BOM for Excel UTF-8
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${payload.title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  download(payloadToCSV(payload), "text/csv;charset=utf-8", "csv", payload.title);
 }
 
 /* ------------------------------------------------------------------ */
@@ -671,52 +619,68 @@ function download(content: BlobPart, mime: string, ext: string, title: string) {
 
 /** Raw structured export — for pipelines and archiving. */
 export function exportToJSON(payload: ExportPayload) {
-  const lang = payload.lang || "ar";
-  const body = JSON.stringify(
-    {
-      brand: BRAND,
-      site: SITE,
-      site_url: SITE_URL,
-      ...(payload.identity?.showLogo !== false ? { logo_url: LOGO_URL } : {}),
-      generated_at: new Date().toISOString(),
-      language: lang,
-      ...payload,
-      disclaimer: DISCLAIMER[lang],
-    },
-    null, 2,
-  );
+  const body = JSON.stringify(buildExportJsonDocument(payload), null, 2);
   download(body, "application/json;charset=utf-8", "json", payload.title);
 }
 
-export function payloadToMarkdown(payload: ExportPayload): string {
+export function payloadToMarkdown(payload: ExportPayload, generatedAt = new Date().toISOString()): string {
   const lang = payload.lang || "ar";
   const cardLabels = CARD_LABELS[lang];
-  const out: string[] = [`# ${payload.title}`];
-  if (payload.subtitle) out.push(`_${payload.subtitle}_`);
-  out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`);
-  if (payload.identity?.showLogo !== false) out.push(`> Logo: ${LOGO_URL}`);
-  if (identityLine(payload, lang)) out.push(`> ${identityLine(payload, lang)}`);
-  out.push("");
+  const summary = buildExportExecutiveSummary(payload);
+  const yamlValue = (value: string) => '"' + value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, " ") + '"';
+  const mdCell = (value: unknown) => String(value ?? "").replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+  const out: string[] = [
+    "---",
+    "schema_version: 2",
+    "title: " + yamlValue(payload.title),
+    "language: " + lang,
+    "generated_at: " + yamlValue(generatedAt),
+    "---",
+    "",
+    "# " + payload.title,
+  ];
+  if (payload.subtitle) out.push("_" + payload.subtitle + "_");
+  out.push("> " + BRAND + " · " + SITE + " — " + UI[lang].generated + " " + generatedAt);
+  if (payload.identity?.showLogo !== false) out.push("> Logo: " + LOGO_URL);
+  if (identityLine(payload, lang)) out.push("> " + identityLine(payload, lang));
+  out.push("", "## " + summary.heading);
+  out.push("| Indicator | Value |", "|---|---|");
+  summary.metrics.forEach((metric) => out.push("| " + mdCell(metric.label) + " | " + mdCell(metric.value) + " |"));
+  if (summary.measuredItems.length) {
+    out.push("", "### " + summary.measuredHeading);
+    out.push("| " + [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel].map(mdCell).join(" | ") + " |");
+    out.push("|---|---|---:|---|");
+    summary.measuredItems.forEach((item) => out.push("| " + [item.section, item.title, item.score + "/100", item.status].map(mdCell).join(" | ") + " |"));
+    if (summary.omittedMeasuredCount) out.push("", "_Additional scored indicators remain in the detailed report: " + summary.omittedMeasuredCount + "._");
+  }
+  if (summary.unmeasuredItems.length) {
+    out.push("", "### " + summary.unmeasuredHeading);
+    summary.unmeasuredItems.forEach((item) => out.push("- **" + mdCell(item.title) + "**" + (item.status ? " — " + mdCell(item.status) : "") + " (" + mdCell(item.section) + ")"));
+    if (summary.omittedUnmeasuredCount) out.push("- " + summary.omittedUnmeasuredCount + " additional indicators remain in the detailed sections.");
+  }
+  out.push("", "> " + summary.note, "");
 
-  for (const s of payload.sections) {
-    out.push(`## ${s.heading}`);
-    if (s.kind === "text" && s.text) out.push(s.text, "");
-    else if (s.kind === "list" && s.list) out.push(...s.list.map((x) => `- ${x}`), "");
-    else if (s.kind === "kv" && s.rows) {
-      out.push("| | |", "|---|---|", ...s.rows.map(([k, v]) => `| ${k} | ${v} |`), "");
-    } else if (s.kind === "table" && s.table) {
+  for (const section of payload.sections) {
+    out.push("## " + section.heading);
+    if (section.kind === "text" && section.text) out.push(section.text, "");
+    else if (section.kind === "list" && section.list) out.push(...section.list.map((item) => "- " + item), "");
+    else if (section.kind === "kv" && section.rows) {
+      out.push("| Field | Value |", "|---|---|", ...section.rows.map(([key, value]) => "| " + mdCell(key) + " | " + mdCell(value) + " |"), "");
+    } else if (section.kind === "table" && section.table) {
       out.push(
-        `| ${s.table.columns.join(" | ")} |`,
-        `| ${s.table.columns.map(() => "---").join(" | ")} |`,
-        ...s.table.data.map((r) => `| ${r.join(" | ")} |`),
+        "| " + section.table.columns.map(mdCell).join(" | ") + " |",
+        "| " + section.table.columns.map(() => "---").join(" | ") + " |",
+        ...section.table.data.map((row) => "| " + row.map(mdCell).join(" | ") + " |"),
         "",
       );
-    } else if (s.kind === "cards" && s.cards) {
-      for (const card of s.cards) {
+    } else if (section.kind === "cards" && section.cards) {
+      for (const card of section.cards) {
         out.push("### " + card.title);
         if (card.subtitle) out.push("_" + card.subtitle + "_");
         out.push("- " + cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"));
-        if (card.fields?.length) out.push("| " + cardLabels.metric + " | " + cardLabels.value + " |", "|---|---|", ...card.fields.map(([key, value]) => "| " + key + " | " + value + " |"));
+        if (card.fields?.length) {
+          out.push("| " + cardLabels.metric + " | " + cardLabels.value + " |", "|---|---|", ...card.fields.map(([key, value]) => "| " + mdCell(key) + " | " + mdCell(value) + " |"));
+        }
         if (card.evidence?.length) out.push("", cardLabels.evidence + ":", ...card.evidence.map((item) => "- " + item));
         if (card.notes?.length) out.push("", cardLabels.notes + ":", ...card.notes.map((item) => "- " + item));
         out.push("");
