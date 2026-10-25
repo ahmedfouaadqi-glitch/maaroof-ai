@@ -99,6 +99,14 @@ const UI: Record<ExportLang, { generated: string; report: string; by: string }> 
   ku: { generated: "دروستکرا لە", report: "ڕاپۆرت", by: "دروستکرا لەلایەن" },
 };
 
+const CARD_LABELS: Record<ExportLang, {
+  source: string; type: string; score: string; status: string; metric: string; value: string; evidence: string; notes: string; note: string;
+}> = {
+  ar: { source: "المصدر", type: "النوع", score: "الدرجة", status: "الحالة", metric: "المعيار", value: "القيمة", evidence: "الأدلة", notes: "الملاحظات", note: "ملاحظة" },
+  en: { source: "Source", type: "Type", score: "Score", status: "Status", metric: "Metric", value: "Value", evidence: "Evidence", notes: "Notes", note: "Note" },
+  ku: { source: "سەرچاوە", type: "جۆر", score: "نمرە", status: "دۆخ", metric: "پێوەر", value: "بەها", evidence: "بەڵگە", notes: "تێبینی", note: "تێبینی" },
+};
+
 /** One-line signature: user name + privacy-safe email. */
 function identityLine(payload: ExportPayload, lang: ExportLang): string {
   const id = payload.identity;
@@ -294,6 +302,7 @@ export async function exportToPDF(payload: ExportPayload) {
 /** Build a branded multi-sheet Excel workbook and trigger download. */
 export async function exportToExcel(payload: ExportPayload) {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND;
@@ -331,8 +340,8 @@ export async function exportToExcel(payload: ExportPayload) {
       section.cards.forEach((card) => {
         sheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || ""]);
         (card.fields || []).forEach(([key, value]) => sheet.addRow([key, value]));
-        (card.evidence || []).forEach((value) => sheet.addRow(["Evidence", value]));
-        (card.notes || []).forEach((value) => sheet.addRow(["Note", value]));
+        (card.evidence || []).forEach((value) => sheet.addRow([cardLabels.evidence, value]));
+        (card.notes || []).forEach((value) => sheet.addRow([cardLabels.note, value]));
         sheet.addRow([]);
       });
     }
@@ -349,7 +358,7 @@ export async function exportToExcel(payload: ExportPayload) {
     if (section.kind === "cards" && section.cards) {
       const name = (section.heading || "Cards " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
       const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
-      const columns = ["Source", "Type", "Score", "Status", "Metric", "Value", "Evidence", "Notes"];
+      const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
       dataSheet.addRow(columns);
       section.cards.forEach((card) => {
         if (card.fields?.length) card.fields.forEach(([metric, value]) =>
@@ -379,6 +388,7 @@ export async function exportToExcel(payload: ExportPayload) {
 /** Build and download a CSV file. Flattens sections (kv/list/text/table) into rows. */
 export function exportToCSV(payload: ExportPayload) {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const lines: string[] = [];
   const esc = (v: any) => {
     const s = String(v ?? "");
@@ -408,7 +418,7 @@ export function exportToCSV(payload: ExportPayload) {
       lines.push(s.table.columns.map(esc).join(","));
       s.table.data.forEach((r) => lines.push(r.map(esc).join(",")));
     } else if (s.kind === "cards" && s.cards) {
-      const columns = ["source", "type", "score", "status", "metric", "value", "evidence", "notes"];
+      const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
       lines.push(columns.map(esc).join(","));
       s.cards.forEach((card) => {
         const evidence = (card.evidence || []).join(" | ");
@@ -493,10 +503,10 @@ export function payloadToMarkdown(payload: ExportPayload): string {
       for (const card of s.cards) {
         out.push("### " + card.title);
         if (card.subtitle) out.push("_" + card.subtitle + "_");
-        out.push("- Score: " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"));
-        if (card.fields?.length) out.push("| Metric | Value |", "|---|---|", ...card.fields.map(([key, value]) => "| " + key + " | " + value + " |"));
-        if (card.evidence?.length) out.push("", "Evidence:", ...card.evidence.map((item) => "- " + item));
-        if (card.notes?.length) out.push("", "Notes:", ...card.notes.map((item) => "- " + item));
+        out.push("- " + cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"));
+        if (card.fields?.length) out.push("| " + cardLabels.metric + " | " + cardLabels.value + " |", "|---|---|", ...card.fields.map(([key, value]) => "| " + key + " | " + value + " |"));
+        if (card.evidence?.length) out.push("", cardLabels.evidence + ":", ...card.evidence.map((item) => "- " + item));
+        if (card.notes?.length) out.push("", cardLabels.notes + ":", ...card.notes.map((item) => "- " + item));
         out.push("");
       }
     }
@@ -520,6 +530,7 @@ export function textIsRtl(text: string, fallback: boolean): boolean {
 export async function exportToWord(payload: ExportPayload) {
   const lang = payload.lang || "ar";
   const rtl = lang !== "en";
+  const cardLabels = CARD_LABELS[lang];
   const {
     AlignmentType, BorderStyle, Document, Footer, Header, HeadingLevel, ImageRun,
     Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType,
@@ -569,10 +580,10 @@ export async function exportToWord(payload: ExportPayload) {
       section.cards.forEach((card) => {
         content.push(paragraph(card.title, { bold: true, size: 24, color: "0F2454" }));
         if (card.subtitle) content.push(paragraph(card.subtitle, { size: 18, color: "64748B" }));
-        content.push(paragraph("Score: " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100") + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }));
-        if (card.fields?.length) content.push(makeTable(["Metric", "Value"], card.fields));
-        (card.evidence || []).forEach((item) => content.push(paragraph("Evidence: " + item, { size: 17, color: "475569" })));
-        (card.notes || []).forEach((item) => content.push(paragraph("Note: " + item, { size: 17, color: "92400E" })));
+        content.push(paragraph(cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100") + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }));
+        if (card.fields?.length) content.push(makeTable([cardLabels.metric, cardLabels.value], card.fields));
+        (card.evidence || []).forEach((item) => content.push(paragraph(cardLabels.evidence + ": " + item, { size: 17, color: "475569" })));
+        (card.notes || []).forEach((item) => content.push(paragraph(cardLabels.note + ": " + item, { size: 17, color: "92400E" })));
       });
     }
   });
@@ -601,6 +612,7 @@ export async function exportToWord(payload: ExportPayload) {
 /** Slide deck — one slide per section. Loaded lazily to keep the bundle light. */
 export async function exportToPowerPoint(payload: ExportPayload) {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
@@ -627,14 +639,14 @@ export async function exportToPowerPoint(payload: ExportPayload) {
         const slide = pptx.addSlide();
         decorate(slide);
         slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA" });
-        slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, rectRadius: 0.08, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
+        slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
         slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid" });
         if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B" });
-        slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
+        slide.addText(card.score == null ? (card.status || "unmeasured") : cardLabels.score + ": " + String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
         const details = [
           ...(card.fields || []).map(([key, value]) => String(key) + ": " + String(value)),
-          ...(card.evidence || []).map((item) => "Evidence: " + item),
-          ...(card.notes || []).map((item) => "Note: " + item),
+          ...(card.evidence || []).map((item) => cardLabels.evidence + ": " + item),
+          ...(card.notes || []).map((item) => cardLabels.note + ": " + item),
         ].join("\n");
         slide.addText(details, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
       });
