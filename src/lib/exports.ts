@@ -7,14 +7,25 @@ import maaroofLogo from "@/assets/maaroof-ai-logo.png";
 
 export type ExportLang = "ar" | "en" | "ku";
 
+export type ExportCard = {
+  title: string;
+  subtitle?: string;
+  score?: number | null;
+  status?: string;
+  fields?: Array<[string, string | number]>;
+  evidence?: string[];
+  notes?: string[];
+};
+
 export type ExportSection = {
   heading: string;
-  // Either rows of [label, value] pairs, free text, or a tabular block.
-  kind: "kv" | "text" | "table" | "list";
+  // Structured card grids are used for per-axis and per-source audit results.
+  kind: "kv" | "text" | "table" | "list" | "cards";
   rows?: Array<[string, string | number]>;
   text?: string;
   list?: string[];
   table?: { columns: string[]; data: (string | number)[][] };
+  cards?: ExportCard[];
 };
 
 export type ExportIdentityInfo = {
