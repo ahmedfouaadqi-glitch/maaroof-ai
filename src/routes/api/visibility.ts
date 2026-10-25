@@ -10,6 +10,8 @@ import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngin
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
 import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
+import { aggregateVisibilityMetrics, measurementSignature } from "@/lib/maaroof/source-intelligence";
+import { recordEvidence } from "@/lib/maaroof/evidence.server";
 
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
@@ -258,7 +260,8 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; ms: number
+              sources: { url: string; title: string }[]; blind_sources: { url: string; title: string }[];
+              grounded_sources: { url: string; title: string }[]; ms: number
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
@@ -334,7 +337,9 @@ export const Route = createFileRoute("/api/visibility")({
               if (res.kind === "ok") completedUnits++;
               const p = previous.p;
               const idx = p.brands.findIndex((b: string) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
-              const sources = [...PA.linkSources(p, evidence), ...(res.kind === "ok" ? PA.linkSources(res.p, evidence) : [])].filter((src: any, i: number, all: any[]) => all.findIndex((x) => x.url === src.url) === i);
+              const blindSources = PA.linkSources(p, evidence);
+              const groundedSources = res.kind === "ok" ? PA.linkSources(res.p, evidence) : [];
+              const sources = [...blindSources, ...groundedSources].filter((src: any, i: number, all: any[]) => all.findIndex((x) => x.url === src.url) === i);
               const totalMs = previous.blindMs + phaseMs;
               statuses[e] = {
                 status: res.kind === "ok" ? "answered" : "partial",
@@ -357,6 +362,8 @@ export const Route = createFileRoute("/api/visibility")({
                 blind_ms: previous.blindMs,
                 grounded_ms: phaseMs,
                 sources,
+                blind_sources: blindSources,
+                grounded_sources: groundedSources,
                 ms: totalMs,
               });
             };
@@ -378,29 +385,112 @@ export const Route = createFileRoute("/api/visibility")({
               if (refund > 0) { try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun, _meta: { refund: true, partial: true, completed_units: completedUnits, asked_units: probeUnits, endpoint: "/api/visibility#probe" } } as any); } catch {} }
               return Number(pChg.tokens || 0) - refund;
             };
+
+            const probedAt = new Date().toISOString();
+            const comparisonKey = measurementSignature({
+              prompts: [q],
+              language: lang,
+              market: market.region,
+              engines,
+              methodVersion: "visibility-live-model-probe-v1",
+            });
+            let probeMetrics: ReturnType<typeof aggregateVisibilityMetrics> | null = null;
+            const finalizeProbeMeasurement = async () => {
+              probeMetrics = aggregateVisibilityMetrics(engines.map((engine) => {
+                const a = answers.find((row) => row.engine === engine);
+                const status = statuses[engine];
+                if (!a || status?.blind_status !== "answered") {
+                  return { status: status?.blind_status === "timeout" ? "unavailable" as const : "failed" as const };
+                }
+                return {
+                  status: "success" as const,
+                  mentioned: a.mentioned,
+                  cited: (a.blind_sources || []).length > 0,
+                  position: a.rank,
+                };
+              }));
+              await Promise.allSettled(answers.filter((a) => a.blind_status === "answered").map((a) => recordEvidence({
+                userId,
+                workspaceId,
+                title: brand + " live model probe — " + a.engine,
+                claim: "In this one sampled model response to the fixed unbranded question, the brand was " +
+                  (a.mentioned ? "mentioned" : "not mentioned") + " and " +
+                  ((a.blind_sources || []).length ? "one or more supplied public sources were matched" : "no supplied public source was matched") + ".",
+                sourceKind: "measurement",
+                // Do not treat model answers as independent websites or independent verification sources.
+                sourceRef: null,
+                evidenceType: "measurement",
+                category: "behavioral",
+                collectionMethod: "visibility_live_model_probe",
+                provider: "model_endpoint",
+                capability: "answer_visibility",
+                retrievedAt: probedAt,
+                dataPeriod: probedAt.slice(0, 10),
+                locale: lang,
+                market: market.region,
+                measurementUnit: "one_model_response",
+                sampleSize: 1,
+                realityKind: "measurement",
+                status: "success",
+                limitation: "This measures one response from the queried model endpoint, not the public consumer product UI or causal effect of any website change.",
+                sourceReliability: 75,
+                relevanceScore: 80,
+                businessImportance: 60,
+                language: lang,
+              })));
+              return probeMetrics;
+            };
+            const measurementProtocol = () => ({
+              measurement_kind: "live_model_probe",
+              reality_kind: "measurement",
+              measured_at: probedAt,
+              asked_engines: engines,
+              attempted: probeMetrics?.attempted ?? engines.length,
+              successful: probeMetrics?.successful ?? answers.filter((a) => a.blind_status === "answered").length,
+              failed: probeMetrics?.failed ?? Math.max(0, engines.length - answers.length),
+              coverage_rate: probeMetrics?.coverageRate ?? null,
+              mention_samples: probeMetrics?.mentionSamples ?? 0,
+              mentions: probeMetrics?.mentions ?? 0,
+              mention_rate: probeMetrics?.mentionRate ?? null,
+              citation_samples: probeMetrics?.citationSamples ?? 0,
+              citations: probeMetrics?.citations ?? 0,
+              citation_rate: probeMetrics?.citationRate ?? null,
+              average_position: probeMetrics?.averagePosition ?? null,
+              reference_prompt: q,
+              comparison_key: comparisonKey,
+              evidence_source: evidenceSource,
+              public_evidence_sample_size: evidence.length,
+              limitations: [
+                "The metric describes sampled model API responses, not guaranteed behavior in a consumer-facing AI product.",
+                "Citation rate counts matches to the supplied public evidence set; it is not a complete index of all citations available on the web.",
+                ...(probeMetrics?.limitation ? [probeMetrics.limitation] : []),
+              ],
+            });
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
               const work = (async () => {
                 await askAll();
+                await finalizeProbeMeasurement();
                 const charged = await settle();
                 const { notifyUser } = await import("@/lib/notify.server");
                 if (!answers.length) {
                   try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
                   return;
                 }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, measurement: measurementProtocol(), charged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
               })().catch(() => {});
               // Safe start: run inline (each engine is capped at 30s) so the work can never be
               // detached after the response; results + notification are saved before we reply.
               await work;
-              return Response.json({ ok: true, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: pChg.tokens } });
+              return Response.json({ ok: true, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, measurement: measurementProtocol(), charged: pChg.tokens } });
             }
             await askAll();
+            await finalizeProbeMeasurement();
             const charged = await settle();
             if (!answers.length) {
-              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, measurement: measurementProtocol(), charged: 0, refunded: true } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -413,7 +503,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
+            return Response.json({ ok: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, measurement: measurementProtocol(), council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
