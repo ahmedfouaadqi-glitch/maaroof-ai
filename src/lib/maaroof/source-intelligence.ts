@@ -31,7 +31,7 @@ export type SourceRoutePlan = {
   capability: SourceCapability;
   language: string;
   market: string | null;
-  primary: "web" | "news" | "direct_read" | "alexandria_catalogue" | "none";
+  primary: "web" | "news" | "url_read" | "alexandria_catalogue" | "none";
   searchSources: Array<"web" | "news">;
   maxRequests: number;
   maxEstimatedCredits: number;
@@ -83,12 +83,14 @@ export function planSourceRoute(input: SourceRouteInput): SourceRoutePlan {
 
   if (useCache) primary = "none";
   else if (capability === "url_read" || (isUrl && capability !== "answer_visibility")) {
-    if (available.directRead) primary = "direct_read";
+    if (available.directRead) primary = "url_read";
     else limitations.push("direct_read_unavailable");
-  } else if (available.webSearch && requestsAvailableForWork > 0) {
+  } else if (available.webSearch && requestsAvailableForWork > 0 && creditsAvailable >= 2) {
+    // A bounded query requires at least the minimum documented search allowance; actual returned-result cost is recorded by the existing usage ledger.
     searchSources = wantsNews ? ["web", "news"] : ["web"];
     primary = wantsNews ? "news" : "web";
   } else if (requestsAvailableForWork <= 0) limitations.push("request_budget_exhausted");
+  else if (available.webSearch && creditsAvailable < 2) limitations.push("credit_budget_below_minimum_search_cost");
   else limitations.push("no_eligible_search_source");
 
   if (input.requestSpecializedDiscovery && available.alexandria && !useCache && requestsAvailableForWork > 0) {
@@ -102,7 +104,7 @@ export function planSourceRoute(input: SourceRouteInput): SourceRoutePlan {
     discoverSpecializedSources ? "explicit_specialized_discovery_only" :
     primary === "news" ? "recent_information_requested" :
     primary === "web" ? "general_web_evidence_sufficient_for_first_pass" :
-    primary === "direct_read" ? "specific_public_url_requested" :
+    primary === "url_read" ? "specific_public_url_requested" :
     "no_source_selected_within_current_constraints";
 
   return {
