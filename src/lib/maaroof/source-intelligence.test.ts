@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   planSourceRoute, normalizeSourceEvidence, aggregateVisibilityMetrics,
-  measurementSignature, canExecuteSpecializedSource,
+  measurementSignature, canExecuteSpecializedSource, estimateSearchCredits,
 } from "./source-intelligence";
 
 describe("Source Intelligence Router", () => {
@@ -83,5 +83,17 @@ describe("Source Intelligence Router", () => {
     expect(canExecuteSpecializedSource({ ...base, discoveredCostCredits: null }).reason).toBe("unknown_cost_fails_closed");
     expect(canExecuteSpecializedSource({ ...base, maxCredits: 2 }).reason).toBe("cost_cap_exceeded");
     expect(canExecuteSpecializedSource({ ...base, requestId: "" }).reason).toBe("idempotency_key_required");
+  });
+
+  it("estimates result-search and page-read costs separately and treats catalog discovery as free", () => {
+    expect(estimateSearchCredits({ resultCount: 8, sources: ["web"], includePageContent: true })).toEqual({
+      queryCredits: 2, pageCredits: 8, estimatedCredits: 10, billable: true,
+    });
+    expect(estimateSearchCredits({ resultCount: 18, sources: ["web", "news"], includePageContent: true })).toEqual({
+      queryCredits: 4, pageCredits: 18, estimatedCredits: 22, billable: true,
+    });
+    expect(estimateSearchCredits({ resultCount: 4, sources: ["alexandria"] })).toEqual({
+      queryCredits: 0, pageCredits: 0, estimatedCredits: 0, billable: false,
+    });
   });
 });
