@@ -18,14 +18,25 @@ export class PublicReadFailure extends Error {
   readonly readIssue: ReadIssueCode;
   readonly origin: "target" | "reader" | "unknown";
   readonly status?: number;
-  constructor(readIssue: ReadIssueCode, origin: PublicReadFailure["origin"], status?: number) {
+  readonly retryAfterMs?: number;
+  constructor(readIssue: ReadIssueCode, origin: PublicReadFailure["origin"], status?: number, retryAfterMs?: number) {
     // Deliberately provider-neutral: this message can cross API boundaries.
     super("Could not retrieve usable public page content.");
     this.name = "PublicReadFailure";
     this.readIssue = readIssue;
     this.origin = origin;
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
+}
+
+export function parseRetryAfterMs(value: string | null | undefined, now = Date.now()): number | undefined {
+  const raw = String(value || "").trim();
+  if (!raw) return undefined;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) ? Math.max(0, timestamp - now) : undefined;
 }
 
 export function isReadIssueCode(value: unknown): value is ReadIssueCode {
