@@ -16,7 +16,7 @@ export class FirecrawlError extends Error {
   body: string;
   constructor(operation: "search" | "scrape" | "map" | "crawl", status: number, body: string) {
     super(`Automated content retrieval failed (HTTP ${status}).`);
-    this.name = "FirecrawlError";
+    this.name = "ContentReadError";
     this.status = status;
     this.operation = operation;
     this.body = body;
@@ -25,9 +25,9 @@ export class FirecrawlError extends Error {
 
 export class FirecrawlLimitError extends Error {
   scope: "global_daily" | "global_monthly" | "per_user_daily" | "per_tool";
-  constructor(scope: FirecrawlLimitError["scope"], message: string) {
+  constructor(scope: FirecrawlLimitError["scope"], _message: string) {
     super("The available reading capacity for this operation has been reached.");
-    this.name = "FirecrawlLimitError";
+    this.name = "ReadCapacityError";
     this.scope = scope;
   }
 }
@@ -238,7 +238,7 @@ function normalizedScrapeFailure(error: unknown, source: string, url: string): P
   if (error instanceof PublicReadFailure) return error;
   const e = error as any;
   const message = String(e?.message || error || "").toLowerCase();
-  if (e?.scope || e?.name === "FirecrawlLimitError") {
+  if (e?.scope || e?.name === "ReadCapacityError") {
     return new PublicReadFailure("reader_quota_reached", "reader", Number.isFinite(e?.status) ? e.status : undefined);
   }
   // An HTTP status on a provider-side error describes the reading route, not the target website.
