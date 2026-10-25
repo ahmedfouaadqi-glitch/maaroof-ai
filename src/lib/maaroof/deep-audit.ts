@@ -209,10 +209,11 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
         if (brandIn(first)) { s += 30; ev2.push("brand_in_opening"); }
         if (/application\/ld\+json|schema\.org/i.test(html)) { s += 20; ev2.push("structured_data"); }
       } else {
-        if (brandIn(title)) { s += 35; ev2.push("brand_in_profile_title"); }
-        if (brandIn(desc)) { s += 25; ev2.push("brand_in_profile_description"); }
-        if (desc) { s += 20; ev2.push("public_profile_description"); }
-        if (words(desc).length >= 12) { s += 20; ev2.push("descriptive_profile_bio"); }
+        // Metadata-only evidence indicates profile identity completeness, not full generative visibility.
+        if (brandIn(title)) { s += 25; ev2.push("brand_in_profile_title"); }
+        if (brandIn(desc)) { s += 20; ev2.push("brand_in_profile_description"); }
+        if (desc) { s += 10; ev2.push("public_profile_description"); }
+        if (words(desc).length >= 12) { s += 5; ev2.push("descriptive_profile_bio"); }
       }
     } else if (axis === "sge") {
       const fp = md.split(/\n{2,}/).find((p) => words(p).length > 15) || "";
@@ -224,11 +225,13 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
         if (brandIn(md)) { s += 30; ev2.push("brand_mentioned"); }
         if (desc) { s += 20; ev2.push("bio"); }
       } else {
-        if (brandIn(title)) { s += 50; ev2.push("brand_in_profile_title"); }
-        if (brandIn(desc)) { s += 30; ev2.push("brand_in_profile_description"); }
-        if (desc) { s += 20; ev2.push("public_profile_bio"); }
+        // A title and bio do not prove that answer engines surface the brand.
+        if (brandIn(title)) { s += 25; ev2.push("brand_in_profile_title"); }
+        if (brandIn(desc)) { s += 20; ev2.push("brand_in_profile_description"); }
+        if (desc) { s += 10; ev2.push("public_profile_bio"); }
       }
     }
+    if (!hasBody) s = Math.min(60, s);
     s = Math.min(100, s);
     return { axis, score: s, verdict: verdictOf(s), evidence: ev2, reason: ev2.length ? "measured" : "no_signal", next: s >= 70 ? "keep" : `improve_${axis}` };
   });
