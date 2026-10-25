@@ -58,8 +58,10 @@ export async function verifyReality(input: {
   subject: string;
   realityRecordId?: string | null;
   executionId?: string | null;
+  userId?: string | null;
+  workspaceId?: string | null;
   assessment?: RealityAssessment | null;
-  benchmark?: { subjectKind: string; subject: string; metric: string } | null;
+  benchmark?: { subjectKind: string; subject: string; metric: string; comparisonKey?: string | null } | null;
   language?: string;
 }): Promise<VerificationResult> {
   const stages: VerificationResult["stages"] = [];
@@ -70,7 +72,12 @@ export async function verifyReality(input: {
   let validation: any = { total: 0, independent_sources: 0, agreement: 0, contradicting: 0, weighted_score: 0, stale: 0, verdict: "none" };
   try {
     const { validateEvidenceFor } = await import("@/lib/maaroof/evidence.server");
-    const r = await validateEvidenceFor({ realityRecordId: input.realityRecordId, executionId: input.executionId });
+    const r = await validateEvidenceFor({
+      realityRecordId: input.realityRecordId,
+      executionId: input.executionId,
+      userId: input.userId || null,
+      workspaceId: input.workspaceId ?? null,
+    });
     validation = r.validation;
     stages.push({ stage: "collect_evidence", ok: r.items.length > 0, note: `${r.items.length} عنصر دليل` });
     stages.push({ stage: "classify_evidence", ok: !!validation.strongest_type, note: String(validation.strongest_type || "غير مصنّف") });
@@ -86,7 +93,7 @@ export async function verifyReality(input: {
   let historical = 0;
   try {
     const { evidenceOverview } = await import("@/lib/maaroof/evidence.server");
-    const ov = await evidenceOverview(200);
+    const ov = await evidenceOverview(200, { userId: input.userId || null, workspaceId: input.workspaceId ?? null });
     historical = ov.by_type?.historical || 0;
     stages.push({ stage: "historical_check", ok: historical > 0, note: `${historical} دليل تاريخي` });
   } catch {
@@ -98,7 +105,13 @@ export async function verifyReality(input: {
   if (input.benchmark) {
     try {
       const { benchmarkTrend } = await import("@/lib/maaroof/benchmark.server");
-      const t = await benchmarkTrend(input.benchmark.subjectKind as any, input.benchmark.subject, input.benchmark.metric);
+      const t = await benchmarkTrend(
+        input.benchmark.subjectKind as any,
+        input.benchmark.subject,
+        input.benchmark.metric,
+        30,
+        { userId: input.userId || null, workspaceId: input.workspaceId ?? null, comparisonKey: input.benchmark.comparisonKey || null },
+      );
       trend = (t as any)?.trend ?? null;
       stages.push({ stage: "benchmark_check", ok: trend === "improving", note: trend || "لا قياس" });
     } catch {
