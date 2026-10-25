@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, RefreshCw, Trash2, Plus, Bell } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +16,7 @@ async function call(action: string, payload: any = {}) {
   return j;
 }
 
-export function CompetitorMonitor() {
+export function CompetitorMonitor({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t } = useI18n();
   const { lang } = useI18n();
   const [items, setItems] = useState<any[]>([]);
@@ -25,26 +25,42 @@ export function CompetitorMonitor() {
   const [freq, setFreq] = useState(24);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const requestSeq = useRef(0);
 
   async function load() {
-    try { const j = await call("list"); setItems(j.items || []); } catch {}
+    const seq = ++requestSeq.current;
+    try {
+      const j = await call("list", { workspace_id: workspaceId });
+      if (seq === requestSeq.current) setItems(Array.isArray(j.items) ? j.items : []);
+    } catch (e: any) {
+      if (seq === requestSeq.current) {
+        setItems([]);
+        setErr(e?.message || "failed");
+      }
+    }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    requestSeq.current += 1;
+    setItems([]);
+    setErr("");
+    void load();
+    return () => { requestSeq.current += 1; };
+  }, [workspaceId]);
 
   async function add() {
     if (!brand.trim() || !comps.trim()) return;
     setBusy(true); setErr("");
     try {
-      await call("create", { brand, competitors: comps.split(",").map((s) => s.trim()).filter(Boolean), frequency_hours: freq, lang });
+      await call("create", { workspace_id: workspaceId, brand, competitors: comps.split(",").map((s) => s.trim()).filter(Boolean), frequency_hours: freq, lang });
       setBrand(""); setComps(""); await load();
     } catch (e: any) { setErr(e?.message || "failed"); } finally { setBusy(false); }
   }
   async function recheck(id: string) {
-    try { await call("recheck", { id, lang }); await load(); } catch (e: any) { setErr(e?.message || "failed"); }
+    try { await call("recheck", { id, workspace_id: workspaceId, lang }); await load(); } catch (e: any) { setErr(e?.message || "failed"); }
   }
   async function del(id: string) {
     if (!confirm(t("auto.delete_monitoring"))) return;
-    try { await call("delete", { id }); await load(); } catch {}
+    try { await call("delete", { id, workspace_id: workspaceId }); await load(); } catch {}
   }
 
   return (
