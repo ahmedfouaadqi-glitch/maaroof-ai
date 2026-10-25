@@ -35,6 +35,20 @@ const ICONS: Record<ExportFormat, any> = {
   json: Braces,
 };
 
+const AUDIT_EXPORT_LABELS: Record<string, Record<"ar" | "en" | "ku", string>> = {
+  measured: { ar: "قابل للقياس", en: "Measured", ku: "پێوراو" },
+  unmeasured: { ar: "لم يُقَس", en: "Unmeasured", ku: "نەپێوراو" },
+  access_restricted: { ar: "الوصول مقيّد", en: "Access restricted", ku: "دەستپێگەیشتن سنووردارە" },
+  rate_limited: { ar: "تجاوز حد الطلبات", en: "Rate limited", ku: "سنووری داواکاری" },
+  timeout: { ar: "انتهت المهلة", en: "Timed out", ku: "کاتی پشکنین تەواو بوو" },
+  source_unavailable: { ar: "المصدر غير متاح", en: "Source unavailable", ku: "سەرچاوە بەردەست نییە" },
+  insufficient_public_content: { ar: "محتوى عام غير كافٍ", en: "Insufficient public content", ku: "ناوەڕۆکی گشتی بەس نییە" },
+  no_public_content: { ar: "لم يُستخرج محتوى عام", en: "No public content extracted", ku: "ناوەڕۆکی گشتی دەستنەکەوت" },
+  insufficient_content_for_axis: { ar: "المحتوى لا يكفي لهذا المحور", en: "Not enough content for this axis", ku: "ناوەڕۆک بۆ ئەم تەوەرە بەس نییە" },
+  needs_full_page_content: { ar: "يتطلب محتوى أعمق", en: "Full content required", ku: "ناوەڕۆکی زیاتر پێویستە" },
+};
+const auditExportText = (value: string, lang: "ar" | "en" | "ku") => AUDIT_EXPORT_LABELS[value]?.[lang] || value;
+
 export function ExportButtons({
   build,
   size = "sm",
@@ -95,8 +109,14 @@ export function ExportButtons({
       const loc: import("@/lib/exports").ExportSection[] = base.map((s) => ({
         ...s,
         heading: labelFor(s.heading, exportLang),
-        rows: s.rows?.map(([k, v]) => [labelFor(String(k), exportLang), localizeValue(v, exportLang)] as [string, string | number]),
+        rows: s.rows?.map(([k, v]) => [labelFor(String(k), exportLang), typeof v === "string" ? auditExportText(v, exportLang) : localizeValue(v, exportLang)] as [string, string | number]),
         table: s.table ? { ...s.table, columns: s.table.columns.map((c) => labelFor(c, exportLang)) } : undefined,
+        cards: s.cards?.map((card) => ({
+          ...card,
+          status: card.status ? auditExportText(card.status, exportLang) : undefined,
+          fields: card.fields?.map(([k, v]) => [labelFor(String(k), exportLang), typeof v === "string" ? auditExportText(v, exportLang) : localizeValue(v, exportLang)] as [string, string | number]),
+          notes: card.notes?.map((note) => auditExportText(note, exportLang)),
+        })),
       }));
       const extra: typeof loc = [linksSection(base, exportLang)];
       if (withPack) {
