@@ -83,8 +83,10 @@ export function planSourceRoute(input: SourceRouteInput): SourceRoutePlan {
 
   if (useCache) primary = "none";
   else if (capability === "url_read" || (isUrl && capability !== "answer_visibility")) {
-    if (available.directRead) primary = "url_read";
-    else limitations.push("direct_read_unavailable");
+    if (!available.directRead) limitations.push("direct_read_unavailable");
+    else if (requestsAvailableForWork <= 0) limitations.push("request_budget_exhausted");
+    else if (creditsAvailable < 1) limitations.push("credit_budget_below_minimum_direct_read_cost");
+    else primary = "url_read";
   } else if (available.webSearch && requestsAvailableForWork > 0 && creditsAvailable >= 2) {
     // A bounded query requires at least the minimum documented search allowance; actual returned-result cost is recorded by the existing usage ledger.
     // Prefer the narrowest source set that satisfies the intent; news-only avoids doubling results and cost.
