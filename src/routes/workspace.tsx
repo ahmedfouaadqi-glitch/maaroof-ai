@@ -17,6 +17,8 @@ import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { Dardasha } from "@/components/workspace/Dardasha";
+import { AssistantMessage } from "@/components/workspace/AssistantMessage";
+import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { WorkspaceAccountPanel } from "@/components/workspace/WorkspaceAccountPanel";
 import { canStartTask, AUTO_RUN_OPTIONS } from "@/lib/maaroof/dardasha";
@@ -48,7 +50,7 @@ import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
-  LoaderCircle, Plus, Search, Sparkles, Square, Target, TrendingUp,
+  LoaderCircle, ListChecks, Plus, Search, Sparkles, Square, Target, TrendingUp,
   Wrench, X,
 } from "lucide-react";
 
@@ -141,6 +143,8 @@ function WorkspacePage() {
   const [geoScope, setGeoScope] = useState<GeoScope>({ scope: "auto" });
   const [chatPrefill, setChatPrefill] = useState<{ text: string; taskId: string } | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [reportTaskDraft, setReportTaskDraft] = useState(false);
+  const [reportGoalSnapshot, setReportGoalSnapshot] = useState("");
   const [pendingApproved, setPendingApproved] = useState("");
   useEffect(() => {
     const saved = (authProfile as any)?.geo_scope;
@@ -484,6 +488,8 @@ function WorkspacePage() {
       setError(locale === "en" ? "Select at least one model or turn off live checking." : locale === "ku" ? "مۆدێلێک هەڵبژێرە یان پشکنینی ڕاستەوخۆ ناچالاک بکە." : "اختر نموذجاً واحداً على الأقل أو أوقف الفحص المباشر.");
       return;
     }
+    setReportTaskDraft(false);
+    setReportGoalSnapshot("");
     setRunning(true);
     setError("");
     setSkillAsk([]);
@@ -684,13 +690,24 @@ function WorkspacePage() {
             onGeoScopeChange={setGeoScope}
             chatPrefill={chatPrefill}
             onPrefillConsumed={() => setChatPrefill(null)}
+            onPrepareTask={(t) => {
+              setGoal(t);
+              setPendingApproved("");
+              setResumeFrom(null);
+              setError("");
+              setReportTaskDraft(false);
+              setReportGoalSnapshot("");
+              setShowAdvanced(true);
+              window.setTimeout(() => document.getElementById("workspace-goal")?.focus(), 60);
+            }}
             onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }}
           /></div>}
-        {!finalEvent && !running && events.length === 0 && showAdvanced && (
+        {!running && showAdvanced && ((!finalEvent && events.length === 0) || reportTaskDraft) && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <label htmlFor="workspace-goal" className="mb-2 block text-sm font-semibold">{locale === "en" ? "Your goal" : locale === "ku" ? "ئامانجەکەت" : "هدفك"}</label>
+                {reportTaskDraft && <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs"><span>{locale === "en" ? "Task draft created from the report. Review the scope and cost before starting." : locale === "ku" ? "ئەرک لە ڕاپۆرتەکەوە ئامادە کراوە؛ پێش دەستپێکردن تێچوو و سنوورەکە بپشکنە." : "أُعدّت مسودة المهمة من التقرير. راجع النطاق والتكلفة قبل البدء."}</span><button type="button" onClick={() => { setGoal(reportGoalSnapshot); setReportTaskDraft(false); setReportGoalSnapshot(""); setShowAdvanced(false); }} className="font-semibold text-primary hover:underline">{locale === "en" ? "Cancel conversion" : locale === "ku" ? "هەڵوەشاندنەوە" : "إلغاء التحويل"}</button></div>}
                 {goal && <div className="mb-2 flex justify-end"><button type="button" onClick={() => { setGoal(""); setSelectedSkills([]); setResumeFrom(null); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 30); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{locale === "en" ? "New blank task" : locale === "ku" ? "ئەرکی نوێی بەتاڵ" : "مهمة جديدة فارغة"}</button></div>}
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={4} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 {selectedSkills.length === 0 && <LiveSkillHints text={goal} lang={locale} onPick={(k) => setSelectedSkills([k])} />}
@@ -820,8 +837,8 @@ function WorkspacePage() {
 
             <DebateCard data={[...events].reverse().find((e: any) => e.type === "debate")?.data} locale={locale} />
             {finalEvent && <div className="rounded-2xl border border-primary/25 bg-card p-5 md:p-6">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div><ExportButtons toolKey="maaroof" build={() => buildTaskExportPayload({ title: c.result, goal: goal.trim(), finalText: String(finalEvent.data?.text || finalEvent.data?.message || ""), results: events.filter((e) => e.type === "tool_result").map((e) => ({ tool: String(e.data?.tool || ""), ok: e.data?.ok !== false, output: e.data?.output })), lang: (locale === "en" || locale === "ku" ? locale : "ar") as any })} /></div>
-              <div className="whitespace-pre-wrap text-sm leading-7">{String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)}</div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-primary"><FileText className="size-5" /><h2 className="font-semibold">{c.result}</h2></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => { const reportText = String(finalEvent.data?.text || finalEvent.data?.message || c.noResults); setReportGoalSnapshot(goal.trim()); setGoal(buildTaskGoalFromResult({ language: locale === "en" || locale === "ku" ? locale : "ar", originalRequest: goal.trim(), answer: reportText })); setPendingApproved(""); setResumeFrom(null); setError(""); setReportTaskDraft(true); setShowAdvanced(true); window.setTimeout(() => document.getElementById("workspace-goal")?.focus(), 60); }} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"><ListChecks className="size-3.5" />{locale === "en" ? "Turn report into task" : locale === "ku" ? "ڕاپۆرت بکە بە ئەرک" : "حوّل التقرير إلى مهمة"}</button><ExportButtons toolKey="maaroof" build={() => buildTaskExportPayload({ title: c.result, goal: reportTaskDraft && reportGoalSnapshot ? reportGoalSnapshot : goal.trim(), finalText: String(finalEvent.data?.text || finalEvent.data?.message || ""), results: events.filter((e) => e.type === "tool_result").map((e) => ({ tool: String(e.data?.tool || ""), ok: e.data?.ok !== false, output: e.data?.output })), lang: (locale === "en" || locale === "ku" ? locale : "ar") as any })} /></div></div>
+              <AssistantMessage content={String(finalEvent.data?.text || finalEvent.data?.message || c.noResults)} lang={locale === "en" || locale === "ku" ? locale : "ar"} />
               {domainsInText(String(finalEvent.data?.text || "")).length > 0 && <div className="mt-4 rounded-xl border border-border bg-muted/40 p-3 text-xs">
                 <p className="mb-2 text-muted-foreground">{locale === "en" ? "Want Maaroof to read one of these pages to understand it better? It opens only after you grant temporary read-only access." : locale === "ku" ? "دەتەوێت معروف ئەم پەڕانە بخوێنێتەوە؟ تەنها دوای ڕێگەپێدانت." : "هل تريد أن يقرأ معروف إحدى هذه الصفحات لفهمها أكثر؟ لا يبدأ إلا بعد تفويضك المؤقت للقراءة فقط."}</p>
                 <div className="flex flex-wrap gap-2">{domainsInText(String(finalEvent.data?.text || "")).map((d) => <button key={d} onClick={() => navigate({ to: "/workspace", search: { tab: "browser", domain: d } })} className="rounded-full border border-primary/40 px-3 py-1 text-primary">{d}</button>)}</div>
