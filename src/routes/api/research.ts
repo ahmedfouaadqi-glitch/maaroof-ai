@@ -87,7 +87,7 @@ export const Route = createFileRoute("/api/research")({
               .eq("request_id", requestId)
               .maybeSingle();
             if (priorRunError) return Response.json({ error: "specialized_idempotency_unavailable", charged: false }, { status: 503 });
-            const replay = decideSpecializedRunReplay(priorRun as any, candidateId);
+            const replay = decideSpecializedRunReplay(priorRun as any, candidateId, workspaceId);
             if (replay.action === "replay") return Response.json({ ...replay.response, replayed: true });
             if (replay.action === "block") {
               return Response.json({
@@ -138,7 +138,7 @@ export const Route = createFileRoute("/api/research")({
                 const { data: racedRun } = await admin.from("specialized_source_runs")
                   .select("candidate_id,status,response,error_code,workspace_id")
                   .eq("user_id", userId).eq("request_id", requestId).maybeSingle();
-                const racedReplay = decideSpecializedRunReplay(racedRun as any, candidateId);
+                const racedReplay = decideSpecializedRunReplay(racedRun as any, candidateId, workspaceId);
                 if (racedReplay.action === "replay") return Response.json({ ...racedReplay.response, replayed: true });
                 if (racedReplay.action === "block") {
                   return Response.json({ error: racedReplay.reason, status: racedReplay.status, request_id: requestId, new_request_required: racedReplay.status === "rejected" }, { status: 409 });
