@@ -164,44 +164,64 @@ const verdictOf = (s: number | null): AxisFinding["verdict"] => s == null ? "unm
 
 /** Scores only axes this target requires, using only signals present in the evidence. No content -> every axis unmeasured. */
 export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: string): AxisFinding[] {
-  const md = String(ev?.markdown || "");
+  const md = String(ev?.markdown || "").trim();
   const html = String(ev?.html || "");
-  const title = String(ev?.title || "");
-  const desc = String(ev?.description || "");
-  const has = md.trim().length > 40;
-  const b = brand.trim().toLowerCase();
+  const title = String(ev?.title || "").trim();
+  const desc = String(ev?.description || "").trim();
+  const hasBody = md.length > 40;
+  // Social/profile scrapers often return Open Graph metadata but little markdown.
+  // Metadata is enough for entity identity (GEO/GSEO), not for claims about FAQ or section structure.
+  const hasMetadata = title.length >= 3 && desc.length >= 20;
+  const has = hasBody || hasMetadata;
+  const normalizedBrand = brand.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const normalizeMatch = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const brandIn = (s: string) => !!normalizedBrand && normalizeMatch(s).includes(normalizedBrand);
+  const bodyWords = words(md);
+  const first = (hasBody ? bodyWords.slice(0, 150).join(" ") : [title, desc].filter(Boolean).join(" ")).trim();
+  const facts = (first.match(/\d[\d.,%]*/g) || []).length;
+
   return t.axes.map((axis): AxisFinding => {
-    if (!has) return { axis, score: null, verdict: "unmeasured", evidence: [], reason: "no_content", next: "retry_or_public" };
+    if (!has) return { axis, score: null, verdict: "unmeasured", evidence: [], reason: "no_public_content", next: "retry_or_public" };
+    if (!hasBody && (axis === "aeo" || axis === "sge")) {
+      return { axis, score: null, verdict: "unmeasured", evidence: [title ? "profile_title_available" : "", desc ? "profile_description_available" : ""].filter(Boolean), reason: "insufficient_content_for_axis", next: "needs_full_page_content" };
+    }
+
     const ev2: string[] = [];
     let s = 0;
-    const first = words(md).slice(0, 150).join(" ");
-    const facts = (first.match(/\d[\d.,%]*/g) || []).length;
-    const brandIn = (x: string) => !!b && x.toLowerCase().includes(b);
     if (axis === "seo") {
-      if (title) { s += 30; ev2.push(`title:${title.slice(0, 80)}`); }
-      if (desc) { s += 30; ev2.push(`description:${desc.slice(0, 80)}`); }
+      if (title) { s += 30; ev2.push(\`title:\${title.slice(0, 80)}\`); }
+      if (desc) { s += 30; ev2.push(\`description:\${desc.slice(0, 80)}\`); }
       if (/^#\s/m.test(md)) { s += 20; ev2.push("h1"); }
-      if (words(md).length > 300) { s += 20; ev2.push(`words:${words(md).length}`); }
+      if (bodyWords.length > 300) { s += 20; ev2.push(\`words:\${bodyWords.length}\`); }
     } else if (axis === "aeo") {
       const q = (md.match(/[?؟]/g) || []).length;
-      if (q >= 3) { s += 40; ev2.push(`questions:${q}`); } else if (q) s += 15;
+      if (q >= 3) { s += 40; ev2.push(\`questions:\${q}\`); } else if (q) s += 15;
       if (/faq|الأسئلة|پرسیار/i.test(md + html)) { s += 30; ev2.push("faq"); }
       if (/^\s*[-*]\s/m.test(md)) { s += 30; ev2.push("lists"); }
     } else if (axis === "geo") {
-      s += Math.min(50, facts * 10); if (facts) ev2.push(`facts_first_150:${facts}`);
-      if (brandIn(first)) { s += 30; ev2.push("brand_in_opening"); }
-      if (/application\/ld\+json|schema\.org/i.test(html)) { s += 20; ev2.push("structured_data"); }
+      if (hasBody) {
+        s += Math.min(50, facts * 10);
+        if (facts) ev2.push(\`facts_first_150:\${facts}\`);
+        if (brandIn(first)) { s += 30; ev2.push("brand_in_opening"); }
+        if (/application\/ld\+json|schema\.org/i.test(html)) { s += 20; ev2.push("structured_data"); }
+      } else {
+        if (brandIn(title)) { s += 35; ev2.push("brand_in_profile_title"); }
+        if (brandIn(desc)) { s += 25; ev2.push("brand_in_profile_description"); }
+        if (desc) { s += 20; ev2.push("public_profile_description"); }
+        if (words(desc).length >= 12) { s += 20; ev2.push("descriptive_profile_bio"); }
+      }
     } else if (axis === "sge") {
       const fp = md.split(/\n{2,}/).find((p) => words(p).length > 15) || "";
       if (fp && words(fp).length <= 80) { s += 50; ev2.push("concise_lead"); } else if (fp) s += 20;
       if ((md.match(/^#{2,3}\s/gm) || []).length >= 2) { s += 50; ev2.push("sections"); }
     } else {
-      if (brandIn(title) || brandIn(desc)) { s += 50; ev2.push("brand_in_profile"); }
-      if (brandIn(md)) { s += 30; ev2.push("brand_mentioned"); }
-      if (desc) { s += 20; ev2.push("bio"); }
+      if (brandIn(title)) { s += 50; ev2.push("brand_in_profile_title"); }
+      if (brandIn(desc)) { s += 30; ev2.push("brand_in_profile_description"); }
+      if (brandIn(md)) { s += 20; ev2.push("brand_mentioned_in_content"); }
+      if (desc) { s += 20; ev2.push("public_profile_bio"); }
     }
     s = Math.min(100, s);
-    return { axis, score: s, verdict: verdictOf(s), evidence: ev2, reason: ev2.length ? "measured" : "no_signal", next: s >= 70 ? "keep" : `improve_${axis}` };
+    return { axis, score: s, verdict: verdictOf(s), evidence: ev2, reason: ev2.length ? "measured" : "no_signal", next: s >= 70 ? "keep" : \`improve_\${axis}\` };
   });
 }
 
