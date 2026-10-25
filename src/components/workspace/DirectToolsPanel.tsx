@@ -13,7 +13,7 @@ const T = {
 };
 
 /** Direct tools tab: grid of every real tool UI, opened inline. Presentation only. */
-export function DirectToolsPanel({ lang, tool }: { lang: L; tool?: string }) {
+export function DirectToolsPanel({ lang, tool, workspaceId = null }: { lang: L; tool?: string; workspaceId?: string | null }) {
   const c = T[lang];
   const vis = useVisibility();
   const reduce = useReducedMotion();
@@ -28,7 +28,7 @@ export function DirectToolsPanel({ lang, tool }: { lang: L; tool?: string }) {
         <Link to="/workspace" search={{ tab: "tools" }} className="text-xs text-primary hover:underline">{c.back}</Link>
         <h2 className="text-lg font-semibold">{toolName(tool!, lang)}</h2>
         <section className="rounded-2xl border border-border bg-card p-5">
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool lang={lang} /></Suspense>
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool lang={lang} workspaceId={workspaceId} /></Suspense>
         </section>
       </div>
     );
