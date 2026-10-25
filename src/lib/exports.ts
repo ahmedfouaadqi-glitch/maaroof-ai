@@ -326,6 +326,14 @@ export async function exportToExcel(payload: ExportPayload) {
       header.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
       header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
       section.table.data.forEach((row) => sheet.addRow(row));
+    } else if (section.kind === "cards" && section.cards) {
+      section.cards.forEach((card) => {
+        sheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || ""]);
+        (card.fields || []).forEach(([key, value]) => sheet.addRow([key, value]));
+        (card.evidence || []).forEach((value) => sheet.addRow(["Evidence", value]));
+        (card.notes || []).forEach((value) => sheet.addRow(["Note", value]));
+        sheet.addRow([]);
+      });
     }
     sheet.addRow([]);
   });
@@ -337,8 +345,25 @@ export async function exportToExcel(payload: ExportPayload) {
     row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" };
   });
   payload.sections.forEach((section, index) => {
+    if (section.kind === "cards" && section.cards) {
+      const name = (section.heading || "Cards " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
+      const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
+      const columns = ["Source", "Type", "Score", "Status", "Metric", "Value", "Evidence", "Notes"];
+      dataSheet.addRow(columns);
+      section.cards.forEach((card) => {
+        if (card.fields?.length) card.fields.forEach(([metric, value]) =>
+          dataSheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, (card.evidence || []).join(" | "), (card.notes || []).join(" | ")])
+        );
+        else dataSheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || "", "", "", (card.evidence || []).join(" | "), (card.notes || []).join(" | ")]);
+      });
+      dataSheet.columns = [34, 18, 10, 22, 18, 28, 48, 40].map((width) => ({ width }));
+      dataSheet.getRow(1).font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+      dataSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+      dataSheet.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" }; });
+      return;
+    }
     if (section.kind !== "table" || !section.table) return;
-    const name = (section.heading || `Table ${index + 1}`).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
+    const name = (section.heading || "Table " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
     const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
     dataSheet.addRows([section.table.columns, ...section.table.data]);
     dataSheet.columns = section.table.columns.map(() => ({ width: 24 }));
