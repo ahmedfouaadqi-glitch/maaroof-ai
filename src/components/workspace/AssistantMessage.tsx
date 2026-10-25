@@ -39,8 +39,44 @@ function isBlockStart(lines: string[], index: number): boolean {
     || (line.includes("|") && index + 1 < lines.length && isTableDivider(lines[index + 1]));
 }
 
+/**
+ * Normalize common model-output defects where Markdown block markers are emitted
+ * inline with prose instead of on separate lines. Fenced code blocks are preserved.
+ */
+export function normalizeAssistantMarkdown(content: string): string {
+  const normalizedLines: string[] = [];
+  let inCodeBlock = false;
+
+  for (const originalLine of String(content || "").replace(/\r\n?/g, "\n").split("\n")) {
+    if (/^\s{0,3}```/.test(originalLine)) {
+      normalizedLines.push(originalLine);
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) {
+      normalizedLines.push(originalLine);
+      continue;
+    }
+
+    let line = originalLine;
+    // Split headings embedded after a sentence, including the "### --- Heading" variant.
+    line = line.replace(/[ \t]+(#{1,4})\s+(?=\S)/g, "\n\n$1 ");
+    line = line.replace(/(^|\n)(#{1,4})\s*[-—–]{3,}\s*/gm, "$1$2 ");
+    // Separate a numbered subsection from the heading that follows it.
+    line = line.replace(/(^|\n)(#{1,4}\s+[^:\n]{2,120}:)[ \t]+(?=\d{1,2}[.)]\s+)/gm, "$1$2\n");
+    // Split compact numbered entries and field bullets only when they resemble labels.
+    line = line.replace(/[ \t]+(\d{1,2}[.)])\s+(?=[\p{L}\p{N}])/gu, "\n$1 ");
+    line = line.replace(/[ \t]+\*\s+(?=(?:\*\*)?[\p{L}\p{N}][^:\n]{0,90}:)/gu, "\n* ");
+    // Numbered section labels followed by field bullets become headings, not broken lists.
+    line = line.replace(/(^|\n)(\d{1,2}[.)])\s+([^:\n]{2,120}:)[ \t]*(?=\n\s*[*+-]\s)/gm, "$1#### $2 $3");
+    normalizedLines.push(line);
+  }
+
+  return normalizedLines.join("\n");
+}
+
 export function parseAssistantMarkdown(content: string): AssistantMarkdownBlock[] {
-  const lines = String(content || "").replace(/\r\n?/g, "\n").split("\n");
+  const lines = normalizeAssistantMarkdown(content).split("\n");
   const blocks: AssistantMarkdownBlock[] = [];
   let i = 0;
 
