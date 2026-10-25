@@ -161,43 +161,130 @@ export const Route = createFileRoute("/api/compare")({
           const userWebsites = { ...(body.websites || {}) };
           if (workspaceContext?.brand_url && !userWebsites[brand]) userWebsites[brand] = String(workspaceContext.brand_url);
           const liveSearchFailures: unknown[] = [];
-          try {
-            const allBrands = [brand, ...competitors];
-            // Multi-signal probe: general/official/reviews/news/geo + per-platform signals
-            // (LinkedIn → copilot, X → grok, reddit → perplexity, wiki → claude/chatgpt, etc.)
-            const queries = allBrands.flatMap((n) => [
-              { brand: n, q: `${n} ${keywords} ${market.region}`.trim(), kind: "general", limit: 5 },
-              { brand: n, q: `"${n}" official site OR موقع رسمي OR website`.trim(), kind: "official", limit: 5 },
-              { brand: n, q: `"${n}" reviews OR رأي OR تقييم ${market.region}`.trim(), kind: "reviews", limit: 4 },
-              { brand: n, q: `"${n}" news ${market.region}`.trim(), kind: "news", limit: 4 },
-              { brand: n, q: `"${n}" ${market.region} address OR عنوان OR location`.trim(), kind: "geo", limit: 3 },
-              { brand: n, q: `site:linkedin.com "${n}"`, kind: "linkedin", limit: 3 },
-              { brand: n, q: `site:x.com OR site:twitter.com "${n}"`, kind: "x", limit: 3 },
-              { brand: n, q: `site:reddit.com "${n}"`, kind: "reddit", limit: 3 },
-              { brand: n, q: `site:wikipedia.org "${n}"`, kind: "wiki", limit: 2 },
-              { brand: n, q: `site:youtube.com "${n}"`, kind: "youtube", limit: 2 },
-            ]);
-            const settled = await Promise.allSettled(queries.map((x) => fcSearch(x.q, { limit: x.limit, lang })));
-            liveSearchFailures.push(...settled.filter((s) => s.status === "rejected").map((s) => (s as PromiseRejectedResult).reason));
-            sources = settled.flatMap((s, idx) => {
-              if (s.status !== "fulfilled") return [];
-              const data: any = (s.value as any)?.data;
-              const rows = Array.isArray(data) ? data : [...(data?.web || []), ...(data?.news || [])];
-              const q = queries[idx];
-              return rows.slice(0, q.limit).map((r: any) => ({
-                brand: q.brand,
-                kind: q.kind,
-                title: r.title,
-                url: r.url,
-                snippet: (r.markdown || r.description || "").slice(0, 400),
-              }));
-            }).slice(0, 140);
-
-            const liveSearchError = liveSearchErrorFrom(liveSearchFailures);
-            if (liveSearchError && sources.length === 0) {
-              return Response.json({ error: liveSearchError.error }, { status: liveSearchError.status });
+          const sourceBudget = {
+            maxRequests: 20,
+            maxEstimatedCredits: 90,
+            requestsUsed: 0,
+            estimatedCredits: 0,
+            limited: false,
+          };
+          const sourceKindFor = (url: string, sourceType: string, fallbackKind: string) => {
+            if (sourceType === "news") return "news";
+            try {
+              const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+              if (host.includes("linkedin.com")) return "linkedin";
+              if (host === "x.com" || host.includes("twitter.com")) return "x";
+              if (host.includes("reddit.com")) return "reddit";
+              if (host.includes("wikipedia.org") || host.includes("wikiwand.com")) return "wiki";
+              if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
+              if (host.includes("trustpilot.") || host.includes("yelp.") || host.includes("tripadvisor.")) return "reviews";
+              if (host.includes("maps.google.") || host.includes("mapy.cz")) return "geo";
+            } catch {}
+            return fallbackKind;
+          };
+          const boundedSearch = async (query: {
+            brand: string; q: string; kind: string; limit: number; sources: Array<"web" | "news">;
+          }) => {
+            const plannedCost = estimateSearchCredits({
+              resultCount: query.limit * query.sources.length,
+              sources: query.sources,
+              includePageContent: true,
+            });
+            const routePlan = planSourceRoute({
+              goal: query.q,
+              capability: query.sources.length === 1 && query.sources[0] === "news" ? "news_search" : "market_intelligence",
+              language: lang,
+              market: market.region,
+              requestedSources: query.sources,
+              available: { webSearch: true, directRead: true, alexandria: false },
+              budget: {
+                maxRequests: sourceBudget.maxRequests,
+                maxEstimatedCredits: sourceBudget.maxEstimatedCredits,
+                usedRequests: sourceBudget.requestsUsed,
+                usedEstimatedCredits: sourceBudget.estimatedCredits,
+              },
+            });
+            if (routePlan.primary === "none" ||
+                sourceBudget.requestsUsed + 1 > sourceBudget.maxRequests ||
+                sourceBudget.estimatedCredits + plannedCost.estimatedCredits > sourceBudget.maxEstimatedCredits) {
+              sourceBudget.limited = true;
+              return [];
             }
+            sourceBudget.requestsUsed += 1;
+            sourceBudget.estimatedCredits += plannedCost.estimatedCredits;
+            try {
+              const sr: any = await fcSearch(query.q, {
+                limit: query.limit,
+                lang,
+                sources: routePlan.searchSources,
+              }, { userId, toolKey: "compare" });
+              const data: any = sr?.data ?? sr;
+              const tagged: Array<{ item: any; sourceType: string }> = [];
+              for (const sourceType of routePlan.searchSources) {
+                const rows = Array.isArray(data?.[sourceType]) ? data[sourceType]
+                  : Array.isArray(sr?.[sourceType]) ? sr[sourceType] : [];
+                for (const item of rows.slice(0, query.limit)) tagged.push({ item, sourceType });
+              }
+              // Alternate search adapters may only return generic web results. Never label those as news.
+              if (!tagged.length && (Array.isArray(data) || Array.isArray(sr?.results))) {
+                const rows = Array.isArray(data) ? data : sr.results;
+                for (const item of rows.slice(0, query.limit)) tagged.push({ item, sourceType: "web" });
+              }
+              if (!tagged.length && sr?.source_profile_warning === "selected_source_profile_unavailable_on_fallback") {
+                const rows = Array.isArray(data?.web) ? data.web : Array.isArray(sr?.web) ? sr.web : [];
+                for (const item of rows.slice(0, query.limit)) tagged.push({ item, sourceType: "web" });
+              }
+              const actualSources: Array<"web" | "news"> = sr?.source_profile_warning ? ["web"]
+                : routePlan.searchSources;
+              const actualCost = estimateSearchCredits({
+                resultCount: tagged.length,
+                sources: actualSources,
+                includePageContent: true,
+              });
+              sourceBudget.estimatedCredits = Math.max(
+                0,
+                sourceBudget.estimatedCredits - plannedCost.estimatedCredits + actualCost.estimatedCredits,
+              );
+              const retrievedAt = new Date().toISOString();
+              return tagged.map(({ item, sourceType }) => ({
+                brand: query.brand,
+                kind: sourceKindFor(String(item?.url || ""), sourceType, query.kind),
+                source_type: sourceType,
+                title: String(item?.title || item?.url || query.brand).slice(0, 300),
+                url: String(item?.url || ""),
+                snippet: String(item?.markdown || item?.description || item?.snippet || "").slice(0, 400),
+                retrieved_at: retrievedAt,
+                source_profile_warning: sr?.source_profile_warning ? true : false,
+              })).filter((item) => /^https?:\/\//i.test(item.url));
+            } catch (error) {
+              liveSearchFailures.push(error);
+              return [];
+            }
+          };
 
+          try {
+            const allBrands = [brand, ...competitors].slice(0, 5);
+            // One combined web/news call and one focused public-presence call per brand.
+            // This replaces the old ten-search-per-brand fan-out with an explicit, measured budget.
+            const queries = allBrands.flatMap((n) => [
+              {
+                brand: n,
+                q: "\"" + n + "\" " + keywords + " " + market.region + " official website reviews location",
+                kind: "general",
+                limit: 2,
+                sources: ["web", "news"] as Array<"web" | "news">,
+              },
+              {
+                brand: n,
+                q: "\"" + n + "\" social profiles LinkedIn Instagram Facebook YouTube Reddit " + market.region,
+                kind: "social",
+                limit: 2,
+                sources: ["web"] as Array<"web" | "news">,
+              },
+            ]);
+            const settled = await Promise.allSettled(queries.map((query) => boundedSearch(query)));
+            liveSearchFailures.push(...settled.filter((item) => item.status === "rejected").map((item) => (item as PromiseRejectedResult).reason));
+            sources = settled.flatMap((item) => item.status === "fulfilled" ? item.value : []).slice(0, 80);
             // Per-platform evidence counts (real, varying per brand)
             for (const n of allBrands) {
               const ev: Record<string, number> = {};
