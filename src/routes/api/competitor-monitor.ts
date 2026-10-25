@@ -6,17 +6,39 @@ import { resolveMonitorPolicy, checkMonitorPolicy } from "@/lib/monitor-policy";
 
 const COST = 2;
 
+const SEARCH_COUNT_LIMIT = 8;
+const BASELINE_METHOD = "search_result_count_proxy_v1";
+
 async function buildBaseline(brand: string, competitors: string[], lang: string) {
   const targets = [brand, ...competitors].slice(0, 6);
-  const out: Record<string, { mentions: number; top: string[] }> = {};
+  const out: Record<string, {
+    mentions: number; top: string[]; metric_kind: string; sample_size: number;
+    retrieved_at: string; query: string; language: string; limitation: string; status: string;
+  }> = {};
   for (const t of targets) {
+    const retrievedAt = new Date().toISOString();
+    const query = `"${t}"`;
     try {
-      const sr: any = await fcSearch(`"${t}"`, { limit: 8, lang });
-      const items = sr?.data?.web || sr?.web || sr?.data || [];
-      const list = Array.isArray(items) ? items : [];
-      out[t] = { mentions: list.length, top: list.slice(0, 5).map((r: any) => String(r?.url || "")) };
+      const sr: any = await fcSearch(query, { limit: SEARCH_COUNT_LIMIT, lang }, { toolKey: "competitor_monitor" });
+      const raw = sr?.data?.web ?? sr?.web ?? sr?.data ?? [];
+      const list = Array.isArray(raw) ? raw : [];
+      out[t] = {
+        mentions: list.length,
+        top: list.slice(0, 5).map((r: any) => String(r?.url || "")).filter(Boolean),
+        metric_kind: BASELINE_METHOD,
+        sample_size: list.length,
+        retrieved_at: retrievedAt,
+        query,
+        language: String(lang),
+        status: list.length ? "success" : "empty",
+        limitation: "عدد نتائج البحث مؤشر تقريبي متغير؛ لا يثبت حصة السوق أو الوعي أو الظهور الفعلي في إجابات النماذج.",
+      };
     } catch {
-      out[t] = { mentions: 0, top: [] };
+      out[t] = {
+        mentions: 0, top: [], metric_kind: BASELINE_METHOD, sample_size: 0,
+        retrieved_at: retrievedAt, query, language: String(lang), status: "unavailable",
+        limitation: "تعذر البحث عن هذا الاسم؛ لم يُحتسب الصفر كدليل على غياب العلامة.",
+      };
     }
   }
   return out;
@@ -39,6 +61,12 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         const body = await request.json();
 
         const { action, id, brand, competitors = [], frequency_hours = 24, lang = "ar", scope } = body;
+        if (scope && typeof scope === "object" && (scope.workspace_id || scope.workspaceId)) {
+          const rawWorkspaceId = String(scope.workspace_id || scope.workspaceId);
+          if (!/^[0-9a-f-]{36}$/i.test(rawWorkspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", rawWorkspaceId).eq("owner_id", userId).maybeSingle();
+          if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+        }
 
         // Only billable actions consume quota (list/delete/policy are free).
         const charge = async () => {
@@ -106,8 +134,10 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const baseline = (w as any).baseline || {};
           const newAlerts: any[] = [];
           for (const k of Object.keys(fresh)) {
-            const prev = (baseline[k]?.mentions || 0);
-            const now = fresh[k].mentions;
+            const prev = Number(baseline[k]?.mentions || 0);
+            const now = Number(fresh[k]?.mentions || 0);
+            // Do not interpret unavailable/empty-source fallbacks as a market change.
+            if (baseline[k]?.status === "unavailable" || fresh[k]?.status === "unavailable" || fresh[k]?.status === "empty") continue;
             const diff = now - prev;
             if (Math.abs(diff) >= 2 || (prev > 0 && Math.abs(diff / prev) >= 0.2)) {
               newAlerts.push({ at: new Date().toISOString(), target: k, prev, now, delta: diff });
@@ -123,7 +153,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
               watch_id: id,
               severity: Math.abs(a.delta) >= 5 ? "high" : "info",
               target: a.target,
-              message: `تغيّر ظهور ${a.target}: ${a.prev} → ${a.now} (${a.delta > 0 ? "+" : ""}${a.delta})`,
+              message: `تغيّر عدد نتائج البحث المرصودة لِـ${a.target}: ${a.prev} → ${a.now} (${a.delta > 0 ? "+" : ""}${a.delta})`,
               payload: a,
             }));
             await admin.from("competitor_alerts").insert(rows);
