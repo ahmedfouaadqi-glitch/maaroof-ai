@@ -48,14 +48,14 @@ const clampInt = (v: unknown, fallback: number, max: number) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.max(0, Math.min(max, Math.floor(n))) : fallback;
 };
-const NEWS_RE = /\b(news|latest|recent|today|yesterday|this week|breaking|press release|أخبار|آخر|احدث|أحدث|اليوم|هذا الأسبوع|صحافة|خبر|هەواڵ|ئەمڕۆ|دوێنێ)\b/i;
-const MARKET_RE = /\b(market size|industry trend|market trends|pricing|prices|share of voice|سوق|السوق|اتجاهات|حجم السوق|الأسعار|نرخ|بازاڕ|ڕەوت)\b/i;
+const NEWS_RE = /\b(news|latest|recent|today|yesterday|this week|breaking|press release)\b|أخبار|آخر|احدث|أحدث|اليوم|هذا الأسبوع|صحافة|خبر|هەواڵ|ئەمڕۆ|دوێنێ/i;
+const MARKET_RE = /\b(market size|industry trend|market trends|pricing|prices|share of voice)\b|سوق|السوق|اتجاهات|حجم السوق|الأسعار|نرخ|بازاڕ|ڕەوت/i;
 const URL_RE = /https?:\/\/[^\s]+/i;
 
 export function inferSourceCapability(goal: string): SourceCapability {
   const text = String(goal || "");
-  if (URL_RE.test(text) && /\b(read|scrape|صفحة|رابط|اقرأ|افحص|crawl|website audit)\b/i.test(text)) return "url_read";
-  if (/\b(visibility|mention rate|citation rate|answer engine|ai answers|ظهور|ذكر العلامة|استشهاد|إجابات الذكاء الاصطناعي)\b/i.test(text)) return "answer_visibility";
+  if (URL_RE.test(text) && (/\b(read|scrape|crawl|website audit)\b|صفحة|رابط|اقرأ|افحص/i.test(text))) return "url_read";
+  if (/\b(visibility|mention rate|citation rate|answer engine|ai answers)\b|ظهور|ذكر العلامة|استشهاد|إجابات الذكاء الاصطناعي/i.test(text)) return "answer_visibility";
   if (MARKET_RE.test(text)) return "market_intelligence";
   if (NEWS_RE.test(text)) return "news_search";
   return "web_search";
@@ -154,7 +154,7 @@ export function normalizeSourceEvidence(input: Partial<SourceEvidence> & { provi
     measurementUnit: input.measurementUnit ? String(input.measurementUnit).slice(0, 80) : null,
     sampleSize: sample != null && Number.isFinite(sample) ? Math.max(0, Math.floor(sample)) : null,
     realityKind: allowedReality.has(String(input.realityKind)) ? input.realityKind as RealityKind : "unverified",
-    status: allowedStatus.has(String(input.status)) ? input.status as SourceStatus : "success",
+    status: allowedStatus.has(String(input.status)) ? input.status as SourceStatus : "unavailable",
     limitation: input.limitation ? String(input.limitation).slice(0, 1000) : null,
     title: input.title ? String(input.title).slice(0, 300) : null,
     claim: input.claim ? String(input.claim).slice(0, 2000) : null,
