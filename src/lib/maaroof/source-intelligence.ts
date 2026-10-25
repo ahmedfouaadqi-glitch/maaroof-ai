@@ -199,6 +199,23 @@ export function aggregateVisibilityMetrics(rows: VisibilityObservation[]): Visib
   };
 }
 
+/** Estimate the documented query-result and optional page-read credits. Discovery-only catalogue searches are free. */
+export function estimateSearchCredits(input: {
+  resultCount: number;
+  sources?: string[];
+  includePageContent?: boolean;
+}): { queryCredits: number; pageCredits: number; estimatedCredits: number; billable: boolean } {
+  const count = Math.max(0, Math.min(10000, Math.floor(Number(input.resultCount) || 0)));
+  const sources = Array.isArray(input.sources) && input.sources.length ? input.sources : ["web"];
+  const catalogueOnly = sources.length === 1 && sources[0] === "alexandria";
+  if (catalogueOnly || count === 0) {
+    return { queryCredits: 0, pageCredits: 0, estimatedCredits: 0, billable: false };
+  }
+  const queryCredits = 2 * Math.ceil(count / 10);
+  const pageCredits = input.includePageContent ? count : 0;
+  return { queryCredits, pageCredits, estimatedCredits: queryCredits + pageCredits, billable: queryCredits + pageCredits > 0 };
+}
+
 export function measurementSignature(input: { prompts: string[]; language: string; market: string; engines: string[]; methodVersion: string }): string {
   const canon = (values: string[]) => values.map((v) => String(v).trim().replace(/\s+/g, " ").toLowerCase()).sort();
   return JSON.stringify({
