@@ -124,6 +124,179 @@ const escapeHtml = (s: any) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+export type ExportSummaryMetric = { label: string; value: number };
+export type ExportScoredItem = { section: string; title: string; score: number; status: string };
+export type ExportExecutiveSummary = {
+  heading: string;
+  metrics: ExportSummaryMetric[];
+  measuredHeading: string;
+  sectionLabel: string;
+  itemLabel: string;
+  scoreLabel: string;
+  statusLabel: string;
+  measuredItems: ExportScoredItem[];
+  omittedMeasuredCount: number;
+  unmeasuredHeading: string;
+  unmeasuredItems: Array<{ section: string; title: string; status: string }>;
+  omittedUnmeasuredCount: number;
+  note: string;
+};
+
+const SUMMARY_TEXT: Record<ExportLang, {
+  heading: string; sections: string; scored: string; unmeasured: string; links: string;
+  measuredHeading: string; section: string; item: string; score: string; status: string;
+  unmeasuredHeading: string; note: string;
+}> = {
+  ar: {
+    heading: "الملخص التنفيذي", sections: "الأقسام", scored: "المؤشرات ذات الدرجة", unmeasured: "المؤشرات غير المقاسة", links: "الروابط المسجلة",
+    measuredHeading: "درجات مسجلة في التقرير", section: "القسم", item: "المؤشر", score: "الدرجة", status: "الحالة",
+    unmeasuredHeading: "مؤشرات بلا درجة رقمية", note: "يعرض هذا الملخص قيماً موجودة في التقرير فقط؛ لا يحسب متوسطاً بين محاور مختلفة ولا يستنتج نتائج جديدة.",
+  },
+  en: {
+    heading: "Executive summary", sections: "Sections", scored: "Scored indicators", unmeasured: "Unmeasured indicators", links: "Recorded links",
+    measuredHeading: "Scores recorded in this report", section: "Section", item: "Indicator", score: "Score", status: "Status",
+    unmeasuredHeading: "Indicators without numeric scores", note: "This summary uses values already present in the report. It does not average different dimensions or infer new findings.",
+  },
+  ku: {
+    heading: "پوختەی جێبەجێکردن", sections: "بەشەکان", scored: "پێوەرە نمرەدارەکان", unmeasured: "پێوەرە پێوانەنەکراوەکان", links: "بەستەرە تۆمارکراوەکان",
+    measuredHeading: "نمرە تۆمارکراوەکانی ڕاپۆرت", section: "بەش", item: "پێوەر", score: "نمرە", status: "دۆخ",
+    unmeasuredHeading: "پێوەرەکانی بێ نمرەی ژمارەیی", note: "ئەم پوختەیە تەنها بەها تۆمارکراوەکانی ڕاپۆرت بەکاردەهێنێت؛ ناوەندی تەوەرە جیاوازەکان هەژمار ناکات و ئەنجامی نوێ ناگرێتەوە.",
+  },
+};
+
+function reportLinks(payload: ExportPayload): string[] {
+  const hay = JSON.stringify({ sections: payload.sections, engineAnswers: payload.engineAnswers || [] });
+  const links = hay.match(/https?:\/\/[^\s"'<>\\)\\]]+/g) || [];
+  return Array.from(new Set(links.map((url) => url.replace(/[.,;:!?،؛]+$/, ""))));
+}
+
+/** All summary measures come from existing report content; scores are never averaged across unlike dimensions. */
+export function buildExportExecutiveSummary(payload: ExportPayload): ExportExecutiveSummary {
+  const lang = payload.lang || "ar";
+  const T = SUMMARY_TEXT[lang];
+  const cards = (payload.sections || []).flatMap((section) =>
+    section.kind === "cards"
+      ? (section.cards || []).map((card) => ({ section: section.heading, title: card.title, score: card.score, status: card.status || "" }))
+      : [],
+  );
+  const measured = cards.filter((card): card is { section: string; title: string; score: number; status: string } =>
+    typeof card.score === "number" && Number.isFinite(card.score),
+  );
+  const unmeasured = cards.filter((card) => typeof card.score !== "number" || !Number.isFinite(card.score));
+  const links = reportLinks(payload);
+  return {
+    heading: T.heading,
+    metrics: [
+      { label: T.sections, value: (payload.sections || []).length },
+      { label: T.scored, value: measured.length },
+      { label: T.unmeasured, value: unmeasured.length },
+      { label: T.links, value: links.length },
+    ],
+    measuredHeading: T.measuredHeading,
+    sectionLabel: T.section,
+    itemLabel: T.item,
+    scoreLabel: T.score,
+    statusLabel: T.status,
+    measuredItems: measured.slice(0, 6),
+    omittedMeasuredCount: Math.max(0, measured.length - 6),
+    unmeasuredHeading: T.unmeasuredHeading,
+    unmeasuredItems: unmeasured.slice(0, 3).map((card) => ({ section: card.section, title: card.title, status: card.status })),
+    omittedUnmeasuredCount: Math.max(0, unmeasured.length - 3),
+    note: T.note,
+  };
+}
+
+export function splitTextForSlides(value: string, maxChars = 900): string[] {
+  const text = String(value || "");
+  if (!text) return [""];
+  const limit = Math.max(100, Math.floor(maxChars));
+  const chunks: string[] = [];
+  let offset = 0;
+  while (offset < text.length) {
+    let end = Math.min(text.length, offset + limit);
+    if (end < text.length) {
+      const newline = text.lastIndexOf("\n", end);
+      const space = text.lastIndexOf(" ", end);
+      const boundary = Math.max(newline, space);
+      if (boundary > offset + Math.floor(limit * 0.55)) end = boundary;
+    }
+    if (end <= offset) end = Math.min(text.length, offset + limit);
+    chunks.push(text.slice(offset, end));
+    offset = end;
+  }
+  return chunks;
+}
+
+const CSV_HEADERS: Record<ExportLang, string[]> = {
+  ar: ["نوع السجل", "القسم", "العنصر", "المعيار", "القيمة", "الدرجة", "الحالة", "الأدلة", "الملاحظات"],
+  en: ["record_type", "section", "item", "metric", "value", "score", "status", "evidence", "notes"],
+  ku: ["جۆری تۆمار", "بەش", "بابەت", "پێوەر", "بەها", "نمرە", "دۆخ", "بەڵگە", "تێبینی"],
+};
+
+function csvCell(value: unknown): string {
+  let text = String(value ?? "");
+  if (/^[\t\r ]*[=+@]/.test(text) || /^[\t\r ]*-[=+@]/.test(text)) text = "'" + text;
+  return /[",\n;\r]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+
+/** Normalized CSV with one stable schema for every section and card type. */
+export function payloadToCSV(payload: ExportPayload, generatedAt = new Date().toISOString()): string {
+  const lang = payload.lang || "ar";
+  const rows: unknown[][] = [CSV_HEADERS[lang]];
+  const add = (type: string, section: string, item = "", metric = "", value: unknown = "", score: unknown = "", status = "", evidence = "", notes = "") =>
+    rows.push([type, section, item, metric, value, score, status, evidence, notes]);
+  add("metadata", "", "title", "", payload.title);
+  if (payload.subtitle) add("metadata", "", "subtitle", "", payload.subtitle);
+  add("metadata", "", "generated_at", "", generatedAt);
+  const who = identityLine(payload, lang);
+  if (who) add("metadata", "", "identity", "", who);
+  add("metadata", "", "brand", "", BRAND);
+  add("metadata", "", "disclaimer", "", DISCLAIMER[lang]);
+  const summary = buildExportExecutiveSummary(payload);
+  summary.metrics.forEach((metric) => add("summary_metric", summary.heading, metric.label, "", metric.value));
+  for (const section of payload.sections) {
+    if (section.kind === "kv" && section.rows) {
+      section.rows.forEach(([key, value]) => add("kv", section.heading, String(key), "", value));
+    } else if (section.kind === "text" && section.text) {
+      section.text.split(/\r?\n/).forEach((line, index) => { if (line) add("text", section.heading, String(index + 1), "", line); });
+    } else if (section.kind === "list" && section.list) {
+      section.list.forEach((item, index) => add("list", section.heading, String(index + 1), "", item));
+    } else if (section.kind === "table" && section.table) {
+      section.table.data.forEach((row, index) => {
+        const record = Object.fromEntries(section.table!.columns.map((column, columnIndex) => [column, row[columnIndex] ?? ""]));
+        add("table_row", section.heading, String(index + 1), "", JSON.stringify(record));
+      });
+    } else if (section.kind === "cards" && section.cards) {
+      section.cards.forEach((card) => {
+        const evidence = (card.evidence || []).join(" | ");
+        const notes = (card.notes || []).join(" | ");
+        if (card.fields?.length) {
+          card.fields.forEach(([metric, value]) => add("card_metric", section.heading, card.title, metric, value, card.score ?? "", card.status || "", evidence, notes));
+        } else {
+          add("card", section.heading, card.title, "", "", card.score ?? "", card.status || "", evidence, notes);
+        }
+      });
+    }
+  }
+  return "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+}
+
+export function buildExportJsonDocument(payload: ExportPayload, generatedAt = new Date().toISOString()) {
+  const lang = payload.lang || "ar";
+  return {
+    schema_version: 2,
+    ...payload,
+    brand: BRAND,
+    site: SITE,
+    site_url: SITE_URL,
+    ...(payload.identity?.showLogo !== false ? { logo_url: LOGO_URL } : {}),
+    generated_at: generatedAt,
+    language: lang,
+    executive_summary: buildExportExecutiveSummary(payload),
+    disclaimer: DISCLAIMER[lang],
+  };
+}
+
 function brandHeaderHtml(lang: ExportLang, payload: ExportPayload, logoData: string | null) {
   const showLogo = payload.identity?.showLogo !== false;
   const who = identityLine(payload, lang);
