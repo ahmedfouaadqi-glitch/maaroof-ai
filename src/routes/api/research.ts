@@ -86,10 +86,13 @@ export const Route = createFileRoute("/api/research")({
           }
           const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
-          // Firecrawl v2 returns { data: { web: [...], news: [...] } } OR legacy { data: [...] }
+          // Keep the result set aligned with the selected source profile. Only an explicit fallback may widen it.
           const pickArr = (v: any): any[] => {
             if (Array.isArray(v)) return v;
-            if (v && typeof v === "object") {
+            if (!v || typeof v !== "object") return [];
+            const selected = routePlan.searchSources.flatMap((source) => Array.isArray(v[source]) ? v[source] : []);
+            if (selected.length) return selected;
+            if (sr?.source_profile_warning === "selected_source_profile_unavailable_on_fallback") {
               return [...(Array.isArray(v.web) ? v.web : []), ...(Array.isArray(v.news) ? v.news : [])];
             }
             return [];
