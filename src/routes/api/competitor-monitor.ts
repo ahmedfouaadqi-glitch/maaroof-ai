@@ -73,8 +73,6 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const _chg = await chargeTokens({ userId, toolKey: "competitor_monitor", runId: crypto.randomUUID(), meta: { provider: "lovable_ai", model: "google/gemini-2.5-flash-lite", endpoint: "/api/competitor-monitor", action } });
           return _chg.ok ? null : Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
         };
-        if (action === "recheck") { const f = await charge(); if (f) return f; }
-
         const loadPolicy = async () => {
           const [{ data: gs }, { data: pr }] = await Promise.all([
             admin.from("app_settings").select("value").eq("key", "monitor_policy").maybeSingle(),
@@ -109,7 +107,6 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           const { count: active } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
           const pc = checkMonitorPolicy(policy, active || 0, competitors.length, Number(frequency_hours) || 24);
           if (!pc.ok) return Response.json({ error: pc.reason, policy }, { status: 403 });
-          { const f = await charge(); if (f) return f; }
           const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,quota_overrides").eq("id", userId).maybeSingle();
           const used = Number((prof as any)?.monthly_analyses_used || 0);
           const overrideLimit = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
@@ -117,6 +114,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           if (!(prof as any)?.is_subscribed && limit - used < COST) {
             return Response.json({ error: "subscription_required" }, { status: 402 });
           }
+          { const f = await charge(); if (f) return f; }
           const baseline = await buildBaseline(brand, competitors, lang);
           const { data: row, error } = await admin.from("competitor_watch").insert({
             user_id: userId, brand, competitors, frequency_hours, scope, baseline, last_run_at: new Date().toISOString(),
@@ -130,6 +128,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           if (!id) return Response.json({ error: "id_required" }, { status: 400 });
           const { data: w } = await admin.from("competitor_watch").select("*").eq("id", id).eq("user_id", userId).maybeSingle();
           if (!w) return Response.json({ error: "not_found" }, { status: 404 });
+          { const f = await charge(); if (f) return f; }
           const fresh = await buildBaseline((w as any).brand, (w as any).competitors as string[], lang);
           const baseline = (w as any).baseline || {};
           const newAlerts: any[] = [];
@@ -137,7 +136,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
             const prev = Number(baseline[k]?.mentions || 0);
             const now = Number(fresh[k]?.mentions || 0);
             // Do not interpret unavailable/empty-source fallbacks as a market change.
-            if (baseline[k]?.status === "unavailable" || fresh[k]?.status === "unavailable" || fresh[k]?.status === "empty") continue;
+            if (["unavailable", "empty"].includes(String(baseline[k]?.status || "")) || ["unavailable", "empty"].includes(String(fresh[k]?.status || ""))) continue;
             const diff = now - prev;
             if (Math.abs(diff) >= 2 || (prev > 0 && Math.abs(diff / prev) >= 0.2)) {
               newAlerts.push({ at: new Date().toISOString(), target: k, prev, now, delta: diff });
