@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 
 const BASE = "https://api.firecrawl.dev/v2";
-import { FETCH_TIMEOUT_MS, scrapeOrder, searchOrder } from "./fetch-order";
+import { FETCH_TIMEOUT_MS, scrapeOrder, searchOrder, hasUsableScrapeEvidence } from "./fetch-order";
 
 export class FirecrawlError extends Error {
   status: number;
@@ -236,15 +236,30 @@ async function directHttp(url: string) {
   const r = await fetch(u, { headers: { "User-Agent": "MaaroofBot/1.0" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!r.ok) throw new Error(`direct ${r.status}`);
   const html = await r.text();
+  const tags = html.match(/<meta\b[^>]*>/gi) || [];
+  const attr = (tag: string, name: string) => {
+    const re = new RegExp("(?:^|\\\\s)" + name + "\\\\s*=\\\\s*(['\\"])(.*?)\\\\1", "i");
+    return (tag.match(re)?.[2] || "").trim();
+  };
+  const metaValue = (...keys: string[]) => {
+    for (const key of keys) {
+      const tag = tags.find((t) => [attr(t, "name"), attr(t, "property"), attr(t, "itemprop")].some((v) => v.toLowerCase() === key.toLowerCase()));
+      const value = tag ? attr(tag, "content") : "";
+      if (value) return value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    }
+    return "";
+  };
   const pick = (re: RegExp) => (html.match(re)?.[1] || "").trim();
-  const title = pick(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const description = pick(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i);
+  const rawTitle = pick(/<title[^>]*>([\s\S]*?)<\/title>/i).replace(/<[^>]+>/g, "").trim();
+  const title = metaValue("og:title", "twitter:title") || rawTitle;
+  const description = metaValue("description", "og:description", "twitter:description");
   const body = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<h1[^>]*>/gi, "\n# ").replace(/<h([23])[^>]*>/gi, (_m, n) => "\n" + "#".repeat(+n) + " ")
     .replace(/<li[^>]*>/gi, "\n- ").replace(/<\/(p|div|h\d|li|section)>/gi, "\n\n").replace(/<[^>]+>/g, " ")
     .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  if (body.length < 40) throw new Error("direct_empty");
-  return { success: true, data: { markdown: body, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
+  if (body.length < 40 && !(title.length >= 3 && description.length >= 20)) throw new Error("direct_empty");
+  const markdown = body.length >= 40 ? body : [title, description].filter(Boolean).join("\n\n");
+  return { success: true, data: { markdown, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
 }
 
 /** Scrape with fallback chain (see fetch-order.ts). Result carries `fetch_source`. */
@@ -256,6 +271,10 @@ export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?:
       if (src === "firecrawl") r = await fcScrapeRaw(url, opts, ctx);
       else if (src === "linkedin_direct") { const { adLinkedIn } = await import("./apidirect.server"); r = await adLinkedIn(url, FETCH_TIMEOUT_MS); }
       else r = await directHttp(url);
+      if (!hasUsableScrapeEvidence(r)) {
+        last = new Error("scrape_empty_or_blocked");
+        continue;
+      }
       if (r && typeof r === "object") r.fetch_source = src;
       return r;
     } catch (e) { last = e; }
