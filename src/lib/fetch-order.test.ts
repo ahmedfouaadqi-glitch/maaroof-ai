@@ -21,6 +21,15 @@ describe("scrape quality gate", () => {
     })).toBe(false);
   });
 
+  it("rejects login shells even when the response contains generic metadata", () => {
+    expect(hasUsableScrapeEvidence({
+      data: { markdown: "Log in to Instagram to view photos and videos.", metadata: {
+        title: "Instagram", description: "Log in or sign up to view posts and follow creators.",
+        statusCode: 200,
+      } },
+    })).toBe(false);
+  });
+
   it("rejects empty responses and HTTP errors", () => {
     expect(hasUsableScrapeEvidence({ data: { markdown: "", metadata: {} } })).toBe(false);
     expect(hasUsableScrapeEvidence({ data: { markdown: "This would otherwise be long enough to count", metadata: { statusCode: 403 } } })).toBe(false);
