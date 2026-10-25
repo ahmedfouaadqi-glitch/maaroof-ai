@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { auditTargets, isDeepAuditRequired, axisWeights, axisPriority, weightedScore } from "../deep-audit";
+import { auditTargets, isDeepAuditRequired, axisWeights, axisPriority, weightedScore, workspaceAuditLinks } from "../deep-audit";
 
 describe("deep audit rules", () => {
   it("account with links requires a deep audit", () => {
@@ -55,5 +55,27 @@ describe("deep audit scoring", () => {
   it("charges only successful targets; all failed -> 0", () => {
     expect(billableUnits([{ ok: false }, { ok: false }])).toBe(0);
     expect(billableUnits([{ ok: true }, { ok: false }, { ok: true }])).toBe(2);
+  });
+});
+
+
+describe("workspace account audit isolation", () => {
+  it("extracts and normalizes links from the selected workspace identity", () => {
+    expect(workspaceAuditLinks({
+      id: "client-a",
+      brand_url: "https://client-a.example",
+      entity_truth_card: {
+        website_url: "https://client-a.example",
+        links: [{ url: "https://instagram.com/client-a" }, { href: "https://linkedin.com/company/client-a" }],
+      },
+    })).toEqual([
+      "https://instagram.com/client-a",
+      "https://linkedin.com/company/client-a",
+      "https://client-a.example",
+    ]);
+  });
+
+  it("does not borrow the owner's profile links when the workspace has no links", () => {
+    expect(workspaceAuditLinks({ id: "client-empty", brand_url: null, entity_truth_card: {} })).toEqual([]);
   });
 });
