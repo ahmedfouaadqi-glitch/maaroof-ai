@@ -3,12 +3,10 @@
 // No match => clarify (never guess).
 import { MAAROOF_SKILLS, recommendMaaroofSkills } from "./skill-catalog";
 
-/** Tools that have a real executable route in the orchestrator. */
-export const EXECUTABLE_TOOLS = new Set([
-  "suggest", "geo_rewrite", "analyze", "research", "feasibility", "bizdev", "brand_boost", "what_if",
-  "applied_ranking", "visibility", "social_analysis", "compare", "company_email", "geo_strategist",
-  "competitor_monitor", "brand_authority", "known", "translate", "teach_space",
-]);
+import { EXECUTABLE_TOOL_KEYS } from "./tool-contracts";
+
+/** Derived from the canonical map of existing API routes and internal orchestrator runners. */
+export const EXECUTABLE_TOOLS = new Set(EXECUTABLE_TOOL_KEYS);
 
 export type SkillInference =
   | { kind: "selected"; skills: string[]; reasons: Record<string, string> }
