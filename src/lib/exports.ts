@@ -894,7 +894,46 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   const cover = pptx.addSlide();
   decorate(cover);
   cover.addText(payload.title, { x: 0.5, y: 2, w: 9, h: 1, fontSize: 30, bold: true, align: "center" });
-  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}\n${identityLine(payload, lang)}`, { x: 0.5, y: 3.1, w: 9, h: 1.2, fontSize: 14, align: "center", color: "666666" });
+  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}\n${identityLine(payload, lang)}`, { x: 0.5, y: 3.1, w: 9, h: 1.2, fontSize: 14, align: "center", color: "666666", fit: "shrink" });
+
+  const summary = buildExportExecutiveSummary(payload);
+  if (payload.sections.length) {
+    const summaryLines = [];
+    if (summary.measuredItems.length) {
+      summaryLines.push(summary.measuredHeading);
+      summary.measuredItems.forEach((item) => summaryLines.push(
+        "• " + item.title + " — " + item.score + "/100" + (item.status ? " · " + item.status : "") + " (" + item.section + ")"
+      ));
+      if (summary.omittedMeasuredCount) summaryLines.push(
+        summary.omittedMeasuredCount + (lang === "en" ? " additional scored indicators are in the detail slides." : lang === "ku" ? " پێوەری نمرەدار لە سلایدە وردەکارییەکان هەن." : " مؤشرات أخرى بدرجات رقمية موجودة في شرائح التفاصيل.")
+      );
+    }
+    if (summary.unmeasuredItems.length) {
+      summaryLines.push(summary.unmeasuredHeading);
+      summary.unmeasuredItems.forEach((item) => summaryLines.push(
+        "• " + item.title + (item.status ? " — " + item.status : "") + " (" + item.section + ")"
+      ));
+      if (summary.omittedUnmeasuredCount) summaryLines.push(
+        summary.omittedUnmeasuredCount + (lang === "en" ? " additional unmeasured indicators are in the detail slides." : lang === "ku" ? " پێوەری پێوانەنەکراوی تر لە سلایدە وردەکارییەکان هەن." : " مؤشرات إضافية غير مقاسة موجودة في شرائح التفاصيل.")
+      );
+    }
+    const summaryPages = splitTextForSlides(summaryLines.join("\n") || summary.note, 700);
+    summaryPages.forEach((page, pageIndex) => {
+      const slide = pptx.addSlide();
+      decorate(slide);
+      slide.addText(summary.heading + (summaryPages.length > 1 ? " (" + (pageIndex + 1) + "/" + summaryPages.length + ")" : ""), { x: 0.4, y: 0.28, w: 9.2, h: 0.5, fontSize: 20, bold: true, color: "4338CA" });
+      if (pageIndex === 0) {
+        summary.metrics.forEach((metric, index) => {
+          const x = 0.4 + index * 2.35;
+          slide.addShape(pptx.ShapeType.rect, { x, y: 0.95, w: 2.15, h: 0.83, fill: { color: "F8FAFC" }, line: { color: "D8E1EF", width: 1 } });
+          slide.addText(String(metric.value), { x: x + 0.08, y: 1.05, w: 1.99, h: 0.32, fontSize: 20, bold: true, align: "center", color: "0F2454", fit: "shrink" });
+          slide.addText(metric.label, { x: x + 0.08, y: 1.4, w: 1.99, h: 0.25, fontSize: 8, align: "center", color: "64748B", fit: "shrink" });
+        });
+      }
+      slide.addText(page, { x: 0.5, y: pageIndex === 0 ? 2.05 : 1.0, w: 9, h: pageIndex === 0 ? 2.6 : 3.55, fontSize: 10, valign: "top", color: "334155", fit: "shrink" });
+      slide.addText(summary.note, { x: 0.5, y: 4.78, w: 9, h: 0.32, fontSize: 7, color: "64748B", fit: "shrink" });
+    });
+  }
 
   const ROWS_PER_SLIDE = 14;
   const CHARS_PER_SLIDE = 1200;
@@ -902,20 +941,23 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   for (const s of payload.sections) {
     if (s.kind === "cards" && s.cards) {
       s.cards.forEach((card) => {
-        const slide = pptx.addSlide();
-        decorate(slide);
-        slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA" });
-        slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
-        slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid" });
-        if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B" });
-        slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
         const details = [
           cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"),
           ...(card.fields || []).map(([key, value]) => String(key) + ": " + String(value)),
           ...(card.evidence || []).map((item) => cardLabels.evidence + ": " + item),
           ...(card.notes || []).map((item) => cardLabels.note + ": " + item),
         ].join("\n");
-        slide.addText(details, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
+        const pages = splitTextForSlides(details, 720);
+        pages.forEach((page, pageIndex) => {
+          const slide = pptx.addSlide();
+          decorate(slide);
+          slide.addText(s.heading + (pages.length > 1 ? " (" + (pageIndex + 1) + "/" + pages.length + ")" : ""), { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA", fit: "shrink" });
+          slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
+          slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid", fit: "shrink" });
+          if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B", fit: "shrink" });
+          slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06, fit: "shrink" });
+          slide.addText(page, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
+        });
       });
       continue;
     }
@@ -938,15 +980,8 @@ export async function exportToPowerPoint(payload: ExportPayload) {
     const body = s.kind === "kv" && s.rows ? s.rows.map(([k, v]) => `• ${k}: ${v}`).join("\n")
       : s.kind === "list" && s.list ? s.list.map((x) => `• ${x}`).join("\n")
       : s.text || "";
-    // Split long text across slides so nothing is cut off.
-    const lines = body.split("\n");
-    const pages: string[] = [];
-    let buf = "";
-    for (const line of lines) {
-      if (buf && buf.length + line.length > CHARS_PER_SLIDE) { pages.push(buf); buf = ""; }
-      buf += (buf ? "\n" : "") + line;
-    }
-    if (buf || pages.length === 0) pages.push(buf);
+    // Split long paragraphs as well as line-based content to avoid overflow on a single line.
+    const pages = splitTextForSlides(body, CHARS_PER_SLIDE);
     pages.forEach((page, pi) => {
       const slide = pptx.addSlide();
       decorate(slide);
