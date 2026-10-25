@@ -66,9 +66,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
       const acct = ((owner as any)?.account_kind ?? null) as any;
       if (!parent || !allowedChildKinds(parentKind, acct).includes(data.space_kind)) throw new Error("invalid_parent");
     }
-    const { data: row, error } = await supabase
-      .from("workspaces")
-      .insert({
+    const base: Record<string, unknown> = {
         owner_id: userId,
         name: data.name,
         kind: data.kind,
@@ -78,6 +76,11 @@ export const createWorkspace = createServerFn({ method: "POST" })
         language: data.language,
         country: data.country ?? null,
         city: data.city ?? null,
+        space_kind: data.space_kind,
+        parent_id: data.parent_id ?? null,
+    };
+    const full = {
+        ...base,
         entity_truth_card: {
           entity_name: data.name,
           entity_type: data.kind === "client" ? "client" : data.kind === "own" ? "organization" : "brand",
@@ -93,11 +96,13 @@ export const createWorkspace = createServerFn({ method: "POST" })
         },
         onboarding: { status: "in_progress", answers: {}, started_at: new Date().toISOString() },
         settings: { language: data.language, scope: "workspace", memory_isolation: "strict" },
-        space_kind: data.space_kind,
-        parent_id: data.parent_id ?? null,
-      } as any)
-      .select(WORKSPACE_COLUMNS)
-      .single();
+    };
+    let { data: row, error } = await supabase.from("workspaces").insert(full as any).select(WORKSPACE_COLUMNS).single();
+    if (error && /column|schema cache/i.test(error.message)) {
+      // Older schema without the identity/onboarding columns: create with core fields only.
+      const retry = await supabase.from("workspaces").insert(base as any).select("*").single();
+      row = retry.data as any; error = retry.error;
+    }
     if (error) throw new Error(error.message);
     return { workspace: row };
   });
