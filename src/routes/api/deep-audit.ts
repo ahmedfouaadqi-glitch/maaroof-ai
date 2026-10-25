@@ -7,7 +7,7 @@ import { isAccountKind } from "@/lib/account-kinds";
 import { isReadIssueCode, isInstagramUrl, PublicReadFailure, preferredReadFailure } from "@/lib/fetch-order";
 
 const TOOL_KEY = "analyze.deep_audit"; // falls back to the parent tool price when not priced separately
-const TARGET_TIMEOUT_MS = 40_000; // per link, covers the full provider fallback chain (15s per attempt)
+const TARGET_TIMEOUT_MS = 45_000; // includes the full fallback chain plus one tightly bounded retry
 const UUID = /^[0-9a-f-]{36}$/i;
 
 async function auth(request: Request) {
@@ -49,6 +49,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
     url: string; kind: string; platform: string | null; ok: boolean;
     read_status: "measured" | "unmeasured"; read_issue: string | null;
     read_origin: "target" | "reader" | "unknown" | null; read_http_status: number | null;
+    read_retry_after_ms: number | null;
     findings: ReturnType<typeof scoreTarget>;
   }[] = [];
 
@@ -80,6 +81,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
     let readIssue: string | null = null;
     let readOrigin: "target" | "reader" | "unknown" | null = null;
     let readHttpStatus: number | null = null;
+    let readRetryAfterMs: number | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const { fcScrape } = await import("@/lib/firecrawl");
@@ -126,6 +128,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       // Record generic origin/status for diagnostics, but never surface the reading vendor's name.
       readOrigin = ["target", "reader", "unknown"].includes(e?.origin) ? e.origin : null;
       readHttpStatus = Number.isFinite(e?.status) ? Number(e.status) : null;
+      readRetryAfterMs = Number.isFinite(e?.retryAfterMs) ? Number(e.retryAfterMs) : null;
       if (isReadIssueCode(e?.readIssue)) readIssue = e.readIssue;
       else if (/timeout|timed out|aborterror|aborted/.test(message)) readIssue = "timeout";
       else if (/quota|capacity.*reached/.test(message)) readIssue = "reader_quota_reached";
@@ -142,13 +145,15 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
     results.push({
       url: t.url, kind: t.kind, platform: t.platform, ok, read_status: readStatus,
       read_issue: ok ? null : readIssue, read_origin: ok ? null : readOrigin,
-      read_http_status: ok ? null : readHttpStatus, findings,
+      read_http_status: ok ? null : readHttpStatus,
+      read_retry_after_ms: ok ? null : readRetryAfterMs, findings,
     });
     const { sourceLabel } = await import("@/lib/fetch-order");
     await emit("audit_target", {
       index: index + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform,
       ok, read_status: readStatus, read_issue: ok ? null : readIssue,
       read_origin: ok ? null : readOrigin, read_http_status: ok ? null : readHttpStatus,
+      read_retry_after_ms: ok ? null : readRetryAfterMs,
       findings, source, source_label: sourceLabel(ok ? (source as any) : null),
     });
     await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
