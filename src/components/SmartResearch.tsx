@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 import { fromResearch } from "@/lib/engine-card-adapters";
@@ -71,9 +71,12 @@ export function SmartResearch({ workspaceId = null }: { workspaceId?: string | n
   const [specializedError, setSpecializedError] = useState("");
   const [specializedResult, setSpecializedResult] = useState<any>(null);
   const [specializedRequestId, setSpecializedRequestId] = useState("");
+  const workspaceEpoch = useRef(0);
   const phrase = (ar: string, en: string, ku: string) => lang === "en" ? en : lang === "ku" ? ku : ar;
 
   useEffect(() => {
+    workspaceEpoch.current += 1;
+    setLoading(false);
     setOut(null);
     setErr("");
     setSpecializedError("");
@@ -98,6 +101,7 @@ export function SmartResearch({ workspaceId = null }: { workspaceId?: string | n
 
   const run = async () => {
     if (!q.trim()) return;
+    const epoch = workspaceEpoch.current;
     setLoading(true); setErr(""); setOut(null);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -114,12 +118,16 @@ export function SmartResearch({ workspaceId = null }: { workspaceId?: string | n
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");
-      setOut(j);
-    } catch (e: any) { setErr(e?.message || "failed"); }
-    finally { setLoading(false); }
+      if (epoch === workspaceEpoch.current) setOut(j);
+    } catch (e: any) {
+      if (epoch === workspaceEpoch.current) setErr(e?.message || "failed");
+    } finally {
+      if (epoch === workspaceEpoch.current) setLoading(false);
+    }
   };
 
   const runSpecializedSource = async () => {
+    const epoch = workspaceEpoch.current;
     const candidate = (out?.specialized_source_options?.candidates || []).find((item: any) => item.candidate_id === selectedSpecializedId);
     if (!candidate || !candidate.executable) return;
     if (!confirmSpecializedPaidRun) {
@@ -165,13 +173,15 @@ export function SmartResearch({ workspaceId = null }: { workspaceId?: string | n
         if (json.retry_with_same_request_id) setSpecializedRequestId(requestId);
         throw new Error(String(message));
       }
-      setSpecializedResult(json.specialized_execution);
-      setSpecializedRequestId("");
-      setConfirmSpecializedPaidRun(false);
+      if (epoch === workspaceEpoch.current) {
+        setSpecializedResult(json.specialized_execution);
+        setSpecializedRequestId("");
+        setConfirmSpecializedPaidRun(false);
+      }
     } catch (error: any) {
-      setSpecializedError(String(error?.message || "specialized_source_failed"));
+      if (epoch === workspaceEpoch.current) setSpecializedError(String(error?.message || "specialized_source_failed"));
     } finally {
-      setSpecializedBusy(false);
+      if (epoch === workspaceEpoch.current) setSpecializedBusy(false);
     }
   };
 
