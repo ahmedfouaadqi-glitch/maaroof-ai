@@ -231,14 +231,47 @@ export const Route = createFileRoute("/api/known")({
               // Stage 0 — web discovery (bounded); engines asked in parallel.
               send("progress", { stage: 0 });
               const qs = localQueries(brand, sector, place, lang, depth === "deep");
+              const maxSearchCalls = depth === "deep" ? 5 : 3;
+              const searchLimit = depth === "deep" ? 6 : 4;
+              const sourceBudget = { maxRequests: maxSearchCalls, maxEstimatedCredits: depth === "deep" ? 42 : 20, requests: 0, estimatedCredits: 0, limited: false };
               const enginePromise = askEngines(brand, sector, place || "worldwide", lang, 10, apiKey, mciOn ? { admin, hours: 24 } : undefined);
               const sources: Src[] = [];
-              for (const q of qs.slice(0, depth === "deep" ? 5 : 3)) {
+              for (const q of qs.slice(0, maxSearchCalls)) {
+                const plannedCost = estimateSearchCredits({ resultCount: searchLimit, sources: ["web"], includePageContent: true });
+                const routePlan = planSourceRoute({
+                  goal: q,
+                  capability: "web_search",
+                  language: lang,
+                  market: place || null,
+                  requestedSources: ["web"],
+                  budget: {
+                    maxRequests: sourceBudget.maxRequests,
+                    maxEstimatedCredits: sourceBudget.maxEstimatedCredits,
+                    usedRequests: sourceBudget.requests,
+                    usedEstimatedCredits: sourceBudget.estimatedCredits,
+                  },
+                });
+                if (routePlan.primary === "none" ||
+                    sourceBudget.requests + 1 > sourceBudget.maxRequests ||
+                    sourceBudget.estimatedCredits + plannedCost.estimatedCredits > sourceBudget.maxEstimatedCredits) {
+                  sourceBudget.limited = true;
+                  continue;
+                }
+                sourceBudget.requests += 1;
+                sourceBudget.estimatedCredits += plannedCost.estimatedCredits;
                 try {
-                  const sr = await fcSearch(q, { limit: depth === "deep" ? 6 : 4, lang, ...(scope.country && scope.scope !== "world" ? { location: place } : {}) }, { userId, toolKey: "known" });
-                  for (const it of listFrom(sr)) {
+                  const sr = await fcSearch(q, {
+                    limit: searchLimit,
+                    lang,
+                    sources: routePlan.searchSources,
+                    ...(scope.country && scope.scope !== "world" ? { location: place } : {}),
+                  }, { userId, toolKey: "known" });
+                  const items = listFrom(sr).slice(0, searchLimit);
+                  const actualCost = estimateSearchCredits({ resultCount: items.length, sources: ["web"], includePageContent: true });
+                  sourceBudget.estimatedCredits = Math.max(0, sourceBudget.estimatedCredits - plannedCost.estimatedCredits + actualCost.estimatedCredits);
+                  for (const it of items) {
                     const url = String(it?.url || "");
-                    if (!url || sources.some((s) => s.url === url)) continue;
+                    if (!/^https?:\/\//i.test(url) || sources.some((s) => s.url === url)) continue;
                     sources.push({ url, title: String(it?.title || "").slice(0, 160), snippet: String(it?.description || it?.markdown || "").slice(0, 500) });
                     if (sources.length >= 8 * 3) break;
                   }
@@ -327,7 +360,26 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
                 })) as any);
               }
               const summary = { text: String(parsed.summary || "").slice(0, 1200), sources: sources.length, candidates: relations.length, filtered };
-              const result = { run_id: dbRunId, brand, depth, market: place || "World", scope, engines_asked: eng.asked, engines_excluded: eng.excluded, engine_answers: eng.byEngine, engine_status: eng.status, summary: summary.text, relations, filtered, sources };
+              const result = {
+                 run_id: dbRunId, brand, depth, market: place || "World", scope,
+                 engines_asked: eng.asked, engines_excluded: eng.excluded, engine_answers: eng.byEngine,
+                 engine_status: eng.status, summary: summary.text, relations, filtered, sources,
+                 source_plan: {
+                   method_version: "known-source-router-v1",
+                   request_count: sourceBudget.requests,
+                   request_cap: sourceBudget.maxRequests,
+                   estimated_credits: sourceBudget.estimatedCredits,
+                   estimated_credit_cap: sourceBudget.maxEstimatedCredits,
+                   budget_limited: sourceBudget.limited,
+                   sample_size: sources.length,
+                   retrieved_at: new Date().toISOString(),
+                   reality_kind: "external_observation",
+                   limitations: [
+                     "Search results are observations and do not by themselves prove a competitor relationship.",
+                     ...(sourceBudget.limited ? ["Some discovery queries were skipped to stay within the source budget."] : []),
+                   ],
+                 },
+               };
               if (dbRunId) await admin.from("mkd_runs").update({ status: "done", summary: { ...summary, result } as any }).eq("id", dbRunId);
               if (mciOn) await logMciDecision(admin, { userId, toolKey: "known", decision: "execute", llmCalls: eng.called + 1, llmSaved: eng.cached, fcCalls: qs.slice(0, depth === "deep" ? 5 : 3).length, meta: { force } });
 
