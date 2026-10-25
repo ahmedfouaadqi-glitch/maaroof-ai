@@ -87,9 +87,7 @@ export async function discoverAlexandriaCapabilities(input: {
       body: JSON.stringify({
         query,
         sources: ["alexandria"],
-        domainTools: true,
         toolDetail: "summary",
-        includeCosts: true,
         limit,
       }),
     });
@@ -168,10 +166,9 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
   const data = body?.data || {};
   const creditsCostRaw = data.creditsCost ?? body?.creditsCost;
   const creditsCost = creditsCostRaw == null ? null : Number(creditsCostRaw);
-  if (creditsCost != null && Number.isFinite(creditsCost) && creditsCost > input.maxCredits) {
-    // Provider call already happened; report the overrun explicitly rather than hiding it.
-    throw new SpecializedSourceGateError("provider_cost_exceeded_declared_cap");
-  }
+  // The preflight quote gates execution. If the provider reports a higher final bill,
+  // preserve that fact in the returned record rather than throwing away an already-billed result.
+  const budgetOverrunDetected = creditsCost != null && Number.isFinite(creditsCost) && creditsCost > input.maxCredits;
   const provenance = normalizeSourceEvidence({
     provider: "specialized_catalogue",
     capability: input.capability,
@@ -182,8 +179,13 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
     status: "success",
     sampleSize: Array.isArray(data.records) ? data.records.length : null,
     measurementUnit: "provider_result",
-    limitation: creditsCost == null ? "actual_cost_not_returned" : null,
+    limitation: creditsCost == null ? "actual_cost_not_returned" : budgetOverrunDetected ? "provider_reported_cost_exceeded_declared_cap" : null,
     sourceReliability: 60,
   });
-  return { result: body, provenance, creditsCost: creditsCost != null && Number.isFinite(creditsCost) ? creditsCost : null };
+  return {
+    result: body,
+    provenance,
+    creditsCost: creditsCost != null && Number.isFinite(creditsCost) ? creditsCost : null,
+    budgetOverrunDetected,
+  };
 }
