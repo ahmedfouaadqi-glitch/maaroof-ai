@@ -15,8 +15,8 @@ export function hasUsableScrapeEvidence(result: any): boolean {
   const combined = [title, description, markdown].join("\n");
   const blockedShell = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn.t available|log in to instagram|sign in to instagram|instagram\.com\/accounts\/login)/i.test(combined);
   const profileMetadata = title.length >= 3 && description.length >= 20;
-  // Reject provider/login placeholders, but preserve public profile OG metadata when it is substantive.
-  if (blockedShell && !profileMetadata) return false;
+  // Never score login/challenge placeholders as the entity's public profile.
+  if (blockedShell) return false;
   if (markdown.length > 40) return true;
   if (profileMetadata) return true;
   // Title-only results are not enough to claim that the entity profile was read.
