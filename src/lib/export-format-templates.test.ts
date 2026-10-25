@@ -23,7 +23,7 @@ const payload: ExportPayload = {
       ],
     },
     { heading: "Sample table", kind: "table", table: { columns: ["Name", "Value"], data: [["A|B", "1,2"]] } },
-    { heading: "Configuration", kind: "kv", rows: [["Formula-like text", "=HYPERLINK(\"https://bad.example\")"]] },
+    { heading: "Configuration", kind: "kv", rows: [["Formula-like text", "=1+1"]] },
   ],
 };
 
@@ -49,7 +49,7 @@ describe("format-specific export templates", () => {
     expect(csv).toContain("record_type,section,item,metric,value,score,status,evidence,notes");
     expect(csv).toContain("card_metric,SEO/GEO dimensions,SEO readiness,Indexed pages,12,72,Measured");
     expect(csv).toContain("table_row,Sample table,1,,");
-    expect(csv).toContain("'=HYPERLINK");
+    expect(csv).toContain("'=1+1");
     expect(csv).toContain("2026-10-26T12:00:00.000Z");
   });
 
