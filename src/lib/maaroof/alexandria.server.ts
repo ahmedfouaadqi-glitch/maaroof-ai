@@ -144,6 +144,27 @@ export async function discoverAlexandriaCapabilities(input: {
   }
 }
 
+export type SpecializedRunReplayDecision =
+  | { action: "reserve" }
+  | { action: "replay"; response: Record<string, any> }
+  | { action: "block"; reason: "request_id_conflict" | "request_already_processed"; status: string };
+
+/** Prevent a reused request ID from charging or invoking a provider twice. */
+export function decideSpecializedRunReplay(existing: {
+  candidate_id?: string | null;
+  status?: string | null;
+  response?: unknown;
+} | null, candidateId: string): SpecializedRunReplayDecision {
+  if (!existing) return { action: "reserve" };
+  if (String(existing.candidate_id || "") !== candidateId) {
+    return { action: "block", reason: "request_id_conflict", status: String(existing.status || "unknown") };
+  }
+  if (existing.status === "succeeded" && existing.response && typeof existing.response === "object" && !Array.isArray(existing.response)) {
+    return { action: "replay", response: existing.response as Record<string, any> };
+  }
+  return { action: "block", reason: "request_already_processed", status: String(existing.status || "unknown") };
+}
+
 export type AlexandriaOptionValidation = { valid: boolean; errors: string[] };
 
 /** Strict, bounded validation against the discovered tool's JSON Schema contract. Unknown contracts fail closed. */
