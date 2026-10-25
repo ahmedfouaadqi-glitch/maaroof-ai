@@ -114,3 +114,25 @@ describe("multi-source audit routing", () => {
   });
 });
 
+describe("metadata-only social profile measurement", () => {
+  it("measures identity signals from public profile metadata but does not invent SGE content depth", () => {
+    const instagram = auditTargets(["https://instagram.com/mengotti.couture"])[0];
+    const findings = scoreTarget(instagram, {
+      markdown: "",
+      title: "Mengotti Couture (@mengotti.couture) · Instagram photos and videos",
+      description: "See Instagram photos and videos from Mengotti Couture (@mengotti.couture). Official fashion profile and latest public posts.",
+    }, "Mengotti Couture");
+    expect(findings.find((f) => f.axis === "geo")?.score).not.toBeNull();
+    expect(findings.find((f) => f.axis === "gseo")?.score).not.toBeNull();
+    expect(findings.find((f) => f.axis === "sge")?.score).toBeNull();
+    expect(findings.find((f) => f.axis === "sge")?.reason).toBe("insufficient_content_for_axis");
+  });
+
+  it("keeps a blocked or metadata-empty social profile unmeasured", () => {
+    const instagram = auditTargets(["https://instagram.com/example"])[0];
+    const findings = scoreTarget(instagram, { markdown: "", title: "Instagram", description: "" }, "Example");
+    expect(findings.every((f) => f.score === null)).toBe(true);
+    expect(findings.every((f) => f.reason === "no_public_content")).toBe(true);
+  });
+});
+
