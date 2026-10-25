@@ -26,6 +26,7 @@ export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; o
   async function remove(r: Row) {
     if (!confirm(tr(lang, `حذف «${r.name}» نهائياً؟`, `Delete "${r.name}" permanently?`, `«${r.name}» بسڕدرێتەوە؟`))) return;
     await supabase.storage.from("task-files").remove([r.path]);
+    if (!user) return;
     let removeQuery = supabase.from("task_attachments").delete().eq("id", r.id).eq("user_id", user.id);
     removeQuery = workspaceId ? removeQuery.eq("workspace_id", workspaceId) : removeQuery.is("workspace_id", null);
     const { error } = await removeQuery;
