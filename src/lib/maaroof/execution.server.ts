@@ -223,7 +223,7 @@ export async function runExecution(input: {
     let okCount = 0;
     let costUsd = 0;
     let tokens = 0;
-    const results: Array<{ tool: string; ok: boolean }> = [];
+    const results: Array<{ tool: string; ok: boolean; measured?: boolean; output?: Record<string, any> }> = [];
 
     const { fromTaskStatus, rollupTasks } = await import("@/lib/maaroof/truth");
     const taskStates: Array<{ status: string }> = [];
@@ -262,7 +262,12 @@ export async function runExecution(input: {
       }
       costUsd += r.costUsd || 0;
       tokens += r.tokens || 0;
-      results.push({ tool: t.expert_key || t.capability_key || t.title, ok: !!r.ok });
+      results.push({
+        tool: t.expert_key || t.capability_key || t.title,
+        ok: !!r.ok,
+        measured: !!r.ok && !!r.measured && Object.keys(r.measured).length > 0,
+        output: r.output || {},
+      });
       if (r.ok) okCount++;
       const status = r.ok ? "done" : "failed";
       taskStates.push({ status });
@@ -324,7 +329,7 @@ export async function runExecution(input: {
     // ---- verify (delegates to the existing reality classifier) ----
     let realityState: string | null = null;
     try {
-      const { classifyReality, persistReality, closeRealityLoop } = await import("@/lib/maaroof/reality.server");
+      const { classifyReality, persistReality, closeRealityLoop, hasExternalEvidence } = await import("@/lib/maaroof/reality.server");
       const assessment = classifyReality({
         toolResults: results,
         memoriesRecalled: 0,
@@ -338,7 +343,7 @@ export async function runExecution(input: {
         timingVerdict: null,
         executionMode: e.mode,
         complianceVerdict: null,
-        externalSources: 0,
+        externalSources: results.filter((r) => r.ok && hasExternalEvidence(r.output)).length,
         historicalSamples: 0,
         finalTextLength: (e.goal || "").length,
       });
