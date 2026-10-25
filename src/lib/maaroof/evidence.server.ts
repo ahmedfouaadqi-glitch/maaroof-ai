@@ -327,7 +327,15 @@ export async function validateEvidenceFor(opts: {
     if (opts.realityRecordId) q = q.eq("reality_record_id", opts.realityRecordId);
     if (opts.executionId) q = q.eq("execution_id", opts.executionId);
     const { data } = await q;
-    const items = ((data as any[]) || []).map((r) => ({ ...r, freshness: freshnessOf(r.category, r.retrieved_at || r.created_at) }));
+    const now = Date.now();
+    const items = ((data as any[]) || [])
+      .filter((r) => {
+        const status = String(r.status || "success");
+        if (["failed", "blocked", "unavailable", "empty"].includes(status)) return false;
+        const expiry = r.expires_at ? Date.parse(r.expires_at) : NaN;
+        return !Number.isFinite(expiry) || expiry > now;
+      })
+      .map((r) => ({ ...r, freshness: freshnessOf(r.category, r.retrieved_at || r.created_at) }));
     return { items, validation: crossValidate(items) };
   } catch {
     return { items: [], validation: crossValidate([]) };
@@ -365,7 +373,7 @@ export async function evidenceOverview(limit = 400, scope?: { userId?: string | 
     }
     let q = db()
       .from("evidence_items")
-      .select("id, user_id, workspace_id, source_ref, source_kind, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, created_at, retrieved_at")
+      .select("id, user_id, workspace_id, source_ref, source_kind, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, created_at, retrieved_at, expires_at, status")
       .order("created_at", { ascending: false })
       .limit(Math.max(1, Math.min(1000, Math.floor(limit) || 400)));
     if (scope?.userId) q = q.eq("user_id", scope.userId);
@@ -373,7 +381,13 @@ export async function evidenceOverview(limit = 400, scope?: { userId?: string | 
       q = scope.workspaceId ? q.eq("workspace_id", scope.workspaceId) : q.is("workspace_id", null);
     }
     const { data } = await q;
-    const rows = (data as any[]) || [];
+    const now = Date.now();
+    const rows = ((data as any[]) || []).filter((r) => {
+      const status = String(r.status || "success");
+      if (["failed", "blocked", "unavailable", "empty"].includes(status)) return false;
+      const expiry = r.expires_at ? Date.parse(r.expires_at) : NaN;
+      return !Number.isFinite(expiry) || expiry > now;
+    });
     const byType: Record<string, number> = {};
     const byCategory: Record<string, number> = {};
     for (const r of rows) {
