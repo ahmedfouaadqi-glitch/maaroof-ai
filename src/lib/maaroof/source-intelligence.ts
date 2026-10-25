@@ -87,7 +87,8 @@ export function planSourceRoute(input: SourceRouteInput): SourceRoutePlan {
     else limitations.push("direct_read_unavailable");
   } else if (available.webSearch && requestsAvailableForWork > 0 && creditsAvailable >= 2) {
     // A bounded query requires at least the minimum documented search allowance; actual returned-result cost is recorded by the existing usage ledger.
-    searchSources = wantsNews ? ["web", "news"] : ["web"];
+    // Prefer the narrowest source set that satisfies the intent; news-only avoids doubling results and cost.
+    searchSources = wantsNews ? ["news"] : ["web"];
     primary = wantsNews ? "news" : "web";
   } else if (requestsAvailableForWork <= 0) limitations.push("request_budget_exhausted");
   else if (available.webSearch && creditsAvailable < 2) limitations.push("credit_budget_below_minimum_search_cost");
