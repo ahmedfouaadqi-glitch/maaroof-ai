@@ -238,7 +238,7 @@ async function directHttp(url: string) {
   const html = await r.text();
   const tags = html.match(/<meta\b[^>]*>/gi) || [];
   const attr = (tag: string, name: string) => {
-    const re = new RegExp("(?:^|\\\\s)" + name + "\\\\s*=\\\\s*(['\\"])(.*?)\\\\1", "i");
+    const re = new RegExp("(?:^|\\s)" + name + "\\s*=\\s*(['\"])(.*?)\\1", "i");
     return (tag.match(re)?.[2] || "").trim();
   };
   const metaValue = (...keys: string[]) => {
