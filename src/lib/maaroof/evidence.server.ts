@@ -88,6 +88,19 @@ export type EvidenceInput = {
   contradicts?: any[];
   expertKey?: string | null;
   language?: string;
+  provider?: string | null;
+  capability?: string | null;
+  retrievedAt?: string | null;
+  dataPeriod?: string | null;
+  locale?: string | null;
+  market?: string | null;
+  measurementUnit?: string | null;
+  sampleSize?: number | null;
+  realityKind?: "observation" | "measurement" | "estimate" | "inference" | "unverified";
+  status?: "success" | "empty" | "unavailable" | "blocked" | "stale" | "failed";
+  limitation?: string | null;
+  relevanceScore?: number | null;
+  businessImportance?: number | null;
 };
 
 /** Days elapsed since a timestamp (0 when unknown). */
@@ -118,20 +131,52 @@ export function weighEvidence(input: {
   contradicts?: any[] | null;
 }): number {
   const base = EVIDENCE_TYPE_STRENGTH[input.evidenceType as EvidenceType] ?? 30;
-  const rel = input.sourceReliability ?? 50;
-  const fresh = input.freshness ?? 100;
-  const value = input.businessValue ?? 50;
-  const repro = input.reproducible ? 12 : 0;
-  const streak = Math.min(Number(input.successCount || 0), 5) * 3;
+  const rel = clamp(input.sourceReliability ?? 50);
+  const fresh = clamp(input.freshness ?? 100);
+  const repro = input.reproducible ? 8 : 0;
   const penalty = (input.contradicts?.length || 0) * 12;
-  return clamp(base * 0.45 + rel * 0.2 + fresh * 0.2 + value * 0.15 + repro + streak - penalty);
+  // Quality reflects source/directness/freshness/reproducibility only. Business importance
+  // and relevance are separate dimensions and must never make a claim more trustworthy.
+  return clamp(base * 0.45 + rel * 0.3 + fresh * 0.25 + repro - penalty);
+}
+
+/** Keep decision relevance and business importance separate from evidence reliability. */
+export function assessEvidenceDimensions(input: {
+  evidenceType: EvidenceType | string;
+  sourceReliability?: number | null;
+  reproducible?: boolean | null;
+  successCount?: number | null;
+  freshness?: number | null;
+  contradicts?: any[] | null;
+  relevanceScore?: number | null;
+  businessImportance?: number | null;
+}) {
+  return {
+    quality: weighEvidence(input),
+    relevance: clamp(input.relevanceScore ?? 50),
+    businessImportance: clamp(input.businessImportance ?? 50),
+  };
 }
 
 /** Persist one classified evidence item. Never throws into a run. */
 export async function recordEvidence(input: EvidenceInput): Promise<string | null> {
   try {
-    const freshness = 100;
-    const weight = weighEvidence({
+    const retrievedAt = input.retrievedAt && Number.isFinite(Date.parse(input.retrievedAt))
+      ? new Date(input.retrievedAt).toISOString()
+      : new Date().toISOString();
+    const freshness = freshnessOf(input.category, retrievedAt);
+    const dimensions = assessEvidenceDimensions({
+      relevanceScore: input.relevanceScore,
+      businessImportance: input.businessImportance ?? input.businessValue,
+      evidenceType: input.evidenceType,
+      sourceReliability: input.sourceReliability,
+      reproducible: input.reproducible,
+      successCount: input.successCount,
+      freshness,
+      contradicts: input.contradicts,
+    });
+    const weight = dimensions.quality;
+    /* const weight = weighEvidence({
       evidenceType: input.evidenceType,
       sourceReliability: input.sourceReliability,
       reproducible: input.reproducible,
@@ -139,7 +184,7 @@ export async function recordEvidence(input: EvidenceInput): Promise<string | nul
       freshness,
       businessValue: input.businessValue,
       contradicts: input.contradicts,
-    });
+    }); */
     const life = SHELF_LIFE_DAYS[String(input.category || "platform")] ?? 90;
     const { data } = await db()
       .from("evidence_items")
@@ -162,6 +207,19 @@ export async function recordEvidence(input: EvidenceInput): Promise<string | nul
         contradicts: input.contradicts || [],
         expert_key: input.expertKey ?? null,
         language: input.language || "ar",
+        provider: input.provider ?? null,
+        capability: input.capability ?? null,
+        retrieved_at: retrievedAt,
+        data_period: input.dataPeriod ?? null,
+        locale: input.locale ?? input.language ?? null,
+        market: input.market ?? null,
+        measurement_unit: input.measurementUnit ?? null,
+        sample_size: input.sampleSize == null ? null : Math.max(0, Math.floor(Number(input.sampleSize) || 0)),
+        reality_kind: input.realityKind ?? "unverified",
+        status: input.status ?? "success",
+        limitation: input.limitation ?? null,
+        relevance_score: dimensions.relevance,
+        business_importance: dimensions.businessImportance,
         weight,
         freshness,
         expires_at: new Date(Date.now() + life * 86_400_000).toISOString(),
@@ -196,17 +254,30 @@ export function crossValidate(rows: any[]): CrossValidation {
       strongest_type: null, weighted_score: 0, avg_freshness: 0, stale: 0, verdict: "none",
     };
   }
-  const sources = new Set(items.map((r) => String(r.source_ref || r.source_kind || "?")));
+  // Independent evidence is counted by source host when a URL exists; multiple pages on one site do not count as independent corroboration.
+  const sourceKey = (r: any) => {
+    const ref = String(r.source_ref || "").trim();
+    try {
+      const host = new URL(ref).hostname.toLowerCase().replace(/^www\./, "");
+      return host || String(r.source_kind || "?");
+    } catch {
+      return ref || String(r.source_kind || "?");
+    }
+  };
+  const sources = new Set(items.map(sourceKey));
   const contradicting = items.filter((r) => (r.contradicts?.length || 0) > 0).length;
   const agreeing = items.length - contradicting;
   const fresh = items.map((r) => (r.freshness != null ? Number(r.freshness) : freshnessOf(r.category, r.created_at)));
   const avgFresh = clamp(fresh.reduce((a, b) => a + b, 0) / fresh.length);
   const stale = fresh.filter((f) => f < 35).length;
-  const weights = items.map((r) =>
-    Number(r.weight) > 0
-      ? Number(r.weight)
-      : weighEvidence({ evidenceType: r.evidence_type, sourceReliability: r.source_reliability, reproducible: r.reproducible, successCount: r.success_count, freshness: r.freshness, businessValue: r.business_value, contradicts: r.contradicts }),
-  );
+  const weights = items.map((r) => weighEvidence({
+    evidenceType: r.evidence_type,
+    sourceReliability: r.source_reliability,
+    reproducible: r.reproducible,
+    successCount: r.success_count,
+    freshness: r.freshness,
+    contradicts: r.contradicts,
+  }));
   const weighted = clamp(weights.reduce((a, b) => a + b, 0) / weights.length);
   const strongest = items
     .slice()
@@ -248,14 +319,14 @@ export async function validateEvidenceFor(opts: {
     let q = db()
       .from("evidence_items")
       .select(
-        "id, title, claim, source_kind, source_ref, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, expires_at, created_at",
+        "id, title, claim, source_kind, source_ref, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, expires_at, created_at, provider, capability, retrieved_at, data_period, locale, market, measurement_unit, sample_size, reality_kind, status, limitation, relevance_score, business_importance",
       )
       .order("weight", { ascending: false })
       .limit(opts.limit ?? 200);
     if (opts.realityRecordId) q = q.eq("reality_record_id", opts.realityRecordId);
     if (opts.executionId) q = q.eq("execution_id", opts.executionId);
     const { data } = await q;
-    const items = ((data as any[]) || []).map((r) => ({ ...r, freshness: freshnessOf(r.category, r.created_at) }));
+    const items = ((data as any[]) || []).map((r) => ({ ...r, freshness: freshnessOf(r.category, r.retrieved_at || r.created_at) }));
     return { items, validation: crossValidate(items) };
   } catch {
     return { items: [], validation: crossValidate([]) };
@@ -267,13 +338,13 @@ export async function decayEvidence(limit = 500): Promise<number> {
   try {
     const { data } = await db()
       .from("evidence_items")
-      .select("id, category, created_at, freshness")
+      .select("id, category, created_at, retrieved_at, freshness")
       .order("created_at", { ascending: true })
       .limit(limit);
     const rows = (data as any[]) || [];
     let touched = 0;
     for (const r of rows) {
-      const f = freshnessOf(r.category, r.created_at);
+      const f = freshnessOf(r.category, r.retrieved_at || r.created_at);
       if (Math.abs(f - Number(r.freshness ?? 100)) < 5) continue;
       await db().from("evidence_items").update({ freshness: f }).eq("id", r.id);
       touched++;
