@@ -207,7 +207,6 @@ export function ExportButtons({
       setOpen(false);
       return;
     }
-    setExportLang(lang === "en" || lang === "ku" ? lang : "ar");
     setMenuPosition(null);
     setPreparedPayload(null);
     setPreviewLoading(true);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPack, extractLinks, linksSection, packSections } from "@/lib/machine-pack";
+import { buildPack, entityFromResult, extractLinks, linksSection, packSections } from "@/lib/machine-pack";
 
 const ob = { aliases: "معروف, Maaroof", facts: "Founded in 2024", links: "https://maaroofai.com\nhttps://example.com/press", officialProfiles: "https://linkedin.com/company/maaroof", faqs: [{ q: "What is GEO?", a: "Optimizing for AI answers." }] };
 
@@ -27,6 +27,12 @@ describe("machine pack", () => {
     expect(buildPack({ brand: "X" }).orgJsonld).toBe("");
     expect(packSections({ brand: "X" }, "ar")).toEqual([]);
   });
+  it("does not infer an entity's official website from a generic result URL", () => {
+    expect(entityFromResult({ brand: "Example Brand", url: "https://news.example/story" })?.site).toBeUndefined();
+    expect(entityFromResult({ brand: "Example Brand", website: "https://example.com" })?.site).toBe("https://example.com");
+    expect(entityFromResult({ brand: "Example Brand", entity: { url: "https://example.org" } })?.site).toBe("https://example.org");
+  });
+
   it("extracts real links from results and says so when none", () => {
     const s = [{ heading: "a", kind: "text" as const, text: "see https://a.com/x." }];
     expect(extractLinks(s)).toEqual(["https://a.com/x"]);

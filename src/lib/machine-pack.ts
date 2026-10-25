@@ -151,7 +151,8 @@ export function entityFromResult(r: any): ResultEntity | null {
   if (!r || typeof r !== "object") return null;
   const brand = str(r.brand) || str(r.brand_name) || str(r.entity?.name) || str(r.company) || str(r.name);
   if (!brand) return null;
-  const siteRaw = str(r.url) || str(r.site) || str(r.website) || str(r.entity?.url);
+  // A generic `url` on a search/audit result often points to an article, not the entity's official website.
+  const siteRaw = str(r.official_website) || str(r.website) || str(r.site) || str(r.entity?.url);
   const site = isUrl(siteRaw) ? siteRaw : undefined;
   const summary = (str(r.summary) || str(r.description) || str(r.entity?.description)).slice(0, 300) || undefined;
   const facts = (Array.isArray(r.facts) ? r.facts : []).map((f: any) => str(typeof f === "string" ? f : f?.fact)).filter(Boolean).slice(0, 8);
