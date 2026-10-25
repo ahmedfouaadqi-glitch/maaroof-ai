@@ -19,8 +19,8 @@ function linkValue(item: unknown): string {
 
 function linkKey(value: string): string {
   try {
-    const u = new URL(/^https?:\/\//i.test(value) ? value : \`https://\${value}\`);
-    return \`\${u.hostname.toLowerCase().replace(/^www\./, "")}\${u.pathname.replace(/\/+$/, "")}\${u.search}\`.toLowerCase();
+    const u = new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+    return (u.hostname.toLowerCase().replace(/^www\./, "") + u.pathname.replace(/\/+$/, "") + u.search).toLowerCase();
   } catch {
     return value.trim().toLowerCase();
   }
@@ -30,7 +30,7 @@ function normalizePublicUrl(value: string): string | null {
   const raw = value.trim();
   if (!raw) return null;
   try {
-    const u = new URL(/^https?:\/\//i.test(raw) ? raw : \`https://\${raw}\`);
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : "https://" + raw);
     if (!["http:", "https:"].includes(u.protocol) || !u.hostname.includes(".") || u.username || u.password) return null;
     u.hash = "";
     return u.toString();
@@ -126,7 +126,8 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
         entity_type: entityType,
         website_url: websiteUrl,
         links: linkRows,
-        social_links: [],        sector: sector.trim().slice(0, 400),
+        social_links: [],
+        sector: sector.trim().slice(0, 400),
         country: country.trim().slice(0, 80) || null,
         markets: marketList,
         keywords: Array.isArray(workspace.keywords) ? workspace.keywords : String(workspace.keywords || "").split(/[,،;\n]+/).map((v) => v.trim()).filter(Boolean),
