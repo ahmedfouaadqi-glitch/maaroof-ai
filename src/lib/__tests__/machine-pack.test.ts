@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildPack, extractLinks, linksSection, packSections } from "@/lib/machine-pack";
 
-const ob = { aliases: "معروف, Maaroof", facts: "Founded in 2024", links: "https://maaroofai.com\nhttps://linkedin.com/company/maaroof", faqs: [{ q: "What is GEO?", a: "Optimizing for AI answers." }] };
+const ob = { aliases: "معروف, Maaroof", facts: "Founded in 2024", links: "https://maaroofai.com\nhttps://example.com/press", officialProfiles: "https://linkedin.com/company/maaroof", faqs: [{ q: "What is GEO?", a: "Optimizing for AI answers." }] };
 
 describe("machine pack", () => {
   it("builds Organization JSON-LD only from given data", () => {
@@ -10,11 +10,21 @@ describe("machine pack", () => {
     expect(org.url).toBe("https://maaroofai.com");
     expect(org.sameAs).toEqual(["https://linkedin.com/company/maaroof"]);
     expect(org.areaServed.map((x: any) => x.name)).toEqual(["Iraq", "Lebanon"]);
+    expect(org.areaServed.every((x: any) => x["@type"] === "Place")).toBe(true);
+    expect(org.sameAs).not.toContain("https://example.com/press");
     expect(p.orgJsonld).not.toMatch(/\b(99|1000)\b/);
   });
   it("builds a valid FAQPage only when FAQs exist", () => {
     expect(JSON.parse(buildPack({ brand: "X", onboarding: ob }).faqJsonld)["@type"]).toBe("FAQPage");
     expect(buildPack({ brand: "X" }).faqJsonld).toBe("");
+    const noFaqSections = packSections({ brand: "X", site: "https://x.example" }, "ar");
+    expect(noFaqSections.some((section) => section.heading.includes("FAQPage"))).toBe(false);
+  });
+
+  it("does not create a publishable pack from a name alone", () => {
+    expect(buildPack({ brand: "X" }).llms).toBe("");
+    expect(buildPack({ brand: "X" }).orgJsonld).toBe("");
+    expect(packSections({ brand: "X" }, "ar")).toEqual([]);
   });
   it("extracts real links from results and says so when none", () => {
     const s = [{ heading: "a", kind: "text" as const, text: "see https://a.com/x." }];
