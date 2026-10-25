@@ -121,7 +121,7 @@ export function ExportButtons({
         site: entity.site,
         summary: entity.summary,
         lang: exportLang,
-        onboarding: { facts: (entity.facts || []).join("\\n"), faqs: entity.faqs },
+        onboarding: { facts: (entity.facts || []).join("\n"), faqs: entity.faqs },
       }, exportLang)
     : [];
   const translationPreviewSections = preparedPayload ? [

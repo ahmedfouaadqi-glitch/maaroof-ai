@@ -49,6 +49,10 @@ export const translateExportContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    // Fail before metering when the translation provider is not configured.
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
     const totalChars = data.segments.reduce((sum, segment) => sum + segment.text.length, 0);
     const units = Math.max(1, Math.ceil(totalChars / 3_500));
     const charge = await chargeTokens({
@@ -58,9 +62,6 @@ export const translateExportContent = createServerFn({ method: "POST" })
       meta: { purpose: "export_content_translation", target_lang: data.targetLang, segment_count: data.segments.length, chars: totalChars },
     });
     if (!charge.ok) throw new Error("quota_exceeded:" + charge.reason);
-
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
 
     const targetName = LANG_NAMES[data.targetLang];
     const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
