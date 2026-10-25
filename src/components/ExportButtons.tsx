@@ -21,7 +21,7 @@ import {
   exportToMarkdown, exportToJSON, type ExportPayload,
 } from "@/lib/exports";
 
-const RUNNERS: Record<ExportFormat, (p: ExportPayload) => void | Promise<void>> = {
+const RUNNERS: Record<ExportFormat, (p: ExportPayload, pdfPopup?: Window | null) => void | Promise<void>> = {
   pdf: exportToPDF,
   xlsx: exportToExcel,
   csv: exportToCSV,
@@ -233,6 +233,14 @@ export function ExportButtons({
 
   const run = async (f: ExportFormat) => {
     if (previewLoading || exporting) return;
+    // Open the PDF window during the trusted click event, before async work can trigger popup blocking.
+    const pdfPopup = f === "pdf" ? window.open("", "_blank", "width=900,height=1000") : undefined;
+    if (pdfPopup) {
+      try {
+        pdfPopup.document.title = exportLang === "en" ? "Preparing report…" : exportLang === "ku" ? "ڕاپۆرت ئامادە دەکرێت…" : "يجري تجهيز التقرير…";
+        if (pdfPopup.document.body) pdfPopup.document.body.textContent = exportLang === "en" ? "Preparing your report for printing…" : exportLang === "ku" ? "ڕاپۆرتەکەت بۆ چاپکردن ئامادە دەکرێت…" : "يجري تجهيز التقرير للطباعة…";
+      } catch { /* The browser may restrict access to the new window. */ }
+    }
     setOpen(false);
     setExporting(true);
     try {
@@ -311,8 +319,12 @@ export function ExportButtons({
 
       const glossary = glossarySection(all, exportLang);
       p.sections = glossary ? [...all, glossary] : all;
-      await RUNNERS[f](p);
+      await RUNNERS[f](p, f === "pdf" ? pdfPopup : undefined);
+      if (f === "pdf" && !pdfPopup) {
+        toast.warning(exportLang === "en" ? "The print window was blocked. An HTML report was downloaded; open it and choose Print / Save as PDF." : exportLang === "ku" ? "پەنجەرەی چاپ ڕێگری لێکرا؛ ڕاپۆرتی HTML داگرترا، بیکەرەوە و چاپ / پاشەکەوتکردن وەک PDF هەڵبژێرە." : "حظر المتصفح نافذة الطباعة؛ نُزّل تقرير HTML. افتحه واختر طباعة / حفظ بتنسيق PDF.");
+      }
     } catch (error) {
+      if (pdfPopup && !pdfPopup.closed) pdfPopup.close();
       const message = String(error instanceof Error ? error.message : error);
       if (message.includes("quota_exceeded")) {
         toast.error(exportLang === "en" ? "Translation quota or credits are not available. No file was exported." : exportLang === "ku" ? "سنووری وەرگێڕان یان کرێدیت بەردەست نییە؛ هیچ فایلێک هەناردە نەکرا." : "رصيد أو حصة الترجمة غير متاحين؛ لم يتم تصدير الملف.");
