@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveDirectPostHandler } from "@/lib/maaroof/direct-tool-dispatch.server";
+import { Route as analyzeRoute } from "@/routes/api/analyze";
 
 describe("in-process tool dispatch", () => {
   it("resolves a simple POST handler from the existing file route", async () => {
@@ -9,6 +10,10 @@ describe("in-process tool dispatch", () => {
     const response = await resolved!({ request: new Request("https://maaroofai.com/api/test", { method: "POST" }) });
     expect(await response.json()).toEqual({ ok: true });
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("can resolve a real TanStack API route module without calling it", () => {
+    expect(resolveDirectPostHandler({ Route: analyzeRoute })).toEqual(expect.any(Function));
   });
 
   it("does not bypass route middleware", () => {
