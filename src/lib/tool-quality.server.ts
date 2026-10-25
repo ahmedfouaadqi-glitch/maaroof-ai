@@ -3,6 +3,7 @@
 // - assertEvidence: fail loudly when there is no real-world grounding.
 // - qualityShell: appends a strict citation contract to any system prompt.
 import { fcSearch, type FcCtx } from "./firecrawl";
+import { estimateSearchCredits, planSourceRoute, type SourceCapability } from "./maaroof/source-intelligence";
 
 export type EvidenceSource = {
   index: number;
@@ -17,6 +18,17 @@ export type EvidencePack = {
   sources: EvidenceSource[];
   query: string;
   context_block: string; // ready to inject into a user prompt
+  source_plan?: {
+    capability: SourceCapability;
+    route: string;
+    requested_sources: string[];
+    request_count: number;
+    estimated_credits: number;
+    sample_size: number;
+    budget_limited: boolean;
+    limitations: string[];
+    retrieved_at: string;
+  };
 };
 
 function domainOf(u: string): string {
@@ -25,34 +37,103 @@ function domainOf(u: string): string {
 
 export async function buildEvidencePack(
   query: string,
-  opts: { limit?: number; lang?: string; ctx?: FcCtx } = {},
+  opts: {
+    limit?: number;
+    lang?: string;
+    ctx?: FcCtx;
+    userId?: string | null;
+    toolKey?: string;
+    capability?: SourceCapability;
+    market?: string | null;
+    maxEstimatedCredits?: number;
+  } = {},
 ): Promise<EvidencePack> {
-  const limit = Math.min(opts.limit ?? 4, 6);
+  const limit = Math.max(1, Math.min(opts.limit ?? 4, 6));
+  const retrievedAt = new Date().toISOString();
+  const capability = opts.capability;
+  const maxEstimatedCredits = Number.isFinite(Number(opts.maxEstimatedCredits))
+    ? Math.max(0, Number(opts.maxEstimatedCredits))
+    : 2 + limit;
+  const routePlan = planSourceRoute({
+    goal: query.slice(0, 280),
+    capability,
+    language: opts.lang || "en",
+    market: opts.market ?? null,
+    available: { webSearch: true, directRead: true, alexandria: false },
+    budget: { maxRequests: 1, maxEstimatedCredits },
+  });
   let raw: any = null;
-  try { raw = await fcSearch(query.slice(0, 280), { limit, lang: opts.lang }, opts.ctx || {}); }
-  catch { raw = null; }
+  let estimatedCredits = 0;
+  const limitations = [...routePlan.limitations];
+  if (routePlan.primary !== "none" && routePlan.searchSources.length) {
+    try {
+      const ctx: FcCtx = {
+        ...(opts.ctx || {}),
+        ...(opts.userId ? { userId: opts.userId } : {}),
+        ...(opts.toolKey ? { toolKey: opts.toolKey } : {}),
+      };
+      raw = await fcSearch(query.slice(0, 280), {
+        limit, lang: opts.lang, sources: routePlan.searchSources,
+      }, ctx);
+    } catch {
+      raw = null;
+      limitations.push("source_retrieval_unavailable");
+    }
+  } else {
+    limitations.push("source_request_not_executed_within_budget");
+  }
 
-  const pickArr = (v: any): any[] => {
-    if (Array.isArray(v)) return v;
-    if (v && typeof v === "object") return [...(v.web || []), ...(v.news || [])];
-    return [];
-  };
-  const list = (pickArr(raw?.data).length ? pickArr(raw.data) : pickArr(raw?.web)).slice(0, limit);
-  const sources: EvidenceSource[] = list.map((r: any, i: number) => ({
+  const data: any = raw?.data ?? raw;
+  const selectedRows: any[] = [];
+  for (const sourceType of routePlan.searchSources) {
+    const rows = Array.isArray(data?.[sourceType]) ? data[sourceType]
+      : Array.isArray(raw?.[sourceType]) ? raw[sourceType] : [];
+    for (const row of rows.slice(0, limit)) selectedRows.push(row);
+  }
+  if (!selectedRows.length && Array.isArray(data) && routePlan.searchSources.includes("web")) {
+    selectedRows.push(...data.slice(0, limit));
+  }
+  if (!selectedRows.length && Array.isArray(raw?.results) && routePlan.searchSources.includes("web")) {
+    selectedRows.push(...raw.results.slice(0, limit));
+  }
+  if (raw?.source_profile_warning === "selected_source_profile_unavailable_on_fallback") {
+    limitations.push("selected_source_profile_unavailable_on_fallback");
+  }
+  const sources: EvidenceSource[] = selectedRows.map((r: any, i: number) => ({
     index: i + 1,
     url: String(r.url || ""),
     title: String(r.title || r.url || "").slice(0, 180),
-    snippet: String(r.markdown || r.description || "").slice(0, 500),
+    snippet: String(r.markdown || r.description || r.snippet || "").slice(0, 500),
     domain: domainOf(r.url || ""),
-    fetched_at: new Date().toISOString(),
-  })).filter((s) => s.url);
+    fetched_at: retrievedAt,
+  })).filter((s) => /^https?:\/\//i.test(s.url));
+  if (raw && routePlan.searchSources.length) {
+    const estimate = estimateSearchCredits({
+      resultCount: sources.length,
+      sources: raw?.source_profile_warning ? ["web"] : routePlan.searchSources,
+      includePageContent: true,
+    });
+    estimatedCredits = estimate.estimatedCredits;
+  }
 
   const context_block = sources.length
     ? "EVIDENCE_SOURCES (use ONLY these facts; cite each claim as [n]):\n" +
       sources.map((s) => `[${s.index}] ${s.title} — ${s.domain} (${s.url})\n${s.snippet}`).join("\n\n")
     : "EVIDENCE_SOURCES: (none available — return evidence_missing: true)";
-
-  return { sources, query, context_block };
+  return {
+    sources, query, context_block,
+    source_plan: {
+      capability: routePlan.capability,
+      route: routePlan.primary,
+      requested_sources: routePlan.searchSources,
+      request_count: raw ? 1 : 0,
+      estimated_credits: estimatedCredits,
+      sample_size: sources.length,
+      budget_limited: limitations.some((reason) => /budget|not_executed/.test(reason)),
+      limitations: Array.from(new Set(limitations)),
+      retrieved_at: retrievedAt,
+    },
+  };
 }
 
 export function assertEnoughEvidence(pack: EvidencePack, min = 2): boolean {
