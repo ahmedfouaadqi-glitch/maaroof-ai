@@ -23,6 +23,21 @@ describe("Source Intelligence Router", () => {
     expect(plan.searchSources).toEqual([]);
   });
 
+  it("blocks direct URL reads when the request or credit budget is exhausted", () => {
+    const noCredits = planSourceRoute({
+      goal: "افحص https://example.com/about",
+      budget: { maxRequests: 1, maxEstimatedCredits: 0 },
+    });
+    expect(noCredits.primary).toBe("none");
+    expect(noCredits.limitations).toContain("credit_budget_below_minimum_direct_read_cost");
+    const noRequests = planSourceRoute({
+      goal: "read https://example.com/about",
+      budget: { maxRequests: 1, maxEstimatedCredits: 2, usedRequests: 1 },
+    });
+    expect(noRequests.primary).toBe("none");
+    expect(noRequests.limitations).toContain("request_budget_exhausted");
+  });
+
   it("uses a news-aware route for recent queries without increasing the call budget", () => {
     const plan = planSourceRoute({ goal: "latest news about the Iraqi mobile market", budget: { maxRequests: 1, maxEstimatedCredits: 2 } });
     expect(plan.primary).toBe("news");
