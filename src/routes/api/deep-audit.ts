@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { auditTargets, scoreTarget, aggregateAxes, billableUnits, weightedScore, workspaceAuditLinks, type AuditTarget } from "@/lib/maaroof/deep-audit";
 import { isAccountKind } from "@/lib/account-kinds";
+import { isReadIssueCode } from "@/lib/fetch-order";
 
 const TOOL_KEY = "analyze.deep_audit"; // falls back to the parent tool price when not priced separately
 const TARGET_TIMEOUT_MS = 40_000; // per link, covers the full provider fallback chain (15s per attempt)
@@ -68,10 +69,14 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
     } catch (error) {
       ev = null;
-      const message = String((error as any)?.message || error || "").toLowerCase();
-      if (/401|403|login|challenge|captcha|blocked|scrape_empty_or_blocked/.test(message)) readIssue = "access_restricted";
-      else if (/429|rate.?limit|quota/.test(message)) readIssue = "rate_limited";
-      else if (/timeout|timed out|abort/.test(message)) readIssue = "timeout";
+      const e = error as any;
+      const message = String(e?.message || error || "").toLowerCase();
+      // Prefer the origin-aware classification from the read layer. Never infer that Instagram blocked us
+      // merely because a third-party reading route returned a quota/rate error.
+      if (isReadIssueCode(e?.readIssue)) readIssue = e.readIssue;
+      else if (/timeout|timed out|aborterror|aborted/.test(message)) readIssue = "timeout";
+      else if (/quota|capacity.*reached/.test(message)) readIssue = "reader_quota_reached";
+      else if (/rate.?limit|too many requests/.test(message)) readIssue = "reader_rate_limited";
       else readIssue = "source_unavailable";
     } finally {
       if (timer) clearTimeout(timer);
