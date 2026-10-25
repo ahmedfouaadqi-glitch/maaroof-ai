@@ -67,7 +67,7 @@ export const Route = createFileRoute("/api/research")({
             if (specializedRun.confirm_paid_run !== true) {
               return Response.json({ error: "explicit_paid_confirmation_required" }, { status: 400 });
             }
-              const requestId = String(specializedRun.request_id || "").trim();
+            const requestId = String(specializedRun.request_id || "").trim();
             if (!/^[A-Za-z0-9._:-]{1,128}$/.test(requestId)) {
               return Response.json({ error: "specialized_request_id_required" }, { status: 400 });
             }
