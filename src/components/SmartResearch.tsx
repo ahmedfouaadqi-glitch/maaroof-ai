@@ -52,7 +52,7 @@ function schemaSummary(schema: any, lang: string): string[] {
   );
 }
 
-export function SmartResearch() {
+export function SmartResearch({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t, lang } = useI18n();
   const { profile, session } = useAuth();
   const specialty = (profile as any)?.specialty || "";
@@ -72,6 +72,15 @@ export function SmartResearch() {
   const [specializedResult, setSpecializedResult] = useState<any>(null);
   const [specializedRequestId, setSpecializedRequestId] = useState("");
   const phrase = (ar: string, en: string, ku: string) => lang === "en" ? en : lang === "ku" ? ku : ar;
+
+  useEffect(() => {
+    setOut(null);
+    setErr("");
+    setSpecializedError("");
+    setSpecializedResult(null);
+    setSelectedSpecializedId("");
+    setSpecializedRequestId("");
+  }, [workspaceId]);
 
   const toggleChannel = (c: string) =>
     setChannelTypes((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
@@ -96,7 +105,7 @@ export function SmartResearch() {
       const res = await apiFetch("/api/research", {
         method: "POST", headers,
         body: JSON.stringify({
-          query: q, lang, scope: getEffectiveScope(profile, "research"),
+          query: q, lang, workspace_id: workspaceId, scope: getEffectiveScope(profile, "research"),
           mode,
           include_channels: includeChannels || mode === "company",
           channel_types: (includeChannels || mode === "company") ? channelTypes : undefined,
@@ -140,7 +149,7 @@ export function SmartResearch() {
       const res = await apiFetch("/api/research", {
         method: "POST", headers,
         body: JSON.stringify({
-          query: q, lang, scope: getEffectiveScope(profile, "research"), mode,
+          query: q, lang, workspace_id: workspaceId, scope: getEffectiveScope(profile, "research"), mode,
           specialized_execution: {
             candidate_id: candidate.candidate_id,
             options,
