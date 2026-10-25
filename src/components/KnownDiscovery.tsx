@@ -122,6 +122,7 @@ export function KnownDiscovery({ workspaceId = null }: { workspaceId?: string | 
           if (!ev || !raw) continue;
           let j: any = {};
           try { j = JSON.parse(raw); } catch { continue; }
+          if (seq !== requestSeq.current) return;
           if (ev === "progress") setStage(Math.max(0, Math.min(3, Number(j.stage) || 0)));
           else if (ev === "result") setResult(j);
           else if (ev === "error") throw new Error(j.error || "failed");
