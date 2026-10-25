@@ -154,7 +154,7 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       ok, read_status: readStatus, read_issue: ok ? null : readIssue,
       read_origin: ok ? null : readOrigin, read_http_status: ok ? null : readHttpStatus,
       read_retry_after_ms: ok ? null : readRetryAfterMs,
-      findings, source, source_label: sourceLabel(ok ? (source as any) : null),
+      findings, source_label: sourceLabel(ok ? (source as any) : null),
     });
     await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
     } finally {
