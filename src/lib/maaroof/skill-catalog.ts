@@ -207,30 +207,51 @@ export function skillFramework(skill: MaaroofSkill, locale: SkillLocaleKey): Ski
 }
 
 /**
- * Lightweight goal-to-skill matching. Pure keyword scoring over ar/en/ku terms.
- * Returns matched skills ordered by score (best first), up to `limit`.
- * Returns an empty list when nothing matches; the caller decides the fallback.
+ * Lightweight, low-cost skill inference across Arabic, English and Kurdish.
+ * Normalization reduces spelling/diacritic variants; a single substring of a
+ * generic word is not enough to select a skill.
  */
-export function recommendMaaroofSkills(goal: string, limit: number = MAAROOF_SKILLS.length): MaaroofSkill[] {
-  const text = String(goal || "").toLowerCase();
-  if (!text.trim()) return [];
-  const scored = MAAROOF_SKILLS
-    .map((skill) => {
-      let score = 0;
-      for (const keyword of skill.keywords) {
-        const k = keyword.toLowerCase();
-        if (!text.includes(k)) continue;
-        // Whole-ish keyword (surrounded by non-letters) scores higher than a substring hit.
-        const boundary = new RegExp(`(^|[^\\p{L}])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\p{L}]|$)`, "u").test(text);
-        score += boundary ? 2 : 1;
-      }
-      return { skill, score };
-    })
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score);
-  return scored.slice(0, Math.max(1, limit)).map((entry) => entry.skill);
+export function normalizeSkillText(value: string): string {
+  let text = String(value || "").normalize("NFKC").toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ك/g, "ک")
+    .replace(/ي/g, "ی");
+  // Small explicit synonym set for common local/dialect spellings.
+  text = text
+    .replace(/انستا(?:گرام)?/g, "انستغرام instagram")
+    .replace(/سوشيال(?: ميديا)?/g, "تواصل اجتماعي social media")
+    .replace(/تحسين محركات البحث/g, "seo")
+    .replace(/سيو/g, "seo")
+    .replace(/منافسة/g, "منافس competitor")
+    .replace(/ذكاء اصطناعي|الذكاء الاصطناعي/g, "ذكاء اصطناعي ai");
+  return text.replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
 }
 
+export function recommendMaaroofSkills(goal: string, limit: number = MAAROOF_SKILLS.length): MaaroofSkill[] {
+  const text = normalizeSkillText(goal);
+  const cap = Math.max(0, Math.min(MAAROOF_SKILLS.length, Math.floor(Number(limit) || 0)));
+  if (!text || cap === 0) return [];
+  const scored = MAAROOF_SKILLS.map((skill) => {
+    let score = 0;
+    const seen = new Set<string>();
+    for (const keyword of skill.keywords) {
+      const k = normalizeSkillText(keyword);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      const exactPhrase = (" " + text + " ").includes(" " + k + " ");
+      const partial = !exactPhrase && text.includes(k);
+      // Exact words/phrases score; substring-only hits are weak hints and cannot trigger alone.
+      if (exactPhrase) score += 2;
+      else if (partial) score += 0.5;
+    }
+    return { skill, score };
+  })
+    .filter((entry) => entry.score >= 2)
+    .sort((a, b) => b.score - a.score);
+  return scored.slice(0, cap).map((entry) => entry.skill);
+}
 /** Union of tool keys for the selected skills, preserving first-seen order. */
 export function toolsForSkills(selectedSkills: string[]): string[] {
   const tools: string[] = [];
