@@ -7,6 +7,9 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
+import { planSourceRoute } from "@/lib/maaroof/source-intelligence";
+import { discoverAlexandriaCapabilities } from "@/lib/maaroof/alexandria.server";
+import { recordEvidence } from "@/lib/maaroof/evidence.server";
 
 
 export const Route = createFileRoute("/api/research")({
@@ -20,6 +23,11 @@ export const Route = createFileRoute("/api/research")({
           if (!query || typeof query !== "string") return Response.json({ error: "query required" }, { status: 400 });
           const limited = String(query).slice(0, 300);
           const isCompany = mode === "company";
+          const includeChannels = !!reqBody?.include_channels;
+          const requestedChannelTypes: string[] = Array.isArray(reqBody?.channel_types) && reqBody.channel_types.length
+            ? reqBody.channel_types.map((v: unknown) => String(v)).filter((v: string) => ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"].includes(v)).slice(0, 3)
+            : ["website", "linkedin", "instagram"];
+          const workspaceId = typeof reqBody?.workspace_id === "string" ? reqBody.workspace_id.trim() : null;
 
           // Mandatory auth — endpoint consumes paid Firecrawl + AI gateway credits
           const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -33,28 +41,48 @@ export const Route = createFileRoute("/api/research")({
           const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
           const userId = userData?.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          if (workspaceId) {
+            if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+            const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+            if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          }
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
-          const _mci = await mciReuse(admin as any, "research", userId, [limited, lang, scope, mode], !!(reqBody as any)?.force);
+          const _mci = await mciReuse(admin as any, "research", userId, [limited, lang, scope, mode, workspaceId], !!(reqBody as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const userCtx = await getUserContext(admin, userId);
 
           const geo = scope?.country ? ` ${scope.country}` : "";
           const specBoost = userCtx.specialty ? ` ${userCtx.specialty}` : "";
-          const includeChannels: boolean = !!reqBody?.include_channels;
-          const channelTypes: string[] = Array.isArray(reqBody?.channel_types) && reqBody.channel_types.length
-            ? reqBody.channel_types : ["website", "linkedin", "twitter", "instagram", "facebook", "youtube", "telegram", "whatsapp", "email"];
+          const channelTypes = requestedChannelTypes;
+          const discoveryRequested = reqBody?.request_specialized_discovery === true;
+          const plannedSearchCalls = 1 + (includeChannels ? channelTypes.length : 0);
+          const routePlan = planSourceRoute({
+            goal: limited,
+            language: String(lang),
+            market: scope?.country ? String(scope.country) : null,
+            capability: undefined,
+            available: { webSearch: true, directRead: true, alexandria: process.env.MAAROOF_ALEXANDRIA_ENABLED === "true" },
+            requestSpecializedDiscovery: discoveryRequested,
+            budget: { maxRequests: plannedSearchCalls + (discoveryRequested ? 1 : 0), maxEstimatedCredits: 10 * plannedSearchCalls },
+          });
 
           // Search BEFORE charging: if live web search is unavailable, return a clear error and charge nothing.
+          // The route plan is deterministic and constrains the number/type of retrieval calls.
           let sr: any;
           try {
-            sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang });
+            sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang, sources: routePlan.searchSources }, { userId, toolKey: "research" });
           } catch (e: any) {
             console.error("[api/research] search unavailable", e?.status, e?.message);
             return Response.json({ error: "search_unavailable", charged: false, message: lang === "en" ? "Live web search is temporarily unavailable. Nothing was charged." : "البحث الحي على الويب غير متاح مؤقتاً. لم يُخصم أي رصيد." }, { status: 503 });
+          }
+          let specializedDiscovery: any = { enabled: false, candidates: [], limitation: "not_requested" };
+          if (discoveryRequested && routePlan.discoverSpecializedSources) {
+            // Free catalogue lookup only. It never invokes a specialized provider capability.
+            specializedDiscovery = await discoverAlexandriaCapabilities({ query: limited, limit: 3 });
           }
           const _chg = await chargeTokens({ userId, toolKey: "research", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/research" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
@@ -69,13 +97,46 @@ export const Route = createFileRoute("/api/research")({
           const rawList: any[] = pickArr(sr?.data).length ? pickArr(sr.data)
             : pickArr(sr?.web).length ? pickArr(sr.web)
             : Array.isArray(sr?.results) ? sr.results : [];
+          const retrievedAt = new Date().toISOString();
           const results = rawList.slice(0, 8).map((r: any) => ({
             title: r.title || r.url,
             url: r.url,
             description: r.description || "",
             snippet: (r.markdown || "").slice(0, 600),
             domain: (() => { try { return new URL(r.url).hostname.replace(/^www\./, ""); } catch { return ""; } })(),
+            evidence_kind: "external_observation",
+            retrieved_at: retrievedAt,
+            locale: String(lang),
+            market: scope?.country ? String(scope.country) : null,
+            sample_size: 1,
+            limitation: "Public web result/snippet; not a direct measurement of AI-answer visibility.",
           }));
+          const sourceProvider = sr?.fetch_source === "apidirect" ? "alternate_web_search" : "web_search";
+          await Promise.allSettled(results.map((item: any) => recordEvidence({
+            userId,
+            workspaceId,
+            title: item.title,
+            claim: item.snippet || item.description || item.title,
+            sourceKind: "external",
+            sourceRef: item.url,
+            evidenceType: "external",
+            category: isCompany ? "market" : "behavioral",
+            collectionMethod: "source_intelligence_router",
+            provider: sourceProvider,
+            capability: routePlan.capability,
+            retrievedAt,
+            locale: String(lang),
+            market: scope?.country ? String(scope.country) : null,
+            measurementUnit: "search_result",
+            sampleSize: 1,
+            realityKind: "observation",
+            status: item.snippet || item.description ? "success" : "empty",
+            limitation: item.limitation,
+            sourceReliability: 60,
+            relevanceScore: 55,
+            businessImportance: 50,
+            language: String(lang),
+          })));
 
           const lovableKey = process.env.LOVABLE_API_KEY;
           let answer = "";
@@ -154,7 +215,8 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
                 else if (domainMap[t]) queries.push({ type: t, q: `${limited}${specBoost} site:${domainMap[t]}` });
               }
               const seen = new Set<string>();
-              const settled = await Promise.allSettled(queries.map((q) => fcSearch(q.q, { limit: 4, lang })));
+              const allowedChannelQueries = queries.slice(0, Math.max(0, channelTypes.length));
+              const settled = await Promise.allSettled(allowedChannelQueries.map((q) => fcSearch(q.q, { limit: 4, lang, sources: ["web"] }, { userId, toolKey: "research" })));
               settled.forEach((s, idx) => {
                 if (s.status !== "fulfilled") return;
                 const list = (() => {
@@ -177,7 +239,41 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
             } catch { /* non-fatal */ }
           }
 
-          { const _out = { query: limited, sge_summary, answer, key_findings, visibility_opportunities, sources: results, channels, specialty: userCtx.specialty, sources_used, rarity_score, uniqueness_notes, evidence_missing }; await mciStore(admin as any, "research", userId, _mci.key, _out); return Response.json(_out); }
+          {
+            const _out = {
+              query: limited, sge_summary, answer, key_findings, visibility_opportunities,
+              sources: results, channels, specialty: userCtx.specialty, sources_used, rarity_score,
+              uniqueness_notes, evidence_missing,
+              source_plan: {
+                capability: routePlan.capability,
+                route: routePlan.primary,
+                requested_search_sources: routePlan.searchSources,
+                retrieved_source_profile: sr?.source_profile_warning ? "general_web_fallback" : routePlan.searchSources.join("+"),
+                request_budget: { max_calls: routePlan.maxRequests, planned_calls: plannedSearchCalls },
+                sample_size: results.length,
+                retrieved_at: retrievedAt,
+                language: String(lang),
+                market: scope?.country ? String(scope.country) : null,
+                reality_kind: "external_observation",
+                limitation: "Search observations and snippets are not direct AI-answer visibility measurements; failed probes are excluded from rates.",
+              },
+              specialized_source_options: {
+                enabled: specializedDiscovery.enabled,
+                candidates: (specializedDiscovery.candidates || []).map((candidate: any) => ({
+                  capability: candidate.capability,
+                  label: candidate.label,
+                  description: candidate.description,
+                  estimated_credits: candidate.estimatedCredits,
+                  terms_required: candidate.termsRequired,
+                  discovery_only: true,
+                })),
+                limitation: specializedDiscovery.limitation,
+                execution_enabled_by_this_request: false,
+              },
+            };
+            await mciStore(admin as any, "research", userId, _mci.key, _out);
+            return Response.json(_out);
+          }
         } catch (e) {
           console.error("[api/research] failed", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
