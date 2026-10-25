@@ -22,7 +22,7 @@ describe("assistant markdown blocks", () => {
   it("normalizes inline headings, numbered sections and field bullets from compact model output", () => {
     const compact = "المقدمة. ### --- تفاصيل البيانات المحفوظة في مساحة العمل: 1. الهوية الجغرافية والقطاع: * **الكيان:** Mengotti Couture * **القطاع:** التجارة الإلكترونية الفاخرة 2. الأصول الرقمية المسجلة: * **الموقع الإلكتروني:** https://example.com";
     const normalized = normalizeAssistantMarkdown(compact);
-    expect(normalized).toContain("\n\n### تفاصيل البيانات المحفوظة في مساحة العمل:");
+    expect(normalized).toContain("### تفاصيل البيانات المحفوظة في مساحة العمل:");
     expect(normalized).toContain("#### 1. الهوية الجغرافية والقطاع:");
     expect(normalized).toContain("* **الكيان:** Mengotti Couture");
 
