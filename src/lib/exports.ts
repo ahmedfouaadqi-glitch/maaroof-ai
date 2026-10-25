@@ -390,10 +390,11 @@ function executiveSummaryHtml(payload: ExportPayload): string {
 }
 
 /** Open a branded printable HTML report and trigger the browser's PDF print dialog. */
-export async function exportToPDF(payload: ExportPayload) {
+export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Window | null) {
   const lang = payload.lang || "ar";
   const dir = lang === "en" ? "ltr" : "rtl";
-  const popup = window.open("", "_blank", "width=900,height=1000");
+  // Prefer the window opened by the export button during the user click event.
+  const popup = preopenedPopup === undefined ? window.open("", "_blank", "width=900,height=1000") : preopenedPopup;
   const logoData = await optionalLogo(payload);
   const html = `<!doctype html>
 <html lang="${lang}" dir="${dir}">
@@ -495,14 +496,17 @@ export async function exportToPDF(payload: ExportPayload) {
 
   const w = popup;
   if (!w) {
-    // Popup blocked — fallback: download html
+    // Popup blocked — provide a printable HTML fallback instead of silently failing.
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${payload.title}.html`;
+    a.download = `${payload.title.replace(/[\/\\:*?"<>|]/g, "_")}.html`;
+    a.style.display = "none";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     return;
   }
   w.document.open();
@@ -661,9 +665,13 @@ function download(content: BlobPart, mime: string, ext: string, title: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+  a.download = `${title.replace(/[\/\\:*?"<>|]/g, "_")}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Defer revocation so browsers can finish resolving the download URL.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Raw structured export — for pipelines and archiving. */
