@@ -237,6 +237,9 @@ export function canExecuteSpecializedSource(input: {
   if (!input.userConfirmedPaidRun) return { allowed: false, reason: "explicit_user_approval_required" };
   if (!input.adminTermsAccepted) return { allowed: false, reason: "organization_terms_not_confirmed" };
   if (!/^[A-Za-z0-9._:-]{1,128}$/.test(input.requestId)) return { allowed: false, reason: "idempotency_key_required" };
+  if (input.discoveredCostCredits == null || input.discoveredCostCredits === "") {
+    return { allowed: false, reason: "unknown_cost_fails_closed" };
+  }
   const cost = Number(input.discoveredCostCredits);
   if (!Number.isFinite(cost) || cost < 0) return { allowed: false, reason: "unknown_cost_fails_closed" };
   const cap = Number(input.maxCredits);
