@@ -161,7 +161,7 @@ function PillarCard({ icon, title, p, t }: { icon: React.ReactNode; title: strin
   );
 }
 
-export function AppliedRanking() {
+export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -180,6 +180,11 @@ export function AppliedRanking() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+
+  useEffect(() => {
+    setResult(null);
+    setError(null);
+  }, [workspaceId]);
 
   useEffect(() => {
     const apply = (text: string) => {
@@ -208,7 +213,7 @@ export function AppliedRanking() {
         method: "POST", headers,
         body: JSON.stringify({
           brand_name: brand, brand_keywords: keywords, sector, website, app_name: appName, app_url: appUrl, notes,
-          lang: outLang, scope: getEffectiveScope(auth?.profile, "applied_ranking"),
+          lang: outLang, workspace_id: workspaceId, scope: getEffectiveScope(auth?.profile, "applied_ranking"),
         }),
       });
       const data = await r.json();
