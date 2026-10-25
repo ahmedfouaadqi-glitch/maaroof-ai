@@ -8,7 +8,7 @@ describe("ten-engine council for every account", () => {
 });
 describe("pack from the examined entity", () => {
   it("uses result brand and faqs, not the profile", () => {
-    const e = entityFromResult({ brand: "Mengotti", url: "https://m.com", faq: [{ question: "Q?", answer: "A." }] })!;
+    const e = entityFromResult({ brand: "Mengotti", website: "https://m.com", faq: [{ question: "Q?", answer: "A." }] })!;
     expect(e.brand).toBe("Mengotti");
     const p = buildPack({ brand: e.brand, site: e.site, onboarding: { faqs: e.faqs } });
     expect(p.orgJsonld).toContain("https://m.com");
