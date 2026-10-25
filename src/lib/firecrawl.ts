@@ -168,7 +168,7 @@ async function fcSearchRaw(query: string, opts: { limit?: number; lang?: string;
   const payload: any = {
     query, limit, lang: opts.lang,
     ...(opts.location ? { location: opts.location } : {}),
-    ...(requestedSources ? { sources: requestedSources.map((type) => ({ type })) } : {}),
+    ...(requestedSources ? { sources: requestedSources } : {}),
     scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
   };
   const hash = hashKey("search", payload);
