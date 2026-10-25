@@ -564,6 +564,16 @@ export async function exportToWord(payload: ExportPayload) {
     else if (section.kind === "list" && section.list) section.list.forEach((item) => content.push(new Paragraph({ bidirectional: textIsRtl(item, rtl), alignment: textIsRtl(item, rtl) ? AlignmentType.RIGHT : AlignmentType.LEFT, bullet: { level: 0 }, children: [new TextRun({ text: item, font: "Arial", size: 22 })] })));
     else if (section.kind === "kv" && section.rows) content.push(makeTable(["", ""], section.rows.map(([key, value]) => [key, value])));
     else if (section.kind === "table" && section.table) content.push(makeTable(section.table.columns, section.table.data));
+    else if (section.kind === "cards" && section.cards) {
+      section.cards.forEach((card) => {
+        content.push(paragraph(card.title, { bold: true, size: 24, color: "0F2454" }));
+        if (card.subtitle) content.push(paragraph(card.subtitle, { size: 18, color: "64748B" }));
+        content.push(paragraph("Score: " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100") + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }));
+        if (card.fields?.length) content.push(makeTable(["Metric", "Value"], card.fields));
+        (card.evidence || []).forEach((item) => content.push(paragraph("Evidence: " + item, { size: 17, color: "475569" })));
+        (card.notes || []).forEach((item) => content.push(paragraph("Note: " + item, { size: 17, color: "92400E" })));
+      });
+    }
   });
   const headerChildren = [new Paragraph({
     bidirectional: rtl,
@@ -611,6 +621,24 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   const CHARS_PER_SLIDE = 1200;
 
   for (const s of payload.sections) {
+    if (s.kind === "cards" && s.cards) {
+      s.cards.forEach((card) => {
+        const slide = pptx.addSlide();
+        decorate(slide);
+        slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA" });
+        slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, rectRadius: 0.08, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
+        slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid" });
+        if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B" });
+        slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
+        const details = [
+          ...(card.fields || []).map(([key, value]) => String(key) + ": " + String(value)),
+          ...(card.evidence || []).map((item) => "Evidence: " + item),
+          ...(card.notes || []).map((item) => "Note: " + item),
+        ].join("\n");
+        slide.addText(details, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
+      });
+      continue;
+    }
     if (s.kind === "table" && s.table) {
       // Split long tables across slides so no row is lost.
       const chunks: (string | number)[][][] = [];
