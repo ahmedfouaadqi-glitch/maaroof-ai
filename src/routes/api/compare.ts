@@ -315,11 +315,25 @@ export const Route = createFileRoute("/api/compare")({
               // 1) Trust user-provided URL fully
               const userUrl = (userWebsites[n] || "").trim();
               if (userUrl) {
+                const scrapeReserve = 5;
+                if (sourceBudget.requestsUsed + 1 > sourceBudget.maxRequests ||
+                    sourceBudget.estimatedCredits + scrapeReserve > sourceBudget.maxEstimatedCredits) {
+                  sourceBudget.limited = true;
+                  officialSites[n] = { url: userUrl, content: "", status: "user", reason: "source_budget_limit" };
+                  return;
+                }
+                sourceBudget.requestsUsed += 1;
+                sourceBudget.estimatedCredits += scrapeReserve;
                 try {
-                  const scraped: any = await fcScrape(userUrl, { deep: true });
+                  const scraped: any = await fcScrape(userUrl, { deep: true }, { userId, toolKey: "compare" });
                   const root = scraped?.data || scraped;
                   const md = String(root?.markdown || "").slice(0, 1500);
                   officialSites[n] = { url: userUrl, content: md, status: "user", reason: "user_provided" };
+                  sources.push({
+                    brand: n, kind: "official", source_type: "direct_read",
+                    title: String(root?.metadata?.title || n).slice(0, 300),
+                    url: userUrl, snippet: md.slice(0, 400), retrieved_at: new Date().toISOString(),
+                  });
                   seoSgeReports[n] = analyzeSeoSge({
                     url: userUrl, html: root?.html || "", markdown: root?.markdown || "",
                     links: Array.isArray(root?.links) ? root.links : [], metadata: root?.metadata || {},
@@ -351,8 +365,8 @@ export const Route = createFileRoute("/api/compare")({
               if (cands.length === 0 || Math.max(...cands.map((c) => c.score)) < 4) {
                 try {
                   const q = `"${n}" ${keywords} official site OR موقع رسمي ${market.region}`.trim().slice(0, 240);
-                  const sr: any = await fcSearch(q, { limit: 6, lang });
-                  const rows = (sr?.data?.web || sr?.data || sr?.web || []) as any[];
+                  const rows = await boundedSearch({ brand: n, q, kind: "official", limit: 2, sources: ["web"] });
+                  sources.push(...rows);
                   for (const r of rows) {
                     try {
                       const host = new URL(r.url).hostname.replace(/^www\./, "").toLowerCase();
@@ -376,10 +390,24 @@ export const Route = createFileRoute("/api/compare")({
               }
               const best = [...byHost.values()].sort((a, b) => b.score - a.score)[0];
               const chosenUrl = best.url;
+              const scrapeReserve = 5;
+              if (sourceBudget.requestsUsed + 1 > sourceBudget.maxRequests ||
+                  sourceBudget.estimatedCredits + scrapeReserve > sourceBudget.maxEstimatedCredits) {
+                sourceBudget.limited = true;
+                officialSites[n] = { url: chosenUrl, content: "", status: "candidate", reason: "source_budget_limit" };
+                return;
+              }
+              sourceBudget.requestsUsed += 1;
+              sourceBudget.estimatedCredits += scrapeReserve;
               try {
-                const scraped: any = await fcScrape(chosenUrl, { deep: true });
+                const scraped: any = await fcScrape(chosenUrl, { deep: true }, { userId, toolKey: "compare" });
                 const root = scraped?.data || scraped;
                 const md = String(root?.markdown || "").slice(0, 1500);
+                sources.push({
+                  brand: n, kind: "official", source_type: "direct_read",
+                  title: String(root?.metadata?.title || n).slice(0, 300),
+                  url: chosenUrl, snippet: md.slice(0, 400), retrieved_at: new Date().toISOString(),
+                });
                 const title = String(root?.metadata?.title || "").toLowerCase();
                 const desc = String(root?.metadata?.description || "").toLowerCase();
                 const slugs = [norm(n), translit(n)].filter(Boolean);
