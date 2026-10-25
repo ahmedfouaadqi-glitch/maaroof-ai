@@ -127,8 +127,11 @@ export function KnownDiscovery({ workspaceId = null }: { workspaceId?: string | 
           else if (ev === "error") throw new Error(j.error || "failed");
         }
       }
-    } catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      if (seq === requestSeq.current) setErr(L.errs[e?.message] || e?.message || "failed");
+    } finally {
+      if (seq === requestSeq.current) setBusy(false);
+    }
   };
 
   const startWatch = async () => {
