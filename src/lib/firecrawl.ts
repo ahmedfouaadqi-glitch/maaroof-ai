@@ -160,9 +160,17 @@ async function checkLimits(userId: string | null | undefined, toolKey: string | 
 
 export type FcCtx = { userId?: string | null; toolKey?: string | null };
 
-async function fcSearchRaw(query: string, opts: { limit?: number; lang?: string; location?: string } = {}, ctx: FcCtx = {}) {
+async function fcSearchRaw(query: string, opts: { limit?: number; lang?: string; location?: string; sources?: Array<"web" | "news" | "images"> } = {}, ctx: FcCtx = {}) {
   const limit = Math.min(opts.limit ?? 4, 10); // lowered default 6 -> 4
-  const payload: any = { query, limit, lang: opts.lang, ...(opts.location ? { location: opts.location } : {}), scrapeOptions: { formats: ["markdown"], onlyMainContent: true } };
+  const requestedSources = Array.isArray(opts.sources) && opts.sources.length
+    ? Array.from(new Set(opts.sources.filter((s) => ["web", "news", "images"].includes(s)))).slice(0, 3)
+    : null;
+  const payload: any = {
+    query, limit, lang: opts.lang,
+    ...(opts.location ? { location: opts.location } : {}),
+    ...(requestedSources ? { sources: requestedSources.map((type) => ({ type })) } : {}),
+    scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+  };
   const hash = hashKey("search", payload);
   const policy = await getPolicy();
 
@@ -186,10 +194,12 @@ async function fcSearchRaw(query: string, opts: { limit?: number; lang?: string;
   }
   const json = await res.json();
   await writeCache("search", hash, json);
-  await logUsage({ ...ctx, op: "search", units: limit, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
+  // Search uses 2 credits per 10 results; requesting page bodies adds one scrape credit per result.
+  const billableUnits = 2 * Math.ceil(limit / 10) + (payload.scrapeOptions ? limit : 0);
+  await logUsage({ ...ctx, op: "search", units: billableUnits, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
   try {
     const { logFirecrawlSpend } = await import("./spend.server");
-    await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units: limit, latencyMs: latency, endpoint: "fc.search" });
+    await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units: billableUnits, latencyMs: latency, endpoint: "fc.search" });
   } catch {}
   return json;
 }
@@ -342,14 +352,19 @@ export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?:
 }
 
 /** Search with fallback chain. Result carries `fetch_source`. */
-export async function fcSearch(query: string, opts: { limit?: number; lang?: string; location?: string } = {}, ctx: FcCtx = {}) {
+export async function fcSearch(query: string, opts: { limit?: number; lang?: string; location?: string; sources?: Array<"web" | "news" | "images"> } = {}, ctx: FcCtx = {}) {
   let last: unknown = null;
   for (const src of searchOrder(available())) {
     try {
       let r: any;
       if (src === "firecrawl") r = await fcSearchRaw(query, opts, ctx);
       else { const { adSearch } = await import("./apidirect.server"); r = await adSearch(query, Math.min(opts.limit ?? 4, 10), FETCH_TIMEOUT_MS); }
-      if (r && typeof r === "object") r.fetch_source = src;
+      if (r && typeof r === "object") {
+        r.fetch_source = src;
+        if (src !== "firecrawl" && opts.sources?.some((s) => s !== "web")) {
+          r.source_profile_warning = "selected_source_profile_unavailable_on_fallback";
+        }
+      }
       return r;
     } catch (e) { last = e; }
   }
