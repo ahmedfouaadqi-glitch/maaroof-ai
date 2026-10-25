@@ -40,7 +40,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
         </button>
         {NAV.map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={n.tab ? path === "/workspace" && tab === n.tab : path === n.to} compact={false} iconOnly={collapsed} />)}
       </aside>
-      <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
+      <div className="min-w-0 flex-1 pb-28 md:pb-0">{children}</div>
       <nav className="fixed inset-x-3 bottom-3 z-40 flex rounded-2xl border border-border bg-card/90 shadow-lg backdrop-blur-md md:hidden">
         {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "skills", "extras", "settings"].includes(tab))} compact />)}
       </nav>
