@@ -124,6 +124,179 @@ const escapeHtml = (s: any) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+export type ExportSummaryMetric = { label: string; value: number };
+export type ExportScoredItem = { section: string; title: string; score: number; status: string };
+export type ExportExecutiveSummary = {
+  heading: string;
+  metrics: ExportSummaryMetric[];
+  measuredHeading: string;
+  sectionLabel: string;
+  itemLabel: string;
+  scoreLabel: string;
+  statusLabel: string;
+  measuredItems: ExportScoredItem[];
+  omittedMeasuredCount: number;
+  unmeasuredHeading: string;
+  unmeasuredItems: Array<{ section: string; title: string; status: string }>;
+  omittedUnmeasuredCount: number;
+  note: string;
+};
+
+const SUMMARY_TEXT: Record<ExportLang, {
+  heading: string; sections: string; scored: string; unmeasured: string; links: string;
+  measuredHeading: string; section: string; item: string; score: string; status: string;
+  unmeasuredHeading: string; note: string;
+}> = {
+  ar: {
+    heading: "الملخص التنفيذي", sections: "الأقسام", scored: "المؤشرات ذات الدرجة", unmeasured: "المؤشرات غير المقاسة", links: "الروابط المسجلة",
+    measuredHeading: "درجات مسجلة في التقرير", section: "القسم", item: "المؤشر", score: "الدرجة", status: "الحالة",
+    unmeasuredHeading: "مؤشرات بلا درجة رقمية", note: "يعرض هذا الملخص قيماً موجودة في التقرير فقط؛ لا يحسب متوسطاً بين محاور مختلفة ولا يستنتج نتائج جديدة.",
+  },
+  en: {
+    heading: "Executive summary", sections: "Sections", scored: "Scored indicators", unmeasured: "Unmeasured indicators", links: "Recorded links",
+    measuredHeading: "Scores recorded in this report", section: "Section", item: "Indicator", score: "Score", status: "Status",
+    unmeasuredHeading: "Indicators without numeric scores", note: "This summary uses values already present in the report. It does not average different dimensions or infer new findings.",
+  },
+  ku: {
+    heading: "پوختەی جێبەجێکردن", sections: "بەشەکان", scored: "پێوەرە نمرەدارەکان", unmeasured: "پێوەرە پێوانەنەکراوەکان", links: "بەستەرە تۆمارکراوەکان",
+    measuredHeading: "نمرە تۆمارکراوەکانی ڕاپۆرت", section: "بەش", item: "پێوەر", score: "نمرە", status: "دۆخ",
+    unmeasuredHeading: "پێوەرەکانی بێ نمرەی ژمارەیی", note: "ئەم پوختەیە تەنها بەها تۆمارکراوەکانی ڕاپۆرت بەکاردەهێنێت؛ ناوەندی تەوەرە جیاوازەکان هەژمار ناکات و ئەنجامی نوێ ناگرێتەوە.",
+  },
+};
+
+function reportLinks(payload: ExportPayload): string[] {
+  const hay = JSON.stringify({ sections: payload.sections, engineAnswers: payload.engineAnswers || [] });
+  const links = hay.match(/https?:\/\/[^\s"'<>\\)\]]+/g) || [];
+  return Array.from(new Set(links.map((url) => url.replace(/[.,;:!?،؛]+$/, ""))));
+}
+
+/** All summary measures come from existing report content; scores are never averaged across unlike dimensions. */
+export function buildExportExecutiveSummary(payload: ExportPayload): ExportExecutiveSummary {
+  const lang = payload.lang || "ar";
+  const T = SUMMARY_TEXT[lang];
+  const cards = (payload.sections || []).flatMap((section) =>
+    section.kind === "cards"
+      ? (section.cards || []).map((card) => ({ section: section.heading, title: card.title, score: card.score, status: card.status || "" }))
+      : [],
+  );
+  const measured = cards.filter((card): card is { section: string; title: string; score: number; status: string } =>
+    typeof card.score === "number" && Number.isFinite(card.score),
+  );
+  const unmeasured = cards.filter((card) => typeof card.score !== "number" || !Number.isFinite(card.score));
+  const links = reportLinks(payload);
+  return {
+    heading: T.heading,
+    metrics: [
+      { label: T.sections, value: (payload.sections || []).length },
+      { label: T.scored, value: measured.length },
+      { label: T.unmeasured, value: unmeasured.length },
+      { label: T.links, value: links.length },
+    ],
+    measuredHeading: T.measuredHeading,
+    sectionLabel: T.section,
+    itemLabel: T.item,
+    scoreLabel: T.score,
+    statusLabel: T.status,
+    measuredItems: measured.slice(0, 6),
+    omittedMeasuredCount: Math.max(0, measured.length - 6),
+    unmeasuredHeading: T.unmeasuredHeading,
+    unmeasuredItems: unmeasured.slice(0, 3).map((card) => ({ section: card.section, title: card.title, status: card.status })),
+    omittedUnmeasuredCount: Math.max(0, unmeasured.length - 3),
+    note: T.note,
+  };
+}
+
+export function splitTextForSlides(value: string, maxChars = 900): string[] {
+  const text = String(value || "");
+  if (!text) return [""];
+  const limit = Math.max(100, Math.floor(maxChars));
+  const chunks: string[] = [];
+  let offset = 0;
+  while (offset < text.length) {
+    let end = Math.min(text.length, offset + limit);
+    if (end < text.length) {
+      const newline = text.lastIndexOf("\n", end);
+      const space = text.lastIndexOf(" ", end);
+      const boundary = Math.max(newline, space);
+      if (boundary > offset + Math.floor(limit * 0.55)) end = boundary;
+    }
+    if (end <= offset) end = Math.min(text.length, offset + limit);
+    chunks.push(text.slice(offset, end));
+    offset = end;
+  }
+  return chunks;
+}
+
+const CSV_HEADERS: Record<ExportLang, string[]> = {
+  ar: ["نوع السجل", "القسم", "العنصر", "المعيار", "القيمة", "الدرجة", "الحالة", "الأدلة", "الملاحظات"],
+  en: ["record_type", "section", "item", "metric", "value", "score", "status", "evidence", "notes"],
+  ku: ["جۆری تۆمار", "بەش", "بابەت", "پێوەر", "بەها", "نمرە", "دۆخ", "بەڵگە", "تێبینی"],
+};
+
+function csvCell(value: unknown): string {
+  let text = String(value ?? "");
+  if (/^[\t\r ]*[=+@]/.test(text) || /^[\t\r ]*-[=+@]/.test(text)) text = "'" + text;
+  return /[",\n;\r]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+
+/** Normalized CSV with one stable schema for every section and card type. */
+export function payloadToCSV(payload: ExportPayload, generatedAt = new Date().toISOString()): string {
+  const lang = payload.lang || "ar";
+  const rows: unknown[][] = [CSV_HEADERS[lang]];
+  const add = (type: string, section: string, item = "", metric = "", value: unknown = "", score: unknown = "", status = "", evidence = "", notes = "") =>
+    rows.push([type, section, item, metric, value, score, status, evidence, notes]);
+  add("metadata", "", "title", "", payload.title);
+  if (payload.subtitle) add("metadata", "", "subtitle", "", payload.subtitle);
+  add("metadata", "", "generated_at", "", generatedAt);
+  const who = identityLine(payload, lang);
+  if (who) add("metadata", "", "identity", "", who);
+  add("metadata", "", "brand", "", BRAND);
+  add("metadata", "", "disclaimer", "", DISCLAIMER[lang]);
+  const summary = buildExportExecutiveSummary(payload);
+  summary.metrics.forEach((metric) => add("summary_metric", summary.heading, metric.label, "", metric.value));
+  for (const section of payload.sections) {
+    if (section.kind === "kv" && section.rows) {
+      section.rows.forEach(([key, value]) => add("kv", section.heading, String(key), "", value));
+    } else if (section.kind === "text" && section.text) {
+      section.text.split(/\r?\n/).forEach((line, index) => { if (line) add("text", section.heading, String(index + 1), "", line); });
+    } else if (section.kind === "list" && section.list) {
+      section.list.forEach((item, index) => add("list", section.heading, String(index + 1), "", item));
+    } else if (section.kind === "table" && section.table) {
+      section.table.data.forEach((row, index) => {
+        const record = Object.fromEntries(section.table!.columns.map((column, columnIndex) => [column, row[columnIndex] ?? ""]));
+        add("table_row", section.heading, String(index + 1), "", JSON.stringify(record));
+      });
+    } else if (section.kind === "cards" && section.cards) {
+      section.cards.forEach((card) => {
+        const evidence = (card.evidence || []).join(" | ");
+        const notes = (card.notes || []).join(" | ");
+        if (card.fields?.length) {
+          card.fields.forEach(([metric, value]) => add("card_metric", section.heading, card.title, metric, value, card.score ?? "", card.status || "", evidence, notes));
+        } else {
+          add("card", section.heading, card.title, "", "", card.score ?? "", card.status || "", evidence, notes);
+        }
+      });
+    }
+  }
+  return "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+}
+
+export function buildExportJsonDocument(payload: ExportPayload, generatedAt = new Date().toISOString()) {
+  const lang = payload.lang || "ar";
+  return {
+    schema_version: 2,
+    ...payload,
+    brand: BRAND,
+    site: SITE,
+    site_url: SITE_URL,
+    ...(payload.identity?.showLogo !== false ? { logo_url: LOGO_URL } : {}),
+    generated_at: generatedAt,
+    language: lang,
+    executive_summary: buildExportExecutiveSummary(payload),
+    disclaimer: DISCLAIMER[lang],
+  };
+}
+
 function brandHeaderHtml(lang: ExportLang, payload: ExportPayload, logoData: string | null) {
   const showLogo = payload.identity?.showLogo !== false;
   const who = identityLine(payload, lang);
@@ -191,6 +364,31 @@ function sectionHtml(s: ExportSection, lang: ExportLang): string {
   return h;
 }
 
+function executiveSummaryHtml(payload: ExportPayload): string {
+  if (!payload.sections?.length) return "";
+  const summary = buildExportExecutiveSummary(payload);
+  const metrics = summary.metrics.map((metric) =>
+    '<div class="summary-metric"><span>' + escapeHtml(metric.label) + '</span><strong>' + escapeHtml(metric.value) + '</strong></div>'
+  ).join("");
+  const measured = summary.measuredItems.length
+    ? '<h3>' + escapeHtml(summary.measuredHeading) + '</h3><table class="summary-table"><thead><tr>' +
+      [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel].map((label) => '<th>' + escapeHtml(label) + '</th>').join("") +
+      '</tr></thead><tbody>' + summary.measuredItems.map((item) => '<tr><td>' + escapeHtml(item.section) + '</td><td>' +
+        escapeHtml(item.title) + '</td><td class="summary-score">' + escapeHtml(item.score) + '/100</td><td>' +
+        escapeHtml(item.status || "—") + '</td></tr>').join("") + '</tbody></table>' +
+      (summary.omittedMeasuredCount ? '<p class="summary-footnote">' + summary.omittedMeasuredCount + ' additional scored indicators remain in the detailed report.</p>' : "")
+    : "";
+  const unmeasured = summary.unmeasuredItems.length
+    ? '<h3>' + escapeHtml(summary.unmeasuredHeading) + '</h3><ul>' + summary.unmeasuredItems.map((item) =>
+        '<li><strong>' + escapeHtml(item.title) + '</strong>' +
+        (item.status ? ' — ' + escapeHtml(item.status) : "") + ' <span>(' + escapeHtml(item.section) + ')</span></li>'
+      ).join("") + '</ul>' +
+      (summary.omittedUnmeasuredCount ? '<p class="summary-footnote">' + summary.omittedUnmeasuredCount + ' additional unmeasured indicators remain in the detailed report.</p>' : "")
+    : "";
+  return '<section class="executive-summary"><h2>' + escapeHtml(summary.heading) + '</h2><div class="summary-metrics">' +
+    metrics + '</div>' + measured + unmeasured + '<p class="summary-note">' + escapeHtml(summary.note) + '</p></section>';
+}
+
 /** Open a branded printable HTML report and trigger the browser's PDF print dialog. */
 export async function exportToPDF(payload: ExportPayload) {
   const lang = payload.lang || "ar";
@@ -225,6 +423,18 @@ export async function exportToPDF(payload: ExportPayload) {
   table.data th { background:#4338ca; color:#fff; padding:6px 8px; border:1px solid #312e81; font-weight:600; text-align:${dir === "rtl" ? "right" : "left"}; }
   table.data td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align: top; }
   table.data tr:nth-child(even) td { background:#f8fafc; }
+  .executive-summary { margin: 18px 0 24px; padding: 14px; border: 1px solid #dbe4f0; border-radius: 12px; background: #fbfdff; break-inside: avoid; page-break-inside: avoid; }
+  .summary-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:8px 0 14px; }
+  .summary-metric { border:1px solid #dbe4f0; border-radius:8px; padding:8px; background:#fff; min-width:0; }
+  .summary-metric span { display:block; font-size:9px; color:#64748b; }
+  .summary-metric strong { display:block; font-size:19px; color:#0f2454; overflow-wrap:anywhere; }
+  .executive-summary h3 { margin:12px 0 5px; font-size:11px; color:#334155; }
+  table.summary-table { font-size:9px; margin-bottom:8px; }
+  table.summary-table th { background:#eef2ff; color:#312e81; text-align:${dir === "rtl" ? "right" : "left"}; padding:5px; border:1px solid #dbe4f0; }
+  table.summary-table td { padding:5px; border:1px solid #e2e8f0; vertical-align:top; overflow-wrap:anywhere; }
+  .summary-score { font-weight:800; color:#312e81; white-space:nowrap; }
+  .summary-footnote, .summary-note { margin:6px 0 0; font-size:9px; color:#64748b; }
+  .executive-summary ul { margin:4px 0; }
   .audit-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px; }
   .audit-card { border:1px solid #dbe4f0; border-radius:11px; padding:10px; break-inside:avoid; page-break-inside:avoid; background:#fff; }
   .audit-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
@@ -266,6 +476,7 @@ export async function exportToPDF(payload: ExportPayload) {
   ${brandHeaderHtml(lang, payload, logoData)}
   <h1>${escapeHtml(payload.title)}</h1>
   ${payload.subtitle ? `<div class="subtitle">${escapeHtml(payload.subtitle)}</div>` : ""}
+  ${executiveSummaryHtml(payload)}
   ${payload.sections.map((section) => sectionHtml(section, lang)).join("")}
   <footer class="disclaimer">
     ${identityLine(payload, lang) ? `<div class="who">${escapeHtml(identityLine(payload, lang))}</div>` : ""}
@@ -307,9 +518,56 @@ export async function exportToExcel(payload: ExportPayload) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND;
   workbook.subject = payload.title;
+  const logoData = await optionalLogo(payload);
+  const createUniqueSheetName = (requested: string) => {
+    const base = requested.slice(0, 31).replace(/[\\/?*\[\]:]/g, "_").trim() || "Data";
+    let candidate = base;
+    let suffix = 2;
+    while (workbook.getWorksheet(candidate)) {
+      const tail = " (" + suffix + ")";
+      candidate = base.slice(0, 31 - tail.length) + tail;
+      suffix += 1;
+    }
+    return candidate;
+  };
+  const summary = buildExportExecutiveSummary(payload);
+  const summarySheetName = lang === "en" ? "Executive Summary" : lang === "ku" ? "پوختە" : "الملخص التنفيذي";
+  const summarySheet = workbook.addWorksheet(summarySheetName, { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 1 }] });
+  summarySheet.columns = [{ width: 34 }, { width: 24 }, { width: 34 }, { width: 20 }];
+  summarySheet.mergeCells("A1:D1");
+  summarySheet.getCell("A1").value = summary.heading;
+  summarySheet.getCell("A1").font = { name: "Arial", size: 20, bold: true, color: { argb: "FF0F2454" } };
+  summarySheet.addRow([payload.title]);
+  if (payload.subtitle) summarySheet.addRow([payload.subtitle]);
+  summarySheet.addRow([UI[lang].generated, new Date().toLocaleString()]);
+  summarySheet.addRow([]);
+  const summaryHeader = lang === "en" ? ["Indicator", "Value"] : lang === "ku" ? ["پێوەر", "بەها"] : ["المؤشر", "القيمة"];
+  const metricHeader = summarySheet.addRow(summaryHeader);
+  metricHeader.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+  metricHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+  summary.metrics.forEach((metric) => summarySheet.addRow([metric.label, metric.value]));
+  if (summary.measuredItems.length) {
+    summarySheet.addRow([]);
+    summarySheet.addRow([summary.measuredHeading]);
+    const scoreHeader = summarySheet.addRow([summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel]);
+    scoreHeader.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+    scoreHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+    summary.measuredItems.forEach((item) => summarySheet.addRow([item.section, item.title, item.score, item.status]));
+    if (summary.omittedMeasuredCount) summarySheet.addRow([lang === "en" ? "Additional scored indicators remain in detailed sheets" : lang === "ku" ? "پێوەرە نمرەدارەکانی تر لە شیتە وردەکارییەکانن" : "مؤشرات أخرى بدرجات رقمية موجودة في أوراق التفاصيل", summary.omittedMeasuredCount]);
+  }
+  if (summary.unmeasuredItems.length) {
+    summarySheet.addRow([]);
+    summarySheet.addRow([summary.unmeasuredHeading]);
+    const unmeasuredHeader = summarySheet.addRow([summary.sectionLabel, summary.itemLabel, summary.statusLabel]);
+    unmeasuredHeader.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+    unmeasuredHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF64748B" } };
+    summary.unmeasuredItems.forEach((item) => summarySheet.addRow([item.section, item.title, item.status]));
+  }
+  summarySheet.addRow([]);
+  summarySheet.addRow([summary.note]);
+  summarySheet.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" }; });
   const sheet = workbook.addWorksheet("Report", { views: [{ rightToLeft: lang !== "en" }] });
   sheet.columns = [{ width: 28 }, { width: 60 }, { width: 28 }, { width: 28 }];
-  const logoData = await optionalLogo(payload);
   if (logoData) {
     const imageId = workbook.addImage({ base64: logoData, extension: "png" });
     sheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 72, height: 72 } });
@@ -357,9 +615,10 @@ export async function exportToExcel(payload: ExportPayload) {
   payload.sections.forEach((section, index) => {
     if (section.kind === "cards" && section.cards) {
       const name = (section.heading || "Cards " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
-      const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
+      const dataSheet = workbook.addWorksheet(createUniqueSheetName(name), { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 1 }] });
       const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
       dataSheet.addRow(columns);
+      dataSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
       section.cards.forEach((card) => {
         if (card.fields?.length) card.fields.forEach(([metric, value]) =>
           dataSheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, (card.evidence || []).join(" | "), (card.notes || []).join(" | ")])
@@ -374,8 +633,9 @@ export async function exportToExcel(payload: ExportPayload) {
     }
     if (section.kind !== "table" || !section.table) return;
     const name = (section.heading || "Table " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
-    const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
+    const dataSheet = workbook.addWorksheet(createUniqueSheetName(name), { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 1 }] });
     dataSheet.addRows([section.table.columns, ...section.table.data]);
+    dataSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: Math.max(1, section.table.columns.length) } };
     dataSheet.columns = section.table.columns.map(() => ({ width: 24 }));
     dataSheet.getRow(1).font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
     dataSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
@@ -386,61 +646,9 @@ export async function exportToExcel(payload: ExportPayload) {
 }
 
 /** Build and download a CSV file. Flattens sections (kv/list/text/table) into rows. */
+/** Download the normalized CSV representation shared by every section type. */
 export function exportToCSV(payload: ExportPayload) {
-  const lang = payload.lang || "ar";
-  const cardLabels = CARD_LABELS[lang];
-  const lines: string[] = [];
-  const esc = (v: any) => {
-    const s = String(v ?? "");
-    if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-    return s;
-  };
-  lines.push(esc(BRAND));
-  lines.push(esc(payload.title));
-  if (payload.subtitle) lines.push(esc(payload.subtitle));
-  lines.push(esc(`${UI[lang].generated}: ${new Date().toLocaleString()}`));
-  if (identityLine(payload, lang)) lines.push(esc(identityLine(payload, lang)));
-  lines.push(esc(`${BRAND} · ${SITE}`));
-  if (payload.identity?.showLogo !== false) lines.push(esc(`Logo: ${LOGO_URL}`));
-  lines.push("");
-
-
-  payload.sections.forEach((s) => {
-    lines.push(esc(`# ${s.heading}`));
-    if (s.kind === "kv" && s.rows) {
-      lines.push(["key", "value"].map(esc).join(","));
-      s.rows.forEach(([k, v]) => lines.push([esc(k), esc(v)].join(",")));
-    } else if (s.kind === "text" && s.text) {
-      s.text.split("\n").forEach((l) => lines.push(esc(l)));
-    } else if (s.kind === "list" && s.list) {
-      s.list.forEach((x) => lines.push(esc(x)));
-    } else if (s.kind === "table" && s.table) {
-      lines.push(s.table.columns.map(esc).join(","));
-      s.table.data.forEach((r) => lines.push(r.map(esc).join(",")));
-    } else if (s.kind === "cards" && s.cards) {
-      const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
-      lines.push(columns.map(esc).join(","));
-      s.cards.forEach((card) => {
-        const evidence = (card.evidence || []).join(" | ");
-        const notes = (card.notes || []).join(" | ");
-        if (card.fields?.length) card.fields.forEach(([metric, value]) =>
-          lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, evidence, notes].map(esc).join(","))
-        );
-        else lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", "", "", evidence, notes].map(esc).join(","));
-      });
-    }
-    lines.push("");
-  });
-  lines.push(esc(DISCLAIMER[lang]));
-
-  const csv = "\ufeff" + lines.join("\n"); // BOM for Excel UTF-8
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${payload.title.replace(/[\\/?*[\]:]/g, "_")}-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  download(payloadToCSV(payload), "text/csv;charset=utf-8", "csv", payload.title);
 }
 
 /* ------------------------------------------------------------------ */
@@ -460,52 +668,68 @@ function download(content: BlobPart, mime: string, ext: string, title: string) {
 
 /** Raw structured export — for pipelines and archiving. */
 export function exportToJSON(payload: ExportPayload) {
-  const lang = payload.lang || "ar";
-  const body = JSON.stringify(
-    {
-      brand: BRAND,
-      site: SITE,
-      site_url: SITE_URL,
-      ...(payload.identity?.showLogo !== false ? { logo_url: LOGO_URL } : {}),
-      generated_at: new Date().toISOString(),
-      language: lang,
-      ...payload,
-      disclaimer: DISCLAIMER[lang],
-    },
-    null, 2,
-  );
+  const body = JSON.stringify(buildExportJsonDocument(payload), null, 2);
   download(body, "application/json;charset=utf-8", "json", payload.title);
 }
 
-export function payloadToMarkdown(payload: ExportPayload): string {
+export function payloadToMarkdown(payload: ExportPayload, generatedAt = new Date().toISOString()): string {
   const lang = payload.lang || "ar";
   const cardLabels = CARD_LABELS[lang];
-  const out: string[] = [`# ${payload.title}`];
-  if (payload.subtitle) out.push(`_${payload.subtitle}_`);
-  out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`);
-  if (payload.identity?.showLogo !== false) out.push(`> Logo: ${LOGO_URL}`);
-  if (identityLine(payload, lang)) out.push(`> ${identityLine(payload, lang)}`);
-  out.push("");
+  const summary = buildExportExecutiveSummary(payload);
+  const yamlValue = (value: string) => '"' + value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, " ") + '"';
+  const mdCell = (value: unknown) => String(value ?? "").replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+  const out: string[] = [
+    "---",
+    "schema_version: 2",
+    "title: " + yamlValue(payload.title),
+    "language: " + lang,
+    "generated_at: " + yamlValue(generatedAt),
+    "---",
+    "",
+    "# " + payload.title,
+  ];
+  if (payload.subtitle) out.push("_" + payload.subtitle + "_");
+  out.push("> " + BRAND + " · " + SITE + " — " + UI[lang].generated + " " + generatedAt);
+  if (payload.identity?.showLogo !== false) out.push("> Logo: " + LOGO_URL);
+  if (identityLine(payload, lang)) out.push("> " + identityLine(payload, lang));
+  out.push("", "## " + summary.heading);
+  out.push("| Indicator | Value |", "|---|---|");
+  summary.metrics.forEach((metric) => out.push("| " + mdCell(metric.label) + " | " + mdCell(metric.value) + " |"));
+  if (summary.measuredItems.length) {
+    out.push("", "### " + summary.measuredHeading);
+    out.push("| " + [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel].map(mdCell).join(" | ") + " |");
+    out.push("|---|---|---:|---|");
+    summary.measuredItems.forEach((item) => out.push("| " + [item.section, item.title, item.score + "/100", item.status].map(mdCell).join(" | ") + " |"));
+    if (summary.omittedMeasuredCount) out.push("", "_Additional scored indicators remain in the detailed report: " + summary.omittedMeasuredCount + "._");
+  }
+  if (summary.unmeasuredItems.length) {
+    out.push("", "### " + summary.unmeasuredHeading);
+    summary.unmeasuredItems.forEach((item) => out.push("- **" + mdCell(item.title) + "**" + (item.status ? " — " + mdCell(item.status) : "") + " (" + mdCell(item.section) + ")"));
+    if (summary.omittedUnmeasuredCount) out.push("- " + summary.omittedUnmeasuredCount + " additional indicators remain in the detailed sections.");
+  }
+  out.push("", "> " + summary.note, "");
 
-  for (const s of payload.sections) {
-    out.push(`## ${s.heading}`);
-    if (s.kind === "text" && s.text) out.push(s.text, "");
-    else if (s.kind === "list" && s.list) out.push(...s.list.map((x) => `- ${x}`), "");
-    else if (s.kind === "kv" && s.rows) {
-      out.push("| | |", "|---|---|", ...s.rows.map(([k, v]) => `| ${k} | ${v} |`), "");
-    } else if (s.kind === "table" && s.table) {
+  for (const section of payload.sections) {
+    out.push("## " + section.heading);
+    if (section.kind === "text" && section.text) out.push(section.text, "");
+    else if (section.kind === "list" && section.list) out.push(...section.list.map((item) => "- " + item), "");
+    else if (section.kind === "kv" && section.rows) {
+      out.push("| Field | Value |", "|---|---|", ...section.rows.map(([key, value]) => "| " + mdCell(key) + " | " + mdCell(value) + " |"), "");
+    } else if (section.kind === "table" && section.table) {
       out.push(
-        `| ${s.table.columns.join(" | ")} |`,
-        `| ${s.table.columns.map(() => "---").join(" | ")} |`,
-        ...s.table.data.map((r) => `| ${r.join(" | ")} |`),
+        "| " + section.table.columns.map(mdCell).join(" | ") + " |",
+        "| " + section.table.columns.map(() => "---").join(" | ") + " |",
+        ...section.table.data.map((row) => "| " + row.map(mdCell).join(" | ") + " |"),
         "",
       );
-    } else if (s.kind === "cards" && s.cards) {
-      for (const card of s.cards) {
+    } else if (section.kind === "cards" && section.cards) {
+      for (const card of section.cards) {
         out.push("### " + card.title);
         if (card.subtitle) out.push("_" + card.subtitle + "_");
         out.push("- " + cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"));
-        if (card.fields?.length) out.push("| " + cardLabels.metric + " | " + cardLabels.value + " |", "|---|---|", ...card.fields.map(([key, value]) => "| " + key + " | " + value + " |"));
+        if (card.fields?.length) {
+          out.push("| " + cardLabels.metric + " | " + cardLabels.value + " |", "|---|---|", ...card.fields.map(([key, value]) => "| " + mdCell(key) + " | " + mdCell(value) + " |"));
+        }
         if (card.evidence?.length) out.push("", cardLabels.evidence + ":", ...card.evidence.map((item) => "- " + item));
         if (card.notes?.length) out.push("", cardLabels.notes + ":", ...card.notes.map((item) => "- " + item));
         out.push("");
@@ -571,6 +795,31 @@ export async function exportToWord(payload: ExportPayload) {
   if (payload.subtitle) content.push(paragraph(payload.subtitle, { size: 22, color: "475569" }));
   content.push(paragraph(`${UI[lang].generated}: ${new Date().toLocaleString()}`, { size: 18, color: "64748B" }));
   if (identityLine(payload, lang)) content.push(paragraph(identityLine(payload, lang), { size: 18, color: "64748B" }));
+  const summary = buildExportExecutiveSummary(payload);
+  if (payload.sections.length) {
+    content.push(paragraph(summary.heading, { heading: HeadingLevel.HEADING_2, bold: true, size: 28, color: "4338CA" }));
+    const summaryHeader = lang === "en" ? ["Indicator", "Value"] : lang === "ku" ? ["پێوەر", "بەها"] : ["المؤشر", "القيمة"];
+    content.push(makeTable(summaryHeader, summary.metrics.map((metric) => [metric.label, metric.value])));
+    if (summary.measuredItems.length) {
+      content.push(paragraph(summary.measuredHeading, { bold: true, size: 22, color: "0F2454" }));
+      content.push(makeTable(
+        [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel],
+        summary.measuredItems.map((item) => [item.section, item.title, item.score, item.status]),
+      ));
+      if (summary.omittedMeasuredCount) content.push(paragraph(
+        summary.omittedMeasuredCount + (lang === "en" ? " more scored indicators are listed in the detailed sections." : lang === "ku" ? " پێوەری نمرەدار لە بەشە وردەکارییەکاندا هەن." : " مؤشرات إضافية بدرجات رقمية موجودة في الأقسام التفصيلية."),
+        { size: 18, color: "64748B" },
+      ));
+    }
+    if (summary.unmeasuredItems.length) {
+      content.push(paragraph(summary.unmeasuredHeading, { bold: true, size: 22, color: "0F2454" }));
+      content.push(makeTable(
+        [summary.sectionLabel, summary.itemLabel, summary.statusLabel],
+        summary.unmeasuredItems.map((item) => [item.section, item.title, item.status]),
+      ));
+    }
+    content.push(paragraph(summary.note, { size: 18, color: "64748B" }));
+  }
   payload.sections.forEach((section) => {
     content.push(paragraph(section.heading, { heading: HeadingLevel.HEADING_2, bold: true, size: 27, color: "4338CA" }));
     if (section.kind === "text" && section.text) section.text.split("\n").forEach((line) => content.push(paragraph(line)));
@@ -645,7 +894,46 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   const cover = pptx.addSlide();
   decorate(cover);
   cover.addText(payload.title, { x: 0.5, y: 2, w: 9, h: 1, fontSize: 30, bold: true, align: "center" });
-  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}\n${identityLine(payload, lang)}`, { x: 0.5, y: 3.1, w: 9, h: 1.2, fontSize: 14, align: "center", color: "666666" });
+  cover.addText(`${payload.subtitle || ""}\n${BRAND} · ${SITE}\n${identityLine(payload, lang)}`, { x: 0.5, y: 3.1, w: 9, h: 1.2, fontSize: 14, align: "center", color: "666666", fit: "shrink" });
+
+  const summary = buildExportExecutiveSummary(payload);
+  if (payload.sections.length) {
+    const summaryLines = [];
+    if (summary.measuredItems.length) {
+      summaryLines.push(summary.measuredHeading);
+      summary.measuredItems.forEach((item) => summaryLines.push(
+        "• " + item.title + " — " + item.score + "/100" + (item.status ? " · " + item.status : "") + " (" + item.section + ")"
+      ));
+      if (summary.omittedMeasuredCount) summaryLines.push(
+        summary.omittedMeasuredCount + (lang === "en" ? " additional scored indicators are in the detail slides." : lang === "ku" ? " پێوەری نمرەدار لە سلایدە وردەکارییەکان هەن." : " مؤشرات أخرى بدرجات رقمية موجودة في شرائح التفاصيل.")
+      );
+    }
+    if (summary.unmeasuredItems.length) {
+      summaryLines.push(summary.unmeasuredHeading);
+      summary.unmeasuredItems.forEach((item) => summaryLines.push(
+        "• " + item.title + (item.status ? " — " + item.status : "") + " (" + item.section + ")"
+      ));
+      if (summary.omittedUnmeasuredCount) summaryLines.push(
+        summary.omittedUnmeasuredCount + (lang === "en" ? " additional unmeasured indicators are in the detail slides." : lang === "ku" ? " پێوەری پێوانەنەکراوی تر لە سلایدە وردەکارییەکان هەن." : " مؤشرات إضافية غير مقاسة موجودة في شرائح التفاصيل.")
+      );
+    }
+    const summaryPages = splitTextForSlides(summaryLines.join("\n") || summary.note, 700);
+    summaryPages.forEach((page, pageIndex) => {
+      const slide = pptx.addSlide();
+      decorate(slide);
+      slide.addText(summary.heading + (summaryPages.length > 1 ? " (" + (pageIndex + 1) + "/" + summaryPages.length + ")" : ""), { x: 0.4, y: 0.28, w: 9.2, h: 0.5, fontSize: 20, bold: true, color: "4338CA" });
+      if (pageIndex === 0) {
+        summary.metrics.forEach((metric, index) => {
+          const x = 0.4 + index * 2.35;
+          slide.addShape(pptx.ShapeType.rect, { x, y: 0.95, w: 2.15, h: 0.83, fill: { color: "F8FAFC" }, line: { color: "D8E1EF", width: 1 } });
+          slide.addText(String(metric.value), { x: x + 0.08, y: 1.05, w: 1.99, h: 0.32, fontSize: 20, bold: true, align: "center", color: "0F2454", fit: "shrink" });
+          slide.addText(metric.label, { x: x + 0.08, y: 1.4, w: 1.99, h: 0.25, fontSize: 8, align: "center", color: "64748B", fit: "shrink" });
+        });
+      }
+      slide.addText(page, { x: 0.5, y: pageIndex === 0 ? 2.05 : 1.0, w: 9, h: pageIndex === 0 ? 2.6 : 3.55, fontSize: 10, valign: "top", color: "334155", fit: "shrink" });
+      slide.addText(summary.note, { x: 0.5, y: 4.78, w: 9, h: 0.32, fontSize: 7, color: "64748B", fit: "shrink" });
+    });
+  }
 
   const ROWS_PER_SLIDE = 14;
   const CHARS_PER_SLIDE = 1200;
@@ -653,20 +941,23 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   for (const s of payload.sections) {
     if (s.kind === "cards" && s.cards) {
       s.cards.forEach((card) => {
-        const slide = pptx.addSlide();
-        decorate(slide);
-        slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA" });
-        slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
-        slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid" });
-        if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B" });
-        slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
         const details = [
           cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"),
           ...(card.fields || []).map(([key, value]) => String(key) + ": " + String(value)),
           ...(card.evidence || []).map((item) => cardLabels.evidence + ": " + item),
           ...(card.notes || []).map((item) => cardLabels.note + ": " + item),
         ].join("\n");
-        slide.addText(details, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
+        const pages = splitTextForSlides(details, 720);
+        pages.forEach((page, pageIndex) => {
+          const slide = pptx.addSlide();
+          decorate(slide);
+          slide.addText(s.heading + (pages.length > 1 ? " (" + (pageIndex + 1) + "/" + pages.length + ")" : ""), { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA", fit: "shrink" });
+          slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
+          slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid", fit: "shrink" });
+          if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B", fit: "shrink" });
+          slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06, fit: "shrink" });
+          slide.addText(page, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
+        });
       });
       continue;
     }
@@ -689,15 +980,8 @@ export async function exportToPowerPoint(payload: ExportPayload) {
     const body = s.kind === "kv" && s.rows ? s.rows.map(([k, v]) => `• ${k}: ${v}`).join("\n")
       : s.kind === "list" && s.list ? s.list.map((x) => `• ${x}`).join("\n")
       : s.text || "";
-    // Split long text across slides so nothing is cut off.
-    const lines = body.split("\n");
-    const pages: string[] = [];
-    let buf = "";
-    for (const line of lines) {
-      if (buf && buf.length + line.length > CHARS_PER_SLIDE) { pages.push(buf); buf = ""; }
-      buf += (buf ? "\n" : "") + line;
-    }
-    if (buf || pages.length === 0) pages.push(buf);
+    // Split long paragraphs as well as line-based content to avoid overflow on a single line.
+    const pages = splitTextForSlides(body, CHARS_PER_SLIDE);
     pages.forEach((page, pi) => {
       const slide = pptx.addSlide();
       decorate(slide);
