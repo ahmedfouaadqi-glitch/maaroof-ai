@@ -1,14 +1,12 @@
 // Pure: decide skills from the task text when the user picked none.
 // Evidence-only — every chosen skill carries the exact words that triggered it.
 // No match => clarify (never guess).
-import { MAAROOF_SKILLS, recommendMaaroofSkills } from "./skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, normalizeSkillText } from "./skill-catalog";
 
-/** Tools that have a real executable route in the orchestrator. */
-export const EXECUTABLE_TOOLS = new Set([
-  "suggest", "geo_rewrite", "analyze", "research", "feasibility", "bizdev", "brand_boost", "what_if",
-  "applied_ranking", "visibility", "social_analysis", "compare", "company_email", "geo_strategist",
-  "competitor_monitor", "brand_authority", "known", "translate", "teach_space",
-]);
+import { EXECUTABLE_TOOL_KEYS } from "./tool-contracts";
+
+/** Derived from the canonical map of existing API routes and internal orchestrator runners. */
+export const EXECUTABLE_TOOLS = new Set(EXECUTABLE_TOOL_KEYS);
 
 export type SkillInference =
   | { kind: "selected"; skills: string[]; reasons: Record<string, string> }
@@ -20,16 +18,21 @@ const URL_RE = /https?:\/\/[^\s]+|\b[a-z0-9-]+\.(com|net|org|io|ai|iq|sa|ae)\b/i
 export function inferSkills(goal: string, selected: string[] = [], limit = 50): SkillInference {
   const valid = selected.filter((k) => MAAROOF_SKILLS.some((s) => s.key === k));
   if (valid.length) return { kind: "selected", skills: valid, reasons: Object.fromEntries(valid.map((k) => [k, "user_selected"])) };
-  const text = String(goal || "").toLowerCase();
+  const rawText = String(goal || "");
+  const text = normalizeSkillText(rawText);
+  const normalized = " " + text + " ";
   const reasons: Record<string, string> = {};
   const skills: string[] = [];
-  for (const s of recommendMaaroofSkills(text, limit)) {
-    const hits = s.keywords.filter((k) => text.includes(k.toLowerCase())).slice(0, 3);
+  for (const s of recommendMaaroofSkills(rawText, limit)) {
+    const hits = s.keywords.filter((k) => {
+      const normalizedKeyword = normalizeSkillText(k);
+      return !!normalizedKeyword && normalized.includes(" " + normalizedKeyword + " ");
+    }).slice(0, 3);
     if (!hits.length) continue;
     skills.push(s.key);
     reasons[s.key] = hits.join("، ");
   }
-  const url = text.match(URL_RE)?.[0];
+  const url = rawText.toLowerCase().match(URL_RE)?.[0];
   if (url && !skills.includes("entity_readiness") && skills.length < limit) {
     skills.push("entity_readiness");
     reasons.entity_readiness = url;
