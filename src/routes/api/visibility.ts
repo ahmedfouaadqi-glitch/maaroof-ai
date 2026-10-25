@@ -438,6 +438,43 @@ export const Route = createFileRoute("/api/visibility")({
                 businessImportance: 60,
                 language: lang,
               })));
+              if (probeMetrics) {
+                const { recordBenchmark } = await import("@/lib/maaroof/benchmark.server");
+                const subjectKind = workspaceId ? "workspace" as const : "platform" as const;
+                const benchmarkMetrics: Array<[string, number | null, number]> = [
+                  ["mention_rate", probeMetrics.mentionRate, probeMetrics.mentionSamples],
+                  ["citation_rate", probeMetrics.citationRate, probeMetrics.citationSamples],
+                  ["coverage_rate", probeMetrics.coverageRate, probeMetrics.attempted],
+                  ["average_position", probeMetrics.averagePosition, probeMetrics.mentionSamples],
+                ];
+                await Promise.allSettled(benchmarkMetrics.filter((row) => row[1] != null && row[2] > 0).map(([metric, value, sampleSize]) =>
+                  recordBenchmark({
+                    subject: brand,
+                    subjectKind,
+                    metric,
+                    value: Number(value),
+                    unit: metric.includes("rate") ? "%" : "rank",
+                    higherIsBetter: metric !== "average_position",
+                    userId,
+                    workspaceId,
+                    sampleSize,
+                    source: "visibility_live_model_probe",
+                    comparisonKey,
+                    meta: {
+                      comparison_key: comparisonKey,
+                      method_version: "visibility-live-model-probe-v1",
+                      prompt: q,
+                      language: lang,
+                      market: market.region,
+                      engines,
+                      attempted: probeMetrics?.attempted,
+                      successful: probeMetrics?.successful,
+                      direct_endpoint: "model_api_probe",
+                      consumer_surface_not_measured: true,
+                    },
+                  }),
+                ));
+              }
               return probeMetrics;
             };
             const measurementProtocol = () => ({
