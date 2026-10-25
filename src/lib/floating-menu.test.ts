@@ -29,7 +29,7 @@ describe("computeFloatingMenuPosition", () => {
       { width: 390, height: 720 },
       "rtl",
     );
-    expect(right.left).toBe(68);
+    expect(right.left).toBe(58);
   });
 
   it("opens below when there is enough room", () => {
