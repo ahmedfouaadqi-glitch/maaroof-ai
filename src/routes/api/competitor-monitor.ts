@@ -201,6 +201,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           if (newAlerts.length > 0) {
             const rows = newAlerts.map((a) => ({
               user_id: userId,
+              workspace_id: workspaceId,
               watch_id: id,
               severity: Math.abs(a.delta) >= 5 ? "high" : "info",
               target: a.target,
