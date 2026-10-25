@@ -12,7 +12,7 @@ import {
   type ExportFormat,
 } from "@/lib/content";
 import { useExportIdentity } from "@/lib/export-identity";
-import { engineAnswerSections, extractLinks, linksSection, packSections } from "@/lib/machine-pack";
+import { buildPack, engineAnswerSections, extractLinks, linksSection } from "@/lib/machine-pack";
 import { toast } from "sonner";
 import { collectExportTranslationPlan, applyExportTranslations } from "@/lib/export-content-translation";
 import { translateExportContent } from "@/lib/translate-export.functions";
@@ -60,6 +60,19 @@ const AUDIT_EXPORT_LABELS: Record<string, Record<"ar" | "en" | "ku", string>> = 
   needs_full_page_content: { ar: "يتطلب محتوى أعمق", en: "Full content required", ku: "ناوەڕۆکی زیاتر پێویستە" },
 };
 const auditExportText = (value: string, lang: "ar" | "en" | "ku") => AUDIT_EXPORT_LABELS[value]?.[lang] || value;
+function downloadMachineAsset(filename: string, content: string, mime: string) {
+  if (!content.trim()) return;
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 const isMachinePackSection = (heading: string) =>
   /machine-readable pack|حزمة قراءة الآلة|پاکێجی|schema\.org json-ld|faqpage schema|llms\.txt/i.test(heading);
 const isGlossarySection = (heading: string) => /^(Glossary|فەرهەنگ|معجم المصطلحات)$/i.test(heading);
@@ -94,7 +107,6 @@ export function ExportButtons({
   const [preparedPayload, setPreparedPayload] = useState<ExportPayload | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
-  const [includeMachineAssets, setIncludeMachineAssets] = useState(false);
   const [translateContent, setTranslateContent] = useState(false);
   const [exporting, setExporting] = useState(false);
   const triggerId = useId();
@@ -104,6 +116,15 @@ export function ExportButtons({
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
   const entity = preparedPayload?.entity;
   const hasMachineAssetData = Boolean(entity?.brand && (entity.site || entity.summary || entity.facts?.length || entity.faqs?.length));
+  const machineAssetPack = entity?.brand && hasMachineAssetData
+    ? buildPack({
+        brand: entity.brand,
+        site: entity.site,
+        summary: entity.summary,
+        lang: exportLang,
+        onboarding: { facts: (entity.facts || []).join("\n"), faqs: entity.faqs },
+      })
+    : null;
   const basePreviewSections = preparedPayload
     ? preparedPayload.sections.filter((section) =>
         !isMachinePackSection(section.heading) && !isGlossarySection(section.heading) && !isLinksAppendix(section.heading)
@@ -115,20 +136,10 @@ export function ExportButtons({
   const previewLinkSections = extractLinks(basePreviewSections).length
     ? [linksSection(basePreviewSections, exportLang)]
     : [];
-  const previewMachineSections = includeMachineAssets && entity?.brand && hasMachineAssetData
-    ? packSections({
-        brand: entity.brand,
-        site: entity.site,
-        summary: entity.summary,
-        lang: exportLang,
-        onboarding: { facts: (entity.facts || []).join("\n"), faqs: entity.faqs },
-      }, exportLang)
-    : [];
   const translationPreviewSections = preparedPayload ? [
     ...previewEngineSections,
     ...basePreviewSections,
     ...previewLinkSections,
-    ...previewMachineSections,
     { heading: "Export metadata", kind: "kv" as const, rows: [["Title", preparedPayload.title], ["Subtitle", preparedPayload.subtitle || ""]] as [string, string][] },
   ] : [];
   const translationPlan = collectExportTranslationPlan(translationPreviewSections);
@@ -181,7 +192,7 @@ export function ExportButtons({
       window.visualViewport?.removeEventListener("scroll", updatePosition);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [open, exportLang, previewLoading, preparedPayload, includeMachineAssets, translateContent]);
+  }, [open, exportLang, previewLoading, preparedPayload, translateContent]);
 
   if (!vis.loading && !vis.isWidgetVisible("results_export")) return null;
   if (override && !override.exports_enabled) return null;
@@ -211,7 +222,6 @@ export function ExportButtons({
     setPreparedPayload(null);
     setPreviewLoading(true);
     setPreviewError(false);
-    setIncludeMachineAssets(false);
     setTranslateContent(false);
     setOpen(true);
     Promise.resolve()
@@ -260,22 +270,6 @@ export function ExportButtons({
 
       const extra: ExportPayload["sections"] = [];
       if (extractLinks(loc).length > 0) extra.push(linksSection(loc, exportLang));
-
-      // Machine-readable assets are opt-in and use only the entity examined in this result.
-      // Do not fall back to the signed-in user's profile: an unrelated report must not inherit it.
-      if (includeMachineAssets && p.entity?.brand && hasMachineAssetData) {
-        extra.push(...packSections({
-          brand: p.entity.brand,
-          site: p.entity.site,
-          summary: p.entity.summary,
-          lang: exportLang,
-          onboarding: {
-            facts: (p.entity.facts || []).join("\n"),
-            faqs: p.entity.faqs,
-            // Result/citation links are deliberately not treated as official social profiles.
-          },
-        }, exportLang));
-      }
 
       const engineSecs = p.engineAnswers?.length
         ? engineAnswerSections({ probe: { answers: p.engineAnswers } }, exportLang)
@@ -418,19 +412,55 @@ export function ExportButtons({
               </p>
             </div>
 
-            {preparedPayload?.entity?.brand && hasMachineAssetData ? (
-              <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-xl border border-border bg-background/70 p-3">
-                <input type="checkbox" checked={includeMachineAssets} onChange={(event) => setIncludeMachineAssets(event.currentTarget.checked)} className="mt-0.5 accent-primary" />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2 text-xs font-semibold"><FileCode2 className="size-4 text-primary" />{exportLang === "en" ? "Append machine-readable asset drafts" : exportLang === "ku" ? "ڕەشنووسی فایلە تەکنیکییەکان زیاد بکە" : "إرفاق مسودات الأصول التقنية"}</span>
-                  <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{exportLang === "en" ? "Only generated from this report's entity. FAQPage is omitted without actual Q&A; nothing is published automatically." : exportLang === "ku" ? "تەنها لە زانیاریی قەوارەی ئەم ڕاپۆرتەوە دروست دەکرێت؛ بەبێ پرسیار و وەڵام FAQPage دروست ناکرێت." : "تُبنى من كيان هذا التقرير فقط. لا تُنشأ FAQPage دون أسئلة وأجوبة فعلية، ولا يُنشر شيء تلقائياً."}</span>
-                  <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">{exportLang === "en" ? "Structured asset contents (facts, Q&A, URLs and code) stay in their source form; the optional translation applies to report prose, not to rewrite website facts." : exportLang === "ku" ? "ناوەڕۆکی فایلە ڕێکخراوەکان (ڕاستی، پرسیار و وەڵام، بەستەر و کۆد) بە شێوەی سەرچاوەکە دەمێنێتەوە؛ وەرگێڕانی ئارەزوومەندانە تەنها بۆ دەقی ڕاپۆرتە." : "تبقى حقائق الأصول المنظمة وأسئلتها وروابطها وكودها كما وردت في المصدر؛ فالترجمة الاختيارية تخص نص التقرير، ولا تعيد صياغة حقائق الموقع."}</span>
-                </span>
-              </label>
+            {machineAssetPack && preparedPayload?.entity?.brand ? (
+              <div className="mb-3 rounded-xl border border-border bg-background/70 p-3">
+                <div className="mb-1 flex items-center gap-2 text-xs font-semibold">
+                  <FileCode2 className="size-4 text-primary" />
+                  {exportLang === "en" ? "Separate machine-readable files" : exportLang === "ku" ? "فایلە جیاوازەکانی خوێندنەوەی ئامێر" : "ملفات تقنية مستقلة"}
+                </div>
+                <p className="mb-3 text-[11px] leading-4 text-muted-foreground">
+                  {exportLang === "en" ? "Download only the files that can be built from this report's entity data. Review every draft against your live website before publishing; no file is uploaded automatically." : exportLang === "ku" ? "تەنها ئەو فایلانە دابەزێنە کە لە زانیاریی قەوارەی ئەم ڕاپۆرتەوە دروست دەکرێن. پێش بڵاوکردنەوە هەر ڕەشنووسێک لەگەڵ ماڵپەڕی ڕاستەقینە بپشکنە؛ هیچ فایلێک خۆکار بارناکراوە." : "نزّل الملفات التي أمكن إنشاؤها من بيانات هذا الكيان فقط. راجع كل مسودة مقابل موقعك الفعلي قبل النشر؛ لا يُرفع أي ملف تلقائياً."}
+                </p>
+                <div className="grid gap-1.5">
+                  {machineAssetPack.llms && (
+                    <button type="button" onClick={() => downloadMachineAsset("llms.txt", machineAssetPack.llms, "text/plain;charset=utf-8")} className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 text-start transition hover:border-primary/20 hover:bg-primary/5">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary"><FileText className="size-4" /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold">llms.txt</span>
+                        <span className="block text-[11px] text-muted-foreground">{exportLang === "en" ? "Text summary of the entity's recorded facts and links" : exportLang === "ku" ? "پوختەی دەقیی ڕاستی و بەستەرە تۆمارکراوەکان" : "ملف نصي يلخص حقائق الكيان وروابطه المسجلة"}</span>
+                      </span>
+                      <Download className="size-4 text-primary" />
+                    </button>
+                  )}
+                  {machineAssetPack.orgJsonld && (
+                    <button type="button" onClick={() => downloadMachineAsset("organization.jsonld", machineAssetPack.orgJsonld, "application/ld+json;charset=utf-8")} className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 text-start transition hover:border-primary/20 hover:bg-primary/5">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary"><Braces className="size-4" /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold">Organization JSON-LD</span>
+                        <span className="block text-[11px] text-muted-foreground">{exportLang === "en" ? "Structured entity details; insert into the relevant page only after review" : exportLang === "ku" ? "زانیاریی ڕێکخراوی قەوارە؛ دوای پێداچوونەوە لە پەڕەی گونجاو دایبنێ" : "بيانات منظمة عن الكيان؛ تُدرج في الصفحة المناسبة بعد المراجعة"}</span>
+                      </span>
+                      <Download className="size-4 text-primary" />
+                    </button>
+                  )}
+                  {machineAssetPack.faqJsonld && (
+                    <button type="button" onClick={() => downloadMachineAsset("faqpage.jsonld", machineAssetPack.faqJsonld, "application/ld+json;charset=utf-8")} className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 text-start transition hover:border-primary/20 hover:bg-primary/5">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary"><FileCode2 className="size-4" /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold">FAQPage JSON-LD</span>
+                        <span className="block text-[11px] text-muted-foreground">{exportLang === "en" ? "Created only from recorded question/answer pairs" : exportLang === "ku" ? "تەنها لە پرسیار و وەڵامی تۆمارکراو دروست دەکرێت" : "ينشأ فقط من أزواج الأسئلة والأجوبة المسجلة"}</span>
+                      </span>
+                      <Download className="size-4 text-primary" />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-2 border-t border-border/70 pt-2 text-[11px] leading-4 text-muted-foreground">
+                  {exportLang === "en" ? "These are standalone files, not report appendices. Their facts, URLs and code remain in source form even when report-text translation is enabled." : exportLang === "ku" ? "ئەمە فایلە جیاوازن، نەک پاشکۆی ڕاپۆرت؛ ڕاستی و بەستەر و کۆدەکان بە شێوەی سەرچاوەکە دەمێننەوە." : "هذه ملفات مستقلة وليست ملاحق داخل التقرير. تبقى الحقائق والروابط والأكواد بلغتها الأصلية حتى عند تفعيل ترجمة نص التقرير."}
+                </p>
+              </div>
             ) : (
               <div className="mb-3 flex items-start gap-2 rounded-xl border border-border/70 bg-muted/30 p-3 text-[11px] leading-4 text-muted-foreground">
                 <Info className="mt-0.5 size-4 shrink-0" />
-                {exportLang === "en" ? "Machine-readable drafts are unavailable for this result because a specific entity and supporting facts were not identified." : exportLang === "ku" ? "ڕەشنووسی فایلە تەکنیکییەکان بەردەست نییە، چونکە قەوارەیەکی دیاریکراو و زانیاریی پشتگیر نەدۆزرایەوە." : "لا تتوفر مسودات الأصول التقنية لهذا التصدير لعدم تحديد كيان وبيانات داعمة كافية."}
+                {exportLang === "en" ? "Standalone machine-readable assets are unavailable because this result does not contain a specific entity and supporting facts." : exportLang === "ku" ? "فایلە جیاوازە تەکنیکییەکان بەردەست نین، چونکە قەوارە و زانیاریی پشتگیر لەم ئەنجامەدا نییە." : "لا تتوفر ملفات تقنية مستقلة لأن النتيجة لا تتضمن كياناً محدداً وبيانات داعمة كافية."}
               </div>
             )}
 
