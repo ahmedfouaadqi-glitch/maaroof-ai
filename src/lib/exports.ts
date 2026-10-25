@@ -166,7 +166,7 @@ const SUMMARY_TEXT: Record<ExportLang, {
 
 function reportLinks(payload: ExportPayload): string[] {
   const hay = JSON.stringify({ sections: payload.sections, engineAnswers: payload.engineAnswers || [] });
-  const links = hay.match(/https?:\/\/[^\s"'<>\\)\\]]+/g) || [];
+  const links = hay.match(/https?:\/\/[^\s"'<>\\)\]]+/g) || [];
   return Array.from(new Set(links.map((url) => url.replace(/[.,;:!?،؛]+$/, ""))));
 }
 
