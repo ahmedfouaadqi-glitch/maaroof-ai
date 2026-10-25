@@ -1,7 +1,7 @@
 import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { fcSearch } from "@/lib/firecrawl";
+import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
@@ -233,10 +233,42 @@ export const Route = createFileRoute("/api/research")({
           // The route plan is deterministic and constrains the number/type of retrieval calls.
           let sr: any;
           try {
-            sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang, sources: routePlan.searchSources }, { userId, toolKey: "research" });
+            if (routePlan.primary === "url_read") {
+              const url = limited.match(/https?:\/\/[^\s<>"'\])}]+/i)?.[0]?.replace(/[.,;!?]+$/, "");
+              if (!url) return Response.json({ error: "public_url_required", charged: false }, { status: 400 });
+              const page: any = await fcScrape(url, {}, { userId, toolKey: "research" });
+              const pageData = page?.data ?? page ?? {};
+              const metadata = pageData?.metadata ?? {};
+              sr = {
+                direct_read: true,
+                fetch_source: page?.fetch_source || "direct_read",
+                data: { web: [{
+                  title: String(metadata.title || url).slice(0, 300),
+                  url: String(metadata.sourceURL || url),
+                  description: String(metadata.description || "").slice(0, 1000),
+                  markdown: String(pageData.markdown || "").slice(0, 12000),
+                  statusCode: metadata.statusCode ?? null,
+                }] },
+              };
+            } else if (routePlan.primary === "none") {
+              return Response.json({
+                error: "source_budget_unavailable",
+                charged: false,
+                limitations: routePlan.limitations,
+              }, { status: 402 });
+            } else {
+              sr = await fcSearch(limited + geo + specBoost, { limit: 8, lang, sources: routePlan.searchSources }, { userId, toolKey: "research" });
+            }
           } catch (e: any) {
-            console.error("[api/research] search unavailable", e?.status, e?.message);
-            return Response.json({ error: "search_unavailable", charged: false, message: lang === "en" ? "Live web search is temporarily unavailable. Nothing was charged." : "البحث الحي على الويب غير متاح مؤقتاً. لم يُخصم أي رصيد." }, { status: 503 });
+            console.error("[api/research] source retrieval unavailable", e?.status, e?.message);
+            const directRead = routePlan.primary === "url_read";
+            return Response.json({
+              error: directRead ? "page_read_unavailable" : "search_unavailable",
+              charged: false,
+              message: lang === "en"
+                ? (directRead ? "The public page could not be read. Nothing was charged." : "Live web search is temporarily unavailable. Nothing was charged.")
+                : (directRead ? "تعذرت قراءة الصفحة العامة. لم يُخصم أي رصيد." : "البحث الحي على الويب غير متاح مؤقتاً. لم يُخصم أي رصيد."),
+            }, { status: 503 });
           }
           let specializedDiscovery: any = { enabled: false, candidates: [], limitation: "not_requested" };
           if (discoveryRequested && routePlan.discoverSpecializedSources) {
@@ -256,7 +288,9 @@ export const Route = createFileRoute("/api/research")({
             }
             return [];
           };
-          const rawList: any[] = pickArr(sr?.data).length ? pickArr(sr.data)
+          const rawList: any[] = sr?.direct_read && Array.isArray(sr?.data?.web)
+            ? sr.data.web
+            : pickArr(sr?.data).length ? pickArr(sr.data)
             : pickArr(sr?.web).length ? pickArr(sr.web)
             : Array.isArray(sr?.results) ? sr.results : [];
           const retrievedAt = new Date().toISOString();
@@ -273,7 +307,9 @@ export const Route = createFileRoute("/api/research")({
             sample_size: 1,
             limitation: "Public web result/snippet; not a direct measurement of AI-answer visibility.",
           }));
-          const sourceProvider = sr?.fetch_source === "apidirect" ? "alternate_web_search" : "web_search";
+          const sourceProvider = sr?.direct_read
+            ? "direct_public_page"
+            : sr?.fetch_source === "apidirect" ? "alternate_web_search" : "web_search";
           await Promise.allSettled(results.map((item: any) => recordEvidence({
             userId,
             workspaceId,
@@ -289,7 +325,7 @@ export const Route = createFileRoute("/api/research")({
             retrievedAt,
             locale: String(lang),
             market: scope?.country ? String(scope.country) : null,
-            measurementUnit: "search_result",
+            measurementUnit: sr?.direct_read ? "public_page_read" : "search_result",
             sampleSize: 1,
             realityKind: "observation",
             status: item.snippet || item.description ? "success" : "empty",
@@ -410,7 +446,7 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
                 capability: routePlan.capability,
                 route: routePlan.primary,
                 requested_search_sources: routePlan.searchSources,
-                retrieved_source_profile: sr?.source_profile_warning ? "general_web_fallback" : routePlan.searchSources.join("+"),
+                retrieved_source_profile: sr?.direct_read ? "direct_public_page" : sr?.source_profile_warning ? "general_web_fallback" : routePlan.searchSources.join("+"),
                 request_budget: { max_calls: routePlan.maxRequests, planned_calls: plannedSearchCalls },
                 sample_size: results.length,
                 retrieved_at: retrievedAt,
