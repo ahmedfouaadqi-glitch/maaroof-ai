@@ -33,6 +33,8 @@ describe("buildTaskGoalFromResult", () => {
     expect(goal.length).toBeLessThanOrEqual(3400);
     expect(goal).toContain("ئامانجی ئەرک");
     expect(goal).toContain("سنووری جێبەجێکردن");
-    expect(goal.match(/x/g)?.length).toBeLessThanOrEqual(1800);
+    expect(goal.length).toBeLessThanOrEqual(1800);
+    expect(goal).toContain("سنووری جێبەجێکردن");
+    expect(goal.match(/x/g)?.length).toBeLessThanOrEqual(650);
   });
 });

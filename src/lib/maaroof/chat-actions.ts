@@ -19,9 +19,9 @@ const cleanSnippet = (value: unknown, maxChars: number): string =>
  * The response is explicitly framed as context, not as an executable instruction.
  */
 export function buildTaskGoalFromResult(input: BuildTaskGoalInput): string {
-  const request = cleanSnippet(input.originalRequest, 600);
-  const answer = cleanSnippet(input.answer, 1800);
-  const proposed = cleanSnippet(input.proposedGoal, 500);
+  const request = cleanSnippet(input.originalRequest, 220);
+  const answer = cleanSnippet(input.answer, 650);
+  const proposed = cleanSnippet(input.proposedGoal, 220);
   const objective = proposed || (input.language === "en"
     ? "Turn the previous result into a scoped, actionable task with verifiable steps."
     : input.language === "ku"
@@ -54,5 +54,5 @@ export function buildTaskGoalFromResult(input: BuildTaskGoalInput): string {
     request ? `${labels.request}\n${request}` : "",
     answer ? `${labels.context}\n${answer}` : "",
     labels.guardrail,
-  ].filter(Boolean).join("\n\n").slice(0, 3400);
+  ].filter(Boolean).join("\n\n").slice(0, 1800);
 }
