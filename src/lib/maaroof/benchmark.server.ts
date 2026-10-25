@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 // Part 19.4 — Benchmark Engine (تطوير لا إنشاء).
 //
 // `ai_model_benchmarks`, `expert_snapshots` and `capability_scores_v` already
@@ -35,6 +36,20 @@ export type BenchmarkDefinition = {
   workspaceId?: string | null;
 };
 
+/** Namespaced storage key: preserves the legacy unique index without crossing user/workspace baselines. */
+export function benchmarkStorageSubject(subject: string, userId?: string | null, workspaceId?: string | null): string {
+  const base = String(subject || "").trim().slice(0, 240);
+  if (!userId) return base;
+  const scopeHash = createHash("sha256")
+    .update(String(userId) + "|" + String(workspaceId || "__user_scope__"))
+    .digest("hex")
+    .slice(0, 12);
+  return base + " [scope:" + scopeHash + "]";
+}
+export function benchmarkDisplaySubject(subject: string): string {
+  return String(subject || "").replace(/\\s+\\[scope:[0-9a-f]{12}\\]$/i, "");
+}
+
 /** Create or update a benchmark definition; returns its id. */
 export async function upsertBenchmark(def: BenchmarkDefinition): Promise<string | null> {
   try {
@@ -42,7 +57,7 @@ export async function upsertBenchmark(def: BenchmarkDefinition): Promise<string 
       .from("benchmarks")
       .upsert(
         {
-          subject: def.subject,
+          subject: benchmarkStorageSubject(def.subject, def.userId, def.workspaceId),
           subject_kind: def.subjectKind,
           metric: def.metric,
           unit: def.unit ?? null,
@@ -90,6 +105,7 @@ export async function recordBenchmark(input: {
   sampleSize?: number;
   source?: string | null;
   meta?: Record<string, any>;
+  comparisonKey?: string | null;
 }): Promise<{ id: string | null; delta: number | null; passed: boolean | null; improvement: number }> {
   const empty = { id: null, delta: null, passed: null, improvement: 0 };
   try {
@@ -121,7 +137,11 @@ export async function recordBenchmark(input: {
         passed: scored.passed,
         sample_size: input.sampleSize ?? 1,
         source: input.source ?? null,
-        meta: input.meta || {},
+        meta: {
+          ...(input.meta || {}),
+          ...(input.comparisonKey ? { comparison_key: input.comparisonKey } : {}),
+          workspace_id: input.workspaceId ?? null,
+        },
       })
       .select("id")
       .single();
@@ -144,11 +164,12 @@ export async function benchmarkTrend(
   try {
     // Scoped verification fails closed: a user must never inherit another user's benchmark baseline.
     if (scope && !scope.userId) return null;
+    const storedSubject = benchmarkStorageSubject(subject, scope?.userId, scope?.workspaceId);
     let benchmarkQuery = db()
       .from("benchmarks")
       .select("id, baseline, target, unit, higher_is_better, user_id, workspace_id")
       .eq("subject_kind", subjectKind)
-      .eq("subject", subject)
+      .eq("subject", storedSubject)
       .eq("metric", metric);
     if (scope?.userId) benchmarkQuery = benchmarkQuery.eq("user_id", scope.userId);
     if (scope && Object.prototype.hasOwnProperty.call(scope, "workspaceId")) {
@@ -189,7 +210,7 @@ export async function benchmarkOverview(limit = 50) {
   try {
     const { data: defs } = await db()
       .from("benchmarks")
-      .select("id, subject, subject_kind, metric, unit, baseline, target, higher_is_better")
+      .select("id, subject, subject_kind, metric, unit, baseline, target, higher_is_better, user_id, workspace_id")
       .order("updated_at", { ascending: false })
       .limit(limit);
     const list = (defs as any[]) || [];
@@ -208,6 +229,7 @@ export async function benchmarkOverview(limit = 50) {
       const scored = latest != null ? scoreAgainstBaseline(latest, d.baseline, d.higher_is_better !== false) : null;
       return {
         ...d,
+        subject: benchmarkDisplaySubject(d.subject),
         samples: rows.length,
         latest,
         improvement: scored?.improvement ?? 0,
