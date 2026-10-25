@@ -701,7 +701,6 @@ function WorkspacePage() {
               setShowAdvanced(true);
               window.setTimeout(() => document.getElementById("workspace-goal")?.focus(), 60);
             }}
-            onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }}
           /></div>}
         {!running && showAdvanced && ((!finalEvent && events.length === 0) || reportTaskDraft) && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
