@@ -20,6 +20,8 @@ import { readWorkspaceGenome, genomePromptBlock } from "./genome.server";
 import { evaluateLaws, lawsPromptBlock, hardLawNotice, type LawEvaluation } from "./laws.server";
 import {
   classifyReality,
+  isMeasuredToolResult,
+  hasExternalEvidence,
   persistReality,
   realityNotice,
   realityPromptBlock,
@@ -1468,7 +1470,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
           .map((d: any) => d.confidence as number);
         reality = classifyReality({
-          toolResults: results.map((r) => ({ tool: String(r.tool), ok: !!r.ok })),
+          toolResults: results.map((r) => ({ tool: String(r.tool), ok: !!r.ok, measured: !!r.ok && isMeasuredToolResult(r.output) })),
           memoriesRecalled: memories.length,
           knowledgeNodes: Array.isArray((trust as any)?.evidence_graph) ? (trust as any).evidence_graph.length : 0,
           councilOpinions: decisionLog.filter((d: any) => d.phase === "council" && !d.error).length,
@@ -1486,7 +1488,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           timingVerdict: timing?.verdict ?? null,
           executionMode,
           complianceVerdict: (compliance as any)?.verdict ?? null,
-          externalSources: results.filter((r) => r.ok).length,
+          externalSources: results.filter((r) => r.ok && hasExternalEvidence(r.output)).length,
           historicalSamples: memories.length,
           finalTextLength: finalText.length,
         });
