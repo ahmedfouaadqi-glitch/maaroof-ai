@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeAlexandriaCandidates, validateAlexandriaOptions } from "./alexandria.server";
+import { normalizeAlexandriaCandidates, normalizeAlexandriaExecutionResponse, validateAlexandriaOptions } from "./alexandria.server";
 
 describe("optional specialized-source connector", () => {
   it("normalizes the documented data.tools discovery response and retains private candidate IDs", () => {
@@ -13,6 +13,40 @@ describe("optional specialized-source connector", () => {
     expect(found[0].estimatedCredits).toBe(4);
     expect(found[0].discoveryOnly).toBe(true);
     expect(found[0].optionsSchema?.required).toEqual(["series_id"]);
+  });
+
+  it("normalizes nested v2 capability results and provider-reported cost", () => {
+    expect(normalizeAlexandriaExecutionResponse({
+      success: true,
+      data: { creditsCost: 4, alexandria: [
+        { provider: "particle", capability: "series/observations", data: { records: [{ id: 1 }] }, creditsCost: 3 },
+      ] },
+    }, "particle", "series/observations")).toEqual({
+      data: { records: [{ id: 1 }] },
+      creditsCost: 3,
+      errorCode: null,
+    });
+  });
+
+  it("maps item-level terms and rate errors to neutral guarded states", () => {
+    expect(normalizeAlexandriaExecutionResponse({
+      success: true,
+      data: { alexandria: [{ provider: "x", capability: "y", error: { code: "THIRD_PARTY_DATA_TERMS_REQUIRED" } }] },
+    }, "x", "y").errorCode).toBe("specialized_source_terms_not_accepted");
+    expect(normalizeAlexandriaExecutionResponse({
+      success: true,
+      data: { alexandria: [{ provider: "x", capability: "y", error: { code: "RATE_LIMIT_EXCEEDED" } }] },
+    }, "x", "y").errorCode).toBe("specialized_source_rate_limited");
+  });
+
+  it("rejects an ambiguous multi-capability response instead of returning unrelated records", () => {
+    expect(normalizeAlexandriaExecutionResponse({
+      success: true,
+      data: { alexandria: [
+        { provider: "a", capability: "x", data: { records: [] } },
+        { provider: "b", capability: "y", data: { records: [1] } },
+      ] },
+    }, "c", "z").errorCode).toBe("specialized_source_response_mismatch");
   });
 
   it("fails closed if the options schema is missing", () => {
