@@ -136,25 +136,48 @@ function brandHeaderHtml(lang: ExportLang, payload: ExportPayload, logoData: str
 
 
 function sectionHtml(s: ExportSection): string {
-  const h = `<h2>${escapeHtml(s.heading)}</h2>`;
+  const h = '<h2>' + escapeHtml(s.heading) + '</h2>';
   if (s.kind === "text" && s.text) {
-    return `${h}<p class="prose">${escapeHtml(s.text).replace(/\n/g, "<br/>")}</p>`;
+    return h + '<p class="prose">' + escapeHtml(s.text).replace(/\n/g, "<br/>") + '</p>';
   }
   if (s.kind === "list" && s.list) {
-    return `${h}<ul>${s.list.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+    return h + '<ul>' + s.list.map((x) => '<li>' + escapeHtml(x) + '</li>').join("") + '</ul>';
   }
   if (s.kind === "kv" && s.rows) {
-    return `${h}<table class="kv"><tbody>${s.rows
-      .map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`)
-      .join("")}</tbody></table>`;
+    return h + '<table class="kv"><tbody>' + s.rows
+      .map(([k, v]) => '<tr><th>' + escapeHtml(k) + '</th><td>' + escapeHtml(v) + '</td></tr>')
+      .join("") + '</tbody></table>';
   }
   if (s.kind === "table" && s.table) {
-    const { columns, data } = s.table;
-    return `${h}<table class="data"><thead><tr>${columns
-      .map((c) => `<th>${escapeHtml(c)}</th>`)
-      .join("")}</tr></thead><tbody>${data
-      .map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`)
-      .join("")}</tbody></table>`;
+    const columns = s.table.columns;
+    const data = s.table.data;
+    return h + '<table class="data"><thead><tr>' + columns
+      .map((value) => '<th>' + escapeHtml(value) + '</th>').join("") +
+      '</tr></thead><tbody>' + data
+      .map((row) => '<tr>' + row.map((value) => '<td>' + escapeHtml(value) + '</td>').join("") + '</tr>')
+      .join("") + '</tbody></table>';
+  }
+  if (s.kind === "cards" && s.cards) {
+    const cards = s.cards.map((card) => {
+      const scoreClass = typeof card.score !== "number" ? "none" : card.score >= 70 ? "good" : card.score >= 40 ? "weak" : "low";
+      const score = typeof card.score === "number"
+        ? '<div class="audit-score ' + scoreClass + '">' + escapeHtml(card.score) + '<small>/100</small></div>'
+        : '<div class="audit-score none">' + escapeHtml(card.status || "unmeasured") + '</div>';
+      const fields = card.fields?.length
+        ? '<table class="audit-fields"><tbody>' + card.fields.map(([key, value]) => '<tr><th>' + escapeHtml(key) + '</th><td>' + escapeHtml(value) + '</td></tr>').join("") + '</tbody></table>'
+        : "";
+      const evidence = card.evidence?.length
+        ? '<div class="audit-evidence"><strong>Evidence</strong><ul>' + card.evidence.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul></div>'
+        : "";
+      const notes = card.notes?.length
+        ? '<div class="audit-notes">' + card.notes.map((item) => '<p>' + escapeHtml(item) + '</p>').join("") + '</div>'
+        : "";
+      return '<article class="audit-card"><div class="audit-card-head"><div class="audit-card-identity"><div class="audit-card-title">' + escapeHtml(card.title) + '</div>' +
+        (card.subtitle ? '<div class="audit-card-subtitle">' + escapeHtml(card.subtitle) + '</div>' : "") +
+        (card.status ? '<span class="audit-status">' + escapeHtml(card.status) + '</span>' : "") +
+        '</div>' + score + '</div>' + fields + evidence + notes + '</article>';
+    }).join("");
+    return h + '<div class="audit-cards">' + cards + '</div>';
   }
   return h;
 }
@@ -193,6 +216,28 @@ export async function exportToPDF(payload: ExportPayload) {
   table.data th { background:#4338ca; color:#fff; padding:6px 8px; border:1px solid #312e81; font-weight:600; text-align:${dir === "rtl" ? "right" : "left"}; }
   table.data td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align: top; }
   table.data tr:nth-child(even) td { background:#f8fafc; }
+  .audit-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px; }
+  .audit-card { border:1px solid #dbe4f0; border-radius:11px; padding:10px; break-inside:avoid; page-break-inside:avoid; background:#fff; }
+  .audit-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .audit-card-identity { min-width:0; flex:1; }
+  .audit-card-title { font-size:11px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; color:#0f2454; }
+  .audit-card-subtitle { color:#64748b; font-size:9px; margin-top:3px; }
+  .audit-status { display:inline-block; margin-top:5px; padding:2px 6px; border-radius:999px; font-size:8px; background:#eef2ff; color:#3730a3; }
+  .audit-score { flex-shrink:0; font-weight:800; font-size:17px; text-align:center; min-width:52px; border-radius:8px; padding:5px; background:#f1f5f9; color:#334155; }
+  .audit-score small { display:block; font-size:7px; font-weight:500; }
+  .audit-score.good { background:#dcfce7; color:#166534; }
+  .audit-score.weak { background:#fef3c7; color:#92400e; }
+  .audit-score.low { background:#fee2e2; color:#991b1b; }
+  .audit-score.none { font-size:8px; font-weight:600; max-width:90px; overflow-wrap:anywhere; }
+  table.audit-fields { margin-top:7px; font-size:9px; }
+  table.audit-fields th { text-align:left; width:36%; padding:4px 5px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; }
+  table.audit-fields td { padding:4px 5px; border:1px solid #e2e8f0; overflow-wrap:anywhere; }
+  .audit-evidence { font-size:8.5px; color:#475569; margin-top:6px; overflow-wrap:anywhere; }
+  .audit-evidence ul { padding-left:14px; margin:2px 0; }
+  .audit-evidence li { margin:2px 0; }
+  .audit-notes { font-size:8.5px; color:#92400e; background:#fffbeb; border-radius:6px; margin-top:6px; padding:5px; overflow-wrap:anywhere; }
+  .audit-notes p { margin:2px 0; }
+  @media print { .audit-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   footer.disclaimer { margin-top: 28px; padding-top: 12px; border-top: 1px dashed #94a3b8; font-size: 10.5px; color:#475569; line-height: 1.5; }
   footer.disclaimer .who { font-weight:600; color:#334155; margin-bottom:4px; }
   /* Nothing may be lost across page breaks */
