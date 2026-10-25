@@ -12,6 +12,7 @@ import {
   type ExportFormat,
 } from "@/lib/content";
 import { useExportIdentity } from "@/lib/export-identity";
+import { engineAnswerSections, extractLinks, linksSection, packSections } from "@/lib/machine-pack";
 import { toast } from "sonner";
 import { collectExportTranslationPlan, applyExportTranslations } from "@/lib/export-content-translation";
 import { translateExportContent } from "@/lib/translate-export.functions";
@@ -59,6 +60,10 @@ const AUDIT_EXPORT_LABELS: Record<string, Record<"ar" | "en" | "ku", string>> = 
   needs_full_page_content: { ar: "يتطلب محتوى أعمق", en: "Full content required", ku: "ناوەڕۆکی زیاتر پێویستە" },
 };
 const auditExportText = (value: string, lang: "ar" | "en" | "ku") => AUDIT_EXPORT_LABELS[value]?.[lang] || value;
+const isMachinePackSection = (heading: string) =>
+  /machine-readable pack|حزمة قراءة الآلة|پاکێجی|schema\.org json-ld|faqpage schema|llms\.txt/i.test(heading);
+const isGlossarySection = (heading: string) => /^(Glossary|فەرهەنگ|معجم المصطلحات)$/i.test(heading);
+const isLinksAppendix = (heading: string) => /^(Result links|Links in report|روابط النتائج|بەستەرەکانی ئەنجام)$/i.test(heading);
 
 export function ExportButtons({
   build,
@@ -97,13 +102,36 @@ export function ExportButtons({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
+  const entity = preparedPayload?.entity;
+  const hasMachineAssetData = Boolean(entity?.brand && (entity.site || entity.summary || entity.facts?.length || entity.faqs?.length));
+  const basePreviewSections = preparedPayload
+    ? preparedPayload.sections.filter((section) =>
+        !isMachinePackSection(section.heading) && !isGlossarySection(section.heading) && !isLinksAppendix(section.heading)
+      )
+    : [];
+  const previewEngineSections = preparedPayload?.engineAnswers?.length
+    ? engineAnswerSections({ probe: { answers: preparedPayload.engineAnswers } }, exportLang)
+    : [];
+  const previewLinkSections = extractLinks(basePreviewSections).length
+    ? [linksSection(basePreviewSections, exportLang)]
+    : [];
+  const previewMachineSections = includeMachineAssets && entity?.brand && hasMachineAssetData
+    ? packSections({
+        brand: entity.brand,
+        site: entity.site,
+        summary: entity.summary,
+        lang: exportLang,
+        onboarding: { facts: (entity.facts || []).join("\\n"), faqs: entity.faqs },
+      }, exportLang)
+    : [];
   const translationPreviewSections = preparedPayload ? [
-    ...preparedPayload.sections,
+    ...previewEngineSections,
+    ...basePreviewSections,
+    ...previewLinkSections,
+    ...previewMachineSections,
     { heading: "Export metadata", kind: "kv" as const, rows: [["Title", preparedPayload.title], ["Subtitle", preparedPayload.subtitle || ""]] as [string, string][] },
   ] : [];
   const translationPlan = collectExportTranslationPlan(translationPreviewSections);
-  const entity = preparedPayload?.entity;
-  const hasMachineAssetData = Boolean(entity?.brand && (entity.site || entity.summary || entity.facts?.length || entity.faqs?.length));
   const payloadSummary = preparedPayload
     ? /seo|geo|audit|visibility|presence|تدقيق|ظهور|محور/i.test(preparedPayload.title + " " + preparedPayload.sections.map((section) => section.heading).join(" "))
       ? (exportLang === "en" ? "This audit export includes findings, available evidence, recommendations and recorded links." : exportLang === "ku" ? "ئەم هەناردەیە دۆزینەوەکان، بەڵگە بەردەستەکان، پێشنیارەکان و بەستەرە تۆمارکراوەکان لەخۆدەگرێت." : "هذا التقرير يتضمن النتائج والأدلة المتاحة والتوصيات والروابط المسجلة.")
@@ -207,13 +235,8 @@ export function ExportButtons({
         identity,
       };
       const { labelFor, localizeValue, glossarySection } = await import("@/lib/maaroof/report-sections");
-      const { extractLinks, linksSection, packSections, engineAnswerSections } = await import("@/lib/machine-pack");
-      const isMachinePackSection = (heading: string) =>
-        /machine-readable pack|حزمة قراءة الآلة|پاکێجی|schema\.org json-ld|faqpage schema|llms\.txt/i.test(heading);
-      const isGlossary = (heading: string) => /^(Glossary|فەرهەنگ|معجم المصطلحات)$/i.test(heading);
-      const isLinksAppendix = (heading: string) => /^(Result links|Links in report|روابط النتائج|بەستەرەکانی ئەنجام)$/i.test(heading);
       const base = p.sections.filter((section) =>
-        !isMachinePackSection(section.heading) && !isGlossary(section.heading) && !isLinksAppendix(section.heading)
+        !isMachinePackSection(section.heading) && !isGlossarySection(section.heading) && !isLinksAppendix(section.heading)
       );
 
       // The selected language localizes headings and known labels. Narrative text is translated only by explicit opt-in below.
