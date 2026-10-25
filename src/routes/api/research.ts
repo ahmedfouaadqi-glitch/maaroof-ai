@@ -8,7 +8,13 @@ import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { planSourceRoute } from "@/lib/maaroof/source-intelligence";
-import { discoverAlexandriaCapabilities } from "@/lib/maaroof/alexandria.server";
+import {
+  discoverAlexandriaCapabilities,
+  executeAlexandriaCapability,
+  validateAlexandriaOptions,
+  isAlexandriaTermsAccepted,
+  SpecializedSourceGateError,
+} from "@/lib/maaroof/alexandria.server";
 import { recordEvidence } from "@/lib/maaroof/evidence.server";
 
 
@@ -46,6 +52,159 @@ export const Route = createFileRoute("/api/research")({
             const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
             if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
           }
+
+          // Paid specialized source execution is a separate, explicit action. Normal research never invokes it.
+          const specializedRun = reqBody?.specialized_execution;
+          if (specializedRun != null) {
+            if (!specializedRun || typeof specializedRun !== "object" || Array.isArray(specializedRun)) {
+              return Response.json({ error: "invalid_specialized_request" }, { status: 400 });
+            }
+            if (specializedRun.confirm_paid_run !== true) {
+              return Response.json({ error: "explicit_paid_confirmation_required" }, { status: 400 });
+            }
+            if (process.env.MAAROOF_ALEXANDRIA_ENABLED !== "true" || !process.env.FIRECRAWL_API_KEY) {
+              return Response.json({ error: "specialized_source_not_enabled" }, { status: 503 });
+            }
+            const hardCap = Number(process.env.MAAROOF_ALEXANDRIA_MAX_CREDITS);
+            if (!Number.isFinite(hardCap) || hardCap < 0) {
+              return Response.json({ error: "specialized_source_cost_cap_not_configured" }, { status: 503 });
+            }
+            const requestId = String(specializedRun.request_id || "").trim();
+            if (!/^[A-Za-z0-9._:-]{1,128}$/.test(requestId)) {
+              return Response.json({ error: "specialized_request_id_required" }, { status: 400 });
+            }
+            const candidateId = String(specializedRun.candidate_id || "").trim();
+            if (!/^[a-f0-9]{24}$/i.test(candidateId)) {
+              return Response.json({ error: "specialized_candidate_required" }, { status: 400 });
+            }
+            const requestedCap = Number(specializedRun.max_credits);
+            if (!Number.isFinite(requestedCap) || requestedCap < 0 || requestedCap > hardCap) {
+              return Response.json({ error: "specialized_cost_cap_exceeded" }, { status: 400 });
+            }
+            const discovered = await discoverAlexandriaCapabilities({ query: limited, limit: 5 });
+            if (!discovered.enabled) return Response.json({ error: "specialized_source_not_enabled" }, { status: 503 });
+            const candidate = discovered.candidates.find((item) => item.candidateId === candidateId);
+            if (!candidate) return Response.json({ error: "specialized_candidate_stale" }, { status: 409 });
+            if (candidate.estimatedCredits == null) {
+              return Response.json({ error: "specialized_source_cost_unknown" }, { status: 402 });
+            }
+            if (candidate.estimatedCredits > requestedCap) {
+              return Response.json({ error: "specialized_source_cost_cap_exceeded", estimated_credits: candidate.estimatedCredits }, { status: 402 });
+            }
+            if (!isAlexandriaTermsAccepted(candidate.provider, candidate.capability)) {
+              return Response.json({ error: "specialized_source_terms_not_accepted" }, { status: 403 });
+            }
+            const options = specializedRun.options;
+            const optionCheck = validateAlexandriaOptions(candidate.optionsSchema, options);
+            if (!optionCheck.valid) {
+              return Response.json({ error: "specialized_options_invalid", reasons: optionCheck.errors }, { status: 400 });
+            }
+
+            const charge = await chargeTokens({
+              userId,
+              toolKey: "research",
+              runId: requestId,
+              meta: {
+                endpoint: "/api/research#specialized",
+                candidate_id: candidateId,
+                estimated_credits: candidate.estimatedCredits,
+                credit_cap: requestedCap,
+                explicit_user_confirmation: true,
+                workspace_id: workspaceId,
+              },
+            });
+            if (!charge.ok) return Response.json(chargeFailureBody(charge.reason as any, charge.left), { status: 402 });
+
+            try {
+              const executed = await executeAlexandriaCapability({
+                provider: candidate.provider,
+                capability: candidate.capability,
+                options: options as Record<string, unknown>,
+                estimatedCredits: candidate.estimatedCredits,
+                maxCredits: requestedCap,
+                userConfirmedPaidRun: true,
+                requestId,
+                adminTermsAccepted: true,
+                userId,
+                toolKey: "research",
+              });
+              const data = executed.result?.data ?? executed.result;
+              const records = Array.isArray(data?.records) ? data.records
+                : Array.isArray(data?.results) ? data.results
+                : Array.isArray(data?.items) ? data.items
+                : [];
+              const retrievedAt = new Date().toISOString();
+              await recordEvidence({
+                userId,
+                workspaceId,
+                title: candidate.label,
+                claim: "A user-approved specialized data request returned public data for the requested research query.",
+                sourceKind: "external",
+                sourceRef: null,
+                evidenceType: "external",
+                category: isCompany ? "market" : "market",
+                collectionMethod: "explicit_specialized_source_run",
+                provider: "specialized_data_source",
+                capability: candidate.capability,
+                retrievedAt,
+                locale: String(lang),
+                market: scope?.country ? String(scope.country) : null,
+                measurementUnit: "source_response",
+                sampleSize: records.length,
+                realityKind: "observation",
+                status: "success",
+                limitation: executed.budgetOverrunDetected
+                  ? "The source reported a final cost above the user-approved estimate cap; review billing before any further call."
+                  : "A source response was retrieved; this is an observation, not automatically a verified market measurement.",
+                sourceReliability: 65,
+                relevanceScore: 75,
+                businessImportance: 65,
+                language: String(lang),
+              });
+              return Response.json({
+                ok: true,
+                specialized_execution: {
+                  label: candidate.label,
+                  description: candidate.description,
+                  result: data,
+                  result_count: records.length,
+                  estimated_credits: candidate.estimatedCredits,
+                  reported_credits: executed.creditsCost,
+                  budget_overrun_detected: executed.budgetOverrunDetected,
+                  request_id: requestId,
+                  retrieved_at: retrievedAt,
+                  reality_kind: "observation",
+                  limitation: "The result is source output. It is not a verified claim until independently checked.",
+                },
+              });
+            } catch (error: any) {
+              // For definitive HTTP/policy errors the provider reports that the action was not accepted.
+              // Transport failures can be ambiguous; clients must retry with the same request ID only.
+              if (error instanceof SpecializedSourceGateError) {
+                try {
+                  await admin.rpc("charge_tokens", {
+                    _user_id: userId, _tool_key: "research", _tokens: -Number(charge.tokens || 0), _usd: 0,
+                    _run_id: requestId, _meta: { refund: true, specialized_source_rejected: true, endpoint: "/api/research#specialized" },
+                  } as any);
+                } catch {}
+                return Response.json({
+                  error: error.code === "specialized_source_access_required" ? "specialized_source_access_required"
+                    : error.code === "specialized_source_rate_limited" ? "specialized_source_rate_limited"
+                    : error.code === "provider_cost_exceeded_declared_cap" ? "specialized_source_cost_review_required"
+                    : "specialized_source_not_completed",
+                  retry_with_same_request_id: true,
+                }, { status: 502 });
+              }
+              console.error("[api/research] specialized request outcome uncertain", String(error?.message || error).slice(0, 160));
+              return Response.json({
+                error: "specialized_source_outcome_uncertain",
+                request_id: requestId,
+                retry_with_same_request_id: true,
+                message: "The final source outcome could not be confirmed. Retry only with the same request ID to avoid duplicate execution.",
+              }, { status: 503 });
+            }
+          }
+
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
@@ -263,15 +422,20 @@ ${isCompany ? `MODE: COMPANY PROFILE. Treat the query as the name of a company/b
               specialized_source_options: {
                 enabled: specializedDiscovery.enabled,
                 candidates: (specializedDiscovery.candidates || []).map((candidate: any) => ({
-                  capability: candidate.capability,
+                  candidate_id: candidate.candidateId,
                   label: candidate.label,
                   description: candidate.description,
                   estimated_credits: candidate.estimatedCredits,
                   terms_required: candidate.termsRequired,
+                  options_schema: candidate.optionsSchema,
+                  response_schema: candidate.responseSchema,
+                  terms_configured: isAlexandriaTermsAccepted(candidate.provider, candidate.capability),
+                  executable: candidate.estimatedCredits != null && !!candidate.optionsSchema && isAlexandriaTermsAccepted(candidate.provider, candidate.capability),
                   discovery_only: true,
                 })),
                 limitation: specializedDiscovery.limitation,
                 execution_enabled_by_this_request: false,
+                configured_max_credits: Number.isFinite(Number(process.env.MAAROOF_ALEXANDRIA_MAX_CREDITS)) ? Number(process.env.MAAROOF_ALEXANDRIA_MAX_CREDITS) : null,
               },
             };
             await mciStore(admin as any, "research", userId, _mci.key, _out);
