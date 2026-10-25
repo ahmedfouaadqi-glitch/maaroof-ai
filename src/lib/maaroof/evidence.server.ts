@@ -304,16 +304,24 @@ export function crossValidate(rows: any[]): CrossValidation {
 export async function validateEvidenceFor(opts: {
   realityRecordId?: string | null;
   executionId?: string | null;
+  userId?: string | null;
+  workspaceId?: string | null;
   limit?: number;
 }): Promise<{ items: any[]; validation: CrossValidation }> {
   try {
+    // Fail closed for an unscoped evidence lookup. A service-role client must not read other users' evidence by default.
+    if (!opts.userId) return { items: [], validation: crossValidate([]) };
     let q = db()
       .from("evidence_items")
       .select(
-        "id, title, claim, source_kind, source_ref, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, expires_at, created_at, provider, capability, retrieved_at, data_period, locale, market, measurement_unit, sample_size, reality_kind, status, limitation, relevance_score, business_importance",
+        "id, title, claim, source_kind, source_ref, evidence_type, category, source_reliability, business_value, weight, freshness, reproducible, success_count, contradicts, expires_at, created_at, provider, capability, retrieved_at, data_period, locale, market, measurement_unit, sample_size, reality_kind, status, limitation, relevance_score, business_importance, user_id, workspace_id",
       )
+      .eq("user_id", opts.userId)
       .order("weight", { ascending: false })
-      .limit(opts.limit ?? 200);
+      .limit(Math.max(1, Math.min(1000, Math.floor(opts.limit || 200))));
+    if (Object.prototype.hasOwnProperty.call(opts, "workspaceId")) {
+      q = opts.workspaceId ? q.eq("workspace_id", opts.workspaceId) : q.is("workspace_id", null);
+    }
     if (opts.realityRecordId) q = q.eq("reality_record_id", opts.realityRecordId);
     if (opts.executionId) q = q.eq("execution_id", opts.executionId);
     const { data } = await q;
