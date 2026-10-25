@@ -24,7 +24,7 @@ async function loadProfile(db: any, userId: string) {
 
 async function loadWorkspace(db: any, userId: string, workspaceId: string) {
   return db.from("workspaces")
-    .select("id, name, brand_url, brand_summary, entity_truth_card")
+    .select("id, name, brand_url, brand_summary, entity_truth_card, profile")
     .eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
 }
 
@@ -104,7 +104,10 @@ export const Route = createFileRoute("/api/deep-audit")({
         const card = workspace?.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
         const targets = auditTargets(workspace ? workspaceAuditLinks(workspace) : p.entity_links);
         const brand = String(workspace ? (card.entity_name || workspace.name || "") : (p.brand_name || ""));
-        const kind = workspace ? null : (isAccountKind(p.account_kind) ? p.account_kind : null);
+        const workspaceProfile = workspace?.profile && typeof workspace.profile === "object" ? workspace.profile : {};
+        const kind = workspace
+          ? (isAccountKind(card.account_kind) ? card.account_kind : isAccountKind(workspaceProfile.account_kind) ? workspaceProfile.account_kind : null)
+          : (isAccountKind(p.account_kind) ? p.account_kind : null);
         const { resolveToolCost } = await import("@/lib/tokens.server");
         const cost = await resolveToolCost(a.userId, TOOL_KEY);
 
@@ -182,7 +185,7 @@ export const Route = createFileRoute("/api/deep-audit")({
         if (startErr) console.error("[deep-audit] start event failed", startErr);
         await runAudit(db, a.userId, job.id, targets,
           String(workspace ? (card.entity_name || workspace.name || "") : (p.brand_name || "")),
-          workspace ? null : (isAccountKind(p.account_kind) ? p.account_kind : null), 1);
+          workspace ? (isAccountKind(card.account_kind) ? card.account_kind : isAccountKind((workspace.profile || {}).account_kind) ? (workspace.profile || {}).account_kind : null) : (isAccountKind(p.account_kind) ? p.account_kind : null), 1);
         return Response.json({ job_id: job.id });
       },
     },
