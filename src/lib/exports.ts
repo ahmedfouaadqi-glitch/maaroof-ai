@@ -7,14 +7,25 @@ import maaroofLogo from "@/assets/maaroof-ai-logo.png";
 
 export type ExportLang = "ar" | "en" | "ku";
 
+export type ExportCard = {
+  title: string;
+  subtitle?: string;
+  score?: number | null;
+  status?: string;
+  fields?: Array<[string, string | number]>;
+  evidence?: string[];
+  notes?: string[];
+};
+
 export type ExportSection = {
   heading: string;
-  // Either rows of [label, value] pairs, free text, or a tabular block.
-  kind: "kv" | "text" | "table" | "list";
+  // Structured card grids are used for per-axis and per-source audit results.
+  kind: "kv" | "text" | "table" | "list" | "cards";
   rows?: Array<[string, string | number]>;
   text?: string;
   list?: string[];
   table?: { columns: string[]; data: (string | number)[][] };
+  cards?: ExportCard[];
 };
 
 export type ExportIdentityInfo = {
@@ -88,6 +99,14 @@ const UI: Record<ExportLang, { generated: string; report: string; by: string }> 
   ku: { generated: "دروستکرا لە", report: "ڕاپۆرت", by: "دروستکرا لەلایەن" },
 };
 
+const CARD_LABELS: Record<ExportLang, {
+  source: string; type: string; score: string; status: string; metric: string; value: string; evidence: string; notes: string; note: string;
+}> = {
+  ar: { source: "المصدر", type: "النوع", score: "الدرجة", status: "الحالة", metric: "المعيار", value: "القيمة", evidence: "الأدلة", notes: "الملاحظات", note: "ملاحظة" },
+  en: { source: "Source", type: "Type", score: "Score", status: "Status", metric: "Metric", value: "Value", evidence: "Evidence", notes: "Notes", note: "Note" },
+  ku: { source: "سەرچاوە", type: "جۆر", score: "نمرە", status: "دۆخ", metric: "پێوەر", value: "بەها", evidence: "بەڵگە", notes: "تێبینی", note: "تێبینی" },
+};
+
 /** One-line signature: user name + privacy-safe email. */
 function identityLine(payload: ExportPayload, lang: ExportLang): string {
   const id = payload.identity;
@@ -124,26 +143,50 @@ function brandHeaderHtml(lang: ExportLang, payload: ExportPayload, logoData: str
 }
 
 
-function sectionHtml(s: ExportSection): string {
-  const h = `<h2>${escapeHtml(s.heading)}</h2>`;
+function sectionHtml(s: ExportSection, lang: ExportLang): string {
+  const h = '<h2>' + escapeHtml(s.heading) + '</h2>';
+  const evidenceLabel = lang === "en" ? "Evidence" : lang === "ku" ? "بەڵگە" : "الأدلة";
   if (s.kind === "text" && s.text) {
-    return `${h}<p class="prose">${escapeHtml(s.text).replace(/\n/g, "<br/>")}</p>`;
+    return h + '<p class="prose">' + escapeHtml(s.text).replace(/\n/g, "<br/>") + '</p>';
   }
   if (s.kind === "list" && s.list) {
-    return `${h}<ul>${s.list.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+    return h + '<ul>' + s.list.map((x) => '<li>' + escapeHtml(x) + '</li>').join("") + '</ul>';
   }
   if (s.kind === "kv" && s.rows) {
-    return `${h}<table class="kv"><tbody>${s.rows
-      .map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`)
-      .join("")}</tbody></table>`;
+    return h + '<table class="kv"><tbody>' + s.rows
+      .map(([k, v]) => '<tr><th>' + escapeHtml(k) + '</th><td>' + escapeHtml(v) + '</td></tr>')
+      .join("") + '</tbody></table>';
   }
   if (s.kind === "table" && s.table) {
-    const { columns, data } = s.table;
-    return `${h}<table class="data"><thead><tr>${columns
-      .map((c) => `<th>${escapeHtml(c)}</th>`)
-      .join("")}</tr></thead><tbody>${data
-      .map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`)
-      .join("")}</tbody></table>`;
+    const columns = s.table.columns;
+    const data = s.table.data;
+    return h + '<table class="data"><thead><tr>' + columns
+      .map((value) => '<th>' + escapeHtml(value) + '</th>').join("") +
+      '</tr></thead><tbody>' + data
+      .map((row) => '<tr>' + row.map((value) => '<td>' + escapeHtml(value) + '</td>').join("") + '</tr>')
+      .join("") + '</tbody></table>';
+  }
+  if (s.kind === "cards" && s.cards) {
+    const cards = s.cards.map((card) => {
+      const scoreClass = typeof card.score !== "number" ? "none" : card.score >= 70 ? "good" : card.score >= 40 ? "weak" : "low";
+      const score = typeof card.score === "number"
+        ? '<div class="audit-score ' + scoreClass + '">' + escapeHtml(card.score) + '<small>/100</small></div>'
+        : '<div class="audit-score none">' + escapeHtml(card.status || "unmeasured") + '</div>';
+      const fields = card.fields?.length
+        ? '<table class="audit-fields"><tbody>' + card.fields.map(([key, value]) => '<tr><th>' + escapeHtml(key) + '</th><td>' + escapeHtml(value) + '</td></tr>').join("") + '</tbody></table>'
+        : "";
+      const evidence = card.evidence?.length
+        ? '<div class="audit-evidence"><strong>' + evidenceLabel + '</strong><ul>' + card.evidence.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul></div>'
+        : "";
+      const notes = card.notes?.length
+        ? '<div class="audit-notes">' + card.notes.map((item) => '<p>' + escapeHtml(item) + '</p>').join("") + '</div>'
+        : "";
+      return '<article class="audit-card"><div class="audit-card-head"><div class="audit-card-identity"><div class="audit-card-title">' + escapeHtml(card.title) + '</div>' +
+        (card.subtitle ? '<div class="audit-card-subtitle">' + escapeHtml(card.subtitle) + '</div>' : "") +
+        (card.status ? '<span class="audit-status">' + escapeHtml(card.status) + '</span>' : "") +
+        '</div>' + score + '</div>' + fields + evidence + notes + '</article>';
+    }).join("");
+    return h + '<div class="audit-cards">' + cards + '</div>';
   }
   return h;
 }
@@ -182,6 +225,28 @@ export async function exportToPDF(payload: ExportPayload) {
   table.data th { background:#4338ca; color:#fff; padding:6px 8px; border:1px solid #312e81; font-weight:600; text-align:${dir === "rtl" ? "right" : "left"}; }
   table.data td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align: top; }
   table.data tr:nth-child(even) td { background:#f8fafc; }
+  .audit-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px; }
+  .audit-card { border:1px solid #dbe4f0; border-radius:11px; padding:10px; break-inside:avoid; page-break-inside:avoid; background:#fff; }
+  .audit-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .audit-card-identity { min-width:0; flex:1; }
+  .audit-card-title { font-size:11px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; color:#0f2454; }
+  .audit-card-subtitle { color:#64748b; font-size:9px; margin-top:3px; }
+  .audit-status { display:inline-block; margin-top:5px; padding:2px 6px; border-radius:999px; font-size:8px; background:#eef2ff; color:#3730a3; }
+  .audit-score { flex-shrink:0; font-weight:800; font-size:17px; text-align:center; min-width:52px; border-radius:8px; padding:5px; background:#f1f5f9; color:#334155; }
+  .audit-score small { display:block; font-size:7px; font-weight:500; }
+  .audit-score.good { background:#dcfce7; color:#166534; }
+  .audit-score.weak { background:#fef3c7; color:#92400e; }
+  .audit-score.low { background:#fee2e2; color:#991b1b; }
+  .audit-score.none { font-size:8px; font-weight:600; max-width:90px; overflow-wrap:anywhere; }
+  table.audit-fields { margin-top:7px; font-size:9px; }
+  table.audit-fields th { text-align:left; width:36%; padding:4px 5px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; }
+  table.audit-fields td { padding:4px 5px; border:1px solid #e2e8f0; overflow-wrap:anywhere; }
+  .audit-evidence { font-size:8.5px; color:#475569; margin-top:6px; overflow-wrap:anywhere; }
+  .audit-evidence ul { padding-left:14px; margin:2px 0; }
+  .audit-evidence li { margin:2px 0; }
+  .audit-notes { font-size:8.5px; color:#92400e; background:#fffbeb; border-radius:6px; margin-top:6px; padding:5px; overflow-wrap:anywhere; }
+  .audit-notes p { margin:2px 0; }
+  @media print { .audit-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   footer.disclaimer { margin-top: 28px; padding-top: 12px; border-top: 1px dashed #94a3b8; font-size: 10.5px; color:#475569; line-height: 1.5; }
   footer.disclaimer .who { font-weight:600; color:#334155; margin-bottom:4px; }
   /* Nothing may be lost across page breaks */
@@ -201,7 +266,7 @@ export async function exportToPDF(payload: ExportPayload) {
   ${brandHeaderHtml(lang, payload, logoData)}
   <h1>${escapeHtml(payload.title)}</h1>
   ${payload.subtitle ? `<div class="subtitle">${escapeHtml(payload.subtitle)}</div>` : ""}
-  ${payload.sections.map(sectionHtml).join("")}
+  ${payload.sections.map((section) => sectionHtml(section, lang)).join("")}
   <footer class="disclaimer">
     ${identityLine(payload, lang) ? `<div class="who">${escapeHtml(identityLine(payload, lang))}</div>` : ""}
     <div>${BRAND} · ${SITE}</div>
@@ -237,6 +302,7 @@ export async function exportToPDF(payload: ExportPayload) {
 /** Build a branded multi-sheet Excel workbook and trigger download. */
 export async function exportToExcel(payload: ExportPayload) {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND;
@@ -270,6 +336,14 @@ export async function exportToExcel(payload: ExportPayload) {
       header.font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
       header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
       section.table.data.forEach((row) => sheet.addRow(row));
+    } else if (section.kind === "cards" && section.cards) {
+      section.cards.forEach((card) => {
+        sheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || ""]);
+        (card.fields || []).forEach(([key, value]) => sheet.addRow([key, value]));
+        (card.evidence || []).forEach((value) => sheet.addRow([cardLabels.evidence, value]));
+        (card.notes || []).forEach((value) => sheet.addRow([cardLabels.note, value]));
+        sheet.addRow([]);
+      });
     }
     sheet.addRow([]);
   });
@@ -281,8 +355,25 @@ export async function exportToExcel(payload: ExportPayload) {
     row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" };
   });
   payload.sections.forEach((section, index) => {
+    if (section.kind === "cards" && section.cards) {
+      const name = (section.heading || "Cards " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
+      const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
+      const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
+      dataSheet.addRow(columns);
+      section.cards.forEach((card) => {
+        if (card.fields?.length) card.fields.forEach(([metric, value]) =>
+          dataSheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, (card.evidence || []).join(" | "), (card.notes || []).join(" | ")])
+        );
+        else dataSheet.addRow([card.title, card.subtitle || "", card.score ?? "", card.status || "", "", "", (card.evidence || []).join(" | "), (card.notes || []).join(" | ")]);
+      });
+      dataSheet.columns = [34, 18, 10, 22, 18, 28, 48, 40].map((width) => ({ width }));
+      dataSheet.getRow(1).font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+      dataSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+      dataSheet.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" }; });
+      return;
+    }
     if (section.kind !== "table" || !section.table) return;
-    const name = (section.heading || `Table ${index + 1}`).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
+    const name = (section.heading || "Table " + (index + 1)).slice(0, 28).replace(/[\\/?*[\]:]/g, "_");
     const dataSheet = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en" }] });
     dataSheet.addRows([section.table.columns, ...section.table.data]);
     dataSheet.columns = section.table.columns.map(() => ({ width: 24 }));
@@ -297,6 +388,7 @@ export async function exportToExcel(payload: ExportPayload) {
 /** Build and download a CSV file. Flattens sections (kv/list/text/table) into rows. */
 export function exportToCSV(payload: ExportPayload) {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const lines: string[] = [];
   const esc = (v: any) => {
     const s = String(v ?? "");
@@ -325,6 +417,17 @@ export function exportToCSV(payload: ExportPayload) {
     } else if (s.kind === "table" && s.table) {
       lines.push(s.table.columns.map(esc).join(","));
       s.table.data.forEach((r) => lines.push(r.map(esc).join(",")));
+    } else if (s.kind === "cards" && s.cards) {
+      const columns = [cardLabels.source, cardLabels.type, cardLabels.score, cardLabels.status, cardLabels.metric, cardLabels.value, cardLabels.evidence, cardLabels.notes];
+      lines.push(columns.map(esc).join(","));
+      s.cards.forEach((card) => {
+        const evidence = (card.evidence || []).join(" | ");
+        const notes = (card.notes || []).join(" | ");
+        if (card.fields?.length) card.fields.forEach(([metric, value]) =>
+          lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, evidence, notes].map(esc).join(","))
+        );
+        else lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", "", "", evidence, notes].map(esc).join(","));
+      });
     }
     lines.push("");
   });
@@ -376,6 +479,7 @@ export function exportToJSON(payload: ExportPayload) {
 
 export function payloadToMarkdown(payload: ExportPayload): string {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const out: string[] = [`# ${payload.title}`];
   if (payload.subtitle) out.push(`_${payload.subtitle}_`);
   out.push(`> ${BRAND} · ${SITE} — ${UI[lang].generated} ${new Date().toLocaleString()}`);
@@ -396,6 +500,16 @@ export function payloadToMarkdown(payload: ExportPayload): string {
         ...s.table.data.map((r) => `| ${r.join(" | ")} |`),
         "",
       );
+    } else if (s.kind === "cards" && s.cards) {
+      for (const card of s.cards) {
+        out.push("### " + card.title);
+        if (card.subtitle) out.push("_" + card.subtitle + "_");
+        out.push("- " + cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"));
+        if (card.fields?.length) out.push("| " + cardLabels.metric + " | " + cardLabels.value + " |", "|---|---|", ...card.fields.map(([key, value]) => "| " + key + " | " + value + " |"));
+        if (card.evidence?.length) out.push("", cardLabels.evidence + ":", ...card.evidence.map((item) => "- " + item));
+        if (card.notes?.length) out.push("", cardLabels.notes + ":", ...card.notes.map((item) => "- " + item));
+        out.push("");
+      }
     }
   }
   out.push("---", DISCLAIMER[lang]);
@@ -417,6 +531,7 @@ export function textIsRtl(text: string, fallback: boolean): boolean {
 export async function exportToWord(payload: ExportPayload) {
   const lang = payload.lang || "ar";
   const rtl = lang !== "en";
+  const cardLabels = CARD_LABELS[lang];
   const {
     AlignmentType, BorderStyle, Document, Footer, Header, HeadingLevel, ImageRun,
     Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType,
@@ -462,6 +577,32 @@ export async function exportToWord(payload: ExportPayload) {
     else if (section.kind === "list" && section.list) section.list.forEach((item) => content.push(new Paragraph({ bidirectional: textIsRtl(item, rtl), alignment: textIsRtl(item, rtl) ? AlignmentType.RIGHT : AlignmentType.LEFT, bullet: { level: 0 }, children: [new TextRun({ text: item, font: "Arial", size: 22 })] })));
     else if (section.kind === "kv" && section.rows) content.push(makeTable(["", ""], section.rows.map(([key, value]) => [key, value])));
     else if (section.kind === "table" && section.table) content.push(makeTable(section.table.columns, section.table.data));
+    else if (section.kind === "cards" && section.cards) {
+      section.cards.forEach((card) => {
+        const scoreText = card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100";
+        const cardChildren: Array<InstanceType<typeof Paragraph> | InstanceType<typeof Table>> = [
+          paragraph(card.title, { bold: true, size: 24, color: "0F2454" }),
+          ...(card.subtitle ? [paragraph(card.subtitle, { size: 18, color: "64748B" })] : []),
+          paragraph(cardLabels.score + ": " + scoreText + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }),
+          ...(card.fields || []).map(([key, value]) => paragraph(String(key) + ": " + String(value), { size: 18, color: "334155" })),
+          ...(card.evidence || []).map((item) => paragraph(cardLabels.evidence + ": " + item, { size: 17, color: "475569" })),
+          ...(card.notes || []).map((item) => paragraph(cardLabels.note + ": " + item, { size: 17, color: "92400E" })),
+        ];
+        const cardFill = card.score == null ? "F8FAFC" : card.score >= 70 ? "F0FDF4" : card.score >= 40 ? "FFFBEB" : "FEF2F2";
+        const cardCell = new TableCell({
+          width: { size: 9360, type: WidthType.DXA },
+          borders: cellBorders,
+          shading: { fill: cardFill, type: ShadingType.CLEAR },
+          margins: { top: 140, bottom: 140, left: 160, right: 160 },
+          children: cardChildren,
+        });
+        content.push(new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [9360],
+          rows: [new TableRow({ children: [cardCell] })],
+        }));
+      });
+    }
   });
   const headerChildren = [new Paragraph({
     bidirectional: rtl,
@@ -488,6 +629,7 @@ export async function exportToWord(payload: ExportPayload) {
 /** Slide deck — one slide per section. Loaded lazily to keep the bundle light. */
 export async function exportToPowerPoint(payload: ExportPayload) {
   const lang = payload.lang || "ar";
+  const cardLabels = CARD_LABELS[lang];
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
@@ -509,6 +651,25 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   const CHARS_PER_SLIDE = 1200;
 
   for (const s of payload.sections) {
+    if (s.kind === "cards" && s.cards) {
+      s.cards.forEach((card) => {
+        const slide = pptx.addSlide();
+        decorate(slide);
+        slide.addText(s.heading, { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA" });
+        slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
+        slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid" });
+        if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B" });
+        slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
+        const details = [
+          cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"),
+          ...(card.fields || []).map(([key, value]) => String(key) + ": " + String(value)),
+          ...(card.evidence || []).map((item) => cardLabels.evidence + ": " + item),
+          ...(card.notes || []).map((item) => cardLabels.note + ": " + item),
+        ].join("\n");
+        slide.addText(details, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });
+      });
+      continue;
+    }
     if (s.kind === "table" && s.table) {
       // Split long tables across slides so no row is lost.
       const chunks: (string | number)[][][] = [];

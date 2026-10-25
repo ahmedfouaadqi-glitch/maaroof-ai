@@ -31,7 +31,41 @@ const VERDICT: Record<L, [string, string, string, string]> = {
   ku: ["باش", "لاواز", "نییە", "نەپێوراو"],
 };
 const verdict = (lang: L, s: number | null | undefined) => { const v = VERDICT[lang]; return s == null ? v[3] : s >= 70 ? v[0] : s >= 40 ? v[1] : v[2]; };
-const NOTE: Record<L, string> = { ar: "النتيجة تعكس الموقع المنشور بتاريخ الفحص", en: "The result reflects the published site at scan time", ku: "ئەنجامەکە ماڵپەڕی بڵاوکراوە لە کاتی پشکنیندا پیشان دەدات" };
+const NOTE: Record<L, string> = { ar: "النتيجة تعكس الأدلة العامة التي أمكن الوصول إليها وقت الفحص", en: "Results reflect the public evidence accessible at scan time", ku: "ئەنجامەکان بەڵگە گشتییە دەستپێگەیشتووەکان لە کاتی پشکنین پیشان دەدەن" };
+
+const ISSUE_TEXT: Record<L, Record<string, string>> = {
+  ar: {
+    access_restricted: "المنصة حجبت القراءة أو طلبت تسجيل الدخول؛ لا تُحتسب نتيجة دون دليل عام قابل للتحقق.",
+    rate_limited: "المصدر حدّ من الطلبات. أعد الفحص لاحقًا بدل افتراض نتيجة.",
+    timeout: "انتهت مهلة قراءة هذا الرابط؛ لم تُحتسب له درجة.",
+    source_unavailable: "تعذر الحصول على محتوى عام صالح من هذا المصدر.",
+    insufficient_public_content: "لم يتوفر نص أو وصف عام كافٍ لقياس هذا المصدر.",
+    no_public_content: "لم يُستخرج محتوى عام كافٍ من الرابط.",
+    insufficient_content_for_axis: "المعلومات التعريفية وحدها لا تكفي لقياس هذا المحور؛ يلزم محتوى أعمق.",
+    needs_full_page_content: "يتطلب هذا المحور محتوى الصفحة، لا العنوان والوصف فقط.",
+  },
+  en: {
+    access_restricted: "The platform blocked reading or required sign-in; no score is inferred without public evidence.",
+    rate_limited: "The source rate-limited requests. Retry later rather than infer a result.",
+    timeout: "Reading this URL timed out; no score was assigned.",
+    source_unavailable: "No usable public content could be retrieved from this source.",
+    insufficient_public_content: "There was not enough public text or description to measure this source.",
+    no_public_content: "Not enough public content was extracted from this URL.",
+    insufficient_content_for_axis: "Profile metadata alone cannot measure this axis; deeper content is required.",
+    needs_full_page_content: "This axis requires page content, not only a title and description.",
+  },
+  ku: {
+    access_restricted: "پلاتفۆرم خوێندنەوەی ڕێگەپێنەدا یان چوونەژوورەوەی دا؛ بەبێ بەڵگە ئەنجام دانانرێت.",
+    rate_limited: "سەرچاوەکە داواکارییەکانی سنووردار کرد؛ دواتر دووبارە هەوڵ بدە.",
+    timeout: "کاتی خوێندنەوەی ئەم بەستەرە تەواو بوو؛ هیچ نمرەیەک نەدرا.",
+    source_unavailable: "ناوەڕۆکی گشتیی بەکارهێنراو لەم سەرچاوەیەوە بەدەست نەهات.",
+    insufficient_public_content: "دەقی گشتی یان وەسفی پێویست بۆ پێوانەکردن نەبوو.",
+    no_public_content: "ناوەڕۆکی گشتیی پێویست لەم بەستەرەوە نەدەرکرا.",
+    insufficient_content_for_axis: "زانیاریی ناسنامە بە تەنها بۆ پێوانەکردنی ئەم تەوەرە بەس نییە.",
+    needs_full_page_content: "ئەم تەوەرە ناوەڕۆکی تەواوی پەڕەی دەوێت، نەک تەنها ناونیشان و وەسف.",
+  },
+};
+const issueText = (lang: L, key?: string | null) => key ? ISSUE_TEXT[lang][key] || key : "";
 
 function Ring({ value, size = 92 }: { value: number | null; size?: number }) {
   const r = size / 2 - 7, c = 2 * Math.PI * r, v = value ?? 0;
@@ -136,10 +170,43 @@ export function WorkspaceAuditPulse({ lang, workspaceId, onTask }: { lang: L; wo
           </div>
           {delta != null && <p className="mt-1 text-[11px] text-muted-foreground">{delta >= 0 ? "+" : ""}{delta} {t.delta}</p>}
           {result && <p className="mt-1 text-[11px] text-muted-foreground">{NOTE[lang]}</p>}
-          {result && <div className="mt-2 flex justify-end"><ExportButtons size="xs" toolKey="maaroof" build={() => ({ title: t.title, lang, entity: { brand: targets[0]?.url ? new URL(targets[0].url).hostname : "Maaroof audit", site: targets[0]?.url, links: targets.map((x: any) => x.url) }, sections: [
-            { heading: lang === "en" ? "Five-axis summary" : lang === "ku" ? "پوختەی پێنج تەوەر" : "ملخص المحاور الخمسة", kind: "kv", rows: [["SEO", result.axes?.seo ?? "unmeasured"], ["AEO", result.axes?.aeo ?? "unmeasured"], ["GEO", result.axes?.geo ?? "unmeasured"], ["SGE", result.axes?.sge ?? "unmeasured"], ["GSEO", result.axes?.gseo ?? "unmeasured"], [lang === "en" ? "Overall" : lang === "ku" ? "گشتی" : "الإجمالي", result.overall ?? "unmeasured"]] },
-            { heading: lang === "en" ? "Audited targets and evidence" : lang === "ku" ? "ئامانج و بەڵگە پشکنراوەکان" : "الأهداف والأدلة المفحوصة", kind: "text", text: JSON.stringify((result.targets || []).map((x: any) => ({ url: x.url, ok: x.ok, findings: (x.findings || []).map((f: any) => ({ axis: f.axis, score: f.score, evidence: f.evidence })) })), null, 2) },
-          ] })} /></div>}
+          {result && <div className="mt-2 flex justify-end"><ExportButtons size="xs" toolKey="maaroof" build={() => {
+            const axisLabels: Record<string, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", sge: "SGE", gseo: "GSEO" };
+            const axisCards = AX.map((axis) => {
+              const score = result.axes?.[axis] ?? null;
+              const measuredLinks = (result.targets || []).filter((target: any) => (target.findings || []).some((finding: any) => finding.axis === axis && finding.score != null)).length;
+              return { title: axis.toUpperCase(), score, status: typeof score === "number" ? "measured" : "unmeasured", fields: [[lang === "en" ? "Sources measured" : lang === "ku" ? "سەرچاوە پێوراوەکان" : "المصادر المقاسة", String(measuredLinks) + "/" + String((result.targets || []).length)] as [string, string | number]] };
+            });
+            const targetCards = (result.targets || []).map((target: any) => {
+              const measured = (target.findings || []).filter((finding: any) => finding.score != null);
+              const average = measured.length ? Math.round(measured.reduce((sum: number, finding: any) => sum + finding.score, 0) / measured.length) : null;
+              return {
+                title: target.url,
+                subtitle: target.platform || target.kind,
+                score: average,
+                status: target.read_status || (target.ok ? "measured" : "unmeasured"),
+                fields: (target.findings || []).map((finding: any) => [axisLabels[finding.axis] || finding.axis.toUpperCase(), finding.score == null ? "unmeasured" : String(finding.score) + "/100"] as [string, string | number]),
+                evidence: (target.findings || []).filter((finding: any) => finding.evidence?.length).map((finding: any) => (axisLabels[finding.axis] || finding.axis.toUpperCase()) + ": " + finding.evidence.join(" · ")),
+                notes: [target.read_issue, ...(target.findings || []).filter((finding: any) => finding.score == null).map((finding: any) => finding.reason)].filter(Boolean),
+              };
+            });
+            const headline = lang === "en" ? "Audit summary" : lang === "ku" ? "پوختەی پشکنین" : "ملخص الفحص";
+            const targetsHeading = lang === "en" ? "Per-link audit cards" : lang === "ku" ? "کارتی پشکنینی هەر بەستەر" : "بطاقات فحص كل رابط";
+            return {
+              title: t.title,
+              subtitle: est.workspace_name || est.brand || (lang === "en" ? "Client digital presence" : lang === "ku" ? "بوونی دیجیتاڵی کڕیار" : "الحضور الرقمي للعميل"),
+              lang,
+              entity: { brand: est.brand || (targets[0]?.url ? new URL(targets[0].url).hostname : "Maaroof audit"), site: targets.find((x: any) => x.kind === "official")?.url || targets[0]?.url, links: targets.map((x: any) => x.url) },
+              sections: [
+                { heading: headline, kind: "kv", rows: [
+                  [lang === "en" ? "Overall score" : lang === "ku" ? "نمرەی گشتی" : "النتيجة الإجمالية", result.overall ?? "unmeasured"],
+                  [lang === "en" ? "Sources with measurable findings" : lang === "ku" ? "سەرچاوەکانی پێوانەکراو" : "المصادر ذات النتائج القابلة للقياس", String(result.succeeded) + "/" + String(result.total)],
+                ] },
+                { heading: lang === "en" ? "Axis score cards" : lang === "ku" ? "کارتی نمرەی تەوەرەکان" : "بطاقات درجات المحاور", kind: "cards", cards: axisCards },
+                { heading: targetsHeading, kind: "cards", cards: targetCards },
+              ],
+            };
+          }} /></div>}
 
           <ul className="mt-4 space-y-1.5" dir="ltr">
             {targets.map((tg) => {
@@ -155,11 +222,12 @@ export function WorkspaceAuditPulse({ lang, workspaceId, onTask }: { lang: L; wo
                   </button>
                   {open === tg.url && done && (
                     <div className="ms-5 mt-1 space-y-1 border-s border-border ps-2" dir={lang === "en" ? "ltr" : "rtl"}>
+                      {done.read_issue && <p className="mb-2 rounded-md bg-muted/60 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground">{issueText(lang, done.read_issue)}</p>}
                       {done.findings.map((f: any) => (
                         <div key={f.axis} className="flex items-center gap-2">
                           <span className="w-10 font-semibold">{f.axis.toUpperCase()}</span>
                           <span className={tone(f.score)}>{f.score ?? t.un}</span>
-                          <span className="flex-1 truncate text-muted-foreground" dir="ltr">{f.evidence.join(" · ")}</span>
+                          <span className="flex-1 min-w-0 text-muted-foreground" dir="auto">{f.score == null ? issueText(lang, f.reason) : f.evidence.join(" · ")}</span>
                           {f.score != null && f.score < 70 && <button type="button" onClick={() => onTask(TASK[lang](f.axis, tg.url))} className="inline-flex items-center gap-0.5 text-primary hover:underline">{t.task}<ArrowUpRight className="size-3" /></button>}
                         </div>
                       ))}
