@@ -129,6 +129,7 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
   result: any;
   provenance: ReturnType<typeof normalizeSourceEvidence>;
   creditsCost: number | null;
+  budgetOverrunDetected: boolean;
 }> {
   if (process.env.MAAROOF_ALEXANDRIA_ENABLED !== "true") throw new SpecializedSourceGateError("specialized_source_not_enabled");
   if (!input.provider.trim() || !input.capability.trim()) throw new SpecializedSourceGateError("capability_required");
