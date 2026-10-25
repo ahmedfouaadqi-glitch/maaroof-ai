@@ -406,6 +406,17 @@ export function exportToCSV(payload: ExportPayload) {
     } else if (s.kind === "table" && s.table) {
       lines.push(s.table.columns.map(esc).join(","));
       s.table.data.forEach((r) => lines.push(r.map(esc).join(",")));
+    } else if (s.kind === "cards" && s.cards) {
+      const columns = ["source", "type", "score", "status", "metric", "value", "evidence", "notes"];
+      lines.push(columns.map(esc).join(","));
+      s.cards.forEach((card) => {
+        const evidence = (card.evidence || []).join(" | ");
+        const notes = (card.notes || []).join(" | ");
+        if (card.fields?.length) card.fields.forEach(([metric, value]) =>
+          lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", metric, value, evidence, notes].map(esc).join(","))
+        );
+        else lines.push([card.title, card.subtitle || "", card.score ?? "", card.status || "", "", "", evidence, notes].map(esc).join(","));
+      });
     }
     lines.push("");
   });
@@ -472,11 +483,21 @@ export function payloadToMarkdown(payload: ExportPayload): string {
       out.push("| | |", "|---|---|", ...s.rows.map(([k, v]) => `| ${k} | ${v} |`), "");
     } else if (s.kind === "table" && s.table) {
       out.push(
-        `| ${s.table.columns.join(" | ")} |`,
-        `| ${s.table.columns.map(() => "---").join(" | ")} |`,
-        ...s.table.data.map((r) => `| ${r.join(" | ")} |`),
+        \`| \${s.table.columns.join(" | ")} |\`,
+        \`| \${s.table.columns.map(() => "---").join(" | ")} |\`,
+        ...s.table.data.map((r) => \`| \${r.join(" | ")} |\`),
         "",
       );
+    } else if (s.kind === "cards" && s.cards) {
+      for (const card of s.cards) {
+        out.push("### " + card.title);
+        if (card.subtitle) out.push("_" + card.subtitle + "_");
+        out.push("- Score: " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"));
+        if (card.fields?.length) out.push("| Metric | Value |", "|---|---|", ...card.fields.map(([key, value]) => "| " + key + " | " + value + " |"));
+        if (card.evidence?.length) out.push("", "Evidence:", ...card.evidence.map((item) => "- " + item));
+        if (card.notes?.length) out.push("", "Notes:", ...card.notes.map((item) => "- " + item));
+        out.push("");
+      }
     }
   }
   out.push("---", DISCLAIMER[lang]);
