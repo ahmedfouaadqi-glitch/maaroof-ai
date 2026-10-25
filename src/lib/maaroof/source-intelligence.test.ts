@@ -16,7 +16,7 @@ describe("Source Intelligence Router", () => {
   it("uses a news-aware route for recent queries without increasing the call budget", () => {
     const plan = planSourceRoute({ goal: "latest news about the Iraqi mobile market", budget: { maxRequests: 1, maxEstimatedCredits: 2 } });
     expect(plan.primary).toBe("news");
-    expect(plan.searchSources).toEqual(["web", "news"]);
+    expect(plan.searchSources).toEqual(["news"]);
     expect(plan.maxRequests).toBe(1);
   });
 
