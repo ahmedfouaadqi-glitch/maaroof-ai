@@ -119,7 +119,7 @@ export function freshnessOf(category: string | null | undefined, createdAt?: str
 
 /**
  * Composite weight of a single piece of evidence (0-100).
- * type strength · source reliability · reproducibility · freshness · value.
+ * type strength · source reliability · freshness · reproducibility. Relevance and business importance are separate.
  */
 export function weighEvidence(input: {
   evidenceType: EvidenceType | string;
@@ -176,15 +176,6 @@ export async function recordEvidence(input: EvidenceInput): Promise<string | nul
       contradicts: input.contradicts,
     });
     const weight = dimensions.quality;
-    /* const weight = weighEvidence({
-      evidenceType: input.evidenceType,
-      sourceReliability: input.sourceReliability,
-      reproducible: input.reproducible,
-      successCount: input.successCount,
-      freshness,
-      businessValue: input.businessValue,
-      contradicts: input.contradicts,
-    }); */
     const life = SHELF_LIFE_DAYS[String(input.category || "platform")] ?? 90;
     const { data } = await db()
       .from("evidence_items")
