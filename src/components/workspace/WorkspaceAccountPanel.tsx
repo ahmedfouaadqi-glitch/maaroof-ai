@@ -7,6 +7,38 @@ import type { Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 type L = "ar" | "en" | "ku";
 const tr = (lang: L, ar: string, en: string, ku: string) => lang === "en" ? en : lang === "ku" ? ku : ar;
 
+function linkValue(item: unknown): string {
+  if (typeof item === "string") return item.trim();
+  if (item && typeof item === "object") {
+    const row = item as Record<string, unknown>;
+    const value = row.url ?? row.href ?? row.link;
+    return typeof value === "string" ? value.trim() : "";
+  }
+  return "";
+}
+
+function linkKey(value: string): string {
+  try {
+    const u = new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+    return (u.hostname.toLowerCase().replace(/^www\./, "") + u.pathname.replace(/\/+$/, "") + u.search).toLowerCase();
+  } catch {
+    return value.trim().toLowerCase();
+  }
+}
+
+function normalizePublicUrl(value: string): string | null {
+  const raw = value.trim();
+  if (!raw) return null;
+  try {
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : "https://" + raw);
+    if (!["http:", "https:"].includes(u.protocol) || !u.hostname.includes(".") || u.username || u.password) return null;
+    u.hash = "";
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 /** Workspace-specific identity and onboarding. User-entered facts remain unverified until independently checked. */
 export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
   workspace: Workspace | null;
@@ -17,6 +49,7 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
   const [entityName, setEntityName] = useState("");
   const [entityType, setEntityType] = useState("brand");
   const [website, setWebsite] = useState("");
+  const [additionalLinks, setAdditionalLinks] = useState("");
   const [sector, setSector] = useState("");
   const [country, setCountry] = useState("");
   const [markets, setMarkets] = useState("");
@@ -30,10 +63,31 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
 
   useEffect(() => {
     const card = workspace?.entity_truth_card || {};
+    const profile = workspace?.profile || {};
     const answers = workspace?.onboarding?.answers || {};
     setEntityName(String(card.entity_name || workspace?.name || ""));
     setEntityType(String(card.entity_type || (workspace?.kind === "client" ? "client" : workspace?.kind === "own" ? "organization" : "brand")));
-    setWebsite(String(card.website_url || workspace?.brand_url || ""));
+    const websiteValue = String(card.website_url || workspace?.brand_url || profile.website_url || "");
+    setWebsite(websiteValue);
+    const candidates = [
+      ...(Array.isArray(card.links) ? card.links : []),
+      ...(Array.isArray(card.social_links) ? card.social_links : []),
+      ...(Array.isArray(profile.entity_links) ? profile.entity_links : []),
+      ...(Array.isArray(profile.links) ? profile.links : []),
+      ...(Array.isArray(profile.social_links) ? profile.social_links : []),
+      profile.website_url,
+      workspace?.brand_url,
+    ].map(linkValue).filter(Boolean);
+    const websiteKey = websiteValue ? linkKey(websiteValue) : "";
+    const seenLinks = new Set<string>(websiteKey ? [websiteKey] : []);
+    const extras: string[] = [];
+    for (const value of candidates) {
+      const key = linkKey(value);
+      if (seenLinks.has(key)) continue;
+      seenLinks.add(key);
+      extras.push(value);
+    }
+    setAdditionalLinks(extras.join("\n"));
     setSector(String(card.sector || workspace?.brand_summary || ""));
     setCountry(String(card.country || workspace?.country || ""));
     setMarkets((Array.isArray(card.markets) ? card.markets : []).join(", "));
@@ -43,7 +97,7 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
     setCompetitors((Array.isArray(answers.competitors) ? answers.competitors : []).join(", "));
     setMessage("");
     setError("");
-  }, [workspace?.id, workspace?.entity_truth_card, workspace?.onboarding, workspace?.brand_url, workspace?.brand_summary, workspace?.country]);
+  }, [workspace?.id, workspace?.entity_truth_card, workspace?.onboarding, workspace?.profile, workspace?.brand_url, workspace?.brand_summary, workspace?.country]);
 
   const save = async () => {
     if (!workspace) return;
@@ -52,12 +106,27 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
       const facts = keyFacts.split(/\n+/).map((v) => v.trim()).filter(Boolean).slice(0, 30);
       const marketList = markets.split(/[,،;\n]+/).map((v) => v.trim()).filter(Boolean).slice(0, 20);
       const competitorList = competitors.split(/[,،;\n]+/).map((v) => v.trim()).filter(Boolean).slice(0, 20);
+      const rawLinks = [website, ...additionalLinks.split(/\r?\n/)].map((v) => v.trim()).filter(Boolean);
+      const normalizedLinks = rawLinks.map(normalizePublicUrl);
+      if (normalizedLinks.some((v) => !v)) {
+        setError(tr(lang, "تأكد من صحة كل رابط؛ استخدم نطاقاً أو رابط HTTP/HTTPS لكل سطر.", "Check each link. Use a domain or an HTTP/HTTPS URL on each line.", "دڵنیابە لە دروستی هەموو بەستەرەکان؛ هەر هێڵێک بەستەری HTTP/HTTPS بێت."));
+        return;
+      }
+      const uniqueLinks = new Map<string, string>();
+      for (const value of normalizedLinks as string[]) uniqueLinks.set(linkKey(value), value);
+      if (uniqueLinks.size > 50) {
+        setError(tr(lang, "الحد الأقصى 50 رابطاً لكل عميل في الفحص الواحد.", "The maximum is 50 links per client audit.", "زۆرترین ژمارە ٥٠ بەستەرە بۆ هەر کڕیار."));
+        return;
+      }
+      const websiteUrl = website.trim() ? normalizePublicUrl(website) : null;
+      const linkRows = [...uniqueLinks.values()].map((url) => ({ url, type: websiteUrl && linkKey(url) === linkKey(websiteUrl) ? "official" : "auto" }));
       const card = {
         ...(workspace.entity_truth_card || {}),
         entity_name: entityName.trim().slice(0, 200),
         entity_type: entityType,
-        website_url: website.trim() || null,
-        links: website.trim() ? [{ url: website.trim(), type: "official" }] : [],
+        website_url: websiteUrl,
+        links: linkRows,
+        social_links: [],
         sector: sector.trim().slice(0, 400),
         country: country.trim().slice(0, 80) || null,
         markets: marketList,
@@ -81,11 +150,18 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
       const result: any = await saveWorkspace({ data: {
         id: workspace.id,
         name: entityName.trim().slice(0, 100) || workspace.name,
-        brand_url: website.trim() || null,
+        brand_url: website.trim() ? normalizePublicUrl(website) : null,
         brand_summary: sector.trim().slice(0, 4000) || null,
         country: country.trim().slice(0, 80) || null,
         language: lang,
         entity_truth_card: card,
+        profile: {
+          ...(workspace.profile || {}),
+          website_url: null,
+          entity_links: [],
+          links: [],
+          social_links: [],
+        },
         onboarding,
         settings,
       } });
@@ -110,6 +186,11 @@ export function WorkspaceAccountPanel({ workspace, lang, onSaved }: {
         <label className="text-xs">{tr(lang, "اسم الكيان", "Entity name", "ناوی کەسایەتی")}<input value={entityName} onChange={(e) => setEntityName(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" /></label>
         <label className="text-xs">{tr(lang, "نوع الكيان", "Entity type", "جۆری کەسایەتی")}<select value={entityType} onChange={(e) => setEntityType(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"><option value="brand">{tr(lang, "علامة تجارية", "Brand", "براند")}</option><option value="organization">{tr(lang, "شركة / منظمة", "Company / organization", "کۆمپانیا / دامەزراوە")}</option><option value="client">{tr(lang, "عميل", "Client", "کڕیار")}</option><option value="product">{tr(lang, "منتج", "Product", "بەرهەم")}</option><option value="person">{tr(lang, "شخص", "Person", "کەس")}</option></select></label>
         <label className="text-xs sm:col-span-2">{tr(lang, "الموقع الرسمي", "Official website", "ماڵپەڕی فەرمی")}<input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" /></label>
+        <label className="text-xs sm:col-span-2">
+          {tr(lang, "روابط إضافية للعميل — رابط واحد في كل سطر", "Additional client links — one URL per line", "بەستەری زیاتر بۆ کڕیار — هەر هێڵێک یەک بەستەر")}
+          <textarea rows={5} value={additionalLinks} onChange={(e) => setAdditionalLinks(e.target.value)} placeholder={"https://linkedin.com/company/example\nhttps://instagram.com/example\nhttps://example.com/services"} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono" />
+          <span className="mt-1 block text-[11px] text-muted-foreground">{tr(lang, "حتى 50 رابطاً إجمالاً. يصنّف معروف المصادر تلقائياً ويوجه كل رابط إلى محاور التدقيق المناسبة لطبيعته.", "Up to 50 links total. Maaroof classifies each source and routes it to the audit axes suited to its type.", "تا ٥٠ بەستەر بە گشتی. معروف جۆری بەستەر دەناسێتەوە و بۆ تەوەرە گونجاوەکان دەنێرێت.")}</span>
+        </label>
         <label className="text-xs">{tr(lang, "القطاع / التخصص", "Sector / specialty", "بواری کار")}<input value={sector} onChange={(e) => setSector(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" /></label>
         <label className="text-xs">{tr(lang, "الدولة / المقر", "Country / headquarters", "وڵات / ناوەند")}<input value={country} onChange={(e) => setCountry(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" /></label>
         <label className="text-xs sm:col-span-2">{tr(lang, "الأسواق المستهدفة (افصل بفاصلة)", "Target markets (comma-separated)", "بازاڕە ئامانجەکان")}<input value={markets} onChange={(e) => setMarkets(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" /></label>

@@ -38,47 +38,78 @@ function scopeError(error: any) {
 
 async function runAudit(db: any, userId: string, jobId: string, targets: AuditTarget[], brand: string, kind: string | null, startSeq = 0) {
   let seq = startSeq;
-  const emit = (event_type: string, payload: any) => db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq: ++seq, event_type, payload });
+  let cursor = 0;
+  let cancelled = false;
+  const CONCURRENCY = 3;
+  const emit = (event_type: string, payload: any) =>
+    db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq: ++seq, event_type, payload });
   const results: { url: string; kind: string; platform: string | null; ok: boolean; findings: ReturnType<typeof scoreTarget> }[] = [];
-  try {
-    const { fcScrape } = await import("@/lib/firecrawl");
-    for (let i = 0; i < targets.length; i++) {
-      const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).maybeSingle();
-      if (j?.status === "cancelled") return;
-      const t = targets[i];
-      await emit("audit_progress", { index: i + 1, total: targets.length, url: t.url, phase: "reading" });
-      await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
-      let ev: any = null;
-      let source: string | null = null;
-      try {
-        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("target_timeout")), TARGET_TIMEOUT_MS));
-        const r: any = await Promise.race([fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY }), timeout]);
-        const d = r?.data ?? r;
-        source = r?.fetch_source ?? null;
-        ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
-      } catch { ev = null; }
-      const findings = scoreTarget(t, ev, brand);
-      const ok = findings.some((f) => f.score != null);
-      results.push({ url: t.url, kind: t.kind, platform: t.platform, ok, findings });
-      const { sourceLabel } = await import("@/lib/fetch-order");
-      await emit("audit_target", { index: i + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform, ok, findings, source, source_label: sourceLabel(ok ? (source as any) : null) });
-      await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId);
+
+  async function auditOne(index: number) {
+    const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).eq("user_id", userId).maybeSingle();
+    if (j?.status === "cancelled") { cancelled = true; return; }
+
+    const t = targets[index];
+    await emit("audit_progress", { index: index + 1, total: targets.length, url: t.url, phase: "reading" });
+    await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
+
+    let ev: any = null;
+    let source: string | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const { fcScrape } = await import("@/lib/firecrawl");
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("target_timeout")), TARGET_TIMEOUT_MS);
+      });
+      const r: any = await Promise.race([fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY }), timeout]);
+      const d = r?.data ?? r;
+      source = r?.fetch_source ?? null;
+      ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
+    } catch {
+      ev = null;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
+
+    const findings = scoreTarget(t, ev, brand);
+    const ok = findings.some((f) => f.score != null);
+    results.push({ url: t.url, kind: t.kind, platform: t.platform, ok, findings });
+    const { sourceLabel } = await import("@/lib/fetch-order");
+    await emit("audit_target", {
+      index: index + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform,
+      ok, findings, source, source_label: sourceLabel(ok ? (source as any) : null),
+    });
+    await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
+  }
+
+  async function worker() {
+    while (!cancelled) {
+      const index = cursor++;
+      if (index >= targets.length) return;
+      await auditOne(index);
+    }
+  }
+
+  try {
+    // Bounded concurrency keeps larger multi-link audits practical without flooding crawl providers.
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker()));
+    if (cancelled) return;
     const axes = aggregateAxes(results.map((r) => r.findings));
     const overall = weightedScore(axes, isAccountKind(kind) ? kind : null);
     const units = billableUnits(results);
     let charged = 0;
     if (units > 0) {
       const { chargeTokens } = await import("@/lib/tokens.server");
-      const c = await chargeTokens({ userId, toolKey: TOOL_KEY, runId: `deep_audit:${jobId}`, units, meta: { endpoint: "/api/deep-audit", targets: targets.length, succeeded: units } });
+      const c = await chargeTokens({ userId, toolKey: TOOL_KEY, runId: "deep_audit:" + jobId, units, meta: { endpoint: "/api/deep-audit", targets: targets.length, succeeded: units } });
       charged = c.ok ? c.tokens : 0;
     }
     await emit("audit_result", { axes, overall, succeeded: units, total: targets.length, charged, targets: results });
+    if (cancelled) return;
     const now = new Date().toISOString();
-    await db.from("maaroof_jobs").update({ status: units > 0 ? "completed" : "failed", error: units > 0 ? null : "تعذّرت قراءة أي رابط؛ لم يُخصم شيء.", finished_at: now, updated_at: now }).eq("id", jobId);
+    await db.from("maaroof_jobs").update({ status: units > 0 ? "completed" : "failed", error: units > 0 ? null : "تعذّرت قراءة أي رابط؛ لم يُخصم شيء.", finished_at: now, updated_at: now }).eq("id", jobId).eq("user_id", userId);
   } catch (e: any) {
     const now = new Date().toISOString();
-    await db.from("maaroof_jobs").update({ status: "failed", error: "تعذّر إكمال الفحص؛ لم يُخصم شيء.", finished_at: now, updated_at: now }).eq("id", jobId);
+    await db.from("maaroof_jobs").update({ status: "failed", error: "تعذّر إكمال الفحص؛ لم يُخصم شيء.", finished_at: now, updated_at: now }).eq("id", jobId).eq("user_id", userId);
   }
 }
 
