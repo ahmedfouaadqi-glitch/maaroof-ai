@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { useI18n } from "@/lib/i18n";
@@ -161,7 +161,7 @@ function PillarCard({ icon, title, p, t }: { icon: React.ReactNode; title: strin
   );
 }
 
-export function AppliedRanking() {
+export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -180,6 +180,14 @@ export function AppliedRanking() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const requestSeq = useRef(0);
+
+  useEffect(() => {
+    requestSeq.current += 1;
+    setResult(null);
+    setError(null);
+    setRunning(false);
+  }, [workspaceId]);
 
   useEffect(() => {
     const apply = (text: string) => {
@@ -199,6 +207,7 @@ export function AppliedRanking() {
     setError(null);
     if (!user) { setError(t.needLogin); return; }
     if (brand.trim().length < 2) { setError(t.needBrand); return; }
+    const seq = ++requestSeq.current;
     setRunning(true); setResult(null);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -208,10 +217,11 @@ export function AppliedRanking() {
         method: "POST", headers,
         body: JSON.stringify({
           brand_name: brand, brand_keywords: keywords, sector, website, app_name: appName, app_url: appUrl, notes,
-          lang: outLang, scope: getEffectiveScope(auth?.profile, "applied_ranking"),
+          lang: outLang, workspace_id: workspaceId, scope: getEffectiveScope(auth?.profile, "applied_ranking"),
         }),
       });
       const data = await r.json();
+      if (seq !== requestSeq.current) return;
       if (!r.ok) {
         setError(data?.error === "limit" ? "limit" : data?.error || "error");
       } else {
@@ -219,8 +229,10 @@ export function AppliedRanking() {
         if (auth) auth.refreshProfile();
       }
     } catch (e: any) {
-      setError(e.message || "error");
-    } finally { setRunning(false); }
+      if (seq === requestSeq.current) setError(e.message || "error");
+    } finally {
+      if (seq === requestSeq.current) setRunning(false);
+    }
   };
 
   return (
