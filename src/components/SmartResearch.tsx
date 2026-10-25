@@ -170,7 +170,8 @@ export function SmartResearch({ workspaceId = null }: { workspaceId?: string | n
       const json = await res.json();
       if (!res.ok) {
         const message = json.message || json.error || "specialized_source_failed";
-        if (json.retry_with_same_request_id) setSpecializedRequestId(requestId);
+        if (json.new_request_required) setSpecializedRequestId("");
+        else if (json.retry_with_same_request_id) setSpecializedRequestId(requestId);
         throw new Error(String(message));
       }
       if (epoch === workspaceEpoch.current) {
