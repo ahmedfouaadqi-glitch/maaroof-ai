@@ -28,6 +28,7 @@ import {
 } from "./reality.server";
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
+import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -1126,6 +1127,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await logMsg("clarify", q);
       return;
       }
+      const toolStartedAt = Date.now();
+      let toolTransport: "direct" | "http_fallback" = "direct";
       try {
         const { stripAgentOnlyFields } = await import("./probe-answer");
         const N = await import("./narration");
@@ -1150,17 +1153,34 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
         try {
-          resp = await fetch(`${ctx.origin}${path}`, {
+          const requestForDirectDispatch = () => new Request(new URL(path, ctx.origin), {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
             body: JSON.stringify(body),
             signal: toolCtl.signal,
           });
+          // Prefer executing the existing API handler inside this Worker. Cloudflare
+          // may reject Worker-to-Worker fetches back to the same public origin.
+          const direct = await dispatchToolInProcess(path, requestForDirectDispatch());
+          if (direct) {
+            resp = direct;
+          } else {
+            // HTTP fallback is used only when the handler cannot be loaded/resolved.
+            // A handler error is never retried over HTTP because it may have charged or
+            // persisted data before throwing.
+            toolTransport = "http_fallback";
+            resp = await fetch(new URL(path, ctx.origin), {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+              body: JSON.stringify(body),
+              signal: toolCtl.signal,
+            });
+          }
         } finally {
           clearTimeout(toolTimer);
           ctx.signal.removeEventListener("abort", onAbort);
         }
-        // Some tools (e.g. /api/known) stream SSE; read the final `result` or `error` event.
+        // Some tools (e.g. /api/known) stream SSE; read the final result or error event.
         let json: any = {};
         let sseError = false;
         if ((resp.headers.get("content-type") || "").includes("text/event-stream")) {
@@ -1175,9 +1195,22 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
             } catch {}
           }
         } else {
-          json = await resp.json().catch(() => ({}));
+          const contentType = resp.headers.get("content-type") || "";
+          const raw = await resp.text().catch(() => "");
+          if (!raw.trim()) {
+            json = { error: "empty_tool_response", http_status: resp.status, content_type: contentType };
+          } else {
+            try {
+              json = JSON.parse(raw);
+            } catch {
+              // Never silently turn a Cloudflare HTML error page or other invalid payload
+              // into {}. Persist a bounded diagnostic so fast failures are diagnosable.
+              const detail = raw.replace(/<[^>]*>/g, " ").split(" ").filter(Boolean).join(" ").trim().slice(0, 320);
+              json = { error: "non_json_tool_response", http_status: resp.status, content_type: contentType, detail };
+            }
+          }
         }
-        const ok = resp.ok && !sseError;
+        const ok = resp.ok && !sseError && json?.error !== "non_json_tool_response" && json?.error !== "empty_tool_response";
         // Live debate: only run when real visibility probe answers split on entity mention.
         if (ok && step.tool === "visibility" && Array.isArray(json?.probe?.answers)) {
           try {
@@ -1207,7 +1240,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           }
         }
         results.push({ tool: step.tool, ok, output: json });
-        await ctx.emit("tool_result", { index: i, tool: step.tool, ok, output: json });
+        await ctx.emit("tool_result", {
+          index: i, tool: step.tool, ok, output: json,
+          duration_ms: Date.now() - toolStartedAt,
+          transport: toolTransport,
+          http_status: resp.status,
+          content_type: resp.headers.get("content-type") || "",
+        });
         try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolDone(step.tool, ok, json, ctx.language as any) }); } catch {}
         // Brand agent: identity consistency vs the Entity Truth Card (pure rules, no model cost).
         try {
@@ -1232,9 +1271,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           });
         } catch {}
       } catch (e: any) {
-        const err = { error: String(e?.message || e) };
+        const err = { error: String(e?.message || e).slice(0, 800) };
         results.push({ tool: step.tool, ok: false, output: err });
-        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: err });
+        await ctx.emit("tool_result", {
+          index: i, tool: step.tool, ok: false, output: err,
+          duration_ms: Date.now() - toolStartedAt,
+          transport: toolTransport,
+        });
         await logMsg("tool_result", err);
       }
 

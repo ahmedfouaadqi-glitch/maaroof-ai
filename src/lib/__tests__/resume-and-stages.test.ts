@@ -3,8 +3,8 @@ import { pipelineCards } from "@/lib/maaroof/pipeline-cards";
 import { reusableResults } from "@/lib/maaroof/jobs";
 
 describe("stage order and stop labels", () => {
-  it("orders conflict before evidence", () => {
-    expect(pipelineCards([], false).map((c) => c.key)).toEqual(["understand", "plan", "council", "conflict", "evidence", "result"]);
+  it("orders evidence before the ten-model council, then conflict resolution", () => {
+    expect(pipelineCards([], false).map((c) => c.key)).toEqual(["understand", "plan", "evidence", "council", "conflict", "result"]);
   });
   it("a task that errored marks later stages as stopped, not skipped", () => {
     const cards = pipelineCards([{ type: "phase", data: { phase: "planning" } }, { type: "tool_call", data: { tool: "analyze" } }, { type: "error", data: {} }], false);

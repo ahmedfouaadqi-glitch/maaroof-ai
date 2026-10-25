@@ -254,20 +254,29 @@ export const Route = createFileRoute("/api/visibility")({
                 }
               } catch { evidenceSource = "none"; }
             };
-            const answers: { engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string; brands: string[]; status: string; blind_status: string; grounded_status: string; sources: { url: string; title: string }[]; ms: number }[] = [];
-            const statuses: Record<string, { status: string; ms: number; blind_status?: string; grounded_status?: string }> = {};
+            const answers: {
+              engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
+              brands: string[]; status: string; blind_status: string; grounded_status: string;
+              blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
+              sources: { url: string; title: string }[]; ms: number
+            }[] = [];
+            const statuses: Record<string, {
+              status: string; ms: number; blind_status?: string; grounded_status?: string;
+              blind_ms?: number; grounded_ms?: number; blind_query?: string; grounded_query?: string
+            }> = {};
             let completedUnits = 0;
             const askOne = async (e: string, model: string | undefined, phase: "blind" | "grounded", blindAnswer?: string) => {
               const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), PA.PROBE_TIMEOUT_MS);
               try {
                 const phaseRules = phase === "blind"
                   ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
-                  : `PHASE 2 — EVIDENCE-GROUNDED REVIEW: The target entity is \"${brand}\". Review the public evidence and the blind answer below. Decide whether the evidence is sufficient to cite this entity as a reliable source in future answers; state the exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof. Public evidence (may be empty):\n${evidenceText || "No public evidence was retrieved."}\nBlind answer (for comparison only):\n${blindAnswer || "Unavailable."}`;
+                  : "PHASE 2 — EVIDENCE-GROUNDED REVIEW: Evaluate whether the target entity is sufficiently supported by the public evidence included in the user's audit question. State exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof.";
+                const actualQuestion = questionForPhase(e, phase, blindAnswer);
                 const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                   method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
                   body: JSON.stringify({ model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages: [
                     { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence organic recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
-                    { role: "user", content: phase === "blind" ? q : `Assess the target entity against the retrieved evidence. The original blind question was: ${q}` },
+                    { role: "user", content: actualQuestion },
                   ] }),
                 });
                 if (!r.ok) return { kind: "error" as const };
@@ -278,31 +287,78 @@ export const Route = createFileRoute("/api/visibility")({
                 return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const) };
               } finally { clearTimeout(t); }
             };
-            const blindResults = new Map<string, { p: any; startedAt: number }>();
+            const questionForPhase = (engine: string, phase: "blind" | "grounded", blindAnswer?: string) => {
+              if (phase === "blind") return q;
+              return [
+                "Evidence audit for target entity: " + brand,
+                "Market: " + market.region,
+                "Original unbiased question (phase 1): " + q,
+                "Public evidence retrieved (may be empty):",
+                evidenceText || "No public evidence was retrieved.",
+                "Blind answer from " + engine + " (for comparison only):",
+                blindAnswer || "Unavailable.",
+                "Audit question: Based only on the supplied public evidence, is this entity sufficiently supported to cite as a reliable source in future answers? State specific evidence gaps, weak claims, contradictions, and what remains unverified. Do not treat the blind answer as proof."
+              ].join("\n");
+            };
+            const groundedQuestionTemplate = () => questionForPhase("[model]", "grounded", "[the model's phase-1 blind answer]");
+            const blindResults = new Map<string, { p: any; startedAt: number; blindMs: number }>();
             const askEngine = async (e: string, phase: "blind" | "grounded") => {
               const previous = blindResults.get(e);
               const startedAt = previous?.startedAt ?? Date.now();
+              const exactQuestion = questionForPhase(e, phase, previous?.p.answer);
+              const phaseStartedAt = Date.now();
               const askPhase = async (answer?: string) => {
                 let res = await askOne(e, models[e]?.model, phase, answer);
                 if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash", phase, answer);
                 return res;
               };
               const res = await askPhase(previous?.p.answer);
-              const ms = Date.now() - startedAt;
+              const phaseMs = Date.now() - phaseStartedAt;
               if (phase === "blind") {
-                if (res.kind !== "ok") { statuses[e] = { status: res.kind, blind_status: res.kind, ms }; return; }
+                if (res.kind !== "ok") {
+                  statuses[e] = {
+                    status: res.kind, blind_status: res.kind, ms: phaseMs, blind_ms: phaseMs,
+                    blind_query: exactQuestion, grounded_query: "",
+                  };
+                  return;
+                }
                 completedUnits++;
-                blindResults.set(e, { p: res.p, startedAt });
-                statuses[e] = { status: "blind_answered", blind_status: "answered", ms };
+                blindResults.set(e, { p: res.p, startedAt, blindMs: phaseMs });
+                statuses[e] = {
+                  status: "blind_answered", blind_status: "answered", ms: phaseMs, blind_ms: phaseMs,
+                  blind_query: exactQuestion,
+                };
                 return;
               }
               if (!previous) return;
               if (res.kind === "ok") completedUnits++;
               const p = previous.p;
               const idx = p.brands.findIndex((b: string) => b.toLowerCase().includes(brand.toLowerCase()) || brand.toLowerCase().includes(b.toLowerCase()));
-              const sources = [...PA.linkSources(p, evidence), ...(res.kind === "ok" ? PA.linkSources(res.p, evidence) : [])].filter((s: any, i: number, all: any[]) => all.findIndex((x) => x.url === s.url) === i);
-              statuses[e] = { status: res.kind === "ok" ? "answered" : "partial", blind_status: "answered", grounded_status: res.kind, ms };
-              answers.push({ engine: e, mentioned: idx >= 0 || p.answer.toLowerCase().includes(brand.toLowerCase()), rank: idx >= 0 ? idx + 1 : null, answer: p.answer, grounded_answer: res.kind === "ok" ? res.p.answer : undefined, brands: p.brands, status: res.kind === "ok" ? "answered" : "partial", blind_status: "answered", grounded_status: res.kind, sources, ms });
+              const sources = [...PA.linkSources(p, evidence), ...(res.kind === "ok" ? PA.linkSources(res.p, evidence) : [])].filter((src: any, i: number, all: any[]) => all.findIndex((x) => x.url === src.url) === i);
+              const totalMs = previous.blindMs + phaseMs;
+              statuses[e] = {
+                status: res.kind === "ok" ? "answered" : "partial",
+                blind_status: "answered", grounded_status: res.kind,
+                ms: totalMs, blind_ms: previous.blindMs, grounded_ms: phaseMs,
+                blind_query: q, grounded_query: exactQuestion,
+              };
+              answers.push({
+                engine: e,
+                mentioned: idx >= 0 || p.answer.toLowerCase().includes(brand.toLowerCase()),
+                rank: idx >= 0 ? idx + 1 : null,
+                answer: p.answer,
+                grounded_answer: res.kind === "ok" ? res.p.answer : undefined,
+                brands: p.brands,
+                status: res.kind === "ok" ? "answered" : "partial",
+                blind_status: "answered",
+                grounded_status: res.kind,
+                blind_query: q,
+                grounded_query: exactQuestion,
+                blind_ms: previous.blindMs,
+                grounded_ms: phaseMs,
+                sources,
+                ms: totalMs,
+              });
             };
             // Throttled batches (3 at a time, short gap) instead of firing all ten at once.
             const askAll = async () => {
@@ -332,19 +388,19 @@ export const Route = createFileRoute("/api/visibility")({
                   try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
                   return;
                 }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, asked: engines, answers, statuses, evidence, charged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
               })().catch(() => {});
               // Safe start: run inline (each engine is capped at 30s) so the work can never be
               // detached after the response; results + notification are saved before we reply.
               await work;
-              return Response.json({ ok: true, background: true, probe: { query: q, asked: engines, answers, charged: pChg.tokens } });
+              return Response.json({ ok: true, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: pChg.tokens } });
             }
             await askAll();
             const charged = await settle();
             if (!answers.length) {
-              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -357,7 +413,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
+            return Response.json({ ok: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();

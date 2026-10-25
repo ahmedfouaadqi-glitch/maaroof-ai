@@ -36,6 +36,14 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
   const [open, setOpen] = useState<StageKey | null>(null);
   const [eng, setEng] = useState<string | null>(null);
   const engines = councilEngines(events, ENGINE_KEYS, running);
+  const probe = events.reduce<any>((best, event) => {
+    if (event.type !== "tool_result" || event.data?.tool !== "visibility") return best;
+    const candidate = event.data?.output?.probe;
+    if (!candidate || typeof candidate !== "object") return best;
+    const currentCount = Array.isArray(best?.answers) ? best.answers.length : 0;
+    const nextCount = Array.isArray(candidate.answers) ? candidate.answers.length : 0;
+    return !best || nextCount >= currentCount ? candidate : best;
+  }, null);
   const clock = (t: number) => new Date(t).toLocaleTimeString(lang === "en" ? "en-GB" : "ar-IQ", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   return (
     <div className="space-y-3">
@@ -80,7 +88,7 @@ export function LivePipeline({ events, running, lang }: { events: Array<{ type: 
           </DialogHeader>
           {open === "council"
             ? <div className="space-y-5">
-                <CouncilGrid engines={engines} lang={lang} selected={eng} onSelect={setEng} />
+                <CouncilGrid engines={engines} lang={lang} selected={eng} probe={probe} onSelect={setEng} />
                 <div><p className="mb-2 text-sm font-semibold">{tr(lang, "ما حدث في مراجعة الخبراء", "What happened in the expert review", "پێداچوونەوەی پسپۆڕان")}</p><StageDetails stage="council" events={events} lang={lang} /></div>
               </div>
             : <StageDetails stage={open} events={events} lang={lang} />}
@@ -113,12 +121,39 @@ function EngineDots({ engines }: { engines: EngineView[] }) {
   );
 }
 
-function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineView[]; lang: L; selected: string | null; onSelect: (k: string | null) => void }) {
+function CouncilGrid({ engines, lang, selected, probe, onSelect }: { engines: EngineView[]; lang: L; selected: string | null; probe?: any; onSelect: (k: string | null) => void }) {
   const i = idx(lang);
   const sel = engines.find((e) => e.key === selected);
   const answered = engines.filter((e) => e.status === "answered");
+  const blindQuestion = String(sel?.blindQuery || probe?.blind_query || probe?.query || "");
+  const groundedQuestion = String(sel?.groundedQuery || probe?.grounded_question_template || "");
+  const phaseLabel = (status: string | null | undefined) => {
+    if (!status) return tr(lang, "غير مسجل", "Not recorded", "تۆمار نەکراوە");
+    if (status === "answered" || status === "ok") return tr(lang, "اكتملت", "Completed", "تەواو بوو");
+    if (status === "timeout") return tr(lang, "انتهت المهلة", "Timed out", "کاتی تەواو بوو");
+    if (status === "error") return tr(lang, "خطأ في الطلب", "Request error", "هەڵەی داواکاری");
+    if (status === "empty") return tr(lang, "رد فارغ", "Empty response", "وەڵامی بەتاڵ");
+    return status;
+  };
   return (
     <div className="space-y-4">
+      <section className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-primary">
+          <Search className="size-4" />
+          {tr(lang, "السؤال المطروح على النماذج", "Question asked to the models", "ئەو پرسیارەی لە مۆدێلەکان کرا")}
+        </h3>
+        <div className="space-y-2">
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="mb-1 text-xs font-semibold text-muted-foreground">{tr(lang, "المرحلة الأولى — السؤال الأعمى غير المتحيز", "Phase 1 — unbiased blind question", "قۆناغی یەکەم — پرسیاری کوێرانە و بێلایەن")}</p>
+            <p dir="auto" className="whitespace-pre-wrap text-sm leading-6">{blindQuestion || tr(lang, "لم يُسجّل السؤال في نتيجة هذه المهمة.", "The question was not recorded in this task result.", "پرسیارەکە لە ئەنجامدا تۆمار نەکراوە.")}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="mb-1 text-xs font-semibold text-muted-foreground">{tr(lang, "المرحلة الثانية — سؤال تدقيق الأدلة", "Phase 2 — evidence-audit question", "قۆناغی دووەم — پرسیاری پشکنینی بەڵگە")}</p>
+            <p dir="auto" className="whitespace-pre-wrap text-sm leading-6">{groundedQuestion || tr(lang, "يظهر السؤال الدقيق بعد تسجيل محاولة تدقيق الأدلة لهذا النموذج.", "The exact audit question appears once this model's evidence review is recorded.", "پرسیاری ورد دوای تۆمارکردنی پشکنینی بەڵگە پیشان دەدرێت.")}</p>
+            {!sel && probe?.grounded_question_template && <p className="mt-2 text-[11px] text-muted-foreground">{tr(lang, "هذه صيغة السؤال مع موضع بديل لإجابة المرحلة الأولى؛ اختر نموذجاً لعرض السؤال الذي أُرسل إليه فعلياً.", "This is the question template with a placeholder for the phase-1 answer; select a model to view its exact submitted question.", "ئەمە قالەبی پرسیارەکەیە؛ مۆدێلێک هەڵبژێرە بۆ بینینی پرسیاری نێردراوی ورد.")}</p>}
+          </div>
+        </div>
+      </section>
       <p className="text-sm text-muted-foreground">{answered.length
         ? tr(lang, `أجاب ${answered.length} من 10، وذكر علامتك ${answered.filter((e) => e.mentioned).length} منها.`, `${answered.length} of 10 answered; ${answered.filter((e) => e.mentioned).length} mentioned your brand.`, `${answered.length} لە 10 وەڵامیان دایەوە.`)
         : tr(lang, "لم تُسجَّل إجابات النماذج بعد في هذه المهمة.", "No model answers recorded in this task yet.", "هێشتا وەڵام تۆمار نەکراوە.")}</p>
@@ -154,6 +189,15 @@ function CouncilGrid({ engines, lang, selected, onSelect }: { engines: EngineVie
               <p>{sel.mentioned
                 ? tr(lang, `ذكر علامتك${sel.rank ? ` في المرتبة ${sel.rank}` : ""}.`, `Mentioned your brand${sel.rank ? ` at position ${sel.rank}` : ""}.`, `ناوی هێنا${sel.rank ? ` (${sel.rank})` : ""}.`)
                 : tr(lang, "لم يذكر علامتك في إجابته.", "Did not mention your brand.", "ناوی نەهێنا.")}</p>
+              <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-xs sm:grid-cols-2">
+                <p>{tr(lang, "حالة السؤال الأعمى:", "Blind-question status:", "دۆخی پرسیاری کوێرانە:")} <b>{phaseLabel(sel.blindStatus)}</b>{sel.blindMs != null ? " · " + formatDuration(sel.blindMs, lang) : ""}</p>
+                <p>{tr(lang, "حالة تدقيق الأدلة:", "Evidence-audit status:", "دۆخی پشکنینی بەڵگە:")} <b>{phaseLabel(sel.groundedStatus)}</b>{sel.groundedMs != null ? " · " + formatDuration(sel.groundedMs, lang) : ""}</p>
+              </div>
+              {sel.groundedStatus && sel.groundedStatus !== "ok" && <p className="rounded-lg border border-warning/30 bg-warning/5 p-2 text-xs">{sel.groundedStatus === "timeout"
+                ? tr(lang, "وصلت الإجابة العمياء، لكن تدقيق الأدلة انتهت مهلته؛ لذلك لا نعرض مراجعة غير مكتملة على أنها ناجحة.", "The blind answer arrived, but evidence review timed out; an incomplete review is not presented as a success.", "وەڵامی کوێرانە هات، بەڵام پشکنینی بەڵگە کاتی تەواو بوو.")
+                : sel.groundedStatus === "error"
+                  ? tr(lang, "وصلت الإجابة العمياء، لكن طلب تدقيق الأدلة فشل حتى بعد محاولة البديل.", "The blind answer arrived, but the evidence-audit request failed even after the fallback attempt.", "وەڵامی کوێرانە هات، بەڵام داواکاری پشکنینی بەڵگە سەرکەوتوو نەبوو.")
+                  : tr(lang, "وصلت الإجابة العمياء، لكن تدقيق الأدلة أعاد رداً فارغاً أو غير قابل للتحليل.", "The blind answer arrived, but the evidence review returned an empty or unparseable response.", "وەڵامی کوێرانە هات، بەڵام پشکنینی بەڵگە بەتاڵ بوو.")}</p>}
               <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden><motion.div className="h-full bg-primary" initial={{ width: 0 }} animate={{ width: `${sel.mentioned ? (sel.rank ? Math.max(20, 100 - (sel.rank - 1) * 15) : 60) : 4}%` }} transition={{ duration: 0.6 }} /></div>
               {sel.answer && <blockquote className="border-s-2 border-primary ps-3 text-muted-foreground">«{sel.answer}»</blockquote>}
               {sel.groundedAnswer && <div className="rounded-lg border border-primary/25 bg-primary/5 p-2 text-xs"><b>{tr(lang, "مراجعة الأدلة:", "Evidence review:", "هەڵسەنگاندنی بەڵگە:")}</b> {sel.groundedAnswer}</div>}

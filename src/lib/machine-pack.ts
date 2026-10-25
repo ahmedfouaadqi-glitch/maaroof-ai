@@ -152,13 +152,13 @@ export function entityFromResult(r: any): ResultEntity | null {
 const ENGINE_NAMES: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity", claude: "Claude", copilot: "Copilot", grok: "Grok", mistral: "Mistral", deepseek: "DeepSeek", kimi: "Kimi", qwen: "Qwen" };
 
 const ENG_TX = {
-  ar: { status: "الحالة", rank: "الترتيب", answer: "الإجابة", sources: "المصادر", next: "الخطوة التالية", yes: "مذكورة", no: "غير مذكورة", noSrc: "لا يوجد مصدر مسجل",
+  ar: { status: "الحالة", rank: "الترتيب", answer: "الإجابة", sources: "المصادر", next: "الخطوة التالية", yes: "مذكورة", no: "غير مذكورة", noSrc: "لا يوجد مصدر مسجل", blindQuestion: "السؤال الأعمى", groundedQuestion: "سؤال تدقيق الأدلة", blindStatus: "حالة الإجابة العمياء", groundedStatus: "حالة تدقيق الأدلة", notRecorded: "غير مسجل",
     top: "ذُكرت في المقدمة: حافظ على تحديث llms.txt والبيانات المنظمة.", ranked: (n: number) => `ذُكرت في المرتبة ${n}: عزّز الحقائق والأرقام في أول 150 كلمة من صفحاتك لتتقدم.`,
     missing: (b: string) => `لم تُذكر: انشر صفحة تعريفية موثقة وFAQPage وروابط رسمية${b ? `، فالمحرك رشّح: ${b}` : ""}.` },
-  en: { status: "Status", rank: "Rank", answer: "Answer", sources: "Sources", next: "Next step", yes: "Mentioned", no: "Not mentioned", noSrc: "No recorded source",
+  en: { status: "Status", rank: "Rank", answer: "Answer", sources: "Sources", next: "Next step", yes: "Mentioned", no: "Not mentioned", noSrc: "No recorded source", blindQuestion: "Unbiased blind question", groundedQuestion: "Evidence-audit question", blindStatus: "Blind answer status", groundedStatus: "Evidence-audit status", notRecorded: "Not recorded",
     top: "Mentioned at the top: keep llms.txt and structured data up to date.", ranked: (n: number) => `Mentioned at rank ${n}: add facts and numbers in the first 150 words of your pages to move up.`,
     missing: (b: string) => `Not mentioned: publish a verified about page, FAQPage and official links${b ? `; the engine recommended: ${b}` : ""}.` },
-  ku: { status: "دۆخ", rank: "پلە", answer: "وەڵام", sources: "سەرچاوەکان", next: "هەنگاوی داهاتوو", yes: "ئاماژەی پێکراوە", no: "ئاماژەی پێنەکراوە", noSrc: "هیچ سەرچاوەیەک تۆمار نەکراوە",
+  ku: { status: "دۆخ", rank: "پلە", answer: "وەڵام", sources: "سەرچاوەکان", next: "هەنگاوی داهاتوو", yes: "ئاماژەی پێکراوە", no: "ئاماژەی پێنەکراوە", noSrc: "هیچ سەرچاوەیەک تۆمار نەکراوە", blindQuestion: "پرسیاری کوێرانە", groundedQuestion: "پرسیاری پشکنینی بەڵگە", blindStatus: "دۆخی وەڵامی کوێرانە", groundedStatus: "دۆخی پشکنینی بەڵگە", notRecorded: "تۆمار نەکراوە",
     top: "لە سەرەوە ئاماژەی پێکراوە: llms.txt و داتای ڕێکخراو نوێ بهێڵەرەوە.", ranked: (n: number) => `لە پلەی ${n} ئاماژەی پێکراوە: ڕاستی و ژمارە لە یەکەم 150 وشەی پەڕەکانت زیاد بکە.`,
     missing: (b: string) => `ئاماژەی پێنەکراوە: پەڕەیەکی ناساندنی پشتڕاستکراو و FAQPage و بەستەری فەرمی بڵاو بکەرەوە${b ? `؛ بزوێنەرەکە پێشنیاری کرد: ${b}` : ""}.` },
 } as const;
@@ -173,14 +173,20 @@ export function engineAnswersOf(r: any): any[] {
 export function engineAnswerSections(r: any, lang: ExportLang = "ar"): ExportSection[] {
   const T = ENG_TX[lang as keyof typeof ENG_TX] || ENG_TX.en;
   const sep = lang === "en" ? ", " : "، ";
+  const probe = r?.probe || r;
   return engineAnswersOf(r).map((a) => {
     const name = ENGINE_NAMES[String(a.engine).toLowerCase()] || String(a.engine);
     const srcs = (a.sources || []).map((s: any) => str(s?.url)).filter(isUrl);
+    const phase = probe?.statuses?.[String(a.engine)] || {};
     const next = a.mentioned ? (a.rank && a.rank > 1 ? T.ranked(a.rank) : T.top) : T.missing((a.brands || []).slice(0, 3).join(sep));
     return {
       heading: name, kind: "kv",
       rows: [
-        [T.status, a.mentioned ? T.yes : T.no],
+        [T.status, a.status || (a.mentioned ? T.yes : T.no)],
+        [T.blindQuestion, str(a.blind_query) || str(phase.blind_query) || str(probe?.blind_query) || str(probe?.query) || T.notRecorded],
+        [T.groundedQuestion, str(a.grounded_query) || str(phase.grounded_query) || str(probe?.grounded_question_template) || T.notRecorded],
+        [T.blindStatus, str(a.blind_status) || str(phase.blind_status) || T.notRecorded],
+        [T.groundedStatus, str(a.grounded_status) || str(phase.grounded_status) || T.notRecorded],
         [T.rank, a.rank ?? "—"],
         [T.answer, String(a.answer || a.reason || "—").slice(0, 4000)],
         [T.sources, srcs.length ? srcs.join("\n") : T.noSrc],
