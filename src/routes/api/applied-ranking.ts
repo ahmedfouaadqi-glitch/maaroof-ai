@@ -6,6 +6,8 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
+import { recordEvidence } from "@/lib/maaroof/evidence.server";
+import { measurementSignature } from "@/lib/maaroof/source-intelligence";
 
 type Body = {
   brand_name: string;
@@ -17,6 +19,7 @@ type Body = {
   notes?: string;
   lang?: "en" | "ar" | "ku";
   scope?: GeoScope;
+  workspace_id?: string | null;
 };
 
 const PLATFORMS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi"];
@@ -41,7 +44,7 @@ THREE PILLARS (score each 0-100, conservative):
 
 OVERALL = round(website*0.4 + app*0.3 + brand*0.3).
 
-For EACH AI engine, give a score 0-100 reflecting how likely THAT engine is to surface/cite this brand when answering applied queries from ${m.audience}, and the SINGLE most impactful action.
+For EACH AI engine, give a conservative ANALYTICAL ESTIMATE (0-100) of how likely THAT engine might surface/cite this brand based only on the supplied evidence. The engines are NOT being queried live by this endpoint. Do not label these scores as directly measured ranking, actual appearance, or observed citation. Give the SINGLE most impactful action.
 
 Use ONLY: (a) facts the user provided, (b) snippets in supplied SOURCES, (c) website scrape excerpt. If a pillar has no evidence, score it low and write "no public signals detected" — DO NOT invent stats, awards, partners, dates, prices, or contacts.
 
@@ -116,6 +119,7 @@ export const Route = createFileRoute("/api/applied-ranking")({
           if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });
 
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
+          const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id.trim() : null;
           const apiKey = process.env.LOVABLE_API_KEY;
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -129,6 +133,11 @@ export const Route = createFileRoute("/api/applied-ranking")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          if (workspaceId) {
+            if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+            const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+            if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          }
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
@@ -166,7 +175,7 @@ export const Route = createFileRoute("/api/applied-ranking")({
           let websiteMeta: any = null;
           if (body.website && /^https?:\/\//i.test(body.website)) {
             try {
-              const sc: any = await fcScrape(body.website);
+              const sc: any = await fcScrape(body.website, {}, { userId, toolKey: "applied_ranking" });
               const md = sc?.data?.markdown || sc?.markdown || "";
               websiteScrape = String(md).slice(0, 4000);
               websiteMeta = sc?.data?.metadata || sc?.metadata || null;
@@ -176,7 +185,7 @@ export const Route = createFileRoute("/api/applied-ranking")({
           let sources: any[] = [];
           try {
             const q = `${brand} ${body.brand_keywords || ""} ${body.sector || ""} ${market.region}`.trim().slice(0, 240);
-            const sr: any = await fcSearch(q, { limit: 6, lang });
+            const sr: any = await fcSearch(q, { limit: 6, lang, sources: ["web"] }, { userId, toolKey: "applied_ranking" });
             sources = (sr?.data || sr?.web || []).slice(0, 6).map((r: any) => ({
               title: r.title, url: r.url,
               snippet: String(r.markdown || r.description || "").slice(0, 500),
@@ -187,7 +196,7 @@ export const Route = createFileRoute("/api/applied-ranking")({
           if (body.app_url || body.app_name) {
             try {
               const aq = `${body.app_name || brand} mobile app ${body.app_url || ""} reviews ratings`.trim().slice(0, 240);
-              const sr: any = await fcSearch(aq, { limit: 4, lang });
+              const sr: any = await fcSearch(aq, { limit: 4, lang, sources: ["web"] }, { userId, toolKey: "applied_ranking" });
               appSearch = (sr?.data || sr?.web || []).slice(0, 4).map((r: any) => ({
                 title: r.title, url: r.url,
                 snippet: String(r.markdown || r.description || "").slice(0, 400),
@@ -255,6 +264,49 @@ Return the JSON now. All text fields MUST be in language code "${lang}".`;
             Math.round(pillars.website.score * 0.4 + pillars.mobile_app.score * 0.3 + pillars.brand.score * 0.3);
           const confidence = ["high", "medium", "low"].includes(parsed?.confidence) ? parsed.confidence : "medium";
 
+          const measuredAt = new Date().toISOString();
+          const sourceRefs = [
+            ...(body.website && websiteScrape ? [{ url: body.website, title: websiteMeta?.title || brand, kind: "website" }] : []),
+            ...sources.map((s) => ({ url: String(s.url || ""), title: String(s.title || ""), kind: "web_search" })),
+            ...appSearch.map((s) => ({ url: String(s.url || ""), title: String(s.title || ""), kind: "app_search" })),
+          ].filter((s) => /^https?:\/\//i.test(s.url));
+          const promptSet = [
+            `How is ${brand} described in ${market.region}?`,
+            `Which sources cite ${brand} for ${body.sector || "its category"}?`,
+            `What evidence supports the expertise of ${brand}?`,
+          ];
+          const comparisonKey = measurementSignature({
+            prompts: promptSet,
+            language: lang,
+            market: market.region,
+            engines: PLATFORMS,
+            methodVersion: "applied-ranking-estimate-v2",
+          });
+          await Promise.allSettled(sourceRefs.map((s) => recordEvidence({
+            userId,
+            workspaceId,
+            title: s.title || s.url,
+            claim: "Public source used as input to an analytical brand-presence estimate.",
+            sourceKind: "external",
+            sourceRef: s.url,
+            evidenceType: "external",
+            category: "behavioral",
+            collectionMethod: "applied_ranking_public_evidence",
+            provider: "public_web",
+            capability: s.kind,
+            retrievedAt: measuredAt,
+            locale: lang,
+            market: market.region,
+            measurementUnit: "source_document",
+            sampleSize: 1,
+            realityKind: "observation",
+            status: "success",
+            limitation: "A public page/search result is an observation, not evidence that an AI engine actually cited the brand.",
+            sourceReliability: 60,
+            relevanceScore: 60,
+            businessImportance: 50,
+            language: lang,
+          })));
           const result = {
             overall,
             confidence,
@@ -265,6 +317,23 @@ Return the JSON now. All text fields MUST be in language code "${lang}".`;
             sources,
             app_sources: appSearch,
             scope: market.region,
+            methodology: {
+              measurement_kind: "analytical_estimate",
+              reality_kind: "estimate",
+              measured_at: measuredAt,
+              direct_engine_probes: 0,
+              source_sample_size: sourceRefs.length,
+              public_search_sample_size: sources.length + appSearch.length,
+              website_content_available: !!websiteScrape,
+              engines_estimated: PLATFORMS,
+              reference_prompt_set: promptSet,
+              comparison_key: comparisonKey,
+              limitation: lang === "ar"
+                ? "الدرجات تقديرات تحليلية مبنية على المصادر العامة المرفقة؛ لم تُستجوب المحركات التسعة مباشرة ولم يُقَس ترتيب فعلي."
+                : lang === "ku"
+                  ? "نمرەکان خەمڵاندنی شیکارییە لەسەر بنەمای سەرچاوە گشتییەکان؛ هیچ مۆدێلێک بە ڕاستەوخۆ تاقی نەکراوەتەوە."
+                  : "Scores are analytical estimates based on supplied public sources; the nine engines were not directly probed and no actual ranking was measured.",
+            },
           };
 
           // Charge usage
