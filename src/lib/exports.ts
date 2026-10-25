@@ -135,8 +135,9 @@ function brandHeaderHtml(lang: ExportLang, payload: ExportPayload, logoData: str
 }
 
 
-function sectionHtml(s: ExportSection): string {
+function sectionHtml(s: ExportSection, lang: ExportLang): string {
   const h = '<h2>' + escapeHtml(s.heading) + '</h2>';
+  const evidenceLabel = lang === "en" ? "Evidence" : lang === "ku" ? "بەڵگە" : "الأدلة";
   if (s.kind === "text" && s.text) {
     return h + '<p class="prose">' + escapeHtml(s.text).replace(/\n/g, "<br/>") + '</p>';
   }
@@ -167,7 +168,7 @@ function sectionHtml(s: ExportSection): string {
         ? '<table class="audit-fields"><tbody>' + card.fields.map(([key, value]) => '<tr><th>' + escapeHtml(key) + '</th><td>' + escapeHtml(value) + '</td></tr>').join("") + '</tbody></table>'
         : "";
       const evidence = card.evidence?.length
-        ? '<div class="audit-evidence"><strong>Evidence</strong><ul>' + card.evidence.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul></div>'
+        ? '<div class="audit-evidence"><strong>' + evidenceLabel + '</strong><ul>' + card.evidence.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul></div>'
         : "";
       const notes = card.notes?.length
         ? '<div class="audit-notes">' + card.notes.map((item) => '<p>' + escapeHtml(item) + '</p>').join("") + '</div>'
@@ -257,7 +258,7 @@ export async function exportToPDF(payload: ExportPayload) {
   ${brandHeaderHtml(lang, payload, logoData)}
   <h1>${escapeHtml(payload.title)}</h1>
   ${payload.subtitle ? `<div class="subtitle">${escapeHtml(payload.subtitle)}</div>` : ""}
-  ${payload.sections.map(sectionHtml).join("")}
+  ${payload.sections.map((section) => sectionHtml(section, lang)).join("")}
   <footer class="disclaimer">
     ${identityLine(payload, lang) ? `<div class="who">${escapeHtml(identityLine(payload, lang))}</div>` : ""}
     <div>${BRAND} · ${SITE}</div>
