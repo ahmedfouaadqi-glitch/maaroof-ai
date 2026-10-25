@@ -7,9 +7,9 @@ import { ExportButtons } from "@/components/ExportButtons";
 
 type L = "ar" | "en" | "ku";
 const T = {
-  ar: { title: "نبض حسابك", sub: "فحص عميق حقيقي لموقعك وحساباتك عبر خمسة محاور", start: "افحص الآن", confirm: "موافق، ابدأ", cancel: "إلغاء", stop: "أوقف الفحص", est: "الكلفة التقديرية", bal: "رصيدك", running: "يقرأ روابطك في الخلفية…", none: "لم يُفحص حسابك بعد", nolinks: "أضف روابط موقعك وحساباتك في ملفك الشخصي لتفعيل النبض.", unpriced: "الفحص غير مسعّر لحسابك بعد.", cancelled: "أُلغي الفحص", partial: "قُرئ جزء من الروابط فقط", failed: "تعذّر الفحص؛ لم يُخصم شيء", task: "حوّلها إلى مهمة", delta: "منذ الفحص السابق", un: "لم يُقَس" },
-  en: { title: "Account pulse", sub: "A real deep audit of your site and socials on five axes", start: "Scan now", confirm: "Approve & start", cancel: "Cancel", stop: "Stop scan", est: "Estimated cost", bal: "Balance", running: "Reading your links in the background…", none: "Your account hasn't been scanned yet", nolinks: "Add your site and social links in your profile to enable the pulse.", unpriced: "The audit isn't priced for your account yet.", cancelled: "Scan cancelled", partial: "Only some links could be read", failed: "Scan failed; nothing was charged", task: "Turn into a task", delta: "since last scan", un: "Unmeasured" },
-  ku: { title: "لێدانی هەژمارەکەت", sub: "پشکنینی قووڵی ڕاستەقینە بۆ ماڵپەڕ و تۆڕەکانت", start: "ئێستا بپشکنە", confirm: "ڕازیم، دەست پێبکە", cancel: "هەڵوەشاندنەوە", stop: "ڕاگرتن", est: "تێچووی خەمڵێنراو", bal: "باڵانس", running: "بەستەرەکانت دەخوێنرێنەوە…", none: "هێشتا نەپشکنراوە", nolinks: "بەستەرەکانت لە پرۆفایلدا زیاد بکە.", unpriced: "نرخ دانەنراوە.", cancelled: "هەڵوەشێنرایەوە", partial: "تەنها هەندێک بەستەر خوێنرایەوە", failed: "سەرنەکەوت؛ هیچ نەبڕدرا", task: "بیکە بە ئەرک", delta: "لە پشکنینی پێشوو", un: "نەپێوراو" },
+  ar: { title: "نبض حسابك", sub: "فحص عميق حقيقي لموقعك وحساباتك عبر خمسة محاور", start: "افحص الآن", confirm: "موافق، ابدأ", cancel: "إلغاء", stop: "أوقف الفحص", est: "الكلفة التقديرية", bal: "رصيدك", running: "يقرأ روابطك في الخلفية…", none: "لم يُفحص حسابك بعد", nolinks: "أضف روابط موقعك وحساباتك في ملفك الشخصي لتفعيل النبض.", workspaceNolinks: "أضف رابط الموقع الرسمي لهذا العميل من المقابلة ← حساب مساحة العمل.", unpriced: "الفحص غير مسعّر لحسابك بعد.", cancelled: "أُلغي الفحص", partial: "قُرئ جزء من الروابط فقط", failed: "تعذّر الفحص؛ لم يُخصم شيء", task: "حوّلها إلى مهمة", delta: "منذ الفحص السابق", un: "لم يُقَس" },
+  en: { title: "Account pulse", sub: "A real deep audit of your site and socials on five axes", start: "Scan now", confirm: "Approve & start", cancel: "Cancel", stop: "Stop scan", est: "Estimated cost", bal: "Balance", running: "Reading your links in the background…", none: "Your account hasn't been scanned yet", nolinks: "Add your site and social links in your profile to enable the pulse.", workspaceNolinks: "Add this client's official website in Interview → Workspace account.", unpriced: "The audit isn't priced for your account yet.", cancelled: "Scan cancelled", partial: "Only some links could be read", failed: "Scan failed; nothing was charged", task: "Turn into a task", delta: "since last scan", un: "Unmeasured" },
+  ku: { title: "لێدانی هەژمارەکەت", sub: "پشکنینی قووڵی ڕاستەقینە بۆ ماڵپەڕ و تۆڕەکانت", start: "ئێستا بپشکنە", confirm: "ڕازیم، دەست پێبکە", cancel: "هەڵوەشاندنەوە", stop: "ڕاگرتن", est: "تێچووی خەمڵێنراو", bal: "باڵانس", running: "بەستەرەکانت دەخوێنرێنەوە…", none: "هێشتا نەپشکنراوە", nolinks: "بەستەرەکانت لە پرۆفایلدا زیاد بکە.", workspaceNolinks: "بەستەری ماڵپەڕی ئەم کڕیارە لە هەژماری شوێنی کار زیاد بکە.", unpriced: "نرخ دانەنراوە.", cancelled: "هەڵوەشێنرایەوە", partial: "تەنها هەندێک بەستەر خوێنرایەوە", failed: "سەرنەکەوت؛ هیچ نەبڕدرا", task: "بیکە بە ئەرک", delta: "لە پشکنینی پێشوو", un: "نەپێوراو" },
 };
 const AX = ["seo", "aeo", "geo", "sge", "gseo"] as const;
 const TASK: Record<L, (axis: string, url: string) => string> = {
@@ -43,8 +43,9 @@ function Ring({ value, size = 92 }: { value: number | null; size?: number }) {
   );
 }
 
-export function WorkspaceAuditPulse({ lang, onTask }: { lang: L; onTask: (text: string) => void }) {
+export function WorkspaceAuditPulse({ lang, workspaceId, onTask }: { lang: L; workspaceId: string | null; onTask: (text: string) => void }) {
   const t = T[lang];
+  const scopeQuery = new URLSearchParams({ workspace_id: workspaceId ?? "" }).toString();
   const [est, setEst] = useState<any>(null);
   const [ask, setAsk] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -52,21 +53,31 @@ export function WorkspaceAuditPulse({ lang, onTask }: { lang: L; onTask: (text: 
   const [live, setLive] = useState<Record<string, any>>({});
   const [result, setResult] = useState<any>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const after = useRef(0);
 
-  const load = async () => {
-    const r = await authed("/api/deep-audit").catch(() => null);
-    if (!r?.ok) return;
-    const j = await r.json(); setEst(j);
-    if (j.last?.id) { after.current = 0; setJobId(j.last.id); }
-  };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let active = true;
+    setEst(null); setJobId(null); setStatus(""); setLive({}); setResult(null); setOpen(null);
+    setLoadError(false); after.current = 0;
+    (async () => {
+      const r = await authed("/api/deep-audit?" + scopeQuery).catch(() => null);
+      if (!active) return;
+      if (!r?.ok) { setLoadError(true); return; }
+      const j = await r.json();
+      if (!active) return;
+      setEst(j);
+      if (j.last?.id) { after.current = 0; setJobId(j.last.id); setStatus(String(j.last.status || "")); }
+    })().catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; };
+  }, [scopeQuery]);
 
   useEffect(() => {
     if (!jobId) return;
     let stop = false;
     const tick = async () => {
-      const r = await authed(`/api/maaroof-jobs?id=${jobId}&after=${after.current}`).catch(() => null);
+      const query = new URLSearchParams({ id: jobId, after: String(after.current), workspace_id: workspaceId ?? "" });
+      const r = await authed("/api/maaroof-jobs?" + query.toString()).catch(() => null);
       if (!r?.ok || stop) return;
       const j = await r.json();
       setStatus(j.job.status);
@@ -79,22 +90,22 @@ export function WorkspaceAuditPulse({ lang, onTask }: { lang: L; onTask: (text: 
     };
     tick();
     return () => { stop = true; };
-  }, [jobId]);
+  }, [jobId, scopeQuery]);
 
   async function start() {
     setAsk(false); setResult(null); setLive({});
-    const r = await authed("/api/deep-audit", { method: "POST", body: JSON.stringify({ approved: true }) });
+    const r = await authed("/api/deep-audit", { method: "POST", body: JSON.stringify({ approved: true, workspace_id: workspaceId }) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { setStatus("failed"); return; }
     after.current = 0; setStatus("running"); setJobId(j.job_id);
   }
   async function cancel() {
     if (!jobId) return;
-    await authed("/api/maaroof-jobs", { method: "POST", body: JSON.stringify({ job_id: jobId }) }).catch(() => null);
+    await authed("/api/maaroof-jobs", { method: "POST", body: JSON.stringify({ job_id: jobId, workspace_id: workspaceId }) }).catch(() => null);
     setStatus("cancelled");
   }
 
-  if (!est) return null;
+  if (!est) return loadError ? <p role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive">{t.failed}</p> : null;
   const running = status === "running" || status === "queued";
   const targets: any[] = est.targets || [];
   const prev = est.previous?.overall ?? null;
@@ -105,7 +116,7 @@ export function WorkspaceAuditPulse({ lang, onTask }: { lang: L; onTask: (text: 
       <div className="flex items-center gap-2"><Activity className={`size-4 text-primary ${running ? "animate-pulse" : ""}`} /><h2 className="font-semibold">{t.title}</h2></div>
       <p className="mt-1 text-xs text-muted-foreground">{t.sub}</p>
 
-      {!targets.length ? <p className="mt-3 text-xs text-muted-foreground">{t.nolinks}</p> : (
+      {!targets.length ? <p className="mt-3 text-xs text-muted-foreground">{workspaceId ? t.workspaceNolinks : t.nolinks}</p> : (
         <>
           <div className="mt-4 flex items-center gap-4">
             <div className="relative shrink-0">
