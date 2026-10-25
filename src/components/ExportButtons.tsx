@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { computeFloatingMenuPosition } from "@/lib/floating-menu";
 import { Download, FileDown, FileSpreadsheet, FileText, FileType2, Presentation, Braces, Hash } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useVisibility } from "@/lib/visibility";
@@ -79,9 +81,56 @@ export function ExportButtons({
     showLogo: override?.show_logo ?? exportCfg.footer.show_logo,
   });
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [exportLang, setExportLang] = useState<"ar" | "en" | "ku">(lang === "en" || lang === "ku" ? lang : "ar");
+  const triggerId = useId();
+  const menuId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const withPack = true;
   const pad = size === "xs" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const anchor = trigger.getBoundingClientRect();
+      const menuBox = menu.getBoundingClientRect();
+      const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const position = computeFloatingMenuPosition(
+        anchor,
+        { width: menuBox.width || 320, height: menuBox.height || 320 },
+        { width: viewportWidth, height: viewportHeight },
+        window.getComputedStyle(trigger).direction === "rtl" ? "rtl" : "ltr",
+      );
+      setMenuPosition({ top: position.top, left: position.left });
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    window.visualViewport?.addEventListener("resize", updatePosition);
+    window.visualViewport?.addEventListener("scroll", updatePosition);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.visualViewport?.removeEventListener("resize", updatePosition);
+      window.visualViewport?.removeEventListener("scroll", updatePosition);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open, exportLang]);
 
   if (!vis.loading && !vis.isWidgetVisible("results_export")) return null;
   if (override && !override.exports_enabled) return null;
@@ -159,42 +208,90 @@ export function ExportButtons({
   return (
     <div className={`relative inline-flex items-center gap-1.5 ${className}`}>
       <button
+        ref={triggerRef}
+        id={triggerId}
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 ${pad} font-semibold text-primary transition hover:bg-primary/20`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => {
+          setMenuPosition(null);
+          setOpen((value) => !value);
+        }}
+        className={`inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 ${pad} font-semibold text-primary shadow-sm transition duration-200 hover:-translate-y-px hover:border-primary/60 hover:bg-primary/15 hover:shadow active:translate-y-0`}
       >
         <Download className="size-3.5" /> {t("export_menu")}
       </button>
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <>
-          <button type="button" aria-hidden className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
-          <div className="absolute top-full z-50 mt-1 min-w-44 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg ltr:left-0 rtl:right-0">
-            <div className="mb-1 flex gap-1 border-b border-border p-1" role="group" aria-label="Report language">
+          <button
+            type="button"
+            aria-label={exportLang === "en" ? "Close export menu" : exportLang === "ku" ? "داخستنی لیستی هەناردە" : "إغلاق قائمة التصدير"}
+            tabIndex={-1}
+            className="fixed inset-0 z-[10000] cursor-default bg-transparent"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            ref={menuRef}
+            id={menuId}
+            role="dialog"
+            aria-labelledby={`${menuId}-title`}
+            dir={exportLang === "en" ? "ltr" : "rtl"}
+            style={{
+              position: "fixed",
+              top: menuPosition?.top ?? -10000,
+              left: menuPosition?.left ?? 8,
+              visibility: menuPosition ? "visible" : "hidden",
+            }}
+            className="z-[10001] w-80 max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-popover/95 p-2 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl transition-[opacity,transform] duration-150"
+          >
+            <div className="flex items-start justify-between gap-3 px-2 pb-2 pt-1">
+              <div>
+                <h3 id={`${menuId}-title`} className="text-sm font-bold text-foreground">
+                  {exportLang === "en" ? "Export report" : exportLang === "ku" ? "هەناردەکردنی ڕاپۆرت" : "تصدير التقرير"}
+                </h3>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {exportLang === "en" ? "Choose a format and language" : exportLang === "ku" ? "فۆرمات و زمان هەڵبژێرە" : "اختر الصيغة واللغة"}
+                </p>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={exportLang === "en" ? "Close" : exportLang === "ku" ? "داخستن" : "إغلاق"}>
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <div className="mb-2 flex gap-1 rounded-xl bg-muted/70 p-1" role="group" aria-label="Report language">
               {(["ar", "en", "ku"] as const).map((l) => (
                 <button key={l} type="button" onClick={() => setExportLang(l)}
-                  className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold ${exportLang === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10"}`}>
+                  aria-pressed={exportLang === l}
+                  className={`flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition duration-150 ${exportLang === l ? "bg-background text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:bg-background/70 hover:text-foreground"}`}>
                   {l === "ar" ? "العربية" : l === "en" ? "English" : "کوردی"}
                 </button>
               ))}
             </div>
-            <p className="mb-1 border-b border-border px-2 py-1.5 text-[11px] text-muted-foreground">
-              {exportLang === "en" ? "Every export includes llms.txt + JSON-LD + FAQPage with how-to" : exportLang === "ku" ? "هەموو هەناردەیەک llms.txt و JSON-LD و FAQPage لەخۆدەگرێت" : "كل تصدير يتضمن llms.txt وJSON-LD وFAQPage مع طريقة الاستخدام"}
+            <p className="mb-2 rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
+              {exportLang === "en" ? "Machine-readable assets are added where supported." : exportLang === "ku" ? "ناوەڕۆکی گونجاو بۆ خوێندنەوەی ماشێن، لە شوێنی پشتگیریکراو زیاد دەکرێت." : "تُضاف الأصول القابلة للقراءة الآلية حيثما يدعمها التقرير."}
             </p>
-            {available.map((f) => {
-              const Icon = ICONS[f];
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => run(f)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-foreground transition hover:bg-primary/10 hover:text-primary"
-                >
-                  <Icon className="size-3.5" /> {labels[f]}
-                </button>
-              );
-            })}
+            <div className="grid gap-1">
+              {available.map((f) => {
+                const Icon = ICONS[f];
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => run(f)}
+                    className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-start text-sm text-foreground transition duration-150 hover:-translate-y-px hover:border-primary/20 hover:bg-primary/10 hover:text-primary hover:shadow-sm active:translate-y-0"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary">
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1 font-medium">{labels[f]}</span>
+                    <span className="text-[10px] text-muted-foreground transition group-hover:text-primary" aria-hidden="true">↗</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

@@ -146,7 +146,7 @@ export function Dardasha({
         <div className="mb-2 text-xs font-semibold text-muted-foreground">{tr(lang, "النطاق الجغرافي الذي سيُوجّه الدردشة والبحث", "Geographic scope for chat and research", "بواری جوگرافی بۆ گفتوگۆ و گەڕان")}</div>
         <GeoScopeSelector compact value={geoScope} onChange={onGeoScopeChange} />
       </div>
-      <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "var(--border) transparent" }} className="max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3">
+      <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "hsl(var(--border)) transparent" }} className="min-h-[160px] max-h-[46dvh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3 scroll-smooth sm:min-h-[220px] sm:max-h-[54dvh] md:max-h-[min(68dvh,760px)] md:p-4">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
         {busy && <div role="status" aria-live="polite" className="mb-3 overflow-hidden rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary"><LoaderCircle className="size-4 animate-spin" />{tr(lang, "بطاقة الأداة: استشارة معروف", "Tool card: Maaroof consultation", "کارتی ئامراز: ڕاوێژکاری معروف")}</div>
@@ -167,10 +167,10 @@ export function Dardasha({
           const openTaskDraft = (proposedGoal?: string) => setTaskDraft({ messageKey, goal: buildTaskGoalFromResult({ language: lang, originalRequest: requestContext, answer: m.content, proposedGoal }) });
           return (
           <div key={messageKey} className={m.role === "user" ? "flex justify-end" : ""}>
-            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full min-w-0 text-sm leading-7"}>
+            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm" : "max-w-full min-w-0 rounded-2xl border border-border/70 bg-card/60 p-3 text-sm leading-7 shadow-sm transition-colors duration-200 hover:border-primary/20 hover:shadow-md sm:p-4"}>
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
               {m.role === "assistant" && m.content.trim() && (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
                   <ExportButtons size="xs" build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })} />
                   {!m.task && !m.needs_task && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "حوّل الرد إلى مهمة", "Turn answer into a task", "وەڵامەکە بکە بە ئەرک")}</button>}
                 </div>
