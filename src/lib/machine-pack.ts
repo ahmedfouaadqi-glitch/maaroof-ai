@@ -22,7 +22,8 @@ export function buildPack(i: PackInput) {
   const name = i.brand.trim() || "Brand";
   const ob = i.onboarding || {};
   const links = splitList(ob.links).filter(isUrl);
-  const site = (i.site && isUrl(i.site) ? i.site : links[0]) || "";
+  // General result links are not necessarily the official website. Never promote one to the entity URL implicitly.
+  const site = (i.site && isUrl(i.site) ? i.site : "") || "";
   const markets = Array.from(new Set([...(i.markets || []), ...splitList(ob.markets)]));
   const facts = splitList(ob.facts).slice(0, 8);
   const aliases = splitList(ob.aliases);

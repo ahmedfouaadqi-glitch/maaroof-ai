@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computeFloatingMenuPosition } from "@/lib/floating-menu";
-import { Download, FileDown, FileSpreadsheet, FileText, FileType2, Presentation, Braces, Hash, Lightbulb, Languages, FileCode2, Info, LoaderCircle, AlertTriangle } from "lucide-react";
+import { Download, FileDown, FileSpreadsheet, FileText, FileType2, Presentation, Braces, Hash, Lightbulb, Languages, FileCode2, Info, LoaderCircle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useVisibility } from "@/lib/visibility";
 import {

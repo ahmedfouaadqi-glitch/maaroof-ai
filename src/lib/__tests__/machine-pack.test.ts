@@ -5,10 +5,11 @@ const ob = { aliases: "معروف, Maaroof", facts: "Founded in 2024", links: "h
 
 describe("machine pack", () => {
   it("builds Organization JSON-LD only from given data", () => {
-    const p = buildPack({ brand: "Maaroof Ai", markets: ["Iraq", "Lebanon"], onboarding: ob });
+    const p = buildPack({ brand: "Maaroof Ai", site: "https://maaroofai.com", markets: ["Iraq", "Lebanon"], onboarding: ob });
     const org = JSON.parse(p.orgJsonld);
     expect(org.url).toBe("https://maaroofai.com");
     expect(org.sameAs).toEqual(["https://linkedin.com/company/maaroof"]);
+    expect(buildPack({ brand: "X", onboarding: { links: "https://unconfirmed.example/page" } }).orgJsonld).not.toContain('"url": "https://unconfirmed.example/page"');
     expect(org.areaServed.map((x: any) => x.name)).toEqual(["Iraq", "Lebanon"]);
     expect(org.areaServed.every((x: any) => x["@type"] === "Place")).toBe(true);
     expect(org.sameAs).not.toContain("https://example.com/press");
