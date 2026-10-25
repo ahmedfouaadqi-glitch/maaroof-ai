@@ -44,7 +44,7 @@ import { OnboardingWizard } from "@/components/workspace/OnboardingWizard";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { ExportButtons } from "@/components/ExportButtons";
-import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import {
   ArrowUp, BrainCircuit, Check, ChevronDown, CircleAlert, Clock3, FileText,
@@ -138,8 +138,15 @@ function WorkspacePage() {
   const [goal, setGoal] = useState("");
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
   const activeWorkspaceId = activeWorkspace?.id ?? null;
+  const [geoScope, setGeoScope] = useState<GeoScope>({ scope: "auto" });
+  const [chatPrefill, setChatPrefill] = useState<{ text: string; taskId: string } | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [pendingApproved, setPendingApproved] = useState("");
+  useEffect(() => {
+    const saved = (authProfile as any)?.geo_scope;
+    if (saved && typeof saved.scope === "string") setGeoScope(saved as GeoScope);
+    else if (user?.id) setGeoScope({ scope: "auto" });
+  }, [user?.id, JSON.stringify((authProfile as any)?.geo_scope)]);
   useEffect(() => { try { setGoal(localStorage.getItem("ws-goal-draft:" + (activeWorkspaceId || "main")) || ""); } catch { setGoal(""); } }, [activeWorkspaceId]);
   useEffect(() => { try { const key = "ws-goal-draft:" + (activeWorkspaceId || "main"); if (goal) localStorage.setItem(key, goal); else localStorage.removeItem(key); } catch {} }, [goal, activeWorkspaceId]);
   const rotatingHint = useRotatingHint(locale, goal.length > 0);
@@ -191,19 +198,30 @@ function WorkspacePage() {
   async function openPastJob(j: PastJob) {
     const token = (await supabase.auth.getSession()).data.session?.access_token;
     if (!token) return;
+    watcherRef.current += 1;
+    setChatPrefill(null);
     setEvents([]); setError(""); setJobId(j.id); setGoal(j.goal || "");
     setRunning(!["completed", "failed", "cancelled"].includes(j.status));
     goMain();
-    try { await watchJob(j.id, 0, token); } catch (e: any) { setRunning(false); setError(String(e?.message || c.failed)); }
+    try { await watchJob(j.id, 0, token, true); } catch (e: any) { setRunning(false); setError(String(e?.message || c.failed)); }
   }
   function continuePastJob(j: PastJob) {
     watcherRef.current += 1;
-    setEvents([]); setJobId(null); setRunning(false);
-    const prefix = locale === "en" ? "Follow-up on previous task: " : locale === "ku" ? "بەردەوامی ئەرکی پێشوو: " : "استكمال للمهمة السابقة: ";
-    setGoal(prefix + (j.goal || "") + "\n");
-    if (j.status !== "completed") void prepareResume(j.id); else setResumeFrom(null);
+    setEvents([]); setJobId(null); setRunning(false); setError("");
+    const statusLabel = j.status;
+    const text = locale === "en"
+      ? `Continue the previous task using its saved context.\nOriginal goal: ${j.goal}\nPrevious status: ${statusLabel}\nReview recorded evidence and successful tool outputs, distinguish completed findings from missing steps, and propose the next action. Do not assume the previous attempt succeeded.`
+      : locale === "ku"
+        ? `ئەرکی پێشوو بە بەکارهێنانی پاشبنەمای پاشەکەوتکراو بەردەوام بکە.\nئامانجی سەرەکی: ${j.goal}\nدۆخی پێشوو: ${statusLabel}\nبەڵگە و ئەنجامە پاشەکەوتکراوەکان بپشکنە، هەنگاوە تەواوبووەکان لە هەنگاوە ماوەکان جیا بکەرەوە، و هەنگاوی داهاتوو پێشنیار بکە. گریمانە مەکە هەوڵی پێشوو سەرکەوتوو بووە.`
+        : `استكمل المهمة السابقة بالاستناد إلى سياقها المحفوظ.\nالهدف الأصلي: ${j.goal}\nحالة المحاولة السابقة: ${statusLabel}\nراجع الأدلة ونتائج الأدوات المسجلة، وميّز ما اكتمل عما بقي، ثم اقترح الخطوة التالية. لا تفترض أن المحاولة السابقة نجحت.`;
+    setChatPrefill({ text, taskId: j.id });
+    // Preparing reuse is read-only; execution still requires the user's approval in Dardasha.
+    void prepareResume(j.id);
+    if (Array.isArray(j.request_payload?.selected_skills)) {
+      setSelectedSkills(j.request_payload.selected_skills.filter((key: unknown) => typeof key === "string"));
+    }
     goMain();
-    setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50);
+    setTimeout(() => document.getElementById("dardasha-message-input")?.focus(), 50);
   }
 
   useEffect(() => {
@@ -347,7 +365,7 @@ function WorkspacePage() {
     return remaining;
   }
 
-  async function watchJob(id: string, after: number, token: string) {
+  async function watchJob(id: string, after: number, token: string, allWorkspaces = false) {
     watcherRef.current += 1;
     const watcherId = watcherRef.current;
     let cursor = after;
@@ -359,7 +377,10 @@ function WorkspacePage() {
         // Always read the freshest token: background refreshes must not break tracking.
         const { data: s } = await supabase.auth.getSession();
         const tk = s.session?.access_token || token;
-        response = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(id) + "&after=" + cursor + "&workspace_id=" + encodeURIComponent(activeWorkspaceId || ""), {
+        const query = new URLSearchParams({ id, after: String(cursor) });
+        if (allWorkspaces) query.set("all_workspaces", "1");
+        else query.set("workspace_id", activeWorkspaceId || "");
+        response = await fetch("/api/maaroof-jobs?" + query.toString(), {
           headers: { Authorization: "Bearer " + tk },
           cache: "no-store",
         });
@@ -397,11 +418,15 @@ function WorkspacePage() {
       }
       const status = String(body?.job?.status || "running");
       const autoNext = body?.job?.auto_resume_job_id || body?.job?.request_payload?.auto_resume_job_id;
-      if (status === "failed" && typeof autoNext === "string" && /^[0-9a-f-]{36}$/i.test(autoNext)) {
+      if (!allWorkspaces && status === "failed" && typeof autoNext === "string" && /^[0-9a-f-]{36}$/i.test(autoNext)) {
         // The runner stopped; Maaroof resumed automatically from the last successful step at no extra charge.
         setEvents(current => [...current, { type: "narration", data: { text: locale === "en" ? "The runner stopped; resuming automatically from the last successful step (no extra charge)…" : locale === "ku" ? "بەردەوامبوونی خۆکار لە دوایین هەنگاوی سەرکەوتوو…" : "توقف المنفّذ؛ معروف يستأنف تلقائياً من آخر خطوة ناجحة دون خصم إضافي…" }, at: Date.now() } as WorkspaceEvent]);
         setJobId(autoNext);
         id = autoNext; cursor = 0;
+        continue;
+      }
+      if ((status === "completed" || status === "failed" || status === "cancelled") && incoming.length >= 200) {
+        // History endpoint pages events in batches; keep reading until the last page.
         continue;
       }
       if (status === "completed" || status === "failed" || status === "cancelled") {
@@ -451,6 +476,10 @@ function WorkspacePage() {
   const [skillAsk, setSkillAsk] = useState<string[]>([]);
   async function start(clarifications?: Record<string, string>, skillsOverride?: string[]) {
     if (!goal.trim() || running || !user || !policy.allowed_modes.includes(mode)) return;
+    if (!isGeoScopeConfigured(geoScope)) {
+      setError(locale === "en" ? "Choose the required country and region/city before starting." : locale === "ku" ? "پێش دەستپێکردن وڵات و ناوچە/شار دیاری بکە." : "حدّد الدولة والمنطقة أو المدينة المطلوبة قبل بدء المهمة.");
+      return;
+    }
     if (liveProbe && selectedModels.length === 0) {
       setError(locale === "en" ? "Select at least one model or turn off live checking." : locale === "ku" ? "مۆدێلێک هەڵبژێرە یان پشکنینی ڕاستەوخۆ ناچالاک بکە." : "اختر نموذجاً واحداً على الأقل أو أوقف الفحص المباشر.");
       return;
@@ -479,7 +508,7 @@ function WorkspacePage() {
           },
           interface_mode: "workspace",
           workspace_id: activeWorkspaceId,
-          geo_scope: toServerGeo(getEffectiveScope(authProfile)),
+          geo_scope: toServerGeoScope(geoScope),
           selected_skills: skillsOverride || selectedSkills,
           run_options: AUTO_RUN_OPTIONS,
           resume_job_id: resumeFrom?.id,
@@ -595,7 +624,7 @@ function WorkspacePage() {
       <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
       <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={handleWorkspaceChange} disabled={running} /></div>
-      {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} workspaceId={activeWorkspaceId} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
+      {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} /><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /><BroadcastPanel lang={locale} workspaceId={activeWorkspaceId} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} workspaceId={activeWorkspaceId} /></Suspense></section>}</div>}
       {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><OnboardingWizard lang={locale as any} /><WorkspaceAccountPanel workspace={activeWorkspace} lang={locale} onSaved={(saved) => setActiveWorkspace(saved as Workspace)} /><WorkspaceSpacesPanel lang={locale} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div><section className="mt-4 rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Approvals" : locale === "ku" ? "ڕەزامەندییەکان" : "الموافقات"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Actions waiting for your decision before Maaroof runs them." : locale === "ku" ? "کردارەکان چاوەڕێی بڕیاری تۆن." : "إجراءات تنتظر قرارك قبل أن ينفذها معروف."}</p><Suspense fallback={null}><LazyApprovals /></Suspense></section><section className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5"><h2 className="font-semibold">{locale === "en" ? "Teach once, work forever" : locale === "ku" ? "جارێک فێرم بکە" : "علّمني مرة… أعمل للأبد"}</h2><p className="mt-1 text-xs text-muted-foreground">{locale === "en" ? "What you teach Maaroof here is saved in the Knowledge space and reused in every task for this account." : locale === "ku" ? "ئەوەی فێری معروفی دەکەیت لە شوێنی زانیاری پاشەکەوت دەکرێت." : "ما تعلّمه لمعروف يُحفظ في مساحة المعرفة ويُستخدم في كل مهمة حسب طبيعة حسابك."}</p><KnownFactsPanel lang={locale} /></section></div>}
@@ -647,7 +676,16 @@ function WorkspacePage() {
         {(finalEvent || events.length > 0) && !running && (
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; const prevJob = jobId; const prevDone = events.some((e: any) => e.type === "final"); watcherRef.current += 1; setEvents([]); setJobId(null); if (prevJob && !prevDone) void prepareResume(prevJob); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
-        {!finalEvent && !running && events.length === 0 && <div className="mb-4"><Dardasha lang={locale} workspaceId={activeWorkspaceId} busyTask={running} onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }} /></div>}
+        {!finalEvent && !running && events.length === 0 && <div className="mb-4"><Dardasha
+            lang={locale}
+            workspaceId={activeWorkspaceId}
+            busyTask={running}
+            geoScope={geoScope}
+            onGeoScopeChange={setGeoScope}
+            chatPrefill={chatPrefill}
+            onPrefillConsumed={() => setChatPrefill(null)}
+            onApproveTask={(t) => { setGoal(t); setPendingApproved(t); }}
+          /></div>}
         {!finalEvent && !running && events.length === 0 && showAdvanced && (
           <section className="rb-workspace-fade rb-workspace-delay-1 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="order-1 min-w-0 space-y-4 lg:order-none">
@@ -656,11 +694,10 @@ function WorkspacePage() {
                 {goal && <div className="mb-2 flex justify-end"><button type="button" onClick={() => { setGoal(""); setSelectedSkills([]); setResumeFrom(null); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 30); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{locale === "en" ? "New blank task" : locale === "ku" ? "ئەرکی نوێی بەتاڵ" : "مهمة جديدة فارغة"}</button></div>}
                 <textarea id="workspace-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder={rotatingHint} disabled={running} rows={4} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60" />
                 {selectedSkills.length === 0 && <LiveSkillHints text={goal} lang={locale} onPick={(k) => setSelectedSkills([k])} />}
+                <div className="mt-3">
+                  <GeoScopeSelector compact value={geoScope} onChange={setGeoScope} />
+                </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <details className="group relative">
-                    <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"}<ChevronDown className="size-3 transition-transform group-open:rotate-180" /></summary>
-                    <div className="absolute start-0 top-full z-30 mt-2 w-[min(22rem,80vw)] rounded-2xl border border-border bg-card p-4 shadow-xl"><div className="mb-2 flex items-center gap-2 text-sm font-semibold">{locale === "en" ? "Geographic scope" : locale === "ku" ? "بواری جوگرافی" : "النطاق الجغرافي"} <HelpTip id="geo" lang={locale} /></div><GeoScopeSelector compact /></div>
-                  </details>
                   <div role="radiogroup" aria-label={c.mode} className="inline-flex flex-wrap rounded-xl border border-border p-0.5 text-xs">
                     {([{ key: "execution", label: c.execute }, { key: "recommendation", label: c.recommendMode }, { key: "simulation", label: c.simulate }] as const).filter(item => policy.allowed_modes.includes(item.key)).map(item => (
                       <button key={item.key} type="button" role="radio" aria-checked={mode === item.key} onClick={() => setMode(item.key)} className={`rounded-lg px-3 py-1.5 font-semibold transition ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>{item.label}</button>
@@ -885,10 +922,4 @@ function SkillDetails({ skill, locale }: { skill: MaaroofSkill; locale: SkillLoc
   );
 }
 
-/** Convert the profile's ordered scope (country > region > province > city) to the agent's geo format. */
-function toServerGeo(scope: { scope: string; country?: string; region?: string; city?: string }) {
-  if (!scope || scope.scope === "world") return { mode: "world" as const };
-  if (scope.scope === "auto") return { mode: "auto" as const };
-  const local = [scope.city, scope.region].filter(Boolean).join(", ");
-  return local ? { mode: "city" as const, country: scope.country, city: local } : { mode: "country" as const, country: scope.country };
-}
+

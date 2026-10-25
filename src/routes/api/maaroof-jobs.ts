@@ -1,7 +1,7 @@
 // Workspace background jobs: GET list / events, POST cancel. Owner-only.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { isStaleJob, isTerminalJobStatus, parseAfter, shouldFallbackFromWorkspaceScope } from "@/lib/maaroof/jobs";
+import { isMissingWorkspaceIdColumn, isStaleJob, isTerminalJobStatus, parseAfter, shouldFallbackFromWorkspaceScope } from "@/lib/maaroof/jobs";
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";
@@ -20,6 +20,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const db = a.admin as any;
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
+        const allWorkspaces = url.searchParams.get("all_workspaces") === "1";
         const workspaceRaw = url.searchParams.get("workspace_id");
         let workspaceId: string | null = null;
         if (workspaceRaw) {
@@ -29,11 +30,23 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           workspaceId = owned.id;
         }
         if (!id) {
-          const columns = "id, goal, mode, status, error, request_payload, created_at, updated_at";
+          const columns = "id, goal, mode, status, error, request_payload, workspace_id, created_at, updated_at";
+          const legacyColumns = "id, goal, mode, status, error, request_payload, created_at, updated_at";
           let q = db.from("maaroof_jobs").select(columns).eq("user_id", a.userId);
-          q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
+          if (!allWorkspaces) q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
           let { data: jobs, error: scopedError } = await q.order("created_at", { ascending: false }).limit(1000);
           let scopeFallback = false;
+          if (scopedError && isMissingWorkspaceIdColumn(scopedError)) {
+            // Legacy production databases may not yet have workspace_id. Preserve task history
+            // by querying this user's rows without selecting/filtering the absent column.
+            console.warn("[maaroof-jobs] workspace_id is absent; using legacy owner-wide history", scopedError.message);
+            const fallback = await db.from("maaroof_jobs").select(legacyColumns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
+            if (fallback.error) {
+              console.error("[maaroof-jobs] legacy owner-wide list failed", fallback.error.message);
+              return Response.json({ jobs: [], degraded: true, error: "jobs_unavailable" }, { status: 503 });
+            }
+            return Response.json({ jobs: fallback.data || [], scope_fallback: true, workspace_scope_unavailable: true });
+          }
           if (shouldFallbackFromWorkspaceScope(scopedError)) {
             console.warn("[maaroof-jobs] scoped list failed; retrying owner-wide", scopedError.message);
             const fallback = await db.from("maaroof_jobs").select(columns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
@@ -47,7 +60,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           return Response.json({ jobs: jobs || [], scope_fallback: scopeFallback });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
-        const hasWorkspaceScope = url.searchParams.has("workspace_id");
+        const hasWorkspaceScope = url.searchParams.has("workspace_id") && !allWorkspaces;
         let jobQuery = db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId);
         if (hasWorkspaceScope) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
         let { data: job, error: jobLookupError } = await jobQuery.maybeSingle();

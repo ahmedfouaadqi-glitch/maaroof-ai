@@ -17,10 +17,50 @@ export function detectGeoFromRequest(request: Request): DetectedGeo {
 
 export type GeoScope = { mode: "auto" | "country" | "city" | "world"; country?: string; city?: string };
 
-export function effectiveGeo(detected: DetectedGeo, scope?: GeoScope) {
-  if (!scope || scope.mode === "auto") {
-    return { country: detected.country || "", city: detected.city, label: detected.country || "World" };
+/** Validate and normalize a scope received from a UI or API. Invalid values never invent a location. */
+export function normalizeGeoScope(value: unknown): GeoScope | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const v = value as Record<string, unknown>;
+  let mode = v.mode;
+  if (typeof mode !== "string" && typeof v.scope === "string") mode = v.scope;
+  if (mode === "region" || mode === "province") mode = "city";
+  if (mode !== "auto" && mode !== "world" && mode !== "country" && mode !== "city") return undefined;
+  if (mode === "auto" || mode === "world") return { mode };
+  const country = typeof v.country === "string" ? v.country.trim().slice(0, 120) : "";
+  const city = typeof v.city === "string" ? v.city.trim().slice(0, 120) : "";
+  if (mode === "country") return country ? { mode, country } : undefined;
+  if (mode === "city") {
+    const region = typeof v.region === "string" ? v.region.trim().slice(0, 120) : "";
+    const place = [city, region].filter(Boolean).join(", ");
+    if (place && country) return { mode, country, city: place };
+    if (place) return { mode, city: place };
+    return country ? { mode: "country", country } : undefined;
   }
-  if (scope.mode === "world") return { country: "", city: undefined, label: "World" };
-  return { country: scope.country || "", city: scope.city, label: [scope.city, scope.country].filter(Boolean).join(", ") || "World" };
+  return undefined;
+}
+
+/**
+ * Resolve a geographic target defensively. An unresolved automatic scope is explicit
+ * instead of being silently relabelled as a real country or as a confirmed world scope.
+ */
+export function effectiveGeo(detected?: DetectedGeo | null, scope?: GeoScope | null) {
+  const safeDetected: DetectedGeo = detected && typeof detected === "object"
+    ? detected
+    : { country: "", source: "none" };
+  const selected = normalizeGeoScope(scope) || { mode: "auto" as const };
+  const visitorCountry = typeof safeDetected.country === "string" ? safeDetected.country.trim() : "";
+  const visitorCity = typeof safeDetected.city === "string" ? safeDetected.city.trim() : "";
+
+  if (selected.mode === "auto") {
+    if (visitorCountry) return { country: visitorCountry, city: visitorCity || undefined, label: [visitorCity, visitorCountry].filter(Boolean).join(", ") };
+    return { country: "", city: undefined, label: "Visitor location unavailable; no country assumed" };
+  }
+  if (selected.mode === "world") return { country: "", city: undefined, label: "World" };
+
+  const country = String(selected.country || "").trim();
+  const city = selected.mode === "city" ? String(selected.city || "").trim() : "";
+  if (selected.mode === "country" && !country) {
+    return { country: "", city: undefined, label: "Country not selected" };
+  }
+  return { country, city: city || undefined, label: [city, country].filter(Boolean).join(", ") || "Location not specified" };
 }

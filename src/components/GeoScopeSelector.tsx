@@ -41,7 +41,9 @@ export function getEffectiveScope(profile: any, toolKey?: string): GeoScope {
     (toolKey && overrides[toolKey]) || profile?.geo_scope || { scope: "auto" };
   if (raw.scope !== "auto") return raw;
   const det = detectedCountry();
-  if (!det) return { scope: "world" };
+  // Keep the scope automatic when the visitor's country is unknown. The server
+  // can resolve it from trusted request headers; never invent a country.
+  if (!det) return { scope: "auto" };
   const info = getCountryInfo(det.code);
   return {
     scope: "country",
@@ -54,13 +56,41 @@ export function getEffectiveScope(profile: any, toolKey?: string): GeoScope {
 export function scopeLabel(scope: GeoScope, lang: "en" | "ar" | "ku"): string {
   const world = lang === "ar" ? "العالم" : lang === "ku" ? "جیهان" : "Worldwide";
   if (scope.scope === "world") return world;
+  if (scope.scope === "auto") {
+    return lang === "ar" ? "تلقائي — موقع الزائر" : lang === "ku" ? "خۆکار — شوێنی سەردانکەر" : "Automatic — visitor location";
+  }
   const parts = [scope.city, scope.region, scope.country].filter(Boolean);
-  return parts.length ? parts.join(", ") : world;
+  if (parts.length) return parts.join(", ");
+  return lang === "ar" ? "حدّد الموقع الجغرافي" : lang === "ku" ? "شوێنی جوگرافی دیاری بکە" : "Choose a geographic location";
 }
 
 const COUNTRY_CODES = Object.keys(NAMES);
 
-export function GeoScopeSelector({ compact = false, toolKey }: { compact?: boolean; toolKey?: string }) {
+export type ServerGeoScope = { mode: "auto" | "world" | "country" | "city"; country?: string; city?: string };
+
+/** Require the fields needed by the selected scope before any chat/task is sent. */
+export function isGeoScopeConfigured(scope?: GeoScope | null): boolean {
+  if (!scope || scope.scope === "auto" || scope.scope === "world") return true;
+  if (!String(scope.country || "").trim()) return false;
+  if (scope.scope === "city") return !!String(scope.city || "").trim();
+  if (scope.scope === "region" || scope.scope === "province") return !!String(scope.region || "").trim();
+  return true;
+}
+
+/** Convert the UI selector into the server's geography contract without guessing a country. */
+export function toServerGeoScope(scope?: GeoScope | null): ServerGeoScope {
+  const value = scope || { scope: "auto" as const };
+  if (value.scope === "world") return { mode: "world" };
+  if (value.scope === "auto") return { mode: "auto" };
+  const country = String(value.country || "").trim() || undefined;
+  if (value.scope === "country") return country ? { mode: "country", country } : { mode: "auto" };
+  if (value.scope === "city") return { mode: "city", country, city: String(value.city || "").trim() || undefined };
+  const place = [value.city, value.region].map((x) => String(x || "").trim()).filter(Boolean).join(", ");
+  if (place) return { mode: "city", country, city: place };
+  return country ? { mode: "country", country } : { mode: "auto" };
+}
+
+export function GeoScopeSelector({ compact = false, toolKey, value, onChange }: { compact?: boolean; toolKey?: string; value?: GeoScope; onChange?: (scope: GeoScope) => void }) {
   const { t, lang } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
   const overrides = ((profile as any)?.tool_geo_scopes || {}) as Record<string, GeoScope>;
@@ -71,13 +101,13 @@ export function GeoScopeSelector({ compact = false, toolKey }: { compact?: boole
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const next: GeoScope =
+    const next: GeoScope = value ||
       (toolKey && overrides[toolKey]) || (profile as any)?.geo_scope || { scope: "auto" };
     setVal(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(stored), toolKey]);
+  }, [JSON.stringify(stored), JSON.stringify(value), toolKey]);
 
-  const effective = useMemo(() => getEffectiveScope(profile, toolKey), [profile, toolKey]);
+  const effective = useMemo(() => getEffectiveScope({ ...(profile || {}), geo_scope: val }, toolKey), [profile, toolKey, val]);
 
   const countryOptions = useMemo(
     () =>
@@ -90,16 +120,20 @@ export function GeoScopeSelector({ compact = false, toolKey }: { compact?: boole
 
   const save = async (next: GeoScope) => {
     setVal(next);
+    onChange?.(next);
     if (!user) return;
     setSaving(true);
-    if (toolKey) {
-      const merged = { ...overrides, [toolKey]: next };
-      await supabase.from("profiles").update({ tool_geo_scopes: merged as any }).eq("id", user.id);
-    } else {
-      await supabase.from("profiles").update({ geo_scope: next as any }).eq("id", user.id);
+    try {
+      if (toolKey) {
+        const merged = { ...overrides, [toolKey]: next };
+        await supabase.from("profiles").update({ tool_geo_scopes: merged as any }).eq("id", user.id);
+      } else {
+        await supabase.from("profiles").update({ geo_scope: next as any }).eq("id", user.id);
+      }
+      await refreshProfile();
+    } finally {
+      setSaving(false);
     }
-    await refreshProfile();
-    setSaving(false);
   };
 
   const clearOverride = async () => {
@@ -108,6 +142,9 @@ export function GeoScopeSelector({ compact = false, toolKey }: { compact?: boole
     const next = { ...overrides };
     delete next[toolKey];
     await supabase.from("profiles").update({ tool_geo_scopes: next as any }).eq("id", user.id);
+    const inherited: GeoScope = (profile as any)?.geo_scope || { scope: "auto" };
+    setVal(inherited);
+    onChange?.(inherited);
     await refreshProfile();
     setSaving(false);
   };

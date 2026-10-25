@@ -1,7 +1,7 @@
 // Maaroof streaming endpoint (SSE). POST { goal, lang?, geo_scope? }
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { detectGeoFromRequest, type GeoScope } from "@/lib/maaroof/geo.server";
+import { detectGeoFromRequest, normalizeGeoScope, type GeoScope } from "@/lib/maaroof/geo.server";
 import { runMaaroof } from "@/lib/maaroof/orchestrator.server";
 import { isMissingWorkspaceIdColumn } from "@/lib/maaroof/jobs";
 
@@ -92,7 +92,7 @@ export const Route = createFileRoute("/api/maaroof")({
         const goal = String(body?.goal || "").trim().slice(0, settings.max_goal_chars);
         if (!goal) return Response.json({ error: "goal_required" }, { status: 400 });
         const lang = (body?.lang as "ar" | "en" | "ku") || "ar";
-        const geoScope = (body?.geo_scope as GeoScope) || undefined;
+        const geoScope = normalizeGeoScope(body?.geo_scope);
         const workspaceRaw = body?.workspace_id;
         if (workspaceRaw != null && workspaceRaw !== "" && (typeof workspaceRaw !== "string" || !/^[0-9a-f-]{36}$/i.test(workspaceRaw))) return Response.json({ error: "invalid_workspace" }, { status: 400 });
         const workspaceId = typeof workspaceRaw === "string" && workspaceRaw ? workspaceRaw : null;
@@ -165,8 +165,9 @@ export const Route = createFileRoute("/api/maaroof")({
           let pickedSkills: string[] = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
           const resumeRef = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
           if (resumeRef) {
-            let previousQuery = db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId);
-            previousQuery = verifiedWorkspaceId ? previousQuery.eq("workspace_id", verifiedWorkspaceId) : previousQuery.is("workspace_id", null);
+            // A user may intentionally continue a task from another one of their own workspaces.
+            // Ownership remains mandatory; the selected destination workspace does not hide source evidence.
+            const previousQuery = db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId);
             let { data: prevPayload, error: previousLookupError } = await previousQuery.maybeSingle();
             if (previousLookupError) {
               console.warn("[maaroof] scoped resume lookup failed; retrying by user_id", previousLookupError.message);
@@ -229,8 +230,8 @@ export const Route = createFileRoute("/api/maaroof")({
           let reusedResults: Record<string, any> | undefined;
           const resumeId = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
           if (resumeId) {
-            let previousJobQuery = db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId);
-            previousJobQuery = verifiedWorkspaceId ? previousJobQuery.eq("workspace_id", verifiedWorkspaceId) : previousJobQuery.is("workspace_id", null);
+            // Resume sources are allowed across the same user's workspaces, never across users.
+            const previousJobQuery = db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId);
             let { data: prevJob, error: previousJobLookupError } = await previousJobQuery.maybeSingle();
             if (previousJobLookupError) {
               console.warn("[maaroof] resume reuse scope failed; retrying by user_id", previousJobLookupError.message);
@@ -240,7 +241,7 @@ export const Route = createFileRoute("/api/maaroof")({
             }
             if (previousJobLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
             if (prevJob) {
-              const { data: evs } = await db.from("maaroof_job_events").select("payload").eq("job_id", resumeId).eq("event_type", "tool_result").order("seq").limit(200);
+              const { data: evs } = await db.from("maaroof_job_events").select("payload").eq("job_id", resumeId).eq("user_id", userId).eq("event_type", "tool_result").order("seq").limit(200);
               const { reusableResults } = await import("@/lib/maaroof/jobs");
               reusedResults = reusableResults((evs || []).map((e: any) => e.payload));
             }

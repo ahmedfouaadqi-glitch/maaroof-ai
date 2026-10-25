@@ -24,22 +24,22 @@ const STATUS: Record<string, { ar: string; en: string; ku: string; cls: string }
   dispatching: { ar: "جارٍ", en: "Running", ku: "بەردەوامە", cls: "bg-primary/15 text-primary" },
 };
 
-export type PastJob = { id: string; goal: string; mode: string; status: string; error: string | null; created_at: string; updated_at?: string | null; request_payload: any };
+export type PastJob = { id: string; goal: string; mode: string; status: string; error: string | null; created_at: string; updated_at?: string | null; workspace_id?: string | null; request_payload: any };
 
-export function HistoryPanel({ lang, onOpen, onContinue, workspaceId = null }: { lang: L; onOpen: (j: PastJob) => void; onContinue: (j: PastJob) => void; workspaceId?: string | null }) {
+export function HistoryPanel({ lang, onOpen, onContinue }: { lang: L; onOpen: (j: PastJob) => void; onContinue: (j: PastJob) => void }) {
   const [jobs, setJobs] = useState<PastJob[] | null>(null);
   useEffect(() => {
     (async () => {
       const t = await token();
-      const r = await fetch("/api/maaroof-jobs" + (workspaceId ? "?workspace_id=" + encodeURIComponent(workspaceId) : ""), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+      const r = await fetch("/api/maaroof-jobs?all_workspaces=1", { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
       const b = r.ok ? await r.json() : { jobs: [] };
       setJobs(Array.isArray(b.jobs) ? b.jobs : []);
     })().catch(() => setJobs([]));
-  }, [workspaceId]);
+  }, []);
 
   const buildExport = (j: PastJob) => async () => {
     const t = await token();
-    const r = await fetch("/api/maaroof-jobs?id=" + j.id + "&after=0&workspace_id=" + encodeURIComponent(workspaceId || ""), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+    const r = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(j.id) + "&after=0&all_workspaces=1", { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
     const b = r.ok ? await r.json() : { events: [] };
     const evs: any[] = b.events || [];
     const fin = [...evs].reverse().find((e) => e.event_type === "final");
