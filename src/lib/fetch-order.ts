@@ -4,7 +4,7 @@ export type SearchSource = "firecrawl" | "apidirect";
 export const FETCH_TIMEOUT_MS = 15_000;
 
 /** True only when a scrape exposes usable text or meaningful title+description metadata. */
-export function hasUsableScrapeEvidence(result: any, url = ""): boolean {
+export function hasUsableScrapeEvidence(result: any): boolean {
   const data = result?.data ?? result;
   const meta = data?.metadata ?? {};
   const markdown = String(data?.markdown ?? "").trim();
