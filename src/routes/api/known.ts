@@ -304,15 +304,15 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
               let realityRecordId: string | null = null;
               try {
                 const { data: rr } = await admin.from("reality_records").insert({
-                  run_id: dbRunId || null, user_id: userId, subject: "market", subject_ref: brand,
+                  run_id: dbRunId || null, user_id: userId, workspace_id: workspaceId, subject: "market", subject_ref: brand,
                   reality_state: relations.some((x) => !x.is_ai_observation) ? "observed" : "inferred",
                   signals: { tool: "known", market: place || "world", depth, relations: relations.length },
                 } as any).select("id").single();
                 realityRecordId = (rr as any)?.id ?? null;
               } catch {}
               const [evidenceMap, nodeMap] = await Promise.all([
-                persistEvidence(userId, brand, relations, lang, realityRecordId),
-                persistKnowledge(userId, brand, sector, place, relations),
+                persistEvidence(userId, brand, relations, lang, realityRecordId, workspaceId),
+                persistKnowledge(userId, brand, sector, place, relations, workspaceId),
               ]);
 
               if (dbRunId && relations.length) {
