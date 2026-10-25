@@ -150,12 +150,15 @@ export type SpecializedRunReplayDecision =
   | { action: "block"; reason: "request_id_conflict" | "request_already_processed"; status: string };
 
 /** Prevent a reused request ID from charging or invoking a provider twice. */
-export function decideSpecializedRunReplay(existing: {
-  candidate_id?: string | null;
-  status?: string | null;
-  response?: unknown;
-} | null, candidateId: string): SpecializedRunReplayDecision {
+export function decideSpecializedRunReplay(
+  existing: { candidate_id?: string | null; status?: string | null; response?: unknown; workspace_id?: string | null } | null,
+  candidateId: string,
+  workspaceId?: string | null,
+): SpecializedRunReplayDecision {
   if (!existing) return { action: "reserve" };
+  if ((existing.workspace_id ?? null) !== (workspaceId ?? null)) {
+    return { action: "block", reason: "request_id_conflict", status: String(existing.status || "unknown") };
+  }
   if (String(existing.candidate_id || "") !== candidateId) {
     return { action: "block", reason: "request_id_conflict", status: String(existing.status || "unknown") };
   }
