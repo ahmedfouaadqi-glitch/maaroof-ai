@@ -1,6 +1,6 @@
 // Micro-probe: let the user pick which of the ten engines to question live,
 // see the expected cost against their balance, then show real answers.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Radar, Lock } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useI18n } from "@/lib/i18n";
@@ -21,7 +21,7 @@ const TX = {
 type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string; status?: string; brands: string[]; reason?: string };
 type Council = { agreement: string; disagreement: string | null; decision: string };
 
-export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean }) {
+export function EngineProbePanel({ brand: brandProp, keywords, scope, workspaceId = null, allowBrandInput }: { brand: string; keywords?: string; scope?: unknown; workspaceId?: string | null; allowBrandInput?: boolean }) {
   const [typed, setTyped] = useState("");
   const [topic, setTopic] = useState(keywords || "");
   const [saveIt, setSaveIt] = useState(true);
@@ -44,6 +44,16 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   const [answers, setAnswers] = useState<ProbeAnswer[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [council, setCouncil] = useState<Council | null>(null);
+  const requestSeq = useRef(0);
+
+  useEffect(() => {
+    requestSeq.current += 1;
+    setAnswers(null);
+    setCouncil(null);
+    setErr(null);
+    setBgMsg(false);
+    setBusy(false);
+  }, [workspaceId]);
 
   useEffect(() => {
     entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 10)); }).catch(() => setAllowed([]));
@@ -65,6 +75,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   async function run() {
     if (!sel.length || busy) return;
     if (!probeTopic) { setErr(topicRequired); return; }
+    const seq = ++requestSeq.current;
     setBusy(true); setErr(null); setAnswers(null); setBgMsg(false);
     if (!brandProp.trim() && typed.trim() && saveIt) {
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id); } catch {}
@@ -76,14 +87,19 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       const r = await apiFetch("/api/visibility", {
         method: "POST",
         headers,
-        body: JSON.stringify({ brand, keywords: probeTopic, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
+        body: JSON.stringify({ brand, keywords: probeTopic, lang: L, workspace_id: workspaceId, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
       });
       const j = await r.json().catch(() => ({}));
+      if (seq !== requestSeq.current) return;
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
       setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null);
-    } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); }
+    } catch (e: any) {
+      if (seq === requestSeq.current) setErr(String(e?.message || e));
+    } finally {
+      if (seq === requestSeq.current) setBusy(false);
+    }
   }
 
   const cards: EngineAnswer[] = useMemo(() => (answers || []).map((a) => ({
