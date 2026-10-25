@@ -77,7 +77,7 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
 }
 
 /** Persist sources as platform evidence; returns entity_name -> evidence ids. Never throws. */
-async function persistEvidence(userId: string, brand: string, relations: any[], lang: string, realityRecordId: string | null): Promise<Map<string, string[]>> {
+async function persistEvidence(userId: string, workspaceId: string | null, brand: string, relations: any[], lang: string, realityRecordId: string | null): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   try {
     const drafts = mkdEvidenceDrafts(brand, relations);
@@ -85,6 +85,7 @@ async function persistEvidence(userId: string, brand: string, relations: any[], 
       const id = await recordEvidence({
         realityRecordId,
         userId,
+        workspaceId,
         title: d.title,
         claim: d.claim,
         sourceKind: "web",
@@ -105,16 +106,17 @@ async function persistEvidence(userId: string, brand: string, relations: any[], 
 }
 
 /** Mirror the discovered graph into the living knowledge layer. Never throws. */
-async function persistKnowledge(userId: string, brand: string, sector: string, place: string, relations: any[]): Promise<Map<string, string>> {
+async function persistKnowledge(userId: string, workspaceId: string | null, brand: string, sector: string, place: string, relations: any[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   try {
     const brandId = await upsertKnowledgeNode({
-      layer: "user",
+      layer: workspaceId ? "workspace" : "user",
       key: `brand:${normalizeDomain(brand) || brand.toLowerCase()}`,
       title: brand,
       summary: `علامة المستخدم${sector ? ` — ${sector}` : ""}${place ? ` — السوق: ${place}` : ""}`,
       payload: { sector: sector || null, market: place || "world" },
-      scope: "user",
+      scope: workspaceId ? "workspace" : "user",
+      workspaceId,
       userId,
       confidence: 80,
       reliability: 80,
@@ -122,13 +124,14 @@ async function persistKnowledge(userId: string, brand: string, sector: string, p
     });
     for (const r of relations) {
       const nodeId = await upsertKnowledgeNode({
-        layer: "user",
+        layer: workspaceId ? "workspace" : "user",
         key: `competitor:${(r.entity_domain || r.entity_name).toLowerCase()}`,
         title: r.entity_name,
         summary: String(r.reason || "").slice(0, 300) || null,
         payload: { category: r.category, confidence: r.confidence, verification_state: r.verification_state, is_ai_observation: r.is_ai_observation, domain: r.entity_domain || null, engines: r.engines || [] },
         sources: (r.sources || []).slice(0, 3).map((u: string) => ({ url: u })),
-        scope: "user",
+        scope: workspaceId ? "workspace" : "user",
+        workspaceId,
         userId,
         confidence: r.confidence,
         reliability: r.is_ai_observation ? 30 : 60,
@@ -161,6 +164,17 @@ export const Route = createFileRoute("/api/known")({
 
         let body: any = {};
         try { body = await request.json(); } catch {}
+        const rawWorkspaceId = body.workspace_id;
+        const workspaceId = rawWorkspaceId == null || rawWorkspaceId === "" ? null : typeof rawWorkspaceId === "string" ? rawWorkspaceId.trim() : "";
+        if (rawWorkspaceId != null && rawWorkspaceId !== "" && (!workspaceId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceId))) {
+          return Response.json({ error: "invalid_workspace" }, { status: 400 });
+        }
+        if (workspaceId) {
+          const { data: ownedWorkspace, error: workspaceError } = await admin.from("workspaces")
+            .select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+          if (workspaceError || !ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+        }
+
         const brand = asText(body.brand, 200);
         const website = asText(body.website || body.url, 300);
         const sector = asText(body.sector || body.keywords, 200);
@@ -180,7 +194,7 @@ export const Route = createFileRoute("/api/known")({
         const mciOn = mciActiveFor(mci as any, "known");
         if (mciOn && !force) {
           try {
-            const hit = await findReusableKnownRun(admin, userId, brand, place, depth);
+            const hit = await findReusableKnownRun(admin, userId, brand, place, depth, workspaceId);
             if (hit) {
               const res = { ...hit.summary.result, run_id: hit.id, reused: { from: hit.created_at } };
               const saved = (res.engines_asked?.length || 0) + 1;
@@ -197,7 +211,7 @@ export const Route = createFileRoute("/api/known")({
 
         const m = describeMarket(scope as any);
         const { data: run } = await admin.from("mkd_runs").insert({
-          user_id: userId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
+          user_id: userId, workspace_id: workspaceId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
         }).select("id").single();
         const dbRunId = (run as any)?.id as string | undefined;
 
@@ -293,8 +307,8 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
                 realityRecordId = (rr as any)?.id ?? null;
               } catch {}
               const [evidenceMap, nodeMap] = await Promise.all([
-                persistEvidence(userId, brand, relations, lang, realityRecordId),
-                persistKnowledge(userId, brand, sector, place, relations),
+                persistEvidence(userId, workspaceId, brand, relations, lang, realityRecordId),
+                persistKnowledge(userId, workspaceId, brand, sector, place, relations),
               ]);
 
               if (dbRunId && relations.length) {
