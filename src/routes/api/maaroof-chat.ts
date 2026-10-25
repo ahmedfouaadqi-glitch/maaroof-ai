@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const taskId = typeof body?.task_id === "string" ? body.task_id : "";
         if (taskId && /^[0-9a-f-]{36}$/i.test(taskId)) {
           const { data: job } = await admin.from("maaroof_jobs")
-            .select("goal, status, workspace_id")
+            .select("goal, status")
             .eq("id", taskId).eq("user_id", userId).maybeSingle();
           if (job) {
             const { data: recorded } = await admin.from("maaroof_job_events")
@@ -92,7 +92,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
               .map((e) => `${e.event_type}: ${JSON.stringify(e.payload || {}).slice(0, 450)}`)
               .join("\n").slice(0, 3600);
             taskCtx = [
-              `[previous task] goal=${String((job as any).goal || "").slice(0, 500)}; status=${String((job as any).status || "unknown")}; workspace_id=${String((job as any).workspace_id || "account-level")}`,
+              `[previous task] goal=${String((job as any).goal || "").slice(0, 500)}; status=${String((job as any).status || "unknown")}`,
               relevant ? `[recorded previous task events and evidence]\n${relevant}` : "[recorded previous task events] No useful tool results were saved; do not assume the task succeeded.",
             ];
           }
