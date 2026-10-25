@@ -4,9 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { auditTargets, scoreTarget, aggregateAxes, billableUnits, weightedScore, workspaceAuditLinks, type AuditTarget } from "@/lib/maaroof/deep-audit";
 import { isAccountKind } from "@/lib/account-kinds";
+import { isReadIssueCode, isInstagramUrl, PublicReadFailure, preferredReadFailure } from "@/lib/fetch-order";
 
 const TOOL_KEY = "analyze.deep_audit"; // falls back to the parent tool price when not priced separately
-const TARGET_TIMEOUT_MS = 40_000; // per link, covers the full provider fallback chain (15s per attempt)
+const TARGET_TIMEOUT_MS = 45_000; // includes the full fallback chain plus one tightly bounded retry
 const UUID = /^[0-9a-f-]{36}$/i;
 
 async function auth(request: Request) {
@@ -40,38 +41,98 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
   let seq = startSeq;
   let cursor = 0;
   let cancelled = false;
+  let activeInstagramReads = 0;
   const CONCURRENCY = 3;
   const emit = (event_type: string, payload: any) =>
     db.from("maaroof_job_events").insert({ job_id: jobId, user_id: userId, seq: ++seq, event_type, payload });
-  const results: { url: string; kind: string; platform: string | null; ok: boolean; read_status: "measured" | "unmeasured"; read_issue: string | null; findings: ReturnType<typeof scoreTarget> }[] = [];
+  const results: {
+    url: string; kind: string; platform: string | null; ok: boolean;
+    read_status: "measured" | "unmeasured"; read_issue: string | null;
+    read_origin: "target" | "reader" | "unknown" | null; read_http_status: number | null;
+    read_retry_after_ms: number | null;
+    findings: ReturnType<typeof scoreTarget>;
+  }[] = [];
 
   async function auditOne(index: number) {
     const { data: j } = await db.from("maaroof_jobs").select("status").eq("id", jobId).eq("user_id", userId).maybeSingle();
     if (j?.status === "cancelled") { cancelled = true; return; }
 
     const t = targets[index];
+    const isInstagramTarget = isInstagramUrl(t.url);
+    let holdsInstagramSlot = false;
+    if (isInstagramTarget) {
+      // Serialize Instagram requests to avoid bursts against a platform that can rate-limit automated reads.
+      while (activeInstagramReads > 0 && !cancelled) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        const { data: currentJob } = await db.from("maaroof_jobs").select("status").eq("id", jobId).eq("user_id", userId).maybeSingle();
+        if (currentJob?.status === "cancelled") { cancelled = true; return; }
+      }
+      if (cancelled) return;
+      activeInstagramReads += 1;
+      holdsInstagramSlot = true;
+    }
+
+    try {
     await emit("audit_progress", { index: index + 1, total: targets.length, url: t.url, phase: "reading" });
     await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
 
     let ev: any = null;
     let source: string | null = null;
     let readIssue: string | null = null;
+    let readOrigin: "target" | "reader" | "unknown" | null = null;
+    let readHttpStatus: number | null = null;
+    let readRetryAfterMs: number | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const { fcScrape } = await import("@/lib/firecrawl");
+      const readOnce = () => fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY });
+      const readWithLimitedRetry = async () => {
+        const startedAt = Date.now();
+        try {
+          return await readOnce();
+        } catch (firstError) {
+          const first = firstError as any;
+          const retryable = ["instagram_rate_limited", "target_rate_limited", "reader_rate_limited"].includes(first?.readIssue);
+          // Retry only quickly detected limits, and only once. Respect long Retry-After values by deferring to a later scan.
+          if (!retryable || Date.now() - startedAt > 8_000) throw firstError;
+          const specifiedDelay = Number(first?.retryAfterMs);
+          const delayMs = Number.isFinite(specifiedDelay) && specifiedDelay > 0
+            ? Math.ceil(specifiedDelay)
+            : first?.readIssue === "instagram_rate_limited" ? 1_500 : 1_000;
+          if (delayMs > 2_500) throw firstError;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          try {
+            return await readOnce();
+          } catch (secondError) {
+            const second = secondError as any;
+            if (isReadIssueCode(first?.readIssue) && isReadIssueCode(second?.readIssue)) {
+              const a = new PublicReadFailure(first.readIssue, first.origin || "unknown", first.status, first.retryAfterMs);
+              const b = new PublicReadFailure(second.readIssue, second.origin || "unknown", second.status, second.retryAfterMs);
+              throw preferredReadFailure([a, b]);
+            }
+            throw secondError;
+          }
+        }
+      };
       const timeout = new Promise((_, reject) => {
         timer = setTimeout(() => reject(new Error("target_timeout")), TARGET_TIMEOUT_MS);
       });
-      const r: any = await Promise.race([fcScrape(t.url, { deep: t.kind === "official" }, { userId, toolKey: TOOL_KEY }), timeout]);
+      const r: any = await Promise.race([readWithLimitedRetry(), timeout]);
       const d = r?.data ?? r;
       source = r?.fetch_source ?? null;
       ev = { markdown: d?.markdown, html: d?.html, title: d?.metadata?.title, description: d?.metadata?.description, statusCode: d?.metadata?.statusCode };
     } catch (error) {
       ev = null;
-      const message = String((error as any)?.message || error || "").toLowerCase();
-      if (/401|403|login|challenge|captcha|blocked|scrape_empty_or_blocked/.test(message)) readIssue = "access_restricted";
-      else if (/429|rate.?limit|quota/.test(message)) readIssue = "rate_limited";
-      else if (/timeout|timed out|abort/.test(message)) readIssue = "timeout";
+      const e = error as any;
+      const message = String(e?.message || error || "").toLowerCase();
+      // Record generic origin/status for diagnostics, but never surface the reading vendor's name.
+      readOrigin = ["target", "reader", "unknown"].includes(e?.origin) ? e.origin : null;
+      readHttpStatus = Number.isFinite(e?.status) ? Number(e.status) : null;
+      readRetryAfterMs = Number.isFinite(e?.retryAfterMs) ? Number(e.retryAfterMs) : null;
+      if (isReadIssueCode(e?.readIssue)) readIssue = e.readIssue;
+      else if (/timeout|timed out|aborterror|aborted/.test(message)) readIssue = "timeout";
+      else if (/quota|capacity.*reached/.test(message)) readIssue = "reader_quota_reached";
+      else if (/rate.?limit|too many requests/.test(message)) readIssue = "reader_rate_limited";
       else readIssue = "source_unavailable";
     } finally {
       if (timer) clearTimeout(timer);
@@ -81,14 +142,24 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
     const ok = findings.some((f) => f.score != null);
     if (!ok && !readIssue) readIssue = "insufficient_public_content";
     const readStatus = ok ? "measured" as const : "unmeasured" as const;
-    results.push({ url: t.url, kind: t.kind, platform: t.platform, ok, read_status: readStatus, read_issue: ok ? null : readIssue, findings });
+    results.push({
+      url: t.url, kind: t.kind, platform: t.platform, ok, read_status: readStatus,
+      read_issue: ok ? null : readIssue, read_origin: ok ? null : readOrigin,
+      read_http_status: ok ? null : readHttpStatus,
+      read_retry_after_ms: ok ? null : readRetryAfterMs, findings,
+    });
     const { sourceLabel } = await import("@/lib/fetch-order");
     await emit("audit_target", {
       index: index + 1, total: targets.length, url: t.url, kind: t.kind, platform: t.platform,
       ok, read_status: readStatus, read_issue: ok ? null : readIssue,
-      findings, source, source_label: sourceLabel(ok ? (source as any) : null),
+      read_origin: ok ? null : readOrigin, read_http_status: ok ? null : readHttpStatus,
+      read_retry_after_ms: ok ? null : readRetryAfterMs,
+      findings, source_label: sourceLabel(ok ? (source as any) : null),
     });
     await db.from("maaroof_jobs").update({ updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
+    } finally {
+      if (holdsInstagramSlot) activeInstagramReads = Math.max(0, activeInstagramReads - 1);
+    }
   }
 
   async function worker() {

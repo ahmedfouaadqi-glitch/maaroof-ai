@@ -5,26 +5,31 @@
 import { createHash } from "node:crypto";
 
 const BASE = "https://api.firecrawl.dev/v2";
-import { FETCH_TIMEOUT_MS, scrapeOrder, searchOrder, hasUsableScrapeEvidence } from "./fetch-order";
+import {
+  FETCH_TIMEOUT_MS, scrapeOrder, searchOrder, hasUsableScrapeEvidence,
+  PublicReadFailure, classifyUnusableScrape, preferredReadFailure, isInstagramUrl, parseRetryAfterMs,
+} from "./fetch-order";
 
 export class FirecrawlError extends Error {
   status: number;
   operation: "search" | "scrape" | "map" | "crawl";
   body: string;
-  constructor(operation: "search" | "scrape" | "map" | "crawl", status: number, body: string) {
-    super(`Firecrawl ${operation} failed: ${status}`);
-    this.name = "FirecrawlError";
+  retryAfterMs?: number;
+  constructor(operation: "search" | "scrape" | "map" | "crawl", status: number, body: string, retryAfterMs?: number) {
+    super(`Automated content retrieval failed (HTTP ${status}).`);
+    this.name = "ContentReadError";
     this.status = status;
     this.operation = operation;
     this.body = body;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
 export class FirecrawlLimitError extends Error {
   scope: "global_daily" | "global_monthly" | "per_user_daily" | "per_tool";
-  constructor(scope: FirecrawlLimitError["scope"], message: string) {
-    super(message);
-    this.name = "FirecrawlLimitError";
+  constructor(scope: FirecrawlLimitError["scope"], _message: string) {
+    super("The available reading capacity for this operation has been reached.");
+    this.name = "ReadCapacityError";
     this.scope = scope;
   }
 }
@@ -37,7 +42,7 @@ export function isFirecrawlError(error: unknown): error is FirecrawlError {
 
 function getKey(): string {
   const k = process.env.FIRECRAWL_API_KEY;
-  if (!k) throw new Error("FIRECRAWL_API_KEY is not configured");
+  if (!k) throw new Error("A content-reading configuration is unavailable.");
   return k;
 }
 
@@ -130,18 +135,18 @@ async function checkLimits(userId: string | null | undefined, toolKey: string | 
   // global day
   const { count: gDay } = await db.from("firecrawl_usage").select("id", { count: "exact", head: true })
     .eq("cache_hit", false).gte("created_at", dayStart);
-  if ((gDay || 0) >= policy.global_daily) throw new FirecrawlLimitError("global_daily", "Firecrawl global daily limit reached.");
+  if ((gDay || 0) >= policy.global_daily) throw new FirecrawlLimitError("global_daily", "Daily reading capacity reached.");
 
   // global month
   const { count: gMo } = await db.from("firecrawl_usage").select("id", { count: "exact", head: true })
     .eq("cache_hit", false).gte("created_at", monthStart);
-  if ((gMo || 0) >= policy.global_monthly) throw new FirecrawlLimitError("global_monthly", "Firecrawl global monthly limit reached.");
+  if ((gMo || 0) >= policy.global_monthly) throw new FirecrawlLimitError("global_monthly", "Monthly reading capacity reached.");
 
   // per-user day
   if (userId) {
     const { count } = await db.from("firecrawl_usage").select("id", { count: "exact", head: true })
       .eq("user_id", userId).eq("cache_hit", false).gte("created_at", dayStart);
-    if ((count || 0) >= policy.per_user_daily) throw new FirecrawlLimitError("per_user_daily", "Your Firecrawl daily quota is reached. Try again tomorrow.");
+    if ((count || 0) >= policy.per_user_daily) throw new FirecrawlLimitError("per_user_daily", "The daily reading allowance for this account has been reached.");
   }
 
   // per-tool month
@@ -149,7 +154,7 @@ async function checkLimits(userId: string | null | undefined, toolKey: string | 
     const cap = policy.per_tool[toolKey];
     const { count } = await db.from("firecrawl_usage").select("id", { count: "exact", head: true })
       .eq("tool_key", toolKey).eq("cache_hit", false).gte("created_at", monthStart);
-    if ((count || 0) >= cap) throw new FirecrawlLimitError("per_tool", `Monthly Firecrawl quota for ${toolKey} reached.`);
+    if ((count || 0) >= cap) throw new FirecrawlLimitError("per_tool", "The monthly reading allowance for this operation has been reached.");
   }
 }
 
@@ -213,7 +218,7 @@ async function fcScrapeRaw(url: string, opts: { deep?: boolean; screenshot?: boo
   const latency = Date.now() - t0;
   if (!res.ok) {
     await logUsage({ ...ctx, op: "scrape", units: 0, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
-    throw new FirecrawlError("scrape", res.status, await res.text().catch(() => ""));
+    throw new FirecrawlError("scrape", res.status, await res.text().catch(() => ""), parseRetryAfterMs(res.headers.get("retry-after")));
   }
   const json = await res.json();
   await writeCache("scrape", hash, json);
@@ -231,10 +236,55 @@ function available() {
   return { firecrawl: !!process.env.FIRECRAWL_API_KEY, apidirect: !!process.env.APIDIRECT_API_KEY };
 }
 
+function normalizedScrapeFailure(error: unknown, source: string, url: string): PublicReadFailure {
+  if (error instanceof PublicReadFailure) return error;
+  const e = error as any;
+  const message = String(e?.message || error || "").toLowerCase();
+  if (e?.scope || e?.name === "ReadCapacityError") {
+    return new PublicReadFailure("reader_quota_reached", "reader", Number.isFinite(e?.status) ? e.status : undefined);
+  }
+  // An HTTP status on a provider-side error describes the reading route, not the target website.
+  if (e?.operation && typeof e?.status === "number") {
+    return new PublicReadFailure(
+      e.status === 429 ? "reader_rate_limited" : "source_unavailable",
+      "reader",
+      e.status,
+      typeof e.retryAfterMs === "number" ? e.retryAfterMs : undefined,
+    );
+  }
+  if (/timeout|timed out|aborterror|aborted/.test(message)) {
+    return new PublicReadFailure("timeout", source === "direct_http" ? "target" : "reader");
+  }
+  if (source === "direct_http" && /direct\s+429/.test(message)) {
+    return new PublicReadFailure(isInstagramUrl(url) ? "instagram_rate_limited" : "target_rate_limited", "target", 429);
+  }
+  if (source === "direct_http" && /direct\s+(401|403)/.test(message)) {
+    const status = Number(message.match(/direct\s+(401|403)/)?.[1]);
+    return new PublicReadFailure(isInstagramUrl(url) ? "instagram_automated_access_denied" : "target_access_restricted", "target", status);
+  }
+  if (/429|rate.?limit/.test(message)) {
+    return new PublicReadFailure("reader_rate_limited", "reader", 429);
+  }
+  return new PublicReadFailure("source_unavailable", source === "direct_http" ? "target" : "reader");
+}
+
 async function directHttp(url: string) {
   const u = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  // Reuse successful direct reads so the same public URL is not fetched repeatedly during quota incidents.
+  const cacheKey = hashKey("direct_http_scrape", { url: u });
+  const policy = await getPolicy();
+  const cached = await readCache("direct_http_scrape", cacheKey, policy.cache_ttl_hours);
+  if (cached && hasUsableScrapeEvidence(cached)) return cached;
+
   const r = await fetch(u, { headers: { "User-Agent": "MaaroofBot/1.0" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  if (!r.ok) throw new Error(`direct ${r.status}`);
+  const retryAfterMs = parseRetryAfterMs(r.headers.get("retry-after"));
+  if (!r.ok) {
+    if (isInstagramUrl(u) && r.status === 429) throw new PublicReadFailure("instagram_rate_limited", "target", r.status, retryAfterMs);
+    if (isInstagramUrl(u) && [401, 403].includes(r.status)) throw new PublicReadFailure("instagram_automated_access_denied", "target", r.status, retryAfterMs);
+    if (r.status === 429) throw new PublicReadFailure("target_rate_limited", "target", r.status, retryAfterMs);
+    if ([401, 403].includes(r.status)) throw new PublicReadFailure("target_access_restricted", "target", r.status, retryAfterMs);
+    throw new PublicReadFailure("source_unavailable", "target", r.status, retryAfterMs);
+  }
   const html = await r.text();
   const tags = html.match(/<meta\b[^>]*>/gi) || [];
   const attr = (tag: string, name: string) => {
@@ -257,14 +307,21 @@ async function directHttp(url: string) {
     .replace(/<h1[^>]*>/gi, "\n# ").replace(/<h([23])[^>]*>/gi, (_m, n) => "\n" + "#".repeat(+n) + " ")
     .replace(/<li[^>]*>/gi, "\n- ").replace(/<\/(p|div|h\d|li|section)>/gi, "\n\n").replace(/<[^>]+>/g, " ")
     .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  if (body.length < 40 && !(title.length >= 3 && description.length >= 20)) throw new Error("direct_empty");
+  if (body.length < 40 && !(title.length >= 3 && description.length >= 20)) {
+    throw new PublicReadFailure("insufficient_public_content", "target", r.status, retryAfterMs);
+  }
   const markdown = body.length >= 40 ? body : [title, description].filter(Boolean).join("\n\n");
-  return { success: true, data: { markdown, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
+  const result = { success: true, data: { markdown, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
+  if (!hasUsableScrapeEvidence(result)) {
+    throw new PublicReadFailure(classifyUnusableScrape(result, u), "target", r.status, retryAfterMs);
+  }
+  await writeCache("direct_http_scrape", cacheKey, result);
+  return result;
 }
 
 /** Scrape with fallback chain (see fetch-order.ts). Result carries `fetch_source`. */
 export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?: boolean } = {}, ctx: FcCtx = {}) {
-  let last: unknown = null;
+  const failures: PublicReadFailure[] = [];
   for (const src of scrapeOrder(url, available())) {
     try {
       let r: any;
@@ -272,14 +329,16 @@ export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?:
       else if (src === "linkedin_direct") { const { adLinkedIn } = await import("./apidirect.server"); r = await adLinkedIn(url, FETCH_TIMEOUT_MS); }
       else r = await directHttp(url);
       if (!hasUsableScrapeEvidence(r)) {
-        last = new Error("scrape_empty_or_blocked");
+        failures.push(new PublicReadFailure(classifyUnusableScrape(r, url), "target", Number((r?.data ?? r)?.metadata?.statusCode) || undefined));
         continue;
       }
       if (r && typeof r === "object") r.fetch_source = src;
       return r;
-    } catch (e) { last = e; }
+    } catch (e) {
+      failures.push(normalizedScrapeFailure(e, src, url));
+    }
   }
-  throw last || new Error("no_fetch_source");
+  throw preferredReadFailure(failures);
 }
 
 /** Search with fallback chain. Result carries `fetch_source`. */
