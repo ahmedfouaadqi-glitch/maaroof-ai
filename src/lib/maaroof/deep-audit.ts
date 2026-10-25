@@ -216,10 +216,15 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
       if (fp && words(fp).length <= 80) { s += 50; ev2.push("concise_lead"); } else if (fp) s += 20;
       if ((md.match(/^#{2,3}\s/gm) || []).length >= 2) { s += 50; ev2.push("sections"); }
     } else {
-      if (brandIn(title)) { s += 50; ev2.push("brand_in_profile_title"); }
-      if (brandIn(desc)) { s += 30; ev2.push("brand_in_profile_description"); }
-      if (brandIn(md)) { s += 20; ev2.push("brand_mentioned_in_content"); }
-      if (desc) { s += 20; ev2.push("public_profile_bio"); }
+      if (hasBody) {
+        if (brandIn(title) || brandIn(desc)) { s += 50; ev2.push("brand_in_profile"); }
+        if (brandIn(md)) { s += 30; ev2.push("brand_mentioned"); }
+        if (desc) { s += 20; ev2.push("bio"); }
+      } else {
+        if (brandIn(title)) { s += 50; ev2.push("brand_in_profile_title"); }
+        if (brandIn(desc)) { s += 30; ev2.push("brand_in_profile_description"); }
+        if (desc) { s += 20; ev2.push("public_profile_bio"); }
+      }
     }
     s = Math.min(100, s);
     return { axis, score: s, verdict: verdictOf(s), evidence: ev2, reason: ev2.length ? "measured" : "no_signal", next: s >= 70 ? "keep" : `improve_${axis}` };
