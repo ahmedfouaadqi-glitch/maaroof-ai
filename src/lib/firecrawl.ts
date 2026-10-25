@@ -307,7 +307,9 @@ async function directHttp(url: string) {
     .replace(/<h1[^>]*>/gi, "\n# ").replace(/<h([23])[^>]*>/gi, (_m, n) => "\n" + "#".repeat(+n) + " ")
     .replace(/<li[^>]*>/gi, "\n- ").replace(/<\/(p|div|h\d|li|section)>/gi, "\n\n").replace(/<[^>]+>/g, " ")
     .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  if (body.length < 40 && !(title.length >= 3 && description.length >= 20)) throw new Error("direct_empty");
+  if (body.length < 40 && !(title.length >= 3 && description.length >= 20)) {
+    throw new PublicReadFailure("insufficient_public_content", "target", r.status, retryAfterMs);
+  }
   const markdown = body.length >= 40 ? body : [title, description].filter(Boolean).join("\n\n");
   const result = { success: true, data: { markdown, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
   if (!hasUsableScrapeEvidence(result)) {
