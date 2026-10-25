@@ -47,7 +47,7 @@ export function benchmarkStorageSubject(subject: string, userId?: string | null,
   return base + " [scope:" + scopeHash + "]";
 }
 export function benchmarkDisplaySubject(subject: string): string {
-  return String(subject || "").replace(/\\s+\\[scope:[0-9a-f]{12}\\]$/i, "");
+  return String(subject || "").replace(/\s+\[scope:[0-9a-f]{12}\]$/i, "");
 }
 
 /** Create or update a benchmark definition; returns its id. */
