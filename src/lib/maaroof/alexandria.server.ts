@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * Optional Alexandria connector. Discovery is non-executing; capability calls are
  * blocked unless a server feature flag, a cost quote, explicit user approval,
@@ -17,6 +18,9 @@ export type AlexandriaCandidate = {
   estimatedCredits: number | null;
   termsRequired: boolean;
   discoveryOnly: true;
+  candidateId: string;
+  optionsSchema: Record<string, any> | null;
+  responseSchema: Record<string, any> | null;
 };
 
 export type AlexandriaDiscoveryResult = {
@@ -41,27 +45,49 @@ function apiKey(): string {
 }
 
 function pickCandidates(payload: any): AlexandriaCandidate[] {
-  const data = payload?.data ?? payload;
-  const candidates = Array.isArray(data?.tools) ? data.tools
-    : Array.isArray(data?.alexandria) ? data.alexandria
-    : Array.isArray(data?.results) ? data.results
-    : [];
+  const roots = [payload?.data ?? payload, payload].filter(Boolean);
+  const candidates: any[] = [];
+  const visit = (value: any) => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (Array.isArray(value.tools)) candidates.push(...value.tools);
+    if (Array.isArray(value.results)) candidates.push(...value.results);
+    // Search API/SDK variants may wrap Alexandria candidates under one or more data records.
+    if (Array.isArray(value.alexandria)) visit(value.alexandria);
+    if (value.data && typeof value.data === "object") visit(value.data);
+    if (value.tool && typeof value.tool === "object") candidates.push(value.tool);
+  };
+  roots.forEach(visit);
   const out: AlexandriaCandidate[] = [];
+  const seen = new Set<string>();
   for (const item of candidates) {
     const row = item?.tool ?? item;
     const provider = String(row?.provider || "").trim();
     const capability = String(row?.capability || row?.name || "").trim();
     if (!provider || !capability) continue;
-    const rawCost = row?.creditsCost ?? row?.credits ?? row?.costCredits ?? row?.price?.credits ?? row?.pricing?.credits;
+    const identity = provider + "|" + capability;
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    const rawCost = row?.creditsCost ?? row?.credits_cost ?? row?.credits ?? row?.costCredits ?? row?.price?.credits ?? row?.pricing?.credits;
     const cost = rawCost == null ? null : Number(rawCost);
+    const estimatedCredits = cost != null && Number.isFinite(cost) && cost >= 0 ? cost : null;
+    const optionsSchema = row?.optionsSchema ?? row?.options_schema ?? row?.options ?? row?.inputSchema ?? row?.input_schema ?? row?.parameters;
+    const responseSchema = row?.responseSchema ?? row?.response_schema ?? row?.response;
+    const candidateId = createHash("sha256").update(identity).digest("hex").slice(0, 24);
     out.push({
       provider: provider.slice(0, 100),
       capability: capability.slice(0, 180),
       label: String(row?.label || row?.title || row?.description || capability).slice(0, 180),
       description: String(row?.description || row?.summary || "").slice(0, 600),
-      estimatedCredits: cost != null && Number.isFinite(cost) && cost >= 0 ? cost : null,
+      estimatedCredits,
       termsRequired: !!(row?.requiresTerms || row?.termsRequired || row?.requiresAction?.type === "accept_terms"),
       discoveryOnly: true,
+      candidateId,
+      optionsSchema: optionsSchema && typeof optionsSchema === "object" ? optionsSchema as Record<string, any> : null,
+      responseSchema: responseSchema && typeof responseSchema === "object" ? responseSchema as Record<string, any> : null,
     });
     if (out.length >= MAX_DISCOVERY_LIMIT) break;
   }
@@ -87,7 +113,8 @@ export async function discoverAlexandriaCapabilities(input: {
       body: JSON.stringify({
         query,
         sources: ["alexandria"],
-        toolDetail: "summary",
+        toolDetail: "full",
+        includeCosts: true,
         limit,
       }),
     });
