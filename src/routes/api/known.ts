@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
+import { estimateSearchCredits, planSourceRoute } from "@/lib/maaroof/source-intelligence";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
@@ -77,7 +78,7 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
 }
 
 /** Persist sources as platform evidence; returns entity_name -> evidence ids. Never throws. */
-async function persistEvidence(userId: string, brand: string, relations: any[], lang: string, realityRecordId: string | null): Promise<Map<string, string[]>> {
+async function persistEvidence(userId: string, brand: string, relations: any[], lang: string, realityRecordId: string | null, workspaceId: string | null): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   try {
     const drafts = mkdEvidenceDrafts(brand, relations);
@@ -85,6 +86,7 @@ async function persistEvidence(userId: string, brand: string, relations: any[], 
       const id = await recordEvidence({
         realityRecordId,
         userId,
+        workspaceId,
         title: d.title,
         claim: d.claim,
         sourceKind: "web",
@@ -105,7 +107,7 @@ async function persistEvidence(userId: string, brand: string, relations: any[], 
 }
 
 /** Mirror the discovered graph into the living knowledge layer. Never throws. */
-async function persistKnowledge(userId: string, brand: string, sector: string, place: string, relations: any[]): Promise<Map<string, string>> {
+async function persistKnowledge(userId: string, brand: string, sector: string, place: string, relations: any[], workspaceId: string | null): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   try {
     const brandId = await upsertKnowledgeNode({
@@ -161,15 +163,31 @@ export const Route = createFileRoute("/api/known")({
 
         let body: any = {};
         try { body = await request.json(); } catch {}
-        const brand = asText(body.brand, 200);
-        const website = asText(body.website || body.url, 300);
-        const sector = asText(body.sector || body.keywords, 200);
+        const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id.trim() : null;
+        let workspace: any = null;
+        if (workspaceId) {
+          if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          const { data, error } = await admin.from("workspaces")
+            .select("id,owner_id,name,brand_url,brand_summary,keywords,country,city,entity_truth_card,onboarding,settings")
+            .eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+          if (error || !data) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          workspace = data;
+        }
+        const card = workspace?.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
+        const answers = workspace?.onboarding?.answers && typeof workspace.onboarding.answers === "object" ? workspace.onboarding.answers : {};
+        const brand = asText(body.brand || workspace?.name || card.brand_name || card.name, 200);
+        const website = asText(body.website || body.url || workspace?.brand_url, 300);
+        const sector = asText(body.sector || body.keywords || workspace?.keywords || card.industry || workspace?.brand_summary || answers.brand_keywords, 200);
         const depth = body.depth === "deep" ? "deep" : "quick";
         const lang = body.lang === "en" || body.lang === "ku" ? body.lang : "ar";
         let scope = (body.scope || null) as GeoScope | null;
         if (!scope || (scope as any).scope === "auto") {
-          const g = detectGeoFromRequest(request);
-          scope = g.country ? { scope: "country", country: g.country } : { scope: "world" };
+          if (workspace?.city) scope = { scope: "city", city: String(workspace.city), country: workspace.country ? String(workspace.country) : undefined };
+          else if (workspace?.country) scope = { scope: "country", country: String(workspace.country) };
+          else {
+            const g = detectGeoFromRequest(request);
+            scope = g.country ? { scope: "country", country: g.country } : { scope: "world" };
+          }
         }
         const place = scope.scope === "world" ? "" : [scope.city, scope.region, scope.country].filter(Boolean).join(", ");
         if (brand.length < 2) return Response.json({ error: "brand_required" }, { status: 400 });
@@ -180,7 +198,7 @@ export const Route = createFileRoute("/api/known")({
         const mciOn = mciActiveFor(mci as any, "known");
         if (mciOn && !force) {
           try {
-            const hit = await findReusableKnownRun(admin, userId, brand, place, depth);
+            const hit = await findReusableKnownRun(admin, userId, brand, place, depth, workspaceId);
             if (hit) {
               const res = { ...hit.summary.result, run_id: hit.id, reused: { from: hit.created_at } };
               const saved = (res.engines_asked?.length || 0) + 1;
@@ -197,7 +215,7 @@ export const Route = createFileRoute("/api/known")({
 
         const m = describeMarket(scope as any);
         const { data: run } = await admin.from("mkd_runs").insert({
-          user_id: userId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
+          user_id: userId, workspace_id: workspaceId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
         }).select("id").single();
         const dbRunId = (run as any)?.id as string | undefined;
 
@@ -299,7 +317,7 @@ Rules: up to 25 candidates. Use source_ids only for sources that actually mentio
 
               if (dbRunId && relations.length) {
                 await admin.from("mkd_relations").insert(relations.map((x) => ({
-                  run_id: dbRunId, user_id: userId, entity_name: x.entity_name, entity_domain: x.entity_domain,
+                  run_id: dbRunId, user_id: userId, workspace_id: workspaceId, entity_name: x.entity_name, entity_domain: x.entity_domain,
                   category: x.category, confidence: x.confidence, reason: x.reason,
                   verification_state: x.verification_state, is_ai_observation: x.is_ai_observation,
                   evidence_ids: evidenceMap.get(x.entity_name) || [],
