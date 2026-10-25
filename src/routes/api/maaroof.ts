@@ -318,9 +318,33 @@ export const Route = createFileRoute("/api/maaroof")({
               }
             }
           })();
+          const safeWork = work.catch(() => {});
+          if (body?.keep_alive === true) {
+            // Keep the HTTP connection open for the whole run so the Worker is never frozen
+            // after responding. Events still go to the database; the client polls them.
+            const enc = new TextEncoder();
+            const keepAlive = new ReadableStream({
+              async start(controller) {
+                const send = (s: string) => { try { controller.enqueue(enc.encode(s)); } catch {} };
+                send(`event: job\ndata: ${JSON.stringify({ job_id: jobId })}\n\n`);
+                const ping = setInterval(() => send(`: ping\n\n`), 15_000);
+                try { await safeWork; } finally {
+                  clearInterval(ping);
+                  send(`event: done\ndata: {}\n\n`);
+                  try { controller.close(); } catch {}
+                }
+              },
+              // Client disconnect does not cancel the job; it may still finish via waitUntil.
+              cancel() {},
+            });
+            const { runAfterResponse } = await import("@/lib/request-ctx.server");
+            runAfterResponse(safeWork);
+            return new Response(keepAlive, {
+              headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Maaroof-Job": jobId },
+            });
+          }
           const { runAfterResponse } = await import("@/lib/request-ctx.server");
           // Never block the response on the job; the client polls for events.
-          const safeWork = work.catch(() => {});
           runAfterResponse(safeWork);
           // Confirm the job really started (first event saved) before handing back its id.
           let started = false;
