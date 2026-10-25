@@ -4,10 +4,27 @@ import type { AccountKind } from "@/lib/account-kinds";
 
 export type Axis = "seo" | "aeo" | "geo" | "sge" | "gseo";
 export const AXES: Axis[] = ["seo", "aeo", "geo", "sge", "gseo"];
-export type TargetKind = "official" | "social" | "page";
+export const MAX_AUDIT_TARGETS = 50;
+export type TargetKind = "official" | "social" | "page" | "directory" | "commerce" | "app_store";
 export type AuditTarget = { url: string; kind: TargetKind; platform: string | null; axes: Axis[] };
 
-/** Extract URLs from one workspace's identity only; never borrow the owner's profile links. */
+/** Normalize public web URLs. Invalid URLs and non-HTTP(S) schemes are deliberately ignored. */
+function normalizeAuditUrl(value: string): string | null {
+  const raw = value.trim();
+  if (!raw) return null;
+  try {
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (!["http:", "https:"].includes(u.protocol) || !u.hostname.includes(".") || u.username || u.password) return null;
+    u.hostname = u.hostname.toLowerCase().replace(/^www\./i, "");
+    u.hash = "";
+    const pathname = u.pathname.replace(/\/+$/, "");
+    return `${u.protocol}//${u.host}${pathname}${u.search}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract URLs only from the selected workspace identity; never borrow owner-wide profile links. */
 export function workspaceAuditLinks(workspace: unknown): string[] {
   if (!workspace || typeof workspace !== "object") return [];
   const w = workspace as Record<string, any>;
@@ -23,48 +40,82 @@ export function workspaceAuditLinks(workspace: unknown): string[] {
     profile.website_url,
     w.brand_url,
   ];
-  const urls = candidates.map((item) => {
-    if (typeof item === "string") return item.trim();
-    if (item && typeof item === "object") {
-      const row = item as Record<string, unknown>;
-      const value = row.url ?? row.href ?? row.link;
-      return typeof value === "string" ? value.trim() : "";
-    }
-    return "";
-  }).filter(Boolean);
-  return [...new Set(urls)].slice(0, 15);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of candidates) {
+    const raw = typeof item === "string" ? item.trim() : item && typeof item === "object"
+      ? String((item as Record<string, unknown>).url ?? (item as Record<string, unknown>).href ?? (item as Record<string, unknown>).link ?? "").trim()
+      : "";
+    const url = normalizeAuditUrl(raw);
+    if (!url || seen.has(url.toLowerCase())) continue;
+    seen.add(url.toLowerCase());
+    out.push(url);
+    if (out.length >= MAX_AUDIT_TARGETS) break;
+  }
+  return out;
 }
 
-const SOCIAL: [RegExp, string][] = [
-  [/linkedin\.com/i, "linkedin"], [/(^|\.)x\.com|twitter\.com/i, "x"], [/instagram\.com/i, "instagram"],
-  [/facebook\.com|fb\.com/i, "facebook"], [/youtube\.com|youtu\.be/i, "youtube"], [/tiktok\.com/i, "tiktok"],
-  [/t\.me|telegram\./i, "telegram"], [/snapchat\.com/i, "snapchat"], [/threads\.net/i, "threads"],
+type PlatformRule = { pattern: RegExp; platform: string; axes: Axis[] };
+
+// Social/profile sources are routed to axes they can meaningfully inform, not technical site checks.
+const SOCIAL: PlatformRule[] = [
+  { pattern: /(^|\.)linkedin\.com$/i, platform: "linkedin", axes: ["geo", "gseo", "aeo"] },
+  { pattern: /(^|\.)(x\.com|twitter\.com)$/i, platform: "x", axes: ["geo", "gseo", "sge"] },
+  { pattern: /(^|\.)instagram\.com$/i, platform: "instagram", axes: ["geo", "gseo", "sge"] },
+  { pattern: /(^|\.)(facebook\.com|fb\.com)$/i, platform: "facebook", axes: ["geo", "gseo", "aeo"] },
+  { pattern: /(^|\.)(youtube\.com|youtu\.be)$/i, platform: "youtube", axes: ["geo", "gseo", "sge", "aeo"] },
+  { pattern: /(^|\.)tiktok\.com$/i, platform: "tiktok", axes: ["geo", "gseo", "sge", "aeo"] },
+  { pattern: /(^|\.)(t\.me|telegram\.me|telegram\.org)$/i, platform: "telegram", axes: ["geo", "gseo"] },
+  { pattern: /(^|\.)snapchat\.com$/i, platform: "snapchat", axes: ["geo", "gseo", "sge"] },
+  { pattern: /(^|\.)threads\.net$/i, platform: "threads", axes: ["geo", "gseo", "sge"] },
+  { pattern: /(^|\.)pinterest\.com$/i, platform: "pinterest", axes: ["geo", "gseo", "sge", "aeo"] },
+  { pattern: /(^|\.)reddit\.com$/i, platform: "reddit", axes: ["geo", "gseo", "sge", "aeo"] },
+  { pattern: /(^|\.)(discord\.com|discord\.gg)$/i, platform: "discord", axes: ["geo", "gseo", "aeo"] },
+  { pattern: /(^|\.)vimeo\.com$/i, platform: "vimeo", axes: ["geo", "gseo", "sge", "aeo"] },
+  { pattern: /(^|\.)dailymotion\.com$/i, platform: "dailymotion", axes: ["geo", "gseo", "sge", "aeo"] },
 ];
 
+const DIRECTORY_HOST = /(^|\.)(yelp\.com|trustpilot\.com|tripadvisor\.[a-z.]+|clutch\.co|g2\.com|capterra\.com|goodfirms\.co|yellowpages\.[a-z.]+|foursquare\.com|mapquest\.com)$/i;
+const COMMERCE_HOST = /(^|\.)(amazon\.[a-z.]+|ebay\.[a-z.]+|etsy\.com|walmart\.com|myshopify\.com)$/i;
+
 function host(u: string): string | null {
-  try { return new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`).hostname.toLowerCase().replace(/^www\./, ""); } catch { return null; }
+  try { return new URL(u).hostname.toLowerCase().replace(/^www\./, ""); } catch { return null; }
 }
 function path(u: string): string {
-  try { return new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`).pathname.replace(/\/+$/, ""); } catch { return ""; }
+  try { return new URL(u).pathname.replace(/\/+$/, ""); } catch { return ""; }
 }
 
-/** Classify each link: social platform, official site root, or an inner page. Deduped. */
+/** Classify each source and route it only to useful axes. Dedupes normalized URLs and caps the work. */
 export function auditTargets(links: unknown): AuditTarget[] {
-  const list = (Array.isArray(links) ? links : []).map((s) => String(s || "").trim()).filter(Boolean);
+  const list = (Array.isArray(links) ? links : []).map((s) => typeof s === "string" ? s : String(s || "")).filter(Boolean);
   const seen = new Set<string>();
   const out: AuditTarget[] = [];
-  for (const url of list) {
-    const h = host(url);
-    if (!h || !h.includes(".")) continue;
-    const key = h + path(url);
+  for (const raw of list) {
+    const url = normalizeAuditUrl(raw);
+    if (!url) continue;
+    const key = url.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    const soc = SOCIAL.find(([re]) => re.test(h));
-    if (soc) out.push({ url, kind: "social", platform: soc[1], axes: ["gseo", "geo"] });
-    else if (!path(url)) out.push({ url, kind: "official", platform: null, axes: [...AXES] });
-    else out.push({ url, kind: "page", platform: null, axes: ["seo", "aeo", "geo", "sge"] });
+    const h = host(url);
+    if (!h) continue;
+    const p = path(url);
+    const social = SOCIAL.find((rule) => rule.pattern.test(h));
+    if (social) {
+      out.push({ url, kind: "social", platform: social.platform, axes: [...social.axes] });
+    } else if (h === "maps.google.com" || (h === "google.com" && /^\/maps(?:\/|$)/i.test(p)) || (h.startsWith("google.") && /^\/maps(?:\/|$)/i.test(p)) || DIRECTORY_HOST.test(h)) {
+      out.push({ url, kind: "directory", platform: h.includes("google.") || h === "maps.google.com" ? "google_maps" : h, axes: ["geo", "gseo", "aeo"] });
+    } else if ((h === "apps.apple.com" && /^\/[^/]+\/app\//i.test(p)) || (h === "play.google.com" && /^\/store\/apps(?:\/|$)/i.test(p))) {
+      out.push({ url, kind: "app_store", platform: h === "apps.apple.com" ? "apple_app_store" : "google_play", axes: ["seo", "aeo", "geo", "gseo"] });
+    } else if (COMMERCE_HOST.test(h)) {
+      out.push({ url, kind: "commerce", platform: h, axes: ["seo", "aeo", "geo", "sge", "gseo"] });
+    } else if (!p) {
+      out.push({ url, kind: "official", platform: null, axes: [...AXES] });
+    } else {
+      out.push({ url, kind: "page", platform: null, axes: ["seo", "aeo", "geo", "sge"] });
+    }
+    if (out.length >= MAX_AUDIT_TARGETS) break;
   }
-  return out.slice(0, 15);
+  return out;
 }
 
 /** Deep audit is mandatory whenever the account has at least one valid link. */
