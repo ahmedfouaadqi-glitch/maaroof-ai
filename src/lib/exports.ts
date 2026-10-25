@@ -364,6 +364,31 @@ function sectionHtml(s: ExportSection, lang: ExportLang): string {
   return h;
 }
 
+function executiveSummaryHtml(payload: ExportPayload): string {
+  if (!payload.sections?.length) return "";
+  const summary = buildExportExecutiveSummary(payload);
+  const metrics = summary.metrics.map((metric) =>
+    '<div class="summary-metric"><span>' + escapeHtml(metric.label) + '</span><strong>' + escapeHtml(metric.value) + '</strong></div>'
+  ).join("");
+  const measured = summary.measuredItems.length
+    ? '<h3>' + escapeHtml(summary.measuredHeading) + '</h3><table class="summary-table"><thead><tr>' +
+      [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel].map((label) => '<th>' + escapeHtml(label) + '</th>').join("") +
+      '</tr></thead><tbody>' + summary.measuredItems.map((item) => '<tr><td>' + escapeHtml(item.section) + '</td><td>' +
+        escapeHtml(item.title) + '</td><td class="summary-score">' + escapeHtml(item.score) + '/100</td><td>' +
+        escapeHtml(item.status || "—") + '</td></tr>').join("") + '</tbody></table>' +
+      (summary.omittedMeasuredCount ? '<p class="summary-footnote">' + summary.omittedMeasuredCount + ' additional scored indicators remain in the detailed report.</p>' : "")
+    : "";
+  const unmeasured = summary.unmeasuredItems.length
+    ? '<h3>' + escapeHtml(summary.unmeasuredHeading) + '</h3><ul>' + summary.unmeasuredItems.map((item) =>
+        '<li><strong>' + escapeHtml(item.title) + '</strong>' +
+        (item.status ? ' — ' + escapeHtml(item.status) : "") + ' <span>(' + escapeHtml(item.section) + ')</span></li>'
+      ).join("") + '</ul>' +
+      (summary.omittedUnmeasuredCount ? '<p class="summary-footnote">' + summary.omittedUnmeasuredCount + ' additional unmeasured indicators remain in the detailed report.</p>' : "")
+    : "";
+  return '<section class="executive-summary"><h2>' + escapeHtml(summary.heading) + '</h2><div class="summary-metrics">' +
+    metrics + '</div>' + measured + unmeasured + '<p class="summary-note">' + escapeHtml(summary.note) + '</p></section>';
+}
+
 /** Open a branded printable HTML report and trigger the browser's PDF print dialog. */
 export async function exportToPDF(payload: ExportPayload) {
   const lang = payload.lang || "ar";
@@ -398,6 +423,18 @@ export async function exportToPDF(payload: ExportPayload) {
   table.data th { background:#4338ca; color:#fff; padding:6px 8px; border:1px solid #312e81; font-weight:600; text-align:${dir === "rtl" ? "right" : "left"}; }
   table.data td { padding:6px 8px; border:1px solid #e2e8f0; vertical-align: top; }
   table.data tr:nth-child(even) td { background:#f8fafc; }
+  .executive-summary { margin: 18px 0 24px; padding: 14px; border: 1px solid #dbe4f0; border-radius: 12px; background: #fbfdff; break-inside: avoid; page-break-inside: avoid; }
+  .summary-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:8px 0 14px; }
+  .summary-metric { border:1px solid #dbe4f0; border-radius:8px; padding:8px; background:#fff; min-width:0; }
+  .summary-metric span { display:block; font-size:9px; color:#64748b; }
+  .summary-metric strong { display:block; font-size:19px; color:#0f2454; overflow-wrap:anywhere; }
+  .executive-summary h3 { margin:12px 0 5px; font-size:11px; color:#334155; }
+  table.summary-table { font-size:9px; margin-bottom:8px; }
+  table.summary-table th { background:#eef2ff; color:#312e81; text-align:${dir === "rtl" ? "right" : "left"}; padding:5px; border:1px solid #dbe4f0; }
+  table.summary-table td { padding:5px; border:1px solid #e2e8f0; vertical-align:top; overflow-wrap:anywhere; }
+  .summary-score { font-weight:800; color:#312e81; white-space:nowrap; }
+  .summary-footnote, .summary-note { margin:6px 0 0; font-size:9px; color:#64748b; }
+  .executive-summary ul { margin:4px 0; }
   .audit-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px; }
   .audit-card { border:1px solid #dbe4f0; border-radius:11px; padding:10px; break-inside:avoid; page-break-inside:avoid; background:#fff; }
   .audit-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
@@ -439,6 +476,7 @@ export async function exportToPDF(payload: ExportPayload) {
   ${brandHeaderHtml(lang, payload, logoData)}
   <h1>${escapeHtml(payload.title)}</h1>
   ${payload.subtitle ? `<div class="subtitle">${escapeHtml(payload.subtitle)}</div>` : ""}
+  ${executiveSummaryHtml(payload)}
   ${payload.sections.map((section) => sectionHtml(section, lang)).join("")}
   <footer class="disclaimer">
     ${identityLine(payload, lang) ? `<div class="who">${escapeHtml(identityLine(payload, lang))}</div>` : ""}
