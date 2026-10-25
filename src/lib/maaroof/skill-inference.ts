@@ -1,7 +1,7 @@
 // Pure: decide skills from the task text when the user picked none.
 // Evidence-only — every chosen skill carries the exact words that triggered it.
 // No match => clarify (never guess).
-import { MAAROOF_SKILLS, recommendMaaroofSkills } from "./skill-catalog";
+import { MAAROOF_SKILLS, recommendMaaroofSkills, normalizeSkillText } from "./skill-catalog";
 
 import { EXECUTABLE_TOOL_KEYS } from "./tool-contracts";
 
@@ -18,16 +18,21 @@ const URL_RE = /https?:\/\/[^\s]+|\b[a-z0-9-]+\.(com|net|org|io|ai|iq|sa|ae)\b/i
 export function inferSkills(goal: string, selected: string[] = [], limit = 50): SkillInference {
   const valid = selected.filter((k) => MAAROOF_SKILLS.some((s) => s.key === k));
   if (valid.length) return { kind: "selected", skills: valid, reasons: Object.fromEntries(valid.map((k) => [k, "user_selected"])) };
-  const text = String(goal || "").toLowerCase();
+  const rawText = String(goal || "");
+  const text = normalizeSkillText(rawText);
+  const normalized = " " + text + " ";
   const reasons: Record<string, string> = {};
   const skills: string[] = [];
-  for (const s of recommendMaaroofSkills(text, limit)) {
-    const hits = s.keywords.filter((k) => text.includes(k.toLowerCase())).slice(0, 3);
+  for (const s of recommendMaaroofSkills(rawText, limit)) {
+    const hits = s.keywords.filter((k) => {
+      const normalizedKeyword = normalizeSkillText(k);
+      return !!normalizedKeyword && normalized.includes(" " + normalizedKeyword + " ");
+    }).slice(0, 3);
     if (!hits.length) continue;
     skills.push(s.key);
     reasons[s.key] = hits.join("، ");
   }
-  const url = text.match(URL_RE)?.[0];
+  const url = rawText.toLowerCase().match(URL_RE)?.[0];
   if (url && !skills.includes("entity_readiness") && skills.length < limit) {
     skills.push("entity_readiness");
     reasons.entity_readiness = url;
