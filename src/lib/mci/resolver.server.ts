@@ -36,14 +36,17 @@ export async function logMciDecision(admin: SupabaseClient, row: {
 }
 
 /** Find a reusable MKD run for the same user + brand + market + depth. */
-export async function findReusableKnownRun(admin: SupabaseClient, userId: string, brand: string, market: string, depth: string) {
+export async function findReusableKnownRun(
+  admin: SupabaseClient, userId: string, brand: string, market: string, depth: string, workspaceId?: string | null,
+) {
   const p = toolProfile("known")!;
   const since = new Date(Date.now() - p.reuseHours * 3600_000).toISOString();
   const fp = requestFingerprint([brand, market, depth]);
-  const { data } = await admin.from("mkd_runs")
-    .select("id, created_at, summary, brand, depth, scope")
-    .eq("user_id", userId).eq("status", "done").gte("created_at", since)
-    .order("created_at", { ascending: false }).limit(20);
+  let query = admin.from("mkd_runs")
+    .select("id, created_at, summary, brand, depth, scope, workspace_id")
+    .eq("user_id", userId).eq("status", "done").gte("created_at", since);
+  query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+  const { data } = await query.order("created_at", { ascending: false }).limit(20);
   const hit = (data || []).find((r: any) => r?.summary?.result && requestFingerprint([r.brand, r.summary?.result?.market === "World" ? "" : r.summary?.result?.market, r.depth]) === fp);
   if (!hit || !isFresh((hit as any).created_at, p.reuseHours)) return null;
   return hit as any;
