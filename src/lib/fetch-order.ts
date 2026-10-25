@@ -13,10 +13,12 @@ export function hasUsableScrapeEvidence(result: any): boolean {
   const status = Number(meta.statusCode);
   if (Number.isFinite(status) && status >= 400) return false;
   const combined = [title, description, markdown].join("\n");
-  const blockedShell = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn.t available|log in to instagram|sign in to instagram|instagram\.com\/accounts\/login)/i.test(combined);
   const profileMetadata = title.length >= 3 && description.length >= 20;
-  // Never score login/challenge placeholders as the entity's public profile.
-  if (blockedShell) return false;
+  const blockedChallenge = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn.t available)/i.test(combined);
+  const genericLogin = /(log in or sign up to view|sign in to view|log in to see|sign in to see|instagram\.com\/accounts\/login)/i.test([title, description].join("\n"));
+  const genericLoginShell = /(log in to instagram|sign in to instagram)/i.test(combined) && !profileMetadata;
+  // Reject generic login/challenge pages, while allowing real public metadata even if the page shell mentions login.
+  if (blockedChallenge || genericLogin || genericLoginShell) return false;
   if (markdown.length > 40) return true;
   if (profileMetadata) return true;
   // Title-only results are not enough to claim that the entity profile was read.
