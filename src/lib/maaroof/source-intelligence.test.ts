@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  planSourceRoute, normalizeSourceEvidence, aggregateVisibilityMetrics,
+  planSourceRoute, inferSourceCapability, normalizeSourceEvidence, aggregateVisibilityMetrics,
   measurementSignature, canExecuteSpecializedSource, estimateSearchCredits,
 } from "./source-intelligence";
 
@@ -11,6 +11,16 @@ describe("Source Intelligence Router", () => {
     expect(plan.searchSources).toEqual(["web"]);
     expect(plan.executeSpecializedSource).toBe(false);
     expect(plan.requestsAvailable).toBe(1);
+  });
+
+  it("routes explicit direct-page requests separately from general search, including Arabic commands", () => {
+    expect(inferSourceCapability("افحص https://example.com/about")).toBe("url_read");
+    const plan = planSourceRoute({
+      goal: "افحص https://example.com/about",
+      budget: { maxRequests: 1, maxEstimatedCredits: 10 },
+    });
+    expect(plan.primary).toBe("url_read");
+    expect(plan.searchSources).toEqual([]);
   });
 
   it("uses a news-aware route for recent queries without increasing the call budget", () => {
