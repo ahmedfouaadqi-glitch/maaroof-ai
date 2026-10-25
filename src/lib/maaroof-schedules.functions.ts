@@ -2,21 +2,27 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { EXECUTABLE_TOOL_KEYS } from "@/lib/maaroof/tool-contracts";
+import { nextCronRunDate, validateSchedulePolicy } from "@/lib/maaroof/schedule-policy";
 
 const Cadence = z.enum(["once", "hourly", "daily", "weekly", "custom_cron"]);
 const ApprovalMode = z.enum(["per_run", "auto_within_quota", "first_time_then_auto"]);
 const Language = z.enum(["ar", "en", "ku"]);
 
-/** Compute next_run_at from cadence. Not perfectly accurate for cron; the scheduler recomputes on each tick. */
-function computeNextRunAt(cadence: string, from: Date = new Date()): Date {
+/** Compute next_run_at using the existing schedule table; custom cron is evaluated in UTC. */
+function computeNextRunAt(cadence: string, from: Date = new Date(), cronExpression?: string | null): Date {
   const t = new Date(from);
   switch (cadence) {
-    case "hourly": t.setHours(t.getHours() + 1); return t;
-    case "daily": t.setDate(t.getDate() + 1); return t;
-    case "weekly": t.setDate(t.getDate() + 7); return t;
+    case "hourly": t.setUTCHours(t.getUTCHours() + 1); return t;
+    case "daily": t.setUTCDate(t.getUTCDate() + 1); return t;
+    case "weekly": t.setUTCDate(t.getUTCDate() + 7); return t;
     case "once": return t;
-    case "custom_cron":
-    default: t.setHours(t.getHours() + 1); return t;
+    case "custom_cron": {
+      const next = nextCronRunDate(String(cronExpression || ""), from);
+      if (!next) throw new Error("invalid_custom_cron");
+      return next;
+    }
+    default: throw new Error("unsupported_schedule_cadence");
   }
 }
 
@@ -42,7 +48,7 @@ export const createSchedule = createServerFn({ method: "POST" })
         name: z.string().trim().min(1).max(100),
         prompt: z.string().trim().min(3).max(4000),
         language: Language.default("ar"),
-        force_tools: z.array(z.string().min(1).max(40)).max(16).default([]),
+        force_tools: z.array(z.string().refine((tool) => EXECUTABLE_TOOL_KEYS.includes(tool), "tool_not_executable")).max(16).default([]),
         cadence: Cadence.default("daily"),
         cron_expr: z.string().max(80).optional().nullable(),
         starts_at: z.string().datetime().optional(),
@@ -54,8 +60,29 @@ export const createSchedule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    let workspaceOwned = !data.workspace_id;
+    if (data.workspace_id) {
+      const { data: workspace, error: workspaceError } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("id", data.workspace_id)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (workspaceError) throw new Error("workspace_validation_failed");
+      workspaceOwned = !!workspace;
+    }
+    const policy = validateSchedulePolicy({
+      cadence: data.cadence,
+      cronExpression: data.cron_expr,
+      approvalMode: data.approval_mode,
+      maxRuns: data.max_runs,
+      forceTools: data.force_tools,
+      allowedTools: [...EXECUTABLE_TOOL_KEYS],
+      workspaceOwned,
+    });
+    if (!policy.valid) throw new Error(policy.errors[0] || "schedule_policy_rejected");
     const startsAt = data.starts_at ? new Date(data.starts_at) : new Date();
-    const nextRunAt = data.cadence === "once" ? startsAt : computeNextRunAt(data.cadence, startsAt);
+    const nextRunAt = computeNextRunAt(data.cadence, startsAt, data.cron_expr);
     const { data: row, error } = await supabase
       .from("maaroof_schedules")
       .insert({
