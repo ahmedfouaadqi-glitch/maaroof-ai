@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
 import { Loader2, Share2 } from "lucide-react";
@@ -9,32 +9,46 @@ import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
-export function SocialAnalysis() {
+export function SocialAnalysis({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t } = useI18n();
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
-  const [brand, setBrand] = useState((auth?.profile as any)?.brand_name ?? "");
+  const [brand, setBrand] = useState(workspaceId ? "" : ((auth?.profile as any)?.brand_name ?? ""));
   const [keywords, setKeywords] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<any>(null);
+  const requestSeq = useRef(0);
+  useEffect(() => {
+    requestSeq.current += 1;
+    setBrand(workspaceId ? "" : ((auth?.profile as any)?.brand_name ?? ""));
+    setKeywords("");
+    setRes(null);
+    setErr("");
+    setBusy(false);
+  }, [workspaceId]);
 
   async function run() {
     if (!brand.trim()) return;
+    const seq = ++requestSeq.current;
     setBusy(true); setErr(""); setRes(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const r = await apiFetch("/api/social-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ brand, keywords, lang }),
+        body: JSON.stringify({ brand, keywords, lang, workspace_id: workspaceId }),
       });
       const j = await r.json();
+      if (seq !== requestSeq.current) return;
       if (!r.ok) throw new Error(j?.error || "failed");
       setRes(j);
-    } catch (e: any) { setErr(e?.message || "failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      if (seq === requestSeq.current) setErr(e?.message || "failed");
+    } finally {
+      if (seq === requestSeq.current) setBusy(false);
+    }
   }
 
   return (
@@ -61,6 +75,12 @@ export function SocialAnalysis() {
               <div className="text-sm">إجمالي الإشارات: <b>{res.total_mentions}</b> · المشاعر: <b>{res.sentiment || "—"}</b> · Share of Voice: <b>{res.share_of_voice ?? "—"}</b></div>
             </div>
             {res.summary && <p className="mt-2 text-sm text-foreground/80">{res.summary}</p>}
+            {res.source_plan && <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+              {lang === "en" ? "Public-search sample" : lang === "ku" ? "نموونەی گەڕانی گشتی" : "عينة البحث العام"}: {res.source_plan.sample_size} ·
+              {lang === "en" ? "requests" : lang === "ku" ? "داواکاری" : "طلبات"}: {res.source_plan.request_count}/{res.source_plan.request_cap} ·
+              {res.source_plan.budget_limited ? (lang === "en" ? "Some checks skipped by budget." : lang === "ku" ? "هەندێک پشکنین بەهۆی سنووری تێچوو نەکرا." : "تم تجاوز بعض الفحوص بسبب حدّ الميزانية.") : ""}
+              {res.source_plan.limitations?.length ? " " + res.source_plan.limitations[0] : ""}
+            </p>}
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {res.platforms?.map((p: any) => (
