@@ -11,9 +11,11 @@ import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, evidenceFromResults, pickQualityFields } from "@/lib/tool-quality.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asList, asText } from "@/lib/input-coerce";
+import { estimateSearchCredits, planSourceRoute } from "@/lib/maaroof/source-intelligence";
+import { recordEvidence } from "@/lib/maaroof/evidence.server";
 
 
-type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string> };
+type Body = { brand?: string; competitors?: string[]; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; websites?: Record<string, string>; workspace_id?: string | null };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -93,12 +95,22 @@ export const Route = createFileRoute("/api/compare")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id.trim() : null;
+          let workspaceContext: any = null;
+          if (workspaceId) {
+            if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+            const { data: workspace, error: workspaceError } = await admin.from("workspaces")
+              .select("id, owner_id, name, brand_url, brand_summary, keywords, country, city, entity_truth_card, onboarding, settings")
+              .eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+            if (workspaceError || !workspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+            workspaceContext = workspace;
+          }
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-3-flash-preview");
           // MCI (additive, fail-open): reuse a fresh identical result for this user — no charge.
-          const _mci = await mciReuse(admin as any, "compare", userId, [brand, competitors, keywords, lang, body.scope], !!(body as any)?.force);
+          const _mci = await mciReuse(admin as any, "compare", userId, [brand, competitors, keywords, lang, body.scope, workspaceId], !!(body as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "compare", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/compare" } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
@@ -130,13 +142,24 @@ export const Route = createFileRoute("/api/compare")({
           }
 
           const userCtx = await getUserContext(admin, userId);
-          const market = describeMarket(body.scope);
+          if (workspaceContext) {
+            const card = workspaceContext.entity_truth_card && typeof workspaceContext.entity_truth_card === "object" ? workspaceContext.entity_truth_card : {};
+            const answers = workspaceContext.onboarding?.answers && typeof workspaceContext.onboarding.answers === "object" ? workspaceContext.onboarding.answers : {};
+            userCtx.brand_name = String(workspaceContext.name || card.brand_name || card.name || "").trim() || null;
+            userCtx.brand_keywords = String(workspaceContext.keywords || card.brand_keywords || card.keywords || answers.brand_keywords || "").trim() || null;
+            userCtx.specialty = String(card.specialty || card.industry || workspaceContext.brand_summary || "").trim() || null;
+          }
+          const effectiveScope: GeoScope | undefined = body.scope || (workspaceContext?.city
+            ? { scope: "city", city: String(workspaceContext.city), country: workspaceContext.country ? String(workspaceContext.country) : undefined }
+            : workspaceContext?.country ? { scope: "country", country: String(workspaceContext.country) } : undefined);
+          const market = describeMarket(effectiveScope);
           const SYSTEM = buildSystem(market);
           let sources: any[] = [];
           const officialSites: Record<string, { url: string; content: string; status: "confirmed" | "candidate" | "user"; reason: string }> = {};
           const seoSgeReports: Record<string, SeoSgeReport> = {};
           const platformEvidence: Record<string, Record<string, number>> = {};
-          const userWebsites = body.websites || {};
+          const userWebsites = { ...(body.websites || {}) };
+          if (workspaceContext?.brand_url && !userWebsites[brand]) userWebsites[brand] = String(workspaceContext.brand_url);
           const liveSearchFailures: unknown[] = [];
           try {
             const allBrands = [brand, ...competitors];
