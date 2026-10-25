@@ -501,7 +501,7 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${payload.title.replace(/[\\/:*?"<>|]/g, "_")}.html`;
+    a.download = `${payload.title.replace(/[\/\\:*?"<>|]/g, "_")}.html`;
     a.style.display = "none";
     document.body.appendChild(a);
     a.click();
@@ -665,7 +665,7 @@ function download(content: BlobPart, mime: string, ext: string, title: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${title.replace(/[\\/:*?"<>|]/g, "_")}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+  a.download = `${title.replace(/[\/\\:*?"<>|]/g, "_")}-${new Date().toISOString().slice(0, 10)}.${ext}`;
   a.style.display = "none";
   document.body.appendChild(a);
   a.click();
