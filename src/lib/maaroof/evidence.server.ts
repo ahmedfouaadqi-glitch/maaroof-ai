@@ -360,7 +360,7 @@ export async function decayEvidence(limit = 500): Promise<number> {
 export async function evidenceOverview(limit = 400, scope?: { userId?: string | null; workspaceId?: string | null }) {
   try {
     // Never use another user's history as corroboration. A workspace scope is only meaningful with its owner.
-    if (scope?.workspaceId && !scope.userId) {
+    if (scope && !scope.userId) {
       return { total: 0, by_type: {}, by_category: {}, validation: crossValidate([]) };
     }
     let q = db()
