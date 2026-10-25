@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MciReuseBadge } from "@/components/MciReuseBadge";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
@@ -61,10 +61,17 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
-  useEffect(() => { setOut(null); setErr(""); }, [workspaceId]);
+  const requestSeq = useRef(0);
+  useEffect(() => {
+    requestSeq.current += 1;
+    setOut(null);
+    setErr("");
+    setBusy(false);
+  }, [workspaceId]);
 
   const run = async () => {
     if (!brand.trim() || busy) return;
+    const seq = ++requestSeq.current;
     setBusy(true); setErr(""); setOut(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -75,13 +82,17 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         body: JSON.stringify({ brand, keywords, lang: outLang, workspace_id: workspaceId, scope: getEffectiveScope(auth?.profile, toolKey) }),
       });
       const j = await res.json().catch(() => ({}));
+      if (seq !== requestSeq.current) return;
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
       setOut(j.result);
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
-    } catch (e: any) { setErr(e?.message || "failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      if (seq === requestSeq.current) setErr(e?.message || "failed");
+    } finally {
+      if (seq === requestSeq.current) setBusy(false);
+    }
   };
 
   const findEngine = (name: string) => ENGINES.find((e) => e.name.toLowerCase() === String(name || "").toLowerCase());
