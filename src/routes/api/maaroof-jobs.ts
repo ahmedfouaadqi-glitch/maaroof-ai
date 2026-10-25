@@ -20,6 +20,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const db = a.admin as any;
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
+        const allWorkspaces = url.searchParams.get("all_workspaces") === "1";
         const workspaceRaw = url.searchParams.get("workspace_id");
         let workspaceId: string | null = null;
         if (workspaceRaw) {
@@ -29,9 +30,9 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           workspaceId = owned.id;
         }
         if (!id) {
-          const columns = "id, goal, mode, status, error, request_payload, created_at, updated_at";
+          const columns = "id, goal, mode, status, error, request_payload, workspace_id, created_at, updated_at";
           let q = db.from("maaroof_jobs").select(columns).eq("user_id", a.userId);
-          q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
+          if (!allWorkspaces) q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
           let { data: jobs, error: scopedError } = await q.order("created_at", { ascending: false }).limit(1000);
           let scopeFallback = false;
           if (shouldFallbackFromWorkspaceScope(scopedError)) {
@@ -47,7 +48,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           return Response.json({ jobs: jobs || [], scope_fallback: scopeFallback });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
-        const hasWorkspaceScope = url.searchParams.has("workspace_id");
+        const hasWorkspaceScope = url.searchParams.has("workspace_id") && !allWorkspaces;
         let jobQuery = db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId);
         if (hasWorkspaceScope) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
         let { data: job, error: jobLookupError } = await jobQuery.maybeSingle();
@@ -94,8 +95,13 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
             }
           }
         }
-        const { data: events } = await db.from("maaroof_job_events").select("seq, event_type, payload, created_at")
-          .eq("job_id", id).gt("seq", parseAfter(url.searchParams.get("after"))).order("seq", { ascending: true }).limit(200);
+        const { data: events, error: eventsError } = await db.from("maaroof_job_events").select("seq, event_type, payload, created_at")
+          .eq("job_id", id).eq("user_id", a.userId)
+          .gt("seq", parseAfter(url.searchParams.get("after"))).order("seq", { ascending: true }).limit(200);
+        if (eventsError) {
+          console.error("[maaroof-jobs] event history lookup failed", eventsError.message);
+          return Response.json({ job, events: [], degraded: true, error: "job_events_unavailable" }, { status: 503 });
+        }
         return Response.json({ job, events: events || [] });
       },
       POST: async ({ request }) => {

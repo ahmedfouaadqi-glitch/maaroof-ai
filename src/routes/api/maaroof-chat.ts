@@ -1,6 +1,7 @@
 // Maaroof chat mode. GET → history; POST { message, lang } → grounded reply; DELETE → clear.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { detectGeoFromRequest, effectiveGeo, normalizeGeoScope } from "@/lib/maaroof/geo.server";
 
 async function authed(request: Request) {
   const auth = request.headers.get("authorization") || "";
@@ -55,6 +56,8 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const message = String(body?.message || "").trim().slice(0, 2000);
         if (!message) return Response.json({ error: "message_required" }, { status: 400 });
         const lang = (["ar", "en", "ku"].includes(body?.lang) ? body.lang : "ar") as "ar" | "en" | "ku";
+        const geoScope = normalizeGeoScope(body?.geo_scope);
+        const geo = effectiveGeo(detectGeoFromRequest(request), geoScope);
         const { chatAllowed, parseReply, groundedSystemPrompt } = await import("@/lib/maaroof/chat-policy");
         const { ownerIdentity, freshFacts, interviewFacts } = await import("@/lib/knowledge-facts");
 
@@ -70,15 +73,28 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         }
         const { chatQuota } = await import("@/lib/maaroof/chat-policy");
         const quota = chatQuota({ metered, subscribed: !!p.is_subscribed, todayUserMessages: (count || 0) + 1, unlimited });
-        // Optional task context: the user's own completed job goal + final result.
+        // Optional context from any earlier task owned by this user, including tasks in
+        // another workspace. The selected task ID is supplied explicitly by the UI.
         let taskCtx: string[] = [];
         const taskId = typeof body?.task_id === "string" ? body.task_id : "";
-        if (taskId) {
-          const { data: job } = await scopeWorkspace(admin.from("maaroof_jobs").select("goal").eq("id", taskId).eq("user_id", userId), workspaceId).maybeSingle();
+        if (taskId && /^[0-9a-f-]{36}$/i.test(taskId)) {
+          const { data: job } = await admin.from("maaroof_jobs")
+            .select("goal, status, workspace_id")
+            .eq("id", taskId).eq("user_id", userId).maybeSingle();
           if (job) {
-            const { data: fin } = await admin.from("maaroof_job_events").select("payload").eq("job_id", taskId).eq("event_type", "final").order("seq", { ascending: false }).limit(1);
-            const txt = JSON.stringify((fin as any)?.[0]?.payload ?? "").slice(0, 3000);
-            taskCtx = [`[task, evidence] ${String((job as any).goal).slice(0, 300)}`, `[task result] ${txt}`];
+            const { data: recorded } = await admin.from("maaroof_job_events")
+              .select("event_type, payload, seq").eq("job_id", taskId).eq("user_id", userId)
+              .in("event_type", ["final", "tool_result", "error", "phase"])
+              .order("seq", { ascending: true }).limit(100);
+            const relevant = ((recorded || []) as any[])
+              .filter((e) => e.event_type !== "tool_result" || e.payload?.ok === true)
+              .slice(-12)
+              .map((e) => `${e.event_type}: ${JSON.stringify(e.payload || {}).slice(0, 450)}`)
+              .join("\n").slice(0, 3600);
+            taskCtx = [
+              `[previous task] goal=${String((job as any).goal || "").slice(0, 500)}; status=${String((job as any).status || "unknown")}; workspace_id=${String((job as any).workspace_id || "account-level")}`,
+              relevant ? `[recorded previous task events and evidence]\n${relevant}` : "[recorded previous task events] No useful tool results were saved; do not assume the task succeeded.",
+            ];
           }
         }
 
@@ -97,7 +113,10 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           ...freshFacts((kf || []) as any[]).map((f: any) => `[${f.source}, ${f.confidence}] ${String(f.fact).slice(0, 300)}`),
           ...interviewFacts((iv || []) as any).map((f) => `[interview] ${f.fact.slice(0, 300)}`),
         ].slice(0, 120);
-        knowledge.unshift(...taskCtx);
+        knowledge.unshift(
+          `[geographic scope] ${geo.label}; country=${geo.country || "not resolved"}; city=${geo.city || "not resolved"}. Respect this selected scope. If visitor location is unavailable, do not infer or invent a country.`,
+          ...taskCtx,
+        );
 
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
@@ -128,7 +147,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           const charge = await chargeTokens({ userId, toolKey: "maaroof.chat", meta: { chars: message.length } });
           if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status: 402 });
         }
-        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task };
+        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo };
         await admin.from("maaroof_chat_messages").insert([
           { user_id: userId, workspace_id: workspaceId, role: "user", content: message },
           { user_id: userId, workspace_id: workspaceId, role: "assistant", content: reply.text, grounded },

@@ -7,6 +7,7 @@ import { validateAttachment, attachmentPath, ATTACHMENT_MIME } from "@/lib/attac
 import { composeChatMessage, type DardashaAttachment } from "@/lib/maaroof/dardasha";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
+import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
@@ -24,7 +25,18 @@ async function call(method: string, body?: unknown, workspaceId?: string | null)
 }
 
 /** «دردشة»: one surface for chat, files and tasks. A task starts only after the user clicks approve. */
-export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: { lang: L; onApproveTask: (goal: string) => void; busyTask?: boolean; workspaceId?: string | null }) {
+export function Dardasha({
+  lang, onApproveTask, busyTask, workspaceId = null, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed,
+}: {
+  lang: L;
+  onApproveTask: (goal: string) => void;
+  busyTask?: boolean;
+  workspaceId?: string | null;
+  geoScope: GeoScope;
+  onGeoScopeChange: (scope: GeoScope) => void;
+  chatPrefill?: { text: string; taskId?: string } | null;
+  onPrefillConsumed?: () => void;
+}) {
   const { user } = useAuth();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
@@ -33,11 +45,21 @@ export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: 
   const [quota, setQuota] = useState<Quota | null>(null);
   const [atts, setAtts] = useState<Att[]>([]);
   const [drag, setDrag] = useState(false);
+  const [contextTaskId, setContextTaskId] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null }))); }); }, [workspaceId]);
+  useEffect(() => {
+    if (!chatPrefill) return;
+    setText(chatPrefill.text);
+    setContextTaskId(chatPrefill.taskId || "");
+    inputRef.current?.focus();
+    onPrefillConsumed?.();
+    // The parent clears the one-shot prefill after it is consumed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatPrefill]);
   const boxRef = useRef<HTMLDivElement>(null);
   // Scroll only inside the message box; never move the page.
   useEffect(() => { const b = boxRef.current; if (b) b.scrollTo({ top: b.scrollHeight, behavior: "smooth" }); }, [msgs, busy]);
@@ -67,10 +89,18 @@ export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: 
     const ready = atts.filter((a) => !a.busy && !a.failed);
     const m = composeChatMessage(text, ready);
     if (!m || busy || atts.some((a) => a.busy)) return;
+    if (!isGeoScopeConfigured(geoScope)) {
+      setErr(tr(lang, "أكمل تحديد الدولة والمنطقة أو المدينة قبل إرسال الطلب.", "Choose the required country and region/city before sending.", "پێش ناردن وڵات و ناوچە/شار دیاری بکە."));
+      return;
+    }
     setText(""); setAtts([]); setErr(""); setBusy(true);
     setMsgs((p) => [...p, { role: "user", content: m }]);
     try {
-      const r = await call("POST", { message: m, lang, workspace_id: workspaceId }, workspaceId);
+      const r = await call("POST", {
+        message: m, lang, workspace_id: workspaceId,
+        task_id: contextTaskId || undefined,
+        geo_scope: toServerGeoScope(geoScope),
+      }, workspaceId);
       if (!r.ok) {
         const e = r.json?.error;
         setErr(e === "chat_limit" ? tr(lang, "انتهى حد المحادثة لليوم.", "Daily chat limit reached.", "سنووری ڕۆژانە تەواو بوو.")
@@ -106,6 +136,10 @@ export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: 
           {quota && <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums">{(quota as any).approved ? tr(lang, "غير محدود", "Unlimited", "بێسنوور") : quota.unlimited ? tr(lang, "من رصيدك عند النجاح", "From balance on success", "لە باڵانس") : `${quota.remaining}/${quota.cap}`}</span>}
           {msgs.length > 0 && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف المحادثة؟", "Clear chat?", "سڕینەوە؟"))) { await call("DELETE", undefined, workspaceId); setMsgs([]); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
         </div>
+      </div>
+      <div className="mb-4 rounded-xl border border-border bg-background/50 p-3">
+        <div className="mb-2 text-xs font-semibold text-muted-foreground">{tr(lang, "النطاق الجغرافي الذي سيُوجّه الدردشة والبحث", "Geographic scope for chat and research", "بواری جوگرافی بۆ گفتوگۆ و گەڕان")}</div>
+        <GeoScopeSelector compact value={geoScope} onChange={onGeoScopeChange} />
       </div>
       <div ref={boxRef} className="max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
@@ -155,7 +189,7 @@ export function Dardasha({ lang, onApproveTask, busyTask, workspaceId = null }: 
       <div className="mt-3 flex items-end gap-2">
         <input ref={fileRef} type="file" multiple accept={ATTACHMENT_MIME.join(",")} className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
         <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border hover:bg-muted" aria-label="attach"><Paperclip className="size-4" /></button>
-        <textarea ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
+        <textarea id="dardasha-message-input" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { const fs = Array.from(e.clipboardData.files || []); if (fs.length) { e.preventDefault(); void addFiles(fs); } }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
           rows={3} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
