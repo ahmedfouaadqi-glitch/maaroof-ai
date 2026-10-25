@@ -110,12 +110,15 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         const body = await request.json();
 
         const { action, id, brand, competitors = [], frequency_hours = 24, lang = "ar", scope } = body;
-        if (scope && typeof scope === "object" && (scope.workspace_id || scope.workspaceId)) {
-          const rawWorkspaceId = String(scope.workspace_id || scope.workspaceId);
-          if (!/^[0-9a-f-]{36}$/i.test(rawWorkspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
-          const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", rawWorkspaceId).eq("owner_id", userId).maybeSingle();
+        const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id.trim() : null;
+        if (workspaceId) {
+          if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
           if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
         }
+        const withWorkspace = (query: any) => workspaceId
+          ? query.eq("workspace_id", workspaceId)
+          : query.is("workspace_id", null);
 
         // Only billable actions consume quota (list/delete/policy are free).
         const charge = async () => {
@@ -132,19 +135,19 @@ export const Route = createFileRoute("/api/competitor-monitor")({
 
         if (action === "policy") {
           const policy = await loadPolicy();
-          const { count } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
+          const { count } = await withWorkspace(admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId));
           const cost = await resolveToolCost(userId, "competitor_monitor");
           return Response.json({ policy, active: count || 0, cost_tokens: cost.tokens });
         }
 
         if (action === "list") {
-          const { data } = await admin.from("competitor_watch").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+          const { data } = await withWorkspace(admin.from("competitor_watch").select("*").eq("user_id", userId)).order("created_at", { ascending: false });
           return Response.json({ items: data || [] });
         }
 
         if (action === "delete") {
           if (!id) return Response.json({ error: "id_required" }, { status: 400 });
-          await admin.from("competitor_watch").delete().eq("id", id).eq("user_id", userId);
+          await withWorkspace(admin.from("competitor_watch").delete().eq("id", id).eq("user_id", userId));
           return Response.json({ ok: true });
         }
 
@@ -153,7 +156,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
             return Response.json({ error: "brand_and_competitors_required" }, { status: 400 });
           }
           const policy = await loadPolicy();
-          const { count: active } = await admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId);
+          const { count: active } = await withWorkspace(admin.from("competitor_watch").select("id", { count: "exact", head: true }).eq("user_id", userId));
           const pc = checkMonitorPolicy(policy, active || 0, competitors.length, Number(frequency_hours) || 24);
           if (!pc.ok) return Response.json({ error: pc.reason, policy }, { status: 403 });
           const { data: prof } = await admin.from("profiles").select("monthly_analyses_used,is_subscribed,quota_overrides").eq("id", userId).maybeSingle();
@@ -166,7 +169,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
           { const f = await charge(); if (f) return f; }
           const baseline = await buildBaseline(brand, competitors, lang, userId, workspaceId || null);
           const { data: row, error } = await admin.from("competitor_watch").insert({
-            user_id: userId, brand, competitors, frequency_hours, scope, baseline, last_run_at: new Date().toISOString(),
+            user_id: userId, workspace_id: workspaceId, brand, competitors, frequency_hours, scope, baseline, last_run_at: new Date().toISOString(),
           }).select().single();
           if (error) return Response.json({ error: error.message }, { status: 500 });
           await admin.from("profiles").update({ monthly_analyses_used: used + COST }).eq("id", userId);
@@ -175,7 +178,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
 
         if (action === "recheck") {
           if (!id) return Response.json({ error: "id_required" }, { status: 400 });
-          const { data: w } = await admin.from("competitor_watch").select("*").eq("id", id).eq("user_id", userId).maybeSingle();
+          const { data: w } = await withWorkspace(admin.from("competitor_watch").select("*").eq("id", id).eq("user_id", userId)).maybeSingle();
           if (!w) return Response.json({ error: "not_found" }, { status: 404 });
           { const f = await charge(); if (f) return f; }
           const fresh = await buildBaseline((w as any).brand, (w as any).competitors as string[], lang, userId, workspaceId || null);
@@ -192,7 +195,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
             }
           }
           const alerts = [...newAlerts, ...((w as any).alerts || [])].slice(0, 50);
-          await admin.from("competitor_watch").update({ baseline: fresh, last_run_at: new Date().toISOString(), alerts }).eq("id", id);
+          await withWorkspace(admin.from("competitor_watch").update({ baseline: fresh, last_run_at: new Date().toISOString(), alerts }).eq("id", id).eq("user_id", userId));
 
           // Insert per-alert notifications for the user
           if (newAlerts.length > 0) {
