@@ -24,23 +24,23 @@ WHERE retrieved_at IS NULL OR reality_kind IS NULL OR reality_kind = '' OR statu
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_sample_size_nonnegative') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_sample_size_nonnegative' AND conrelid = 'public.evidence_items'::regclass) THEN
     ALTER TABLE public.evidence_items
       ADD CONSTRAINT evidence_items_sample_size_nonnegative CHECK (sample_size IS NULL OR sample_size >= 0);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_relevance_score_range') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_relevance_score_range' AND conrelid = 'public.evidence_items'::regclass) THEN
     ALTER TABLE public.evidence_items
       ADD CONSTRAINT evidence_items_relevance_score_range CHECK (relevance_score IS NULL OR relevance_score BETWEEN 0 AND 100);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_business_importance_range') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_business_importance_range' AND conrelid = 'public.evidence_items'::regclass) THEN
     ALTER TABLE public.evidence_items
       ADD CONSTRAINT evidence_items_business_importance_range CHECK (business_importance IS NULL OR business_importance BETWEEN 0 AND 100);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_reality_kind_valid') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_reality_kind_valid' AND conrelid = 'public.evidence_items'::regclass) THEN
     ALTER TABLE public.evidence_items
       ADD CONSTRAINT evidence_items_reality_kind_valid CHECK (reality_kind IN ('observation','measurement','estimate','inference','unverified'));
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_status_valid') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'evidence_items_status_valid' AND conrelid = 'public.evidence_items'::regclass) THEN
     ALTER TABLE public.evidence_items
       ADD CONSTRAINT evidence_items_status_valid CHECK (status IN ('success','empty','unavailable','blocked','stale','failed'));
   END IF;
