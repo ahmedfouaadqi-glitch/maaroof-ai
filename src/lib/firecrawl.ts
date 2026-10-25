@@ -269,7 +269,7 @@ function normalizedScrapeFailure(error: unknown, source: string, url: string): P
 }
 
 async function directHttp(url: string) {
-  const u = /^https?:\/\//i.test(url) ? url : \`https://\${url}\`;
+  const u = /^https?:\/\//i.test(url) ? url : `https://${url}`;
   // Reuse successful direct reads so the same public URL is not fetched repeatedly during quota incidents.
   const cacheKey = hashKey("direct_http_scrape", { url: u });
   const policy = await getPolicy();
