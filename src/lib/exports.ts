@@ -579,12 +579,28 @@ export async function exportToWord(payload: ExportPayload) {
     else if (section.kind === "table" && section.table) content.push(makeTable(section.table.columns, section.table.data));
     else if (section.kind === "cards" && section.cards) {
       section.cards.forEach((card) => {
-        content.push(paragraph(card.title, { bold: true, size: 24, color: "0F2454" }));
-        if (card.subtitle) content.push(paragraph(card.subtitle, { size: 18, color: "64748B" }));
-        content.push(paragraph(cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100") + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }));
-        if (card.fields?.length) content.push(makeTable([cardLabels.metric, cardLabels.value], card.fields));
-        (card.evidence || []).forEach((item) => content.push(paragraph(cardLabels.evidence + ": " + item, { size: 17, color: "475569" })));
-        (card.notes || []).forEach((item) => content.push(paragraph(cardLabels.note + ": " + item, { size: 17, color: "92400E" })));
+        const scoreText = card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100";
+        const cardChildren: Array<InstanceType<typeof Paragraph> | InstanceType<typeof Table>> = [
+          paragraph(card.title, { bold: true, size: 24, color: "0F2454" }),
+          ...(card.subtitle ? [paragraph(card.subtitle, { size: 18, color: "64748B" })] : []),
+          paragraph(cardLabels.score + ": " + scoreText + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }),
+          ...(card.fields || []).map(([key, value]) => paragraph(String(key) + ": " + String(value), { size: 18, color: "334155" })),
+          ...(card.evidence || []).map((item) => paragraph(cardLabels.evidence + ": " + item, { size: 17, color: "475569" })),
+          ...(card.notes || []).map((item) => paragraph(cardLabels.note + ": " + item, { size: 17, color: "92400E" })),
+        ];
+        const cardFill = card.score == null ? "F8FAFC" : card.score >= 70 ? "F0FDF4" : card.score >= 40 ? "FFFBEB" : "FEF2F2";
+        const cardCell = new TableCell({
+          width: { size: 9360, type: WidthType.DXA },
+          borders: cellBorders,
+          shading: { fill: cardFill, type: ShadingType.CLEAR },
+          margins: { top: 140, bottom: 140, left: 160, right: 160 },
+          children: cardChildren,
+        });
+        content.push(new Table({
+          width: { size: 9360, type: WidthType.DXA },
+          columnWidths: [9360],
+          rows: [new TableRow({ children: [cardCell] })],
+        }));
       });
     }
   });
@@ -643,8 +659,9 @@ export async function exportToPowerPoint(payload: ExportPayload) {
         slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
         slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid" });
         if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B" });
-        slide.addText(card.score == null ? (card.status || "unmeasured") : cardLabels.score + ": " + String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
+        slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06 });
         const details = [
+          cardLabels.score + ": " + (card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100"),
           ...(card.fields || []).map(([key, value]) => String(key) + ": " + String(value)),
           ...(card.evidence || []).map((item) => cardLabels.evidence + ": " + item),
           ...(card.notes || []).map((item) => cardLabels.note + ": " + item),
