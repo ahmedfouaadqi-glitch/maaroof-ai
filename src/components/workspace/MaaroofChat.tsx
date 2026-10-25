@@ -3,6 +3,7 @@ import { LoaderCircle, Send, Trash2, ArrowLeftRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { ShinyText } from "@/components/motion/effects";
+import { AssistantMessage } from "./AssistantMessage";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 
@@ -72,8 +73,8 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «ماذا تعرف عن علامتي؟» أو «ما الذي ينقص ملفي ليقتبسني ChatGPT؟»", "Example: “What do you know about my brand?”", "نموونە: «چی دەزانیت دەربارەی براندەکەم؟»")}</p>}
         {msgs.map((m, i) => (
           <div key={m.id || i} className={m.role === "user" ? "flex justify-end" : ""}>
-            <div className={m.role === "user" ? "max-w-[85%] rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full whitespace-pre-wrap text-sm leading-7"}>
-              {m.content}
+            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full min-w-0 text-sm leading-7"}>
+              {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
               {m.role === "assistant" && m.task && (
                 <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-xs">
                   <p className="font-semibold text-primary">{tr(lang, "مهمة مقترحة", "Proposed task", "ئەرکی پێشنیارکراو")} · {({ scan: tr(lang, "فحص", "Scan", "پشکنین"), plan: tr(lang, "تخطيط", "Plan", "پلان"), recommend: tr(lang, "توصية", "Recommendation", "ڕاسپاردە"), simulate: tr(lang, "محاكاة", "Simulation", "لاساییکردنەوە") } as Record<string, string>)[m.task.kind]}</p>

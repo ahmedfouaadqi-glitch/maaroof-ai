@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Send, Trash2, Play, Paperclip, X } from "lucide-react";
+import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
@@ -7,12 +7,15 @@ import { validateAttachment, attachmentPath, ATTACHMENT_MIME } from "@/lib/attac
 import { composeChatMessage, type DardashaAttachment } from "@/lib/maaroof/dardasha";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
+import { AssistantMessage } from "./AssistantMessage";
+import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
 import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
 type Task = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
 type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null };
+type ChatTaskDraft = { messageKey: string; goal: string };
 type Att = DardashaAttachment & { busy?: boolean; failed?: boolean };
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 const token = async () => (await supabase.auth.getSession()).data.session?.access_token || "";
@@ -26,10 +29,11 @@ async function call(method: string, body?: unknown, workspaceId?: string | null)
 
 /** «دردشة»: one surface for chat, files and tasks. A task starts only after the user clicks approve. */
 export function Dardasha({
-  lang, onApproveTask, busyTask, workspaceId = null, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed,
+  lang, onPrepareTask, busyTask, workspaceId = null, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed,
 }: {
   lang: L;
-  onApproveTask: (goal: string) => void;
+  /** Prepares a task draft for review; does not start execution. */
+  onPrepareTask: (goal: string) => void;
   busyTask?: boolean;
   workspaceId?: string | null;
   geoScope: GeoScope;
@@ -46,11 +50,12 @@ export function Dardasha({
   const [atts, setAtts] = useState<Att[]>([]);
   const [drag, setDrag] = useState(false);
   const [contextTaskId, setContextTaskId] = useState("");
+  const [taskDraft, setTaskDraft] = useState<ChatTaskDraft | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null }))); }); }, [workspaceId]);
+  useEffect(() => { setTaskDraft(null); void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null }))); }); }, [workspaceId]);
   useEffect(() => {
     if (!chatPrefill) return;
     setText(chatPrefill.text);
@@ -156,22 +161,49 @@ export function Dardasha({
           <p className="mt-1 text-muted-foreground">{tr(lang, "رفع الملف ثم تحليل المحتوى وإلحاقه بسياق الدردشة قبل الإرسال.", "Uploading, analyzing, then attaching the extracted content to the chat before sending.", "بارکردن و شیکردنەوە و زیادکردنی ناوەڕۆک بۆ گفتوگۆ پێش ناردن.")}</p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-1/3 rounded-full bg-primary animate-[pulse_1.2s_ease-in-out_infinite]" /></div>
         </div>}
-        {msgs.map((m, i) => (
-          <div key={m.id || i} className={m.role === "user" ? "flex justify-end" : ""}>
-            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full whitespace-pre-wrap text-sm leading-7"}>
-              {m.content}
-              {m.role === "assistant" && m.content.trim() && <div className="mt-2"><ExportButtons size="xs" build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })} /></div>}
+        {msgs.map((m, i) => {
+          const requestContext = [...msgs.slice(0, i)].reverse().find((candidate) => candidate.role === "user")?.content || lastUser;
+          const messageKey = m.id || `message-${i}`;
+          const openTaskDraft = (proposedGoal?: string) => setTaskDraft({ messageKey, goal: buildTaskGoalFromResult({ language: lang, originalRequest: requestContext, answer: m.content, proposedGoal }) });
+          return (
+          <div key={messageKey} className={m.role === "user" ? "flex justify-end" : ""}>
+            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-full min-w-0 text-sm leading-7"}>
+              {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
+              {m.role === "assistant" && m.content.trim() && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <ExportButtons size="xs" build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })} />
+                  {!m.task && !m.needs_task && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "حوّل الرد إلى مهمة", "Turn answer into a task", "وەڵامەکە بکە بە ئەرک")}</button>}
+                </div>
+              )}
               {m.role === "assistant" && (m.task || m.needs_task) && (
                 <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-xs">
                   <p className="font-semibold text-primary">{tr(lang, "مهمة مقترحة", "Proposed task", "ئەرکی پێشنیارکراو")}{m.task ? ` · ${kindLabel[m.task.kind] || ""}` : ""}</p>
                   <p className="mt-1 text-foreground">{m.task?.goal || lastUser}</p>
                   <p className="mt-1 text-muted-foreground">{tr(lang, "ستمر بالمراحل الست: فهم الطلب ← الخطة والأدوات ← جمع الأدلة ← النماذج العشرة ← حل التعارض ← النتيجة. لا يُخصم شيء إلا عند النجاح.", "Six stages: understand → plan & tools → evidence → ten engines → resolve conflicts → result. Charged only on success.", "شەش قۆناغ. تەنها لە سەرکەوتندا دەبڕدرێت.")}</p>
-                  <button type="button" disabled={busyTask} onClick={() => onApproveTask(m.task?.goal || lastUser)} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground disabled:opacity-50"><Play className="size-3" />{tr(lang, "موافقة وبدء", "Approve and start", "پەسەندکردن و دەستپێکردن")}</button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" disabled={busyTask} onClick={() => openTaskDraft(m.task?.goal || requestContext)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "مراجعة المهمة", "Review task", "پێداچوونەوەی ئەرک")}</button>
+                  </div>
                 </div>
               )}
             </div>
+            {m.role === "assistant" && taskDraft?.messageKey === messageKey && (
+              <div className="mt-3 rounded-2xl border border-primary/30 bg-primary/5 p-4" data-testid="chat-task-draft">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 font-semibold text-primary"><ListChecks className="size-4" />{tr(lang, "مسودة مهمة من هذه النتيجة", "Task draft from this result", "ڕەشنووسی ئەرک لەم ئەنجامەوە")}</div>
+                  <button type="button" onClick={() => setTaskDraft(null)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted" aria-label={tr(lang, "إلغاء المسودة", "Cancel draft", "هەڵوەشاندنەوە")}><XCircle className="size-4" /></button>
+                </div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor={`chat-task-draft-${messageKey}`}>{tr(lang, "الهدف والسياق — راجعه وعدّله قبل المتابعة", "Goal and context — review and edit before continuing", "ئامانج و پاشبنەما — پێش بەردەوامبوون پێداچوونەوە و دەستکاری بکە")}</label>
+                <textarea id={`chat-task-draft-${messageKey}`} value={taskDraft.goal} onChange={(event) => setTaskDraft((draft) => draft?.messageKey === messageKey ? { ...draft, goal: event.target.value.slice(0, 1800) } : draft)} rows={5} className="w-full resize-y rounded-xl border border-border bg-background p-3 text-sm leading-6 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" dir="auto" />
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">{tr(lang, "هذه مسودة فقط. لا يبدأ التنفيذ هنا؛ ستراجع نطاق المهمة وتقدير التكلفة في إعداد المهمة قبل الضغط على بدء التنفيذ.", "This is only a draft. Execution does not start here; review task scope and the cost estimate in task setup before starting.", "ئەمە تەنها ڕەشنووسە. جێبەجێکردن لێرە دەست پێناکات؛ پێش دەستپێکردن سنوور و تێچوو لە ئامادەکاری ئەرک بپشکنە.")}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" disabled={busyTask || !taskDraft.goal.trim()} onClick={() => { const goal = taskDraft.goal.trim(); setTaskDraft(null); onPrepareTask(goal); }} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "متابعة إلى مراجعة التكلفة", "Continue to cost review", "بەردەوامبوون بۆ پێداچوونەوەی تێچوو")}</button>
+                  <button type="button" onClick={() => setTaskDraft(null)} className="rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted">{tr(lang, "إلغاء", "Cancel", "هەڵوەشاندنەوە")}</button>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
         {busy && <div role="status" aria-live="polite" className="rounded-xl border border-primary/25 bg-primary/5 p-3"><div className="flex items-center gap-2 text-sm"><LoaderCircle className="size-4 animate-spin text-primary" /><ShinyText>{tr(lang, "معروف يحلل طلبك ويجهّز الاستشارة…", "Maaroof is analyzing your request and preparing the consultation…", "معروف داواکارییەکەت شیدەکاتەوە…")}</ShinyText></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-2/5 rounded-full bg-primary animate-pulse" /></div><p className="mt-1 text-[11px] text-muted-foreground">{tr(lang, "هذه إشارة نشاط وليست نسبة إنجاز محسوبة.", "Activity indicator, not a measured completion percentage.", "ئەمە نیشانەی چالاکییە، نەک ڕێژەی تەواوبوونی پێوانەکراو.")}</p></div>}
         <div ref={endRef} />
       </div>
