@@ -245,15 +245,17 @@ export function crossValidate(rows: any[]): CrossValidation {
       strongest_type: null, weighted_score: 0, avg_freshness: 0, stale: 0, verdict: "none",
     };
   }
-  // Independent evidence is counted by source host when a URL exists; multiple pages on one site do not count as independent corroboration.
+  // Independent corroboration requires a distinct URL host. Non-URL tool IDs and model probes
+  // are grouped by their source kind because their independence cannot be established from a label.
   const sourceKey = (r: any) => {
     const ref = String(r.source_ref || "").trim();
     try {
-      const host = new URL(ref).hostname.toLowerCase().replace(/^www\./, "");
-      return host || String(r.source_kind || "?");
-    } catch {
-      return ref || String(r.source_kind || "?");
-    }
+      const parsed = new URL(ref);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return parsed.hostname.toLowerCase().replace(/^www\./, "");
+      }
+    } catch {}
+    return String(r.source_kind || "unknown");
   };
   const sources = new Set(items.map(sourceKey));
   const contradicting = items.filter((r) => (r.contradicts?.length || 0) > 0).length;
