@@ -20,6 +20,12 @@ describe("Source Intelligence Router", () => {
     expect(plan.maxRequests).toBe(1);
   });
 
+  it("declines even a first search when the declared credit budget is below the minimum", () => {
+    const plan = planSourceRoute({ goal: "Research public information", budget: { maxRequests: 1, maxEstimatedCredits: 1 } });
+    expect(plan.primary).toBe("none");
+    expect(plan.limitations).toContain("credit_budget_below_minimum_search_cost");
+  });
+
   it("fails closed when budget is exhausted", () => {
     const plan = planSourceRoute({
       goal: "research market trends",
