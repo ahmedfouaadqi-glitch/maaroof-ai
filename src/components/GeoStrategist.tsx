@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 import { fromStrategist } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
@@ -20,18 +20,27 @@ const GOALS = [
   { id: "local", label: "auto.local_focus" },
 ];
 
-export function GeoStrategist() {
+export function GeoStrategist({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t } = useI18n();
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
-  const [brand, setBrand] = useState((auth?.profile as any)?.brand_name ?? "");
+  const [brand, setBrand] = useState(workspaceId ? "" : ((auth?.profile as any)?.brand_name ?? ""));
   const [keywords, setKeywords] = useState("");
   const [selected, setSelected] = useState<string[]>(["awareness"]);
   const [budget, setBudget] = useState("low");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<any>(null);
+  const requestSeq = useRef(0);
+  useEffect(() => {
+    requestSeq.current += 1;
+    setBrand(workspaceId ? "" : ((auth?.profile as any)?.brand_name ?? ""));
+    setKeywords("");
+    setRes(null);
+    setErr("");
+    setBusy(false);
+  }, [workspaceId]);
 
   function toggle(id: string) {
     setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
@@ -39,19 +48,24 @@ export function GeoStrategist() {
 
   async function run() {
     if (!brand.trim()) return;
+    const seq = ++requestSeq.current;
     setBusy(true); setErr(""); setRes(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const r = await apiFetch("/api/geo-strategist", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ brand, keywords, lang, goals: { types: selected, budget } }),
+        body: JSON.stringify({ brand, keywords, lang, workspace_id: workspaceId, goals: { types: selected, budget } }),
       });
       const j = await r.json();
+      if (seq !== requestSeq.current) return;
       if (!r.ok) throw new Error(j?.error || "failed");
       setRes(j);
-    } catch (e: any) { setErr(e?.message || "failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      if (seq === requestSeq.current) setErr(e?.message || "failed");
+    } finally {
+      if (seq === requestSeq.current) setBusy(false);
+    }
   }
 
   return (
@@ -85,6 +99,16 @@ export function GeoStrategist() {
       {res && (
         <div className="space-y-3 text-sm">
           {res.summary && <div className="rounded-xl border border-primary/30 bg-card/60 p-4">{res.summary}</div>}
+          {res.source_plan && (
+            <div className="rounded-lg border border-border bg-background/50 p-3 text-xs text-muted-foreground">
+              <div className="font-semibold text-foreground">{lang === "en" ? "Source coverage" : lang === "ku" ? "داپۆشینی سەرچاوە" : "تغطية المصادر"}</div>
+              <div className="mt-1">
+                {lang === "en" ? "Public sources" : lang === "ku" ? "سەرچاوە گشتییەکان" : "المصادر العامة"}: {res.source_plan.sample_size ?? res.sources?.length ?? 0} ·
+                {lang === "en" ? "estimated credits" : lang === "ku" ? "خاڵی خەمڵێنراو" : "الرصيد التقديري"}: {res.source_plan.estimated_credits ?? "—"}
+              </div>
+              {res.source_plan.limitations?.[0] && <p className="mt-1 leading-5">{res.source_plan.limitations[0]}</p>}
+            </div>
+          )}
           {res.priority_keywords?.length > 0 && <div><b>{t("auto.priority_keywords")}</b> {res.priority_keywords.join("، ")}</div>}
           {res.content_types?.length > 0 && (
             <div><b>{t("auto.content_types")}</b><ul className="mt-1 list-inside list-disc">{res.content_types.map((c: any, i: number) => <li key={i}>{c.type} — <span className="text-muted-foreground">{c.reason}</span></li>)}</ul></div>
