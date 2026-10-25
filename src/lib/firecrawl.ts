@@ -7,19 +7,21 @@ import { createHash } from "node:crypto";
 const BASE = "https://api.firecrawl.dev/v2";
 import {
   FETCH_TIMEOUT_MS, scrapeOrder, searchOrder, hasUsableScrapeEvidence,
-  PublicReadFailure, classifyUnusableScrape, preferredReadFailure, isInstagramUrl,
+  PublicReadFailure, classifyUnusableScrape, preferredReadFailure, isInstagramUrl, parseRetryAfterMs,
 } from "./fetch-order";
 
 export class FirecrawlError extends Error {
   status: number;
   operation: "search" | "scrape" | "map" | "crawl";
   body: string;
-  constructor(operation: "search" | "scrape" | "map" | "crawl", status: number, body: string) {
+  retryAfterMs?: number;
+  constructor(operation: "search" | "scrape" | "map" | "crawl", status: number, body: string, retryAfterMs?: number) {
     super(`Automated content retrieval failed (HTTP ${status}).`);
     this.name = "ContentReadError";
     this.status = status;
     this.operation = operation;
     this.body = body;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -216,7 +218,7 @@ async function fcScrapeRaw(url: string, opts: { deep?: boolean; screenshot?: boo
   const latency = Date.now() - t0;
   if (!res.ok) {
     await logUsage({ ...ctx, op: "scrape", units: 0, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
-    throw new FirecrawlError("scrape", res.status, await res.text().catch(() => ""));
+    throw new FirecrawlError("scrape", res.status, await res.text().catch(() => ""), parseRetryAfterMs(res.headers.get("retry-after")));
   }
   const json = await res.json();
   await writeCache("scrape", hash, json);
@@ -243,7 +245,12 @@ function normalizedScrapeFailure(error: unknown, source: string, url: string): P
   }
   // An HTTP status on a provider-side error describes the reading route, not the target website.
   if (e?.operation && typeof e?.status === "number") {
-    return new PublicReadFailure(e.status === 429 ? "reader_rate_limited" : "source_unavailable", "reader", e.status);
+    return new PublicReadFailure(
+      e.status === 429 ? "reader_rate_limited" : "source_unavailable",
+      "reader",
+      e.status,
+      typeof e.retryAfterMs === "number" ? e.retryAfterMs : undefined,
+    );
   }
   if (/timeout|timed out|aborterror|aborted/.test(message)) {
     return new PublicReadFailure("timeout", source === "direct_http" ? "target" : "reader");
@@ -262,14 +269,21 @@ function normalizedScrapeFailure(error: unknown, source: string, url: string): P
 }
 
 async function directHttp(url: string) {
-  const u = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  const u = /^https?:\/\//i.test(url) ? url : \`https://\${url}\`;
+  // Reuse successful direct reads so the same public URL is not fetched repeatedly during quota incidents.
+  const cacheKey = hashKey("direct_http_scrape", { url: u });
+  const policy = await getPolicy();
+  const cached = await readCache("direct_http_scrape", cacheKey, policy.cache_ttl_hours);
+  if (cached && hasUsableScrapeEvidence(cached)) return cached;
+
   const r = await fetch(u, { headers: { "User-Agent": "MaaroofBot/1.0" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  const retryAfterMs = parseRetryAfterMs(r.headers.get("retry-after"));
   if (!r.ok) {
-    if (isInstagramUrl(u) && r.status === 429) throw new PublicReadFailure("instagram_rate_limited", "target", r.status);
-    if (isInstagramUrl(u) && [401, 403].includes(r.status)) throw new PublicReadFailure("instagram_automated_access_denied", "target", r.status);
-    if (r.status === 429) throw new PublicReadFailure("target_rate_limited", "target", r.status);
-    if ([401, 403].includes(r.status)) throw new PublicReadFailure("target_access_restricted", "target", r.status);
-    throw new PublicReadFailure("source_unavailable", "target", r.status);
+    if (isInstagramUrl(u) && r.status === 429) throw new PublicReadFailure("instagram_rate_limited", "target", r.status, retryAfterMs);
+    if (isInstagramUrl(u) && [401, 403].includes(r.status)) throw new PublicReadFailure("instagram_automated_access_denied", "target", r.status, retryAfterMs);
+    if (r.status === 429) throw new PublicReadFailure("target_rate_limited", "target", r.status, retryAfterMs);
+    if ([401, 403].includes(r.status)) throw new PublicReadFailure("target_access_restricted", "target", r.status, retryAfterMs);
+    throw new PublicReadFailure("source_unavailable", "target", r.status, retryAfterMs);
   }
   const html = await r.text();
   const tags = html.match(/<meta\b[^>]*>/gi) || [];
@@ -295,7 +309,12 @@ async function directHttp(url: string) {
     .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   if (body.length < 40 && !(title.length >= 3 && description.length >= 20)) throw new Error("direct_empty");
   const markdown = body.length >= 40 ? body : [title, description].filter(Boolean).join("\n\n");
-  return { success: true, data: { markdown, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
+  const result = { success: true, data: { markdown, html, metadata: { title, description, sourceURL: u, statusCode: r.status } } };
+  if (!hasUsableScrapeEvidence(result)) {
+    throw new PublicReadFailure(classifyUnusableScrape(result, u), "target", r.status, retryAfterMs);
+  }
+  await writeCache("direct_http_scrape", cacheKey, result);
+  return result;
 }
 
 /** Scrape with fallback chain (see fetch-order.ts). Result carries `fetch_source`. */
