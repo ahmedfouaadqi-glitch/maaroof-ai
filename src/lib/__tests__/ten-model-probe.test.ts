@@ -73,7 +73,7 @@ describe("cards show what really happened", () => {
   });
   it("evidence timeline carries real links", () => {
     expect(linksOf(ev[1].data.output)).toEqual([{ url: "https://a.com", title: "A" }]);
-    const t = stageTimeline(ev as any, "evidence", "ar");
+    const t = stageTimeline(ev as any, "council", "ar");
     expect(t.some((x) => x.links.length === 1)).toBe(true);
   });
 });
