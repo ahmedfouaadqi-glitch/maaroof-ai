@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { auditTargets, isDeepAuditRequired, axisWeights, axisPriority, weightedScore, workspaceAuditLinks } from "../deep-audit";
+import { auditTargets, isDeepAuditRequired, axisWeights, axisPriority, weightedScore, workspaceAuditLinks, MAX_AUDIT_TARGETS } from "../deep-audit";
 
 describe("deep audit rules", () => {
   it("account with links requires a deep audit", () => {
@@ -79,3 +79,38 @@ describe("workspace account audit isolation", () => {
     expect(workspaceAuditLinks({ id: "client-empty", brand_url: null, entity_truth_card: {} })).toEqual([]);
   });
 });
+
+describe("multi-source audit routing", () => {
+  it("normalizes and deduplicates URLs before enforcing the target cap", () => {
+    expect(auditTargets(["maaroofai.com", "https://www.maaroofai.com/#top"])).toHaveLength(1);
+    expect(auditTargets(Array.from({ length: MAX_AUDIT_TARGETS + 5 }, (_, i) => `https://brand-${i}.example/about`))).toHaveLength(MAX_AUDIT_TARGETS);
+  });
+
+  it("routes social profiles to relevant discovery axes, not technical SEO axes", () => {
+    const instagram = auditTargets(["https://instagram.com/example"])[0];
+    expect(instagram.kind).toBe("social");
+    expect(instagram.axes).toEqual(["geo", "gseo", "sge"]);
+    expect(instagram.axes).not.toContain("seo");
+  });
+
+  it("routes local directories and app listings according to their source type", () => {
+    const maps = auditTargets(["https://google.com/maps/place/example"])[0];
+    const app = auditTargets(["https://play.google.com/store/apps/details?id=com.example"])[0];
+    expect(maps.kind).toBe("directory");
+    expect(maps.axes).toEqual(["geo", "gseo", "aeo"]);
+    expect(app.kind).toBe("app_store");
+    expect(app.axes).toEqual(["seo", "aeo", "geo", "gseo"]);
+  });
+
+  it("extracts more than fifteen distinct links from the selected workspace", () => {
+    const links = Array.from({ length: 25 }, (_, i) => ({ url: `https://source-${i}.example/profile` }));
+    expect(workspaceAuditLinks({ id: "client-many", entity_truth_card: { links } })).toHaveLength(25);
+  });
+
+  it("never returns more than the supported audit target count", () => {
+    const links = Array.from({ length: 80 }, (_, i) => `https://brand-${i}.example/`);
+    expect(workspaceAuditLinks({ entity_truth_card: { links } })).toHaveLength(MAX_AUDIT_TARGETS);
+    expect(auditTargets(links)).toHaveLength(MAX_AUDIT_TARGETS);
+  });
+});
+
