@@ -285,6 +285,24 @@ export const Route = createFileRoute("/api/compare")({
             const settled = await Promise.allSettled(queries.map((query) => boundedSearch(query)));
             liveSearchFailures.push(...settled.filter((item) => item.status === "rejected").map((item) => (item as PromiseRejectedResult).reason));
             sources = settled.flatMap((item) => item.status === "fulfilled" ? item.value : []).slice(0, 80);
+            const liveSearchError = liveSearchErrorFrom(liveSearchFailures);
+            if (sources.length === 0) {
+              try {
+                await admin.rpc("charge_tokens", {
+                  _user_id: userId, _tool_key: "compare", _tokens: -Number(_chg.tokens || 0), _usd: 0,
+                  _run_id: _runId, _meta: { refund: true, endpoint: "/api/compare", reason: "no_public_sources" },
+                } as any);
+              } catch {}
+              return Response.json({
+                error: liveSearchError?.error || (sourceBudget.limited ? "source_budget_unavailable" : "live_search_unavailable"),
+                charged: false,
+                source_plan: {
+                  request_count: sourceBudget.requestsUsed,
+                  estimated_credits: sourceBudget.estimatedCredits,
+                  budget_limited: sourceBudget.limited,
+                },
+              }, { status: liveSearchError?.status || 503 });
+            }
             // Per-platform evidence counts (real, varying per brand)
             for (const n of allBrands) {
               const ev: Record<string, number> = {};
