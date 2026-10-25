@@ -165,6 +165,51 @@ export function decideSpecializedRunReplay(existing: {
   return { action: "block", reason: "request_already_processed", status: String(existing.status || "unknown") };
 }
 
+export type AlexandriaResponseNormalization = {
+  data: any;
+  creditsCost: number | null;
+  errorCode: string | null;
+};
+
+/** Normalize the v2 /scrape response, where the selected capability is nested under data.alexandria. */
+export function normalizeAlexandriaExecutionResponse(
+  body: any,
+  provider: string,
+  capability: string,
+): AlexandriaResponseNormalization {
+  if (!body || typeof body !== "object") return { data: null, creditsCost: null, errorCode: "specialized_source_invalid_response" };
+  const envelope = body.data ?? body;
+  const calls: any[] = Array.isArray(envelope?.alexandria)
+    ? envelope.alexandria
+    : Array.isArray(body?.alexandria) ? body.alexandria : [];
+  let selected: any = null;
+  if (calls.length) {
+    selected = calls.find((item) =>
+      String(item?.provider || "").toLowerCase() === provider.toLowerCase() &&
+      String(item?.capability || "").toLowerCase() === capability.toLowerCase()
+    ) || (calls.length === 1 ? calls[0] : null);
+    if (!selected) return { data: null, creditsCost: null, errorCode: "specialized_source_response_mismatch" };
+    if (selected.error || selected.success === false) {
+      const rawCode = String(selected.error?.code || selected.code || "specialized_source_unavailable").toLowerCase();
+      const code = rawCode.includes("term") ? "specialized_source_terms_not_accepted"
+        : rawCode.includes("rate") || rawCode.includes("429") ? "specialized_source_rate_limited"
+        : rawCode.includes("access") || rawCode.includes("403") ? "specialized_source_access_required"
+        : rawCode.includes("cost") || rawCode.includes("budget") ? "provider_cost_exceeded_declared_cap"
+        : "specialized_source_unavailable";
+      return { data: null, creditsCost: null, errorCode: code };
+    }
+  }
+  const result = selected?.data ?? selected?.records ?? (calls.length ? selected : envelope);
+  const rawCost = selected?.creditsCost ?? selected?.credits_cost ?? selected?.costCredits ??
+    envelope?.creditsCost ?? envelope?.credits_cost ?? body?.creditsCost ?? body?.credits_cost;
+  const cost = rawCost == null ? null : Number(rawCost);
+  return {
+    data: result,
+    creditsCost: cost != null && Number.isFinite(cost) && cost >= 0 ? cost : null,
+    errorCode: null,
+  };
+}
+
 export type AlexandriaOptionValidation = { valid: boolean; errors: string[] };
 
 /** Strict, bounded validation against the discovered tool's JSON Schema contract. Unknown contracts fail closed. */
@@ -257,9 +302,9 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
     headers: {
       "Content-Type": "application/json",
       Authorization: "Bearer " + apiKey(),
-      "x-request-id": input.requestId,
     },
     body: JSON.stringify({
+      requestId: input.requestId,
       alexandria: {
         provider: input.provider,
         capability: input.capability,
@@ -269,13 +314,17 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
   });
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.success === false) {
-    const code = String(body?.code || (response.status === 403 ? "specialized_source_access_required" : response.status === 429 ? "specialized_source_rate_limited" : "specialized_source_unavailable"));
-    // Terms are a human action, never auto-accepted or retried with a new request id.
-    throw new SpecializedSourceGateError(code.slice(0, 120));
+    const rawCode = String(body?.code || (response.status === 403 ? "specialized_source_access_required" : response.status === 429 ? "specialized_source_rate_limited" : "specialized_source_unavailable")).toLowerCase();
+    const code = rawCode.includes("term") ? "specialized_source_terms_not_accepted"
+      : rawCode.includes("rate") || response.status === 429 ? "specialized_source_rate_limited"
+      : rawCode.includes("access") || response.status === 403 ? "specialized_source_access_required"
+      : "specialized_source_unavailable";
+    throw new SpecializedSourceGateError(code);
   }
-  const data = body?.data || {};
-  const creditsCostRaw = data.creditsCost ?? body?.creditsCost;
-  const creditsCost = creditsCostRaw == null ? null : Number(creditsCostRaw);
+  const normalized = normalizeAlexandriaExecutionResponse(body, input.provider, input.capability);
+  if (normalized.errorCode) throw new SpecializedSourceGateError(normalized.errorCode);
+  const data = normalized.data;
+  const creditsCost = normalized.creditsCost;
   // The preflight quote gates execution. If the provider reports a higher final bill,
   // preserve that fact in the returned record rather than throwing away an already-billed result.
   const budgetOverrunDetected = creditsCost != null && Number.isFinite(creditsCost) && creditsCost > input.maxCredits;
@@ -287,13 +336,15 @@ export async function executeAlexandriaCapability(input: AlexandriaExecutionInpu
     locale: typeof input.options?.language === "string" ? input.options.language : null,
     realityKind: "observation",
     status: "success",
-    sampleSize: Array.isArray(data.records) ? data.records.length : null,
+    sampleSize: Array.isArray(data?.records) ? data.records.length
+      : Array.isArray(data?.results) ? data.results.length
+      : Array.isArray(data?.items) ? data.items.length : null,
     measurementUnit: "provider_result",
     limitation: creditsCost == null ? "actual_cost_not_returned" : budgetOverrunDetected ? "provider_reported_cost_exceeded_declared_cap" : null,
     sourceReliability: 60,
   });
   return {
-    result: body,
+    result: data,
     provenance,
     creditsCost: creditsCost != null && Number.isFinite(creditsCost) ? creditsCost : null,
     budgetOverrunDetected,
