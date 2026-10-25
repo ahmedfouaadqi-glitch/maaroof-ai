@@ -7,6 +7,34 @@ export const AXES: Axis[] = ["seo", "aeo", "geo", "sge", "gseo"];
 export type TargetKind = "official" | "social" | "page";
 export type AuditTarget = { url: string; kind: TargetKind; platform: string | null; axes: Axis[] };
 
+/** Extract URLs from one workspace's identity only; never borrow the owner's profile links. */
+export function workspaceAuditLinks(workspace: unknown): string[] {
+  if (!workspace || typeof workspace !== "object") return [];
+  const w = workspace as Record<string, any>;
+  const card = w.entity_truth_card && typeof w.entity_truth_card === "object" ? w.entity_truth_card as Record<string, any> : {};
+  const profile = w.profile && typeof w.profile === "object" ? w.profile as Record<string, any> : {};
+  const candidates: unknown[] = [
+    ...(Array.isArray(card.links) ? card.links : []),
+    ...(Array.isArray(card.social_links) ? card.social_links : []),
+    ...(Array.isArray(profile.entity_links) ? profile.entity_links : []),
+    ...(Array.isArray(profile.links) ? profile.links : []),
+    ...(Array.isArray(profile.social_links) ? profile.social_links : []),
+    card.website_url,
+    profile.website_url,
+    w.brand_url,
+  ];
+  const urls = candidates.map((item) => {
+    if (typeof item === "string") return item.trim();
+    if (item && typeof item === "object") {
+      const row = item as Record<string, unknown>;
+      const value = row.url ?? row.href ?? row.link;
+      return typeof value === "string" ? value.trim() : "";
+    }
+    return "";
+  }).filter(Boolean);
+  return [...new Set(urls)].slice(0, 15);
+}
+
 const SOCIAL: [RegExp, string][] = [
   [/linkedin\.com/i, "linkedin"], [/(^|\.)x\.com|twitter\.com/i, "x"], [/instagram\.com/i, "instagram"],
   [/facebook\.com|fb\.com/i, "facebook"], [/youtube\.com|youtu\.be/i, "youtube"], [/tiktok\.com/i, "tiktok"],

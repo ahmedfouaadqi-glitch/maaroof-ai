@@ -26,20 +26,29 @@ const STATUS: Record<string, { ar: string; en: string; ku: string; cls: string }
 
 export type PastJob = { id: string; goal: string; mode: string; status: string; error: string | null; created_at: string; updated_at?: string | null; workspace_id?: string | null; request_payload: any };
 
-export function HistoryPanel({ lang, onOpen, onContinue }: { lang: L; onOpen: (j: PastJob) => void; onContinue: (j: PastJob) => void }) {
+export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: L; workspaceId: string | null; onOpen: (j: PastJob) => void; onContinue: (j: PastJob) => void }) {
   const [jobs, setJobs] = useState<PastJob[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   useEffect(() => {
+    let active = true;
+    setJobs(null);
+    setLoadError(false);
     (async () => {
       const t = await token();
-      const r = await fetch("/api/maaroof-jobs?all_workspaces=1", { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+      const query = new URLSearchParams({ workspace_id: workspaceId ?? "" });
+      const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
       const b = r.ok ? await r.json() : { jobs: [] };
+      if (!active) return;
+      setLoadError(!r.ok || b?.degraded === true);
       setJobs(Array.isArray(b.jobs) ? b.jobs : []);
-    })().catch(() => setJobs([]));
-  }, []);
+    })().catch(() => { if (active) { setJobs([]); setLoadError(true); } });
+    return () => { active = false; };
+  }, [workspaceId]);
 
   const buildExport = (j: PastJob) => async () => {
     const t = await token();
-    const r = await fetch("/api/maaroof-jobs?id=" + encodeURIComponent(j.id) + "&after=0&all_workspaces=1", { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+    const query = new URLSearchParams({ id: j.id, after: "0", workspace_id: workspaceId ?? "" });
+    const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
     const b = r.ok ? await r.json() : { events: [] };
     const evs: any[] = b.events || [];
     const fin = [...evs].reverse().find((e) => e.event_type === "final");
@@ -58,7 +67,7 @@ export function HistoryPanel({ lang, onOpen, onContinue }: { lang: L; onOpen: (j
   return (
     <section className={card}>
       <h2 className="mb-4 flex items-center gap-2 font-semibold"><History className="size-5 text-primary" />{tr(lang, "المهام السابقة", "Previous tasks", "ئەرکە پێشووەکان")}</h2>
-      {jobs === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : jobs.length === 0 ? (
+      {loadError ? <p role="alert" className="text-sm text-destructive">{tr(lang, "تعذر تحميل المهام ضمن نطاق مساحة العمل الحالية. تحقق من قاعدة البيانات ثم أعد المحاولة.", "Could not load tasks for the current workspace. Check the database migration and retry.", "نەتوانرا ئەرکەکانی شوێنی کاری ئێستا بخوێندرێنەوە.")}</p> : jobs === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : jobs.length === 0 ? (
         <p className="text-sm text-muted-foreground">{tr(lang, "لا توجد مهام سابقة بعد.", "No previous tasks yet.", "هێشتا هیچ ئەرکێک نییە.")}</p>
       ) : (
         <ul className="space-y-3">

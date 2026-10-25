@@ -6,9 +6,9 @@ export function isTerminalJobStatus(s: string): boolean {
   return (JOB_TERMINAL as readonly string[]).includes(s);
 }
 
-/** True when a scoped read failed and retrying with user_id is appropriate. */
-export function shouldFallbackFromWorkspaceScope(error: unknown): boolean {
-  return error !== null && error !== undefined;
+/** Never widen a workspace-scoped read to owner-wide data after a query error. */
+export function shouldFallbackFromWorkspaceScope(_error: unknown): boolean {
+  return false;
 }
 
 /** Detect a missing workspace_id schema column without masking unrelated insert failures. */

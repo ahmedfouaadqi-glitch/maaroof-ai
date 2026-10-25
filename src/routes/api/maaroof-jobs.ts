@@ -1,7 +1,7 @@
 // Workspace background jobs: GET list / events, POST cancel. Owner-only.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { isMissingWorkspaceIdColumn, isStaleJob, isTerminalJobStatus, parseAfter, shouldFallbackFromWorkspaceScope } from "@/lib/maaroof/jobs";
+import { isMissingWorkspaceIdColumn, isStaleJob, isTerminalJobStatus, parseAfter } from "@/lib/maaroof/jobs";
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";
@@ -35,40 +35,31 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           let q = db.from("maaroof_jobs").select(columns).eq("user_id", a.userId);
           if (!allWorkspaces) q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
           let { data: jobs, error: scopedError } = await q.order("created_at", { ascending: false }).limit(1000);
-          let scopeFallback = false;
-          if (scopedError && isMissingWorkspaceIdColumn(scopedError)) {
-            // Legacy production databases may not yet have workspace_id. Preserve task history
-            // by querying this user's rows without selecting/filtering the absent column.
-            console.warn("[maaroof-jobs] workspace_id is absent; using legacy owner-wide history", scopedError.message);
-            const fallback = await db.from("maaroof_jobs").select(legacyColumns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
-            if (fallback.error) {
-              console.error("[maaroof-jobs] legacy owner-wide list failed", fallback.error.message);
-              return Response.json({ jobs: [], degraded: true, error: "jobs_unavailable" }, { status: 503 });
+          if (scopedError) {
+            // Never widen a workspace-scoped request to every workspace after a schema/query error.
+            if (allWorkspaces && isMissingWorkspaceIdColumn(scopedError)) {
+              const fallback = await db.from("maaroof_jobs").select(legacyColumns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
+              if (fallback.error) {
+                console.error("[maaroof-jobs] legacy owner-wide list failed", fallback.error.message);
+                return Response.json({ jobs: [], degraded: true, error: "jobs_unavailable" }, { status: 503 });
+              }
+              return Response.json({ jobs: fallback.data || [], scope_fallback: true, workspace_scope_unavailable: true });
             }
-            return Response.json({ jobs: fallback.data || [], scope_fallback: true, workspace_scope_unavailable: true });
+            const code = isMissingWorkspaceIdColumn(scopedError) ? "workspace_scope_unavailable" : "jobs_unavailable";
+            console.error("[maaroof-jobs] scoped list failed without widening scope", scopedError.message);
+            return Response.json({ jobs: [], degraded: true, error: code }, { status: 503 });
           }
-          if (shouldFallbackFromWorkspaceScope(scopedError)) {
-            console.warn("[maaroof-jobs] scoped list failed; retrying owner-wide", scopedError.message);
-            const fallback = await db.from("maaroof_jobs").select(columns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
-            jobs = fallback.data;
-            scopeFallback = true;
-            if (fallback.error) {
-              console.error("[maaroof-jobs] owner-wide list failed", fallback.error.message);
-              return Response.json({ jobs: [], degraded: true, error: "jobs_unavailable" }, { status: 503 });
-            }
-          }
-          return Response.json({ jobs: jobs || [], scope_fallback: scopeFallback });
+          return Response.json({ jobs: jobs || [], scope_fallback: false });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
         const hasWorkspaceScope = url.searchParams.has("workspace_id") && !allWorkspaces;
         let jobQuery = db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId);
         if (hasWorkspaceScope) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
         let { data: job, error: jobLookupError } = await jobQuery.maybeSingle();
-        if (jobLookupError && hasWorkspaceScope && shouldFallbackFromWorkspaceScope(jobLookupError)) {
-          console.warn("[maaroof-jobs] scoped lookup failed; retrying by user_id", jobLookupError.message);
-          const fallback = await db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId).maybeSingle();
-          job = fallback.data;
-          jobLookupError = fallback.error;
+        if (jobLookupError && hasWorkspaceScope) {
+          const code = isMissingWorkspaceIdColumn(jobLookupError) ? "workspace_scope_unavailable" : "job_lookup_failed";
+          console.error("[maaroof-jobs] scoped lookup failed without widening scope", jobLookupError.message);
+          return Response.json({ error: code }, { status: 503 });
         }
         if (jobLookupError) {
           console.error("[maaroof-jobs] job lookup failed", jobLookupError.message);
@@ -118,7 +109,18 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const id = String(body?.job_id || "");
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
         const db = a.admin as any;
-        const { data: job } = await db.from("maaroof_jobs").select("id, status").eq("id", id).eq("user_id", a.userId).maybeSingle();
+        const hasWorkspaceScope = Object.prototype.hasOwnProperty.call(body || {}, "workspace_id");
+        const rawWorkspaceId = typeof body?.workspace_id === "string" ? body.workspace_id.trim() : "";
+        const workspaceId = rawWorkspaceId || null;
+        if (workspaceId && !/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
+        if (workspaceId) {
+          const { data: owned } = await db.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", a.userId).maybeSingle();
+          if (!owned) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+        }
+        let jobQuery = db.from("maaroof_jobs").select("id, status").eq("id", id).eq("user_id", a.userId);
+        if (hasWorkspaceScope) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
+        const { data: job, error: jobError } = await jobQuery.maybeSingle();
+        if (jobError) return Response.json({ error: hasWorkspaceScope ? (isMissingWorkspaceIdColumn(jobError) ? "workspace_scope_unavailable" : "job_lookup_failed") : "job_lookup_failed" }, { status: 503 });
         if (!job) return Response.json({ error: "not_found" }, { status: 404 });
         if (!isTerminalJobStatus(job.status)) {
           const now = new Date().toISOString();
