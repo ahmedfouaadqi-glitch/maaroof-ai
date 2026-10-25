@@ -154,21 +154,34 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, Math.ro
 /** A successful route is not a measurement unless the result explicitly says it is. */
 export function isMeasuredToolResult(output: any): boolean {
   if (!output || typeof output !== "object") return false;
-  return output.reality_kind === "measurement" ||
-    output.measurement_kind === "direct_measurement" ||
-    output.measurement?.kind === "measurement" ||
-    output.measurement?.status === "measured" ||
-    output.measurement?.reality_kind === "measurement";
+  const candidates = [
+    output,
+    output.probe,
+    output.result,
+    output.result?.probe,
+    output.probe?.measurement,
+    output.result?.measurement,
+    output.result?.methodology,
+  ].filter((v) => v && typeof v === "object");
+  return candidates.some((v: any) =>
+    v.reality_kind === "measurement" ||
+    v.measurement_kind === "direct_measurement" ||
+    v.measurement?.kind === "measurement" ||
+    v.measurement?.status === "measured" ||
+    v.measurement?.reality_kind === "measurement"
+  );
 }
 
 /** Only count source-backed outputs as external evidence; a successful AI answer alone is not a source. */
 export function hasExternalEvidence(output: any): boolean {
   if (!output || typeof output !== "object") return false;
-  const candidates = [
-    output.sources, output.evidence, output.source_results, output.search_results,
-    output.results, output.references, output.citations,
-  ];
-  return candidates.some((value) => Array.isArray(value) && value.some((item) => {
+  const roots = [output, output.probe, output.result, output.result?.probe]
+    .filter((v) => v && typeof v === "object");
+  const collections = roots.flatMap((root: any) => [
+    root.sources, root.evidence, root.source_results, root.search_results,
+    root.results, root.references, root.citations,
+  ]);
+  return collections.some((value) => Array.isArray(value) && value.some((item) => {
     if (typeof item === "string") return /^https?:\/\//i.test(item);
     if (!item || typeof item !== "object") return false;
     const url = String(item.url || item.source_ref || item.sourceRef || item.href || "");
