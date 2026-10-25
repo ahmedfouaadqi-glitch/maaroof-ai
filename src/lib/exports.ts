@@ -795,6 +795,31 @@ export async function exportToWord(payload: ExportPayload) {
   if (payload.subtitle) content.push(paragraph(payload.subtitle, { size: 22, color: "475569" }));
   content.push(paragraph(`${UI[lang].generated}: ${new Date().toLocaleString()}`, { size: 18, color: "64748B" }));
   if (identityLine(payload, lang)) content.push(paragraph(identityLine(payload, lang), { size: 18, color: "64748B" }));
+  const summary = buildExportExecutiveSummary(payload);
+  if (payload.sections.length) {
+    content.push(paragraph(summary.heading, { heading: HeadingLevel.HEADING_2, bold: true, size: 28, color: "4338CA" }));
+    const summaryHeader = lang === "en" ? ["Indicator", "Value"] : lang === "ku" ? ["پێوەر", "بەها"] : ["المؤشر", "القيمة"];
+    content.push(makeTable(summaryHeader, summary.metrics.map((metric) => [metric.label, metric.value])));
+    if (summary.measuredItems.length) {
+      content.push(paragraph(summary.measuredHeading, { bold: true, size: 22, color: "0F2454" }));
+      content.push(makeTable(
+        [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel],
+        summary.measuredItems.map((item) => [item.section, item.title, item.score, item.status]),
+      ));
+      if (summary.omittedMeasuredCount) content.push(paragraph(
+        summary.omittedMeasuredCount + (lang === "en" ? " more scored indicators are listed in the detailed sections." : lang === "ku" ? " پێوەری نمرەدار لە بەشە وردەکارییەکاندا هەن." : " مؤشرات إضافية بدرجات رقمية موجودة في الأقسام التفصيلية."),
+        { size: 18, color: "64748B" },
+      ));
+    }
+    if (summary.unmeasuredItems.length) {
+      content.push(paragraph(summary.unmeasuredHeading, { bold: true, size: 22, color: "0F2454" }));
+      content.push(makeTable(
+        [summary.sectionLabel, summary.itemLabel, summary.statusLabel],
+        summary.unmeasuredItems.map((item) => [item.section, item.title, item.status]),
+      ));
+    }
+    content.push(paragraph(summary.note, { size: 18, color: "64748B" }));
+  }
   payload.sections.forEach((section) => {
     content.push(paragraph(section.heading, { heading: HeadingLevel.HEADING_2, bold: true, size: 27, color: "4338CA" }));
     if (section.kind === "text" && section.text) section.text.split("\n").forEach((line) => content.push(paragraph(line)));
