@@ -194,12 +194,36 @@ async function fcSearchRaw(query: string, opts: { limit?: number; lang?: string;
   }
   const json = await res.json();
   await writeCache("search", hash, json);
-  // Search uses 2 credits per 10 results; requesting page bodies adds one scrape credit per result.
-  const billableUnits = 2 * Math.ceil(limit / 10) + (payload.scrapeOptions ? limit : 0);
+  const resultArrays = (() => {
+    const data: any = (json as any)?.data ?? json;
+    const arrays = [data?.web, data?.news, data?.images, (json as any)?.web, (json as any)?.news, (json as any)?.images]
+      .filter(Array.isArray) as any[][];
+    if (Array.isArray(data)) arrays.push(data);
+    if (arrays.length) {
+      const seen = new Set<string>();
+      return arrays.flat().filter((item: any) => {
+        const key = String(item?.url || item?.id || JSON.stringify(item));
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).length;
+    }
+    return Array.isArray((json as any)?.results) ? (json as any).results.length : 0;
+  })();
+  const sourceTypes = requestedSources || ["web"];
+  const { estimateSearchCredits } = await import("./maaroof/source-intelligence");
+  const estimate = estimateSearchCredits({
+    resultCount: resultArrays,
+    sources: sourceTypes,
+    includePageContent: !!payload.scrapeOptions && !(sourceTypes.length === 1 && sourceTypes[0] === "alexandria"),
+  });
+  const billableUnits = estimate.estimatedCredits;
   await logUsage({ ...ctx, op: "search", units: billableUnits, queryHash: hash, cacheHit: false, latencyMs: latency, status: res.status });
   try {
-    const { logFirecrawlSpend } = await import("./spend.server");
-    await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units: billableUnits, latencyMs: latency, endpoint: "fc.search" });
+    if (billableUnits > 0) {
+      const { logFirecrawlSpend } = await import("./spend.server");
+      await logFirecrawlSpend({ userId: ctx.userId || null, toolKey: ctx.toolKey || null, units: billableUnits, latencyMs: latency, endpoint: "fc.search" });
+    }
   } catch {}
   return json;
 }
