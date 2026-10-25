@@ -52,7 +52,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
       ku: "دەپێۊین ماڵپەڕەکەت چەند بۆ ئامێر خوێندنەوە ئامادەیە.",
     },
     tools: ["analyze", "brand_authority"],
-    keywords: ["هوية", "الهوية", "بيانات", "سكيمة", "المخطط", "تحليل", "جاهزية", "الموقع", "ناسنامە", "شیکار", "entity", "schema", "audit", "site", "website"],
+    keywords: ["هوية", "الهوية", "بيانات", "سكيمة", "المخطط", "تحليل", "جاهزية", "الموقع", "ناسنامە", "شیکار", "entity", "schema", "audit", "site", "website", "seo", "سيو", "تحسين محركات البحث"],
   },
   {
     key: "growth_roadmap",
@@ -84,7 +84,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     label: { ar: "استخبارات السوق والمنصات", en: "Market & Social Intelligence", ku: "زانیاری بازاڕ و تۆڕەکان" },
     description: { ar: "نبحث في السوق ونحلل حضورك على منصات التواصل.", en: "We research the market and analyse your social presence.", ku: "بازاڕ لێکۆڵینەوە دەکەین و تۆڕە کۆمەڵایەتییەکانت شیدەکەینەوە." },
     tools: ["research", "social_analysis"],
-    keywords: ["بحث", "سوق", "تواصل", "سوشيال", "انستغرام", "لێکۆڵینەوە", "research", "social", "instagram", "market research"],
+    keywords: ["بحث", "سوق", "تواصل", "سوشيال", "انستغرام", "انستا", "التواصل الاجتماعي", "لێکۆڵینەوە", "research", "social", "social media", "instagram", "market research"],
   },
   {
     key: "applied_ranking",
