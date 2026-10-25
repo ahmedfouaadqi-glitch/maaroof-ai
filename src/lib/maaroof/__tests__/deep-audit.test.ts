@@ -122,8 +122,12 @@ describe("metadata-only social profile measurement", () => {
       title: "Mengotti Couture (@mengotti.couture) · Instagram photos and videos",
       description: "See Instagram photos and videos from Mengotti Couture (@mengotti.couture). Official fashion profile and latest public posts.",
     }, "Mengotti Couture");
-    expect(findings.find((f) => f.axis === "geo")?.score).not.toBeNull();
-    expect(findings.find((f) => f.axis === "gseo")?.score).not.toBeNull();
+    const geo = findings.find((f) => f.axis === "geo")?.score;
+    const gseo = findings.find((f) => f.axis === "gseo")?.score;
+    expect(geo).not.toBeNull();
+    expect(gseo).not.toBeNull();
+    expect(geo).toBeLessThanOrEqual(60);
+    expect(gseo).toBeLessThanOrEqual(60);
     expect(findings.find((f) => f.axis === "sge")?.score).toBeNull();
     expect(findings.find((f) => f.axis === "sge")?.reason).toBe("insufficient_content_for_axis");
   });
