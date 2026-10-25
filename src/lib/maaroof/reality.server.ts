@@ -116,7 +116,7 @@ export type EvidenceItem = {
 
 export type RealitySignals = {
   /** Tool executions already performed by the run. */
-  toolResults: Array<{ tool: string; ok: boolean }>;
+  toolResults: Array<{ tool: string; ok: boolean; measured?: boolean }>;
   memoriesRecalled: number;
   knowledgeNodes: number;
   councilOpinions: number;
@@ -151,15 +151,55 @@ export type RealityAssessment = {
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, Math.round(n)));
 
+/** A successful route is not a measurement unless the result explicitly says it is. */
+export function isMeasuredToolResult(output: any): boolean {
+  if (!output || typeof output !== "object") return false;
+  const candidates = [
+    output,
+    output.probe,
+    output.result,
+    output.result?.probe,
+    output.probe?.measurement,
+    output.result?.measurement,
+    output.result?.methodology,
+  ].filter((v) => v && typeof v === "object");
+  return candidates.some((v: any) =>
+    v.reality_kind === "measurement" ||
+    v.measurement_kind === "direct_measurement" ||
+    v.measurement?.kind === "measurement" ||
+    v.measurement?.status === "measured" ||
+    v.measurement?.reality_kind === "measurement"
+  );
+}
+
+/** Only count source-backed outputs as external evidence; a successful AI answer alone is not a source. */
+export function hasExternalEvidence(output: any): boolean {
+  if (!output || typeof output !== "object") return false;
+  const roots = [output, output.probe, output.result, output.result?.probe]
+    .filter((v) => v && typeof v === "object");
+  const collections = roots.flatMap((root: any) => [
+    root.sources, root.evidence, root.source_results, root.search_results,
+    root.results, root.references, root.citations,
+  ]);
+  return collections.some((value) => Array.isArray(value) && value.some((item) => {
+    if (typeof item === "string") return /^https?:\/\//i.test(item);
+    if (!item || typeof item !== "object") return false;
+    const url = String(item.url || item.source_ref || item.sourceRef || item.href || "");
+    return /^https?:\/\//i.test(url);
+  }));
+}
+
 /** Evidence strength from the artefacts the run actually produced. */
 export function evidenceScore(s: RealitySignals): number {
-  const ok = s.toolResults.filter((r) => r.ok).length;
+  const measured = s.toolResults.filter((r) => r.ok && r.measured).length;
+  const observed = s.toolResults.filter((r) => r.ok && !r.measured).length;
   return clamp(
-    ok * 18 +
-      Math.min(s.knowledgeNodes, 6) * 6 +
-      Math.min(s.memoriesRecalled, 6) * 4 +
+    measured * 20 +
+      observed * 5 +
+      Math.min(s.knowledgeNodes, 6) * 4 +
+      Math.min(s.memoriesRecalled, 6) * 3 +
       Math.min(s.externalSources, 4) * 7 +
-      Math.min(s.historicalSamples, 5) * 3,
+      Math.min(s.historicalSamples, 5) * 2,
   );
 }
 
@@ -167,12 +207,15 @@ export function evidenceScore(s: RealitySignals): number {
 export function verificationScore(s: RealitySignals): number {
   const total = s.toolResults.length;
   const ok = s.toolResults.filter((r) => r.ok).length;
+  const measured = s.toolResults.filter((r) => r.ok && r.measured).length;
   const successRate = total ? (ok / total) * 100 : 0;
+  const measurementRate = total ? (measured / total) * 100 : 0;
   const compliance =
     s.complianceVerdict === "compliant" ? 100 : s.complianceVerdict === "warning" ? 60 : s.complianceVerdict ? 15 : 50;
   const council = s.councilAvgConfidence ?? 50;
   const trust = s.trustScore ?? 50;
-  return clamp(successRate * 0.35 + compliance * 0.2 + council * 0.2 + trust * 0.25);
+  // Successful execution, expert consensus and trust are not substitutes for measured outputs.
+  return clamp(measurementRate * 0.45 + successRate * 0.15 + compliance * 0.15 + council * 0.1 + trust * 0.15);
 }
 
 /**
@@ -183,13 +226,14 @@ export function classifyReality(s: RealitySignals): RealityAssessment {
   const ev = evidenceScore(s);
   const ver = verificationScore(s);
   const ok = s.toolResults.filter((r) => r.ok).length;
+  const measured = s.toolResults.filter((r) => r.ok && r.measured).length;
   const failed = s.toolResults.filter((r) => !r.ok);
   const executed = s.executionMode === "execution" && ok > 0;
-  const reproducible = ok >= 1 && failed.length === 0 && ev >= 40;
+  const reproducible = measured >= 1 && failed.length === 0 && ev >= 40;
 
   let state: RealityState;
-  if (executed && ev >= 60 && ver >= 70 && s.complianceVerdict !== "violation") state = "verified";
-  else if (executed && ev >= 40) state = "measured";
+  if (executed && measured > 0 && s.externalSources > 0 && ev >= 60 && ver >= 70 && s.complianceVerdict !== "violation") state = "verified";
+  else if (measured > 0 && ev >= 40) state = "measured";
   else if (ok > 0) state = "observed";
   else if (s.executionMode === "simulation") state = "simulation";
   else if (s.hasEnvision && s.executionMode === "recommendation") state = "predicted";
@@ -207,6 +251,7 @@ export function classifyReality(s: RealitySignals): RealityAssessment {
 
   const missing_evidence: string[] = [];
   if (ok === 0) missing_evidence.push("لا توجد نتيجة تنفيذ ناجحة تسند الاستنتاج.");
+  if (measured === 0) missing_evidence.push("لم تُرجع أي أداة نتيجة موسومة بقياس مباشر؛ نجاح التنفيذ وحده لا يثبت القياس.");
   if (s.knowledgeNodes === 0) missing_evidence.push("لم تُستخدم أي عقدة معرفية موثّقة.");
   if (s.externalSources === 0) missing_evidence.push("لا يوجد مصدر خارجي مستقل للتحقق.");
   if (s.memoriesRecalled === 0) missing_evidence.push("لا توجد سوابق تاريخية مقارنة.");
@@ -217,13 +262,15 @@ export function classifyReality(s: RealitySignals): RealityAssessment {
 
   const evidence: EvidenceItem[] = [
     ...s.toolResults.map<EvidenceItem>((r) => ({
-      source_kind: "tool_result",
+      source_kind: r.measured ? "measurement" : "tool_result",
       source_ref: r.tool,
-      claim: r.ok ? `نتيجة ناجحة من الأداة ${r.tool}` : `فشل من الأداة ${r.tool}`,
-      weight: r.ok ? 3 : 1,
+      claim: !r.ok ? `فشل من الأداة ${r.tool}` : r.measured
+        ? `نتيجة موسومة بقياس مباشر من الأداة ${r.tool}`
+        : `نجح تنفيذ الأداة ${r.tool}؛ لم يُثبت أن مخرجها قياس مباشر`,
+      weight: r.measured ? 3 : r.ok ? 1 : 0,
       success_count: r.ok ? 1 : 0,
-      reproducible: r.ok,
-      verified_by: "execution_engine",
+      reproducible: r.measured && r.ok,
+      verified_by: r.measured ? "measurement_contract" : "execution_engine",
       verified_at: r.ok ? new Date().toISOString() : null,
     })),
     ...(s.memoriesRecalled
