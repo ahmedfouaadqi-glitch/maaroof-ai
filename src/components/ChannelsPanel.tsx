@@ -388,7 +388,7 @@ export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: (
         provider={dialogProvider}
         onClose={() => setDialogProvider(null)}
         onSaved={async () => { setDialogProvider(null); await load(); onChanged?.(); }}
-        saveFn={saveManualFn}
+        saveFn={((args: any) => saveManualFn({ ...args, data: { ...args.data, workspaceId } } as any)) as any}
       />
     </div>
   );
