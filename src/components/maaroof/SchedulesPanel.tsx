@@ -55,13 +55,13 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
   const [approval, setApproval] = useState<Schedule["approval_mode"]>("per_run");
   const [maxRuns, setMaxRuns] = useState<number>(0);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { void refresh(); }, [workspaceId]);
   useEffect(() => { if (defaultPrompt && !prompt) setPrompt(defaultPrompt); }, [defaultPrompt]);
 
   async function refresh() {
     setLoading(true);
     try {
-      const res = await list();
+      const res = await list({ data: { workspace_id: workspaceId } } as any);
       setItems((res.items as Schedule[]) || []);
     } finally { setLoading(false); }
   }
@@ -97,7 +97,7 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
     await refresh();
   }
 
-  const filtered = workspaceId ? items.filter((s) => s.workspace_id === workspaceId || !s.workspace_id) : items;
+  const filtered = items;
 
   return (
     <div className="rounded-lg border bg-card p-3 space-y-2">
