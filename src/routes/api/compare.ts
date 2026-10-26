@@ -1,6 +1,7 @@
 import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { getUserContext, specialtyHint } from "@/lib/user-context.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { fcSearch, fcScrape, isFirecrawlError } from "@/lib/firecrawl";
@@ -88,10 +89,7 @@ export const Route = createFileRoute("/api/compare")({
           }
 
           const admin = createClient(SUPABASE_URL, SERVICE);
-          const auth = request.headers.get("authorization");
-          if (!auth?.startsWith("Bearer ")) return Response.json({ error: "auth_required" }, { status: 401 });
-          const { data: authData } = await admin.auth.getUser(auth.slice(7));
-          const userId = authData.user?.id;
+          const userId = await resolveAuthenticatedUserId(request, admin);
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
