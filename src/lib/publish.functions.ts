@@ -16,8 +16,10 @@ const ALLOWED_MODE = new Set(["manual", "auto"]);
 
 export const startTelegramLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => { const x = (d || {}) as { workspaceId?: string | null }; if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace"); return { workspaceId: x.workspaceId || null }; })
+  .handler(async ({ data, context }) => {
     const userId = context.userId;
+    if (data.workspaceId) { const { data: w } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle(); if (!w) throw new Error("workspace_not_found"); }
     const username = process.env.TELEGRAM_BOT_USERNAME;
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!username || !token) {
@@ -28,6 +30,7 @@ export const startTelegramLink = createServerFn({ method: "POST" })
     const { data: existing } = await supabaseAdmin
       .from("publish_channels").select("id, config, verified_at")
       .eq("user_id", userId).eq("kind", "telegram")
+      .eq("workspace_id", data.workspaceId)
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
 
     if (existing && !existing.verified_at) {
@@ -35,7 +38,7 @@ export const startTelegramLink = createServerFn({ method: "POST" })
       await supabaseAdmin.from("publish_channels").update({ config: cfg }).eq("id", existing.id);
     } else {
       await supabaseAdmin.from("publish_channels").insert({
-        user_id: userId, kind: "telegram", label: "Telegram", active: false,
+        user_id: userId, workspace_id: data.workspaceId, kind: "telegram", label: "Telegram", active: false,
         approval_mode: "manual",
         config: { link_token: linkToken },
       });
@@ -62,27 +65,29 @@ export const enableLinkedIn = createServerFn({ method: "POST" })
 export const disconnectChannel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { id?: string };
+    const x = (d || {}) as { id?: string; workspaceId?: string | null };
     if (!x.id) throw new Error("id_required");
-    return { id: x.id };
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { id: x.id, workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     await supabaseAdmin.from("publish_channels")
-      .delete().eq("id", data.id).eq("user_id", context.userId);
+      .delete().eq("id", data.id).eq("user_id", context.userId).eq("workspace_id", data.workspaceId);
     return { ok: true };
   });
 
 export const setChannelApprovalMode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { id?: string; mode?: string };
+    const x = (d || {}) as { id?: string; mode?: string; workspaceId?: string | null };
     if (!x.id || !x.mode || !ALLOWED_MODE.has(x.mode)) throw new Error("invalid");
-    return { id: x.id, mode: x.mode };
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { id: x.id, mode: x.mode, workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     await supabaseAdmin.from("publish_channels")
       .update({ approval_mode: data.mode })
-      .eq("id", data.id).eq("user_id", context.userId);
+      .eq("id", data.id).eq("user_id", context.userId).eq("workspace_id", data.workspaceId);
     return { ok: true };
   });
 
@@ -110,16 +115,17 @@ export const skipNotifyOnboarding = createServerFn({ method: "POST" })
 
 export const getChannelsState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => { const x = (d || {}) as { workspaceId?: string | null }; if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace"); return { workspaceId: x.workspaceId || null }; })
+  .handler(async ({ data, context }) => {
+    if (data.workspaceId) { const { data: w } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", context.userId).maybeSingle(); if (!w) throw new Error("workspace_not_found"); }
     const { data: prof } = await supabaseAdmin
       .from("profiles")
       .select("preferred_notify_channel, notify_onboarded")
       .eq("id", context.userId).maybeSingle();
-    const { data: chans } = await supabaseAdmin
-      .from("publish_channels")
-      .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes, owner_type, owner_name, is_default, connected_via, last_verified_at, last_error, external_account_id")
-      .eq("user_id", context.userId)
-      .order("created_at", { ascending: false });
+    let channelsQuery = supabaseAdmin.from("publish_channels")
+      .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes, owner_type, owner_name, is_default, connected_via, last_verified_at, last_error, external_account_id, workspace_id")
+      .eq("user_id", context.userId).eq("workspace_id", data.workspaceId);
+    const { data: chans } = await channelsQuery.order("created_at", { ascending: false });
     return {
       preferred: (prof as any)?.preferred_notify_channel ?? "email",
       onboarded: !!(prof as any)?.notify_onboarded,
@@ -140,7 +146,7 @@ export const getChannelsState = createServerFn({ method: "GET" })
 export const saveManualSocialToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { provider?: string; token?: string; pageId?: string; igUserId?: string; defaultMediaUrl?: string };
+    const x = (d || {}) as { provider?: string; token?: string; pageId?: string; igUserId?: string; defaultMediaUrl?: string; workspaceId?: string | null };
     if (!x.provider || !MANUAL_PROVIDERS.has(x.provider)) throw new Error("invalid_provider");
     if (!x.token || x.token.length < 10) throw new Error("invalid_token");
     return {
@@ -149,6 +155,7 @@ export const saveManualSocialToken = createServerFn({ method: "POST" })
       pageId: x.pageId?.trim() || "",
       igUserId: x.igUserId?.trim() || "",
       defaultMediaUrl: x.defaultMediaUrl?.trim() || "",
+      workspaceId: x.workspaceId || null,
     };
   })
   .handler(async ({ data, context }) => {
@@ -176,7 +183,7 @@ export const saveManualSocialToken = createServerFn({ method: "POST" })
 
     const { data: existing } = await supabaseAdmin
       .from("publish_channels").select("id")
-      .eq("user_id", context.userId).eq("kind", data.provider).maybeSingle();
+      .eq("user_id", context.userId).eq("kind", data.provider).eq("workspace_id", data.workspaceId).maybeSingle();
 
     if (existing) {
       await supabaseAdmin.from("publish_channels").update({
@@ -185,7 +192,7 @@ export const saveManualSocialToken = createServerFn({ method: "POST" })
       }).eq("id", existing.id);
     } else {
       await supabaseAdmin.from("publish_channels").insert({
-        user_id: context.userId, kind: data.provider, label: data.provider,
+        user_id: context.userId, workspace_id: data.workspaceId, kind: data.provider, label: data.provider,
         account_label: accountLabel, active: true, approval_mode: "manual",
         connected_via: "manual", verified_at: new Date().toISOString(), config,
       });
