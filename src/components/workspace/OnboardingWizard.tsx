@@ -1,4 +1,4 @@
-// Six golden onboarding questions. Saves owner answers to the account profile (no charge, no model call).
+// Six onboarding questions. Workspace answers are stored on that workspace; main-account storage remains unchanged.
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ const Q: Record<L, { title: string; hint: string; save: string; saved: string; a
     fields: [["brand", "ناوی فەرمی براند", ""], ["aliases", "ناوە جیاوازەکان", ""], ["markets", "بازاڕە پشتڕاستکراوەکان", ""], ["facts", "ڕاستییە سەرەکییەکان", ""], ["competitors", "ڕکابەرە سەرەکییەکان", ""], ["links", "بەستەرە فەرمییەکان", "https://..."]] },
 };
 
-export function OnboardingWizard({ lang }: { lang: L }) {
+export function OnboardingWizard({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const T = Q[lang] || Q.ar;
   const [uid, setUid] = useState<string | null>(null);
   const [v, setV] = useState<Record<string, string>>({});
@@ -25,19 +25,32 @@ export function OnboardingWizard({ lang }: { lang: L }) {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       setUid(u.user.id);
-      const { data } = await supabase.from("profiles").select("brand_name, onboarding").eq("id", u.user.id).maybeSingle();
-      const ob: any = (data as any)?.onboarding || {};
-      setV({ brand: (data as any)?.brand_name || "", aliases: ob.aliases || "", markets: ob.markets || "", facts: ob.facts || "", competitors: ob.competitors || "", links: ob.links || "" });
+      let ob: any = {};
+      let brandName = "";
+      if (workspaceId) {
+        const { data, error } = await supabase.from("workspaces").select("name, onboarding").eq("id", workspaceId).eq("owner_id", u.user.id).maybeSingle();
+        if (error) throw error;
+        ob = (data as any)?.onboarding || {};
+        brandName = ob.brand || (data as any)?.name || "";
+      } else {
+        const { data, error } = await supabase.from("profiles").select("brand_name, onboarding").eq("id", u.user.id).maybeSingle();
+        if (error) throw error;
+        ob = (data as any)?.onboarding || {};
+        brandName = (data as any)?.brand_name || "";
+      }
+      setV({ brand: brandName, aliases: ob.aliases || "", markets: ob.markets || "", facts: ob.facts || "", competitors: ob.competitors || "", links: ob.links || "" });
       if (Array.isArray(ob.faqs) && ob.faqs.length) setFaqs(ob.faqs);
     })();
-  }, []);
+  }, [workspaceId]);
 
   if (!uid) return null;
   const save = async () => {
     setBusy(true);
     const { brand, ...rest } = v;
-    const onboarding = { ...rest, faqs: faqs.filter((f) => f.q.trim() && f.a.trim()) };
-    const { error } = await supabase.from("profiles").update({ onboarding, ...(brand?.trim() ? { brand_name: brand.trim() } : {}) } as any).eq("id", uid);
+    const onboarding = { ...rest, brand: brand || "", faqs: faqs.filter((f) => f.q.trim() && f.a.trim()) };
+    const { error } = workspaceId
+      ? await supabase.from("workspaces").update({ onboarding }).eq("id", workspaceId).eq("owner_id", uid)
+      : await supabase.from("profiles").update({ onboarding, ...(brand?.trim() ? { brand_name: brand.trim() } : {}) } as any).eq("id", uid);
     setBusy(false);
     error ? toast.error(error.message) : toast.success(T.saved);
   };
