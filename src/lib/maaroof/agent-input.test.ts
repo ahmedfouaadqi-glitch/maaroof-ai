@@ -46,4 +46,20 @@ describe("agent-input", () => {
     expect(missingFields("geo_rewrite", filled)).toEqual(["text"]);
     expect(extractRewriteSourceText([{ tool: "known", ok: true, output: { url: "https://example.com" } }])).toBe("");
   });
+
+  it("does not treat a rewrite instruction as the source passage", () => {
+    const goal = "Rewrite this copy for GEO and improve its search visibility.";
+    const filled = fillFromTask("geo_rewrite", { text: goal }, [], { goal });
+    expect(filled.text).toBe("");
+    expect(missingFields("geo_rewrite", filled)).toEqual(["text"]);
+  });
+
+  it("extracts explicitly quoted source copy from the user's rewrite request", () => {
+    const source = "Acme helps customers configure secure digital payment workflows.";
+    const goal = `Rewrite this copy for GEO: "${source}"`;
+    const filled = fillFromTask("geo_rewrite", { text: goal }, [], { goal });
+    expect(filled.text).toBe(source);
+    expect(missingFields("geo_rewrite", filled)).toEqual([]);
+  });
+
 });
