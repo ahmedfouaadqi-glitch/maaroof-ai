@@ -213,7 +213,7 @@ export function Dardasha({
                   </button>
                   <ExportButtons
                     size="xs"
-                    className="!rounded-full !border-0 !bg-transparent !px-2.5 !py-1.5 !text-muted-foreground hover:!bg-muted/70"
+                    className="[&_button]:!rounded-full [&_button]:!border-border/50 [&_button]:!bg-muted/20 [&_button]:!px-2.5 [&_button]:!py-1.5 [&_button]:!text-muted-foreground [&_button]:!shadow-none [&_button:hover]:!bg-muted/70 [&_button:hover]:!text-foreground [&_button:hover]:!shadow-none"
                     build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })}
                   />
                   {!m.axisAuditRequest && !m.task && !m.needs_task && hasActionableRecommendations(m.content) && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "تحويل لمهمة", "Turn into task", "گۆڕین بۆ ئەرک")}</button>}
