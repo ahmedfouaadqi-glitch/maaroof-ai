@@ -175,7 +175,14 @@ export function Dardasha({
           const openTaskDraft = (proposedGoal?: string) => setTaskDraft({ messageKey, goal: buildTaskGoalFromResult({ language: lang, originalRequest: requestContext, answer: m.content, proposedGoal }) });
           return (
           <div key={messageKey} className={m.role === "user" ? "flex justify-end" : ""}>
-            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-primary/10 bg-primary/10 px-3.5 py-2.5 text-sm leading-6 text-foreground shadow-none" : "group relative max-w-full min-w-0 rounded-2xl border border-border/55 bg-card/45 p-3 text-sm leading-7 shadow-[0_1px_2px_hsl(var(--foreground)/0.025)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/15 hover:bg-card/70 sm:p-4"}>
+            <div
+              className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-primary/10 bg-primary/10 px-3.5 py-2.5 text-sm leading-6 text-foreground shadow-none" : "group relative max-w-full min-w-0 rounded-2xl border border-border/55 bg-card/45 p-3 text-sm leading-7 shadow-[0_1px_2px_hsl(var(--foreground)/0.025)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/15 hover:bg-card/70 sm:p-4"}
+              onMouseMove={m.role === "assistant" ? (event) => {
+                const bounds = event.currentTarget.getBoundingClientRect();
+                event.currentTarget.style.backgroundImage = "radial-gradient(380px circle at " + (event.clientX - bounds.left) + "px " + (event.clientY - bounds.top) + "px, hsl(var(--primary) / 0.055), transparent 72%)";
+              } : undefined}
+              onMouseLeave={m.role === "assistant" ? (event) => { event.currentTarget.style.backgroundImage = ""; } : undefined}
+            >
               {m.role === "assistant" && (
                 <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.045] px-2 py-1 font-semibold text-foreground/85">
