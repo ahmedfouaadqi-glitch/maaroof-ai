@@ -39,7 +39,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
       en: "We compare your site with competitors and track content gaps and share of voice.",
       ku: "ماڵپەڕەکەت بە ڕکابەرانەوە بەراورد دەکەین و بۆشایی ناوەڕۆک دەبینین.",
     },
-    tools: ["compare", "competitor_monitor"],
+    tools: ["compare"],
     keywords: ["منافس", "المنافسين", "السوق", "مقارنة", "فجوات", "الحصة", "رقابت", "بازاڕ", "بەراورد", "competitor", "market", "compare", "gap"],
   },
   {
@@ -157,14 +157,6 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     description: { ar: "نحوّل الفجوات المكتشفة إلى قائمة تعديلات محتوى وبيانات مهيكلة قابلة للموافقة.", en: "We turn detected gaps into an approvable list of content and structured-data edits.", ku: "بۆشاییەکان دەکەینە لیستی دەستکاری ناوەڕۆک و داتای ڕێکخراو بۆ پەسەندکردن." },
     tools: ["analyze", "geo_rewrite"],
     keywords: ["إصلاح", "اصلاح", "تعديلات", "الاقتباس", "لا يقتبس", "چاککردن", "fix", "citation fix", "edits"],
-  },
-  {
-    key: "smart_competitor",
-    icon: "trending",
-    label: { ar: "ملف المنافس الذكي", en: "Smart Competitor File", ku: "فایلی زیرەکی ڕکابەر" },
-    description: { ar: "نتابع منافساً أو مجموعة منافسين ونعرض الأحداث المؤثرة فقط بدلاً من تقارير متكررة.", en: "We follow one or more competitors and surface only impactful events instead of repeated reports.", ku: "شوێن ڕکابەرێک یان گرووپێک دەکەوین و تەنها ڕووداوە کاریگەرەکان پیشان دەدەین." },
-    tools: ["competitor_monitor", "compare"],
-    keywords: ["ملف المنافس", "تتبع منافس", "متابعة المنافس", "أحداث", "ڕکابەر", "competitor file", "track competitor", "rival"],
   },
   {
     key: "machine_readability",
