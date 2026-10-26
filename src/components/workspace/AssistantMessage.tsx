@@ -185,31 +185,31 @@ function renderInline(value: string, prefix: string): ReactNode[] {
 export function AssistantMessage({ content, lang }: { content: string; lang: "ar" | "en" | "ku" }) {
   const blocks = parseAssistantMarkdown(content);
   return (
-    <div className="min-w-0 space-y-3 break-words" dir="auto" lang={lang} data-testid="assistant-message">
+    <div className="min-w-0 space-y-4 break-words" dir="auto" lang={lang} data-testid="assistant-message">
       {blocks.map((block, index) => {
         const key = `${block.type}-${index}`;
         if (block.type === "hr") return <hr key={key} className="my-4 border-border" />;
         if (block.type === "heading") {
           if (block.level === 1) return (
-            <h2 key={key} className="group flex items-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3 text-lg font-bold tracking-tight text-foreground transition-colors duration-200 hover:border-primary/40">
-              <span aria-hidden="true" className="h-6 w-1.5 shrink-0 rounded-full bg-primary transition-all duration-200 group-hover:h-7" />
+            <h2 key={key} className="group flex items-center gap-2 border-b border-border/50 pb-2 pt-1 text-lg font-semibold tracking-tight text-foreground">
+              <span aria-hidden="true" className="h-5 w-1 shrink-0 rounded-full bg-primary/45 transition-colors duration-200 group-hover:bg-primary/70" />
               <span className="min-w-0">{renderInline(block.text, key)}</span>
             </h2>
           );
           if (block.level === 2) return (
-            <h3 key={key} className="flex items-center gap-2 border-s-2 border-primary/60 bg-muted/30 px-3 py-2 text-base font-bold tracking-tight text-foreground transition-colors duration-200 hover:bg-muted/50">
+            <h3 key={key} className="flex items-center gap-2 border-s-2 border-primary/40 py-1 ps-3 text-base font-semibold tracking-tight text-foreground">
               {renderInline(block.text, key)}
             </h3>
           );
-          return <h4 key={key} className="rounded-lg px-1 py-1 text-sm font-semibold text-foreground">{renderInline(block.text, key)}</h4>;
+          return <h4 key={key} className="mt-3 rounded-md px-1 py-0.5 text-sm font-semibold text-foreground">{renderInline(block.text, key)}</h4>;
         }
         if (block.type === "list") {
           const ListTag = block.ordered ? "ol" : "ul";
-          return <ListTag key={key} className={`space-y-1 ps-5 ${block.ordered ? "list-decimal" : "list-disc"}`}>{block.items.map((item, itemIndex) => <li key={itemIndex} className="rounded-lg px-2 py-1 ps-1 leading-7 transition-colors duration-150 hover:bg-muted/40">{renderInline(item, `${key}-item-${itemIndex}`)}</li>)}</ListTag>;
+          return <ListTag key={key} className={`space-y-2 ps-5 ${block.ordered ? "list-decimal" : "list-disc"}`}>{block.items.map((item, itemIndex) => <li key={itemIndex} className="px-1 py-0.5 ps-1 leading-7 text-foreground/90 marker:text-primary/70">{renderInline(item, `${key}-item-${itemIndex}`)}</li>)}</ListTag>;
         }
-        if (block.type === "quote") return <blockquote key={key} className="rounded-xl border border-primary/15 border-s-2 border-s-primary/60 bg-primary/5 px-4 py-3 text-muted-foreground transition-colors duration-150 hover:bg-primary/10">{renderInline(block.text, key)}</blockquote>;
-        if (block.type === "code") return <pre key={key} className="overflow-x-auto rounded-xl bg-muted p-3 text-xs leading-6"><code data-language={block.language || undefined}>{block.code}</code></pre>;
-        if (block.type === "table") return <div key={key} className="overflow-x-auto rounded-lg border border-border"><table className="w-full min-w-[320px] border-collapse text-start text-sm"><thead className="bg-muted/60"><tr>{block.headers.map((cell, cellIndex) => <th key={cellIndex} scope="col" className="border-b border-border px-3 py-2 font-semibold">{renderInline(cell, `${key}-head-${cellIndex}`)}</th>)}</tr></thead><tbody>{block.rows.map((row, rowIndex) => <tr key={rowIndex} className="border-b border-border last:border-0">{block.headers.map((_, cellIndex) => <td key={cellIndex} className="px-3 py-2 align-top">{renderInline(row[cellIndex] || "", `${key}-row-${rowIndex}-cell-${cellIndex}`)}</td>)}</tr>)}</tbody></table></div>;
+        if (block.type === "quote") return <blockquote key={key} className="rounded-r-lg border-s-2 border-s-primary/45 bg-muted/30 px-4 py-3 text-muted-foreground">{renderInline(block.text, key)}</blockquote>;
+        if (block.type === "code") return <pre key={key} className="overflow-x-auto rounded-xl border border-border/60 bg-muted/50 p-3 text-xs leading-6"><code data-language={block.language || undefined}>{block.code}</code></pre>;
+        if (block.type === "table") return <div key={key} className="overflow-x-auto rounded-xl border border-border/60"><table className="w-full min-w-[320px] border-collapse text-start text-sm"><thead className="bg-muted/35"><tr>{block.headers.map((cell, cellIndex) => <th key={cellIndex} scope="col" className="border-b border-border/60 px-3 py-2 text-xs font-semibold text-muted-foreground">{renderInline(cell, `${key}-head-${cellIndex}`)}</th>)}</tr></thead><tbody>{block.rows.map((row, rowIndex) => <tr key={rowIndex} className="border-b border-border/40 last:border-0 even:bg-muted/15">{block.headers.map((_, cellIndex) => <td key={cellIndex} className="border-b border-border/30 px-3 py-2.5 align-top leading-6 last:border-0">{renderInline(row[cellIndex] || "", `${key}-row-${rowIndex}-cell-${cellIndex}`)}</td>)}</tr>)}</tbody></table></div>;
         return <p key={key} className="max-w-[92ch] leading-7 text-foreground/95">{renderInline(block.text, key)}</p>;
       })}
     </div>
