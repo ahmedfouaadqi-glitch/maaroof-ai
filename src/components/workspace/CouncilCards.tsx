@@ -20,6 +20,20 @@ function CountUp({ to }: { to: number }) {
   return <>{v}</>;
 }
 
+/** Animated circular score (0-100) drawn from the council average. */
+export function GeoScoreRing({ value }: { value: number }) {
+  const r = 20, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, value));
+  return (
+    <div className="relative size-12 shrink-0">
+      <svg viewBox="0 0 48 48" className="size-12 -rotate-90">
+        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" className="stroke-muted" />
+        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-primary transition-[stroke-dashoffset] duration-1000 ease-out motion-reduce:transition-none" strokeDasharray={c} strokeDashoffset={c * (1 - v / 100)} />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-xs font-bold tabular-nums"><CountUp to={v} /></span>
+    </div>
+  );
+}
+
 export function CouncilCards({ council, lang }: { council: Council; lang: L }) {
   const s = council.summary;
   const decision: Record<string, string> = {
@@ -28,11 +42,17 @@ export function CouncilCards({ council, lang }: { council: Council; lang: L }) {
     split: tr(lang, "انقسام متساوٍ بين المحركات", "Engines are evenly split", "دابەشبوونی یەکسان"),
     no_evidence: tr(lang, "لم يُجب أي محرك — لا حكم", "No engine answered — no verdict", "هیچ وەڵامێک نییە"),
   };
+  const glow = s.decision === "agree" ? "shadow-[0_0_24px_-8px_hsl(var(--primary))] border-primary/40" : s.decision === "disagree" ? "border-destructive/40" : "border-border/60";
   return (
-    <div className="mt-3 rounded-xl border border-border/60 bg-background/60 p-3">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="font-semibold">{tr(lang, "مجلس المحركات العشرة", "Ten-engine council", "ئەنجومەنی دە بزوێنەر")}</span>
-        <span className="text-muted-foreground tabular-nums">{tr(lang, `أجاب ${s.answered} من ${s.asked}`, `${s.answered} of ${s.asked} answered`, `${s.answered} لە ${s.asked}`)}{s.avgScore != null && <> · <CountUp to={s.avgScore} />/100</>}</span>
+    <div className={`mt-3 rounded-xl border bg-background/60 p-3 ${glow}`}>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          {s.avgScore != null && <GeoScoreRing value={s.avgScore} />}
+          <div>
+            <div className="font-semibold">{tr(lang, "مجلس المحركات العشرة", "Ten-engine council", "ئەنجومەنی دە بزوێنەر")}</div>
+            <div className="text-muted-foreground tabular-nums">{tr(lang, `أجاب ${s.answered} من ${s.asked}`, `${s.answered} of ${s.asked} answered`, `${s.answered} لە ${s.asked}`)}</div>
+          </div>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
         {council.engines.map((e, i) => {
