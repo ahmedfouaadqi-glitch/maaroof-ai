@@ -126,6 +126,10 @@ export const runAgentCommand = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
+    if (data.workspaceId) {
+      const { data: owned } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle();
+      if (!owned) return { ok: false, error: "workspace_not_found" };
+    }
     try {
       await checkAndConsume(userId, 1);
     } catch (e: any) {
