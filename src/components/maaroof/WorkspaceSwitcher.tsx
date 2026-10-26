@@ -166,27 +166,28 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
       {loading ? (
         <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> {t("auto.loading")}</div>
       ) : (
-        <ul className="space-y-1 text-sm">
-          <li><button type="button" onClick={() => pick(null)} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-start ${!activeId ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}><span className="flex-1">{lang === "en" ? "Main account" : lang === "ku" ? "هەژماری سەرەکی" : "الحساب الأساسي"}</span>{!activeId && <Check className="size-3.5" />}</button></li>
-          {items.length === 0 && <li className="px-2 py-2 text-xs text-muted-foreground">{t("auto.no_spaces_yet_create_the_first")}</li>}
-          {items.map((w) => (
-            <li key={w.id} className={`group flex items-center gap-2 p-2 rounded ${activeId === w.id ? "bg-primary/10 border border-primary/40" : "hover:bg-muted"}`}>
-              <button onClick={() => pick(w)} className="flex-1 text-start truncate">
-                <div className="flex items-center gap-1.5 truncate">
-                  {activeId === w.id && <Check className="w-3 h-3 text-primary shrink-0" />}
-                  <span className="truncate">{w.name}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground">
-                  {w.space_kind === "product" ? copy("منتج", "Product", "بەرهەم") : w.kind === "client" ? t("auto.client") : w.kind === "own" ? copy("خاص بي", "My business", "کاری من") : t("auto.tag")}
-                  {w.brand_url ? ` · ${new URL(w.brand_url).hostname.replace("www.", "")}` : ""}
-                </div>
-              </button>
-              <button onClick={() => remove(w.id)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10" title={t("auto.delete")}>
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="flex items-center gap-2">
+          <select
+            aria-label={t("auto.workspaces")}
+            value={activeId ?? ""}
+            onChange={(e) => { const id = e.target.value; void pick(id ? items.find((w) => w.id === id) || null : null); }}
+            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="">{lang === "en" ? "Main account" : lang === "ku" ? "هەژماری سەرەکی" : "الحساب الأساسي"}</option>
+            {items.map((w) => {
+              const kindLabel = w.space_kind === "product" ? copy("منتج", "Product", "بەرهەم") : w.kind === "client" ? t("auto.client") : w.kind === "own" ? copy("خاص بي", "My business", "کاری من") : t("auto.tag");
+              let host = "";
+              try { host = w.brand_url ? ` · ${new URL(w.brand_url).hostname.replace("www.", "")}` : ""; } catch {}
+              return <option key={w.id} value={w.id}>{`${w.name} — ${kindLabel}${host}`}</option>;
+            })}
+          </select>
+          {activeId && (
+            <button type="button" onClick={() => void remove(activeId)} className="rounded-lg p-2 text-destructive hover:bg-destructive/10" title={t("auto.delete")} aria-label={t("auto.delete")}>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          {items.length === 0 && <span className="text-xs text-muted-foreground">{t("auto.no_spaces_yet_create_the_first")}</span>}
+        </div>
       )}
     </div>
   );
