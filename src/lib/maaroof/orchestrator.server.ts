@@ -30,6 +30,7 @@ import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUp
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
+import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -552,7 +553,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
+    let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS).filter((step) => step?.tool !== "competitor_monitor") : [];
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
     if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
@@ -571,6 +572,23 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         for (const k of executableToolsFor(ctx.selectedSkills)) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "مطلوبة للمهارة المختارة لهذه المهمة." } as PlanStep);
         steps = steps.slice(0, Math.max(MAX_STEPS, steps.length));
       } catch {}
+    }
+
+    // Explicit five-axis audit requests receive the core evidence tools even if the planner omits them.
+    if (isFiveAxisAuditGoal(ctx.goal)) {
+      const requiredAuditTools = ["analyze", "brand_authority", ...(ctx.liveProbe !== false ? ["visibility"] : [])]
+        .filter((key) => !settings.enabled_tools.length || settings.enabled_tools.includes(key));
+      const requiredSet = new Set(requiredAuditTools);
+      for (const key of requiredAuditTools) {
+        if (steps.some((step) => step.tool === key)) continue;
+        const requiredStep = { tool: key, input: {}, reason: "مطلوب لتغطية المحاور الخمسة بالقياس والأدلة المسجلة." } as PlanStep;
+        if (steps.length < MAX_STEPS) {
+          steps.push(requiredStep);
+          continue;
+        }
+        const replaceIndex = steps.findLastIndex((step) => !requiredSet.has(step.tool) && step.tool !== "competitor_monitor");
+        if (replaceIndex >= 0) steps[replaceIndex] = requiredStep;
+      }
     }
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
