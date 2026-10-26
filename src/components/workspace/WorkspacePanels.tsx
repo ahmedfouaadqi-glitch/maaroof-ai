@@ -151,10 +151,15 @@ export function KnowledgePanel({ lang, workspaceId = null }: { lang: L; workspac
     (async () => {
       let spacesQuery = supabase.from("knowledge_spaces").select("id,name,workspace_id,nodes_count").eq("user_id", user.id);
       spacesQuery = workspaceId ? spacesQuery.eq("workspace_id", workspaceId) : spacesQuery.is("workspace_id", null);
-      const [{ data: spaces }, { data: iv }, { data: ws }] = await Promise.all([
-        spacesQuery,
-        supabase.from("knowledge_space_interviews").select("space_id,answer").eq("user_id", user.id),
-        supabase.from("workspaces").select("id,space_kind").eq("owner_id", user.id),
+      const { data: spaces } = await spacesQuery;
+      const spaceIds = (spaces || []).map((s: any) => s.id);
+      const [{ data: iv }, { data: ws }] = await Promise.all([
+        spaceIds.length
+          ? supabase.from("knowledge_space_interviews").select("space_id,answer").eq("user_id", user.id).in("space_id", spaceIds)
+          : Promise.resolve({ data: [] as any[] }),
+        workspaceId
+          ? supabase.from("workspaces").select("id,space_kind").eq("id", workspaceId).eq("owner_id", user.id)
+          : supabase.from("workspaces").select("id,space_kind").eq("owner_id", user.id),
       ]);
       const kinds = new Map((ws || []).map((w: any) => [w.id, w.space_kind]));
       setItems((spaces || []).map((s: any) => {
