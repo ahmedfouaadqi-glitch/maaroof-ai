@@ -188,14 +188,17 @@ export function priorCompetitors(results: Array<{ tool: string; ok: boolean; out
 /** Fill inputs that depend on earlier steps or tool defaults. Pure; never overwrites set values. */
 export function fillFromTask(tool: string, input: Record<string, any>, results: Array<{ tool: string; ok: boolean; output: any }>, context?: EntityContext): Record<string, any> {
   const out = { ...input };
+  if (tool === "competitor_monitor" && !["create", "list", "recheck", "delete", "policy"].includes(String(out.action))) out.action = "create";
   if (tool === "compare" && !(Array.isArray(out.competitors) ? out.competitors.length : str(out.competitors))) {
     const c = priorCompetitors(results, str(out.brand));
     if (c.length) { out.competitors = c; out.competitors_source = "prior_steps"; }
   }
   if (tool === "geo_rewrite" && (!str(out.text) || isRewriteInstructionText(str(out.text), str(context?.goal)))) {
-    out.text = explicitQuotedRewriteSource(str(context?.goal))
+    const source = explicitQuotedRewriteSource(str(context?.goal))
       || extractRewriteSourceText(results)
       || rewriteContextSource(context);
+    if (source) out.text = source;
+    else delete out.text;
   }
   return out;
 }
