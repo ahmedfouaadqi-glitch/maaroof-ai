@@ -106,6 +106,29 @@ function rewriteContextSource(ctx?: EntityContext): string {
   return candidates.map(str).find((value) => value.length >= MIN_REWRITE_SOURCE_LENGTH && !/^https?:\/\/\S+$/i.test(value))?.slice(0, MAX_REWRITE_SOURCE_LENGTH) || "";
 }
 
+function explicitQuotedRewriteSource(goal: string): string {
+  const patterns = [
+    /"([^"]{25,})"/s,
+    /“([^”]{25,})”/s,
+    /«([^»]{25,})»/s,
+    /'([^']{25,})'/s,
+  ];
+  for (const pattern of patterns) {
+    const match = goal.match(pattern);
+    const value = match?.[1]?.trim();
+    if (value && value.length >= MIN_REWRITE_SOURCE_LENGTH && !/^https?:\/\/\S+$/i.test(value)) {
+      return value.slice(0, MAX_REWRITE_SOURCE_LENGTH);
+    }
+  }
+  return "";
+}
+
+function isRewriteInstructionText(value: string, goal: string): boolean {
+  const normalize = (text: string) => text.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  const directive = /\b(rewrite|rephrase|paraphrase|optimi[sz]e|improve the copy|rewrite this|polish this)\b|أعد\s+صياغة|اعد\s+صياغة|إعادة\s+الصياغة|اعادة\s+الصياغة|حسّن\s+النص|حسن\s+النص|بازنڤیسەوە|دووبارە\s+بینووسە/i.test(value);
+  return !!goal.trim() && normalize(value) === normalize(goal) && directive;
+}
+
 /** Fill missing inputs. Never overwrites a value the planner already set. */
 export function fillToolInput(tool: string, input: any, ctx: EntityContext): Record<string, any> {
   const out: Record<string, any> = input && typeof input === "object" && !Array.isArray(input) ? { ...input } : {};
@@ -169,8 +192,10 @@ export function fillFromTask(tool: string, input: Record<string, any>, results: 
     const c = priorCompetitors(results, str(out.brand));
     if (c.length) { out.competitors = c; out.competitors_source = "prior_steps"; }
   }
-  if (tool === "geo_rewrite" && !str(out.text)) {
-    out.text = extractRewriteSourceText(results) || rewriteContextSource(context);
+  if (tool === "geo_rewrite" && (!str(out.text) || isRewriteInstructionText(str(out.text), str(context?.goal)))) {
+    out.text = explicitQuotedRewriteSource(str(context?.goal))
+      || extractRewriteSourceText(results)
+      || rewriteContextSource(context);
   }
   return out;
 }
