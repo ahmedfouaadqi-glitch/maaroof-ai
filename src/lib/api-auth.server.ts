@@ -3,6 +3,17 @@
 // and returns either { ok:true, userId } or a Response (402/401) to short-circuit.
 import { createClient } from "@supabase/supabase-js";
 import { chargeTokens, chargeFailureBody, type ChargeResult } from "@/lib/tokens.server";
+import { verifyInternalAuth } from "@/lib/internal-auth.server";
+
+/** Authenticate trusted in-process dispatch first; browser calls still require a valid bearer token. */
+export async function resolveAuthenticatedUserId(request: Request, admin: any): Promise<string | null> {
+  const internalUserId = await verifyInternalAuth(request);
+  if (internalUserId) return internalUserId;
+  const auth = request.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+  const { data, error } = await admin.auth.getUser(auth.slice(7));
+  return !error && data.user?.id ? data.user.id : null;
+}
 
 export async function authAndCharge(opts: {
   request: Request;
@@ -15,13 +26,8 @@ export async function authAndCharge(opts: {
   if (!url || !key) {
     return { ok: false, response: Response.json({ error: "server_not_configured" }, { status: 500 }) };
   }
-  const auth = opts.request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) {
-    return { ok: false, response: Response.json({ error: "auth_required" }, { status: 401 }) };
-  }
   const admin = createClient(url, key, { auth: { persistSession: false } });
-  const { data } = await admin.auth.getUser(auth.slice(7));
-  const userId = data.user?.id;
+  const userId = await resolveAuthenticatedUserId(opts.request, admin);
   if (!userId) {
     return { ok: false, response: Response.json({ error: "auth_required" }, { status: 401 }) };
   }
