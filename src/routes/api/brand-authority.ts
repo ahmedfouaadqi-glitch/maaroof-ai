@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { fcScrape } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
@@ -245,13 +246,8 @@ async function authUser(request: Request) {
   const SUPABASE_URL = process.env.SUPABASE_URL!;
   const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const admin = createClient(SUPABASE_URL, SERVICE);
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) {
-    return { admin, err: Response.json({ error: "auth_required" }, { status: 401 }) } as const;
-  }
-  const { data: ud, error } = await admin.auth.getUser(auth.slice(7));
-  const userId = ud?.user?.id;
-  if (error || !userId) return { admin, err: Response.json({ error: "auth_required" }, { status: 401 }) } as const;
+  const userId = await resolveAuthenticatedUserId(request, admin);
+  if (!userId) return { admin, err: Response.json({ error: "auth_required" }, { status: 401 }) } as const;
   const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (!prof) return { admin, err: Response.json({ error: "auth_required" }, { status: 401 }) } as const;
   return { admin, userId, profile: prof, err: null as null } as const;
