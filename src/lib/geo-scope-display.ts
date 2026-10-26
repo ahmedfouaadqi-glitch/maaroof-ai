@@ -42,7 +42,7 @@ export function getCompactGeoScopeDisplay(
   });
   if (!code) {
     return {
-      label: rawCountry || (lang === "ar" ? "موقع غير محدد" : lang === "ku" ? "شوێن دیاری نەکراوە" : "Location not specified"),
+      label: rawCountry || String(scope.city || scope.region || "").trim() || (lang === "ar" ? "موقع غير محدد" : lang === "ku" ? "شوێن دیاری نەکراوە" : "Location not specified"),
     };
   }
 
