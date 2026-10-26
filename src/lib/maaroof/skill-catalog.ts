@@ -159,6 +159,18 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     keywords: ["إصلاح", "اصلاح", "تعديلات", "الاقتباس", "لا يقتبس", "چاککردن", "fix", "citation fix", "edits"],
   },
   {
+    key: "smart_competitor",
+    icon: "trending",
+    label: { ar: "تحليل المنافس الذكي", en: "Smart Competitor Analysis", ku: "شیکاری زیرەکی ڕکابەر" },
+    description: {
+      ar: "نقارن المنافسين من خلال فحص محدد للبيانات العامة المتاحة. المراقبة المستمرة متوقفة مؤقتاً.",
+      en: "Compare competitors through a focused review of available public data. Ongoing monitoring is temporarily paused.",
+      ku: "ڕکابەرەکان بە پشکنینێکی دیاریکراوی داتای گشتی بەراورد بکە؛ چاودێری بەردەوام کاتی ڕاگیراوە.",
+    },
+    tools: ["compare"],
+    keywords: ["منافس", "المنافسين", "السوق", "مقارنة", "فجوات", "رقابت", "بازاڕ", "بەراورد", "competitor", "market", "compare", "gap"],
+  },
+  {
     key: "machine_readability",
     icon: "target",
     label: { ar: "ملفات قراءة الآلة", en: "Machine-Readable Files", ku: "فایلەکانی خوێندنەوەی ئامێر" },
