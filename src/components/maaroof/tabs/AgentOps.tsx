@@ -208,7 +208,7 @@ export function AgentOps({ section, workspaceId = null }: { section: AgentOpsSec
   const publishTask = async (taskId: string, text: string, channelId: string) => {
     setPublishingTask(taskId);
     try {
-      const res: any = await publishFn({ data: { taskId, text, channelId } });
+      const res: any = await publishFn({ data: { taskId, text, channelId, workspaceId } } as any);
       if (res?.ok) alert(t("ag_pub_ok"));
       else alert(`${t("ag_pub_fail")} ${tx(res?.error)}`);
     } catch (e: any) {
