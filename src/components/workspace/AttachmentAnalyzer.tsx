@@ -37,7 +37,7 @@ export function AttachmentAnalyzer({ lang, context = "task", workspaceId = null,
     if (!file || !user) return;
     setBusy(true); setMsg("");
     try {
-      const path = attachmentPath(user.id, file.name, Date.now());
+      const path = attachmentPath(user.id, file.name, Date.now(), workspaceId);
       const up = await supabase.storage.from("task-files").upload(path, file, { contentType: file.type });
       if (up.error) throw new Error("upload");
       const r = await fetch(withPreviewAuth("/api/attachment-analyze"), {
