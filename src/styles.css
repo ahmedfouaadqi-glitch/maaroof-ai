@@ -539,7 +539,7 @@
    Layout-only: preserve the existing theme, copy, assets and page background.
    The reveal remains CSS-only (no GSAP, WebGL, canvas or per-frame effects). */
 .maaroof-workspace-page > header > div {
-  max-width: 1720px;
+  max-width: 1600px;
   padding-inline: clamp(0.75rem, 2.2vw, 1.75rem);
 }
 
@@ -597,7 +597,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .maaroof-workspace-page .maaroof-chat-shell {
+  .maaroof-workspace-page .maaroof-chat-shell,
+  .maaroof-workspace-page .maaroof-chat-messages {
     scroll-behavior: auto;
   }
 }
