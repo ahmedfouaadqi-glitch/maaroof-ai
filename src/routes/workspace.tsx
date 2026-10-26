@@ -17,6 +17,7 @@ import { HelpTip } from "@/components/workspace/HelpTip";
 import { BroadcastPanel } from "@/components/workspace/BroadcastPanel";
 import { KnownFactsPanel } from "@/components/workspace/KnownFactsPanel";
 import { Dardasha } from "@/components/workspace/Dardasha";
+import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 import { AssistantMessage } from "@/components/workspace/AssistantMessage";
 import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
 import { WorkspaceSwitcher, type Workspace } from "@/components/maaroof/WorkspaceSwitcher";
@@ -298,6 +299,14 @@ function WorkspacePage() {
   }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
+  const isAxisAuditGoal = isFiveAxisAuditGoal(goal);
+  const axisAuditTask = isAxisAuditGoal ? {
+    status: (running ? "running" : error ? "failed" : finalEvent ? "complete" : "ready") as "ready" | "running" | "complete" | "failed",
+    goal,
+    events,
+    finalText: String(finalEvent?.data?.text || finalEvent?.data?.message || ""),
+    error,
+  } : undefined;
   /** Real per-engine status read only from recorded task events; unknown engines stay "checked on run". */
   const engineStatus = useMemo(() => {
     const out: Record<string, "ok" | "failed"> = {};
@@ -682,7 +691,7 @@ function WorkspacePage() {
         {(finalEvent || events.length > 0) && !running && (
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; const prevJob = jobId; const prevDone = events.some((e: any) => e.type === "final"); watcherRef.current += 1; setEvents([]); setJobId(null); if (prevJob && !prevDone) void prepareResume(prevJob); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
-        {!finalEvent && !running && events.length === 0 && <div className="mb-4"><Dardasha
+        {((!finalEvent && !running && events.length === 0) || isAxisAuditGoal) && <div className="mb-4"><Dardasha
             lang={locale}
             workspaceId={activeWorkspaceId}
             busyTask={running}
@@ -690,6 +699,7 @@ function WorkspacePage() {
             onGeoScopeChange={setGeoScope}
             chatPrefill={chatPrefill}
             onPrefillConsumed={() => setChatPrefill(null)}
+            axisAuditTask={axisAuditTask}
             onPrepareTask={(t) => {
               setGoal(t);
               setMode("execution");
