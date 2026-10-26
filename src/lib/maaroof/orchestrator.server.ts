@@ -553,7 +553,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS).filter((step) => step?.tool !== "competitor_monitor") : [];
+    let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
     if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
