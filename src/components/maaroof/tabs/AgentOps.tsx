@@ -29,7 +29,7 @@ export type AgentOpsSection = "tasks" | "channels";
  * Operational surface of the autonomous agent, merged into the Maaroof page.
  * `section` decides which block renders; state stays inside a single instance.
  */
-export function AgentOps({ section }: { section: AgentOpsSection }) {
+export function AgentOps({ section, workspaceId = null }: { section: AgentOpsSection; workspaceId?: string | null }) {
   const { t, lang } = useI18n();
   const { user, isAdmin, loading } = useAuth();
   const vis = useVisibility();
@@ -93,15 +93,16 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     setSub(effectiveSub);
     setAddon(effectiveSub?.agent_addons || null);
 
-    const { data: tg } = await supabase.from("agent_targets").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    const scope = (query: any) => workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    const { data: tg } = await scope(supabase.from("agent_targets").select("*").eq("user_id", user.id)).order("created_at", { ascending: false });
     setTargets(tg || []);
 
-    const { data: tk } = await supabase.from("agent_tasks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
+    const { data: tk } = await scope(supabase.from("agent_tasks").select("*").eq("user_id", user.id)).order("created_at", { ascending: false }).limit(20);
     setTasks(tk || []);
 
-    const { data: ch } = await supabase.from("publish_channels")
-      .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes, connection_id, external_account_id, connected_via, created_at, user_id")
-      .eq("user_id", user.id).order("created_at", { ascending: false });
+    const { data: ch } = await scope(supabase.from("publish_channels")
+      .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes, connection_id, external_account_id, connected_via, created_at, user_id, workspace_id")
+      .eq("user_id", user.id)).order("created_at", { ascending: false });
     setChannels(ch || []);
 
     const { data: prof } = await supabase.from("profiles").select("brand_name, brand_keywords, geo_scope").eq("id", user.id).maybeSingle();
@@ -113,7 +114,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     setPageLoading(false);
   };
 
-  useEffect(() => { if (user) load(); }, [user?.id, isAdmin]);
+  useEffect(() => { if (user) void load(); }, [user?.id, isAdmin, workspaceId]);
 
   const addTarget = async () => {
     if (!user || (!newUrl && !newTopic)) return;
@@ -122,14 +123,14 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
       return;
     }
     await supabase.from("agent_targets").insert({
-      user_id: user.id, url: newUrl || null, topic: newTopic || null,
+      user_id: user.id, workspace_id: workspaceId, url: newUrl || null, topic: newTopic || null,
     });
     setNewUrl(""); setNewTopic("");
     load();
   };
 
   const removeTarget = async (id: string) => {
-    await supabase.from("agent_targets").delete().eq("id", id);
+    await supabase.from("agent_targets").delete().eq("id", id).eq("user_id", user?.id).then(({ error }) => { if (error) throw error; });
     load();
   };
 
@@ -150,7 +151,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     setRunningId(targetId || "all");
     setRunMsg(null);
     try {
-      const res: any = await runNowFn({ data: { targetId, lang: outLang } });
+      const res: any = await runNowFn({ data: { targetId, lang: outLang, workspaceId } });
       if (res?.ok) setRunMsg({ ok: true, text: `${t("ag_run_done")} (${res.done || 0})` });
       else setRunMsg({ ok: false, text: `${t("ag_run_failed")} ${tx(res?.error)}` });
     } catch (e: any) {
@@ -165,7 +166,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     if (!cmd.trim() || cmdBusy) return;
     setCmdBusy(true); setCmdMsg(null);
     try {
-      const res: any = await runCmdFn({ data: { command: cmd, lang: outLang } });
+      const res: any = await runCmdFn({ data: { command: cmd, lang: outLang, workspaceId } });
       if (res?.ok) { setCmdMsg({ ok: true, text: t("ag_cmd_ok") }); setCmd(""); }
       else setCmdMsg({ ok: false, text: `${t("ag_cmd_fail")} ${res?.error || ""}` });
     } catch (e: any) {
@@ -233,7 +234,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     </div>
   );
 
-  if (section === "channels") return <ChannelsPanel onChanged={load} />;
+  if (section === "channels") return <ChannelsPanel workspaceId={workspaceId} onChanged={load} />;
 
   const isAdminSub = sub.id === "admin";
   const usagePct = addon && !isAdminSub ? Math.min(100, (sub.tasks_used / addon.monthly_tasks) * 100) : 0;
@@ -450,7 +451,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
                   <button
                     onClick={async () => {
                       if (!confirm(t("hist_confirm_delete"))) return;
-                      await supabase.from("agent_tasks").delete().eq("id", tk.id);
+                      await supabase.from("agent_tasks").delete().eq("id", tk.id).eq("user_id", user?.id);
                       setTasks((cur) => cur.filter((x) => x.id !== tk.id));
                     }}
                     title={t("hist_delete")}
