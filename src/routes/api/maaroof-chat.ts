@@ -122,7 +122,37 @@ export const Route = createFileRoute("/api/maaroof-chat")({
 
         let reply: { text: string; needsTask: boolean; task: { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string } | null };
         const { openRouterChat, detectCouncilRequest } = await import("@/lib/maaroof/openrouter.server");
-        if (!axisAuditRequest && detectCouncilRequest(message)) {
+        const { detectGeoScoreRequest } = await import("@/lib/maaroof/chat-direct");
+        const geoScore = !axisAuditRequest ? detectGeoScoreRequest(message) : null;
+        let directDone = false;
+        if (geoScore) {
+          // One tool => runs directly in the chat; the tool itself charges only on success.
+          try {
+            const { dispatchToolInProcess } = await import("@/lib/maaroof/direct-tool-dispatch.server");
+            const req = new Request(new URL("/api/analyze", request.url), {
+              method: "POST",
+              headers: { "content-type": "application/json", authorization: request.headers.get("authorization") || "" },
+              body: JSON.stringify({ text: geoScore.text, lang, scope: geo }),
+            });
+            const res = await dispatchToolInProcess("/api/analyze", req, userId);
+            const j: any = res ? await res.json().catch(() => null) : null;
+            if (res?.ok && j && typeof j === "object" && !j.error) {
+              const r = j.result || j;
+              const s = (k: string) => (typeof r?.[k] === "number" ? Math.round(r[k]) : "—");
+              const head = lang === "en" ? "GEO score for your text" : lang === "ku" ? "نمرەی GEO بۆ دەقەکەت" : "درجة GEO لنصك";
+              const lbl = lang === "en" ? ["Overall", "Authority", "Local relevance", "Citation"] : ["الإجمالي", "السلطة", "الملاءمة المحلية", "قابلية الاقتباس"];
+              const lines = [`### ${head}`, `- **${lbl[0]}:** ${s("score") !== "—" ? s("score") : s("overall")}/100`, `- **${lbl[1]}:** ${s("authority")}/100`, `- **${lbl[2]}:** ${s("local")}/100`, `- **${lbl[3]}:** ${s("citation")}/100`];
+              if (r?.ai_view) lines.push("", String(r.ai_view));
+              const ex = r?.explain || {};
+              for (const k of ["authority", "local", "citation"]) if (ex[k]) lines.push(`- ${ex[k]}`);
+              reply = { text: lines.join("\n"), needsTask: false, task: null };
+              directDone = true;
+            }
+          } catch (e) { console.warn("[maaroof-chat] direct analyze failed", String((e as any)?.message || e).slice(0, 160)); }
+        }
+        if (directDone) {
+          // reply already set from a real tool run
+        } else if (!axisAuditRequest && detectCouncilRequest(message)) {
           // Ten-engine council runs as a real approved task (live probe, charged only for answering engines).
           const t = lang === "en"
             ? "I can ask all ten Maaroof engines now: each one gets the same unbiased question, then an evidence check. You'll see every engine's status, answer, real sources and the conflict resolution. Approve to start."
