@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle } from "lucide-react";
+import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle, Copy, Check, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
@@ -9,9 +9,10 @@ import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
 import { AssistantMessage } from "./AssistantMessage";
 import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
-import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, scopeLabel, type GeoScope } from "@/components/GeoScopeSelector";
 import { FiveAxisAuditCards, type FiveAxisAuditTaskState } from "@/components/workspace/FiveAxisAuditCards";
 import { buildFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
+import { hasActionableRecommendations, hasUsefulAnalyticalContent } from "@/lib/maaroof/chat-message-actions";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
@@ -55,6 +56,7 @@ export function Dardasha({
   const [drag, setDrag] = useState(false);
   const [contextTaskId, setContextTaskId] = useState("");
   const [taskDraft, setTaskDraft] = useState<ChatTaskDraft | null>(null);
+  const [copiedMessageKey, setCopiedMessageKey] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,6 +93,16 @@ export function Dardasha({
       } catch {
         setAtts((p) => p.map((a) => (a.name === name && a.busy ? { name, analysis: "", failed: true } : a)));
       }
+    }
+  };
+
+  const copyMessage = async (messageKey: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageKey(messageKey);
+      window.setTimeout(() => setCopiedMessageKey((current) => current === messageKey ? null : current), 1500);
+    } catch {
+      setErr(tr(lang, "تعذّر النسخ من المتصفح. حدّد النص وانسخه يدوياً.", "Clipboard access failed. Select and copy the text manually.", "کۆپی کردن سەرکەوتوو نەبوو؛ دەقەکە دەستی کۆپی بکە."));
     }
   };
 
@@ -152,14 +164,6 @@ export function Dardasha({
       </div>
       <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "hsl(var(--border)) transparent" }} className="min-h-[160px] max-h-[46dvh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3 scroll-smooth sm:min-h-[220px] sm:max-h-[54dvh] md:max-h-[min(68dvh,760px)] md:p-4">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
-        {busy && <div role="status" aria-live="polite" className="mb-3 overflow-hidden rounded-xl border border-primary/30 bg-primary/5 p-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-primary"><LoaderCircle className="size-4 animate-spin" />{tr(lang, "بطاقة الأداة: استشارة معروف", "Tool card: Maaroof consultation", "کارتی ئامراز: ڕاوێژکاری معروف")}</div>
-          <p className="mt-1 text-xs text-muted-foreground">{tr(lang, "يُرسل الطلب ويُنتظر الرد. هذا مؤشر نشاط حي وليس نسبة إنجاز محسوبة من الخادم.", "The request is running. This is a live activity indicator, not a server-measured completion percentage.", "داواکاری لە جێبەجێکردندایە. ئەمە نیشاندەری چالاکییە، نە ڕێژەی تەواوبوونی پێوانەکراو.")}</p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={tr(lang, "نشاط الاستشارة", "Consultation activity", "چالاکی ڕاوێژکاری")}>
-            <div className="h-full w-1/3 rounded-full bg-primary animate-[pulse_1.2s_ease-in-out_infinite]" />
-          </div>
-          <details className="mt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">{tr(lang, "عرض مراحل النشاط", "Show activity stages", "پیشاندانی قۆناغەکان")}</summary><ol className="mt-2 list-decimal space-y-1 ps-5"><li>{tr(lang, "استلام الطلب والسياق", "Receive request and context", "وەرگرتنی داواکاری و پاشبنەما")}</li><li className="font-semibold text-primary">{tr(lang, "استشارة النموذج وصياغة الرد", "Consult model and draft response", "ڕاوێژ لەگەڵ مۆدێل و ئامادەکردنی وەڵام")}</li><li>{tr(lang, "عرض النتيجة أو اقتراح مهمة تتطلب موافقتك", "Show a result or propose a task requiring your approval", "پیشاندانی ئەنجام یان پێشنیاری ئەرک بە ڕەزامەندی تۆ")}</li></ol></details>
-        </div>}
         {atts.some((a) => a.busy) && <div role="status" aria-live="polite" className="mb-3 rounded-xl border border-border p-3 text-xs">
           <div className="flex items-center gap-2 font-semibold"><LoaderCircle className="size-3.5 animate-spin text-primary" />{tr(lang, "استخراج محتوى الملف", "Extracting file content", "دەرهێنانی ناوەڕۆکی فایل")}</div>
           <p className="mt-1 text-muted-foreground">{tr(lang, "رفع الملف ثم تحليل المحتوى وإلحاقه بسياق الدردشة قبل الإرسال.", "Uploading, analyzing, then attaching the extracted content to the chat before sending.", "بارکردن و شیکردنەوە و زیادکردنی ناوەڕۆک بۆ گفتوگۆ پێش ناردن.")}</p>
@@ -171,7 +175,22 @@ export function Dardasha({
           const openTaskDraft = (proposedGoal?: string) => setTaskDraft({ messageKey, goal: buildTaskGoalFromResult({ language: lang, originalRequest: requestContext, answer: m.content, proposedGoal }) });
           return (
           <div key={messageKey} className={m.role === "user" ? "flex justify-end" : ""}>
-            <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm" : "max-w-full min-w-0 rounded-2xl border border-border/70 bg-card/60 p-3 text-sm leading-7 shadow-sm transition-colors duration-200 hover:border-primary/20 hover:shadow-md sm:p-4"}>
+            <div
+              className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-primary/10 bg-primary/10 px-3.5 py-2.5 text-sm leading-6 text-foreground shadow-none" : "group relative max-w-full min-w-0 rounded-2xl border border-border/55 bg-card/45 p-3 text-sm leading-7 shadow-[0_1px_2px_hsl(var(--foreground)/0.025)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/15 hover:bg-card/70 sm:p-4"}
+              onMouseMove={m.role === "assistant" ? (event) => {
+                const bounds = event.currentTarget.getBoundingClientRect();
+                event.currentTarget.style.backgroundImage = "radial-gradient(380px circle at " + (event.clientX - bounds.left) + "px " + (event.clientY - bounds.top) + "px, hsl(var(--primary) / 0.055), transparent 72%)";
+              } : undefined}
+              onMouseLeave={m.role === "assistant" ? (event) => { event.currentTarget.style.backgroundImage = ""; } : undefined}
+            >
+              {m.role === "assistant" && (
+                <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.045] px-2 py-1 font-semibold text-foreground/85">
+                    <Sparkles className="size-3 text-primary" />{tr(lang, "معروف", "Maaroof", "معروف")}
+                  </span>
+                  <span aria-label={tr(lang, "النطاق الجغرافي", "Geographic context", "پاشبنەمای جوگرافی")}>· {scopeLabel(geoScope, lang)}</span>
+                </div>
+              )}
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
               {m.role === "assistant" && m.axisAuditRequest && (
                 <FiveAxisAuditCards
@@ -180,10 +199,24 @@ export function Dardasha({
                   taskState={axisAuditTask}
                 />
               )}
-              {m.role === "assistant" && m.content.trim() && (
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-                  <ExportButtons size="xs" build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })} />
-                  {!m.axisAuditRequest && !m.task && !m.needs_task && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "حوّل الرد إلى مهمة", "Turn answer into a task", "وەڵامەکە بکە بە ئەرک")}</button>}
+              {m.role === "assistant" && (hasUsefulAnalyticalContent(m.content) || m.axisAuditRequest) && (
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/45 pt-2.5 opacity-90 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => void copyMessage(messageKey, m.content)}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    aria-label={tr(lang, "نسخ الرد", "Copy answer", "کۆپی وەڵام")}
+                    title={tr(lang, "نسخ الرد", "Copy answer", "کۆپی وەڵام")}
+                  >
+                    {copiedMessageKey === messageKey ? <Check className="size-3.5 text-emerald-600 animate-pulse" /> : <Copy className="size-3.5" />}
+                    {copiedMessageKey === messageKey ? tr(lang, "تم النسخ", "Copied", "کۆپی کرا") : tr(lang, "نسخ", "Copy", "کۆپی")}
+                  </button>
+                  <ExportButtons
+                    size="xs"
+                    className="[&_button]:!rounded-full [&_button]:!border-border/50 [&_button]:!bg-muted/20 [&_button]:!px-2.5 [&_button]:!py-1.5 [&_button]:!text-muted-foreground [&_button]:!shadow-none [&_button:hover]:!bg-muted/70 [&_button:hover]:!text-foreground [&_button:hover]:!shadow-none"
+                    build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })}
+                  />
+                  {!m.axisAuditRequest && !m.task && !m.needs_task && hasActionableRecommendations(m.content) && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "تحويل لمهمة", "Turn into task", "گۆڕین بۆ ئەرک")}</button>}
                 </div>
               )}
               {m.role === "assistant" && !m.axisAuditRequest && (m.task || m.needs_task) && (
@@ -215,7 +248,16 @@ export function Dardasha({
           </div>
           );
         })}
-        {busy && <div role="status" aria-live="polite" className="rounded-xl border border-primary/25 bg-primary/5 p-3"><div className="flex items-center gap-2 text-sm"><LoaderCircle className="size-4 animate-spin text-primary" /><ShinyText>{tr(lang, "معروف يحلل طلبك ويجهّز الاستشارة…", "Maaroof is analyzing your request and preparing the consultation…", "معروف داواکارییەکەت شیدەکاتەوە…")}</ShinyText></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-2/5 rounded-full bg-primary animate-pulse" /></div><p className="mt-1 text-[11px] text-muted-foreground">{tr(lang, "هذه إشارة نشاط وليست نسبة إنجاز محسوبة.", "Activity indicator, not a measured completion percentage.", "ئەمە نیشانەی چالاکییە، نەک ڕێژەی تەواوبوونی پێوانەکراو.")}</p></div>}
+        {busy && <div role="status" aria-live="polite" className="relative isolate overflow-hidden rounded-2xl border border-primary/15 bg-primary/[0.035] px-3.5 py-3 shadow-sm before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(ellipse_at_top_left,hsl(var(--primary)/0.08),transparent_65%)] sm:px-4">
+          <div className="flex items-center gap-2.5 text-sm">
+            <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full border border-primary/15 bg-background/80">
+              <LoaderCircle className="size-3.5 animate-spin text-primary" />
+              <span className="absolute inset-0 rounded-full bg-primary/10 animate-ping [animation-duration:2.2s]" />
+            </span>
+            <div className="min-w-0"><ShinyText>{tr(lang, "معروف يستحضر سياقك ويصيغ الرد…", "Maaroof is gathering context and shaping a reply…", "معروف پاشبنەما کۆدەکاتەوە و وەڵام ئامادە دەکات…")}</ShinyText></div>
+            <span className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[10px] text-muted-foreground"><span className="size-1.5 animate-pulse rounded-full bg-primary" />{tr(lang, "يكتب", "Writing", "دەنووسێت")}</span>
+          </div>
+        </div>}
         <div ref={endRef} />
       </div>
       {atts.length > 0 && (
@@ -229,15 +271,15 @@ export function Dardasha({
         </div>
       )}
       {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
-      <div className="mt-3 flex items-end gap-2">
+      <div className="mt-3 flex items-end gap-2 rounded-2xl border border-border/70 bg-background/80 p-2 shadow-sm backdrop-blur-sm transition-[border-color,box-shadow] focus-within:border-primary/45 focus-within:shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]">
         <input ref={fileRef} type="file" multiple accept={ATTACHMENT_MIME.join(",")} className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
-        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border hover:bg-muted" aria-label="attach"><Paperclip className="size-4" /></button>
+        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={tr(lang, "إرفاق ملف", "Attach file", "هاوپێچکردنی فایل")}><Paperclip className="size-4" /></button>
         <textarea id="dardasha-message-input" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { const fs = Array.from(e.clipboardData.files || []); if (fs.length) { e.preventDefault(); void addFiles(fs); } }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-          rows={3} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
-          className="min-h-20 flex-1 resize-none rounded-2xl border-2 border-border bg-background px-4 py-3 text-base leading-7 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15" />
-        <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-50" aria-label="send"><Send className="size-5" /></button>
+          rows={1} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
+          className="max-h-40 min-h-11 flex-1 resize-none border-0 bg-transparent px-2.5 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground/75 focus:ring-0" />
+        <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-40" aria-label={tr(lang, "إرسال", "Send", "ناردن")}><Send className="size-5" /></button>
       </div>
     </section>
   );
