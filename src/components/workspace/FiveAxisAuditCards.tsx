@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Activity, CheckCircle2, ChevronDown, CircleAlert, FileSearch, LoaderCircle, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { buildTaskExportPayload, type TaskToolResult } from "@/lib/maaroof/task-export";
@@ -118,8 +118,11 @@ export function FiveAxisAuditCards({
     if (taskState?.status === "failed") return "failed";
     const hasEvidence = !!section && (
       (section.rows || []).some((row) => {
-        const val = String(row[1] ?? "").trim();
-        return val.length > 0 && !/not measured|no available|no measurable|لم تُسجّل|لا توجد بيانات|لم يُعثر|نەپێوراو|بەردەست نییە|نەدۆزرایەوە/i.test(val);
+        const label = String(row[0] ?? "");
+        const raw = row[1];
+        const val = String(raw ?? "").trim();
+        if (!val || ((typeof raw === "number" || /count|number of fields|الحقول|عدد|ژمارە/i.test(label)) && Number(raw) === 0)) return false;
+        return !/not measured|no available|no measurable|no reliable|no actual|لم تُسجّل|لا توجد بيانات|لم يُعثر|نەپێوراو|بەردەست نییە|نەدۆزرایەوە|no answers|لم توجد إجابات/i.test(val);
       }) || !!section.text?.trim() || !!section.table?.data?.length
     );
     if (taskState?.status === "complete") return hasEvidence ? "measured" : "unmeasured";
@@ -131,7 +134,7 @@ export function FiveAxisAuditCards({
     : status === "measured" || status === "complete" ? <CheckCircle2 className="size-3.5" />
       : status === "failed" ? <CircleAlert className="size-3.5" /> : <Activity className="size-3.5" />;
 
-  const onMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+  const onMouseMove = (event: ReactMouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     event.currentTarget.style.setProperty("--pointer-x", `${event.clientX - rect.left}px`);
     event.currentTarget.style.setProperty("--pointer-y", `${event.clientY - rect.top}px`);
