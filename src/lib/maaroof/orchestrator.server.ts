@@ -576,8 +576,9 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
     // Explicit five-axis audit requests receive the core evidence tools even if the planner omits them.
     if (isFiveAxisAuditGoal(ctx.goal)) {
+      const configuredEnabledTools = settings.enabled_tools || [];
       const requiredAuditTools = ["analyze", "brand_authority", ...(ctx.liveProbe !== false ? ["visibility"] : [])]
-        .filter((key) => !settings.enabled_tools.length || settings.enabled_tools.includes(key));
+        .filter((key) => !configuredEnabledTools.length || configuredEnabledTools.includes(key));
       const requiredSet = new Set(requiredAuditTools);
       for (const key of requiredAuditTools) {
         if (steps.some((step) => step.tool === key)) continue;
