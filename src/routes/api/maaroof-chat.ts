@@ -22,6 +22,11 @@ function scopeWorkspace(query: any, workspaceId: string | null) {
   return workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
 }
 
+// "legacy" = messages saved before conversations existed.
+function byThread<T extends { is: any; eq: any }>(q: T, threadId: string): T {
+  return threadId === "legacy" ? q.is("thread_id", null) : q.eq("thread_id", threadId);
+}
+
 export const Route = createFileRoute("/api/maaroof-chat")({
   server: {
     handlers: {
@@ -29,7 +34,12 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
         const workspace = await resolveWorkspace(a.admin, a.userId, new URL(request.url).searchParams.get("workspace_id"));
         if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
-        const { data } = await scopeWorkspace(a.admin.from("maaroof_chat_messages").select("id, role, content, grounded, created_at").eq("user_id", a.userId), workspace.id).order("created_at", { ascending: true }).limit(100);
+        const threadId = new URL(request.url).searchParams.get("thread_id") || "";
+        const { data: threads } = await scopeWorkspace(a.admin.from("chat_threads").select("id, title, updated_at").eq("user_id", a.userId), workspace.id).order("updated_at", { ascending: false }).limit(50);
+        const { count: legacyCount } = await scopeWorkspace(a.admin.from("maaroof_chat_messages").select("id", { count: "exact", head: true }).eq("user_id", a.userId).is("thread_id", null), workspace.id);
+        const { data } = threadId
+          ? await byThread(scopeWorkspace(a.admin.from("maaroof_chat_messages").select("id, role, content, grounded, created_at").eq("user_id", a.userId), workspace.id), threadId).order("created_at", { ascending: true }).limit(200)
+          : { data: [] as any[] };
         const { data: prof } = await a.admin.from("profiles").select("is_subscribed, tokens_balance, tokens_daily_limit, tokens_monthly_limit").eq("id", a.userId).maybeSingle();
         const p: any = prof || {};
         const today = new Date(); today.setUTCHours(0, 0, 0, 0);
@@ -38,13 +48,16 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const { isUnlimitedAccount } = await import("@/lib/tokens.server");
         const unlimited = await isUnlimitedAccount(a.userId);
         const { data: jobs } = await scopeWorkspace(a.admin.from("maaroof_jobs").select("id, goal, status, created_at").eq("user_id", a.userId).eq("status", "completed"), workspace.id).order("created_at", { ascending: false }).limit(15);
-        return Response.json({ items: data ?? [], tasks: jobs ?? [], quota: chatQuota({ metered: Number(p.tokens_balance) > 0 || p.tokens_daily_limit != null || p.tokens_monthly_limit != null, subscribed: !!p.is_subscribed, todayUserMessages: count || 0, unlimited }) });
+        return Response.json({ items: data ?? [], threads: [...(threads ?? []), ...((legacyCount || 0) > 0 ? [{ id: "legacy", title: "محادثات سابقة", updated_at: null }] : [])], tasks: jobs ?? [], quota: chatQuota({ metered: Number(p.tokens_balance) > 0 || p.tokens_daily_limit != null || p.tokens_monthly_limit != null, subscribed: !!p.is_subscribed, todayUserMessages: count || 0, unlimited }) });
       },
       DELETE: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
         const workspace = await resolveWorkspace(a.admin, a.userId, new URL(request.url).searchParams.get("workspace_id"));
         if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
-        await scopeWorkspace(a.admin.from("maaroof_chat_messages").delete().eq("user_id", a.userId), workspace.id);
+        const threadId = new URL(request.url).searchParams.get("thread_id") || "";
+        if (!threadId) return Response.json({ error: "thread_required" }, { status: 400 });
+        await byThread(scopeWorkspace(a.admin.from("maaroof_chat_messages").delete().eq("user_id", a.userId), workspace.id), threadId);
+        if (threadId !== "legacy") await a.admin.from("chat_threads").delete().eq("user_id", a.userId).eq("id", threadId);
         return Response.json({ ok: true });
       },
       POST: async ({ request }) => {
@@ -56,6 +69,11 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const workspaceId = workspace.id;
         const message = String(body?.message || "").trim().slice(0, 2000);
         if (!message) return Response.json({ error: "message_required" }, { status: 400 });
+        let threadId = typeof body?.thread_id === "string" && (body.thread_id === "legacy" || /^[0-9a-f-]{36}$/i.test(body.thread_id)) ? body.thread_id : "";
+        if (threadId && threadId !== "legacy") {
+          const { data: th } = await admin.from("chat_threads").select("id").eq("id", threadId).eq("user_id", userId).maybeSingle();
+          if (!th) threadId = "";
+        }
         const lang = (["ar", "en", "ku"].includes(body?.lang) ? body.lang : "ar") as "ar" | "en" | "ku";
         const axisAuditRequest = detectFiveAxisAuditRequest(message);
         const geoScope = normalizeGeoScope(body?.geo_scope);
@@ -105,7 +123,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           scopeWorkspace(admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(120),
           workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
           workspaceId ? admin.from("workspaces").select("name, space_kind, profile, goals, entity_truth_card, onboarding, settings, brand_url, brand_summary, keywords, country, city").eq("owner_id", userId).eq("id", workspaceId).limit(1) : Promise.resolve({ data: [] as any[] }),
-          scopeWorkspace(admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(40),
+          threadId ? byThread(scopeWorkspace(admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId), workspaceId), threadId).order("created_at", { ascending: false }).limit(40) : Promise.resolve({ data: [] as any[] }),
         ]);
         const id = ownerIdentity(p);
         const conf = id.verified ? "evidence" : "unverified profile entry";
@@ -125,6 +143,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const { detectGeoScoreRequest } = await import("@/lib/maaroof/chat-direct");
         const geoScore = !axisAuditRequest ? detectGeoScoreRequest(message) : null;
         let directDone = false;
+        let council: any = null;
         if (geoScore) {
           // One tool => runs directly in the chat; the tool itself charges only on success.
           try {
@@ -147,6 +166,10 @@ export const Route = createFileRoute("/api/maaroof-chat")({
               for (const k of ["authority", "local", "citation"]) if (ex[k]) lines.push(`- ${ex[k]}`);
               reply = { text: lines.join("\n"), needsTask: false, task: null };
               directDone = true;
+              try {
+                const { runToolCouncil } = await import("@/lib/maaroof/tool-council.server");
+                council = await runToolCouncil({ tool: "geo_score", input: geoScore.text, result: lines.join("\n"), lang });
+              } catch { council = null; }
             }
           } catch (e) { console.warn("[maaroof-chat] direct analyze failed", String((e as any)?.message || e).slice(0, 160)); }
         }
@@ -196,12 +219,21 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           const charge = await chargeTokens({ userId, toolKey: "maaroof.chat", meta: { chars: message.length } });
           if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status: 402 });
         }
-        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo, axis_audit_request: axisAuditRequest };
-        await admin.from("maaroof_chat_messages").insert([
-          { user_id: userId, workspace_id: workspaceId, role: "user", content: message },
-          { user_id: userId, workspace_id: workspaceId, role: "assistant", content: reply.text, grounded },
+        const grounded = { council, knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo, axis_audit_request: axisAuditRequest };
+        if (!threadId) {
+          const { data: th, error: thErr } = await admin.from("chat_threads").insert({ user_id: userId, workspace_id: workspaceId, title: message.replace(/\s+/g, " ").slice(0, 60) }).select("id").single();
+          if (thErr) console.error("[maaroof-chat] thread create failed", thErr.message);
+          threadId = th?.id || "";
+        } else if (threadId !== "legacy") {
+          await admin.from("chat_threads").update({ updated_at: new Date().toISOString() }).eq("id", threadId).eq("user_id", userId);
+        }
+        const tid = threadId && threadId !== "legacy" ? threadId : null;
+        const { error: insErr } = await admin.from("maaroof_chat_messages").insert([
+          { user_id: userId, workspace_id: workspaceId, thread_id: tid, role: "user", content: message },
+          { user_id: userId, workspace_id: workspaceId, thread_id: tid, role: "assistant", content: reply.text, grounded },
         ]);
-        return Response.json({ text: reply.text, needs_task: reply.needsTask, task: reply.task, axis_audit_request: axisAuditRequest, knowledge_items: knowledge.length, quota });
+        if (insErr) console.error("[maaroof-chat] save failed", insErr.message);
+        return Response.json({ thread_id: threadId || null, council, text: reply.text, needs_task: reply.needsTask, task: reply.task, axis_audit_request: axisAuditRequest, knowledge_items: knowledge.length, quota });
       },
     },
   },

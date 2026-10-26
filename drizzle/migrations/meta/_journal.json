@@ -127,6 +127,13 @@
       "when": 1792888336424,
       "tag": "0017_workspace_account_isolation",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793052921299,
+      "tag": "0018_migration",
+      "breakpoints": true
     }
   ]
 }

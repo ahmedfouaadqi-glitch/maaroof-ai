@@ -12,11 +12,14 @@ import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
 import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
 import { FiveAxisAuditCards, type FiveAxisAuditTaskState } from "@/components/workspace/FiveAxisAuditCards";
 import { buildFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
+import { CouncilCards, type Council } from "./CouncilCards";
+import { Plus, MessagesSquare } from "lucide-react";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
 type Task = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
-type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null; axisAuditRequest?: boolean };
+type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null; axisAuditRequest?: boolean; council?: Council | null };
+type Thread = { id: string; title: string; updated_at: string | null };
 type ChatTaskDraft = { messageKey: string; goal: string };
 type Att = DardashaAttachment & { busy?: boolean; failed?: boolean };
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -31,9 +34,12 @@ function isActionableAssistantReply(content: string): boolean {
   return structured && actionable;
 }
 
-async function call(method: string, body?: unknown, workspaceId?: string | null) {
+async function call(method: string, body?: unknown, workspaceId?: string | null, threadId?: string) {
   const t = await token();
-  const query = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+  const qs = new URLSearchParams();
+  if (workspaceId) qs.set("workspace_id", workspaceId);
+  if (threadId) qs.set("thread_id", threadId);
+  const query = qs.toString() ? `?${qs}` : "";
   const res = await fetch(withPreviewAuth("/api/maaroof-chat" + query), { method, headers: { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: body ? JSON.stringify(body) : undefined });
   return { ok: res.ok, status: res.status, json: await res.json().catch(() => ({})) };
 }
@@ -69,7 +75,13 @@ export function Dardasha({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setTaskDraft(null); void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null, axisAuditRequest: m.grounded?.axis_audit_request === true }))); }); }, [workspaceId]);
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const skipLoad = useRef("");
+  const [threadId, setThreadId] = useState("");
+  const toMsgs = (items: any[]): Msg[] => items.map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null, axisAuditRequest: m.grounded?.axis_audit_request === true, council: m.grounded?.council || null }));
+  // Load conversation list for this space; open the most recent one.
+  useEffect(() => { setTaskDraft(null); setMsgs([]); setThreadId(""); void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); const ts: Thread[] = r.json.threads || []; setThreads(ts); if (ts[0]) setThreadId(ts[0].id); }); }, [workspaceId]);
+  useEffect(() => { if (!threadId) return; if (skipLoad.current === threadId) { skipLoad.current = ""; return; } void call("GET", undefined, workspaceId, threadId).then((r) => { if (r.ok) setMsgs(toMsgs(r.json.items || [])); }); inputRef.current?.focus(); }, [threadId, workspaceId]);
   useEffect(() => {
     if (!chatPrefill) return;
     setText(chatPrefill.text);
@@ -118,6 +130,7 @@ export function Dardasha({
       const r = await call("POST", {
         message: m, lang, workspace_id: workspaceId,
         task_id: contextTaskId || undefined,
+        thread_id: threadId || undefined,
         geo_scope: toServerGeoScope(geoScope),
       }, workspaceId);
       if (!r.ok) {
@@ -128,7 +141,12 @@ export function Dardasha({
         return;
       }
       if (r.json.quota) setQuota(r.json.quota);
-      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null, axisAuditRequest: r.json.axis_audit_request === true }]);
+      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null, axisAuditRequest: r.json.axis_audit_request === true, council: r.json.council || null }]);
+      if (r.json.thread_id && r.json.thread_id !== threadId) {
+        const nid = String(r.json.thread_id);
+        setThreads((ts) => [{ id: nid, title: m.slice(0, 60), updated_at: new Date().toISOString() }, ...ts.filter((t) => t.id !== nid)]);
+        skipLoad.current = nid; setThreadId(nid);
+      }
     } catch {
       setErr(tr(lang, "انقطع الاتصال بالدردشة. تحقق من الاتصال وحاول مجدداً.", "Chat connection failed. Check your connection and retry.", "پەیوەندی گفتوگۆ کێشەی هەبوو. دووبارە هەوڵ بدە."));
     } finally {
@@ -153,8 +171,16 @@ export function Dardasha({
         </div>
         <div className="flex items-center gap-2">
           {quota && <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums">{(quota as any).approved ? tr(lang, "غير محدود", "Unlimited", "بێسنوور") : quota.unlimited ? tr(lang, "من رصيدك عند النجاح", "From balance on success", "لە باڵانس") : `${quota.remaining}/${quota.cap}`}</span>}
-          {msgs.length > 0 && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف المحادثة؟", "Clear chat?", "سڕینەوە؟"))) { await call("DELETE", undefined, workspaceId); setMsgs([]); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
+          {threadId && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف هذه المحادثة؟", "Delete this conversation?", "سڕینەوە؟"))) { await call("DELETE", undefined, workspaceId, threadId); setMsgs([]); setThreads((ts) => ts.filter((t) => t.id !== threadId)); setThreadId(""); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
         </div>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <MessagesSquare className="size-4 text-muted-foreground" />
+        <select aria-label={tr(lang, "المحادثات السابقة", "Previous conversations", "گفتوگۆکانی پێشوو")} value={threadId} onChange={(e) => setThreadId(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+          {!threadId && <option value="">{tr(lang, "محادثة جديدة", "New conversation", "گفتوگۆی نوێ")}</option>}
+          {threads.map((t) => <option key={t.id} value={t.id}>{t.id === "legacy" ? tr(lang, "محادثات سابقة", "Earlier messages", "نامەکانی پێشوو") : t.title}</option>)}
+        </select>
+        <button type="button" onClick={() => { setThreadId(""); setMsgs([]); setTaskDraft(null); inputRef.current?.focus(); }} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{tr(lang, "محادثة جديدة", "New", "نوێ")}</button>
       </div>
       <div className="maaroof-chat-scope mb-3 rounded-xl border border-border bg-background/50 p-3 sm:p-3.5">
         <div className="mb-2 text-xs font-semibold text-muted-foreground">{tr(lang, "النطاق الجغرافي الذي سيُوجّه الدردشة والبحث", "Geographic scope for chat and research", "بواری جوگرافی بۆ گفتوگۆ و گەڕان")}</div>
@@ -189,6 +215,7 @@ export function Dardasha({
                 {isGeoScopeConfigured(geoScope) && <span className="rounded-full bg-muted/70 px-2 py-0.5">{tr(lang, "سياق جغرافي مفعّل", "Geographic context active", "پاشبنەمای جوگرافی چالاکە")}</span>}
               </div>}
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
+              {m.role === "assistant" && m.council && <CouncilCards council={m.council} lang={lang} />}
               {m.role === "assistant" && m.axisAuditRequest && (
                 <FiveAxisAuditCards
                   lang={lang}
