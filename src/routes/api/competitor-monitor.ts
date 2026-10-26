@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/competitor-monitor")({
         return Response.json({
           error: "temporarily_paused",
           skipped: "temporarily_paused",
-          message: PAUSED_MESSAGES[lang],
+          message: PAUSED_MESSAGES[lang as keyof typeof PAUSED_MESSAGES],
         }, { status: 503 });
       },
     },

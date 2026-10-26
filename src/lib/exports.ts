@@ -961,7 +961,7 @@ export async function exportToPowerPoint(payload: ExportPayload) {
           decorate(slide);
           slide.addText(s.heading + (pages.length > 1 ? " (" + (pageIndex + 1) + "/" + pages.length + ")" : ""), { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA", fit: "shrink" });
           slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
-          slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "mid", fit: "shrink" });
+          slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "middle", fit: "shrink" });
           if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B", fit: "shrink" });
           slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06, fit: "shrink" });
           slide.addText(page, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });

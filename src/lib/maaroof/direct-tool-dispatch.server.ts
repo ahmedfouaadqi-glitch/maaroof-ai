@@ -16,7 +16,7 @@ type RouteLike = {
 
 type Handler = (context: { request: Request; params?: Record<string, string>; context?: Record<string, unknown> }) => Response | Promise<Response>;
 
-const ROUTE_LOADERS: Record<string, () => Promise<RouteLike>> = {
+const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/api/analyze": () => import("@/routes/api/analyze"),
   "/api/suggest": () => import("@/routes/api/suggest"),
   "/api/compare": () => import("@/routes/api/compare"),
