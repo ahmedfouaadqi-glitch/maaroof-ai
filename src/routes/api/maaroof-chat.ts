@@ -120,7 +120,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           ...taskCtx,
         );
 
-        let reply: { text: string; needsTask: boolean; task: { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string } | null };
+        let reply: { text: string; needsTask: boolean; task: { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string } | null } = { text: "", needsTask: false, task: null };
         const { openRouterChat, detectCouncilRequest } = await import("@/lib/maaroof/openrouter.server");
         const { detectGeoScoreRequest } = await import("@/lib/maaroof/chat-direct");
         const geoScore = !axisAuditRequest ? detectGeoScoreRequest(message) : null;
