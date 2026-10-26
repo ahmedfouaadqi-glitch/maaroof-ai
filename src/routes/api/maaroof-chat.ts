@@ -146,7 +146,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           for (const model of raw ? [] : CHAT_MODEL_CHAIN) {
             try {
               const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-                method: "POST", headers: lovableAiHeaders(apiKey), signal: AbortSignal.timeout(90_000),
+                method: "POST", headers: lovableAiHeaders(apiKey!), signal: AbortSignal.timeout(90_000),
                 body: JSON.stringify({ model, ...chatSamplingParams(model), messages: msgs }),
               });
               if (!res.ok) { lastErr = res.status === 429 ? "rate_limited" : res.status === 402 ? "credits" : "ai_failed"; continue; }
