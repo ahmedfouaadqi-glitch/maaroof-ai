@@ -98,7 +98,11 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
       await pick(w);
       setName(""); setBrandUrl(""); setSector(""); setShowForm(false);
     } catch (e: any) {
-      setFormError(String(e?.message || copy("تعذر إنشاء مساحة العمل.", "Could not create the workspace.", "دروستکردنی شوێنی کار سەرکەوتوو نەبوو.")).slice(0, 240));
+      const msg = String(e?.message || "");
+      const lim = /space_limit_reached:(\d+)/.exec(msg);
+      setFormError(lim
+        ? copy(`بلغت الحد الأقصى لمساحات العمل في باقتك (${lim[1]}).`, `You reached your plan's workspace limit (${lim[1]}).`, `گەیشتیتە سنووری شوێنی کار (${lim[1]}).`)
+        : (msg || copy("تعذر إنشاء مساحة العمل.", "Could not create the workspace.", "دروستکردنی شوێنی کار سەرکەوتوو نەبوو.")).slice(0, 240));
     } finally {
       setCreating(false);
     }

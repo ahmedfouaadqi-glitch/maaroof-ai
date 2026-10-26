@@ -121,19 +121,29 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         );
 
         let reply: { text: string; needsTask: boolean; task: { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string } | null };
-        if (axisAuditRequest) {
+        const { openRouterChat, detectCouncilRequest } = await import("@/lib/maaroof/openrouter.server");
+        if (!axisAuditRequest && detectCouncilRequest(message)) {
+          // Ten-engine council runs as a real approved task (live probe, charged only for answering engines).
+          const t = lang === "en"
+            ? "I can ask all ten Maaroof engines now: each one gets the same unbiased question, then an evidence check. You'll see every engine's status, answer, real sources and the conflict resolution. Approve to start."
+            : lang === "ku"
+              ? "دەتوانم ئێستا پرسیار لە هەر دە بزوێنەری معروف بکەم و وەڵام و سەرچاوە ڕاستەقینەکان پیشان بدەم. بۆ دەستپێکردن پەسەندی بکە."
+              : "يمكنني الآن سؤال محركات معروف العشرة: سؤال محايد واحد لكل محرك ثم تحقق بالأدلة، وستظهر حالة كل محرك وإجابته ومصادره الحقيقية وحسم التعارض. وافق للبدء.";
+          reply = { text: t, needsTask: true, task: { kind: "scan", goal: `${message}\n\n[visibility: probe all ten engines]` } };
+        } else if (axisAuditRequest) {
           // This is an explicit user request for a live audit. Return an exact, localized task draft;
           // no live tools are run here, and the existing workspace approval/cost review still applies.
           reply = { text: fiveAxisAuditReply(lang), needsTask: true, task: { kind: "scan", goal: buildFiveAxisAuditGoal(lang) } };
         } else {
           const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
           const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } = await import("@/lib/lovable-ai");
           const { CHAT_MODEL_CHAIN, chatSamplingParams } = await import("@/lib/model-params");
           const history = ((hist || []) as any[]).reverse().map((m) => ({ role: m.role, content: m.content }));
           const msgs = [{ role: "system", content: groundedSystemPrompt(lang, knowledge) }, ...history, { role: "user", content: message }];
-          let raw = ""; let lastErr = "ai_failed";
-          for (const model of CHAT_MODEL_CHAIN) {
+          // OpenRouter is primary; the existing gateway chain is the fallback.
+          let raw = await openRouterChat(msgs); let lastErr = "ai_failed";
+          if (!raw && !apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
+          for (const model of raw ? [] : CHAT_MODEL_CHAIN) {
             try {
               const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
                 method: "POST", headers: lovableAiHeaders(apiKey), signal: AbortSignal.timeout(90_000),
