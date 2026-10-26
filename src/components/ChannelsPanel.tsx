@@ -92,7 +92,7 @@ const PLATFORMS: {
 
 type PickerAccount = { externalId: string; name: string; kind: string; ownerType: string };
 
-export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
+export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: () => void; workspaceId?: string | null }) {
   const { t } = useI18n();
   const fetchState = useServerFn(getChannelsState);
   const tgLinkFn = useServerFn(startTelegramLink);
@@ -114,8 +114,8 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
   const [picker, setPicker] = useState<{ linkId: string; provider: string; accounts: PickerAccount[] } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = async () => setState((await fetchState()) as State);
-  useEffect(() => { load(); }, []);
+  const load = async () => setState((await fetchState({ data: { workspaceId } } as any)) as State);
+  useEffect(() => { void load(); }, [workspaceId]);
 
   // ---- OAuth popup flow -----------------------------------------------------
   const waitForPopup = (popup: Window, provider: string) =>
