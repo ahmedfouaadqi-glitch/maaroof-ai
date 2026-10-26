@@ -857,6 +857,33 @@ export type Database = {
           },
         ]
       }
+      chat_threads: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       competitor_alerts: {
         Row: {
           created_at: string
@@ -3122,6 +3149,7 @@ export type Database = {
           grounded: Json
           id: string
           role: string
+          thread_id: string | null
           user_id: string
           workspace_id: string | null
         }
@@ -3131,6 +3159,7 @@ export type Database = {
           grounded?: Json
           id?: string
           role: string
+          thread_id?: string | null
           user_id: string
           workspace_id?: string | null
         }
@@ -3140,6 +3169,7 @@ export type Database = {
           grounded?: Json
           id?: string
           role?: string
+          thread_id?: string | null
           user_id?: string
           workspace_id?: string | null
         }
