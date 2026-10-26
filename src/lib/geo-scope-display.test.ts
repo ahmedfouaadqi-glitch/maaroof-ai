@@ -23,10 +23,11 @@ describe("compact geographic scope summary", () => {
     expect(getCompactGeoScopeDisplay({ scope: "auto" }, "ar").label).toContain("تلقائي");
   });
 
-  it("shows a city or region beside the selected country", () => {
-    expect(getCompactGeoScopeDisplay({ scope: "city", country: "Lebanon", city: "بيروت" }, "ar")).toMatchObject({
+  it("keeps the compact summary focused on the country even for a city scope", () => {
+    expect(getCompactGeoScopeDisplay({ scope: "city", country: "Lebanon", city: "بيروت" }, "ar")).toEqual({
       label: "لبنان",
-      place: "بيروت",
+      code: "LB",
+      flag: "🇱🇧",
     });
   });
 });
