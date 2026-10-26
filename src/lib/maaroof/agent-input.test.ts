@@ -50,7 +50,7 @@ describe("agent-input", () => {
   it("does not treat a rewrite instruction as the source passage", () => {
     const goal = "Rewrite this copy for GEO and improve its search visibility.";
     const filled = fillFromTask("geo_rewrite", { text: goal }, [], { goal });
-    expect(filled.text).toBe("");
+    expect(filled.text).toBeUndefined();
     expect(missingFields("geo_rewrite", filled)).toEqual(["text"]);
   });
 
