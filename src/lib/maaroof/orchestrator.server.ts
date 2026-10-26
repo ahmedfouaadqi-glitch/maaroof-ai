@@ -29,6 +29,7 @@ import {
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
+import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -112,7 +113,7 @@ export function normalizeToolInput(input: any): Record<string, any> {
 }
 
 function toolsDescription(): string {
-  return TOOL_CATALOG.filter((t) => t.group === "tools")
+  return TOOL_CATALOG.filter((t) => t.group === "tools" && t.key !== "competitor_monitor")
     .map((t) => { const o = describeToolOptions(t.key); return `- ${t.key}: ${t.labels.en}${o ? ` (${o})` : ""}`; })
     .join("\n");
 }
@@ -557,7 +558,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
     // User-edited tool list (from the pre-execution catalog card) wins over the planner.
-    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k]);
+    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && k !== "competitor_monitor");
     if (userTools.length) {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
@@ -578,7 +579,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // Full tool catalog with per-user cost (no charge) so the user can add/remove tools before running.
     try {
       const { resolveToolCost } = await import("@/lib/tokens.server");
-      const keys = Object.keys(TOOL_OPTIONS);
+      const keys = Object.keys(TOOL_OPTIONS).filter((key) => key !== "competitor_monitor");
       const costs = await Promise.all(keys.map(async (k) => { try { return (await resolveToolCost(ctx.userId, k)).tokens || 0; } catch { return 0; } }));
       const { data: bal } = await db().from("profiles").select("tokens_balance").eq("id", ctx.userId).maybeSingle();
       await ctx.emit("tool_catalog", {
@@ -1031,6 +1032,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const specialists = new Set<string>();
     const runStep = async (i: number) => {
       const step = steps[i];
+      // Old queued plans may still contain this key; skip it before agent creation, dispatch or billing.
+      if (step.tool === "competitor_monitor") {
+        const skip = { skipped: "temporarily_paused", tool: "competitor_monitor" };
+        results.push({ tool: step.tool, ok: false, output: skip });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+        await logMsg("tool_result", skip);
+        return;
+      }
       await ctx.emit("tool_call", { index: i, tool: step.tool, input: step.input, reason: step.reason });
       await logMsg("tool_call", step);
 
@@ -1153,15 +1162,21 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
         try {
+          const internalAuth = await createInternalAuthHeader(ctx.userId, path, "POST");
+          const internalHeaders: Record<string, string> = {
+            "Content-Type": "application/json",
+            ...(ctx.authBearer ? { Authorization: ctx.authBearer } : {}),
+            ...(internalAuth ? { "x-maaroof-internal-auth": internalAuth } : {}),
+          };
           const requestForDirectDispatch = () => new Request(new URL(path, ctx.origin), {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+            headers: internalHeaders,
             body: JSON.stringify(body),
             signal: toolCtl.signal,
           });
           // Prefer executing the existing API handler inside this Worker. Cloudflare
           // may reject Worker-to-Worker fetches back to the same public origin.
-          const direct = await dispatchToolInProcess(path, requestForDirectDispatch());
+          const direct = await dispatchToolInProcess(path, requestForDirectDispatch(), ctx.userId);
           if (direct) {
             resp = direct;
           } else {
@@ -1171,7 +1186,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
             toolTransport = "http_fallback";
             resp = await fetch(new URL(path, ctx.origin), {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+              headers: internalHeaders,
               body: JSON.stringify(body),
               signal: toolCtl.signal,
             });
