@@ -273,14 +273,14 @@ export function Dardasha({
         </div>
       )}
       {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
-      <div className="mt-3 flex items-end gap-2">
+      <div className="mt-3 flex items-end gap-2 rounded-[1.75rem] border border-border/70 bg-card/60 p-2 shadow-sm backdrop-blur-md transition focus-within:border-primary/30 focus-within:shadow-md">
         <input ref={fileRef} type="file" multiple accept={ATTACHMENT_MIME.join(",")} className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
-        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card/70 text-muted-foreground shadow-sm transition hover:border-primary/30 hover:bg-muted hover:text-primary" aria-label="attach" title={tr(lang, "إرفاق ملف", "Attach file", "هاوپێچکردنی فایل")}><Paperclip className="size-4" /></button>
+        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-transparent bg-transparent text-muted-foreground transition hover:bg-muted hover:text-primary" aria-label="attach" title={tr(lang, "إرفاق ملف", "Attach file", "هاوپێچکردنی فایل")}><Paperclip className="size-4" /></button>
         <textarea id="dardasha-message-input" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { const fs = Array.from(e.clipboardData.files || []); if (fs.length) { e.preventDefault(); void addFiles(fs); } }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
           rows={1} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
-          className="min-h-12 max-h-40 flex-1 resize-none rounded-3xl border border-border/70 bg-card/75 px-4 py-3 text-sm leading-6 shadow-inner outline-none transition focus:border-primary/50 focus:bg-background focus:ring-2 focus:ring-primary/10" />
+          className="min-h-12 max-h-40 flex-1 resize-none rounded-3xl border border-transparent bg-transparent px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-muted-foreground/75 focus:border-transparent focus:bg-transparent focus:ring-0" />
         <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:scale-[1.03] hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100" aria-label={tr(lang, "إرسال", "Send", "ناردن")}><Send className="size-5" /></button>
       </div>
     </section>
