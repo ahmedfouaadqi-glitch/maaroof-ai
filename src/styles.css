@@ -533,3 +533,71 @@
 @keyframes ws-aurora { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
 @media (prefers-reduced-motion: reduce) { .ws-aurora { animation: none; } }
 @media (max-width: 767px) { .ws-aurora { opacity: .35; filter: blur(32px); } }
+
+
+/* Responsive React Bits-inspired workspace geometry.
+   Layout-only: preserve the existing theme, copy, assets and page background.
+   The reveal remains CSS-only (no GSAP, WebGL, canvas or per-frame effects). */
+.maaroof-workspace-page > header > div {
+  max-width: 1720px;
+  padding-inline: clamp(0.75rem, 2.2vw, 1.75rem);
+}
+
+.maaroof-workspace-page .maaroof-chat-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: clamp(30rem, calc(100dvh - 18rem), 48rem);
+  min-height: 30rem;
+}
+
+.maaroof-chat-heading,
+.maaroof-chat-scope,
+.maaroof-chat-composer,
+.maaroof-chat-attachments,
+.maaroof-chat-error {
+  flex-shrink: 0;
+}
+
+.maaroof-workspace-page .maaroof-chat-messages {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (max-height: 720px) and (min-width: 768px) {
+  .maaroof-workspace-page .maaroof-chat-shell {
+    height: clamp(28rem, calc(100dvh - 14rem), 40rem);
+    min-height: 28rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .maaroof-workspace-page > header > div {
+    max-width: 100%;
+    padding-inline: 0.75rem;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-shell {
+    height: auto;
+    min-height: 0;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-messages {
+    min-height: clamp(15rem, 42dvh, 24rem);
+    max-height: 56dvh;
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maaroof-workspace-page .maaroof-chat-shell {
+    scroll-behavior: auto;
+  }
+}
