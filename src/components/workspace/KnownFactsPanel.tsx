@@ -23,10 +23,16 @@ export function KnownFactsPanel({ lang, workspaceId = null }: { lang: L; workspa
       let factQuery = (supabase as any).from("knowledge_facts").select("id, source, fact, confidence, created_at, expires_at, broadcast, workspace_id").eq("user_id", user.id);
       factQuery = workspaceId ? factQuery.eq("workspace_id", workspaceId) : factQuery.is("workspace_id", null);
       let spacesQuery = (supabase as any).from("workspaces").select("name, space_kind, parent_id").eq("owner_id", user.id);
-      spacesQuery = workspaceId ? spacesQuery.eq("parent_id", workspaceId) : spacesQuery.limit(100);
+      spacesQuery = workspaceId ? spacesQuery.eq("id", workspaceId) : spacesQuery.limit(100);
+      const { data: accountSpaces } = workspaceId
+        ? { data: [] as any[] }
+        : await (supabase as any).from("knowledge_spaces").select("id").eq("user_id", user.id).is("workspace_id", null);
+      const accountSpaceIds = (accountSpaces || []).map((s: any) => s.id);
       const [{ data: kf }, { data: iv }, { data: p }, { data: ws }] = await Promise.all([
         factQuery.order("created_at", { ascending: false }).limit(50),
-        workspaceId ? Promise.resolve({ data: [] as any[] }) : supabase.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", user.id).limit(100),
+        workspaceId || accountSpaceIds.length === 0
+          ? Promise.resolve({ data: [] as any[] })
+          : supabase.from("knowledge_space_interviews").select("space_id, question, answer, answered_at, created_at").eq("user_id", user.id).in("space_id", accountSpaceIds).limit(100),
         workspaceId ? (supabase as any).from("workspaces").select("id,name,kind,space_kind,parent_id,brand_url,brand_summary,keywords,profile,goals,success_metrics,country,created_at,updated_at").eq("id", workspaceId).eq("owner_id", user.id).maybeSingle() : supabase.from("profiles").select("full_name, brand_name, account_kind, specialty, entity_type, hq_country, target_markets, entity_links, entity_facts, entity_verified_at, entity_updated_at, created_at").eq("id", user.id).maybeSingle(),
         spacesQuery,
       ]);
@@ -47,14 +53,14 @@ export function KnownFactsPanel({ lang, workspaceId = null }: { lang: L; workspa
   }, [user?.id, lang, workspaceId]);
 
   const del = async (id: string) => {
-    await (supabase as any).from("knowledge_facts").delete().eq("id", id);
+    await (supabase as any).from("knowledge_facts").delete().eq("id", id).eq("user_id", user?.id).filter("workspace_id", workspaceId ? "eq" : "is", workspaceId);
     setRows((r) => (r || []).filter((x) => x.id !== id));
   };
 
   /** Only the owner turns a hypothesis into evidence, explicitly. */
   const confirmFact = async (r: Row) => {
     if (!window.confirm(tr(lang, `تأكيد أن هذه المعلومة صحيحة؟\n\n${r.fact}`, `Confirm this is true?\n\n${r.fact}`, `پشتڕاستی دەکەیتەوە؟\n\n${r.fact}`))) return;
-    const { error } = await (supabase as any).from("knowledge_facts").update({ confidence: "evidence" }).eq("id", r.id);
+    const { error } = await (supabase as any).from("knowledge_facts").update({ confidence: "evidence" }).eq("id", r.id).eq("user_id", user?.id).filter("workspace_id", workspaceId ? "eq" : "is", workspaceId);
     if (!error) setRows((rs) => (rs || []).map((x) => (x.id === r.id ? { ...x, confidence: "evidence" } : x)));
   };
 
@@ -70,7 +76,7 @@ export function KnownFactsPanel({ lang, workspaceId = null }: { lang: L; workspa
   const toggleBroadcast = async (r: Row) => {
     const on = !r.broadcast;
     if (on && !window.confirm(tr(lang, `سيظهر هذا النص في بطاقة السلطة العامة التي تقرؤها زواحف الذكاء الاصطناعي:\n\n${r.fact}\n\nهل توافق على البث؟`, `This text will appear on your public brand card read by AI crawlers:\n\n${r.fact}\n\nApprove broadcast?`, `ئەم دەقە لە کارتی گشتی دەردەکەوێت:\n\n${r.fact}\n\nڕازیت؟`))) return;
-    const { error } = await (supabase as any).from("knowledge_facts").update({ broadcast: on }).eq("id", r.id);
+    const { error } = await (supabase as any).from("knowledge_facts").update({ broadcast: on }).eq("id", r.id).eq("user_id", user?.id).filter("workspace_id", workspaceId ? "eq" : "is", workspaceId);
     if (!error) setRows((rs) => (rs || []).map((x) => (x.id === r.id ? { ...x, broadcast: on } : x)));
   };
 
