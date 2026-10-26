@@ -31,7 +31,7 @@ export function hasActionableRecommendations(content: string): boolean {
   const raw = String(content || "");
   const plain = plainText(raw);
   const listItems = (raw.match(/(?:^|\n)\s*(?:[-*+]\s|\d{1,2}[.)]\s)/gm) || []).length;
-  const cues = /\b(?:recommend|recommendation|next steps|action plan|implement|fix|improve|optimi[sz]e|prioriti[sz]e|launch|measure|validate|should|must|need to|roadmap)\b|(?:أوصي|التوصيات|الخطوات القادمة|خطة العمل|نفّذ|تنفيذ|عالج|أصلح|حسّن|تحسين|أولوية|أطلق|قِس|تحقّق|ينبغي|يجب|خارطة الطريق|پێشنیار|هەنگاوەکان|چارەسەر|باشترکردن)/iu.test(plain);
-  const multipleSections = (raw.match(/(?:^|\n)\s*#{1,4}\s+/gm) || []).length >= 2;
-  return cues || listItems >= 2 || multipleSections;
+  const cues = /\b(?:recommend|recommendation|next steps|action plan|implement|fix|improve|optimi[sz]e|prioriti[sz]e|launch|measure|validate|should|must|need to|roadmap)\b|(?:أوصي|التوصيات|الخطوات القادمة|خطة العمل|نفّذ|عالج|أصلح|حسّن|أطلق|قِس|تحقّق|ينبغي|يجب|خارطة الطريق|پێشنیار|هەنگاوەکان|چارەسەر|باشترکردن)/iu.test(plain);
+  const hasActionStructure = listItems >= 2 && /\b(?:step|action|recommendation|priorit(?:y|ies)|next|plan)\b|(?:خطوة|التوصيات|الخطوات القادمة|خطة العمل|ينبغي|يجب|پێشنیار|هەنگاوەکان)/iu.test(plain);
+  return cues || hasActionStructure;
 }
