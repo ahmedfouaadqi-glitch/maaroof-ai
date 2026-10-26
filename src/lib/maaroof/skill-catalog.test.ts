@@ -12,6 +12,10 @@ describe("skill catalog", () => {
     const tools = new Set((TOOL_CATALOG as any[]).map((t) => t.key));
     for (const s of MAAROOF_SKILLS) for (const t of s.tools) expect(tools.has(t)).toBe(true);
   });
+  it("does not connect any skill to the temporarily paused monitor", () => {
+    for (const skill of MAAROOF_SKILLS) expect(skill.tools).not.toContain("competitor_monitor");
+    expect(MAAROOF_SKILLS.find((skill) => skill.key === "smart_competitor")?.tools).toEqual(["compare"]);
+  });
   it("every skill has all seven framework parts", () => {
     for (const s of MAAROOF_SKILLS) {
       const f = skillFramework(s, "ar");
