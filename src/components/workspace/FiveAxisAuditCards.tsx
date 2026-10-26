@@ -116,13 +116,18 @@ export function FiveAxisAuditCards({
     if (taskState?.status === "running") return "running";
     if (taskState?.status === "ready") return "ready";
     if (taskState?.status === "failed") return "failed";
+    const rows = section?.rows || [];
+    const noEvidence = (value: unknown) => /not measured|no available|no measurable|no reliable|no actual|no long-form|no model answers|no answers|no entity|not recorded|لم تُسجّل|لا توجد بيانات|لم يُعثر|لا يتوفر|لا توجد إجابات|نەپێوراو|بەردەست نییە|نەدۆزرایەوە|هیچ ئەنجامێک|هیچ وەڵام|تۆمار نەکراوە|ناوی قەوارەی متمانەپێکراو/i.test(String(value ?? ""));
+    const statusRow = rows.find((row) => /status|حالة|دۆخ|نتيجة الأدلة|result/i.test(String(row[0] ?? "")));
+    if (statusRow && noEvidence(statusRow[1]) && taskState?.status === "complete") return "unmeasured";
     const hasEvidence = !!section && (
-      (section.rows || []).some((row) => {
+      rows.some((row) => {
         const label = String(row[0] ?? "");
         const raw = row[1];
         const val = String(raw ?? "").trim();
         if (!val || (typeof raw === "number" && Number(raw) === 0) || (/count|number of fields|الحقول|عدد|ژمارە/i.test(label) && Number(raw) === 0)) return false;
-        return !/not measured|no available|no measurable|no reliable|no actual|لم تُسجّل|لا توجد بيانات|لم يُعثر|نەپێوراو|بەردەست نییە|نەدۆزرایەوە|no answers|لم توجد إجابات/i.test(val);
+        if (/not deployed|does not prove|لا يثبت|بڵاوکراوەتەوە|ڕەتکردنەوە/i.test(label)) return false;
+        return !noEvidence(val);
       }) || !!section.text?.trim() || !!section.table?.data?.length
     );
     if (taskState?.status === "complete") return hasEvidence ? "measured" : "unmeasured";
