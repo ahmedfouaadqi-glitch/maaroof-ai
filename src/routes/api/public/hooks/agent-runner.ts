@@ -116,6 +116,7 @@ export const Route = createFileRoute("/api/public/hooks/agent-runner")({
                   }
                   await admin.from("agent_tasks").insert({
                     user_id: sub.user_id,
+                    workspace_id: (tg as any).workspace_id ?? null,
                     target_id: tg.id,
                     task_type: taskType,
                     input: subject,
@@ -125,7 +126,7 @@ export const Route = createFileRoute("/api/public/hooks/agent-runner")({
                   didThisRun++;
                 } catch (e: any) {
                   await admin.from("agent_tasks").insert({
-                    user_id: sub.user_id, target_id: tg.id, task_type: taskType,
+                    user_id: sub.user_id, workspace_id: (tg as any).workspace_id ?? null, target_id: tg.id, task_type: taskType,
                     input: subject, status: "failed", error: e?.message || "error",
                   });
                 }
