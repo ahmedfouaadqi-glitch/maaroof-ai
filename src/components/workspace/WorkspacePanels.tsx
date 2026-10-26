@@ -143,14 +143,16 @@ export function BalancePanel({ lang }: { lang: L }) {
 
 type Ks = { id: string; name: string; workspace_id: string | null; nodes_count: number; asked: number; answered: number; kind: string };
 
-export function KnowledgePanel({ lang }: { lang: L }) {
+export function KnowledgePanel({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const { user } = useAuth();
   const [items, setItems] = useState<Ks[] | null>(null);
   useEffect(() => {
     if (!user) return;
     (async () => {
+      let spacesQuery = supabase.from("knowledge_spaces").select("id,name,workspace_id,nodes_count").eq("user_id", user.id);
+      spacesQuery = workspaceId ? spacesQuery.eq("workspace_id", workspaceId) : spacesQuery.is("workspace_id", null);
       const [{ data: spaces }, { data: iv }, { data: ws }] = await Promise.all([
-        supabase.from("knowledge_spaces").select("id,name,workspace_id,nodes_count").eq("user_id", user.id),
+        spacesQuery,
         supabase.from("knowledge_space_interviews").select("space_id,answer").eq("user_id", user.id),
         supabase.from("workspaces").select("id,space_kind").eq("owner_id", user.id),
       ]);
@@ -160,7 +162,7 @@ export function KnowledgePanel({ lang }: { lang: L }) {
         return { ...s, asked: q.length, answered: q.filter((x: any) => x.answer).length, kind: s.workspace_id ? String(kinds.get(s.workspace_id) || "company") : "account" };
       }));
     })().catch(() => setItems([]));
-  }, [user?.id]);
+  }, [user?.id, workspaceId]);
   const kindLabel = (k: string) => ({ account: tr(lang, "الحساب", "Account", "هەژمار"), company: tr(lang, "شركة", "Company", "کۆمپانیا"), product: tr(lang, "منتج", "Product", "بەرهەم"), client: tr(lang, "عميل", "Client", "کڕیار") } as Record<string, string>)[k] || k;
   return (
     <section className={card}>
