@@ -9,7 +9,7 @@ type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 
 /** Upload an image/PDF/text and have Maaroof analyze it. Cost shown first; charged on success only. */
-export function AttachmentAnalyzer({ lang, context = "task", onResult }: { lang: L; context?: "task" | "interview"; onResult?: (text: string) => void }) {
+export function AttachmentAnalyzer({ lang, context = "task", workspaceId = null, onResult }: { lang: L; context?: "task" | "interview"; workspaceId?: string | null; onResult?: (text: string) => void }) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -37,12 +37,12 @@ export function AttachmentAnalyzer({ lang, context = "task", onResult }: { lang:
     if (!file || !user) return;
     setBusy(true); setMsg("");
     try {
-      const path = attachmentPath(user.id, file.name, Date.now());
+      const path = attachmentPath(user.id, file.name, Date.now(), workspaceId);
       const up = await supabase.storage.from("task-files").upload(path, file, { contentType: file.type });
       if (up.error) throw new Error("upload");
       const r = await fetch(withPreviewAuth("/api/attachment-analyze"), {
         method: "POST", headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ path, name: file.name, mime: file.type, question, context, lang }),
+        body: JSON.stringify({ path, name: file.name, mime: file.type, question, context, lang, workspace_id: workspaceId }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "failed");

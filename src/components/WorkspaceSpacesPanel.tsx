@@ -23,7 +23,7 @@ const T = {
 const ICON: Record<SpaceKind, typeof Building2> = { company: Building2, subsidiary: GitBranch, product: Package, client: Users };
 const KEY = "maaroof.active_workspace_id";
 
-export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
+export function WorkspaceSpacesPanel({ lang, workspaceId = null, onWorkspaceChange }: { lang: L; workspaceId?: string | null; onWorkspaceChange?: (workspace: Ws | null) => void }) {
   const t = T[lang];
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
@@ -60,11 +60,13 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
       const res = await list();
       const arr = (res.items as unknown as Ws[]) || [];
       setItems(arr);
-      const saved = localStorage.getItem(KEY);
-      setActive((arr.find((w) => w.id === saved) || arr[0])?.id ?? null);
+      setActive(workspaceId && arr.some((w) => w.id === workspaceId) ? workspaceId : null);
     } catch (e: any) { setError(String(e?.message || e)); } finally { setLoading(false); }
-  }, [list]);
+  }, [list, workspaceId]);
   useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    setActive(workspaceId && items.some((w) => w.id === workspaceId) ? workspaceId : null);
+  }, [workspaceId, items]);
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -100,7 +102,11 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
     setError(null);
     try {
       await remove({ data: { id } });
-      if (active && ids.includes(active)) setActive(null);
+      if (active && ids.includes(active)) {
+        setActive(null);
+        localStorage.removeItem(KEY);
+        onWorkspaceChange?.(null);
+      }
       await reload();
     } catch (e: any) { setError(String(e?.message || e)); }
   }
@@ -117,7 +123,11 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
               {open ? <ChevronDown className="size-3" /> : <ChevronLeft className="size-3 rtl:rotate-0 ltr:rotate-180" />}
             </button>
           ) : <span className="w-4" />}
-          <div className="flex-1"><SpaceRow w={w} active={active === w.id} onPick={() => setActive(w.id)} label={kindLabel(w.space_kind)} /></div>
+          <div className="flex-1"><SpaceRow w={w} active={active === w.id} onPick={() => {
+            localStorage.setItem(KEY, w.id);
+            setActive(w.id);
+            onWorkspaceChange?.(w);
+          }} label={kindLabel(w.space_kind)} /></div>
           <button type="button" aria-label={t.del} title={t.del} onClick={() => void removeSpace(w.id)} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>
         </div>
         {open && kids.length > 0 && <ul className="ms-5 space-y-1 border-s border-border ps-2">{kids.map((k) => renderNode(k, depth + 1))}</ul>}
@@ -141,6 +151,8 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
       const res = await create({ data: { name: name.trim(), kind: form.parent ? (form.kind === "client" ? "client" : "brand") : "own", brand_url: brand, keywords: [], language: lang, space_kind: form.kind, parent_id: form.parent } as any });
       const w = res.workspace as unknown as Ws;
       setItems((p) => [w, ...p]); setActive(w.id);
+      localStorage.setItem(KEY, w.id);
+      onWorkspaceChange?.(w);
       setForm(null); setName(""); setUrl("");
     } catch (e: any) {
       setError(String(e?.message || "").startsWith("space_limit_reached") ? t.limit : String(e?.message || e));

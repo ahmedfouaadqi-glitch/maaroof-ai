@@ -95,6 +95,7 @@ export type Database = {
           topic: string | null
           url: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           active?: boolean
@@ -104,6 +105,7 @@ export type Database = {
           topic?: string | null
           url?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           active?: boolean
@@ -113,6 +115,7 @@ export type Database = {
           topic?: string | null
           url?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -3864,6 +3867,7 @@ export type Database = {
           redirect_uri: string
           state: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           code_verifier?: string | null
@@ -3876,6 +3880,7 @@ export type Database = {
           redirect_uri: string
           state: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           code_verifier?: string | null
@@ -3888,6 +3893,7 @@ export type Database = {
           redirect_uri?: string
           state?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -4278,6 +4284,7 @@ export type Database = {
           token_expires_at: string | null
           user_id: string
           verified_at: string | null
+          workspace_id: string | null
         }
         Insert: {
           account_label?: string | null
@@ -4301,6 +4308,7 @@ export type Database = {
           token_expires_at?: string | null
           user_id: string
           verified_at?: string | null
+          workspace_id?: string | null
         }
         Update: {
           account_label?: string | null
@@ -4324,6 +4332,7 @@ export type Database = {
           token_expires_at?: string | null
           user_id?: string
           verified_at?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -4337,6 +4346,7 @@ export type Database = {
           status: string
           task_id: string | null
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           channel_id?: string | null
@@ -4347,6 +4357,7 @@ export type Database = {
           status: string
           task_id?: string | null
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           channel_id?: string | null
@@ -4357,6 +4368,7 @@ export type Database = {
           status?: string
           task_id?: string | null
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }

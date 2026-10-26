@@ -92,7 +92,7 @@ const PLATFORMS: {
 
 type PickerAccount = { externalId: string; name: string; kind: string; ownerType: string };
 
-export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
+export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: () => void; workspaceId?: string | null }) {
   const { t } = useI18n();
   const fetchState = useServerFn(getChannelsState);
   const tgLinkFn = useServerFn(startTelegramLink);
@@ -114,8 +114,8 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
   const [picker, setPicker] = useState<{ linkId: string; provider: string; accounts: PickerAccount[] } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = async () => setState((await fetchState()) as State);
-  useEffect(() => { load(); }, []);
+  const load = async () => setState((await fetchState({ data: { workspaceId } } as any)) as State);
+  useEffect(() => { void load(); }, [workspaceId]);
 
   // ---- OAuth popup flow -----------------------------------------------------
   const waitForPopup = (popup: Window, provider: string) =>
@@ -147,7 +147,7 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
     if (!popup) { setNotice(t("ch_popup_blocked")); return; }
     setBusy(provider);
     try {
-      const r = (await startOAuthFn({ data: { provider } })) as any;
+      const r = (await startOAuthFn({ data: { provider, workspaceId } } as any)) as any;
       if (!r?.ok) { popup.close(); setNotice(t("ch_provider_pending")); return; }
       const done = waitForPopup(popup, provider);
       popup.location.href = r.authorizationUrl;
@@ -166,7 +166,7 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
   const connectTelegram = async () => {
     setBusy("telegram");
     try {
-      const r = (await tgLinkFn()) as any;
+      const r = (await tgLinkFn({ data: { workspaceId } } as any)) as any;
       if (r?.ok && r.link) {
         setTgLink(r.link);
         window.open(r.link, "_blank", "noopener,noreferrer");
@@ -179,25 +179,25 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
   const disconnect = async (id: string) => {
     if (!confirm(t("ag_ch_confirm_disconnect") || t("auto.disconnect_this_channel"))) return;
     setBusy(id);
-    try { await disconnectFn({ data: { id } }); }
+    try { await disconnectFn({ data: { id, workspaceId } } as any); }
     finally { setBusy(null); await load(); onChanged?.(); }
   };
 
   const verify = async (id: string) => {
     setBusy(id);
     try {
-      const r = (await verifyFn({ data: { id } })) as any;
+      const r = (await verifyFn({ data: { id, workspaceId } } as any)) as any;
       setNotice(r?.ok ? t("ch_verify_ok") : `${t("ch_verify_fail")} — ${r?.error || ""}`);
     } finally { setBusy(null); await load(); onChanged?.(); }
   };
 
-  const makeDefault = async (id: string) => { await defaultFn({ data: { id } }); await load(); };
+  const makeDefault = async (id: string) => { await defaultFn({ data: { id, workspaceId } } as any); await load(); };
   const toggleMode = async (id: string, mode: string) => {
-    await setModeFn({ data: { id, mode: mode === "auto" ? "manual" : "auto" } });
+    await setModeFn({ data: { id, mode: mode === "auto" ? "manual" : "auto", workspaceId } } as any);
     await load();
   };
   const setOwner = async (id: string, ownerType: string) => {
-    await ownerFn({ data: { id, ownerType } });
+    await ownerFn({ data: { id, ownerType, workspaceId } } as any);
     await load();
   };
   const choosePref = async (channel: string) => { await setPrefFn({ data: { channel } }); await load(); };
@@ -388,7 +388,7 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
         provider={dialogProvider}
         onClose={() => setDialogProvider(null)}
         onSaved={async () => { setDialogProvider(null); await load(); onChanged?.(); }}
-        saveFn={saveManualFn}
+        saveFn={((args: any) => saveManualFn({ ...args, data: { ...args.data, workspaceId } } as any)) as any}
       />
     </div>
   );

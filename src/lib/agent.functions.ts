@@ -10,14 +10,20 @@ const normLang = (v: unknown): L => (v === "en" || v === "ku" ? v : "ar");
 export const runAgentNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { targetId?: string; lang?: string };
-    return { targetId: x.targetId, lang: normLang(x.lang) };
+    const x = (d || {}) as { targetId?: string; lang?: string; workspaceId?: string | null };
+    if (x.workspaceId != null && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { targetId: x.targetId, lang: normLang(x.lang), workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
     const runId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string;
     const runStartedAt = new Date().toISOString();
-    const q = supabaseAdmin.from("agent_targets").select("*").eq("user_id", userId).eq("active", true);
+    if (data.workspaceId) {
+      const { data: owned } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle();
+      if (!owned) return { ok: false, error: "workspace_not_found", runId };
+    }
+    let q = supabaseAdmin.from("agent_targets").select("*").eq("user_id", userId).eq("active", true);
+    q = data.workspaceId ? q.eq("workspace_id", data.workspaceId) : q.is("workspace_id", null);
     const { data: targets } = data.targetId ? await q.eq("id", data.targetId) : await q.limit(5);
     if (!targets || targets.length === 0) return { ok: false, error: "no_targets", runId };
 
@@ -43,7 +49,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
             if (m) score = Math.min(100, parseInt(m[1], 10));
           }
           const { data: ins } = await supabaseAdmin.from("agent_tasks").insert({
-            user_id: userId, target_id: (tg as any).id, task_type: taskType,
+            user_id: userId, workspace_id: data.workspaceId, target_id: (tg as any).id, task_type: taskType,
             input: subject, status: "done",
             result: { summary: content, score, lang: data.lang },
             approval_status: taskType === "suggest_post" ? "pending" : "none",
@@ -54,10 +60,11 @@ export const runAgentNow = createServerFn({ method: "POST" })
 
           if (taskType === "suggest_post" && tid) {
             // Try auto-publish to any channel in 'auto' mode
-            const { data: autoChans } = await supabaseAdmin
-              .from("publish_channels").select("*")
+            let autoQuery = supabaseAdmin.from("publish_channels").select("*")
               .eq("user_id", userId).eq("approval_mode", "auto").eq("active", true)
               .not("verified_at", "is", null);
+            autoQuery = data.workspaceId ? autoQuery.eq("workspace_id", data.workspaceId) : autoQuery.is("workspace_id", null);
+            const { data: autoChans } = await autoQuery;
             let published = false;
             for (const ch of autoChans || []) {
               try {
@@ -66,7 +73,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
                 published = true;
                 if (published) {
                   await supabaseAdmin.from("publish_log").insert({
-                    user_id: userId, task_id: tid, channel_id: ch.id, kind: ch.kind, status: "sent",
+                    user_id: userId, workspace_id: data.workspaceId, task_id: tid, channel_id: ch.id, kind: ch.kind, status: "sent",
                   });
                   await supabaseAdmin.from("agent_tasks").update({
                     approval_status: "approved",
@@ -78,7 +85,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
                 }
               } catch (e: any) {
                 await supabaseAdmin.from("publish_log").insert({
-                  user_id: userId, task_id: tid, channel_id: ch.id, kind: ch.kind,
+                  user_id: userId, workspace_id: data.workspaceId, task_id: tid, channel_id: ch.id, kind: ch.kind,
                   status: "failed", error: e?.message || "error",
                 });
               }
@@ -95,7 +102,7 @@ export const runAgentNow = createServerFn({ method: "POST" })
           }
         } catch (e: any) {
           await supabaseAdmin.from("agent_tasks").insert({
-            user_id: userId, target_id: (tg as any).id, task_type: taskType,
+            user_id: userId, workspace_id: data.workspaceId, target_id: (tg as any).id, task_type: taskType,
             input: subject, status: "failed", error: e?.message || "error",
             run_id: runId, run_started_at: runStartedAt,
           });
@@ -110,14 +117,19 @@ export const runAgentNow = createServerFn({ method: "POST" })
 export const runAgentCommand = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { command?: string; lang?: string };
+    const x = (d || {}) as { command?: string; lang?: string; workspaceId?: string | null };
     if (!x.command || typeof x.command !== "string" || x.command.trim().length < 3) {
       throw new Error("command_required");
     }
-    return { command: x.command.trim().slice(0, 2000), lang: normLang(x.lang) };
+    if (x.workspaceId != null && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { command: x.command.trim().slice(0, 2000), lang: normLang(x.lang), workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
+    if (data.workspaceId) {
+      const { data: owned } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle();
+      if (!owned) return { ok: false, error: "workspace_not_found" };
+    }
     try {
       await checkAndConsume(userId, 1);
     } catch (e: any) {
@@ -126,7 +138,7 @@ export const runAgentCommand = createServerFn({ method: "POST" })
     try {
       const content = await callAI(SYSTEM_AGENT, data.command, data.lang);
       const { data: row } = await supabaseAdmin.from("agent_tasks").insert({
-        user_id: userId, task_type: "command",
+        user_id: userId, workspace_id: data.workspaceId, task_type: "command",
         input: data.command, status: "done", result: { summary: content, lang: data.lang },
       }).select("id").single();
       return { ok: true, taskId: row?.id, summary: content };
@@ -143,29 +155,39 @@ export const runAgentCommand = createServerFn({ method: "POST" })
 export const publishToChannel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { channelId?: string; text?: string; taskId?: string };
+    const x = (d || {}) as { channelId?: string; text?: string; taskId?: string; workspaceId?: string | null };
     if (!x.channelId) throw new Error("channel_required");
     if (!x.text || x.text.trim().length < 3) throw new Error("text_required");
-    return { channelId: x.channelId, text: x.text.slice(0, 4000), taskId: x.taskId };
+    if (x.workspaceId != null && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { channelId: x.channelId, text: x.text.slice(0, 4000), taskId: x.taskId, workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
+    if (data.workspaceId) {
+      const { data: owned } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle();
+      if (!owned) return { ok: false, error: "workspace_not_found" };
+    }
     const { data: ch, error } = await supabaseAdmin
       .from("publish_channels").select("*")
-      .eq("id", data.channelId).eq("user_id", userId).maybeSingle();
+      .eq("id", data.channelId).eq("user_id", userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId).maybeSingle();
     if (error || !ch) return { ok: false, error: "channel_not_found" };
+    if (data.taskId) {
+      const { data: task } = await supabaseAdmin.from("agent_tasks").select("id,workspace_id").eq("id", data.taskId).eq("user_id", userId).maybeSingle();
+      if (!task || (task.workspace_id ?? null) !== ((ch as any).workspace_id ?? null)) return { ok: false, error: "workspace_mismatch" };
+    }
     if (!ch.active) return { ok: false, error: "channel_inactive" };
 
     try {
       const { publishToSavedChannel } = await import("@/lib/channels/dispatch.server");
       await publishToSavedChannel(ch as any, data.text);
       await supabaseAdmin.from("publish_log").insert({
-        user_id: userId, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind, status: "sent",
+        user_id: userId, workspace_id: (ch as any).workspace_id ?? null, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind, status: "sent",
       });
       return { ok: true };
     } catch (e: any) {
       await supabaseAdmin.from("publish_log").insert({
-        user_id: userId, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind,
+        user_id: userId, workspace_id: (ch as any).workspace_id ?? null, task_id: data.taskId || null, channel_id: ch.id, kind: ch.kind,
         status: "failed", error: e?.message || "error",
       });
       return { ok: false, error: e?.message || "error" };
