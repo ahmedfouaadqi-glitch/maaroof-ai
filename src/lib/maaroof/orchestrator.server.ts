@@ -29,6 +29,8 @@ import {
 import { loadModelRegistry, selectModel, recordModelCall, costOf, proposeModelUpgrade, type ModelPhase, type ModelChoice } from "./models.server";
 import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
+import { createInternalAuthHeader } from "@/lib/internal-auth.server";
+import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -112,7 +114,7 @@ export function normalizeToolInput(input: any): Record<string, any> {
 }
 
 function toolsDescription(): string {
-  return TOOL_CATALOG.filter((t) => t.group === "tools")
+  return TOOL_CATALOG.filter((t) => t.group === "tools" && t.key !== "competitor_monitor")
     .map((t) => { const o = describeToolOptions(t.key); return `- ${t.key}: ${t.labels.en}${o ? ` (${o})` : ""}`; })
     .join("\n");
 }
@@ -557,7 +559,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
     // User-edited tool list (from the pre-execution catalog card) wins over the planner.
-    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k]);
+    const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && k !== "competitor_monitor");
     if (userTools.length) {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
@@ -571,6 +573,25 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         steps = steps.slice(0, Math.max(MAX_STEPS, steps.length));
       } catch {}
     }
+
+    // Explicit five-axis audit requests receive the core evidence tools even if the planner omits them.
+    if (isFiveAxisAuditGoal(ctx.goal)) {
+      const configuredEnabledTools = settings.enabled_tools || [];
+      const requiredAuditTools = ["analyze", "brand_authority", ...(ctx.liveProbe !== false ? ["visibility"] : [])]
+        .filter((key) => !configuredEnabledTools.length || configuredEnabledTools.includes(key));
+      const requiredSet = new Set(requiredAuditTools);
+      for (const key of requiredAuditTools) {
+        if (steps.some((step) => step.tool === key)) continue;
+        const requiredStep = { tool: key, input: {}, reason: "مطلوب لتغطية المحاور الخمسة بالقياس والأدلة المسجلة." } as PlanStep;
+        if (steps.length < MAX_STEPS) {
+          steps.push(requiredStep);
+          continue;
+        }
+        const fromEnd = [...steps].reverse().findIndex((step) => !requiredSet.has(step.tool) && step.tool !== "competitor_monitor");
+        const replaceIndex = fromEnd >= 0 ? steps.length - 1 - fromEnd : -1;
+        if (replaceIndex >= 0) steps[replaceIndex] = requiredStep;
+      }
+    }
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
@@ -578,7 +599,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // Full tool catalog with per-user cost (no charge) so the user can add/remove tools before running.
     try {
       const { resolveToolCost } = await import("@/lib/tokens.server");
-      const keys = Object.keys(TOOL_OPTIONS);
+      const keys = Object.keys(TOOL_OPTIONS).filter((key) => key !== "competitor_monitor");
       const costs = await Promise.all(keys.map(async (k) => { try { return (await resolveToolCost(ctx.userId, k)).tokens || 0; } catch { return 0; } }));
       const { data: bal } = await db().from("profiles").select("tokens_balance").eq("id", ctx.userId).maybeSingle();
       await ctx.emit("tool_catalog", {
@@ -1031,6 +1052,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const specialists = new Set<string>();
     const runStep = async (i: number) => {
       const step = steps[i];
+      // Old queued plans may still contain this key; skip it before agent creation, dispatch or billing.
+      if (step.tool === "competitor_monitor") {
+        const skip = { skipped: "temporarily_paused", tool: "competitor_monitor" };
+        results.push({ tool: step.tool, ok: false, output: skip });
+        await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
+        await logMsg("tool_result", skip);
+        return;
+      }
       await ctx.emit("tool_call", { index: i, tool: step.tool, input: step.input, reason: step.reason });
       await logMsg("tool_call", step);
 
@@ -1084,7 +1113,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const { fillFromTask, taskEntity, taskEntityInput } = await import("./agent-input");
-      const filled = fillFromTask(step.tool, fillToolInput(step.tool, taskEntityInput(step.tool, step.input, results), { goalBrand: clarBrand || taskEntity(results)?.brand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results);
+      const filled = fillFromTask(step.tool, fillToolInput(step.tool, taskEntityInput(step.tool, step.input, results), { goalBrand: clarBrand || taskEntity(results)?.brand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results, { goal: ctx.goal, workspace: workspaceProfile, profile: entityProfile });
       const missing = missingFields(step.tool, filled);
       // No competitors anywhere: skip before any charge with a clear reason instead of failing.
       if ((step.tool === "compare" || (step.tool === "competitor_monitor" && (filled as any).action === "create"))
@@ -1153,15 +1182,21 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         ctx.signal.addEventListener("abort", onAbort);
         let resp: Response;
         try {
+          const internalAuth = await createInternalAuthHeader(ctx.userId, path, "POST");
+          const internalHeaders: Record<string, string> = {
+            "Content-Type": "application/json",
+            ...(ctx.authBearer ? { Authorization: ctx.authBearer } : {}),
+            ...(internalAuth ? { "x-maaroof-internal-auth": internalAuth } : {}),
+          };
           const requestForDirectDispatch = () => new Request(new URL(path, ctx.origin), {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+            headers: internalHeaders,
             body: JSON.stringify(body),
             signal: toolCtl.signal,
           });
           // Prefer executing the existing API handler inside this Worker. Cloudflare
           // may reject Worker-to-Worker fetches back to the same public origin.
-          const direct = await dispatchToolInProcess(path, requestForDirectDispatch());
+          const direct = await dispatchToolInProcess(path, requestForDirectDispatch(), ctx.userId);
           if (direct) {
             resp = direct;
           } else {
@@ -1171,7 +1206,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
             toolTransport = "http_fallback";
             resp = await fetch(new URL(path, ctx.origin), {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: ctx.authBearer },
+              headers: internalHeaders,
               body: JSON.stringify(body),
               signal: toolCtl.signal,
             });

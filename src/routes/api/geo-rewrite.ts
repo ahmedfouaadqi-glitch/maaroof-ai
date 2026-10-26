@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
@@ -68,13 +69,7 @@ export const Route = createFileRoute("/api/geo-rewrite")({
           }
           const admin = createClient(SUPABASE_URL, SERVICE);
 
-          let userId: string | null = null;
-          const auth = request.headers.get("authorization");
-          if (auth?.startsWith("Bearer ")) {
-            const token = auth.slice(7);
-            const { data } = await admin.auth.getUser(token);
-            userId = data.user?.id || null;
-          }
+          const userId = await resolveAuthenticatedUserId(request, admin);
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();

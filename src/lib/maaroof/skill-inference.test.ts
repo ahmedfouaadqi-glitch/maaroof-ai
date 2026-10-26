@@ -18,4 +18,8 @@ describe("inferSkills", () => {
     expect(executableToolsFor(["knowledge_training"])).toEqual(["teach_space"]);
     expect(executableToolsFor(["presence_audit"])).toEqual(["known", "visibility"]);
   });
+  it("keeps competitor analysis available without exposing paused monitoring", () => {
+    expect(executableToolsFor(["smart_competitor"])).toEqual(["compare"]);
+    expect(executableToolsFor(["competitor_gap"])).toEqual(["compare"]);
+  });
 });

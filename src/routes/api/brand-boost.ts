@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
@@ -102,12 +103,9 @@ export const Route = createFileRoute("/api/brand-boost")({
           }
           const admin = createClient(SUPABASE_URL, SERVICE);
 
-          // Mandatory auth
-          const auth = request.headers.get("authorization");
-          if (!auth?.startsWith("Bearer ")) return Response.json({ error: "auth_required" }, { status: 401 });
-          const { data: userData, error: userErr } = await admin.auth.getUser(auth.slice(7));
-          const userId = userData?.user?.id;
-          if (userErr || !userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          // Browser requests use bearer tokens; long-running server dispatch uses a signed, route-bound identity.
+          const userId = await resolveAuthenticatedUserId(request, admin);
+          if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
 
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
