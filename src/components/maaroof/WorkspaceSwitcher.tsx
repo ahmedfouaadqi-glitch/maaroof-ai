@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Plus, Check, Loader2, Trash2 } from "lucide-react";
+import { Building2, Plus, Check, Loader2, Trash2, ChevronDown } from "lucide-react";
 import { listWorkspaces, createWorkspace, deleteWorkspace } from "@/lib/workspaces.functions";
 
 export type Workspace = {
@@ -166,7 +166,12 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
       {loading ? (
         <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> {t("auto.loading")}</div>
       ) : (
-        <ul className="space-y-1 text-sm">
+        <details className="group/dropdown relative">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted">
+            <span className="flex-1 truncate">{activeId ? (items.find((w) => w.id === activeId)?.name || (lang === "en" ? "Main account" : lang === "ku" ? "هەژماری سەرەکی" : "الحساب الأساسي")) : (lang === "en" ? "Main account" : lang === "ku" ? "هەژماری سەرەکی" : "الحساب الأساسي")}</span>
+            <ChevronDown className="size-4 shrink-0 transition group-open/dropdown:rotate-180" />
+          </summary>
+          <ul className="absolute z-30 mt-1 max-h-72 w-full space-y-1 overflow-y-auto rounded-lg border border-border bg-card p-2 text-sm shadow-lg">
           <li><button type="button" onClick={() => pick(null)} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-start ${!activeId ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}><span className="flex-1">{lang === "en" ? "Main account" : lang === "ku" ? "هەژماری سەرەکی" : "الحساب الأساسي"}</span>{!activeId && <Check className="size-3.5" />}</button></li>
           {items.length === 0 && <li className="px-2 py-2 text-xs text-muted-foreground">{t("auto.no_spaces_yet_create_the_first")}</li>}
           {items.map((w) => (
@@ -186,7 +191,8 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
               </button>
             </li>
           ))}
-        </ul>
+          </ul>
+        </details>
       )}
     </div>
   );
