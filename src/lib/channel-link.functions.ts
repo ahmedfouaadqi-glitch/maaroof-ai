@@ -191,7 +191,6 @@ export const verifyChannel = createServerFn({ method: "POST" })
       .select("*")
       .eq("id", data.id)
       .eq("user_id", context.userId)
-      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId)
       .maybeSingle();
     if (!ch) return { ok: false as const, error: "channel_not_found" };
 
