@@ -121,7 +121,7 @@ export function FiveAxisAuditCards({
         const label = String(row[0] ?? "");
         const raw = row[1];
         const val = String(raw ?? "").trim();
-        if (!val || ((typeof raw === "number" || /count|number of fields|الحقول|عدد|ژمارە/i.test(label)) && Number(raw) === 0)) return false;
+        if (!val || (typeof raw === "number" && Number(raw) === 0) || (/count|number of fields|الحقول|عدد|ژمارە/i.test(label) && Number(raw) === 0)) return false;
         return !/not measured|no available|no measurable|no reliable|no actual|لم تُسجّل|لا توجد بيانات|لم يُعثر|نەپێوراو|بەردەست نییە|نەدۆزرایەوە|no answers|لم توجد إجابات/i.test(val);
       }) || !!section.text?.trim() || !!section.table?.data?.length
     );
@@ -187,7 +187,7 @@ export function FiveAxisAuditCards({
               whileHover={reduceMotion ? undefined : { y: -2, scale: 1.005 }}
               onMouseMove={onMouseMove}
               className="group relative min-w-0 overflow-hidden rounded-2xl border border-primary/15 bg-card p-4 shadow-sm transition-colors duration-200 hover:border-primary/35 hover:shadow-md"
-              style={{ backgroundImage: "radial-gradient(360px circle at var(--pointer-x, 50%) var(--pointer-y, 0px), color-mix(in srgb, var(--primary) 10%, transparent), transparent 68%)" }}
+              style={{ backgroundImage: "radial-gradient(360px circle at var(--pointer-x, 50%) var(--pointer-y, 0px), color-mix(in srgb, hsl(var(--primary)) 10%, transparent), transparent 68%)" }}
               dir="auto"
             >
               <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-primary/30 to-transparent" />
