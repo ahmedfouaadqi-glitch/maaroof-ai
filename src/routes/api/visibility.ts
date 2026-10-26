@@ -523,10 +523,10 @@ export const Route = createFileRoute("/api/visibility")({
 
           const result = normalizeResult(parsed || {}, content);
 
-          await admin.from("profiles").update({
-            brand_name: brand,
-            brand_keywords: keywords || null,
-          }).eq("id", userId);
+          // Never overwrite the main account identity with a checked brand; only fill it when empty.
+          if (!prof?.brand_name) {
+            await admin.from("profiles").update({ brand_name: brand, brand_keywords: keywords || null }).eq("id", userId).is("brand_name", null);
+          }
 
           const taskPayload = {
             user_id: userId,
