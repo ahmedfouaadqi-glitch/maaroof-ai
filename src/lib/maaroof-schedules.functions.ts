@@ -22,13 +22,15 @@ function computeNextRunAt(cadence: string, from: Date = new Date()): Date {
 
 export const listSchedules = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: unknown) => z.object({ workspace_id: z.string().uuid().nullable().optional() }).parse(input))
+  .handler(async ({ data: input, context }) => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase
+    let query = supabase
       .from("maaroof_schedules")
       .select("id, workspace_id, name, prompt, language, force_tools, cadence, cron_expr, starts_at, ends_at, max_runs, runs_done, next_run_at, last_run_at, approval_mode, status, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .eq("user_id", userId);
+    query = input.workspace_id ? query.eq("workspace_id", input.workspace_id) : query.is("workspace_id", null);
+    const { data, error } = await query.order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return { items: data ?? [] };
   });
@@ -54,6 +56,11 @@ export const createSchedule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    if (data.workspace_id) {
+      const { data: ownedWorkspace, error: workspaceError } = await supabase.from("workspaces").select("id").eq("id", data.workspace_id).eq("owner_id", userId).maybeSingle();
+      if (workspaceError) throw new Error(workspaceError.message);
+      if (!ownedWorkspace) throw new Error("workspace_not_found");
+    }
     const startsAt = data.starts_at ? new Date(data.starts_at) : new Date();
     const nextRunAt = data.cadence === "once" ? startsAt : computeNextRunAt(data.cadence, startsAt);
     const { data: row, error } = await supabase
