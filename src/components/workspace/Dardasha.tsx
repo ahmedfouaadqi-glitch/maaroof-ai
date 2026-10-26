@@ -245,7 +245,6 @@ export function Dardasha({
               {scopeDisplay.flag && <span className="shrink-0" aria-hidden="true">{scopeDisplay.flag}</span>}
               <span className="min-w-0 truncate text-sm font-semibold">{scopeDisplay.label}</span>
               {scopeDisplay.code && <span className="shrink-0 text-xs font-medium text-muted-foreground">({scopeDisplay.code})</span>}
-              {scopeDisplay.place && <span className="hidden shrink-0 max-w-[12rem] truncate text-xs text-muted-foreground sm:inline">— {scopeDisplay.place}</span>}
               <ChevronDown className={"ms-auto size-4 shrink-0 text-muted-foreground transition-transform" + (scopeExpanded ? " rotate-180" : "")} />
             </button>
             {scopeExpanded && (
