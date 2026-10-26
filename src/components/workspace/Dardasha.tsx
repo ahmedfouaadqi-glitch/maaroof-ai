@@ -176,8 +176,8 @@ export function Dardasha({
             <div
               onPointerMove={m.role === "assistant" ? (event) => {
                 const rect = event.currentTarget.getBoundingClientRect();
-                event.currentTarget.style.setProperty("--chat-x", \`\${event.clientX - rect.left}px\`);
-                event.currentTarget.style.setProperty("--chat-y", \`\${event.clientY - rect.top}px\`);
+                event.currentTarget.style.setProperty("--chat-x", `${event.clientX - rect.left}px`);
+                event.currentTarget.style.setProperty("--chat-y", `${event.clientY - rect.top}px`);
               } : undefined}
               style={m.role === "assistant" ? { backgroundImage: "radial-gradient(380px circle at var(--chat-x, 50%) var(--chat-y, 50%), hsl(var(--primary) / 0.055), transparent 74%)" } : undefined}
               className={m.role === "user"
