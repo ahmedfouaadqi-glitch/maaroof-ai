@@ -586,7 +586,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           steps.push(requiredStep);
           continue;
         }
-        const replaceIndex = steps.findLastIndex((step) => !requiredSet.has(step.tool) && step.tool !== "competitor_monitor");
+        const fromEnd = [...steps].reverse().findIndex((step) => !requiredSet.has(step.tool) && step.tool !== "competitor_monitor");
+        const replaceIndex = fromEnd >= 0 ? steps.length - 1 - fromEnd : -1;
         if (replaceIndex >= 0) steps[replaceIndex] = requiredStep;
       }
     }
