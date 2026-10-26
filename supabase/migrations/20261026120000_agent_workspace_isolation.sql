@@ -17,3 +17,9 @@ CREATE INDEX IF NOT EXISTS publish_channels_user_workspace_created_idx
   ON public.publish_channels (user_id, workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS publish_log_user_workspace_created_idx
   ON public.publish_log (user_id, workspace_id, created_at DESC);
+
+ALTER TABLE public.oauth_link_states
+  ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS oauth_link_states_user_workspace_idx
+  ON public.oauth_link_states (user_id, workspace_id, created_at DESC);
