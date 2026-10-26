@@ -89,3 +89,18 @@ DROP TRIGGER IF EXISTS enforce_maaroof_schedules_workspace_owner ON public.maaro
 CREATE TRIGGER enforce_maaroof_schedules_workspace_owner
   BEFORE INSERT OR UPDATE OF workspace_id, user_id ON public.maaroof_schedules
   FOR EACH ROW EXECUTE FUNCTION public.enforce_workspace_owner();
+
+DROP TRIGGER IF EXISTS enforce_knowledge_spaces_workspace_owner ON public.knowledge_spaces;
+CREATE TRIGGER enforce_knowledge_spaces_workspace_owner
+  BEFORE INSERT OR UPDATE OF workspace_id, user_id ON public.knowledge_spaces
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_workspace_owner();
+
+DROP TRIGGER IF EXISTS enforce_maaroof_chat_messages_workspace_owner ON public.maaroof_chat_messages;
+CREATE TRIGGER enforce_maaroof_chat_messages_workspace_owner
+  BEFORE INSERT OR UPDATE OF workspace_id, user_id ON public.maaroof_chat_messages
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_workspace_owner();
+
+DROP TRIGGER IF EXISTS enforce_maaroof_jobs_workspace_owner ON public.maaroof_jobs;
+CREATE TRIGGER enforce_maaroof_jobs_workspace_owner
+  BEFORE INSERT OR UPDATE OF workspace_id, user_id ON public.maaroof_jobs
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_workspace_owner();
