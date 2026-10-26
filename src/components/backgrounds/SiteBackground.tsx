@@ -19,7 +19,7 @@ export default function SiteBackground() {
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string; addEventListener?: (type: string, listener: () => void) => void; removeEventListener?: (type: string, listener: () => void) => void } }).connection;
     const sync = () => {
       const lowData = Boolean(connection?.saveData || connection?.effectiveType === "2g");
       setAnimate(!motion.matches && !lowData);
@@ -50,7 +50,8 @@ export default function SiteBackground() {
     let raf = 0;
     let running = false;
     let lastFrameAt = 0;
-    let activity: BackgroundActivity = "idle";
+    const initialActivity = document.documentElement.dataset.maaroofActivity as BackgroundActivity | undefined;
+    let activity: BackgroundActivity = initialActivity && ["idle", "analyzing", "running", "success", "failed"].includes(initialActivity) ? initialActivity : "idle";
     let successUntil = 0;
     const nodes: NetworkNode[] = [];
     const pointer: PointerState = { x: 0, y: 0, active: false, lastMovedAt: 0 };
