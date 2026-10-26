@@ -1,3 +1,4 @@
+import { inWorkspaceScope } from "@/lib/workspace-scope";
 import { formatDuration } from "@/lib/maaroof/pipeline-cards";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
