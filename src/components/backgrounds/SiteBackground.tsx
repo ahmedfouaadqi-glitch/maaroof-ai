@@ -102,6 +102,8 @@ export default function SiteBackground() {
       pointer.lastMovedAt = performance.now();
     };
     const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("a, button, input, textarea, select, summary, [role='button'], [data-no-background-ripple]")) return;
       pointer.x = event.clientX;
       pointer.y = event.clientY;
       pointer.active = true;
@@ -169,9 +171,10 @@ export default function SiteBackground() {
           const dy = pointer.y - node.y;
           const distance = Math.hypot(dx, dy);
           if (distance > 1 && distance < pointerRadius) {
-            const force = ((pointerRadius - distance) / pointerRadius) * elapsed * 0.0000015;
-            node.vx += (dx / distance) * force;
-            node.vy += (dy / distance) * force;
+            const influence = (pointerRadius - distance) / pointerRadius;
+            const pull = influence * elapsed * 0.0022;
+            node.x += (dx / distance) * pull;
+            node.y += (dy / distance) * pull;
           }
         }
         const maxSpeed = active ? 0.038 : 0.026;
@@ -179,8 +182,6 @@ export default function SiteBackground() {
         node.vy = Math.max(-maxSpeed, Math.min(maxSpeed, node.vy));
         node.x += node.vx * elapsed * speed;
         node.y += node.vy * elapsed * speed;
-        node.vx *= Math.pow(0.99992, elapsed);
-        node.vy *= Math.pow(0.99992, elapsed);
         if (node.x < 0) { node.x = 0; node.vx = Math.abs(node.vx); }
         if (node.x > width) { node.x = width; node.vx = -Math.abs(node.vx); }
         if (node.y < 0) { node.y = 0; node.vy = Math.abs(node.vy); }
@@ -234,7 +235,7 @@ export default function SiteBackground() {
 
       // Soft node glow; use only existing theme colors.
       ctx.shadowColor = successful ? success : active ? accent : primary;
-      ctx.shadowBlur = active ? (smallScreen.matches ? 4 : 7) : 3.5;
+      ctx.shadowBlur = active ? (smallScreen.matches ? 5 : 8) : 4;
       for (const node of nodes) {
         ctx.globalAlpha = active
           ? 0.66 + 0.2 * Math.sin(time / 560 + node.phase)
