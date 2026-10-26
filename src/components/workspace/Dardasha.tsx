@@ -212,7 +212,7 @@ export function Dardasha({
                   {!m.axisAuditRequest && !m.task && !m.needs_task && hasActionableRecommendations(m.content) && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "تحويل لمهمة", "Turn into task", "گۆڕین بۆ ئەرک")}</button>}
                 </div>
               )}
-              {m.role === "assistant" && !m.axisAuditRequest && (m.task || m.needs_task) && (              {m.role === "assistant" && !m.axisAuditRequest && (m.task || m.needs_task) && (
+              {m.role === "assistant" && !m.axisAuditRequest && (m.task || m.needs_task) && (
                 <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-xs">
                   <p className="font-semibold text-primary">{tr(lang, "مهمة مقترحة", "Proposed task", "ئەرکی پێشنیارکراو")}{m.task ? ` · ${kindLabel[m.task.kind] || ""}` : ""}</p>
                   <p className="mt-1 text-foreground">{m.task?.goal || lastUser}</p>
@@ -251,7 +251,7 @@ export function Dardasha({
             <span className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[10px] text-muted-foreground"><span className="size-1.5 animate-pulse rounded-full bg-primary" />{tr(lang, "يكتب", "Writing", "دەنووسێت")}</span>
           </div>
         </div>}
-        <div ref={endRef} />        <div ref={endRef} />
+        <div ref={endRef} />
       </div>
       {atts.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
