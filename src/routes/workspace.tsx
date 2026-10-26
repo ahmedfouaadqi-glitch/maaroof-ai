@@ -299,6 +299,24 @@ function WorkspacePage() {
   }, [goal, policy.enabled_skills, policy.skill_access]);
   const tools = useMemo(() => toolsForSkills(selectedSkills), [selectedSkills]);
   const finalEvent = [...events].reverse().find((event) => event.type === "final");
+  const backgroundActivity = running ? "running" : error ? "failed" : finalEvent ? "success" : events.length > 0 ? "analyzing" : "idle";
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.maaroofActivity = backgroundActivity;
+    window.dispatchEvent(new CustomEvent("maaroof:background-state", { detail: { state: backgroundActivity } }));
+    const resetSuccess = backgroundActivity === "success"
+      ? window.setTimeout(() => {
+          if (root.dataset.maaroofActivity !== "success") return;
+          root.dataset.maaroofActivity = "idle";
+          window.dispatchEvent(new CustomEvent("maaroof:background-state", { detail: { state: "idle" } }));
+        }, 3000)
+      : undefined;
+    return () => { if (resetSuccess !== undefined) window.clearTimeout(resetSuccess); };
+  }, [backgroundActivity]);
+  useEffect(() => () => {
+    document.documentElement.dataset.maaroofActivity = "idle";
+    window.dispatchEvent(new CustomEvent("maaroof:background-state", { detail: { state: "idle" } }));
+  }, []);
   const isAxisAuditGoal = isFiveAxisAuditGoal(goal);
   const axisAuditTask = isAxisAuditGoal ? {
     status: (running ? "running" : error ? "failed" : finalEvent ? "complete" : "ready") as "ready" | "running" | "complete" | "failed",
