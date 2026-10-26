@@ -806,3 +806,204 @@
     display: none;
   }
 }
+
+
+/* Dardasha chat workspace: separate conversation history, flexible message area, compact geo scope. */
+.maaroof-workspace-page .maaroof-chat-shell {
+  height: clamp(32rem, calc(100dvh - 19rem), 54rem);
+  max-height: calc(100dvh - 7rem);
+}
+
+.maaroof-workspace-page .maaroof-chat-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  gap: 0.85rem;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.maaroof-workspace-page .maaroof-chat-layout.is-history-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+  gap: 0;
+}
+
+.maaroof-workspace-page .maaroof-chat-history {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.85);
+  border-radius: 1rem;
+  background: hsl(var(--background) / 0.68);
+}
+
+.maaroof-workspace-page .maaroof-chat-layout.is-history-collapsed .maaroof-chat-history {
+  display: none;
+}
+
+.maaroof-chat-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.7);
+}
+
+.maaroof-chat-history-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.55rem;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.maaroof-chat-thread {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.7rem;
+  background: transparent;
+  color: hsl(var(--foreground) / 0.82);
+  text-align: start;
+  font-size: 0.8125rem;
+  line-height: 1.35rem;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.maaroof-chat-thread:hover {
+  border-color: hsl(var(--border));
+  background: hsl(var(--muted) / 0.45);
+}
+
+.maaroof-chat-thread.is-active {
+  border-color: hsl(var(--primary) / 0.35);
+  background: hsl(var(--primary) / 0.09);
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.maaroof-workspace-page .maaroof-chat-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.maaroof-workspace-page .maaroof-chat-scope {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.maaroof-chat-scope-toggle {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid hsl(var(--border) / 0.85);
+  border-radius: 0.9rem;
+  padding: 0.75rem 0.9rem;
+  background: hsl(var(--background) / 0.66);
+  color: hsl(var(--foreground));
+  text-align: start;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.maaroof-chat-scope-toggle:hover {
+  border-color: hsl(var(--primary) / 0.35);
+  background: hsl(var(--background) / 0.9);
+}
+
+.maaroof-chat-scope-toggle:focus-visible,
+.maaroof-chat-thread:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 0.65);
+  outline-offset: 2px;
+}
+
+.maaroof-chat-scope-editor {
+  margin-top: 0.5rem;
+  max-height: min(55dvh, 30rem);
+  overflow: auto;
+  border: 1px solid hsl(var(--border) / 0.8);
+  border-radius: 1rem;
+  padding: 0.65rem;
+  background: hsl(var(--card));
+  box-shadow: 0 14px 32px hsl(var(--foreground) / 0.08);
+}
+
+.maaroof-chat-scope-editor > * {
+  border: 0;
+  padding: 0.35rem;
+  background: transparent;
+}
+
+@media (max-height: 760px) and (min-width: 768px) {
+  .maaroof-workspace-page .maaroof-chat-shell {
+    height: clamp(28rem, calc(100dvh - 13rem), 43rem);
+    max-height: calc(100dvh - 5rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .maaroof-workspace-page .maaroof-chat-shell {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-layout,
+  .maaroof-workspace-page .maaroof-chat-layout.is-history-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-history {
+    position: absolute;
+    z-index: 30;
+    inset-block: 0;
+    inset-inline-start: 0;
+    display: none;
+    width: min(84vw, 19rem);
+    max-height: 100%;
+    background: hsl(var(--card));
+    box-shadow: 0 16px 36px hsl(var(--foreground) / 0.17);
+  }
+
+  .maaroof-workspace-page .maaroof-chat-layout.is-history-open .maaroof-chat-history {
+    display: flex;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-main {
+    min-height: 0;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-main .maaroof-chat-messages {
+    min-height: clamp(15rem, 42dvh, 24rem);
+    max-height: 56dvh;
+  }
+
+  .maaroof-chat-scope-toggle {
+    flex-wrap: wrap;
+    padding: 0.65rem 0.75rem;
+  }
+}
