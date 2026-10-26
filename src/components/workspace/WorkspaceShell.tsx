@@ -33,7 +33,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
   const toggle = () => setUserCollapsed((v) => { const n = !v; try { localStorage.setItem("ws-sidebar-collapsed", n ? "1" : "0"); } catch {} return n; });
   const collapsed = sidebarCollapsed(userCollapsed, autoCollapse) && !hover;
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-0 md:px-4 xl:gap-6">
+    <div className="mx-auto flex w-full max-w-[1720px] gap-4 px-0 md:px-4 xl:gap-6">
       <aside onMouseEnter={() => autoCollapse && !userCollapsed && setHover(true)} onMouseLeave={() => setHover(false)} className={`sticky top-20 hidden h-[calc(100vh-6rem)] shrink-0 flex-col gap-1 rounded-2xl border border-border bg-card/80 p-2 backdrop-blur transition-[width] duration-300 md:flex ${collapsed ? "w-14" : "w-56"}`}>
         <button type="button" onClick={toggle} aria-label={userCollapsed ? (locale === "en" ? "Show menu" : locale === "ku" ? "پیشاندانی لیست" : "إظهار القائمة") : (locale === "en" ? "Hide menu" : locale === "ku" ? "شاردنەوەی لیست" : "إخفاء القائمة")} title={userCollapsed ? "+" : "−"} className="mb-1 flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
           {collapsed ? <PanelRightOpen className="size-4" /> : <PanelRightClose className="size-4" />}
