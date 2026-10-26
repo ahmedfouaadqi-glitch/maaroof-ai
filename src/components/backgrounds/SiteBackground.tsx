@@ -39,10 +39,18 @@ export default function SiteBackground() {
     const ctx = canvas?.getContext("2d", { alpha: true, desynchronized: true });
     if (!canvas || !ctx) return;
 
-    const rootStyle = getComputedStyle(document.documentElement);
-    const primary = rootStyle.getPropertyValue("--primary").trim() || "oklch(0.60 0.20 262)";
-    const accent = rootStyle.getPropertyValue("--accent").trim() || primary;
-    const success = rootStyle.getPropertyValue("--success").trim() || primary;
+    let primary = "oklch(0.60 0.20 262)";
+    let accent = primary;
+    let success = primary;
+    const readThemeColors = () => {
+      const rootStyle = getComputedStyle(document.documentElement);
+      primary = rootStyle.getPropertyValue("--primary").trim() || "oklch(0.60 0.20 262)";
+      accent = rootStyle.getPropertyValue("--accent").trim() || primary;
+      success = rootStyle.getPropertyValue("--success").trim() || primary;
+    };
+    readThemeColors();
+    const themeObserver = new MutationObserver(readThemeColors);
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "style"] });
     const smallScreen = window.matchMedia("(max-width: 768px), (pointer: coarse)");
     let width = 0;
     let height = 0;
@@ -52,7 +60,7 @@ export default function SiteBackground() {
     let lastFrameAt = 0;
     const initialActivity = document.documentElement.dataset.maaroofActivity as BackgroundActivity | undefined;
     let activity: BackgroundActivity = initialActivity && ["idle", "analyzing", "running", "success", "failed"].includes(initialActivity) ? initialActivity : "idle";
-    let successUntil = 0;
+    let successUntil = activity === "success" ? performance.now() + SUCCESS_GLOW_MS : 0;
     const nodes: NetworkNode[] = [];
     const pointer: PointerState = { x: 0, y: 0, active: false, lastMovedAt: 0 };
     const ripple: RippleState = { x: 0, y: 0, startedAt: 0, active: false };
@@ -279,6 +287,7 @@ export default function SiteBackground() {
 
     return () => {
       stop();
+      themeObserver.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerdown", onPointerDown);
