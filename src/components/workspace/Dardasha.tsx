@@ -144,9 +144,9 @@ export function Dardasha({
       onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
       onDragLeave={() => setDrag(false)}
       onDrop={(e) => { e.preventDefault(); setDrag(false); void addFiles(Array.from(e.dataTransfer.files || [])); }}
-      className={`rb-workspace-fade rounded-2xl border bg-card p-4 shadow-sm transition md:p-5 ${drag ? "border-primary ring-4 ring-primary/20" : "border-border"}`}
+      className={`rb-workspace-fade maaroof-chat-shell min-w-0 rounded-2xl border bg-card p-3 shadow-sm transition sm:p-4 xl:p-5 ${drag ? "border-primary ring-4 ring-primary/20" : "border-border"}`}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="maaroof-chat-heading mb-3 flex shrink-0 items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">{tr(lang, "دردشة", "Dardasha", "دردشە")}</h2>
           <p className="text-xs text-muted-foreground">{tr(lang, "اكتب، الصق، أو اسحب ملفاً. معروف يفهم طلبك ويختار المهارات والأدوات بنفسه، ولا يبدأ أي مهمة إلا بموافقتك.", "Type, paste or drop a file. Maaroof understands, picks skills and tools itself, and starts nothing without your approval.", "بنووسە، بلکێنە یان فایل ڕابکێشە. معروف بەبێ ڕەزامەندیت هیچ دەست پێناکات.")}</p>
@@ -156,11 +156,11 @@ export function Dardasha({
           {msgs.length > 0 && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف المحادثة؟", "Clear chat?", "سڕینەوە؟"))) { await call("DELETE", undefined, workspaceId); setMsgs([]); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
         </div>
       </div>
-      <div className="mb-4 rounded-xl border border-border bg-background/50 p-3">
+      <div className="maaroof-chat-scope mb-3 rounded-xl border border-border bg-background/50 p-3 sm:p-3.5">
         <div className="mb-2 text-xs font-semibold text-muted-foreground">{tr(lang, "النطاق الجغرافي الذي سيُوجّه الدردشة والبحث", "Geographic scope for chat and research", "بواری جوگرافی بۆ گفتوگۆ و گەڕان")}</div>
         <GeoScopeSelector compact value={geoScope} onChange={onGeoScopeChange} />
       </div>
-      <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "hsl(var(--border)) transparent" }} className="min-h-[160px] max-h-[46dvh] space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3 scroll-smooth sm:min-h-[220px] sm:max-h-[54dvh] md:max-h-[min(68dvh,760px)] md:p-4">
+      <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "hsl(var(--border)) transparent" }} className="maaroof-chat-messages min-w-0 min-h-[220px] flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3 scroll-smooth md:p-4">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
         {atts.some((a) => a.busy) && <div role="status" aria-live="polite" className="mb-3 rounded-xl border border-border p-3 text-xs">
           <div className="flex items-center gap-2 font-semibold"><LoaderCircle className="size-3.5 animate-spin text-primary" />{tr(lang, "استخراج محتوى الملف", "Extracting file content", "دەرهێنانی ناوەڕۆکی فایل")}</div>
@@ -263,7 +263,7 @@ export function Dardasha({
         <div ref={endRef} />
       </div>
       {atts.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+        <div className="maaroof-chat-attachments mt-2 flex shrink-0 flex-wrap gap-2 text-xs">
           {atts.map((a, i) => (
             <span key={i} className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 ${a.failed ? "border-destructive text-destructive" : "border-border"}`}>
               {a.busy ? <LoaderCircle className="size-3 animate-spin" /> : <Paperclip className="size-3" />}{a.name}{a.failed ? ` · ${tr(lang, "تعذّر، لم يُخصم", "failed, not charged", "شکستی هێنا")}` : ""}
@@ -272,8 +272,8 @@ export function Dardasha({
           ))}
         </div>
       )}
-      {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
-      <div className="mt-3 flex items-end gap-2 rounded-[1.75rem] border border-border/70 bg-card/60 p-2 shadow-sm backdrop-blur-md transition focus-within:border-primary/30 focus-within:shadow-md">
+      {err && <p className="maaroof-chat-error mt-2 shrink-0 text-xs text-destructive">{err}</p>}
+      <div className="maaroof-chat-composer mt-3 flex shrink-0 items-end gap-2 rounded-[1.75rem] border border-border/70 bg-card/60 p-2 shadow-sm backdrop-blur-md transition focus-within:border-primary/30 focus-within:shadow-md">
         <input ref={fileRef} type="file" multiple accept={ATTACHMENT_MIME.join(",")} className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
         <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-transparent bg-transparent text-muted-foreground transition hover:bg-muted hover:text-primary" aria-label="attach" title={tr(lang, "إرفاق ملف", "Attach file", "هاوپێچکردنی فایل")}><Paperclip className="size-4" /></button>
         <textarea id="dardasha-message-input" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
