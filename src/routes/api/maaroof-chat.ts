@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, effectiveGeo, normalizeGeoScope } from "@/lib/maaroof/geo.server";
+import { buildFiveAxisAuditGoal, detectFiveAxisAuditRequest, fiveAxisAuditReply } from "@/lib/maaroof/chat-axis-audit";
 
 async function authed(request: Request) {
   const auth = request.headers.get("authorization") || "";
@@ -56,6 +57,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const message = String(body?.message || "").trim().slice(0, 2000);
         if (!message) return Response.json({ error: "message_required" }, { status: 400 });
         const lang = (["ar", "en", "ku"].includes(body?.lang) ? body.lang : "ar") as "ar" | "en" | "ku";
+        const axisAuditRequest = detectFiveAxisAuditRequest(message);
         const geoScope = normalizeGeoScope(body?.geo_scope);
         const geo = effectiveGeo(detectGeoFromRequest(request), geoScope);
         const { chatAllowed, parseReply, groundedSystemPrompt } = await import("@/lib/maaroof/chat-policy");
@@ -118,28 +120,35 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           ...taskCtx,
         );
 
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
-        const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } = await import("@/lib/lovable-ai");
-        const { CHAT_MODEL_CHAIN, chatSamplingParams } = await import("@/lib/model-params");
-        const history = ((hist || []) as any[]).reverse().map((m) => ({ role: m.role, content: m.content }));
-        const msgs = [{ role: "system", content: groundedSystemPrompt(lang, knowledge) }, ...history, { role: "user", content: message }];
-        let raw = ""; let lastErr = "ai_failed";
-        for (const model of CHAT_MODEL_CHAIN) {
-          try {
-            const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-              method: "POST", headers: lovableAiHeaders(apiKey), signal: AbortSignal.timeout(90_000),
-              body: JSON.stringify({ model, ...chatSamplingParams(model), messages: msgs }),
-            });
-            if (!res.ok) { lastErr = res.status === 429 ? "rate_limited" : res.status === 402 ? "credits" : "ai_failed"; continue; }
-            const j: any = await res.json().catch(() => null);
-            raw = String(j?.choices?.[0]?.message?.content || "").trim();
-            if (raw) break;
-          } catch { lastErr = "ai_failed"; }
+        let reply: { text: string; needsTask: boolean; task: { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string } | null };
+        if (axisAuditRequest) {
+          // This is an explicit user request for a live audit. Return an exact, localized task draft;
+          // no live tools are run here, and the existing workspace approval/cost review still applies.
+          reply = { text: fiveAxisAuditReply(lang), needsTask: true, task: { kind: "scan", goal: buildFiveAxisAuditGoal(lang) } };
+        } else {
+          const apiKey = process.env.LOVABLE_API_KEY;
+          if (!apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
+          const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } = await import("@/lib/lovable-ai");
+          const { CHAT_MODEL_CHAIN, chatSamplingParams } = await import("@/lib/model-params");
+          const history = ((hist || []) as any[]).reverse().map((m) => ({ role: m.role, content: m.content }));
+          const msgs = [{ role: "system", content: groundedSystemPrompt(lang, knowledge) }, ...history, { role: "user", content: message }];
+          let raw = ""; let lastErr = "ai_failed";
+          for (const model of CHAT_MODEL_CHAIN) {
+            try {
+              const res = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+                method: "POST", headers: lovableAiHeaders(apiKey), signal: AbortSignal.timeout(90_000),
+                body: JSON.stringify({ model, ...chatSamplingParams(model), messages: msgs }),
+              });
+              if (!res.ok) { lastErr = res.status === 429 ? "rate_limited" : res.status === 402 ? "credits" : "ai_failed"; continue; }
+              const j: any = await res.json().catch(() => null);
+              raw = String(j?.choices?.[0]?.message?.content || "").trim();
+              if (raw) break;
+            } catch { lastErr = "ai_failed"; }
+          }
+          if (!raw) return Response.json({ error: lastErr }, { status: 502 });
+          reply = parseReply(raw);
+          try { const { brandModelIds } = await import("@/lib/maaroof/model-council"); reply.text = brandModelIds(reply.text, lang); } catch {}
         }
-        if (!raw) return Response.json({ error: lastErr }, { status: 502 });
-        const reply = parseReply(raw);
-        try { const { brandModelIds } = await import("@/lib/maaroof/model-council"); reply.text = brandModelIds(reply.text, lang); } catch {}
 
         // Charge only after a successful reply, for metered non-approved accounts.
         if (metered && !unlimited) {
@@ -147,12 +156,12 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           const charge = await chargeTokens({ userId, toolKey: "maaroof.chat", meta: { chars: message.length } });
           if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status: 402 });
         }
-        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo };
+        const grounded = { knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo, axis_audit_request: axisAuditRequest };
         await admin.from("maaroof_chat_messages").insert([
           { user_id: userId, workspace_id: workspaceId, role: "user", content: message },
           { user_id: userId, workspace_id: workspaceId, role: "assistant", content: reply.text, grounded },
         ]);
-        return Response.json({ text: reply.text, needs_task: reply.needsTask, task: reply.task, knowledge_items: knowledge.length, quota });
+        return Response.json({ text: reply.text, needs_task: reply.needsTask, task: reply.task, axis_audit_request: axisAuditRequest, knowledge_items: knowledge.length, quota });
       },
     },
   },
