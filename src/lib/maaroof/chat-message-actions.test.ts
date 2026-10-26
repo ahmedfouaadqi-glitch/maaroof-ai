@@ -21,9 +21,9 @@ describe("contextual chat actions", () => {
     expect(hasActionableRecommendations(answer)).toBe(true);
   });
 
-  it("does not treat a long neutral explanation as an actionable task by default", () => {
+  it("keeps long neutral chat-only explanations free of report and task controls", () => {
     const answer = "هذه فقرة وصفية تشرح السياق والمعلومات العامة دون اقتراح أي إجراء أو خطة تنفيذ. ".repeat(8);
-    expect(hasUsefulAnalyticalContent(answer)).toBe(true);
+    expect(hasUsefulAnalyticalContent(answer)).toBe(false);
     expect(hasActionableRecommendations(answer)).toBe(false);
   });
 });
