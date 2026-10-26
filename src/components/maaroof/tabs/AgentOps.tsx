@@ -130,7 +130,9 @@ export function AgentOps({ section, workspaceId = null }: { section: AgentOpsSec
   };
 
   const removeTarget = async (id: string) => {
-    await supabase.from("agent_targets").delete().eq("id", id).eq("user_id", user?.id).then(({ error }) => { if (error) throw error; });
+    await (workspaceId
+      ? supabase.from("agent_targets").delete().eq("id", id).eq("user_id", user?.id).eq("workspace_id", workspaceId)
+      : supabase.from("agent_targets").delete().eq("id", id).eq("user_id", user?.id).is("workspace_id", null)).then(({ error }) => { if (error) throw error; });
     load();
   };
 
@@ -451,7 +453,9 @@ export function AgentOps({ section, workspaceId = null }: { section: AgentOpsSec
                   <button
                     onClick={async () => {
                       if (!confirm(t("hist_confirm_delete"))) return;
-                      await supabase.from("agent_tasks").delete().eq("id", tk.id).eq("user_id", user?.id);
+                      await (workspaceId
+                        ? supabase.from("agent_tasks").delete().eq("id", tk.id).eq("user_id", user?.id).eq("workspace_id", workspaceId)
+                        : supabase.from("agent_tasks").delete().eq("id", tk.id).eq("user_id", user?.id).is("workspace_id", null));
                       setTasks((cur) => cur.filter((x) => x.id !== tk.id));
                     }}
                     title={t("hist_delete")}
