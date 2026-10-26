@@ -13,7 +13,7 @@ const Q: Record<L, { title: string; hint: string; save: string; saved: string; a
     fields: [["brand", "ناوی فەرمی براند", ""], ["aliases", "ناوە جیاوازەکان", ""], ["markets", "بازاڕە پشتڕاستکراوەکان", ""], ["facts", "ڕاستییە سەرەکییەکان", ""], ["competitors", "ڕکابەرە سەرەکییەکان", ""], ["links", "بەستەرە فەرمییەکان", "https://..."]] },
 };
 
-export function OnboardingWizard({ lang }: { lang: L }) {
+export function OnboardingWizard({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const T = Q[lang] || Q.ar;
   const [uid, setUid] = useState<string | null>(null);
   const [v, setV] = useState<Record<string, string>>({});
@@ -25,19 +25,24 @@ export function OnboardingWizard({ lang }: { lang: L }) {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       setUid(u.user.id);
-      const { data } = await supabase.from("profiles").select("brand_name, onboarding").eq("id", u.user.id).maybeSingle();
+      const { data } = workspaceId
+        ? await (supabase as any).from("workspaces").select("name, onboarding").eq("id", workspaceId).eq("owner_id", u.user.id).maybeSingle()
+        : await supabase.from("profiles").select("brand_name, onboarding").eq("id", u.user.id).maybeSingle();
       const ob: any = (data as any)?.onboarding || {};
-      setV({ brand: (data as any)?.brand_name || "", aliases: ob.aliases || "", markets: ob.markets || "", facts: ob.facts || "", competitors: ob.competitors || "", links: ob.links || "" });
+      setFaqs([{ q: "", a: "" }]);
+      setV({ brand: (data as any)?.brand_name || (data as any)?.name || "", aliases: ob.aliases || "", markets: ob.markets || "", facts: ob.facts || "", competitors: ob.competitors || "", links: ob.links || "" });
       if (Array.isArray(ob.faqs) && ob.faqs.length) setFaqs(ob.faqs);
     })();
-  }, []);
+  }, [workspaceId]);
 
   if (!uid) return null;
   const save = async () => {
     setBusy(true);
     const { brand, ...rest } = v;
     const onboarding = { ...rest, faqs: faqs.filter((f) => f.q.trim() && f.a.trim()) };
-    const { error } = await supabase.from("profiles").update({ onboarding, ...(brand?.trim() ? { brand_name: brand.trim() } : {}) } as any).eq("id", uid);
+    const { error } = workspaceId
+      ? await (supabase as any).from("workspaces").update({ onboarding, ...(brand?.trim() ? { name: brand.trim() } : {}) }).eq("id", workspaceId).eq("owner_id", uid)
+      : await supabase.from("profiles").update({ onboarding, ...(brand?.trim() ? { brand_name: brand.trim() } : {}) } as any).eq("id", uid);
     setBusy(false);
     error ? toast.error(error.message) : toast.success(T.saved);
   };

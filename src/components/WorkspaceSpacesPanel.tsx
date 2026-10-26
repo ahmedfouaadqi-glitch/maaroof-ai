@@ -23,7 +23,7 @@ const T = {
 const ICON: Record<SpaceKind, typeof Building2> = { company: Building2, subsidiary: GitBranch, product: Package, client: Users };
 const KEY = "maaroof.active_workspace_id";
 
-export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
+export function WorkspaceSpacesPanel({ lang, workspaceId }: { lang: L; workspaceId?: string | null }) {
   const t = T[lang];
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
@@ -60,10 +60,10 @@ export function WorkspaceSpacesPanel({ lang }: { lang: L }) {
       const res = await list();
       const arr = (res.items as unknown as Ws[]) || [];
       setItems(arr);
-      const saved = localStorage.getItem(KEY);
-      setActive((arr.find((w) => w.id === saved) || arr[0])?.id ?? null);
+      const saved = workspaceId !== undefined ? workspaceId : localStorage.getItem(KEY);
+      setActive(arr.find((w) => w.id === saved)?.id ?? (workspaceId !== undefined ? null : arr[0]?.id ?? null));
     } catch (e: any) { setError(String(e?.message || e)); } finally { setLoading(false); }
-  }, [list]);
+  }, [list, workspaceId]);
   useEffect(() => { void reload(); }, [reload]);
   useEffect(() => {
     (async () => {
