@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle, Check, Copy, ChevronDown, FileDown } from "lucide-react";
+import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle, Check, Copy, ChevronDown, FileDown, Plus, MessagesSquare, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
@@ -10,10 +10,10 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { AssistantMessage } from "./AssistantMessage";
 import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
 import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
+import { getCompactGeoScopeDisplay } from "@/lib/geo-scope-display";
 import { FiveAxisAuditCards, type FiveAxisAuditTaskState } from "@/components/workspace/FiveAxisAuditCards";
 import { buildFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 import { CouncilCards, type Council } from "./CouncilCards";
-import { Plus, MessagesSquare } from "lucide-react";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
@@ -78,6 +78,31 @@ export function Dardasha({
   const [threads, setThreads] = useState<Thread[]>([]);
   const skipLoad = useRef("");
   const [threadId, setThreadId] = useState("");
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [scopeExpanded, setScopeExpanded] = useState(() => geoScope.scope === "auto");
+
+  const toggleHistory = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setHistoryOpen((open) => !open);
+    } else {
+      setHistoryCollapsed((collapsed) => !collapsed);
+    }
+  };
+
+  const startNewConversation = () => {
+    setThreadId("");
+    setMsgs([]);
+    setTaskDraft(null);
+    setErr("");
+    setContextTaskId("");
+    setHistoryOpen(false);
+    inputRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (geoScope.scope !== "auto" && isGeoScopeConfigured(geoScope)) setScopeExpanded(false);
+  }, [geoScope.scope, geoScope.country, geoScope.region, geoScope.city]);
   const toMsgs = (items: any[]): Msg[] => items.map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null, axisAuditRequest: m.grounded?.axis_audit_request === true, council: m.grounded?.council || null }));
   // Load conversation list for this space; open the most recent one.
   useEffect(() => { setTaskDraft(null); setMsgs([]); setThreadId(""); void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); const ts: Thread[] = r.json.threads || []; setThreads(ts); if (ts[0]) setThreadId(ts[0].id); }); }, [workspaceId]);
@@ -156,6 +181,7 @@ export function Dardasha({
 
   const lastUser = [...msgs].reverse().find((m) => m.role === "user")?.content || "";
   const kindLabel: Record<string, string> = { scan: tr(lang, "فحص", "Scan", "پشکنین"), plan: tr(lang, "خطة", "Plan", "پلان"), recommend: tr(lang, "توصية", "Recommendation", "ڕاسپاردە"), simulate: tr(lang, "محاكاة", "Simulation", "لاساییکردنەوە") };
+  const scopeDisplay = getCompactGeoScopeDisplay(geoScope, lang);
 
   return (
     <section
@@ -170,22 +196,70 @@ export function Dardasha({
           <p className="text-xs text-muted-foreground">{tr(lang, "اكتب، الصق، أو اسحب ملفاً. معروف يفهم طلبك ويختار المهارات والأدوات بنفسه، ولا يبدأ أي مهمة إلا بموافقتك.", "Type, paste or drop a file. Maaroof understands, picks skills and tools itself, and starts nothing without your approval.", "بنووسە، بلکێنە یان فایل ڕابکێشە. معروف بەبێ ڕەزامەندیت هیچ دەست پێناکات.")}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={toggleHistory} className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={tr(lang, "إظهار أو إخفاء سجل المحادثات", "Toggle conversation history", "پیشاندان یان شاردنەوەی تۆماری گفتوگۆ")} title={tr(lang, "سجل المحادثات", "Conversation history", "تۆماری گفتوگۆ")}>
+            <MessagesSquare className="size-4" />
+          </button>
           {quota && <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums">{(quota as any).approved ? tr(lang, "غير محدود", "Unlimited", "بێسنوور") : quota.unlimited ? tr(lang, "من رصيدك عند النجاح", "From balance on success", "لە باڵانس") : `${quota.remaining}/${quota.cap}`}</span>}
           {threadId && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف هذه المحادثة؟", "Delete this conversation?", "سڕینەوە؟"))) { await call("DELETE", undefined, workspaceId, threadId); setMsgs([]); setThreads((ts) => ts.filter((t) => t.id !== threadId)); setThreadId(""); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
         </div>
       </div>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <MessagesSquare className="size-4 text-muted-foreground" />
-        <select aria-label={tr(lang, "المحادثات السابقة", "Previous conversations", "گفتوگۆکانی پێشوو")} value={threadId} onChange={(e) => setThreadId(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-          {!threadId && <option value="">{tr(lang, "محادثة جديدة", "New conversation", "گفتوگۆی نوێ")}</option>}
-          {threads.map((t) => <option key={t.id} value={t.id}>{t.id === "legacy" ? tr(lang, "محادثات سابقة", "Earlier messages", "نامەکانی پێشوو") : t.title}</option>)}
-        </select>
-        <button type="button" onClick={() => { setThreadId(""); setMsgs([]); setTaskDraft(null); inputRef.current?.focus(); }} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted"><Plus className="size-3.5" />{tr(lang, "محادثة جديدة", "New", "نوێ")}</button>
-      </div>
-      <div className="maaroof-chat-scope mb-3 rounded-xl border border-border bg-background/50 p-3 sm:p-3.5">
-        <div className="mb-2 text-xs font-semibold text-muted-foreground">{tr(lang, "النطاق الجغرافي الذي سيُوجّه الدردشة والبحث", "Geographic scope for chat and research", "بواری جوگرافی بۆ گفتوگۆ و گەڕان")}</div>
-        <GeoScopeSelector compact value={geoScope} onChange={onGeoScopeChange} />
-      </div>
+      <div className={"maaroof-chat-layout min-w-0" + (historyCollapsed ? " is-history-collapsed" : "") + (historyOpen ? " is-history-open" : "")}>
+        <aside className="maaroof-chat-history" aria-label={tr(lang, "سجل المحادثات", "Conversation history", "تۆماری گفتوگۆ")}>
+          <div className="maaroof-chat-history-heading">
+            <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+              <MessagesSquare className="size-4 shrink-0 text-primary" />
+              <span className="truncate">{tr(lang, "سجل المحادثات", "Conversations", "تۆماری گفتوگۆ")}</span>
+            </div>
+            <button type="button" onClick={startNewConversation} className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition hover:bg-primary/15" aria-label={tr(lang, "محادثة جديدة", "New conversation", "گفتوگۆی نوێ")} title={tr(lang, "محادثة جديدة", "New conversation", "گفتوگۆی نوێ")}>
+              <Plus className="size-4" />
+            </button>
+          </div>
+          <div className="maaroof-chat-history-list">
+            {threads.length === 0 && <p className="px-2 py-3 text-xs leading-5 text-muted-foreground">{tr(lang, "ستظهر محادثاتك السابقة هنا.", "Your previous conversations will appear here.", "گفتوگۆکانی پێشووت لێرە دەردەکەون.")}</p>}
+            {threads.map((thread) => (
+              <button
+                type="button"
+                key={thread.id}
+                onClick={() => { setTaskDraft(null); setThreadId(thread.id); setHistoryOpen(false); }}
+                className={"maaroof-chat-thread" + (threadId === thread.id ? " is-active" : "")}
+                aria-current={threadId === thread.id ? "page" : undefined}
+                title={thread.title}
+              >
+                <span className="min-w-0 flex-1 truncate text-start">{thread.id === "legacy" ? tr(lang, "محادثات سابقة", "Earlier messages", "نامەکانی پێشوو") : thread.title}</span>
+                {threadId === thread.id && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </aside>
+        <div className="maaroof-chat-main min-w-0">
+          <div className="maaroof-chat-scope">
+            <button
+              type="button"
+              className="maaroof-chat-scope-toggle"
+              onClick={() => setScopeExpanded((expanded) => !expanded)}
+              aria-expanded={scopeExpanded}
+              title={tr(lang, "تغيير النطاق الجغرافي", "Change geographic scope", "گۆڕینی بواری جوگرافی")}
+            >
+              <MapPin className="size-4 shrink-0 text-primary" />
+              <span className="shrink-0 text-xs text-muted-foreground">{tr(lang, "أنت تعمل على نطاق", "Working in scope", "تۆ لە بواری")}</span>
+              {scopeDisplay.flag && <span className="shrink-0" aria-hidden="true">{scopeDisplay.flag}</span>}
+              <span className="min-w-0 truncate text-sm font-semibold">{scopeDisplay.label}</span>
+              {scopeDisplay.code && <span className="shrink-0 text-xs font-medium text-muted-foreground">({scopeDisplay.code})</span>}
+              <ChevronDown className={"ms-auto size-4 shrink-0 text-muted-foreground transition-transform" + (scopeExpanded ? " rotate-180" : "")} />
+            </button>
+            {scopeExpanded && (
+              <div className="maaroof-chat-scope-editor">
+                <GeoScopeSelector
+                  compact
+                  value={geoScope}
+                  onChange={(next) => {
+                    onGeoScopeChange(next);
+                    if (isGeoScopeConfigured(next)) setScopeExpanded(false);
+                  }}
+                />
+              </div>
+            )}
+          </div>
       <div ref={boxRef} style={{ scrollbarWidth: "thin", scrollbarColor: "hsl(var(--border)) transparent" }} className="maaroof-chat-messages min-w-0 min-h-[220px] flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-xl bg-background p-3 scroll-smooth md:p-4">
         {msgs.length === 0 && <p className="text-sm text-muted-foreground">{tr(lang, "مثال: «افحص ظهور علامتي في ChatGPT» أو «عميل لديه حساب إنستغرام فقط، ماذا نفعل؟»", "Example: “Check my brand in ChatGPT”", "نموونە: «براندەکەم بپشکنە»")}</p>}
         {atts.some((a) => a.busy) && <div role="status" aria-live="polite" className="mb-3 rounded-xl border border-border p-3 text-xs">
@@ -309,6 +383,8 @@ export function Dardasha({
           rows={1} placeholder={tr(lang, "اكتب، الصق، أو اسحب ملفاً هنا…", "Type, paste or drop a file…", "بنووسە…")}
           className="maaroof-chat-input min-h-14 max-h-40 min-w-0 w-full flex-1 resize-none rounded-3xl border border-transparent bg-transparent px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-muted-foreground/75 focus:border-transparent focus:bg-transparent focus:ring-0" />
         <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:scale-[1.03] hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100" aria-label={tr(lang, "إرسال", "Send", "ناردن")}><Send className="size-5" /></button>
+      </div>
+        </div>
       </div>
     </section>
   );
