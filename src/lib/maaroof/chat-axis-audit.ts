@@ -2,7 +2,7 @@ export type ChatLang = "ar" | "en" | "ku";
 
 const AXES = ["SEO", "AEO", "GEO", "SGE", "GSEO"] as const;
 const AUDIT_VERB = /\b(check|inspect|audit|scan|test|measure|evaluate|assess|analy[sz]e|review|verify|examine|run)\b|افحص|فحص|افحصوا|افحصي|تدقيق|دقّق|دقق|اختبر|اختبار|قيّم|قياس|تحقق|تحقّق|راجع|راجعوا|شغّل|نفّذ|نفذ|پشکنین|پشکنینی|هەڵسەنگاندن|بپشکنە|بپشکنن|تاقی|هەڵبسەنگێن|verify/i;
-const FIVE_AXIS_PHRASE = /\b(all\s+five|five\s+axes|five\s+dimensions|these\s+five\s+areas|the\s+five\s+disciplines)\b|المحاور\s+الخمس(?:ة)?|المحاور\s+الخمسة|المجالات\s+الخمس(?:ة)?|الأبعاد\s+الخمس(?:ة)?|پێنج\s+تەوەر|پێنج\s+محور/i;
+const FIVE_AXIS_PHRASE = /\b(all\s+five|five\s+axes|five\s+dimensions|five\s+areas|these\s+five\s+areas|the\s+five\s+(?:axes|areas|dimensions|disciplines)|5\s+(?:axes|areas|dimensions))\b|المحاور\s+الخمس(?:ة)?|المحاور\s+الخمسة|المجالات\s+الخمس(?:ة)?|الأبعاد\s+الخمس(?:ة)?|پێنج\s+تەوەر|پێنج\s+محور/i;
 
 function hasAllAxisCodes(text: string): boolean {
   const normalized = text.toUpperCase().replace(/[^A-Z0-9]+/g, " ");
