@@ -25,7 +25,7 @@ export type Workspace = {
 
 const STORAGE_KEY = "maaroof.active_workspace_id";
 
-export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (ws: Workspace | null) => void; disabled?: boolean }) {
+export function WorkspaceSwitcher({ onChange, activeWorkspaceId, disabled = false }: { onChange: (ws: Workspace | null) => void; activeWorkspaceId?: string | null; disabled?: boolean }) {
   const { t, lang } = useI18n();
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
@@ -58,6 +58,10 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
       }
     })();
   }, []);
+
+  useEffect(() => {
+    setActiveId(activeWorkspaceId && items.some((w) => w.id === activeWorkspaceId) ? activeWorkspaceId : null);
+  }, [activeWorkspaceId, items]);
 
   async function pick(w: Workspace | null) {
     if (disabled) return;
