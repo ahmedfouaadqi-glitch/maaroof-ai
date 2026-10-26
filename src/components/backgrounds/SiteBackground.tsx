@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type BackgroundActivity = "idle" | "analyzing" | "running" | "success" | "failed";
-type NetworkNode = { x: number; y: number; vx: number; vy: number; phase: number };
+type NetworkNode = { x: number; y: number; vx: number; vy: number; phase: number; role: "engine" | "knowledge" };
 type PointerState = { x: number; y: number; active: boolean; lastMovedAt: number };
 type RippleState = { x: number; y: number; startedAt: number; active: boolean };
 
@@ -57,18 +57,19 @@ export default function SiteBackground() {
     const pointer: PointerState = { x: 0, y: 0, active: false, lastMovedAt: 0 };
     const ripple: RippleState = { x: 0, y: 0, startedAt: 0, active: false };
 
-    const randomNode = (): NetworkNode => ({
+    const randomNode = (role: NetworkNode["role"]): NetworkNode => ({
       x: Math.random() * Math.max(1, width),
       y: Math.random() * Math.max(1, height),
       vx: (Math.random() - 0.5) * 0.022,
       vy: (Math.random() - 0.5) * 0.022,
       phase: Math.random() * Math.PI * 2,
+      role,
     });
 
     const desiredNodeCount = () => {
       const area = Math.max(1, width * height);
       if (smallScreen.matches) return Math.max(12, Math.min(18, Math.round(area / 42000)));
-      return Math.max(22, Math.min(34, Math.round(area / 44000)));
+      return Math.max(25, Math.min(35, Math.round(area / 40000)));
     };
 
     const resize = () => {
@@ -91,7 +92,7 @@ export default function SiteBackground() {
       }
 
       const count = desiredNodeCount();
-      while (nodes.length < count) nodes.push(randomNode());
+      while (nodes.length < count) nodes.push(randomNode(nodes.length < 10 ? "engine" : "knowledge"));
       if (nodes.length > count) nodes.length = count;
     };
 
@@ -237,11 +238,12 @@ export default function SiteBackground() {
       ctx.shadowColor = successful ? success : active ? accent : primary;
       ctx.shadowBlur = active ? (smallScreen.matches ? 5 : 8) : 4;
       for (const node of nodes) {
+        const isEngine = node.role === "engine";
         ctx.globalAlpha = active
-          ? 0.66 + 0.2 * Math.sin(time / 560 + node.phase)
-          : 0.48 + 0.17 * Math.sin(time / 1250 + node.phase);
-        const radius = active ? 3.2 : 2.7;
-        const pulse = 0.35 * (1 + Math.sin(time / (active ? 390 : 850) + node.phase));
+          ? (isEngine ? 0.78 : 0.5) + (isEngine ? 0.16 : 0.17) * Math.sin(time / (isEngine ? 560 : 760) + node.phase)
+          : (isEngine ? 0.62 : 0.38) + (isEngine ? 0.14 : 0.14) * Math.sin(time / (isEngine ? 1250 : 1450) + node.phase);
+        const radius = active ? (isEngine ? 3.7 : 2.5) : (isEngine ? 3.1 : 2.15);
+        const pulse = (isEngine ? 0.42 : 0.22) * (1 + Math.sin(time / (active ? 390 : 850) + node.phase));
         ctx.beginPath();
         ctx.arc(node.x, node.y, radius + pulse, 0, Math.PI * 2);
         ctx.fill();
