@@ -1093,7 +1093,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const { fillFromTask, taskEntity, taskEntityInput } = await import("./agent-input");
-      const filled = fillFromTask(step.tool, fillToolInput(step.tool, taskEntityInput(step.tool, step.input, results), { goalBrand: clarBrand || taskEntity(results)?.brand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results);
+      const filled = fillFromTask(step.tool, fillToolInput(step.tool, taskEntityInput(step.tool, step.input, results), { goalBrand: clarBrand || taskEntity(results)?.brand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results, { goal: ctx.goal, workspace: workspaceProfile, profile: entityProfile });
       const missing = missingFields(step.tool, filled);
       // No competitors anywhere: skip before any charge with a clear reason instead of failing.
       if ((step.tool === "compare" || (step.tool === "competitor_monitor" && (filled as any).action === "create"))
