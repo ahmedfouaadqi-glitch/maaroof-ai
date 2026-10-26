@@ -55,7 +55,11 @@ export const createWorkspace = createServerFn({ method: "POST" })
       supabase.from("profiles").select("subscription_tier").eq("id", userId).maybeSingle(),
     ]);
     const tier = (prof as any)?.subscription_tier ?? null;
-    if (!canCreateSpace(count ?? 0, tier)) throw new Error(`space_limit_reached:${spaceLimit(tier)}`);
+    if (!canCreateSpace(count ?? 0, tier)) {
+      // Owner (admin) and approved accounts have no space limit.
+      const { isUnlimitedAccount } = await import("@/lib/tokens.server");
+      if (!(await isUnlimitedAccount(userId))) throw new Error(`space_limit_reached:${spaceLimit(tier)}`);
+    }
     if (data.parent_id) {
       const { allowedChildKinds } = await import("@/lib/space-structure");
       const [{ data: parent }, { data: owner }] = await Promise.all([

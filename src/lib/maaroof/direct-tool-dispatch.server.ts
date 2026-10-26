@@ -16,7 +16,7 @@ type RouteLike = {
 
 type Handler = (context: { request: Request; params?: Record<string, string>; context?: Record<string, unknown> }) => Response | Promise<Response>;
 
-const ROUTE_LOADERS: Record<string, () => Promise<RouteLike>> = {
+const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/api/analyze": () => import("@/routes/api/analyze"),
   "/api/suggest": () => import("@/routes/api/suggest"),
   "/api/compare": () => import("@/routes/api/compare"),
@@ -64,7 +64,7 @@ export async function dispatchToolInProcess(path: string, request: Request, user
   if (!load) return null;
   let route: RouteLike;
   try {
-    route = await load();
+    route = (await load()) as RouteLike;
   } catch (error) {
     console.warn("[maaroof] direct route import unavailable; using HTTP fallback", path, String((error as any)?.message || error).slice(0, 180));
     return null;

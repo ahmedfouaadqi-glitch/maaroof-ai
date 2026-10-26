@@ -66,7 +66,7 @@ export async function verifyInternalAuth(request: Request): Promise<string | nul
   try { pathname = new URL(request.url).pathname; } catch { return null; }
   const payload = payloadFor(version, timestamp, userId, request.method, pathname);
   try {
-    const valid = await crypto.subtle.verify("HMAC", key, signature, encoder.encode(payload));
+    const valid = await crypto.subtle.verify("HMAC", key, signature as BufferSource, encoder.encode(payload));
     return valid ? userId : null;
   } catch {
     return null;
