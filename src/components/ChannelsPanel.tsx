@@ -147,7 +147,7 @@ export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: (
     if (!popup) { setNotice(t("ch_popup_blocked")); return; }
     setBusy(provider);
     try {
-      const r = (await startOAuthFn({ data: { provider } })) as any;
+      const r = (await startOAuthFn({ data: { provider, workspaceId } } as any)) as any;
       if (!r?.ok) { popup.close(); setNotice(t("ch_provider_pending")); return; }
       const done = waitForPopup(popup, provider);
       popup.location.href = r.authorizationUrl;
@@ -186,18 +186,18 @@ export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: (
   const verify = async (id: string) => {
     setBusy(id);
     try {
-      const r = (await verifyFn({ data: { id } })) as any;
+      const r = (await verifyFn({ data: { id, workspaceId } } as any)) as any;
       setNotice(r?.ok ? t("ch_verify_ok") : `${t("ch_verify_fail")} — ${r?.error || ""}`);
     } finally { setBusy(null); await load(); onChanged?.(); }
   };
 
-  const makeDefault = async (id: string) => { await defaultFn({ data: { id } }); await load(); };
+  const makeDefault = async (id: string) => { await defaultFn({ data: { id, workspaceId } } as any); await load(); };
   const toggleMode = async (id: string, mode: string) => {
     await setModeFn({ data: { id, mode: mode === "auto" ? "manual" : "auto", workspaceId } } as any);
     await load();
   };
   const setOwner = async (id: string, ownerType: string) => {
-    await ownerFn({ data: { id, ownerType } });
+    await ownerFn({ data: { id, ownerType, workspaceId } } as any);
     await load();
   };
   const choosePref = async (channel: string) => { await setPrefFn({ data: { channel } }); await load(); };
