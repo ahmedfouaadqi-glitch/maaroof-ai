@@ -11,11 +11,13 @@ const OWNER_TYPES = new Set(["personal", "organization", "brand"]);
 export const startChannelOAuth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { provider?: string };
+    const x = (d || {}) as { provider?: string; workspaceId?: string | null };
     if (!x.provider || !PROVIDERS.has(x.provider)) throw new Error("invalid_provider");
-    return { provider: x.provider as "linkedin" | "meta" | "x" };
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { provider: x.provider as "linkedin" | "meta" | "x", workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
+    if (data.workspaceId) { const { data: w } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", context.userId).maybeSingle(); if (!w) return { ok: false as const, error: "workspace_not_found" }; }
     const { providerReady, buildAuthUrl, makePkce, PROVIDERS: DEFS } = await import("@/lib/channels/providers.server");
     if (!providerReady(data.provider)) return { ok: false as const, error: "provider_not_configured" };
 
@@ -32,6 +34,7 @@ export const startChannelOAuth = createServerFn({ method: "POST" })
       .insert({
         state,
         user_id: context.userId,
+        workspace_id: data.workspaceId,
         provider: data.provider,
         code_verifier: pkce?.verifier ?? null,
         redirect_uri: redirectUri,
@@ -67,6 +70,7 @@ export const listOAuthAccounts = createServerFn({ method: "POST" })
       .select("id, provider, payload, user_id")
       .eq("id", data.linkId)
       .eq("user_id", context.userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId)
       .maybeSingle();
     if (!row) return { ok: false as const, error: "link_not_found" };
     const payload = (row.payload || {}) as any;
@@ -103,7 +107,7 @@ export const attachOAuthAccounts = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: row } = await supabaseAdmin
       .from("oauth_link_states")
-      .select("id, provider, payload")
+      .select("id, provider, payload, workspace_id")
       .eq("id", data.linkId)
       .eq("user_id", context.userId)
       .maybeSingle();
@@ -133,6 +137,7 @@ export const attachOAuthAccounts = createServerFn({ method: "POST" })
         .eq("user_id", context.userId)
         .eq("kind", acc.kind)
         .eq("external_account_id", acc.externalId)
+        .filter("workspace_id", row.workspace_id ? "eq" : "is", row.workspace_id)
         .maybeSingle();
 
       const patch = {
@@ -144,6 +149,7 @@ export const attachOAuthAccounts = createServerFn({ method: "POST" })
         token_expires_at: payload.expires_at || null,
         scopes,
         connected_via: "oauth",
+        workspace_id: row.workspace_id ?? null,
         active: true,
         verified_at: new Date().toISOString(),
         last_verified_at: new Date().toISOString(),
@@ -175,9 +181,10 @@ export const attachOAuthAccounts = createServerFn({ method: "POST" })
 export const verifyChannel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { id?: string };
+    const x = (d || {}) as { id?: string; workspaceId?: string | null };
     if (!x.id) throw new Error("id_required");
-    return { id: x.id };
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { id: x.id, workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const { data: ch } = await supabaseAdmin
@@ -222,7 +229,8 @@ export const setDefaultChannel = createServerFn({ method: "POST" })
       .from("publish_channels")
       .update({ is_default: false })
       .eq("user_id", context.userId)
-      .eq("kind", ch.kind);
+      .eq("kind", ch.kind)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     await supabaseAdmin.from("publish_channels").update({ is_default: true }).eq("id", ch.id);
     return { ok: true };
   });
@@ -231,10 +239,11 @@ export const setDefaultChannel = createServerFn({ method: "POST" })
 export const updateChannelOwner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { id?: string; ownerType?: string; ownerName?: string };
+    const x = (d || {}) as { id?: string; ownerType?: string; ownerName?: string; workspaceId?: string | null };
     if (!x.id) throw new Error("id_required");
     if (x.ownerType && !OWNER_TYPES.has(x.ownerType)) throw new Error("invalid_owner_type");
-    return { id: x.id, ownerType: x.ownerType, ownerName: (x.ownerName || "").slice(0, 120) };
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { id: x.id, ownerType: x.ownerType, ownerName: (x.ownerName || "").slice(0, 120), workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const patch: Record<string, any> = {};
@@ -245,6 +254,7 @@ export const updateChannelOwner = createServerFn({ method: "POST" })
       .from("publish_channels")
       .update(patch as any)
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     return { ok: true };
   });
