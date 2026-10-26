@@ -70,7 +70,6 @@ export const listOAuthAccounts = createServerFn({ method: "POST" })
       .select("id, provider, payload, user_id")
       .eq("id", data.linkId)
       .eq("user_id", context.userId)
-      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId)
       .maybeSingle();
     if (!row) return { ok: false as const, error: "link_not_found" };
     const payload = (row.payload || {}) as any;
@@ -192,6 +191,7 @@ export const verifyChannel = createServerFn({ method: "POST" })
       .select("*")
       .eq("id", data.id)
       .eq("user_id", context.userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId)
       .maybeSingle();
     if (!ch) return { ok: false as const, error: "channel_not_found" };
 
@@ -205,7 +205,9 @@ export const verifyChannel = createServerFn({ method: "POST" })
         account_label: res.name || ch.account_label,
         active: res.ok ? ch.active : false,
       })
-      .eq("id", ch.id);
+      .eq("id", ch.id)
+      .eq("user_id", context.userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     return res.ok ? { ok: true as const, name: res.name } : { ok: false as const, error: res.error };
   });
 
@@ -213,9 +215,10 @@ export const verifyChannel = createServerFn({ method: "POST" })
 export const setDefaultChannel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { id?: string };
+    const x = (d || {}) as { id?: string; workspaceId?: string | null };
     if (!x.id) throw new Error("id_required");
-    return { id: x.id };
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { id: x.id, workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const { data: ch } = await supabaseAdmin
@@ -223,6 +226,7 @@ export const setDefaultChannel = createServerFn({ method: "POST" })
       .select("id, kind")
       .eq("id", data.id)
       .eq("user_id", context.userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId)
       .maybeSingle();
     if (!ch) return { ok: false, error: "channel_not_found" };
     await supabaseAdmin
@@ -231,7 +235,7 @@ export const setDefaultChannel = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .eq("kind", ch.kind)
       .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
-    await supabaseAdmin.from("publish_channels").update({ is_default: true }).eq("id", ch.id);
+    await supabaseAdmin.from("publish_channels").update({ is_default: true }).eq("id", ch.id).eq("user_id", context.userId).filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     return { ok: true };
   });
 
