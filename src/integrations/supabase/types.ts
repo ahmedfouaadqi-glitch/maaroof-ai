@@ -4284,6 +4284,7 @@ export type Database = {
           token_expires_at: string | null
           user_id: string
           verified_at: string | null
+          workspace_id: string | null
         }
         Insert: {
           account_label?: string | null
@@ -4307,6 +4308,7 @@ export type Database = {
           token_expires_at?: string | null
           user_id: string
           verified_at?: string | null
+          workspace_id?: string | null
         }
         Update: {
           account_label?: string | null
@@ -4330,6 +4332,7 @@ export type Database = {
           token_expires_at?: string | null
           user_id?: string
           verified_at?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
