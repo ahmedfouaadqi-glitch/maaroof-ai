@@ -1,3 +1,4 @@
+import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 // Server-only in-process dispatch for internal Maaroof tools.
 // Cloudflare can block a Worker calling its own public origin. Calling the same
 // route handler directly avoids that network loop while preserving the endpoint's
@@ -58,7 +59,7 @@ export function resolveDirectPostHandler(routeLike: unknown): Handler | null {
  * Errors thrown by the handler are intentionally propagated: never re-run a tool that
  * may already have performed side effects or spent credits.
  */
-export async function dispatchToolInProcess(path: string, request: Request): Promise<Response | null> {
+export async function dispatchToolInProcess(path: string, request: Request, userId?: string): Promise<Response | null> {
   const load = ROUTE_LOADERS[path];
   if (!load) return null;
   let route: RouteLike;
@@ -73,7 +74,16 @@ export async function dispatchToolInProcess(path: string, request: Request): Pro
     console.warn("[maaroof] direct route handler unavailable; using HTTP fallback", path);
     return null;
   }
-  // Current internal tool handlers consume the request and authenticate using the
-  // same forwarded bearer token as the old HTTP call.
+  // Add a short-lived signed identity for long-running server work; the bearer token
+  // is still preserved for compatibility with routes that only support browser auth.
+  if (userId && !request.headers.has("x-maaroof-internal-auth")) {
+    const pathname = new URL(request.url).pathname;
+    const proof = await createInternalAuthHeader(userId, pathname, request.method);
+    if (proof) {
+      const headers = new Headers(request.headers);
+      headers.set("x-maaroof-internal-auth", proof);
+      request = new Request(request, { headers });
+    }
+  }
   return await handler({ request, params: {}, context: {} });
 }
