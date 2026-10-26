@@ -1,3 +1,4 @@
+import { inWorkspaceScope } from "@/lib/workspace-scope";
 // SchedulesPanel — list + create scheduled auto-runs for Maaroof.
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -97,7 +98,7 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
     await refresh();
   }
 
-  const filtered = workspaceId ? items.filter((s) => s.workspace_id === workspaceId || !s.workspace_id) : items;
+  const filtered = items.filter((s) => inWorkspaceScope(s.workspace_id, workspaceId));
 
   return (
     <div className="rounded-lg border bg-card p-3 space-y-2">
