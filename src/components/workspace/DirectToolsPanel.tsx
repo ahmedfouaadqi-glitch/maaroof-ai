@@ -15,12 +15,33 @@ const T = {
 /** Direct tools tab: grid of every real tool UI, opened inline. Presentation only. */
 export function DirectToolsPanel({ lang, tool }: { lang: L; tool?: string }) {
   const c = T[lang];
+  const pausedText = lang === "en" ? "Temporarily paused" : lang === "ku" ? "کاتی ڕاگیراوە" : "موقفة مؤقتاً";
+  const pausedDescription = lang === "en" ? "This tool is disabled. No scan will run and no credits will be charged." : lang === "ku" ? "ئەم ئامرازە ناچالاکە؛ هیچ پشکنینێک ناکرێت و کرێدیت نابڕدرێت." : "الأداة معطلة مؤقتاً؛ لن يبدأ أي فحص ولن يُخصم رصيد.";
   const vis = useVisibility();
   const reduce = useReducedMotion();
   const [q, setQ] = useState("");
   const keys = useMemo(() => Object.keys(TOOL_UI).filter((k) => k === "report" || vis.isToolVisible(k)), [vis]);
   const shown = keys.filter((k) => toolName(k, lang).toLowerCase().includes(q.trim().toLowerCase()));
   const Tool = tool && keys.includes(tool) ? TOOL_UI[tool] : undefined;
+
+  if (tool === "competitor_monitor") {
+    return (
+      <div className="space-y-4">
+        <Link to="/workspace" search={{ tab: "tools" }} className="text-xs text-primary hover:underline">{c.back}</Link>
+        <section aria-disabled="true" className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-card p-5">
+          <div className="absolute inset-x-0 top-0 h-1 bg-amber-500/70" />
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold">{toolName("competitor_monitor", lang)}</h2>
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">{pausedText}</span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{pausedDescription}</p>
+          <button type="button" disabled className="mt-4 cursor-not-allowed rounded-xl border border-border px-3 py-2 text-xs font-semibold opacity-50">
+            {lang === "en" ? "Launch disabled" : lang === "ku" ? "دەستپێکردن ناچالاکە" : "الإطلاق معطّل"}
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   if (Tool) {
     return (
@@ -45,11 +66,21 @@ export function DirectToolsPanel({ lang, tool }: { lang: L; tool?: string }) {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((k, i) => (
           <motion.div key={k} layout initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduce ? 0 : i * 0.04, duration: 0.3 }} whileHover={reduce ? undefined : { rotateX: 3, rotateY: -3, scale: 1.02 }} style={{ transformPerspective: 800 }}>
-            <Link to="/workspace" search={{ tab: "tools", tool: k }} className="block">
-              <SpotlightCard className="p-4">
-                <div className="text-sm font-semibold">{toolName(k, lang)}</div>
+            {k === "competitor_monitor" ? (
+              <SpotlightCard className="p-4 opacity-80">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-sm font-semibold">{toolName(k, lang)}</div>
+                  <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">{pausedText}</span>
+                </div>
+                <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{pausedDescription}</p>
               </SpotlightCard>
-            </Link>
+            ) : (
+              <Link to="/workspace" search={{ tab: "tools", tool: k }} className="block">
+                <SpotlightCard className="p-4">
+                  <div className="text-sm font-semibold">{toolName(k, lang)}</div>
+                </SpotlightCard>
+              </Link>
+            )}
           </motion.div>
         ))}
       </div>
