@@ -102,7 +102,11 @@ export function WorkspaceSpacesPanel({ lang, workspaceId = null, onWorkspaceChan
     setError(null);
     try {
       await remove({ data: { id } });
-      if (active && ids.includes(active)) setActive(null);
+      if (active && ids.includes(active)) {
+        setActive(null);
+        localStorage.removeItem(KEY);
+        onWorkspaceChange?.(null);
+      }
       await reload();
     } catch (e: any) { setError(String(e?.message || e)); }
   }
