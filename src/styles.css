@@ -537,10 +537,18 @@
 
 /* Responsive React Bits-inspired workspace geometry.
    Layout-only: preserve the existing theme, copy, assets and page background.
-   The reveal remains CSS-only (no GSAP, WebGL, canvas or per-frame effects). */
+   Scope selection remains outside the independently scrollable message viewport. */
 .maaroof-workspace-page > header > div {
   max-width: 1600px;
   padding-inline: clamp(0.75rem, 2.2vw, 1.75rem);
+}
+
+.maaroof-workspace-main > header,
+.maaroof-workspace-main > .maaroof-chat-frame {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(100%, 1320px);
+  margin-inline: auto;
 }
 
 .maaroof-workspace-page .maaroof-chat-shell {
@@ -549,8 +557,8 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  height: clamp(30rem, calc(100dvh - 18rem), 48rem);
-  min-height: 30rem;
+  height: clamp(29rem, calc(100dvh - 20rem), 46rem);
+  min-height: 0;
 }
 
 .maaroof-chat-heading,
@@ -559,6 +567,12 @@
 .maaroof-chat-attachments,
 .maaroof-chat-error {
   flex-shrink: 0;
+}
+
+.maaroof-workspace-page .maaroof-chat-scope {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
 }
 
 .maaroof-workspace-page .maaroof-chat-messages {
@@ -571,10 +585,29 @@
   scrollbar-gutter: stable;
 }
 
-@media (max-height: 720px) and (min-width: 768px) {
+.maaroof-workspace-page .maaroof-chat-composer {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 4.5rem;
+}
+
+.maaroof-workspace-page .maaroof-chat-input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  align-self: center;
+}
+
+@media (max-height: 760px) and (min-width: 768px) {
   .maaroof-workspace-page .maaroof-chat-shell {
-    height: clamp(28rem, calc(100dvh - 14rem), 40rem);
-    min-height: 28rem;
+    height: auto;
+    min-height: 0;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-messages {
+    min-height: clamp(10rem, 22dvh, 13rem);
+    max-height: 42dvh;
   }
 }
 
@@ -582,6 +615,11 @@
   .maaroof-workspace-page > header > div {
     max-width: 100%;
     padding-inline: 0.75rem;
+  }
+
+  .maaroof-workspace-main > header,
+  .maaroof-workspace-main > .maaroof-chat-frame {
+    max-width: 100%;
   }
 
   .maaroof-workspace-page .maaroof-chat-shell {
@@ -593,6 +631,14 @@
     min-height: clamp(15rem, 42dvh, 24rem);
     max-height: 56dvh;
     flex: 1 1 auto;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-composer {
+    min-height: 4rem;
+  }
+
+  .maaroof-workspace-page .maaroof-chat-input {
+    min-height: 3rem;
   }
 }
 
