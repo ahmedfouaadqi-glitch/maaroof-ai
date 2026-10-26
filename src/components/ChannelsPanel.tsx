@@ -166,7 +166,7 @@ export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: (
   const connectTelegram = async () => {
     setBusy("telegram");
     try {
-      const r = (await tgLinkFn()) as any;
+      const r = (await tgLinkFn({ data: { workspaceId } } as any)) as any;
       if (r?.ok && r.link) {
         setTgLink(r.link);
         window.open(r.link, "_blank", "noopener,noreferrer");
@@ -179,7 +179,7 @@ export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: (
   const disconnect = async (id: string) => {
     if (!confirm(t("ag_ch_confirm_disconnect") || t("auto.disconnect_this_channel"))) return;
     setBusy(id);
-    try { await disconnectFn({ data: { id } }); }
+    try { await disconnectFn({ data: { id, workspaceId } } as any); }
     finally { setBusy(null); await load(); onChanged?.(); }
   };
 
@@ -193,7 +193,7 @@ export function ChannelsPanel({ onChanged, workspaceId = null }: { onChanged?: (
 
   const makeDefault = async (id: string) => { await defaultFn({ data: { id } }); await load(); };
   const toggleMode = async (id: string, mode: string) => {
-    await setModeFn({ data: { id, mode: mode === "auto" ? "manual" : "auto" } });
+    await setModeFn({ data: { id, mode: mode === "auto" ? "manual" : "auto", workspaceId } } as any);
     await load();
   };
   const setOwner = async (id: string, ownerType: string) => {
