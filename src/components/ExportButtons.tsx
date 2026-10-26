@@ -284,7 +284,7 @@ export function ExportButtons({
         : [];
       let all = [
         ...engineSecs,
-        ...loc.filter((section) => !isGlossary(section.heading)),
+        ...loc.filter((section) => !isGlossarySection(section.heading)),
         ...extra,
       ];
 

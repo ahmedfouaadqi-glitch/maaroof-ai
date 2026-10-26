@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
 import { summarizeLedger, knowledgeCompletion, type LedgerRow } from "@/lib/workspace-panels";
+import { buildTaskHistoryExportPayload } from "@/lib/maaroof/task-history-export";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -47,21 +48,13 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
 
   const buildExport = (j: PastJob) => async () => {
     const t = await token();
-    const query = new URLSearchParams({ id: j.id, after: "0", workspace_id: workspaceId ?? "" });
+    // The archived job's own workspace is authoritative; the user may have switched workspaces since it ran.
+    const query = new URLSearchParams({ id: j.id, after: "0", workspace_id: j.workspace_id ?? "" });
     const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
-    const b = r.ok ? await r.json() : { events: [] };
-    const evs: any[] = b.events || [];
-    const fin = [...evs].reverse().find((e) => e.event_type === "final");
-    const text = String(fin?.payload?.summary || fin?.payload?.text || fin?.payload?.answer || "");
-    return {
-      title: j.goal || tr(lang, "مهمة", "Task", "ئەرک"),
-      subtitle: new Date(j.created_at).toLocaleString(),
-      sections: [
-        { heading: tr(lang, "الحالة", "Status", "دۆخ"), kind: "kv" as const, rows: [[tr(lang, "الحالة", "Status", "دۆخ"), STATUS[j.status]?.[lang] || j.status] as [string, string]] },
-        ...(text ? [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text" as const, text }] : []),
-        { heading: tr(lang, "سجل العمل", "Activity", "تۆمار"), kind: "list" as const, list: evs.map((e) => `${new Date(e.created_at).toLocaleTimeString()} · ${e.event_type}`) },
-      ],
-    };
+    if (!r.ok) throw new Error("task_events_unavailable");
+    const b = await r.json();
+    if (b?.error || !Array.isArray(b?.events)) throw new Error("task_events_unavailable");
+    return buildTaskHistoryExportPayload(j, b.events, lang);
   };
 
   return (
