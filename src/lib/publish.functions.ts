@@ -30,7 +30,7 @@ export const startTelegramLink = createServerFn({ method: "POST" })
     const { data: existing } = await supabaseAdmin
       .from("publish_channels").select("id, config, verified_at")
       .eq("user_id", userId).eq("kind", "telegram")
-      .eq("workspace_id", data.workspaceId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId)
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
 
     if (existing && !existing.verified_at) {
@@ -72,7 +72,7 @@ export const disconnectChannel = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     await supabaseAdmin.from("publish_channels")
-      .delete().eq("id", data.id).eq("user_id", context.userId).eq("workspace_id", data.workspaceId);
+      .delete().eq("id", data.id).eq("user_id", context.userId).filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     return { ok: true };
   });
 
@@ -87,7 +87,7 @@ export const setChannelApprovalMode = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await supabaseAdmin.from("publish_channels")
       .update({ approval_mode: data.mode })
-      .eq("id", data.id).eq("user_id", context.userId).eq("workspace_id", data.workspaceId);
+      .eq("id", data.id).eq("user_id", context.userId).filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     return { ok: true };
   });
 
@@ -124,7 +124,7 @@ export const getChannelsState = createServerFn({ method: "GET" })
       .eq("id", context.userId).maybeSingle();
     let channelsQuery = supabaseAdmin.from("publish_channels")
       .select("id, kind, label, account_label, active, verified_at, approval_mode, scopes, owner_type, owner_name, is_default, connected_via, last_verified_at, last_error, external_account_id, workspace_id")
-      .eq("user_id", context.userId).eq("workspace_id", data.workspaceId);
+      .eq("user_id", context.userId).filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId);
     const { data: chans } = await channelsQuery.order("created_at", { ascending: false });
     return {
       preferred: (prof as any)?.preferred_notify_channel ?? "email",
@@ -183,7 +183,7 @@ export const saveManualSocialToken = createServerFn({ method: "POST" })
 
     const { data: existing } = await supabaseAdmin
       .from("publish_channels").select("id")
-      .eq("user_id", context.userId).eq("kind", data.provider).eq("workspace_id", data.workspaceId).maybeSingle();
+      .eq("user_id", context.userId).eq("kind", data.provider).filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId).maybeSingle();
 
     if (existing) {
       await supabaseAdmin.from("publish_channels").update({
