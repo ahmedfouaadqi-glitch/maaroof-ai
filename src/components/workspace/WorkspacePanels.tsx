@@ -1,3 +1,4 @@
+import { inWorkspaceScope } from "@/lib/workspace-scope";
 import { formatDuration } from "@/lib/maaroof/pipeline-cards";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -143,11 +144,12 @@ export function BalancePanel({ lang }: { lang: L }) {
 
 type Ks = { id: string; name: string; workspace_id: string | null; nodes_count: number; asked: number; answered: number; kind: string };
 
-export function KnowledgePanel({ lang }: { lang: L }) {
+export function KnowledgePanel({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const { user } = useAuth();
   const [items, setItems] = useState<Ks[] | null>(null);
   useEffect(() => {
     if (!user) return;
+    setItems(null);
     (async () => {
       const [{ data: spaces }, { data: iv }, { data: ws }] = await Promise.all([
         supabase.from("knowledge_spaces").select("id,name,workspace_id,nodes_count").eq("user_id", user.id),
@@ -155,12 +157,12 @@ export function KnowledgePanel({ lang }: { lang: L }) {
         supabase.from("workspaces").select("id,space_kind").eq("owner_id", user.id),
       ]);
       const kinds = new Map((ws || []).map((w: any) => [w.id, w.space_kind]));
-      setItems((spaces || []).map((s: any) => {
+      setItems((spaces || []).filter((s: any) => inWorkspaceScope(s.workspace_id, workspaceId)).map((s: any) => {
         const q = (iv || []).filter((x: any) => x.space_id === s.id);
         return { ...s, asked: q.length, answered: q.filter((x: any) => x.answer).length, kind: s.workspace_id ? String(kinds.get(s.workspace_id) || "company") : "account" };
       }));
     })().catch(() => setItems([]));
-  }, [user?.id]);
+  }, [user?.id, workspaceId]);
   const kindLabel = (k: string) => ({ account: tr(lang, "الحساب", "Account", "هەژمار"), company: tr(lang, "شركة", "Company", "کۆمپانیا"), product: tr(lang, "منتج", "Product", "بەرهەم"), client: tr(lang, "عميل", "Client", "کڕیار") } as Record<string, string>)[k] || k;
   return (
     <section className={card}>
