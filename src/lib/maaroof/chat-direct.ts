@@ -7,9 +7,9 @@ export function chatRoute(toolCount: number): "chat" | "direct" | "task" {
   return toolCount <= DIRECT_TOOL_LIMIT ? "direct" : "task";
 }
 
-const GEO_SCORE_RE = /(درج[ةه]|تقييم|نقاط|قيّم|قيم|score|rate|grade|نمر[ەه])\s*(?:ال)?\s*(geo|جيو)|(geo|جيو)\s*(score|درج[ةه])/i;
+const GEO_SCORE_RE = /(درج[ةه]|تقييم|نقاط|قيّم|قيم|score|rate|grade|نمر[ەه])\s*(?:ال)?\s*(geo|جيو)|(geo|جيو)\s*(score|درج[ةه])|(تدقيق|دقق|راجع)\s*(?:هذا\s*)?(?:ال)?(نص|منشور)|كثاف[ةه]\s*(?:ال)?حقائق|fact\s*density|audit\s*(this\s*)?(text|post)/i;
 
-/** Detects "GEO score for this text/post" and returns the text to score (>= 25 chars), else null. */
+/** Detects a one-tool text check (GEO score, text audit, fact density) and returns the text (>= 25 chars), else null. */
 export function detectGeoScoreRequest(message: string): { tool: "analyze"; text: string } | null {
   const m = String(message || "");
   if (!GEO_SCORE_RE.test(m)) return null;
