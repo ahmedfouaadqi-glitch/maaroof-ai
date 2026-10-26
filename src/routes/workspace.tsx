@@ -638,7 +638,7 @@ function WorkspacePage() {
       <SiteHeader />
       <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
-      <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={handleWorkspaceChange} disabled={running} /></div>
+      <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={handleWorkspaceChange} activeWorkspaceId={activeWorkspaceId} disabled={running} /></div>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} workspaceId={activeWorkspaceId} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} workspaceId={activeWorkspaceId} /><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /><BroadcastPanel lang={locale} workspaceId={activeWorkspaceId} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} workspaceId={activeWorkspaceId} /></Suspense></section>}</div>}
