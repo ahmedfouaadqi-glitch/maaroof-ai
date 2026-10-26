@@ -87,13 +87,13 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
 
   async function toggle(s: Schedule) {
     const next = s.status === "active" ? "paused" : "active";
-    await setStatus({ data: { id: s.id, status: next } });
+    await setStatus({ data: { id: s.id, workspace_id: workspaceId, status: next } } as any);
     await refresh();
   }
 
   async function remove(id: string) {
     if (!confirm(t("auto.delete_schedule"))) return;
-    await del({ data: { id } });
+    await del({ data: { id, workspace_id: workspaceId } } as any);
     await refresh();
   }
 
