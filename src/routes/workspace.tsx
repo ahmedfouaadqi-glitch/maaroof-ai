@@ -691,7 +691,7 @@ function WorkspacePage() {
         {(finalEvent || events.length > 0) && !running && (
           <div className="mb-4 flex justify-end"><button type="button" onClick={() => { watcherRef.current += 1; setEvents([]); setJobId(null); setGoal(""); setError(""); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Plus className="size-4" />{locale === "en" ? "Start a new task" : locale === "ku" ? "دەستپێکردنی ئەرکی نوێ" : "بدء مهمة جديدة"}</button><button type="button" onClick={() => { const prev = goal; const prevJob = jobId; const prevDone = events.some((e: any) => e.type === "final"); watcherRef.current += 1; setEvents([]); setJobId(null); if (prevJob && !prevDone) void prepareResume(prevJob); setError(""); setGoal((locale === "en" ? "Follow-up on: " : locale === "ku" ? "بەردەوامی: " : "استكمالاً لمهمة: ") + prev + "\n"); setTimeout(() => document.getElementById("workspace-goal")?.focus(), 50); }} className="ms-2 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">{locale === "en" ? "Continue" : locale === "ku" ? "بەردەوامبوون" : "استكمال"}</button></div>
         )}
-        {((!finalEvent && !running && events.length === 0) || isAxisAuditGoal) && <div className="mb-4"><Dardasha
+        {((!finalEvent && !running && events.length === 0) || isAxisAuditGoal) && <div className="maaroof-chat-frame mb-4"><Dardasha
             lang={locale}
             workspaceId={activeWorkspaceId}
             busyTask={running}
