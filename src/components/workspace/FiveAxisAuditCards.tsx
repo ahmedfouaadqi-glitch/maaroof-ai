@@ -102,7 +102,7 @@ export function FiveAxisAuditCards({
   const copy = COPY[lang];
   const reduceMotion = useReducedMotion();
   const [expanded, setExpanded] = useState<string[]>([]);
-  const payload = useMemo(() => derivePayload(taskState, lang), [taskState, lang]);
+  const payload = useMemo(() => derivePayload(taskState, lang), [taskState?.events, taskState?.finalText, taskState?.goal, lang]);
   const sections = payload.sections.filter((section) => axisForHeading(section.heading));
   const byAxis = new Map<AxisKey, typeof sections[number]>();
   for (const section of sections) {
