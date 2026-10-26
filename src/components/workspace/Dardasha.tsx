@@ -10,11 +10,13 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { AssistantMessage } from "./AssistantMessage";
 import { buildTaskGoalFromResult } from "@/lib/maaroof/chat-actions";
 import { GeoScopeSelector, isGeoScopeConfigured, toServerGeoScope, type GeoScope } from "@/components/GeoScopeSelector";
+import { FiveAxisAuditCards, type FiveAxisAuditTaskState } from "@/components/workspace/FiveAxisAuditCards";
+import { buildFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
 type Task = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
-type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null };
+type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null; axisAuditRequest?: boolean };
 type ChatTaskDraft = { messageKey: string; goal: string };
 type Att = DardashaAttachment & { busy?: boolean; failed?: boolean };
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -29,7 +31,7 @@ async function call(method: string, body?: unknown, workspaceId?: string | null)
 
 /** «دردشة»: one surface for chat, files and tasks. A task starts only after the user clicks approve. */
 export function Dardasha({
-  lang, onPrepareTask, busyTask, workspaceId = null, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed,
+  lang, onPrepareTask, busyTask, workspaceId = null, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed, axisAuditTask,
 }: {
   lang: L;
   /** Prepares a task draft for review; does not start execution. */
@@ -40,6 +42,8 @@ export function Dardasha({
   onGeoScopeChange: (scope: GeoScope) => void;
   chatPrefill?: { text: string; taskId?: string } | null;
   onPrefillConsumed?: () => void;
+  /** Live recorded results for a five-axis audit approved in the parent task runner. */
+  axisAuditTask?: FiveAxisAuditTaskState;
 }) {
   const { user } = useAuth();
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -55,7 +59,7 @@ export function Dardasha({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setTaskDraft(null); void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null }))); }); }, [workspaceId]);
+  useEffect(() => { setTaskDraft(null); void call("GET", undefined, workspaceId).then((r) => { if (!r.ok) return; setQuota(r.json.quota || null); setMsgs((r.json.items || []).map((m: any) => ({ ...m, needs_task: m.grounded?.needs_task, task: m.grounded?.task || null, axisAuditRequest: m.grounded?.axis_audit_request === true }))); }); }, [workspaceId]);
   useEffect(() => {
     if (!chatPrefill) return;
     setText(chatPrefill.text);
@@ -114,7 +118,7 @@ export function Dardasha({
         return;
       }
       if (r.json.quota) setQuota(r.json.quota);
-      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null }]);
+      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null, axisAuditRequest: r.json.axis_audit_request === true }]);
     } catch {
       setErr(tr(lang, "انقطع الاتصال بالدردشة. تحقق من الاتصال وحاول مجدداً.", "Chat connection failed. Check your connection and retry.", "پەیوەندی گفتوگۆ کێشەی هەبوو. دووبارە هەوڵ بدە."));
     } finally {
@@ -169,13 +173,20 @@ export function Dardasha({
           <div key={messageKey} className={m.role === "user" ? "flex justify-end" : ""}>
             <div className={m.role === "user" ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm" : "max-w-full min-w-0 rounded-2xl border border-border/70 bg-card/60 p-3 text-sm leading-7 shadow-sm transition-colors duration-200 hover:border-primary/20 hover:shadow-md sm:p-4"}>
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
+              {m.role === "assistant" && m.axisAuditRequest && (
+                <FiveAxisAuditCards
+                  lang={lang}
+                  onReviewAndRun={() => onPrepareTask(buildFiveAxisAuditGoal(lang))}
+                  taskState={axisAuditTask}
+                />
+              )}
               {m.role === "assistant" && m.content.trim() && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
                   <ExportButtons size="xs" build={() => ({ title: tr(lang, "استشارة معروف", "Maaroof consultation", "ڕاوێژکاری معروف"), lang, sections: [{ heading: tr(lang, "النتيجة", "Result", "ئەنجام"), kind: "text", text: m.content }] })} />
-                  {!m.task && !m.needs_task && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "حوّل الرد إلى مهمة", "Turn answer into a task", "وەڵامەکە بکە بە ئەرک")}</button>}
+                  {!m.axisAuditRequest && !m.task && !m.needs_task && <button type="button" disabled={busyTask} onClick={() => openTaskDraft()} className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-50"><ListChecks className="size-3.5" />{tr(lang, "حوّل الرد إلى مهمة", "Turn answer into a task", "وەڵامەکە بکە بە ئەرک")}</button>}
                 </div>
               )}
-              {m.role === "assistant" && (m.task || m.needs_task) && (
+              {m.role === "assistant" && !m.axisAuditRequest && (m.task || m.needs_task) && (
                 <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-xs">
                   <p className="font-semibold text-primary">{tr(lang, "مهمة مقترحة", "Proposed task", "ئەرکی پێشنیارکراو")}{m.task ? ` · ${kindLabel[m.task.kind] || ""}` : ""}</p>
                   <p className="mt-1 text-foreground">{m.task?.goal || lastUser}</p>
