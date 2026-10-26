@@ -30,4 +30,8 @@ describe("compact geographic scope summary", () => {
       flag: "🇱🇧",
     });
   });
+
+  it("shows the selected region when no country is required by the current scope", () => {
+    expect(getCompactGeoScopeDisplay({ scope: "region", region: "كردستان" }, "ar").label).toBe("كردستان");
+  });
 });
