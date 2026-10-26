@@ -148,6 +148,7 @@ export const saveManualSocialToken = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => {
     const x = (d || {}) as { provider?: string; token?: string; pageId?: string; igUserId?: string; defaultMediaUrl?: string; workspaceId?: string | null };
     if (!x.provider || !MANUAL_PROVIDERS.has(x.provider)) throw new Error("invalid_provider");
+    if (x.workspaceId && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
     if (!x.token || x.token.length < 10) throw new Error("invalid_token");
     return {
       provider: x.provider,
@@ -159,6 +160,10 @@ export const saveManualSocialToken = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
+    if (data.workspaceId) {
+      const { data: owned } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", context.userId).maybeSingle();
+      if (!owned) return { ok: false as const, error: "workspace_not_found" };
+    }
     let accountLabel = "";
     let config: Record<string, any> = {};
     try {
