@@ -93,6 +93,7 @@ export const updateScheduleStatus = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
+        workspace_id: z.string().uuid().nullable().optional(),
         status: z.enum(["active", "paused", "cancelled"]),
       })
       .parse(input),
@@ -103,21 +104,23 @@ export const updateScheduleStatus = createServerFn({ method: "POST" })
       .from("maaroof_schedules")
       .update({ status: data.status })
       .eq("id", data.id)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .filter("workspace_id", data.workspace_id ? "eq" : "is", data.workspace_id ?? null);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const deleteSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+   .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), workspace_id: z.string().uuid().nullable().optional() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase
       .from("maaroof_schedules")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .filter("workspace_id", data.workspace_id ? "eq" : "is", data.workspace_id ?? null);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
