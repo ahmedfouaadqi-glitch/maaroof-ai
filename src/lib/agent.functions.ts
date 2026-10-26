@@ -155,16 +155,22 @@ export const runAgentCommand = createServerFn({ method: "POST" })
 export const publishToChannel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const x = (d || {}) as { channelId?: string; text?: string; taskId?: string };
+    const x = (d || {}) as { channelId?: string; text?: string; taskId?: string; workspaceId?: string | null };
     if (!x.channelId) throw new Error("channel_required");
     if (!x.text || x.text.trim().length < 3) throw new Error("text_required");
-    return { channelId: x.channelId, text: x.text.slice(0, 4000), taskId: x.taskId };
+    if (x.workspaceId != null && !/^[0-9a-f-]{36}$/i.test(x.workspaceId)) throw new Error("invalid_workspace");
+    return { channelId: x.channelId, text: x.text.slice(0, 4000), taskId: x.taskId, workspaceId: x.workspaceId || null };
   })
   .handler(async ({ data, context }) => {
     const userId = context.userId;
+    if (data.workspaceId) {
+      const { data: owned } = await supabaseAdmin.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", userId).maybeSingle();
+      if (!owned) return { ok: false, error: "workspace_not_found" };
+    }
     const { data: ch, error } = await supabaseAdmin
       .from("publish_channels").select("*")
-      .eq("id", data.channelId).eq("user_id", userId).maybeSingle();
+      .eq("id", data.channelId).eq("user_id", userId)
+      .filter("workspace_id", data.workspaceId ? "eq" : "is", data.workspaceId).maybeSingle();
     if (error || !ch) return { ok: false, error: "channel_not_found" };
     if (data.taskId) {
       const { data: task } = await supabaseAdmin.from("agent_tasks").select("id,workspace_id").eq("id", data.taskId).eq("user_id", userId).maybeSingle();
