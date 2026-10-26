@@ -21,8 +21,8 @@ export function hasUsefulAnalyticalContent(content: string): boolean {
 
   const hasStructure = /(?:^|\n)\s*(?:#{1,4}\s|[-*+]\s|\d{1,2}[.)]\s)/m.test(raw)
     || /\|[^\n]+\|\s*\n\s*\|?\s*:?-{3,}/.test(raw);
-  const hasAnalysisSignal = /\b(?:analysis|recommend(?:ation)?s?|next steps|action plan|strategy|priorit(?:y|ies)|implement|improve|optimi[sz]e|diagnos(?:is|e)|findings|risk|solution|compare|roadmap|should|must)\b|(?:تحليل|توصي(?:ة|ات)|الخطوات القادمة|خطة عمل|استراتيجية|أولوية|نفّذ|تنفيذ|تحسين|تشخيص|النتائج|المخاطر|حلول|قارن|خارطة طريق|ينبغي|يجب|پێشنیار|هەنگاو|پلانی کار|شیکردنەوە)/iu.test(plain);
-  return (words >= 28 && (hasStructure || hasAnalysisSignal)) || (plain.length >= 520 && words >= 70);
+  const hasAnalysisSignal = /\b(?:analysis|recommend(?:ation)?s?|next steps|action plan|strategy|priorit(?:y|ies)|implement|improve|optimi[sz]e|diagnos(?:is|e)|findings|risk|solution|compare|roadmap|should|must)\b|(?:تحليل|توصي(?:ة|ات)|الخطوات القادمة|خطة عمل|استراتيجية|أولوية|نفّذ|تحسين|تشخيص|النتائج|المخاطر|حلول|قارن|خارطة طريق|ينبغي|يجب|پێشنیار|هەنگاو|پلانی کار|شیکردنەوە)/iu.test(plain);
+  return words >= 28 && (hasStructure || hasAnalysisSignal);
 }
 
 /** Only offer a task conversion when the answer contains an actionable signal. */
