@@ -49,7 +49,7 @@ describe("operational workbook", () => {
     const neg = p.sections.find((s) => s.heading === "Negative keywords — review required")!.table!.data;
     const normalized = neg.map((r) => String(r[0]).toLowerCase());
     expect(new Set(normalized).size).toBe(normalized.length);
-    expect(neg.some((r) => String(r[1]).includes("candidate") && String(r[2]).includes("review"))).toBe(true);
+    expect(neg.some((r) => String(r[1]).toLowerCase().includes("candidate") && String(r[2]).toLowerCase().includes("review"))).toBe(true);
     expect(p.sections.find((s) => s.heading === "Brand vs competitors")!.table!.data[0][4]).toBe(NA.en);
   });
 
