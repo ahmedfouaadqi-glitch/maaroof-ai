@@ -4,6 +4,7 @@
  * Supports PDF (via browser print) and Excel (via xlsx) with brand header + disclaimer.
  */
 import maaroofLogo from "@/assets/maaroof-ai-logo.png";
+import { sanitizeDeep } from "@/lib/brand-sanitize";
 
 export type ExportLang = "ar" | "en" | "ku";
 
@@ -391,6 +392,7 @@ function executiveSummaryHtml(payload: ExportPayload): string {
 
 /** Open a branded printable HTML report and trigger the browser's PDF print dialog. */
 export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Window | null) {
+  payload = sanitizeDeep(payload);
   const lang = payload.lang || "ar";
   const dir = lang === "en" ? "ltr" : "rtl";
   // Prefer the window opened by the export button during the user click event.
@@ -516,6 +518,7 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
 
 /** Build a branded multi-sheet Excel workbook and trigger download. */
 export async function exportToExcel(payload: ExportPayload) {
+  payload = sanitizeDeep(payload);
   const lang = payload.lang || "ar";
   const cardLabels = CARD_LABELS[lang];
   const { default: ExcelJS } = await import("exceljs");
@@ -652,6 +655,7 @@ export async function exportToExcel(payload: ExportPayload) {
 /** Build and download a CSV file. Flattens sections (kv/list/text/table) into rows. */
 /** Download the normalized CSV representation shared by every section type. */
 export function exportToCSV(payload: ExportPayload) {
+  payload = sanitizeDeep(payload);
   download(payloadToCSV(payload), "text/csv;charset=utf-8", "csv", payload.title);
 }
 
@@ -676,6 +680,7 @@ function download(content: BlobPart, mime: string, ext: string, title: string) {
 
 /** Raw structured export — for pipelines and archiving. */
 export function exportToJSON(payload: ExportPayload) {
+  payload = sanitizeDeep(payload);
   const body = JSON.stringify(buildExportJsonDocument(payload), null, 2);
   download(body, "application/json;charset=utf-8", "json", payload.title);
 }
@@ -749,6 +754,7 @@ export function payloadToMarkdown(payload: ExportPayload, generatedAt = new Date
 }
 
 export function exportToMarkdown(payload: ExportPayload) {
+  payload = sanitizeDeep(payload);
   download(payloadToMarkdown(payload), "text/markdown;charset=utf-8", "md", payload.title);
 }
 
@@ -761,6 +767,7 @@ export function textIsRtl(text: string, fallback: boolean): boolean {
 }
 
 export async function exportToWord(payload: ExportPayload) {
+  payload = sanitizeDeep(payload);
   const lang = payload.lang || "ar";
   const rtl = lang !== "en";
   const cardLabels = CARD_LABELS[lang];
@@ -885,6 +892,7 @@ export async function exportToWord(payload: ExportPayload) {
 
 /** Slide deck — one slide per section. Loaded lazily to keep the bundle light. */
 export async function exportToPowerPoint(payload: ExportPayload) {
+  payload = sanitizeDeep(payload);
   const lang = payload.lang || "ar";
   const cardLabels = CARD_LABELS[lang];
   const { default: PptxGenJS } = await import("pptxgenjs");
