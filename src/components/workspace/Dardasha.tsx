@@ -506,7 +506,14 @@ function SecondResult({
   const [brand, setBrand] = useState(seed.brand);
   const [site, setSite] = useState(seed.site);
   const [category, setCategory] = useState(seed.category);
-  const [competitors, setCompetitors] = useState("");
+  const competitorSuggestions = (() => {
+    const signals = [seed.category, seed.site, ...workbookHints].join(" ").toLowerCase();
+    if (!/luxury fashion|couture|designer|eyewear|eyeglasses|sunglasses|نظارات|أزياء فاخرة|هوت كوتور/.test(signals)) return "";
+    const names = ["Farfetch", "Mytheresa"];
+    if (/eyewear|eyeglasses|sunglasses|نظارات/.test(signals)) names.push("Sunglass Hut");
+    return names.join(", ");
+  })();
+  const [competitors, setCompetitors] = useState(competitorSuggestions);
   const [targetMarket, setTargetMarket] = useState("");
   const [needMarket, setNeedMarket] = useState(false);
   const [editContext, setEditContext] = useState(false);
@@ -524,6 +531,7 @@ function SecondResult({
     setBrand((current) => current.trim() ? current : resolved.brand);
     setSite((current) => current.trim() ? current : resolved.site);
     setCategory((current) => current.trim() ? current : resolved.category);
+    setCompetitors((current) => current.trim() ? current : competitorSuggestions);
   }, [workspaceContext, requestText, hintsKey]);
 
   const run = async () => {
