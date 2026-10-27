@@ -202,7 +202,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const perEngine: (string | number)[][] = [];
   for (const m of markets) {
     const mk = kRows.filter((r) => r.m.code === m.code);
-    const pick = [...mk.filter((r) => winners.has(r.k.toLowerCase())), ...mk.filter((r) => !winners.has(r.k.toLowerCase()))].slice(0, 30);
+    const pick = [...mk.filter((r) => winners.has(r.k.toLowerCase())), ...mk.filter((r) => !winners.has(r.k.toLowerCase()))];
     for (const r of pick) {
       const ax = keywordAxis(r.k);
       const cs = clusterScore(input.clusterAnswers || [], m.code, r.k);
