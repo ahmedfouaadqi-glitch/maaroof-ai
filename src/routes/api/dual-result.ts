@@ -43,6 +43,12 @@ export const Route = createFileRoute("/api/dual-result")({
         const anyPage = parties.some((p) => p.pageText);
         if (!answeredMarkets && !anyPage) return Response.json({ error: "no_evidence" }, { status: 502 });
 
+        // Charge only successful markets; fall back to the parent tool price.
+        const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
+        const units = Math.max(1, answeredMarkets);
+        let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id, markets: markets.map((m: any) => m.code) } });
+        if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id, sub: "competitive_geo.market" } });
+        if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, charge.left), { status: 402 });
         // Per-cluster questions (limit chosen by the user, 0-10 per market).
         const { buildClusters, answeredClusterCount } = await import("@/lib/keyword-clusters");
         const clusterLimit = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
@@ -59,12 +65,6 @@ export const Route = createFileRoute("/api/dual-result")({
           if (!cc.ok && cc.reason === "unpriced") cc = await ct({ userId, toolKey: "compare", units: answeredClusters, meta: { attachment_id: id, sub: "competitive_geo.cluster" } });
           if (!cc.ok) return Response.json({ error: "insufficient_balance_clusters", left: cc.left }, { status: 402 });
         }
-        // Charge only successful markets; fall back to the parent tool price.
-        const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
-        const units = Math.max(1, answeredMarkets);
-        let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id, markets: markets.map((m: any) => m.code) } });
-        if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id, sub: "competitive_geo.market" } });
-        if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, charge.left), { status: 402 });
 
         const social = await gatherSocial(parties.map((p) => p.name), userId);
         const { data: prof } = await db.from("profiles").select("onboarding").eq("id", userId).maybeSingle();
