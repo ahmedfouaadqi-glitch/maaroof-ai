@@ -156,12 +156,18 @@ describe("operational workbook", () => {
       sheets: [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: [["luxury eyewear"]], totalRows: 1, truncated: false }],
       parties: [{ name: "Mengotti Couture", role: "brand", url: null, found: "user", pageText: null }],
       engineAnswers: answers,
+      clusterAnswers: [
+        { market: "us", engine: "chatgpt", status: "answered" as const, answer: "Mengotti Couture is a retailer", keywords: ["luxury eyewear"], provider_path: "primary" as const },
+        { market: "us", engine: "gemini", status: "answered" as const, answer: "Mengotti Couture is a retailer", keywords: ["luxury eyewear"], provider_path: "fallback" as const },
+      ],
     });
     const log = payload.sections.find((section) => section.heading === "Ten-engine answer and status log")!.table!.data;
     expect(log.some((row) => row.includes("Fallback route"))).toBe(true);
     const execution = payload.sections.find((section) => section.heading === "Execution and errors")!.table!.data;
     const marketProbes = execution.find((row) => row[0] === "Market engine probes")!;
     expect(marketProbes.slice(1, 5)).toEqual([3, 2, 1, 0]);
+    const clusterProbes = execution.find((row) => row[0] === "Keyword cluster probes")!;
+    expect(clusterProbes.slice(1, 5)).toEqual([2, 1, 1, 0]);
   });
 
   it("classifies question keywords as AEO", () => {
