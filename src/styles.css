@@ -1016,3 +1016,110 @@
     padding: 0.65rem 0.75rem;
   }
 }
+
+
+/* Full-viewport Dardasha workspace.
+   The main chat owns the available viewport below the site header: the page shell
+   and frame no longer impose a 1320px cap or a short fixed-height card. */
+@media (min-width: 768px) {
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-shell-row.is-main-workspace {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    min-height: calc(100dvh - 4rem);
+    margin-inline: 0;
+    padding-inline: clamp(0.75rem, 1.1vw, 1.4rem);
+    gap: clamp(0.75rem, 1vw, 1.25rem);
+    align-items: stretch;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-shell-row.is-main-workspace > aside {
+    height: calc(100dvh - 6rem);
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-content.is-main-workspace-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: calc(100dvh - 4rem);
+    height: calc(100dvh - 4rem);
+    padding-bottom: 0;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-switcher-wrap.is-main-chat-switcher {
+    flex: 0 0 auto;
+    padding-top: 0.55rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-main.is-main-chat-main {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 0 0.75rem;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-main.is-main-chat-main > header {
+    flex: 0 0 auto;
+    margin-bottom: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-main.is-main-chat-main > header .size-12 {
+    width: 2.65rem;
+    height: 2.65rem;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-chat-frame {
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-chat-frame > .maaroof-chat-shell {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-chat-layout {
+    flex: 1 1 0%;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-chat-messages {
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-shell-row {
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    margin-inline: 0;
+    gap: 0;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-content {
+    min-width: 0;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-main.is-main-chat-main {
+    padding-top: 0.75rem;
+  }
+
+  .maaroof-workspace-page.is-main-chat .maaroof-workspace-main.is-main-chat-main > .maaroof-chat-frame {
+    width: 100%;
+    max-width: 100%;
+  }
+}
