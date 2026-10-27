@@ -103,7 +103,7 @@ describe("operational workbook", () => {
     const asked = rows.find((r) => r[0] === "designer dress")!;
     const unasked = rows.find((r) => r[0] === "evening gown")!;
     expect(asked[2]).toBe("0/1");
-    expect(asked[3]).toBe("No literal mention in answers");
+    expect(asked[3]).toBe("No literal mention in direct answers");
     expect(unasked[2]).toBe("Not measured");
     expect(unasked[3]).toBe("Not tested in engine query");
   });
@@ -137,7 +137,7 @@ describe("operational workbook", () => {
     const engineLog = p.sections.find((s) => s.heading === "Ten-engine answer and status log")!.table!.data;
     expect(engineLog.some((row) => row.includes("HTTP 429") && row.includes("http_error"))).toBe(true);
     const alexRow = execution.find((row) => row[0] === "Optional Alexandria source")!;
-    expect(alexRow.slice(1, 4)).toEqual([1, 1, 0]);
+    expect(alexRow.slice(1, 4)).toEqual([1, 0, 0]);
   });
 
   it("does not count fallback stand-in answers in direct share of voice", () => {
