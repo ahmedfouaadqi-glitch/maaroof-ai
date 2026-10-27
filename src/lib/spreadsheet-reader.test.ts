@@ -42,3 +42,11 @@ describe("spreadsheet reader", () => {
     expect(googleSheetId("https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms/edit#gid=0")).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms");
   });
 });
+
+import { isFailureText, taskFact } from "./knowledge-facts";
+describe("failure facts", () => {
+  it("does not store 'file not available' as evidence", () => {
+    expect(isFailureText("الملف غير متاح حالياً للقراءة")).toBe(true);
+    expect(taskFact("ملف", "الملف غير متاح، يرجى إرساله مرة أخرى عبر البريد")).toBeNull();
+  });
+});
