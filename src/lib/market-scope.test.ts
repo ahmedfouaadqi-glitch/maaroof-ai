@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectMarkets, sheetsForMarket } from "./market-scope";
+import { detectMarkets, marketByCode, sheetsForMarket } from "./market-scope";
 
 describe("sheetsForMarket", () => {
   const us = detectMarkets(["United States"])[0];
@@ -19,5 +19,13 @@ describe("sheetsForMarket", () => {
     const sheets = [{ name: "Keyword research" }];
     expect(sheetsForMarket(sheets, [us, uk], us)).toEqual([]);
     expect(sheetsForMarket(sheets, [us, uk], uk)).toEqual([]);
+  });
+});
+
+describe("geographic market coverage", () => {
+  it("recognizes countries from the workspace geographic selector even if they were not in the legacy market list", () => {
+    expect(detectMarkets(["Italy"]).map((market) => market.code)).toContain("it");
+    expect(marketByCode("it")?.en).toBe("Italy");
+    expect(detectMarkets(["إيطاليا"]).map((market) => market.code)).toContain("it");
   });
 });
