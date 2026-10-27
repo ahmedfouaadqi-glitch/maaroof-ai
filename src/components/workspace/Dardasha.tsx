@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { validateAttachment, attachmentPath } from "@/lib/attachments";
-import { composeChatMessage, type DardashaAttachment } from "@/lib/maaroof/dardasha";
+import { composeChatMessage, MAX_DARDASHA_MESSAGE_CHARS, type DardashaAttachment } from "@/lib/maaroof/dardasha";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
 import { AssistantMessage } from "./AssistantMessage";
@@ -150,6 +150,10 @@ export function Dardasha({
     const ready = atts.filter((a) => !a.busy && !a.failed);
     const m = composeChatMessage(text, ready);
     if (!m || busy || atts.some((a) => a.busy)) return;
+    if (m.length > MAX_DARDASHA_MESSAGE_CHARS) {
+      setErr(tr(lang, `الرسالة مع سياق المرفقات تتجاوز الحد ${MAX_DARDASHA_MESSAGE_CHARS.toLocaleString()} حرفًا. اختصرها أو أرسلها على أجزاء؛ لم تُرسل أي بيانات.`, `The message plus attachment context exceeds ${MAX_DARDASHA_MESSAGE_CHARS.toLocaleString()} characters. Shorten it or send it in parts; nothing was sent.`, `نامەکە لەگەڵ پاشبنەمای هاوپێچەکان لە ${MAX_DARDASHA_MESSAGE_CHARS.toLocaleString()} پیت زیاترە. بەش بەش بینێرە؛ هیچ داتایەک نەنێردرا.`));
+      return;
+    }
     if (!isGeoScopeConfigured(geoScope)) {
       setErr(tr(lang, "أكمل تحديد الدولة والمنطقة أو المدينة قبل إرسال الطلب.", "Choose the required country and region/city before sending.", "پێش ناردن وڵات و ناوچە/شار دیاری بکە."));
       return;
@@ -166,7 +170,8 @@ export function Dardasha({
       }, workspaceId);
       if (!r.ok) {
         const e = r.json?.error;
-        setErr(e === "chat_limit" ? tr(lang, "انتهى حد المحادثة لليوم.", "Daily chat limit reached.", "سنووری ڕۆژانە تەواو بوو.")
+        setErr(e === "message_too_long" ? tr(lang, "الرسالة طويلة جدًا؛ الحد 12000 حرف. اختصرها أو أرسلها على أجزاء.", "Message is too long; the limit is 12,000 characters. Shorten it or send it in parts.", "نامەکە زۆر درێژە؛ سنوور 12000 پیتە.")
+          : e === "chat_limit" ? tr(lang, "انتهى حد المحادثة لليوم.", "Daily chat limit reached.", "سنووری ڕۆژانە تەواو بوو.")
           : r.status === 402 ? tr(lang, "الرصيد غير كافٍ. لم يُخصم شيء.", "Not enough balance. Nothing was charged.", "باڵانس بەس نییە.")
           : tr(lang, "تعذّر الرد الآن، لم يُخصم شيء. حاول مجدداً.", "Could not reply; nothing charged. Try again.", "وەڵام نەدرایەوە. دووبارە هەوڵ بدە."));
         return;
@@ -287,7 +292,7 @@ export function Dardasha({
               } : undefined}
               style={m.role === "assistant" ? { backgroundImage: "radial-gradient(380px circle at var(--chat-x, 50%) var(--chat-y, 50%), hsl(var(--primary) / 0.055), transparent 74%)" } : undefined}
               className={m.role === "user"
-                ? "max-w-[85%] whitespace-pre-wrap rounded-2xl border border-primary/10 bg-primary/10 px-4 py-2.5 text-sm leading-6 text-foreground shadow-sm"
+                ? "max-w-[85%] whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-2xl border border-primary/10 bg-primary/10 px-4 py-2.5 text-sm leading-6 text-foreground shadow-sm"
                 : "relative max-w-full min-w-0 rounded-2xl border border-border/55 bg-card/45 p-3 text-sm leading-7 shadow-sm backdrop-blur-sm transition duration-200 hover:border-primary/20 hover:shadow-md sm:p-4"}
             >
               {m.role === "assistant" && <div className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -391,6 +396,7 @@ export function Dardasha({
           className="maaroof-chat-input min-h-14 max-h-40 min-w-0 w-full flex-1 resize-none rounded-3xl border border-transparent bg-transparent px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-muted-foreground/75 focus:border-transparent focus:bg-transparent focus:ring-0" />
         <button type="button" onClick={() => void send()} disabled={busy || (!text.trim() && !atts.some((a) => !a.busy && !a.failed))} className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:scale-[1.03] hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100" aria-label={tr(lang, "إرسال", "Send", "ناردن")}><Send className="size-5" /></button>
       </div>
+      {(text.length > 1800 || atts.length > 0) && <p className="maaroof-chat-message-counter mt-1 px-3 text-[11px] text-muted-foreground" aria-live="polite">{composeChatMessage(text, atts.filter((a) => !a.busy && !a.failed)).length.toLocaleString()} / {MAX_DARDASHA_MESSAGE_CHARS.toLocaleString()} {tr(lang, "حرفًا", "characters", "پیت")}</p>}
         </div>
       </div>
     </section>

@@ -2,10 +2,12 @@
 export type DardashaAttachment = { name: string; analysis: string };
 
 /** Message sent to the chat: the user's text plus analyzed attachment summaries as context. */
-export function composeChatMessage(text: string, atts: DardashaAttachment[], max = 2000): string {
+export const MAX_DARDASHA_MESSAGE_CHARS = 12000;
+
+export function composeChatMessage(text: string, atts: DardashaAttachment[]): string {
   const t = text.trim();
   const ctx = atts.filter((a) => a.analysis.trim()).map((a) => `[مرفق: ${a.name}] ${a.analysis.trim().slice(0, 600)}`);
-  return [t, ...ctx].filter(Boolean).join("\n\n").slice(0, max);
+  return [t, ...ctx].filter(Boolean).join("\n\n");
 }
 
 /** A task may start only after an explicit approval click on a proposed task with a goal. */
