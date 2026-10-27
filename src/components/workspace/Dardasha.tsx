@@ -19,7 +19,7 @@ type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets
 type L = "ar" | "en" | "ku";
 type Task = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
 type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null; axisAuditRequest?: boolean; council?: Council | null; sheets?: SheetCard[] };
-type SheetCard = { name: string; source?: string; totalRows: number; sheets: Array<{ name: string; totalRows: number; columns: string[]; sample: (string | number)[][] }> };
+type SheetCard = { name: string; attachment_id?: string; source?: string; totalRows: number; sheets: Array<{ name: string; totalRows: number; columns: string[]; sample: (string | number)[][] }> };
 type Thread = { id: string; title: string; updated_at: string | null };
 type ChatTaskDraft = { messageKey: string; goal: string };
 type Att = DardashaAttachment & { busy?: boolean; failed?: boolean; id?: string; reason?: string };
@@ -418,6 +418,56 @@ function SheetInventory({ sheets, lang, reply }: { sheets: SheetCard[]; lang: L;
         </div>
       ))}
       <ExportButtons size="xs" build={() => sheetExportPayload(sheets, reply, lang) as any} />
+      {sheets.find((c) => c.attachment_id) && <SecondResult attachmentId={sheets.find((c) => c.attachment_id)!.attachment_id!} lang={lang} />}
+    </div>
+  );
+}
+
+type DualRes = { payload: any; summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>; parties: Array<{ name: string; role: string; url: string | null; read: boolean }>; charged: number };
+
+function SecondResult({ attachmentId, lang }: { attachmentId: string; lang: L }) {
+  const [brand, setBrand] = useState(""); const [site, setSite] = useState(""); const [category, setCategory] = useState(""); const [competitors, setCompetitors] = useState("");
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [res, setRes] = useState<DualRes | null>(null);
+  const run = async () => {
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch(withPreviewAuth("/api/dual-result"), { method: "POST", headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ attachment_id: attachmentId, brand, site, category, competitors, lang }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg: Record<string, string> = { no_market: tr(lang, "لم يُذكر أي سوق في الملف. اكتب السوق المستهدف في رسالتك.", "No market is named in the file. Name the target market in your message.", "هیچ بازاڕێک ناونەبراوە."), no_evidence: tr(lang, "لم نحصل على أي دليل من الويب أو المحركات، ولم يُخصم شيء.", "No evidence from the web or engines; nothing was charged.", "هیچ بەڵگەیەک نییە؛ هیچ نەبڕدرا."), missing_input: tr(lang, "اكتب اسم العلامة والمجال.", "Enter the brand and category.", "ناوی براند و بوار بنووسە.") };
+        setErr(msg[j?.error] || j?.ar || j?.error || "error");
+      } else setRes(j);
+    } catch { setErr(tr(lang, "تعذّر الاتصال.", "Connection failed.", "پەیوەندی سەرکەوتوو نەبوو.")); }
+    setBusy(false);
+  };
+  const inp = "w-full rounded-lg border border-border bg-background px-2 py-1 text-xs";
+  return (
+    <div className="mt-3 rounded-xl border border-primary/30 bg-background p-3">
+      <p className="font-semibold text-foreground">{tr(lang, "النتيجة الثانية: بحث العلامة والمنافسين لكل سوق", "Second result: brand & competitor research per market", "ئەنجامی دووەم: لێکۆڵینەوەی ڕکابەران")}</p>
+      <p className="mt-1 text-muted-foreground">{tr(lang, "الأسواق تُقرأ من الملف. يُخصم الرصيد فقط عند النجاح.", "Markets are read from the file. Charged only on success.", "بازاڕەکان لە فایل دەخوێندرێنەوە.")}</p>
+      {!res && (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <input className={inp} value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={tr(lang, "اسم العلامة", "Brand name", "ناوی براند")} />
+          <input className={inp} value={site} onChange={(e) => setSite(e.target.value)} placeholder={tr(lang, "رابط الموقع (اختياري)", "Website (optional)", "ماڵپەڕ")} dir="ltr" />
+          <input className={inp} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={tr(lang, "المجال، مثل: أزياء فاخرة", "Category, e.g. luxury fashion", "بوار")} />
+          <input className={inp} value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder={tr(lang, "منافسون مفصولون بفاصلة (اختياري)", "Competitors, comma-separated (optional)", "ڕکابەران")} />
+          <button type="button" disabled={busy || !brand.trim() || !category.trim()} onClick={run} className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50 sm:col-span-2">
+            {busy ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />{tr(lang, "جارٍ البحث وسؤال المحركات العشرة…", "Researching and asking the ten engines…", "لێکۆڵینەوە…")}</> : tr(lang, "ابدأ البحث", "Start research", "دەستپێبکە")}
+          </button>
+        </div>
+      )}
+      {err && <p className="mt-2 text-destructive">{err}</p>}
+      {res && (
+        <div className="mt-2 space-y-2">
+          {res.summary.map((s) => (
+            <div key={s.market} className="rounded-lg bg-muted/30 px-2 py-1">
+              <span className="font-medium">{s.label}</span>: {s.voice.map((v) => `${v.name} ${v.percent === null ? tr(lang, "غير متوفر", "n/a", "نییە") : `${v.percent}% (${v.mentioned}/${v.answered})`}`).join(" · ")}
+            </div>
+          ))}
+          <ul className="space-y-0.5">{res.parties.map((p, i) => <li key={i}>{p.name} — {p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">{p.url}</a> : tr(lang, "لا يوجد رابط", "no link", "بەستەر نییە")} {!p.read && `(${tr(lang, "لم تُقرأ الصفحة", "page not read", "نەخوێندرایەوە")})`}</li>)}</ul>
+          <ExportButtons size="xs" build={() => res.payload} />
+        </div>
+      )}
     </div>
   );
 }

@@ -38,6 +38,7 @@ import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompetitorMonitorRouteImport } from './routes/api/competitor-monitor'
 import { Route as ApiDeepAuditRouteImport } from './routes/api/deep-audit'
 import { Route as ApiDelegatedBrowserRouteImport } from './routes/api/delegated-browser'
+import { Route as ApiDualResultRouteImport } from './routes/api/dual-result'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
@@ -210,6 +211,11 @@ const ApiDelegatedBrowserRoute = ApiDelegatedBrowserRouteImport.update({
   path: '/api/delegated-browser',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDualResultRoute = ApiDualResultRouteImport.update({
+  id: '/api/dual-result',
+  path: '/api/dual-result',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFeasibilityRoute = ApiFeasibilityRouteImport.update({
   id: '/api/feasibility',
   path: '/api/feasibility',
@@ -374,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
   '/api/deep-audit': typeof ApiDeepAuditRoute
   '/api/delegated-browser': typeof ApiDelegatedBrowserRoute
+  '/api/dual-result': typeof ApiDualResultRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
@@ -431,6 +438,7 @@ export interface FileRoutesByTo {
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
   '/api/deep-audit': typeof ApiDeepAuditRoute
   '/api/delegated-browser': typeof ApiDelegatedBrowserRoute
+  '/api/dual-result': typeof ApiDualResultRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
@@ -489,6 +497,7 @@ export interface FileRoutesById {
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
   '/api/deep-audit': typeof ApiDeepAuditRoute
   '/api/delegated-browser': typeof ApiDelegatedBrowserRoute
+  '/api/dual-result': typeof ApiDualResultRoute
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
@@ -548,6 +557,7 @@ export interface FileRouteTypes {
     | '/api/competitor-monitor'
     | '/api/deep-audit'
     | '/api/delegated-browser'
+    | '/api/dual-result'
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
@@ -605,6 +615,7 @@ export interface FileRouteTypes {
     | '/api/competitor-monitor'
     | '/api/deep-audit'
     | '/api/delegated-browser'
+    | '/api/dual-result'
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/api/competitor-monitor'
     | '/api/deep-audit'
     | '/api/delegated-browser'
+    | '/api/dual-result'
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
@@ -720,6 +732,7 @@ export interface RootRouteChildren {
   ApiCompetitorMonitorRoute: typeof ApiCompetitorMonitorRoute
   ApiDeepAuditRoute: typeof ApiDeepAuditRoute
   ApiDelegatedBrowserRoute: typeof ApiDelegatedBrowserRoute
+  ApiDualResultRoute: typeof ApiDualResultRoute
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
@@ -947,6 +960,13 @@ declare module '@tanstack/react-router' {
       path: '/api/delegated-browser'
       fullPath: '/api/delegated-browser'
       preLoaderRoute: typeof ApiDelegatedBrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/dual-result': {
+      id: '/api/dual-result'
+      path: '/api/dual-result'
+      fullPath: '/api/dual-result'
+      preLoaderRoute: typeof ApiDualResultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/feasibility': {
@@ -1189,6 +1209,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCompetitorMonitorRoute: ApiCompetitorMonitorRoute,
   ApiDeepAuditRoute: ApiDeepAuditRoute,
   ApiDelegatedBrowserRoute: ApiDelegatedBrowserRoute,
+  ApiDualResultRoute: ApiDualResultRoute,
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
