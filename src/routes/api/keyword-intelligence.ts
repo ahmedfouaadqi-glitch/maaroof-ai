@@ -78,8 +78,14 @@ export const Route = createFileRoute("/api/keyword-intelligence")({
         // Gather a small, bounded set of public evidence. Failed searches remain visible as gaps.
         const queries = [
           { key: "brand", q: `"${brand}" ${market}` },
-          ...competitors.slice(0, 4).map((c: string, i: number) => ({ key: `competitor_${i + 1}`, q: `"${c}" ${market}` })),
+          ...competitors.slice(0, 3).map((c: string, i: number) => ({ key: `competitor_${i + 1}`, q: `"${c}" ${market}` })),
           { key: "keyword_opportunities", q: `(${brand}) products categories styles alternatives ${market}` },
+          { key: "social_x", q: `site:x.com OR site:twitter.com "${brand}" ${socialKeywords.slice(0, 3).join(" ")}` },
+          { key: "social_linkedin", q: `site:linkedin.com "${brand}" ${socialKeywords.slice(0, 3).join(" ")}` },
+          { key: "social_reddit", q: `site:reddit.com "${brand}" ${socialKeywords.slice(0, 3).join(" ")}` },
+          { key: "social_youtube", q: `site:youtube.com "${brand}" ${socialKeywords.slice(0, 3).join(" ")}` },
+          { key: "social_facebook", q: `site:facebook.com "${brand}" ${socialKeywords.slice(0, 3).join(" ")}` },
+          { key: "social_instagram", q: `site:instagram.com "${brand}" ${socialKeywords.slice(0, 3).join(" ")}` },
         ];
         const evidence: any[] = [];
         for (const item of queries) {
