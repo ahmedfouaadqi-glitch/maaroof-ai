@@ -47,7 +47,8 @@ describe("keyword clusters", () => {
     expect(answeredClusterCount([
       { market: "US", engine: "a", status: "answered", answer: "y", keywords: ["x"], provider_path: "fallback" },
     ])).toBe(0);
-  });});
+  });
+});
 
 describe("llms.txt missing fields", () => {
   it("lists every empty core field", () => {
