@@ -200,7 +200,7 @@ export const Route = createFileRoute("/api/dual-result")({
             parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
             context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource },
             charged: 0,
-            clusters: { asked: 0, answered: 0, probes_asked: 0, probes_answered: 0 },
+            clusters: { asked: 0, answered: 0, billable_answered: 0, probes_asked: 0, probes_answered: 0, probes_fallback_answered: 0 },
             negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
             alexandria: partialAlexandria,
           });
