@@ -459,6 +459,8 @@ function SheetInventory({
 type ProbeDiagnostics = {
   asked: number;
   answered: number;
+  primary_route: number;
+  fallback_route: number;
   no_answer: number;
   empty: number;
   timeout: number;
