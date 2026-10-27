@@ -67,6 +67,24 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     keywords: ["خطة", "تخطيط", "نمو", "استراتيجية", "طريق", "پلان", "گەشە", "ستراتیژی", "plan", "strategy", "roadmap", "growth"],
   },
   {
+    key: "search_visibility_strategy",
+    icon: "chart",
+    label: { ar: "استراتيجية الظهور في البحث والذكاء الاصطناعي", en: "Search & AI Visibility Strategy", ku: "ستراتیژی دەرکەوتن لە گەڕان و زیرەکی دەستکرد" },
+    description: {
+      ar: "يجمع ملف الكلمات المفتاحية مع أدلة الموقع والبحث والمنافسين وقياس إجابات النماذج، ثم يحولها إلى أولويات تنفيذ. ويعرض SGEO كمؤشر تداخل مشتق بين SEO وAEO وGEO وSGE، مع إبقاء GSEO منفصلًا.",
+      en: "Combines keyword files with website, web research, competitor and model-answer evidence, then turns findings into priorities. SGEO is shown as a derived overlap index across SEO, AEO, GEO and SGE; GSEO remains separate.",
+      ku: "فایلی وشە سەرەکییەکان لەگەڵ بەڵگەی ماڵپەڕ و گەڕان و ڕکابەر و وەڵامی مۆدێلەکان کۆدەکاتەوە و دەیکاتە پێشینەی جێبەجێکردن. SGEO پێوەرێکی مشتەقە و GSEO جیاواز دەمێنێتەوە.",
+    },
+    tools: ["analyze", "research", "compare", "known", "visibility", "geo_strategist", "applied_ranking"],
+    keywords: [
+      "search visibility", "search engine visibility", "keyword research", "keyword strategy",
+      "seo", "aeo", "geo", "sge", "sgeo", "gseo", "keywords",
+      "الكلمات المفتاحية", "تحليل الكلمات", "ظهور البحث", "الظهور في الذكاء الاصطناعي",
+      "تحسين محركات البحث", "تدقيق الظهور", "تدقيق seo", "استراتيجية الظهور",
+      "وشە سەرەکییەکان", "دەرکەوتن", "search strategy",
+    ],
+  },
+  {
     key: "citation_content",
     icon: "sparkles",
     label: { ar: "محتوى جاهز للاقتباس", en: "Citation-Ready Content", ku: "ناوەڕۆکی ئامادە بۆ ئیستناد" },

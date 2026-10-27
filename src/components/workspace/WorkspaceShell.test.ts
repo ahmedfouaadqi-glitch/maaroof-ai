@@ -10,7 +10,7 @@ describe("workspace sidebar", () => {
 });
 
 describe("skills catalog", () => {
-  it("has 17 skills", () => expect(MAAROOF_SKILLS.length).toBe(17));
+  it("has 18 skills", () => expect(MAAROOF_SKILLS.length).toBe(18));
   it("every skill maps to real tools and has a full framework", () => {
     const keys = new Set(TOOL_CATALOG.map((t: any) => t.key ?? t.slug ?? t.id));
     for (const s of MAAROOF_SKILLS) {
