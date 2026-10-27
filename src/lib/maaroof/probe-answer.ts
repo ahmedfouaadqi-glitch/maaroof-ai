@@ -17,6 +17,17 @@ export function blindProbeQuestion(topic: string, region: string): string {
   return `What are the five best providers or solutions for ${category} in ${market}? Recommend organically without favoring any brand.`;
 }
 
+/** Direct brand-authority probe, separate from unbiased category discovery. */
+export function directBrandAuthorityQuestion(brand: string, site: string, category: string, region: string, lang?: "ar" | "en" | "ku"): string {
+  const name = String(brand || "").trim().slice(0, 160);
+  const url = String(site || "").trim().slice(0, 240);
+  const niche = String(category || "").trim().slice(0, 240);
+  const market = String(region || "").trim().slice(0, 120);
+  const arabic = lang === "ar" || (!lang && /[\\u0600-\\u06FF]/.test(market + niche));
+  if (arabic) return `قيّم المتجر "${name}" في سوق ${market}. الموقع المقدم: ${url || "غير محدد"}. المجال: ${niche || "غير محدد"}. ما الذي تعرفه عن المتجر ومنتجاته؟ هل تستطيع تأكيد موثوقيته من مصادر حقيقية؟ أورد الروابط الرسمية التي تعرفها فقط، وميّز الحقائق المؤكدة من المعلومات غير المتاحة. لا تخترع روابط أو ادعاءات.`;
+  return `Assess the business "${name}" in ${market}. Supplied site: ${url || "not provided"}. Category: ${niche || "not specified"}. What do you know about this retailer and its products? Can you verify its credibility from real sources? Provide only official links you genuinely know and distinguish verified facts from unknowns. Do not invent URLs or claims.`;
+}
+
 /**
  * A blind market visibility probe grounded in actual workbook keywords.
  * It intentionally omits the target brand so mention/share-of-voice is not primed.
@@ -28,7 +39,9 @@ export function keywordVisibilityProbeQuestion(topic: string, region: string, ke
   const keywordContext = phrases.length
     ? "Actual search phrases from the uploaded workbook: " + phrases.map((value) => '"' + value.slice(0, 180) + '"').join(", ") + "."
     : "Use the category to understand the search context.";
-  return "In " + market + ", a customer is searching in this product/service category: " + category + ". " + keywordContext + " Based only on your existing knowledge, which relevant brands, product providers, retailers, or websites would you naturally recommend? Keep recommendations relevant to these products or services; do not switch to SEO tools or marketing agencies unless the search phrases are explicitly about those services. Reply as JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}. Do not invent URLs; include URLs only when you know them to be real.";
+  const arabic = /[\\u0600-\\u06FF]/.test(market + category + phrases.join(" "));
+  if (arabic) return `في سوق ${market}، يبحث العميل عن ${category}. ${phrases.length ? "عبارات البحث الفعلية: " + phrases.map((value) => '"' + value.slice(0, 180) + '"').join("، ") + "." : "استخدم المجال لفهم سياق البحث."} ما العلامات التجارية والمتاجر المتخصصة ذات الصلة بهذه المنتجات تحديداً التي توصي بها، ولماذا؟ لا تنتقل إلى أدوات SEO أو وكالات التسويق ما لم تكن عبارات البحث تتعلق بها صراحةً. أجب بصيغة JSON تتضمن answer وbrands وurls، ولا تخترع روابط.`;
+  return "In " + market + ", a customer is searching in this product/service category: " + category + ". " + keywordContext + " Based only on your existing knowledge, which relevant brands, product providers, retailers, or websites would you naturally recommend? Keep recommendations relevant to these products or services; do not switch to SEO tools or marketing agencies unless the search phrases are explicitly about those services. Reply as JSON {\\"answer\\": string, \\"brands\\": string[], \\"urls\\": string[]}. Do not invent URLs; include URLs only when you know them to be real.";
 }
 
 /** Parse a model reply. Returns null when there is no usable answer text. */
