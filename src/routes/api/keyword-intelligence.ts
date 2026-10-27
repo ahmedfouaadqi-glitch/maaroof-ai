@@ -7,15 +7,6 @@ import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
 
 const AXES = ["SEO", "GEO", "AEO", "SGE", "GSEO", "SGEO"] as const;
-const SOCIAL_PLATFORMS = [
-  { key: "x", query: "site:x.com OR site:twitter.com" },
-  { key: "linkedin", query: "site:linkedin.com" },
-  { key: "reddit", query: "site:reddit.com" },
-  { key: "youtube", query: "site:youtube.com" },
-  { key: "facebook", query: "site:facebook.com" },
-  { key: "instagram", query: "site:instagram.com" },
-];
-
 function text(v: unknown, max = 4000): string {
   return asText(v, max).trim();
 }
@@ -26,6 +17,11 @@ function list(v: unknown, max = 12): string[] {
 function normalizeScore(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+}
+function nullableScore(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : null;
 }
 function normalizeRows(v: unknown, limit = 100): any[] {
   if (!Array.isArray(v)) return [];
@@ -39,8 +35,8 @@ function normalizeRows(v: unknown, limit = 100): any[] {
     rationale: text(x?.rationale, 500),
     old_match: text(x?.old_match, 250),
     similarity: normalizeScore(x?.similarity),
-    share_of_voice: normalizeScore(x?.share_of_voice),
-    density: normalizeScore(x?.density),
+    share_of_voice: nullableScore(x?.share_of_voice),
+    density: nullableScore(x?.density),
     authority: normalizeScore(x?.authority),
     negative: Boolean(x?.negative),
     priority: ["high", "medium", "low"].includes(String(x?.priority)) ? String(x.priority) : "medium",
