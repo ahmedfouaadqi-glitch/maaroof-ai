@@ -565,7 +565,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    let steps = Array.isArray(planObj.steps)
+    let steps: PlanStep[] = Array.isArray(planObj.steps)
       ? planObj.steps.slice(0, MAX_STEPS).map((step) => ({
           ...step,
           // Treat planner output as untrusted: dependencies must be simple tool keys.
