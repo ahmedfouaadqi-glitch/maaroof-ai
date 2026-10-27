@@ -652,11 +652,11 @@ function WorkspacePage() {
   if (loading || !user) return <AuthGate state={loading ? "loading" : "signed-out"} title={c.eyebrow} redirect="/workspace" />;
 
   return (
-    <div className="maaroof-workspace-page min-h-screen">
+    <div className={`maaroof-workspace-page min-h-screen ${tab === "main" ? "is-main-chat" : ""}`}>
       <SiteHeader />
       <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
-      <div className="px-4 pt-4 md:px-0"><WorkspaceSwitcher onChange={handleWorkspaceChange} disabled={running} /></div>
+      <div className={`maaroof-workspace-switcher-wrap px-4 pt-4 md:px-0 ${tab === "main" ? "is-main-chat-switcher" : ""}`}><WorkspaceSwitcher onChange={handleWorkspaceChange} disabled={running} /></div>
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} workspaceId={activeWorkspaceId} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
       {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} workspaceId={activeWorkspaceId} /><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /><BroadcastPanel lang={locale} workspaceId={activeWorkspaceId} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} workspaceId={activeWorkspaceId} /></Suspense></section>}</div>}
@@ -692,7 +692,7 @@ function WorkspacePage() {
       {tab === "extras" && <div className="space-y-4 px-4 py-6 md:px-0 md:py-10"><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-3 font-semibold">{locale === "en" ? "Publishing channels" : locale === "ku" ? "کەناڵەکانی بڵاوکردنەوە" : "قنوات النشر"}</h2><Suspense fallback={null}><LazyAgentOps section="channels" /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-3 font-semibold">{locale === "en" ? "Scheduling" : locale === "ku" ? "خشتە" : "الجدولة"}</h2><Suspense fallback={null}><LazySchedules workspaceId={activeWorkspaceId} defaultPrompt={goal} /></Suspense></section><section className="rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Scheduled agent tasks" : locale === "ku" ? "ئەرکە خشتەکراوەکان" : "مهام الوكيل المجدولة"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Tip: just write “every week…” in your goal and Maaroof will propose a schedule or ask you." : locale === "ku" ? "تەنها بنووسە «هەموو هەفتەیەک…»." : "تلميح: اكتب «كل أسبوع…» في هدفك وسيقترح معروف الجدولة أو يسألك عنها."}</p><Suspense fallback={null}><LazyAgentOps section="tasks" /></Suspense></section></div>}
       {tab === "browser" && <div className="px-4 py-6 md:px-0 md:py-10"><DelegatedBrowserPanel lang={locale} initialDomain={search.domain} initialPurpose={search.domain ? goal.trim().slice(0, 200) : undefined} /></div>}
       {tab === "more" && <div className="grid gap-2 px-4 py-6">{MORE_ITEMS.map((n) => <div key={n.tab || n.to} className="rounded-xl border border-border bg-card"><NavLink n={n} locale={locale} on={false} compact={false} /></div>)}</div>}
-      <main id="skills" className={`maaroof-workspace-main px-4 py-5 md:px-0 md:py-7 xl:py-8 ${tab === "main" ? "" : "hidden"}`}>
+      <main id="skills" className={`maaroof-workspace-main px-4 py-5 md:px-0 md:py-7 xl:py-8 ${tab === "main" ? "is-main-chat-main" : "hidden"}`}>
         <header className="rb-workspace-fade relative isolate mb-5 flex flex-wrap items-center gap-3 md:mb-6">
           <div aria-hidden className="ws-aurora" />
           <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
