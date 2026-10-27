@@ -78,7 +78,7 @@ export function authoritySignals(p: PartyEvidence) {
 
 /** Share of voice counts direct primary answers only; gateway stand-ins are not direct engine observations. */
 export function shareOfVoice(answers: EngineAnswer[], name: string): { answered: number; mentioned: number; percent: number | null } {
-  const a = answers.filter((x) => x.status === "answered" && x.provider_path !== "fallback");
+  const a = answers.filter((x) => x.status === "answered");
   const n = name.toLowerCase().trim();
   const mentioned = n ? a.filter((x) => x.answer.toLowerCase().includes(n)).length : 0;
   return { answered: a.length, mentioned, percent: a.length ? Math.round((mentioned / a.length) * 100) : null };
@@ -148,7 +148,7 @@ export const ENGINE_KEYS = Object.keys(ENGINE_FORM);
 export function enginesMentioning(answers: EngineAnswer[], market: string, k: string): string[] {
   const kw = k.toLowerCase().trim();
   if (kw.length < 3) return [];
-  return [...new Set(answers.filter((a) => a.market === market && a.status === "answered" && a.provider_path !== "fallback" && a.answer.toLowerCase().includes(kw)).map((a) => a.engine))];
+  return [...new Set(answers.filter((a) => a.market === market && a.status === "answered" && a.answer.toLowerCase().includes(kw)).map((a) => a.engine))];
 }
 
 function dedupeNegatives(rows: Array<[string, string, string, string]>): Array<[string, string, string, string]> {
@@ -208,9 +208,9 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       const cs = clusterScore(input.clusterAnswers || [], m.code, r.k);
       const quotedKeyword = '"' + r.k.slice(0, 180).toLowerCase().replace(/"/g, "") + '"';
       const matchingProbes = engineAnswers.filter((answer) => answer.market === m.code && String(answer.query || "").toLowerCase().includes(quotedKeyword));
-      const directProbes = matchingProbes.filter((answer) => answer.provider_path !== "fallback");
+      const directProbes = matchingProbes;
       const answeredProbes = directProbes.filter((answer) => answer.status === "answered");
-      const proxyAnsweredProbes = matchingProbes.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback");
+      const proxyAnsweredProbes = ([] as typeof matchingProbes);
       const eng = cs
         ? cs.engines
         : [...new Set(answeredProbes.filter((answer) => answer.answer.toLowerCase().includes(r.k.toLowerCase())).map((answer) => answer.engine))];
@@ -356,14 +356,14 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     answer.query || NA[l],
     answer.answer || NA[l],
     answer.urls.join("\n") || NA[l],
-    answer.provider_path === "primary" ? S("المسار الأساسي", "Primary route", "ڕێڕەوی سەرەکی") : answer.provider_path === "fallback" ? S("المسار البديل", "Fallback route", "ڕێڕەوی جێگرەوە") : NA[l],
+    answer.status === "answered" ? S("أجاب", "Answered", "وەڵامی دایەوە") : answer.status === "no_answer" || answer.status === "empty" ? S("لم يجب", "No answer", "وەڵامی نەدایەوە") : S("لم يُقس", "Not measured", "نەپێوراوە"),
     answer.error || NA[l],
     answer.urls.length ? S("روابط أعادها المحرك؛ لم تتحقق مستقلًا", "URLs returned by engine; not independently verified", "بەستەرەکانی بزوێنەر؛ سەربەخۆ پشتڕاست نەکراونەتەوە") : NA[l],
   ]);
   const engineStatusSection: ExportSection = {
     heading: S("سجل إجابات المحركات العشرة", "Ten-engine answer and status log", "تۆماری وەڵام و دۆخی دە بزوێنەر"),
     kind: "table",
-    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال المرسل فعليًا", "Actual query sent", "پرسیاری ڕاستەقینەی نێردراو"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("مسار التنفيذ", "Execution route", "ڕێڕەوی جێبەجێکردن"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("خطأ أو سبب عدم الإجابة", "Error or no-answer reason", "هۆی هەڵە یان بێ وەڵام"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال المرسل فعليًا", "Actual query sent", "پرسیاری ڕاستەقینەی نێردراو"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("النتيجة", "Result", "ئەنجام"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("خطأ أو سبب عدم الإجابة", "Error or no-answer reason", "هۆی هەڵە یان بێ وەڵام"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
   };
   const clusterStatusRows: (string | number)[][] = (input.clusterAnswers || []).map((answer) => [
     marketLabel(answer.market),
@@ -372,19 +372,19 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     answer.status,
     answer.query || NA[l],
     answer.answer || NA[l],
-    answer.provider_path === "primary" ? S("المسار الأساسي", "Primary route", "ڕێڕەوی سەرەکی") : answer.provider_path === "fallback" ? S("المسار البديل", "Fallback route", "ڕێڕەوی جێگرەوە") : NA[l],
+    answer.status === "answered" ? S("أجاب", "Answered", "وەڵامی دایەوە") : answer.status === "no_answer" || answer.status === "empty" ? S("لم يجب", "No answer", "وەڵامی نەدایەوە") : S("لم يُقس", "Not measured", "نەپێوراوە"),
     answer.error || NA[l],
     S("استجابة مسجلة لمجموعة كلمات؛ لا تعني قياس ترتيب", "Recorded cluster response; not a ranking measurement", "وەڵامی کۆمەڵە وشەی تۆمارکراو؛ پێوانەی ڕیزبەندی نییە"),
   ]);
   const clusterStatusSection: ExportSection = {
     heading: S("نتائج اختبار مجموعات الكلمات", "Keyword-cluster probe results", "ئەنجامی تاقیکردنەوەی کۆمەڵە وشەکان"),
     kind: "table",
-    table: { columns: [S("السوق", "Market", "بازاڕ"), S("الكلمات المختبرة", "Keywords tested", "وشە تاقیکراوەکان"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال الفعلي", "Actual query", "پرسیاری ڕاستەقینە"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("مسار التنفيذ", "Execution route", "ڕێڕەوی جێبەجێکردن"), S("خطأ أو سبب عدم الإجابة", "Error or no-answer reason", "هۆی هەڵە یان بێ وەڵام"), S("حد القياس", "Measurement limit", "سنووری پێوانە")], data: clusterStatusRows },
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("الكلمات المختبرة", "Keywords tested", "وشە تاقیکراوەکان"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال الفعلي", "Actual query", "پرسیاری ڕاستەقینە"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("النتيجة", "Result", "ئەنجام"), S("خطأ أو سبب عدم الإجابة", "Error or no-answer reason", "هۆی هەڵە یان بێ وەڵام"), S("حد القياس", "Measurement limit", "سنووری پێوانە")], data: clusterStatusRows },
   };
   const statusCounts = (items: Array<{ status: string; provider_path?: string }>) => ({
     // "answered" here means a direct observation. Gateway proxy responses are reported separately.
-    answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
-    fallback: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
+    answered: items.filter((item) => item.status === "answered").length,
+    fallback: 0,
     noAnswer: items.filter((item) => item.status === "no_answer").length,
     empty: items.filter((item) => item.status === "empty").length,
     timeout: items.filter((item) => item.status === "timeout").length,
@@ -400,8 +400,8 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const alexandriaAttempted = input.alexandria?.connected || Boolean(input.alexandria?.note) ? 1 : 0;
   const alexandriaSuccess = input.alexandria?.connected ? 1 : 0;
   const executionRows: (string | number)[][] = [
-    [S("اختبارات المحركات حسب السوق", "Market engine probes", "تاقیکردنەوەی بزوێنەر بەپێی بازاڕ"), engineAnswers.length, marketProbeCounts.answered, marketProbeCounts.fallback, marketProbeCounts.noAnswer, marketProbeCounts.empty, marketProbeCounts.timeout, marketProbeCounts.httpError, marketProbeCounts.error, S("الإجابات المباشرة فقط تدخل في قياس الظهور؛ إجابات المسار البديل مساعدة وتُعرض منفصلة.", "Only direct answers enter visibility measurement; fallback responses are supporting data shown separately.", "تەنها وەڵامە ڕاستەوخۆکان دەچنە ناو پێوانەی دەرکەوتن؛ وەڵامی ڕێڕەوی جێگرەوە جیا دەردەخرێت.")],
-    [S("اختبارات مجموعات الكلمات", "Keyword cluster probes", "تاقیکردنەوەی کۆمەڵە وشەکان"), (input.clusterAnswers || []).length, clusterProbeCounts.answered, clusterProbeCounts.fallback, clusterProbeCounts.noAnswer, clusterProbeCounts.empty, clusterProbeCounts.timeout, clusterProbeCounts.httpError, clusterProbeCounts.error, S("العدد المباشر هنا لا يتضمن إجابات المسار البديل، ولا يمثل ترتيبًا عامًا.", "The direct count excludes fallback responses and is not a general ranking.", "ژمارەی ڕاستەوخۆ وەڵامی ڕێڕەوی جێگرەوە ناگرێتەوە و ڕیزبەندی گشتی نییە.")],
+    [S("اختبارات المحركات حسب السوق", "Market engine probes", "تاقیکردنەوەی بزوێنەر بەپێی بازاڕ"), engineAnswers.length, marketProbeCounts.answered, marketProbeCounts.fallback, marketProbeCounts.noAnswer, marketProbeCounts.empty, marketProbeCounts.timeout, marketProbeCounts.httpError, marketProbeCounts.error, S("كل إجابة مسجلة من المحركات العشرة تدخل في القياس.", "Every recorded answer from the ten engines counts.", "هەموو وەڵامێکی تۆمارکراو دەژمێردرێت.")],
+    [S("اختبارات مجموعات الكلمات", "Keyword cluster probes", "تاقیکردنەوەی کۆمەڵە وشەکان"), (input.clusterAnswers || []).length, clusterProbeCounts.answered, clusterProbeCounts.fallback, clusterProbeCounts.noAnswer, clusterProbeCounts.empty, clusterProbeCounts.timeout, clusterProbeCounts.httpError, clusterProbeCounts.error, S("العدد لا يمثل ترتيبًا عامًا.", "The count is not a general ranking.", "ژمارە ڕیزبەندی گشتی نییە.")],
     [S("قراءة صفحات العلامة والمنافسين", "Brand and competitor page reads", "خوێندنەوەی پەڕەی براند و ڕکابەران"), partyUrls.length, pageReadCount, 0, partyUrls.length - pageReadCount, 0, 0, 0, 0, S("عدد الصفحات ذات النص المستخرج من بين الروابط المعروفة؛ الرابط وحده لا يعني قراءة الصفحة.", "Pages with extracted text among known URLs; a URL alone does not mean the page was read.", "پەڕەکانی دەقی وەرگیراو لە نێوان بەستەرە ناسراوەکان؛ بەستەر بە تەنها واتای خوێندنەوە نییە.")],
     [S("نتائج البحث الاجتماعي العامة", "Public social search results", "ئەنجامەکانی گەڕانی گشتیی سۆشیال"), Math.min(parties.length, 5), socialPartyCount, 0, Math.max(0, Math.min(parties.length, 5) - socialPartyCount), 0, 0, 0, 0, S("العدد هو حساب الجهات التي ظهر لها رابط واحد على الأقل؛ عدم ظهور رابط لا يثبت عدم وجود محتوى.", "Counts parties with at least one result; no result does not prove no content exists.", "ژمارەی لایەنەکانی هەیە کەمترین یەک بەستەریان هەیە؛ نەبوونی ئەنجام بەڵگەی نەبوونی ناوەڕۆک نییە.")],
     [S("مصدر Alexandria الاختياري", "Optional Alexandria source", "سەرچاوەی هەڵبژاردەی Alexandria"), alexandriaAttempted, alexandriaSuccess, 0, Math.max(0, alexandriaAttempted - alexandriaSuccess), 0, 0, 0, 0, input.alexandria?.note || S("غير مهيأ أو لا توجد أدلة قابلة للاستخدام؛ لا تُستبدل بياناته ببيانات تخمينية.", "Not configured or no usable evidence; no speculative replacement data is used.", "ئامادە نەکراوە یان بەڵگەی بەسوود نییە؛ داتای خەمڵێنراو جێگای ناگرێتەوە.")],
@@ -409,7 +409,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const executionSection: ExportSection = {
     heading: S("التنفيذ والأخطاء", "Execution and errors", "جێبەجێکردن و هەڵەکان"),
     kind: "table",
-    table: { columns: [S("النشاط", "Activity", "چالاکی"), S("المحاولات / الروابط", "Attempts / URLs", "هەوڵ / بەستەر"), S("الإجابات المباشرة / القراءات", "Direct answers / reads", "وەڵامە ڕاستەوخۆکان / خوێندنەوە"), S("إجابات المسار البديل (مساعدة)", "Fallback answers (supporting)", "وەڵامی ڕێڕەوی جێگرەوە"), S("لا إجابة / غير متاح", "No answer / unavailable", "بێ وەڵام / بەردەست نییە"), S("فارغ", "Empty", "بەتاڵ"), S("انتهاء مهلة", "Timeouts", "کاتی تەواوبوون"), S("أخطاء HTTP", "HTTP errors", "هەڵەی HTTP"), S("أخطاء أخرى", "Other errors", "هەڵەی تر"), S("حدود التفسير", "Interpretation limits", "سنووری لێکدانەوە")], data: executionRows },
+    table: { columns: [S("النشاط", "Activity", "چالاکی"), S("المحاولات / الروابط", "Attempts / URLs", "هەوڵ / بەستەر"), S("الإجابات المباشرة / القراءات", "Direct answers / reads", "وەڵامە ڕاستەوخۆکان / خوێندنەوە"), S("إجابات إضافية", "Additional answers", "وەڵامی زیادە"), S("لا إجابة / غير متاح", "No answer / unavailable", "بێ وەڵام / بەردەست نییە"), S("فارغ", "Empty", "بەتاڵ"), S("انتهاء مهلة", "Timeouts", "کاتی تەواوبوون"), S("أخطاء HTTP", "HTTP errors", "هەڵەی HTTP"), S("أخطاء أخرى", "Other errors", "هەڵەی تر"), S("حدود التفسير", "Interpretation limits", "سنووری لێکدانەوە")], data: executionRows },
   };
   const evidenceRows: (string | number)[][] = [];
   for (const party of parties) if (party.url) evidenceRows.push([party.role, party.name, party.url, party.pageText ? S("تم جلب نص الصفحة", "Page text fetched", "دەقی پەڕە وەرگیرا") : S("رابط فقط؛ الصفحة لم تُقرأ", "URL only; page not read", "تەنها بەستەر؛ پەڕە نەخوێندراوەتەوە"), party.found]);
