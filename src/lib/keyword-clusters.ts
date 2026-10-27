@@ -30,7 +30,11 @@ export function buildClusters(market: string, keywords: string[], winners: Set<s
 
 /** Question asked to every engine for one cluster (blind: no brand is named). */
 export function clusterQuestion(c: KeywordCluster, marketName: string): string {
-  return `A user in ${marketName} searches for: ${c.keywords.map((k) => `"${k}"`).join(", ")}. Which providers, brands or websites would you recommend and why? Answer organically.`;
+  const keywords = c.keywords.map((k) => `"${k}"`).join(", ");
+  const arabic = /[\\u0600-\\u06FF]/.test(`${marketName} ${c.keywords.join(" ")}`);
+  return arabic
+    ? `يتسوق شخص في ${marketName} للبحث عن: ${keywords}. ما المتاجر والعلامات التجارية المتخصصة والموثوقة التي تنصح بها لهذه المنتجات تحديداً؟ اذكر الأسباب والروابط الحقيقية المعروفة فقط، ولا تنتقل إلى أدوات تحسين محركات البحث أو برمجيات مراقبة الخوادم ما لم تكن الكلمات نفسها تتعلق بذلك. أجب باللغة العربية.`
+    : `A customer in ${marketName} is shopping for: ${keywords}. Which specialist retailers and brands are relevant to these exact products, and why? Include only real URLs you know; do not switch to SEO tools or server-monitoring software unless the keywords explicitly concern those services.`;
 }
 
 export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string };
