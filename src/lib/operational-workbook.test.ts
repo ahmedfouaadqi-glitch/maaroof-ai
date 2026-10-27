@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectMarkets } from "./market-scope";
-import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA, enginesMentioning, keywordAxis, keywordAxisScores } from "./operational-workbook";
+import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, enginesMentioning, keywordAxis, keywordAxisScores } from "./operational-workbook";
 
 describe("market scope", () => {
   it("reads markets from sheet names", () => {
