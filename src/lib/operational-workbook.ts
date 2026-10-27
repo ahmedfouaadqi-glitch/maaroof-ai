@@ -18,7 +18,7 @@ export type PartyEvidence = {
   description?: string | null;
 };
 
-export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer"; answer: string; urls: string[] };
+export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer"; answer: string; urls: string[]; query?: string };
 
 export type ResearchInput = {
   brand: string;
@@ -272,6 +272,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     marketLabel(answer.market),
     answer.engine,
     answer.status,
+    answer.query || NA[l],
     answer.answer || NA[l],
     answer.urls.join("\n") || NA[l],
     answer.urls.length ? S("روابط أعادها المحرك؛ لم تتحقق مستقلًا", "URLs returned by engine; not independently verified", "بەستەرەکانی بزوێنەر؛ سەربەخۆ پشتڕاست نەکراونەتەوە") : NA[l],
@@ -279,7 +280,20 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const engineStatusSection: ExportSection = {
     heading: S("سجل إجابات المحركات العشرة", "Ten-engine answer and status log", "تۆماری وەڵام و دۆخی دە بزوێنەر"),
     kind: "table",
-    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال المرسل فعليًا", "Actual query sent", "پرسیاری ڕاستەقینەی نێردراو"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
+  };
+  const clusterStatusRows: (string | number)[][] = (input.clusterAnswers || []).map((answer) => [
+    marketLabel(answer.market),
+    answer.keywords.join(" | "),
+    answer.engine,
+    answer.status,
+    answer.answer || NA[l],
+    S("استجابة مسجلة لمجموعة كلمات؛ لا تعني قياس ترتيب", "Recorded cluster response; not a ranking measurement", "وەڵامی کۆمەڵە وشەی تۆمارکراو؛ پێوانەی ڕیزبەندی نییە"),
+  ]);
+  const clusterStatusSection: ExportSection = {
+    heading: S("نتائج اختبار مجموعات الكلمات", "Keyword-cluster probe results", "ئەنجامی تاقیکردنەوەی کۆمەڵە وشەکان"),
+    kind: "table",
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("الكلمات المختبرة", "Keywords tested", "وشە تاقیکراوەکان"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("حد القياس", "Measurement limit", "سنووری پێوانە")], data: clusterStatusRows },
   };
   const evidenceRows: (string | number)[][] = [];
   for (const party of parties) if (party.url) evidenceRows.push([party.role, party.name, party.url, party.pageText ? S("تم جلب نص الصفحة", "Page text fetched", "دەقی پەڕە وەرگیرا") : S("رابط فقط؛ الصفحة لم تُقرأ", "URL only; page not read", "تەنها بەستەر؛ پەڕە نەخوێندراوەتەوە"), party.found]);
@@ -291,7 +305,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     table: { columns: [S("نوع المصدر", "Source type", "جۆری سەرچاوە"), S("الجهة / السياق", "Entity / context", "لایەن / پاشبنەما"), S("الرابط", "URL", "بەستەر"), S("ما الذي تحقق", "What was checked", "چی پشکنرا"), S("منشأ النتيجة", "Provenance", "سەرچاوەی ئەنجام")], data: evidenceRows },
   };
   sections.splice(1, 0, sourceInventory, ...originalDataSections);
-  sections.splice(2 + originalDataSections.length, 0, engineStatusSection, evidenceSection);
+  sections.splice(2 + originalDataSections.length, 0, engineStatusSection, clusterStatusSection, evidenceSection);
 
   return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: input.brand + " · " + markets.map(mName).join(" / "), lang: l, sections };
 }
