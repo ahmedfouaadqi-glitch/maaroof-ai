@@ -5,7 +5,7 @@ import { completionWithFallback } from "@/lib/maaroof/provider-fallback.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf } from "@/lib/maaroof/probe-answer";
 import type { Market } from "@/lib/market-scope";
-import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
+import type { PartyEvidence, EngineAnswer, DiscoveredKeyword, KeywordSearchEvidence } from "@/lib/operational-workbook";
 
 const rowsOf = (r: any): any[] => (r?.data?.web || r?.data || r?.web || []) as any[];
 
@@ -129,6 +129,196 @@ export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clust
       error: call.detail || "Provider returned no usable answer",
     };
   }));
+}
+
+type KeywordSourceRecord = {
+  id: string;
+  source_type: "website" | "competitor" | "social" | "web_search";
+  entity: string;
+  market: string;
+  title: string;
+  url: string;
+  text: string;
+};
+
+/**
+ * Reuses the existing crawler/search and gateway route to discover current terms
+ * and grounded opportunities. Actual page/social terms must occur in their cited
+ * source text; only opportunity terms may be inferred from that evidence.
+ */
+export async function discoverKeywordIdeas(o: {
+  brand: string;
+  category: string;
+  markets: Market[];
+  parties: PartyEvidence[];
+  social: Array<{ party: string; url: string; text: string }>;
+  existingKeywords: string[];
+  userId: string;
+  lang: "ar" | "en" | "ku";
+}): Promise<{ terms: DiscoveredKeyword[]; searchEvidence: KeywordSearchEvidence[] }> {
+  const searches = await Promise.all(o.markets.slice(0, 5).map(async (market) => {
+    const query = `"${o.brand}" ${o.category} products services styles features questions ${market.en}`.trim();
+    try {
+      const result: any = await fcSearch(query, { limit: 5, lang: o.lang === "ku" ? "en" : o.lang, location: market.en }, { userId: o.userId, toolKey: "competitive_geo" });
+      const rows = rowsOf(result).slice(0, 5);
+      return rows.map((r: any) => ({
+        market: market.code,
+        title: String(r?.title || "").trim().slice(0, 180),
+        url: String(r?.url || "").trim().slice(0, 500),
+        text: String(r?.description || r?.snippet || "").replace(/\\s+/g, " ").trim().slice(0, 500),
+      })).filter((r) => /^https?:\\/\\//i.test(r.url) && (r.title || r.text));
+    } catch {
+      return [] as Array<{ market: string; title: string; url: string; text: string }>;
+    }
+  }));
+  const searchRows = searches.flat();
+  let nextId = 1;
+  const sources: KeywordSourceRecord[] = [];
+  const sourceByKey = new Map<string, KeywordSourceRecord>();
+  const addSource = (row: Omit<KeywordSourceRecord, "id">) => {
+    const key = [row.source_type, row.entity, row.market, row.url].join("|");
+    const old = sourceByKey.get(key);
+    if (old) return old;
+    const source = { ...row, id: "S" + nextId++ };
+    sources.push(source);
+    sourceByKey.set(key, source);
+    return source;
+  };
+  for (const p of o.parties) {
+    if (!p.pageText && !p.title && !p.description) continue;
+    addSource({
+      source_type: p.role === "brand" ? "website" : "competitor",
+      entity: p.name,
+      market: "all",
+      title: String(p.title || p.name).slice(0, 180),
+      url: String(p.url || ""),
+      text: [p.title, p.description, p.pageText].filter(Boolean).join("\\n").slice(0, 5000),
+    });
+  }
+  for (const post of o.social.slice(0, 30)) {
+    addSource({
+      source_type: "social",
+      entity: post.party,
+      market: "all",
+      title: post.party + " public social result",
+      url: post.url,
+      text: post.text.slice(0, 700),
+    });
+  }
+  for (const r of searchRows) {
+    addSource({
+      source_type: "web_search",
+      entity: r.title || r.url,
+      market: r.market,
+      title: r.title,
+      url: r.url,
+      text: r.text,
+    });
+  }
+  const searchEvidence: KeywordSearchEvidence[] = sources.map((x) => ({
+    market: x.market,
+    source_type: x.source_type,
+    entity: x.entity,
+    title: x.title,
+    url: x.url,
+    text: x.text.slice(0, 700),
+  }));
+  if (!sources.length) return { terms: [], searchEvidence };
+
+  const sourceContext = sources.map((x) => ({
+    id: x.id,
+    type: x.source_type,
+    entity: x.entity,
+    market: x.market,
+    title: x.title,
+    url: x.url,
+    text: x.text.slice(0, 1800),
+  }));
+  const langName = o.lang === "ar" ? "Arabic" : o.lang === "ku" ? "Kurdish Sorani" : "English";
+  const prompt = [
+    "You are MAAROOF Ai's keyword discovery specialist. Return JSON only.",
+    "Find useful search phrases for the brand's real products/services, including long-tail buyer queries and natural-language questions.",
+    "Use the supplied source records only. Never invent URLs, search volumes, CPC, rankings, or numeric metrics.",
+    "Return up to 15 brand_current_keywords, 15 competitor_keywords, 10 social_keywords, and 25 new_opportunities per market, prioritizing relevance and variety.",
+    "brand_current_keywords must appear literally in the brand website source text.",
+    "competitor_keywords must appear literally in that competitor's source text; include exact party and source_id.",
+    "social_keywords must appear literally in a supplied social result; include the exact source_id.",
+    "new_opportunities are useful phrases not already in the existing workbook list. They may be new query formulations informed by the supplied evidence, but must cite a source_id that grounds the product/category/market. Do not claim the exact phrase appeared in that source.",
+    "Preserve the market code. Suggest the requested report language (" + langName + ") and appropriate English/local-language variants when supported by market context.",
+    "Existing workbook keywords: " + JSON.stringify(o.existingKeywords.slice(0, 250)),
+    "Markets: " + JSON.stringify(o.markets.map((m) => ({ code: m.code, name: m.en, local_name: m.ar }))),
+    "Source records: " + JSON.stringify(sourceContext),
+    "Return exact schema: {brand_current_keywords:[{keyword,market,intent,language,source_id}],competitor_keywords:[{keyword,market,intent,language,party,source_id}],social_keywords:[{keyword,market,intent,language,party,source_id}],new_opportunities:[{keyword,market,intent,language,rationale,source_id}]}.",
+  ].join("\\n");
+
+  let parsed: any = null;
+  try {
+    const model = ENGINE_COUNCIL_MODELS[0]?.model || "google/gemini-2.5-pro";
+    const call = await completionWithFallback({
+      primaryModel: model,
+      messages: [
+        { role: "system", content: "You are a strict evidence-grounded SEO/GEO/AEO keyword researcher. Output valid JSON only. Do not invent metrics or source URLs." },
+        { role: "user", content: prompt },
+      ],
+      primaryKey: process.env.OPENROUTER_API_KEY,
+      fallbackKey: process.env.LOVABLE_API_KEY,
+      timeoutMs: 45_000,
+      acceptContent: (content) => {
+        try {
+          const raw = String(content || "");
+          const start = raw.indexOf("{");
+          const end = raw.lastIndexOf("}");
+          if (start < 0 || end <= start) return false;
+          const obj = JSON.parse(raw.slice(start, end + 1));
+          return !!obj && typeof obj === "object" && (Array.isArray(obj.new_opportunities) || Array.isArray(obj.brand_current_keywords));
+        } catch { return false; }
+      },
+    });
+    const raw = String(call.content || "");
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start >= 0 && end > start) parsed = JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    parsed = null;
+  }
+  if (!parsed) return { terms: [], searchEvidence };
+
+  const sourceMap = new Map(sources.map((x) => [x.id, x]));
+  const existing = new Set(o.existingKeywords.map((x) => x.toLowerCase().trim()));
+  const pageTextFor = (x: KeywordSourceRecord) => x.text.toLocaleLowerCase();
+  const terms: DiscoveredKeyword[] = [];
+  const seen = new Set<string>();
+  const add = (item: any, kind: DiscoveredKeyword["kind"]) => {
+    const keyword = String(item?.keyword || "").replace(/\\s+/g, " ").trim().slice(0, 180);
+    const market = o.markets.find((m) => m.code === String(item?.market || "")) || (o.markets.length === 1 ? o.markets[0] : null);
+    const source = sourceMap.get(String(item?.source_id || ""));
+    if (!keyword || keyword.length < 3 || !market || !source) return;
+    if (kind !== "opportunity" && !pageTextFor(source).includes(keyword.toLocaleLowerCase())) return;
+    if (kind === "opportunity" && existing.has(keyword.toLowerCase())) return;
+    if (kind === "brand" && source.source_type !== "website") return;
+    if (kind === "competitor" && source.source_type !== "competitor") return;
+    if (kind === "social" && source.source_type !== "social") return;
+    if ((kind === "brand" || kind === "competitor" || kind === "social") && source.url && !/^https?:\\/\\//i.test(source.url)) return;
+    const key = [market.code, kind, keyword.toLowerCase(), source.url].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    terms.push({
+      keyword,
+      market: market.code,
+      kind,
+      intent: String(item?.intent || "").slice(0, 100),
+      language: String(item?.language || o.lang).slice(0, 40),
+      party: String(item?.party || source.entity).slice(0, 160),
+      source: kind === "opportunity" ? "Opportunity based on " + source.title : source.source_type === "website" ? "Brand website" : source.source_type === "competitor" ? "Competitor website" : "Public social result",
+      url: source.url || undefined,
+      rationale: String(item?.rationale || "").slice(0, 400),
+    });
+  };
+  for (const x of (Array.isArray(parsed.brand_current_keywords) ? parsed.brand_current_keywords : []).slice(0, 100)) add(x, "brand");
+  for (const x of (Array.isArray(parsed.competitor_keywords) ? parsed.competitor_keywords : []).slice(0, 120)) add(x, "competitor");
+  for (const x of (Array.isArray(parsed.social_keywords) ? parsed.social_keywords : []).slice(0, 80)) add(x, "social");
+  for (const x of (Array.isArray(parsed.new_opportunities) ? parsed.new_opportunities : []).slice(0, 120)) add(x, "opportunity");
+  return { terms, searchEvidence };
 }
 
 /**
