@@ -1,7 +1,6 @@
 // Server: background research for the second result. Every value comes from a fetched page or an engine reply.
 import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { ENGINE_COUNCIL_MODELS } from "@/lib/maaroof/tool-council";
-import { OPENROUTER_URL } from "@/lib/maaroof/openrouter.server";
 import { completionWithFallback } from "@/lib/maaroof/provider-fallback.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf } from "@/lib/maaroof/probe-answer";
