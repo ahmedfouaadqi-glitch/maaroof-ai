@@ -43,8 +43,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
 
         const { detectMarkets, marketByCode } = await import("@/lib/market-scope");
-        const { allKeywords } = await import("@/lib/operational-workbook");
-        const keywordEvidence = allKeywords(sheets, 5000);
+        const { keywordColumn } = await import("@/lib/operational-workbook");
         const requestText = String(b?.request_text || b?.text || "").trim().slice(0, 12000);
         const marketText = String(b?.market_text || "").trim().slice(0, 240);
         const geo = b?.geo_scope && typeof b.geo_scope === "object" ? b.geo_scope : {};
@@ -58,7 +57,7 @@ export const Route = createFileRoute("/api/dual-result")({
           explicitCategory: b?.category,
           workspace,
           requestText,
-          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns), ...keywordEvidence.slice(0, 1000)],
+          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns)],
         });
         const brand = resolved.brand;
         const site = resolved.site || undefined;
@@ -100,12 +99,38 @@ export const Route = createFileRoute("/api/dual-result")({
           : scopedMarkets.length ? "geographic_scope"
           : "workbook_or_request";
 
+        const { sheetsForMarket: sheetsForTargetMarket } = await import("@/lib/market-scope");
+        const keywordSamplesByMarket: Record<string, string[]> = {};
+        for (const market of markets.slice(0, 5)) {
+          const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
+          const orderedSheets = [
+            ...targetSheets.filter((sheet: any) => /winner|winning|رابح|رابحة/i.test(sheet.name)),
+            ...targetSheets.filter((sheet: any) => !/winner|winning|رابح|رابحة/i.test(sheet.name)),
+          ];
+          const seen = new Set<string>();
+          const candidates: string[] = [];
+          for (const sheet of orderedSheets) {
+            const index = keywordColumn(sheet);
+            if (index < 0) continue;
+            for (const row of sheet.rows) {
+              const keyword = String(row[index] ?? "").trim();
+              const normalized = keyword.toLocaleLowerCase();
+              if (keyword.length < 3 || seen.has(normalized)) continue;
+              seen.add(normalized);
+              candidates.push(keyword.slice(0, 180));
+              if (candidates.length >= 8) break;
+            }
+            if (candidates.length >= 8) break;
+          }
+          keywordSamplesByMarket[market.code] = candidates;
+        }
+
         const competitors = (Array.isArray(b?.competitors) ? b.competitors : String(b?.competitors || "").split(/[,،\n]/))
           .map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
         const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
         const [parties, engineAnswers] = await Promise.all([
           gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId }),
-          askEnginesPerMarket(category, markets.slice(0, 5)),
+          askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket),
         ]);
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
@@ -121,7 +146,6 @@ export const Route = createFileRoute("/api/dual-result")({
         const { buildClusters, answeredClusterCount } = await import("@/lib/keyword-clusters");
         const clusterLimit = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
         const winners = new Set<string>();
-        const { keywordColumn } = await import("@/lib/operational-workbook");
         const kwOf = (s: any) => { const i = keywordColumn(s); return i < 0 ? [] : s.rows.map((r: any) => String(r[i] ?? "")); };
         for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) for (const k of kwOf(s)) winners.add(k.trim().toLowerCase());
         const { sheetsForMarket } = await import("@/lib/market-scope");
