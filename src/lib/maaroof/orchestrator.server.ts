@@ -46,7 +46,7 @@ type ToolCall = { tool: string; input: any; reason?: string };
 type PlanStep = ToolCall & { depends_on?: string[] };
 
 /** Tools that fan out to many engines or crawl; they get a longer timeout. */
-const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking"]);
+const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking", "keyword_intelligence"]);
 
 function toolPath(toolKey: string): string | null {
   const map: Record<string, string> = {
