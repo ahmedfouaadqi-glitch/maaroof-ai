@@ -21,6 +21,15 @@ describe("keyword clusters", () => {
     expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 2 });
     expect(clusterScore(ans, "US", "abaya")).toBeNull();
   });
+  it("does not count fallback stand-ins as direct visibility measurements", () => {
+    const ans = [
+      { market: "US", engine: "gpt", status: "answered" as const, answer: "Try wedding dress shops", keywords: ["wedding dress"], provider_path: "primary" as const },
+      { market: "US", engine: "claude", status: "answered" as const, answer: "Try wedding dress shops", keywords: ["wedding dress"], provider_path: "fallback" as const },
+      { market: "US", engine: "grok", status: "no_answer" as const, answer: "", keywords: ["wedding dress"] },
+    ];
+    expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 1 });
+  });
+
   it("counts only clusters with a real answer for charging", () => {
     expect(answeredClusterCount([{ market: "US", engine: "a", status: "no_answer", answer: "", keywords: ["x"] }])).toBe(0);
     expect(answeredClusterCount([
