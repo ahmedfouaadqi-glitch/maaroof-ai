@@ -3,7 +3,7 @@ import { Paperclip, LoaderCircle, FileText, Image as ImageIcon } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { withPreviewAuth } from "@/lib/api-client";
-import { validateAttachment, attachmentPath, ATTACHMENT_MIME } from "@/lib/attachments";
+import { validateAttachment, attachmentPath } from "@/lib/attachments";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
@@ -59,7 +59,7 @@ export function AttachmentAnalyzer({ lang, context = "task", onResult }: { lang:
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold"><Paperclip className="size-4 text-primary" />{tr(lang, "إرفاق صورة أو ملف للتحليل", "Attach an image or file", "هاوپێچکردنی وێنە یان فایل")}</h3>
         <button type="button" onClick={() => inputRef.current?.click()} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted">{tr(lang, "اختيار ملف", "Choose file", "هەڵبژاردن")}</button>
-        <input ref={inputRef} type="file" accept={ATTACHMENT_MIME.join(",")} className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+        <input ref={inputRef} type="file" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">{tr(lang, "صورة أو PDF أو نص حتى 10MB. يحلّله نموذج معروف القادر على قراءة الصور؛ النماذج العشرة في فحص الظهور لا تستقبل الصور، لذا لا تُرسل إليها.", "Image, PDF or text up to 10MB. Analyzed by Maaroof's vision model; the ten visibility engines don't accept images, so files are not sent to them.", "وێنە، PDF یان دەق تا 10MB.")}</p>
       {file && (
