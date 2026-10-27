@@ -62,11 +62,14 @@ export async function askEnginesPerMarket(category: string, markets: Market[], k
   const key = process.env.OPENROUTER_API_KEY;
   const jobs = markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
   return Promise.all(jobs.map(async ({ m, e }): Promise<EngineAnswer> => {
-    if (!key) return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] };
+    const query = keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || []);
+    if (!key) return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query };
     try {
-      const p = parseProbeContent(await askEngine(e.model, keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || []), key));
-      return p ? { market: m.code, engine: e.key, status: "answered", answer: p.answer, urls: p.urls } : { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] };
-    } catch { return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] }; }
+      const p = parseProbeContent(await askEngine(e.model, query, key));
+      return p
+        ? { market: m.code, engine: e.key, status: "answered", answer: p.answer, urls: p.urls, query }
+        : { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query };
+    } catch { return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query }; }
   }));
 }
 
