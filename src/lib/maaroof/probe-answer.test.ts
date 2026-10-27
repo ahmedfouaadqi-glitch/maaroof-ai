@@ -15,7 +15,8 @@ describe("keywordVisibilityProbeQuestion", () => {
     const q = keywordVisibilityProbeQuestion("Fashion", "Lebanon", ["dress", "dress", "bag", "shoe", "coat", "gown", "hat", "belt", "scarf", "jacket"]);
     expect((q.match(/"dress"/g) || []).length).toBe(1);
     expect(q).toContain('"belt"');
-    expect(q).not.toContain('"scarf"');
+    expect(q).toContain('"scarf"');
+    expect(q).not.toContain('"jacket"');
   });
 
   it("does not invent a keyword list when no keyword samples are supplied", () => {
