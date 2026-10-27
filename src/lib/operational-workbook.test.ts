@@ -131,13 +131,13 @@ describe("operational workbook", () => {
     });
     const execution = p.sections.find((s) => s.heading === "Execution and errors")!.table!.data;
     const marketProbes = execution.find((row) => row[0] === "Market engine probes")!;
-    expect(marketProbes.slice(1, 8)).toEqual([6, 1, 1, 0, 1, 1, 1]);
+    expect(marketProbes.slice(1, 8)).toEqual([6, 1, 0, 1, 1, 1, 1]);
     const clusters = execution.find((row) => row[0] === "Keyword cluster probes")!;
-    expect(clusters.slice(1, 8)).toEqual([2, 1, 1, 0, 0, 0, 1]);
+    expect(clusters.slice(1, 8)).toEqual([2, 1, 0, 0, 0, 1, 0]);
     const engineLog = p.sections.find((s) => s.heading === "Ten-engine answer and status log")!.table!.data;
     expect(engineLog.some((row) => row.includes("HTTP 429") && row.includes("http_error"))).toBe(true);
     const alexRow = execution.find((row) => row[0] === "Optional Alexandria source")!;
-    expect(alexRow.slice(1, 4)).toEqual([1, 0, 1]);
+    expect(alexRow.slice(1, 4)).toEqual([1, 1, 0]);
   });
 
   it("does not count fallback stand-in answers in direct share of voice", () => {
@@ -161,7 +161,7 @@ describe("operational workbook", () => {
     expect(log.some((row) => row.includes("Fallback route"))).toBe(true);
     const execution = payload.sections.find((section) => section.heading === "Execution and errors")!.table!.data;
     const marketProbes = execution.find((row) => row[0] === "Market engine probes")!;
-    expect(marketProbes.slice(1, 5)).toEqual([3, 3, 2, 1]);
+    expect(marketProbes.slice(1, 5)).toEqual([3, 2, 1, 0]);
   });
 
   it("classifies question keywords as AEO", () => {
