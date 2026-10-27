@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
         const sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
 
-        const { detectMarkets, marketByCode } = await import("@/lib/market-scope");
+        const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
         const { keywordColumn } = await import("@/lib/operational-workbook");
         const requestText = String(b?.request_text || b?.text || "").trim().slice(0, 12000);
         const marketText = String(b?.market_text || "").trim().slice(0, 240);
@@ -52,13 +52,36 @@ export const Route = createFileRoute("/api/dual-result")({
         const geoCountry = typeof geo.country === "string" ? geo.country.trim().slice(0, 120) : "";
         const geoCity = typeof geo.city === "string" ? geo.city.trim().slice(0, 120) : "";
 
+        // Use representative values from the workbook as context signals, not just worksheet headings.
+        // This lets the existing category resolver handle brands whose sector appears in row data.
+        const workbookValueSignals: string[] = [];
+        for (const sheet of sheets) {
+          const indices = new Set<number>();
+          const detectedKeywordIndex = keywordColumn(sheet);
+          if (detectedKeywordIndex >= 0) indices.add(detectedKeywordIndex);
+          sheet.columns.forEach((column: string, index: number) => {
+            if (/(product|service|category|industry|brand|title|name|search term|keyword|query|item|sku|description|product type|نوع المنتج|الخدمة|الفئة|الصناعة|اسم المنتج|الكلمة المفتاحية)/i.test(column)) indices.add(index);
+          });
+          for (const row of sheet.rows.slice(0, 30)) {
+            for (const index of indices) {
+              const value = String(row[index] ?? "").trim().replace(/\s+/g, " ");
+              if (value.length >= 3 && value.length <= 140 && !/^https?:\/\//i.test(value) && !/^\d+(?:[.,]\d+)?$/.test(value)) {
+                workbookValueSignals.push(value);
+                if (workbookValueSignals.length >= 120) break;
+              }
+            }
+            if (workbookValueSignals.length >= 120) break;
+          }
+          if (workbookValueSignals.length >= 120) break;
+        }
+
         const resolved = resolveCompetitiveContext({
           explicitBrand: b?.brand,
           explicitSite: b?.site,
           explicitCategory: b?.category,
           workspace,
           requestText,
-          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns)],
+          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns), ...workbookValueSignals],
         });
         const brand = resolved.brand;
         const site = resolved.site || undefined;
@@ -88,6 +111,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const markets = chosen.length ? chosen
           : userMarkets.length ? userMarkets
           : scopedMarkets.length ? scopedMarkets
+          : geoMode === "world" ? [GLOBAL_MARKET]
           : workbookMarkets;
         if (!markets.length) return Response.json({
           error: "no_market",
@@ -98,6 +122,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const marketSource = chosen.length ? "explicit"
           : userMarkets.length ? "user_input"
           : scopedMarkets.length ? "geographic_scope"
+          : geoMode === "world" ? "geographic_scope"
           : "workbook_or_request";
 
         const { sheetsForMarket: sheetsForTargetMarket } = await import("@/lib/market-scope");
