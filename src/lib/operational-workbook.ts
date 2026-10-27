@@ -136,7 +136,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     heading: S("بطاقة السلطة", "Authority card", "کارتی دەسەڵات"), kind: "table",
     table: {
       columns: [S("الطرف", "Party", "لایەن"), S("الرابط", "URL", "بەستەر"), S("العنوان", "Title", "ناونیشان"), S("الوصف", "Description", "وەسف"), S("هاتف", "Phone", "تەلەفۆن"), S("بريد", "Email", "ئیمەیڵ"), S("من نحن", "About", "دەربارە"), S("أسئلة شائعة", "FAQ", "پرسیار"), S("المصدر", "Source", "سەرچاوە")],
-      data: parties.map((p) => { const a = authoritySignals(p); const yn = (v: true | null) => (v ? S("موجود", "Present", "هەیە") : NA[l]);
+      data: parties.map((p) => { const a = authoritySignals(p); const yn = (v: boolean | null) => (v ? S("موجود", "Present", "هەیە") : NA[l]);
         return [p.name, cell(a.url, l), cell(a.title, l), cell(a.description, l), cell(a.phone, l), cell(a.email, l), yn(a.about), yn(a.faq), p.pageText ? SRC_WEB : NA[l]]; }),
     },
   });
