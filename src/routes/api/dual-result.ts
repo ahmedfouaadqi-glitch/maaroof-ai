@@ -136,6 +136,49 @@ export const Route = createFileRoute("/api/dual-result")({
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
         const marketEvidenceAvailable = hasChargeableMarketEvidence(answeredMarkets, anyPage);
+        if (!marketEvidenceAvailable) {
+          // Preserve source data and explain initial probe failures without triggering further paid
+          // cluster/social/structured-data requests when market probes and page reads yielded no evidence.
+          const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
+          const skippedSourceNote = "Skipped because the initial market probes and page reads returned no usable external evidence; no additional source requests were made.";
+          const partialAlexandria = { connected: false, note: skippedSourceNote };
+          const payload = buildOperationalPayload({
+            brand, lang, markets, sheets, parties, engineAnswers,
+            social: [], alexandria: partialAlexandria, clusterAnswers: [],
+          });
+          const summary = markets.map((m: any) => ({
+            market: m.code,
+            label: lang === "ar" ? m.ar : m.en,
+            voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })),
+          }));
+          const summarizeStatuses = (items: Array<{ status: string }>) => ({
+            asked: items.length,
+            answered: items.filter((item) => item.status === "answered").length,
+            no_answer: items.filter((item) => item.status === "no_answer").length,
+            empty: items.filter((item) => item.status === "empty").length,
+            timeout: items.filter((item) => item.status === "timeout").length,
+            http_error: items.filter((item) => item.status === "http_error").length,
+            error: items.filter((item) => item.status === "error").length,
+          });
+          const urls = parties.filter((party) => Boolean(party.url));
+          const diagnostics = {
+            market_probes: summarizeStatuses(engineAnswers),
+            cluster_probes: summarizeStatuses([]),
+            pages: { urls: urls.length, read: 0, unread: urls.length },
+            social: { searched_parties: 0, parties_with_results: 0, results: 0 },
+            alexandria: partialAlexandria,
+          };
+          return Response.json({
+            payload, summary, diagnostics, evidence_state: "none" as const,
+            evidence_note: "No external evidence was retrieved. The workbook still preserves the original rows, actual market queries, and failed/no-answer statuses. Additional paid research stages were skipped.",
+            parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
+            context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource },
+            charged: 0,
+            clusters: { asked: 0, answered: 0, probes_asked: 0, probes_answered: 0 },
+            negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
+            alexandria: partialAlexandria,
+          });
+        }
         // Do not charge for a market probe when it produced no usable answer and no page was read.
         // Still continue building a partial workbook so the user receives source data and failure diagnostics.
         let totalCharged = 0;
