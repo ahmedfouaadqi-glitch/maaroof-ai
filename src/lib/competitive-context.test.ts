@@ -35,6 +35,25 @@ describe("competitive context resolution", () => {
     expect(inferCategoryFromSignals(["black evening dresses", "couture gown", "designer dress"])).toBe("Luxury fashion & couture");
   });
 
+  it("infers common healthcare and medical sectors from product and service values in a workbook", () => {
+    expect(inferCategoryFromSignals(["Medical clinic", "patient care", "diagnostic equipment", "pharmacy services"])).toBe("Healthcare & medical");
+  });
+
+  it("infers finance and education as distinct sectors for generic brand names", () => {
+    expect(inferCategoryFromSignals(["digital banking", "payment processing", "financial services"])).toBe("Finance & banking");
+    expect(inferCategoryFromSignals(["online courses", "e-learning academy", "training"])).toBe("Education & training");
+  });
+
+  it("uses real workbook signals to resolve an otherwise generic workspace", () => {
+    const resolved = resolveCompetitiveContext({
+      workspace: { name: "Brand X" },
+      requestText: "Analyze this keyword workbook",
+      workbookSignals: ["industrial safety equipment", "factory machinery", "industrial supplies"],
+    });
+    expect(resolved.category).toBe("Industrial & manufacturing");
+    expect(resolved.categorySource).toBe("inferred");
+  });
+
   it("does not invent a category when no signals support one", () => {
     const resolved = resolveCompetitiveContext({ workspace: { name: "Client A" }, requestText: "Review my project." });
     expect(resolved.category).toBe("");
