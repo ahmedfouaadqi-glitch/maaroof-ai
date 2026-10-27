@@ -56,7 +56,7 @@ function textByKeys(value: unknown, keys: string[], depth = 0): string {
 
 const CATEGORY_RULES: Array<{ category: string; pattern: RegExp }> = [
   { category: "Luxury fashion & couture", pattern: /\b(couture|haute couture|luxury fashion|designer gowns?|evening gowns?)\b|أزياء فاخرة|هوت كوتور|فساتين سهرة/gi },
-  { category: "Fashion & apparel", pattern: /\b(fashion|apparel|clothing|garments?|dresses?|bridal wear|wedding dresses?|boutique|textiles?|shoes?|handbags?|abaya|abayas)\b|أزياء|ملابس|فساتين|أحذية|حقائب|عباءات|عباية/gi },
+  { category: "Fashion & apparel", pattern: /\b(fashion|apparel|clothing|garments?|dress(?:es)?|bridal wear|wedding dress(?:es)?|boutique|textiles?|shoes?|handbags?|abaya|abayas)\b|أزياء|ملابس|فساتين|أحذية|حقائب|عباءات|عباية/gi },
   { category: "Jewelry & accessories", pattern: /\b(jewelry|jewellery|diamonds?|gold jewelry|watches|accessories)\b|مجوهرات|ألماس|ذهب|ساعات/gi },
   { category: "Beauty, cosmetics & fragrance", pattern: /\b(beauty|cosmetics?|skincare|makeup|perfume|fragrance|hair care)\b|تجميل|مستحضرات تجميل|عطور|عناية بالبشرة/gi },
   { category: "Hotels & hospitality", pattern: /\b(hotels?|resorts?|hospitality|accommodation|booking rooms)\b|فنادق|فندق|ضيافة|منتجع/gi },
@@ -109,13 +109,13 @@ export function resolveCompetitiveContext(input: {
     } catch {}
   }
 
+  const isGenericCategory = (value: string) => /^(retail|e-?commerce|shop|store|business|company|client|brand|general|متجر|متجر إلكتروني|تجارة إلكترونية|تجارة تجزئة|شركة|علامة تجارية)$/i.test(value.trim());
   const summary = clean(workspace.brand_summary, 240);
-  const usableSummary = summary && !/^(retail|e-?commerce|shop|store|business|company|client|brand|general|متجر|متجر إلكتروني|تجارة إلكترونية|تجارة تجزئة|شركة|علامة تجارية)$/i.test(summary) ? summary : "";
-  const workspaceCategory =
-    usableSummary ||
-    textByKeys(workspace.profile, ["industry", "sector", "category", "business_type", "specialty", "specialization", "business_description", "industry_name"]) ||
-    textByKeys(truth, ["sector", "industry", "category", "business_category", "product_category", "business_type"]) ||
-    textByKeys(workspace.onboarding, ["industry", "sector", "category", "business_type", "specialty", "business_description"]);
+  const usableSummary = summary && !isGenericCategory(summary) ? summary : "";
+  const profileCategory = textByKeys(workspace.profile, ["industry", "sector", "category", "business_type", "specialty", "specialization", "business_description", "industry_name"]);
+  const truthCategory = textByKeys(truth, ["sector", "industry", "category", "business_category", "product_category", "business_type"]);
+  const onboardingCategory = textByKeys(workspace.onboarding, ["industry", "sector", "category", "business_type", "specialty", "business_description"]);
+  const workspaceCategory = usableSummary || [profileCategory, truthCategory, onboardingCategory].map((value) => isGenericCategory(value) ? "" : value).find(Boolean) || "";
   const explicitCategory = clean(input.explicitCategory, 240);
   const inferred = inferCategoryFromSignals([
     brand,
