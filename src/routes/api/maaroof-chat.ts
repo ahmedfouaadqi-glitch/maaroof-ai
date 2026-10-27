@@ -138,10 +138,32 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           ...taskCtx,
         );
 
+        // Attached spreadsheets / Google Sheets links: full structured data for the model (not saved into history).
+        let fileCtx = ""; const sheetCards: any[] = [];
+        try {
+          const ids = (Array.isArray(body?.attachment_ids) ? body.attachment_ids : []).filter((x: any) => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 5);
+          if (ids.length) {
+            const { data: atts } = await scopeWorkspace(admin.from("task_attachments").select("id, name, analysis, structure, status").eq("user_id", userId).in("id", ids), workspaceId);
+            for (const at of (atts || []) as any[]) {
+              if (at.structure?.digest) { fileCtx += `\n\n[FILE "${at.name}" — full structured read]\n${String(at.structure.digest).slice(0, 90000 / ids.length)}`; sheetCards.push({ name: at.name, ...at.structure, digest: undefined }); }
+              else if (at.analysis) fileCtx += `\n\n[FILE "${at.name}" — analysis]\n${String(at.analysis).slice(0, 12000)}`;
+            }
+          }
+          const { googleSheetId, buildStructure, workbookDigest } = await import("@/lib/spreadsheet-reader");
+          const gid = googleSheetId(message);
+          if (gid) {
+            const { fetchPublicGoogleSheet } = await import("@/lib/spreadsheet-reader.server");
+            const g = await fetchPublicGoogleSheet(gid);
+            if ("sheets" in g) { fileCtx += `\n\n[GOOGLE SHEET ${gid} — full structured read]\n${workbookDigest(g.sheets, 90000)}`; sheetCards.push({ name: "Google Sheet", ...buildStructure(g.sheets, "gsheet") }); }
+            else fileCtx += `\n\n[GOOGLE SHEET ${gid}] Could not be read (${g.error}). Tell the user exactly this: the link must be shared as "Anyone with the link can view", or they can upload the file directly. Do not claim to know its contents.`;
+          }
+        } catch (e) { console.warn("[maaroof-chat] file context failed", String((e as any)?.message || e).slice(0, 160)); }
+        if (fileCtx) fileCtx = `\n\n---\nThe user attached data. Read ALL of it. Start with an inventory: every sheet by exact name, its row count and columns. Then per sheet: what it contains, key figures (top items by volume/score when such columns exist), gaps and issues. Then concrete GEO/SEO/Ads recommendations and next steps. Quote numbers only from the data; label inferences as inferences.${fileCtx}`;
+
         let reply: { text: string; needsTask: boolean; task: { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string } | null } = { text: "", needsTask: false, task: null };
         const { openRouterChat, detectCouncilRequest } = await import("@/lib/maaroof/openrouter.server");
         const { detectGeoScoreRequest } = await import("@/lib/maaroof/chat-direct");
-        const geoScore = !axisAuditRequest ? detectGeoScoreRequest(message) : null;
+        const geoScore = !axisAuditRequest && !fileCtx ? detectGeoScoreRequest(message) : null;
         let directDone = false;
         let council: any = null;
         if (geoScore) {
@@ -175,7 +197,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         }
         if (directDone) {
           // reply already set from a real tool run
-        } else if (!axisAuditRequest && detectCouncilRequest(message)) {
+        } else if (!axisAuditRequest && !fileCtx && detectCouncilRequest(message)) {
           // Ten-engine council runs as a real approved task (live probe, charged only for answering engines).
           const t = lang === "en"
             ? "I can ask all ten Maaroof engines now: each one gets the same unbiased question, then an evidence check. You'll see every engine's status, answer, real sources and the conflict resolution. Approve to start."
@@ -192,7 +214,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           const { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } = await import("@/lib/lovable-ai");
           const { CHAT_MODEL_CHAIN, chatSamplingParams } = await import("@/lib/model-params");
           const history = ((hist || []) as any[]).reverse().map((m) => ({ role: m.role, content: m.content }));
-          const msgs = [{ role: "system", content: groundedSystemPrompt(lang, knowledge) }, ...history, { role: "user", content: message }];
+          const msgs = [{ role: "system", content: groundedSystemPrompt(lang, knowledge) }, ...history, { role: "user", content: message + fileCtx }];
           // OpenRouter is primary; the existing gateway chain is the fallback.
           let raw = await openRouterChat(msgs); let lastErr = "ai_failed";
           if (!raw && !apiKey) return Response.json({ error: "server_not_configured" }, { status: 500 });
@@ -233,7 +255,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           { user_id: userId, workspace_id: workspaceId, thread_id: tid, role: "assistant", content: reply.text, grounded },
         ]);
         if (insErr) console.error("[maaroof-chat] save failed", insErr.message);
-        return Response.json({ thread_id: threadId || null, council, text: reply.text, needs_task: reply.needsTask, task: reply.task, axis_audit_request: axisAuditRequest, knowledge_items: knowledge.length, quota });
+        return Response.json({ thread_id: threadId || null, council, text: reply.text, needs_task: reply.needsTask, task: reply.task, axis_audit_request: axisAuditRequest, knowledge_items: knowledge.length, quota, sheets: sheetCards });
       },
     },
   },

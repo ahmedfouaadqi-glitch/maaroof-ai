@@ -76,7 +76,26 @@ export const Route = createFileRoute("/api/attachment-analyze")({
           return Response.json({ id: row.id, analysis, charged: 0, unreadable: true });
         }
         const content: any[] = [{ type: "text", text: prompt }];
-        if (kind === "text") content.push({ type: "text", text: new TextDecoder().decode(buf).slice(0, 60000) });
+        // Spreadsheets: structured read of every sheet (names, columns, rows), saved with the attachment.
+        const { isSpreadsheetName, buildStructure, workbookDigest } = await import("@/lib/spreadsheet-reader");
+        const sheetKind = isSpreadsheetName(name, mime);
+        let structure: any = null;
+        if (sheetKind) {
+          try {
+            const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
+            const sheets = await readSpreadsheetBytes(buf, sheetKind, name);
+            if (sheets.length) {
+              const digest = workbookDigest(sheets, 90000);
+              structure = { ...buildStructure(sheets, sheetKind), digest };
+              await a.db.from("task_attachments").update({ structure }).eq("id", row.id);
+              content[0].text += `\nThis is a spreadsheet with ${sheets.length} sheets. First list every sheet by its exact name with row count and columns, then summarise what each sheet contains, then answer. Use only the rows shown; say when rows were not shown.`;
+              content.push({ type: "text", text: digest });
+            }
+          } catch (e) { console.warn("[attachment-analyze] sheet read failed", String((e as any)?.message || e).slice(0, 120)); }
+          if (!structure) { await a.db.from("task_attachments").update({ status: "failed" }).eq("id", row.id); return Response.json({ id: row.id, error: "unreadable_sheet" }, { status: 422 }); }
+        }
+        if (structure) { /* already added */ }
+        else if (kind === "text") content.push({ type: "text", text: new TextDecoder().decode(buf).slice(0, 60000) });
         else if (kind === "office") {
           let extracted = "";
           try {
@@ -106,6 +125,7 @@ export const Route = createFileRoute("/api/attachment-analyze")({
           try {
             const { taskFact } = await import("@/lib/knowledge-facts");
             const f = taskFact(`${name}`, analysis);
+            // never store failure text as evidence (handled in taskFact)
             if (f) await a.db.from("knowledge_facts").insert({ user_id: a.userId, workspace_id: workspaceId, source: context === "interview" ? "interview" : "task", source_ref: row?.id, ...f });
           } catch {}
           let council = null;
@@ -113,7 +133,7 @@ export const Route = createFileRoute("/api/attachment-analyze")({
             const { runToolCouncil } = await import("@/lib/maaroof/tool-council.server");
             council = await runToolCouncil({ tool: "attachment.analyze", input: name, result: analysis, lang: lang === "English" ? "en" : lang === "Arabic" ? "ar" : "ku" });
           } catch {}
-          return Response.json({ id: row?.id, analysis, charged, council });
+          return Response.json({ id: row?.id, analysis, charged, council, structure: structure ? { ...structure, digest: undefined } : null });
         } catch (e: any) {
           await a.db.from("task_attachments").update({ status: "failed" }).eq("id", row?.id);
           return Response.json({ error: "analysis_failed", detail: String(e?.message || e).slice(0, 100) }, { status: 502 });

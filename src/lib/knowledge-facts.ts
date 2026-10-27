@@ -11,6 +11,7 @@ export function taskFact(goal: string, finalText: string, now = Date.now()) {
   const g = String(goal || "").trim();
   const t = String(finalText || "").replace(/\s+/g, " ").trim();
   if (!g || t.length < 20) return null;
+  if (isFailureText(t)) return null;
   return {
     fact: `${g.slice(0, 150)} — ${t}`.slice(0, FACT_MAX_CHARS),
     confidence: "evidence" as const,
@@ -73,4 +74,10 @@ export function ownerIdentity(p: Record<string, any> | null | undefined) {
   const known = OWNER_FIELDS.filter(has);
   const missing = OWNER_FIELDS.filter((k) => !has(k));
   return { known, missing, completeness: Math.round((known.length / OWNER_FIELDS.length) * 100), verified: !!p?.entity_verified_at };
+}
+
+/** Outputs that only say something was missing/failed are not evidence and must not be remembered. */
+export function isFailureText(t: string): boolean {
+  const head = String(t || "").slice(0, 400);
+  return /(غير متاح|لم يتم (استلام|العثور)|لم يُرفق|تعذّر (الوصول|قراءة)|لا يمكن الوصول|not (available|accessible|found)|could not (access|read|find)|unable to (access|read))/i.test(head);
 }
