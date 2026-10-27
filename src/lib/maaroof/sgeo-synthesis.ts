@@ -42,20 +42,20 @@ type PillarSupport = Record<SgeoCoreAxis, RegExp>;
 const PILLAR_SUPPORT: Record<SgeoPillarKey, PillarSupport> = {
   entity_clarity: {
     seo: /^(title:|description:|h1$)/i,
-    aeo: /^(questions:\\d+|faq)$/i,
+    aeo: /^(questions:\d+|faq)$/i,
     geo: /^(brand_in_opening|brand_in_profile|brand_in_profile_title|brand_in_profile_description|brand_mentioned)$/i,
     sge: /^concise_lead$/i,
   },
   answer_structure: {
     seo: /^h1$/i,
-    aeo: /^(questions:\\d+|faq|lists)$/i,
-    geo: /^(structured_data|facts_first_150:\\d+)$/i,
+    aeo: /^(questions:\d+|faq|lists)$/i,
+    geo: /^(structured_data|facts_first_150:\d+)$/i,
     sge: /^(sections|concise_lead)$/i,
   },
   factual_content: {
-    seo: /^words:\\d+$/i,
-    aeo: /^(questions:\\d+|faq|lists)$/i,
-    geo: /^facts_first_150:\\d+$/i,
+    seo: /^words:\d+$/i,
+    aeo: /^(questions:\d+|faq|lists)$/i,
+    geo: /^facts_first_150:\d+$/i,
     sge: /^(concise_lead|sections)$/i,
   },
   machine_extractability: {

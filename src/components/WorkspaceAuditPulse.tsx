@@ -33,6 +33,64 @@ const VERDICT: Record<L, [string, string, string, string]> = {
 const verdict = (lang: L, s: number | null | undefined) => { const v = VERDICT[lang]; return s == null ? v[3] : s >= 70 ? v[0] : s >= 40 ? v[1] : v[2]; };
 const NOTE: Record<L, string> = { ar: "النتيجة تعكس الأدلة العامة التي أمكن الوصول إليها وقت الفحص", en: "Results reflect the public evidence accessible at scan time", ku: "ئەنجامەکان بەڵگە گشتییە دەستپێگەیشتووەکان لە کاتی پشکنین پیشان دەدەن" };
 
+const SGEO_COPY: Record<L, {
+  title: string; description: string; notAvailable: string; measuredTargets: string;
+  overlapPillars: string; coverage: string; matched: string;
+  entityClarity: string; answerStructure: string; factualContent: string; machineExtractability: string;
+}> = {
+  ar: {
+    title: "مؤشر SGEO المركّب",
+    description: "يقيس نقاط التقاطع المدعومة بالأدلة بين SEO وAEO وGEO وSGE. ليس محورًا سادسًا، ولا يغيّر الدرجة الإجمالية؛ ويبقى GSEO محورًا مستقلًا.",
+    notAvailable: "لا تتضمن هذه النتيجة القديمة بيانات كافية لحساب المؤشر المركّب. أجرِ فحصًا جديدًا لحسابه.",
+    measuredTargets: "المصادر التي اكتملت فيها قياسات المحاور الأربعة",
+    overlapPillars: "أنماط التقاطع المشتركة",
+    coverage: "تغطية التقاطع",
+    matched: "مصادر متطابقة",
+    entityClarity: "وضوح الكيان",
+    answerStructure: "بنية الإجابة",
+    factualContent: "المحتوى الحقائقي",
+    machineExtractability: "قابلية الاستخراج آليًا",
+  },
+  en: {
+    title: "SGEO composite index",
+    description: "Measures evidence-backed overlap across SEO, AEO, GEO and SGE. It is not a sixth axis and does not change the overall score; GSEO remains a separate axis.",
+    notAvailable: "This historical result does not contain enough data to calculate the composite index. Run a new scan to calculate it.",
+    measuredTargets: "Targets with all four core axes measured",
+    overlapPillars: "Shared overlap patterns",
+    coverage: "Overlap coverage",
+    matched: "matching targets",
+    entityClarity: "Entity clarity",
+    answerStructure: "Answer structure",
+    factualContent: "Factual content",
+    machineExtractability: "Machine extractability",
+  },
+  ku: {
+    title: "پێوەری پێکهاتەیی SGEO",
+    description: "هاوبەشی بەڵگەدار لە نێوان SEO وAEO وGEO وSGE دەپێوێت. تەوەرێکی شەشەم نییە و نمرەی گشتی ناگۆڕێت؛ GSEO تەوەرێکی جیاواز دەمێنێتەوە.",
+    notAvailable: "ئەنجامی پێشووتر داتای پێویستی بۆ هەژمارکردنی پێوەری پێکهاتەیی نییە. پشکنینێکی نوێ بکە.",
+    measuredTargets: "سەرچاوەکانی کە هەموو چوار تەوەرە سەرەکییەکەیان پێوراوە",
+    overlapPillars: "جۆرە هاوبەشەکانی تێکەڵبوون",
+    coverage: "ڕێژەی هاوبەشی",
+    matched: "سەرچاوەی هاوشێوە",
+    entityClarity: "ڕوونی قەوارە",
+    answerStructure: "پێکهاتەی وەڵام",
+    factualContent: "ناوەڕۆکی ڕاستی",
+    machineExtractability: "دەرکێشانی ئامێری",
+  },
+};
+
+function sgeoPillarLabel(lang: L, key: string): string {
+  const c = SGEO_COPY[lang];
+  const labels: Record<string, string> = {
+    entity_clarity: c.entityClarity,
+    answer_structure: c.answerStructure,
+    factual_content: c.factualContent,
+    machine_extractability: c.machineExtractability,
+  };
+  return labels[key] || key;
+}
+
+
 const ISSUE_TEXT: Record<L, Record<string, string>> = {
   ar: {
     instagram_automated_access_denied: "Instagram رفض القراءة الآلية لهذه الصفحة؛ لا يعني ذلك أن الرابط غير صالح، ويمكن إعادة المحاولة لاحقًا.",
@@ -188,6 +246,44 @@ export function WorkspaceAuditPulse({ lang, workspaceId, onTask }: { lang: L; wo
           </div>
           {delta != null && <p className="mt-1 text-[11px] text-muted-foreground">{delta >= 0 ? "+" : ""}{delta} {t.delta}</p>}
           {result && <p className="mt-1 text-[11px] text-muted-foreground">{NOTE[lang]}</p>}
+          {result && (
+            <section className="mt-3 rounded-xl border border-border bg-background/50 p-3" aria-label={SGEO_COPY[lang].title}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold">{SGEO_COPY[lang].title}</h3>
+                  <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{SGEO_COPY[lang].description}</p>
+                </div>
+                <div className="min-w-16 text-center">
+                  <div className={`text-2xl font-bold ${tone(typeof result.sgeo?.score === "number" ? result.sgeo.score : null)}`}>
+                    {typeof result.sgeo?.score === "number" ? result.sgeo.score : "—"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">/100</div>
+                </div>
+              </div>
+              {result.sgeo ? (
+                <>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {SGEO_COPY[lang].measuredTargets}: {result.sgeo.measuredTargets}/{result.sgeo.totalTargets}
+                  </p>
+                  <div className="mt-2">
+                    <div className="mb-1 text-[11px] font-semibold">{SGEO_COPY[lang].overlapPillars}</div>
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      {(result.sgeo.pillars || []).map((pillar: any) => (
+                        <div key={pillar.key} className="rounded-lg bg-muted/60 p-2">
+                          <div className="text-[11px] font-medium">{sgeoPillarLabel(lang, String(pillar.key))}</div>
+                          <div className="mt-1 text-sm font-semibold">{typeof pillar.coveragePercent === "number" ? `${pillar.coveragePercent}%` : "—"}</div>
+                          <div className="text-[10px] text-muted-foreground">{Number(pillar.matchedTargets) || 0} {SGEO_COPY[lang].matched}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-2 text-[11px] text-muted-foreground">{SGEO_COPY[lang].notAvailable}</p>
+              )}
+            </section>
+          )}
+
           {result && <div className="mt-2 flex justify-end"><ExportButtons size="xs" toolKey="maaroof" build={() => {
             const axisLabels: Record<string, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", sge: "SGE", gseo: "GSEO" };
             const axisCards = AX.map((axis) => {
@@ -195,6 +291,13 @@ export function WorkspaceAuditPulse({ lang, workspaceId, onTask }: { lang: L; wo
               const measuredLinks = (result.targets || []).filter((target: any) => (target.findings || []).some((finding: any) => finding.axis === axis && finding.score != null)).length;
               return { title: axis.toUpperCase(), score, status: typeof score === "number" ? "measured" : "unmeasured", fields: [[lang === "en" ? "Sources measured" : lang === "ku" ? "سەرچاوە پێوراوەکان" : "المصادر المقاسة", String(measuredLinks) + "/" + String((result.targets || []).length)] as [string, string | number]] };
             });
+            const sgeo = result.sgeo || null;
+            const sgeoHeading = lang === "en" ? "SGEO composite index (derived, not an extra axis)" : lang === "ku" ? "پێوەری پێکهاتەیی SGEO (تەوەری زیادە نییە)" : "مؤشر SGEO المركّب (مشتق وليس محورًا إضافيًا)";
+            const sgeoRows: Array<[string, string | number]> = [
+              [lang === "en" ? "Overlap score" : lang === "ku" ? "نمرەی هاوبەشی" : "درجة التقاطع", typeof sgeo?.score === "number" ? sgeo.score : (lang === "en" ? "Not measured" : lang === "ku" ? "نەپێوراو" : "لم يُقَس")],
+              [lang === "en" ? "Targets with all four core axes measured" : lang === "ku" ? "سەرچاوەکانی چوار تەوەرەکەیان پێوراوە" : "مصادر قِيست فيها المحاور الأربعة", sgeo ? `${sgeo.measuredTargets}/${sgeo.totalTargets}` : (lang === "en" ? "Not available in this historical scan" : lang === "ku" ? "لە ئەم پشکنینە پێشووترەدا نییە" : "غير متوفر في هذا الفحص السابق")],
+              ...((sgeo?.pillars || []).map((pillar: any) => [sgeoPillarLabel(lang, String(pillar.key)), typeof pillar.coveragePercent === "number" ? `${pillar.coveragePercent}%` : (lang === "en" ? "Not measured" : lang === "ku" ? "نەپێوراو" : "لم يُقَس")] as [string, string | number])),
+            ];
             const targetCards = (result.targets || []).map((target: any) => {
               const measured = (target.findings || []).filter((finding: any) => finding.score != null);
               const average = measured.length ? Math.round(measured.reduce((sum: number, finding: any) => sum + finding.score, 0) / measured.length) : null;
@@ -221,6 +324,7 @@ export function WorkspaceAuditPulse({ lang, workspaceId, onTask }: { lang: L; wo
                   [lang === "en" ? "Sources with measurable findings" : lang === "ku" ? "سەرچاوەکانی پێوانەکراو" : "المصادر ذات النتائج القابلة للقياس", String(result.succeeded) + "/" + String(result.total)],
                 ] },
                 { heading: lang === "en" ? "Axis score cards" : lang === "ku" ? "کارتی نمرەی تەوەرەکان" : "بطاقات درجات المحاور", kind: "cards", cards: axisCards },
+                { heading: sgeoHeading, kind: "kv", rows: sgeoRows },
                 { heading: targetsHeading, kind: "cards", cards: targetCards },
               ],
             };

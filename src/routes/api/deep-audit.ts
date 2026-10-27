@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { auditTargets, scoreTarget, aggregateAxes, billableUnits, weightedScore, workspaceAuditLinks, type AuditTarget } from "@/lib/maaroof/deep-audit";
 import { isAccountKind } from "@/lib/account-kinds";
+import { synthesizeSgeo } from "@/lib/maaroof/sgeo-synthesis";
 import { isReadIssueCode, isInstagramUrl, PublicReadFailure, preferredReadFailure } from "@/lib/fetch-order";
 
 const TOOL_KEY = "analyze.deep_audit"; // falls back to the parent tool price when not priced separately
@@ -196,7 +197,8 @@ async function runAudit(db: any, userId: string, jobId: string, targets: AuditTa
       const c = await chargeTokens({ userId, toolKey: TOOL_KEY, runId: "deep_audit:" + jobId, units, meta: { endpoint: "/api/deep-audit", targets: targets.length, succeeded: units } });
       charged = c.ok ? c.tokens : 0;
     }
-    await emit("audit_result", { axes, overall, succeeded: units, total: targets.length, charged, targets: results });
+    const sgeo = synthesizeSgeo(results.map((result) => result.findings));
+    await emit("audit_result", { axes, overall, sgeo, succeeded: units, total: targets.length, charged, targets: results });
     if (cancelled) return;
     const now = new Date().toISOString();
     await db.from("maaroof_jobs").update({ status: units > 0 ? "completed" : "failed", error: units > 0 ? null : "تعذّرت قراءة أي رابط؛ لم يُخصم شيء.", finished_at: now, updated_at: now }).eq("id", jobId).eq("user_id", userId);
