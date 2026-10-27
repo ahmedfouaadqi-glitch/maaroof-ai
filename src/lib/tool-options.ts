@@ -27,6 +27,7 @@ export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   competitor_monitor: { fields: ["action", "id", "brand", "competitors", "frequency_hours"], enums: { action: ["create", "list", "recheck", "delete", "policy"] } },
   social_analysis: { fields: ["brand", "keywords"] },
   what_if: { fields: ["brand", "changes", "kind", "axes"] },
+  keyword_intelligence: { tabs: ["old_new_comparison", "competitors", "social", "six_axes", "timeline", "negative_keywords", "sources"], fields: ["brand", "brand_name", "website", "source_url", "market", "country", "language", "lang", "old_keywords", "existing_keywords", "competitors", "social_keywords", "product_context", "description"] },
   brand_authority: { fields: ["brand_name", "brand_keywords", "source_url", "ping"] },
   geo_rewrite: { fields: ["text"] },
 };
