@@ -4,7 +4,7 @@ import { packSections, linksSection, entityFromResult, engineAnswerSections, eng
 import { payloadFromResult } from "@/lib/export-bus";
 
 export type TaskToolResult = { tool: string; ok: boolean; output: any };
-const BANNED = /fire\s*crawl/gi;
+import { sanitizeDeep } from "@/lib/brand-sanitize";
 const isUrl = (v: unknown): v is string => typeof v === "string" && /^https?:\/\/[^\s]+$/i.test(v);
 
 const TX = {
@@ -74,7 +74,7 @@ const TX = {
 } as const;
 
 function scrub<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value).replace(BANNED, "Maaroof")) as T;
+  return sanitizeDeep(value);
 }
 
 function printable(value: any, max = 1100): string {
