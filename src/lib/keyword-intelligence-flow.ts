@@ -23,3 +23,29 @@ export function shouldAutoStartKeywordResearch(requestText: string, workbookHint
   if (!request || !ANALYSIS_INTENT.test(request) || !WORKBOOK_OUTPUT.test(request)) return false;
   return KEYWORD_SIGNAL.test(request) || hasKeywordWorkbookSignals(workbookHints);
 }
+
+export type EvidenceState = "available" | "partial" | "none";
+
+/** Evidence presence is separate from whether every requested source succeeded. */
+export function deriveEvidenceState(input: {
+  answeredMarketCalls: number;
+  answeredClusterCalls: number;
+  readablePages: number;
+  socialResults: number;
+  structuredEvidence: number;
+  failedProbes: number;
+}): EvidenceState {
+  const evidenceCount = [
+    input.answeredMarketCalls,
+    input.answeredClusterCalls,
+    input.readablePages,
+    input.socialResults,
+    input.structuredEvidence,
+  ].reduce((sum, count) => sum + Math.max(0, Number(count) || 0), 0);
+  if (!evidenceCount) return "none";
+  return input.failedProbes > 0 ? "partial" : "available";
+}
+
+export function hasChargeableMarketEvidence(answeredMarkets: number, hasReadablePage: boolean): boolean {
+  return Number(answeredMarkets) > 0 || Boolean(hasReadablePage);
+}
