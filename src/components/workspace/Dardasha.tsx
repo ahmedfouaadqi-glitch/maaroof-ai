@@ -583,7 +583,7 @@ function SecondResult({
         <button type="button" onClick={() => setEditContext((value) => !value)} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
           {editContext ? tr(lang, "إخفاء التعديل", "Hide edits", "شاردنەوەی دەستکاری") : tr(lang, "تعديل بيانات البحث (اختياري)", "Edit research details (optional)", "دەستکاری زانیاری گەڕان")}
         </button>
-        <button type="button" disabled={busy || !brand.trim() || !category.trim()} onClick={run} className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+        <button type="button" disabled={busy || !brand.trim() || !category.trim() || (needMarket && !targetMarket.trim())} onClick={run} className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />{tr(lang, "جارٍ البحث والتحقق…", "Researching and verifying…", "گەڕان و پشتڕاستکردنەوە…")}</> : tr(lang, "ابدأ البحث", "Start research", "دەستپێبکە")}
         </button>
       </div>
