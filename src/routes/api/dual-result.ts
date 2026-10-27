@@ -34,7 +34,7 @@ export const Route = createFileRoute("/api/dual-result")({
 
         const competitors = (Array.isArray(b?.competitors) ? b.competitors : String(b?.competitors || "").split(/[,،\n]/)).map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
         const site = /^https?:\/\//i.test(String(b?.site || "")) ? String(b.site) : undefined;
-        const { gatherParties, askEnginesPerMarket } = await import("@/lib/competitive-geo.server");
+        const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
         const [parties, engineAnswers] = await Promise.all([
           gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId }),
           askEnginesPerMarket(category, markets.slice(0, 5)),
@@ -50,10 +50,19 @@ export const Route = createFileRoute("/api/dual-result")({
         if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id, sub: "competitive_geo.market" } });
         if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, charge.left), { status: 402 });
 
+        const social = await gatherSocial(parties.map((p) => p.name), userId);
+        const { data: prof } = await db.from("profiles").select("onboarding").eq("id", userId).maybeSingle();
+        const { buildPack } = await import("@/lib/machine-pack");
+        const brandParty = parties.find((p) => p.role === "brand");
+        const pack = buildPack({ brand, site: brandParty?.url || site, summary: brandParty?.description || undefined, markets: markets.map((m: any) => (lang === "ar" ? m.ar : m.en)), lang, onboarding: ((prof as any)?.onboarding || {}) as any });
+        // Alexandria evidence layer is not wired in this app yet; report it honestly.
+        const alexandria = { connected: false };
         const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
-        const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers });
+        const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms });
+        if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
+        if (pack.orgJsonld) payload.sections.push({ heading: "Organization JSON-LD", kind: "text", text: pack.orgJsonld });
         const summary = markets.map((m: any) => ({ market: m.code, label: lang === "ar" ? m.ar : m.en, voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })) }));
-        return Response.json({ payload, summary, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), charged: charge.tokens || 0 });
+        return Response.json({ payload, summary, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), charged: charge.tokens || 0, llms: pack.llms, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },

@@ -423,7 +423,7 @@ function SheetInventory({ sheets, lang, reply }: { sheets: SheetCard[]; lang: L;
   );
 }
 
-type DualRes = { payload: any; summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>; parties: Array<{ name: string; role: string; url: string | null; read: boolean }>; charged: number };
+type DualRes = { payload: any; summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>; parties: Array<{ name: string; role: string; url: string | null; read: boolean }>; charged: number; llms?: string; negatives?: string[] };
 
 function SecondResult({ attachmentId, lang }: { attachmentId: string; lang: L }) {
   const [brand, setBrand] = useState(""); const [site, setSite] = useState(""); const [category, setCategory] = useState(""); const [competitors, setCompetitors] = useState("");
@@ -450,7 +450,7 @@ function SecondResult({ attachmentId, lang }: { attachmentId: string; lang: L })
           <input className={inp} value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={tr(lang, "اسم العلامة", "Brand name", "ناوی براند")} />
           <input className={inp} value={site} onChange={(e) => setSite(e.target.value)} placeholder={tr(lang, "رابط الموقع (اختياري)", "Website (optional)", "ماڵپەڕ")} dir="ltr" />
           <input className={inp} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={tr(lang, "المجال، مثل: أزياء فاخرة", "Category, e.g. luxury fashion", "بوار")} />
-          <input className={inp} value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder={tr(lang, "منافسون مفصولون بفاصلة (اختياري)", "Competitors, comma-separated (optional)", "ڕکابەران")} />
+          <input className={inp} value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder={tr(lang, "منافسون إضافيون (اختياري — يُكتشفون تلقائياً)", "Extra competitors (optional — found automatically)", "ڕکابەران")} />
           <button type="button" disabled={busy || !brand.trim() || !category.trim()} onClick={run} className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50 sm:col-span-2">
             {busy ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />{tr(lang, "جارٍ البحث وسؤال المحركات العشرة…", "Researching and asking the ten engines…", "لێکۆڵینەوە…")}</> : tr(lang, "ابدأ البحث", "Start research", "دەستپێبکە")}
           </button>
@@ -465,6 +465,10 @@ function SecondResult({ attachmentId, lang }: { attachmentId: string; lang: L })
             </div>
           ))}
           <ul className="space-y-0.5">{res.parties.map((p, i) => <li key={i}>{p.name} — {p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">{p.url}</a> : tr(lang, "لا يوجد رابط", "no link", "بەستەر نییە")} {!p.read && `(${tr(lang, "لم تُقرأ الصفحة", "page not read", "نەخوێندرایەوە")})`}</li>)}</ul>
+          <div className="flex flex-wrap gap-1">
+            {res.llms && <button type="button" onClick={() => navigator.clipboard.writeText(res.llms!)} className="rounded-lg border border-border px-2 py-1 text-xs">{tr(lang, "نسخ llms.txt", "Copy llms.txt", "کۆپی llms.txt")}</button>}
+            {!!res.negatives?.length && <button type="button" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([res.negatives!.join("\n")], { type: "text/plain" })); a.download = "negative-keywords.txt"; a.click(); }} className="rounded-lg border border-border px-2 py-1 text-xs">{tr(lang, `تحميل الكلمات السلبية (${res.negatives.length})`, `Download negatives (${res.negatives.length})`, "داگرتن")}</button>}
+          </div>
           <ExportButtons size="xs" build={() => res.payload} />
         </div>
       )}

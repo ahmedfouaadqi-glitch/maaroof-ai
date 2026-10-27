@@ -26,6 +26,12 @@ export type ResearchInput = {
   sheets: SheetData[];
   parties: PartyEvidence[];
   engineAnswers: EngineAnswer[];
+  /** Public social posts/pages found by search (url + snippet). */
+  social?: Array<{ party: string; url: string; text: string }>;
+  /** Whether an Alexandria evidence source is connected. Unknown = not connected. */
+  alexandria?: { connected: boolean; note?: string };
+  /** llms.txt produced for the brand ("" when there was nothing real to put in it). */
+  llms?: string;
 };
 
 const NEG_RX = /\b(free|cheap(est)?|used|second ?hand|fake|replica|copy|jobs?|careers?|diy|download|pdf|wholesale|rent(al)?|repair|meaning|tutorial)\b|مجان|مستعمل|تقليد|وظائف|وظيفة|تحميل|ايجار|إيجار|تصليح/i;
@@ -89,80 +95,143 @@ export function allKeywords(sheets: SheetData[], max = 20000): string[] {
 const t3 = (l: ExportLang, ar: string, en: string, ku: string) => (l === "ar" ? ar : l === "ku" ? ku : en);
 const cell = (v: Cell | null | undefined, l: ExportLang): string | number => (v === null || v === undefined || v === "" ? NA[l] : v);
 
+export type Axis = "GEO" | "SGE" | "AEO" | "SEO" | "Social";
+
+/** Rule-based axis per keyword, with the rule that matched (labelled "recommended", not measured). */
+export function keywordAxis(k: string): { axis: Axis; rule: string } {
+  const t = k.toLowerCase();
+  if (/instagram|tiktok|facebook|snapchat|youtube|انستغرام|تيك ?توك/.test(t)) return { axis: "Social", rule: "social platform word" };
+  if (/^(what|how|why|which|where|when|who|is|can|does)\b|\?|ما هو|ما هي|كيف|لماذا|أين|هل/.test(t)) return { axis: "AEO", rule: "question form" };
+  if (/\b(best|top|vs|versus|compare|alternative|review)s?\b|أفضل|مقارنة|بديل/.test(t)) return { axis: "GEO", rule: "comparison/recommendation" };
+  if (t.split(/\s+/).length >= 5) return { axis: "SGE", rule: "long descriptive query" };
+  return { axis: "SEO", rule: "short commercial term" };
+}
+
+/** Suggested phrasing of a keyword per engine retrieval style. Always labelled as suggestion. */
+const ENGINE_FORM: Record<string, (k: string, m: string) => string> = {
+  chatgpt: (k, m) => `What are the best options for ${k} in ${m}?`,
+  gemini: (k, m) => `${k} ${m} price and where to buy`,
+  claude: (k, m) => `How do I choose ${k} in ${m}?`,
+  perplexity: (k, m) => `${k} ${m} sources`,
+  copilot: (k, m) => `${k} ${m} compare`,
+  grok: (k, m) => `${k} ${m} trending`,
+  mistral: (k, m) => `${k} ${m}`,
+  deepseek: (k, m) => `${k} ${m} specifications`,
+  kimi: (k, m) => `${k} ${m} guide`,
+  qwen: (k, m) => `${k} ${m} buy online`,
+};
+export const ENGINE_KEYS = Object.keys(ENGINE_FORM);
+
+/** Engines (of answered ones in that market) whose answer literally contains the keyword. */
+export function enginesMentioning(answers: EngineAnswer[], market: string, k: string): string[] {
+  const kw = k.toLowerCase().trim();
+  if (kw.length < 3) return [];
+  return [...new Set(answers.filter((a) => a.market === market && a.status === "answered" && a.answer.toLowerCase().includes(kw)).map((a) => a.engine))];
+}
+
+function dedupeNegatives(rows: Array<[string, string, string]>): Array<[string, string, string]> {
+  const seen = new Set<string>(); const out: Array<[string, string, string]> = [];
+  for (const r of rows) { const k = r[0].toLowerCase().replace(/\s+/g, " ").trim(); if (!k || seen.has(k)) continue; seen.add(k); out.push(r); }
+  return out;
+}
+
 export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const { lang: l, markets, sheets, parties, engineAnswers } = input;
   const S = (ar: string, en: string, ku: string) => t3(l, ar, en, ku);
+  const SRC = S("المصدر", "Source", "سەرچاوە");
   const SRC_FILE = S("من الملف", "From file", "لە فایل");
   const SRC_WEB = S("من صفحة ويب", "From web page", "لە پەڕەی وێب");
   const SRC_ENG = S("من إجابات المحركات", "From engine answers", "لە وەڵامی بزوێنەرەکان");
-  const SRC_RULE = S("قاعدة استبعاد", "Exclusion rule", "یاسای دەرکردن");
+  const SRC_RULE = S("قاعدة مكتوبة (مقترح)", "Written rule (suggested)", "یاسا (پێشنیار)");
+  const mName = (m: Market) => (l === "ar" ? m.ar : m.en);
   const keywords = allKeywords(sheets);
-  const sections: ExportSection[] = [];
+  const brand = parties.find((p) => p.role === "brand");
+  const comps = parties.filter((p) => p.role === "competitor");
 
-  // Summary per market
-  sections.push({
-    heading: S("ملخص الأسواق", "Market summary", "پوختەی بازاڕەکان"), kind: "table",
-    table: {
-      columns: [S("السوق", "Market", "بازاڕ"), S("تبويبات الملف", "File sheets", "پەڕەکان"), S("صفوف", "Rows", "ڕیز"), S("محركات أجابت", "Engines answered", "وەڵامدەرەوە"), ...parties.map((p) => `${S("حصة صوت", "Share of voice", "بەشی دەنگ")}: ${p.name}`), S("المصدر", "Source", "سەرچاوە")],
-      data: markets.map((m) => {
-        const ms = sheets.filter((s) => sheetMatchesMarket(s.name, m));
-        const ans = engineAnswers.filter((a) => a.market === m.code);
-        return [l === "ar" ? m.ar : m.en, ms.map((s) => s.name).join(", ") || NA[l], ms.reduce((a, s) => a + s.totalRows, 0), `${ans.filter((a) => a.status === "answered").length}/${ans.length}`,
-          ...parties.map((p) => { const v = shareOfVoice(ans, p.name); return v.percent === null ? NA[l] : `${v.percent}% (${v.mentioned}/${v.answered})`; }), `${SRC_FILE} + ${SRC_ENG}`];
-      }),
-    },
-  });
-
-  // Full keyword rows per market (no sampling beyond the reader's per-sheet cap)
-  for (const m of markets) for (const s of sheets.filter((x) => sheetMatchesMarket(x.name, m))) {
-    sections.push({ heading: `${l === "ar" ? m.ar : m.en} — ${s.name}`, kind: "table", table: { columns: [...s.columns, S("المصدر", "Source", "سەرچاوە")], data: s.rows.map((r) => [...s.columns.map((_, i) => cell(r[i], l)), SRC_FILE]) } });
+  // Market keyword rows (deduped per market)
+  type KRow = { k: string; m: Market; sheet: string; vol: Cell | null };
+  const kRows: KRow[] = [];
+  for (const m of markets) {
+    const seen = new Set<string>();
+    for (const s of sheets.filter((x) => sheetMatchesMarket(x.name, m))) {
+      const ki = keywordColumn(s); if (ki < 0) continue;
+      const vc = (detectColumns(s.columns) as any).volume; const vi = vc ? s.columns.indexOf(vc) : -1;
+      for (const r of s.rows) { const k = String(r[ki] ?? "").trim(); const key = k.toLowerCase(); if (!k || seen.has(key)) continue; seen.add(key); kRows.push({ k, m, sheet: s.name, vol: vi >= 0 ? r[vi] : null }); }
+    }
   }
 
-  // Competitor benchmark: published keywords + fact density
-  sections.push({
-    heading: S("مقارنة المنافسين", "Competitor benchmark", "بەراوردی ڕکابەران"), kind: "table",
-    table: {
-      columns: [S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("الرابط", "URL", "بەستەر"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("كلمات الملف المنشورة", "File keywords published", "وشە بڵاوکراوەکان"), S("عدد الكلمات", "Words", "وشە"), S("حقائق رقمية", "Numeric facts", "ڕاستی"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی/100"), S("المصدر", "Source", "سەرچاوە")],
-      data: parties.map((p) => {
-        const fd = factDensity(p.pageText); const pub = publishedKeywords(p.pageText, keywords);
-        return [p.name, p.role === "brand" ? S("العلامة", "Brand", "براند") : S("منافس", "Competitor", "ڕکابەر"), p.url || NA[l], p.found === "user" ? S("أدخله المستخدم", "User", "بەکارهێنەر") : p.found === "file" ? SRC_FILE : S("بحث ويب", "Web search", "گەڕان"),
-          p.pageText ? (pub.slice(0, 40).join(", ") || "0") : NA[l], fd?.words ?? NA[l], fd?.facts ?? NA[l], fd?.per100 ?? NA[l], p.pageText ? SRC_WEB : NA[l]];
-      }),
-    },
-  });
+  // Negatives
+  const negRaw: Array<[string, string, string]> = [];
+  for (const s of sheets.filter((x) => /negative|سلبي/i.test(x.name))) { const i = keywordColumn(s) >= 0 ? keywordColumn(s) : 0; for (const r of s.rows) negRaw.push([String(r[i] ?? "").trim(), s.name, SRC_FILE]); }
+  for (const n of negativeCandidates(keywords)) negRaw.push([n.keyword, n.rule, SRC_RULE]);
+  const negs = dedupeNegatives(negRaw);
 
-  // Authority card per party
-  sections.push({
-    heading: S("بطاقة السلطة", "Authority card", "کارتی دەسەڵات"), kind: "table",
-    table: {
-      columns: [S("الطرف", "Party", "لایەن"), S("الرابط", "URL", "بەستەر"), S("العنوان", "Title", "ناونیشان"), S("الوصف", "Description", "وەسف"), S("هاتف", "Phone", "تەلەفۆن"), S("بريد", "Email", "ئیمەیڵ"), S("من نحن", "About", "دەربارە"), S("أسئلة شائعة", "FAQ", "پرسیار"), S("المصدر", "Source", "سەرچاوە")],
-      data: parties.map((p) => { const a = authoritySignals(p); const yn = (v: boolean | null) => (v ? S("موجود", "Present", "هەیە") : NA[l]);
-        return [p.name, cell(a.url, l), cell(a.title, l), cell(a.description, l), cell(a.phone, l), cell(a.email, l), yn(a.about), yn(a.faq), p.pageText ? SRC_WEB : NA[l]]; }),
-    },
-  });
-
-  // Negative keywords: from file NEGATIVE sheets + exclusion rule
-  const negSheets = sheets.filter((s) => /negative|سلبي/i.test(s.name));
-  const negRows: (string | number)[][] = [];
-  for (const s of negSheets) { const i = keywordColumn(s) >= 0 ? keywordColumn(s) : 0; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) negRows.push([v, s.name, SRC_FILE]); } }
-  const seen = new Set(negRows.map((r) => String(r[0]).toLowerCase()));
-  for (const n of negativeCandidates(keywords)) if (!seen.has(n.keyword.toLowerCase())) { seen.add(n.keyword.toLowerCase()); negRows.push([n.keyword, n.rule, SRC_RULE]); }
-  sections.push({ heading: S("الكلمات السلبية", "Negative keywords", "وشە نەرێنییەکان"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار"), S("المصدر", "Source", "سەرچاوە")], data: negRows } });
-
-  // GEO opportunities: market where an engine named a competitor but not the brand
-  const geo: (string | number)[][] = [];
-  const brandName = input.brand.toLowerCase();
-  for (const a of engineAnswers.filter((x) => x.status === "answered")) {
-    const txt = a.answer.toLowerCase();
-    if (txt.includes(brandName)) continue;
-    const comps = parties.filter((p) => p.role === "competitor" && txt.includes(p.name.toLowerCase())).map((p) => p.name);
-    if (comps.length) geo.push([a.market.toUpperCase(), a.engine, comps.join(", "), S("المحرك ذكر المنافس ولم يذكر العلامة", "Engine named competitor, not the brand", "ڕکابەری ناوبرد نەک براند"), SRC_ENG]);
+  // Per-engine keyword fit: winners first, else first keywords of each market (max 30 per market)
+  const winners = new Set<string>();
+  for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) { const i = keywordColumn(s); if (i >= 0) for (const r of s.rows) winners.add(String(r[i] ?? "").trim().toLowerCase()); }
+  const perEngine: (string | number)[][] = [];
+  for (const m of markets) {
+    const mk = kRows.filter((r) => r.m.code === m.code);
+    const pick = [...mk.filter((r) => winners.has(r.k.toLowerCase())), ...mk.filter((r) => !winners.has(r.k.toLowerCase()))].slice(0, 30);
+    const answered = engineAnswers.filter((a) => a.market === m.code && a.status === "answered").length;
+    for (const r of pick) {
+      const eng = enginesMentioning(engineAnswers, m.code, r.k); const ax = keywordAxis(r.k);
+      perEngine.push([r.k, mName(m), answered ? `${eng.length}/10` : NA[l], eng.join(", ") || (answered ? "0" : NA[l]), ax.axis, ax.rule,
+        ENGINE_KEYS.map((e) => `${e}: ${ENGINE_FORM[e](r.k, m.en)}`).join("\n"), answered ? SRC_ENG : NA[l]]);
+    }
   }
-  sections.push({ heading: S("فرص GEO", "GEO opportunities", "دەرفەتەکانی GEO"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("المنافسون المذكورون", "Competitors named", "ڕکابەران"), S("الفرصة", "Opportunity", "دەرفەت"), S("المصدر", "Source", "سەرچاوە")], data: geo } });
 
-  // Engine answers + sources
-  sections.push({ heading: S("إجابات المحركات", "Engine answers", "وەڵامی بزوێنەرەکان"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("الإجابة", "Answer", "وەڵام"), S("الروابط", "Links", "بەستەر")], data: engineAnswers.map((a) => [a.market.toUpperCase(), a.engine, a.status === "answered" ? S("أجاب", "Answered", "وەڵامی دایەوە") : S("لم يجب", "No answer", "وەڵام نییە"), a.answer || NA[l], a.urls.join(" ") || NA[l]]) } });
-  sections.push({ heading: S("المصادر", "Sources", "سەرچاوەکان"), kind: "list", list: [...parties.filter((p) => p.url).map((p) => `${p.name}: ${p.url}`), ...new Set(engineAnswers.flatMap((a) => a.urls))] });
+  // Brand vs competitors per market
+  const bench: (string | number)[][] = [];
+  for (const m of markets) {
+    const ans = engineAnswers.filter((a) => a.market === m.code);
+    for (const p of parties) {
+      const v = shareOfVoice(ans, p.name); const fd = factDensity(p.pageText); const a = authoritySignals(p);
+      const signals = [a.title && "title", a.description && "description", a.phone && "phone", a.email && "email", a.about && "about", a.faq && "faq"].filter(Boolean) as string[];
+      const pub = publishedKeywords(p.pageText, keywords);
+      const strong: string[] = []; const weak: string[] = [];
+      if (v.percent !== null) (v.percent >= 30 ? strong : weak).push(S(`حصة صوت ${v.percent}%`, `Share of voice ${v.percent}%`, `${v.percent}%`));
+      if (fd) (fd.per100 >= 2 ? strong : weak).push(S(`${fd.per100} حقيقة/100 كلمة`, `${fd.per100} facts/100 words`, `${fd.per100}`));
+      if (p.pageText) (a.faq ? strong : weak).push(S(a.faq ? "صفحة أسئلة موجودة" : "لا صفحة أسئلة", a.faq ? "Has FAQ" : "No FAQ", "FAQ"));
+      bench.push([mName(m), p.name, p.role === "brand" ? S("العلامة", "Brand", "براند") : S("منافس", "Competitor", "ڕکابەر"),
+        p.found === "user" ? S("أدخله المستخدم", "Entered by user", "بەکارهێنەر") : p.found === "file" ? SRC_FILE : S("اكتُشف ببحث الويب", "Found by web search", "گەڕان"),
+        p.url || NA[l], v.percent === null ? NA[l] : `${v.percent}% (${v.mentioned}/${v.answered})`, fd ? fd.per100 : NA[l], p.pageText ? `${signals.length}/6 (${signals.join(", ") || "-"})` : NA[l],
+        p.pageText ? (pub.slice(0, 15).join(", ") || "0") : NA[l], strong.join("، ") || NA[l], weak.join("، ") || NA[l], [p.pageText && SRC_WEB, v.answered && SRC_ENG].filter(Boolean).join(" + ") || NA[l]]);
+    }
+  }
+  for (const s of input.social || []) bench.push([S("تواصل اجتماعي", "Social", "سۆشیال"), s.party, S("منشور عام", "Public post", "پۆست"), S("بحث ويب", "Web search", "گەڕان"), s.url, NA[l], NA[l], NA[l], publishedKeywords(s.text, keywords).slice(0, 15).join(", ") || "0", NA[l], NA[l], SRC_WEB]);
 
-  return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: `${input.brand} · ${markets.map((m) => (l === "ar" ? m.ar : m.en)).join(" / ")}`, lang: l, sections };
+  // Execution plan: what Maaroof did now vs what the team does
+  const DONE = S("نُفّذ بواسطة معروف", "Done by Maaroof", "ئەنجامدرا");
+  const TEAM = S("يحتاج فريقك", "Needs your team", "تیمەکەت");
+  const NOT = S("لم يُنفّذ: لا بيانات كافية", "Not done: not enough data", "ئەنجام نەدرا");
+  const plan: (string | number)[][] = [
+    [1, S("قائمة كلمات سلبية منظفة", "Clean negative keyword list", "لیستی نەرێنی"), negs.length ? DONE : NOT, negs.length ? S(`${negs.length} كلمة في تبويب الكلمات السلبية`, `${negs.length} keywords in the Negative sheet`, `${negs.length}`) : NA[l], S("انسخها إلى Google Ads ← الأدوات ← قوائم الكلمات السلبية ← اربطها بالحملات", "Copy into Google Ads → Tools → Negative keyword lists → apply to campaigns", "Google Ads")],
+    [2, "llms.txt", input.llms ? DONE : NOT, input.llms ? S("جاهز في نهاية هذا الملف ويمكن نسخه من الدردشة", "Ready at the end of this file and copyable in chat", "ئامادەیە") : S("أكمل بطاقة هوية العلامة أولاً", "Complete the brand identity card first", "کارتی ناسنامە"), S("ارفع الملف إلى جذر الموقع: /llms.txt", "Upload to the site root as /llms.txt", "/llms.txt")],
+    [3, S("كلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), perEngine.length ? DONE : NOT, S(`${perEngine.length} كلمة مع درجة التطابق`, `${perEngine.length} keywords with match score`, `${perEngine.length}`), S("اكتب صفحة أو سؤالاً شائعاً لكل كلمة درجتها منخفضة", "Write a page or FAQ answer for each low-score keyword", "پەڕە بنووسە")],
+    [4, S("سد فجوات GEO", "Close GEO gaps", "GEO"), TEAM, S(`${bench.filter((r) => r[2] !== S("العلامة", "Brand", "براند") && typeof r[5] === "string" && /^[1-9]/.test(String(r[5]))).length} حالة ذكر فيها محرك منافساً`, "Cases where an engine named a competitor", ""), S("أضف حقائق بأرقام ومصادر في أول 150 كلمة من الصفحات الأساسية", "Add numbered, sourced facts in the first 150 words of key pages", "")],
+    [5, S("بيانات Schema (Organization/FAQ)", "Schema data (Organization/FAQ)", "Schema"), input.llms ? DONE : NOT, S("تُنتج مع حزمة قراءة الآلة", "Produced with the machine-readable pack", ""), S("ضع الكود داخل <head> في الموقع", "Paste the code inside the site <head>", "<head>")],
+    [6, S("طبقة الإسكندرية", "Alexandria layer", "Alexandria"), input.alexandria?.connected ? DONE : NOT, input.alexandria?.connected ? (input.alexandria.note || "") : S("غير متصلة حالياً؛ لم تُستخدم أي بيانات منها", "Not connected; no data was used from it", "پەیوەست نییە"), S("تحتاج ربطاً قبل الاعتماد عليها", "Needs connecting before use", "")],
+  ];
+
+  const answeredTotal = engineAnswers.filter((a) => a.status === "answered").length;
+  const brandVoice = brand ? markets.map((m) => { const v = shareOfVoice(engineAnswers.filter((a) => a.market === m.code), brand.name); return `${mName(m)}: ${v.percent === null ? NA[l] : `${v.percent}%`}`; }).join(" · ") : NA[l];
+  const sections: ExportSection[] = [
+    { heading: S("ابدأ هنا", "Start here", "لێرە دەستپێبکە"), kind: "table", table: { columns: [S("البند", "Item", "بڕگە"), S("القيمة", "Value", "بەها"), SRC], data: [
+      [S("العلامة", "Brand", "براند"), input.brand, S("أدخله المستخدم", "Entered by user", "بەکارهێنەر")],
+      [S("الأسواق", "Markets", "بازاڕەکان"), markets.map(mName).join(" / ") || NA[l], SRC_FILE],
+      [S("كلمات الملف (بلا تكرار)", "File keywords (unique)", "وشەکان"), kRows.length, SRC_FILE],
+      [S("المنافسون", "Competitors", "ڕکابەران"), comps.map((c) => c.name).join(", ") || NA[l], comps.some((c) => c.found === "web_search") ? S("بحث ويب", "Web search", "گەڕان") : S("أدخله المستخدم", "Entered by user", "")],
+      [S("إجابات المحركات", "Engine answers", "وەڵامەکان"), `${answeredTotal}/${engineAnswers.length}`, SRC_ENG],
+      [S("حصة صوت العلامة", "Brand share of voice", "بەشی دەنگ"), brandVoice, SRC_ENG],
+      [S("الكلمات السلبية", "Negative keywords", "نەرێنی"), negs.length, `${SRC_FILE} + ${SRC_RULE}`],
+      [S("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), S("افتح تبويب «خطة التنفيذ»", "Open the “Execution plan” sheet", "پلان"), "-"],
+    ] } },
+    { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("التبويب", "Sheet", "پەڕە"), S("حجم البحث", "Volume", "قەبارە"), S("المحور المقترح", "Suggested axis", "تەوەر"), SRC], data: kRows.map((r) => [r.k, mName(r.m), r.sheet, cell(r.vol, l), keywordAxis(r.k).axis, SRC_FILE]) } },
+    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("درجة التطابق", "Match score", "پلە"), S("النماذج التي ذكرتها", "Engines that mentioned it", "بزوێنەرەکان"), S("المحور", "Axis", "تەوەر"), S("سبب المحور", "Axis reason", "هۆکار"), S("الصيغة المقترحة لكل نموذج", "Suggested phrasing per engine", "پێشنیار"), SRC], data: perEngine } },
+    { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
+    { heading: S("الكلمات السلبية", "Negative keywords", "وشە نەرێنییەکان"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار"), SRC], data: negs } },
+    { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
+  ];
+  return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: `${input.brand} · ${markets.map(mName).join(" / ")}`, lang: l, sections };
 }

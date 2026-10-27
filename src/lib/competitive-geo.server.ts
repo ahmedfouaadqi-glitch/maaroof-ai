@@ -23,7 +23,7 @@ async function findSite(name: string, userId: string): Promise<string | null> {
 export async function gatherParties(o: { brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string }): Promise<PartyEvidence[]> {
   const parties: Array<Omit<PartyEvidence, "pageText">> = [{ name: o.brand, role: "brand", url: o.site || null, found: "user" }];
   for (const c of o.competitors.slice(0, 4)) parties.push({ name: c, role: "competitor", url: null, found: "user" });
-  if (!o.competitors.length && o.category) {
+  if (o.category && parties.length < 5) {
     // Candidates from a real web search per market; each keeps its result url.
     const brandHost = o.site ? hostOf(o.site) : "";
     for (const m of o.markets.slice(0, 3)) {
@@ -68,4 +68,16 @@ export async function askEnginesPerMarket(category: string, markets: Market[]): 
       return p ? { market: m.code, engine: e.key, status: "answered", answer: p.answer, urls: p.urls } : { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] };
     } catch { return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] }; }
   }));
+}
+
+/** Public social pages/posts that mention each party (search results only; nothing invented). */
+export async function gatherSocial(names: string[], userId: string): Promise<Array<{ party: string; url: string; text: string }>> {
+  const out: Array<{ party: string; url: string; text: string }> = [];
+  await Promise.all(names.slice(0, 5).map(async (n) => {
+    try {
+      const rows = rowsOf(await fcSearch(`"${n}" (site:instagram.com OR site:tiktok.com OR site:facebook.com OR site:x.com)`, { limit: 4 }, { userId, toolKey: "competitive_geo" }));
+      for (const r of rows) if (r?.url) out.push({ party: n, url: String(r.url), text: `${r.title || ""} ${r.description || ""}` });
+    } catch { /* no result recorded */ }
+  }));
+  return out;
 }
