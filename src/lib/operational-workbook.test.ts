@@ -108,6 +108,38 @@ describe("operational workbook", () => {
     expect(unasked[3]).toBe("Not tested in engine query");
   });
 
+  it("reports distinct provider failures in the execution summary", () => {
+    const p = buildOperationalPayload({
+      brand: "B",
+      lang: "en",
+      markets: detectMarkets(["USA"]),
+      sheets: [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: [["designer dress"]], totalRows: 1, truncated: false }],
+      parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: [
+        { market: "us", engine: "chatgpt", status: "answered", answer: "Try boutiques", urls: [], query: '"designer dress"' },
+        { market: "us", engine: "gemini", status: "no_answer", answer: "", urls: [], query: '"designer dress"', error: "Provider API key is not configured" },
+        { market: "us", engine: "claude", status: "empty", answer: "", urls: [], query: '"designer dress"', error: "Provider returned no message content" },
+        { market: "us", engine: "qwen", status: "timeout", answer: "", urls: [], query: '"designer dress"', error: "Request timed out" },
+        { market: "us", engine: "mistral", status: "http_error", answer: "", urls: [], query: '"designer dress"', error: "HTTP 429" },
+        { market: "us", engine: "deepseek", status: "error", answer: "", urls: [], query: '"designer dress"', error: "Network failure" },
+      ],
+      clusterAnswers: [
+        { market: "us", engine: "chatgpt", status: "answered", answer: "Try boutiques", keywords: ["designer dress"] },
+        { market: "us", engine: "qwen", status: "timeout", answer: "", keywords: ["designer dress"], error: "Request timed out" },
+      ],
+      alexandria: { connected: false, note: "unreachable" },
+    });
+    const execution = p.sections.find((s) => s.heading === "Execution and errors")!.table!.data;
+    const marketProbes = execution.find((row) => row[0] === "Market engine probes")!;
+    expect(marketProbes.slice(1, 8)).toEqual([6, 1, 1, 1, 1, 1, 1]);
+    const clusters = execution.find((row) => row[0] === "Keyword cluster probes")!;
+    expect(clusters.slice(1, 8)).toEqual([2, 1, 0, 0, 1, 0, 0]);
+    const engineLog = p.sections.find((s) => s.heading === "Ten-engine answer and status log")!.table!.data;
+    expect(engineLog.some((row) => row.includes("HTTP 429") && row.includes("http_error"))).toBe(true);
+    const alexRow = execution.find((row) => row[0] === "Optional Alexandria source")!;
+    expect(alexRow.slice(1, 4)).toEqual([1, 0, 1]);
+  });
+
   it("classifies question keywords as AEO", () => {
     expect(keywordAxis("how to clean a dior bag").axis).toBe("AEO");
     expect(keywordAxis("best luxury bags").axis).toBe("GEO");

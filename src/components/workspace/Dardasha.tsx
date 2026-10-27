@@ -456,6 +456,16 @@ function SheetInventory({
   );
 }
 
+type ProbeDiagnostics = {
+  asked: number;
+  answered: number;
+  no_answer: number;
+  empty: number;
+  timeout: number;
+  http_error: number;
+  error: number;
+};
+
 type DualRes = {
   payload: any;
   summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>;
@@ -463,6 +473,14 @@ type DualRes = {
   charged: number;
   llms?: string;
   negatives?: string[];
+  clusters?: { asked: number; answered: number; probes_asked: number; probes_answered: number };
+  diagnostics?: {
+    market_probes: ProbeDiagnostics;
+    cluster_probes: ProbeDiagnostics;
+    pages: { urls: number; read: number; unread: number };
+    social: { searched_parties: number; parties_with_results: number; results: number };
+    alexandria: { connected: boolean; note: string };
+  };
   context?: { brand: string; site: string; category: string; categorySource: string; marketSource: string };
 };
 
@@ -605,10 +623,48 @@ function SecondResult({
           {busy ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />{tr(lang, "جارٍ البحث والتحقق…", "Researching and verifying…", "گەڕان و پشتڕاستکردنەوە…")}</> : tr(lang, "ابدأ البحث", "Start research", "دەستپێبکە")}
         </button>
       </div>
+      {busy && (
+        <div role="status" aria-live="polite" className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+          <div className="flex items-center gap-2 font-semibold">
+            <LoaderCircle className="size-4 animate-spin text-primary" />
+            {tr(lang, "مسار البحث قيد التنفيذ", "Research workflow is running", "ڕێڕەوی گەڕان لە جێبەجێکردندایە")}
+          </div>
+          <p className="mt-1 text-muted-foreground">{tr(lang, "يشمل المسار قراءة الكلمات حسب السوق، واختبار المحركات ومجموعات الكلمات، وقراءة صفحات المصادر، ثم بناء ملف Excel. ستظهر أعداد الإجابات والأخطاء الفعلية بعد اكتمال الطلب.", "The workflow reads market-specific keywords, probes engines and keyword clusters, reads available source pages, then builds the Excel workbook. Actual answer and error counts appear when the request finishes.", "ڕێڕەوەکە وشەکان بەپێی بازاڕ دەخوێنێتەوە، بزوێنەر و کۆمەڵە وشەکان تاقی دەکاتەوە، پەڕەی سەرچاوەکان دەخوێنێتەوە، پاشان فایلی Excel دروست دەکات. ژمارەی وەڵام و هەڵە دوای تەواوبوونی داواکاری دەردەکەوێت.")}</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-1/3 animate-pulse rounded-full bg-primary/70" /></div>
+        </div>
+      )}
       {err && <p className="mt-2 text-destructive">{err}</p>}
       {res && (
         <div className="mt-2 space-y-2">
           {res.context && <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-muted-foreground">{tr(lang, "سياق التحليل الفعلي", "Resolved analysis context", "پاشبنەمای شیکردنەوە")}: {res.context.brand} · {res.context.category} · {res.context.marketSource}</div>}
+          {res.diagnostics && (
+            <div className="rounded-lg border border-border/60 bg-background p-3">
+              <p className="font-semibold">{tr(lang, "حالة التنفيذ والأدلة", "Execution and evidence status", "دۆخی جێبەجێکردن و بەڵگە")}</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-md bg-muted/30 p-2">
+                  <p className="font-medium">{tr(lang, "استعلامات المحركات حسب السوق", "Market engine probes", "تاقیکردنەوەی بزوێنەر بەپێی بازاڕ")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.market_probes.answered}/{res.diagnostics.market_probes.asked} {tr(lang, "إجابة", "answered", "وەڵام")}; {res.diagnostics.market_probes.no_answer} {tr(lang, "بلا إجابة", "no answer", "بێ وەڵام")}; {res.diagnostics.market_probes.empty} {tr(lang, "فارغة", "empty", "بەتاڵ")}; {res.diagnostics.market_probes.timeout} {tr(lang, "انتهاء مهلة", "timeouts", "کاتی تەواوبوون")}; {res.diagnostics.market_probes.http_error} HTTP; {res.diagnostics.market_probes.error} {tr(lang, "أخطاء أخرى", "other errors", "هەڵەی تر")}</p>
+                </div>
+                <div className="rounded-md bg-muted/30 p-2">
+                  <p className="font-medium">{tr(lang, "استعلامات مجموعات الكلمات", "Keyword cluster probes", "تاقیکردنەوەی کۆمەڵە وشەکان")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.cluster_probes.answered}/{res.diagnostics.cluster_probes.asked} {tr(lang, "إجابة", "answered", "وەڵام")}; {res.diagnostics.cluster_probes.no_answer} {tr(lang, "بلا إجابة", "no answer", "بێ وەڵام")}; {res.diagnostics.cluster_probes.empty} {tr(lang, "فارغة", "empty", "بەتاڵ")}; {res.diagnostics.cluster_probes.timeout} {tr(lang, "انتهاء مهلة", "timeouts", "کاتی تەواوبوون")}; {res.diagnostics.cluster_probes.http_error} HTTP; {res.diagnostics.cluster_probes.error} {tr(lang, "أخطاء أخرى", "other errors", "هەڵەی تر")}</p>
+                </div>
+                <div className="rounded-md bg-muted/30 p-2">
+                  <p className="font-medium">{tr(lang, "قراءة صفحات المصادر", "Source page reads", "خوێندنەوەی پەڕەی سەرچاوە")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.pages.read}/{res.diagnostics.pages.urls} {tr(lang, "صفحة مقروءة", "pages read", "پەڕە خوێندراوە")}; {res.diagnostics.pages.unread} {tr(lang, "رابط بلا نص مستخرج", "URLs without extracted text", "بەستەر بەبێ دەقی وەرگیراو")}</p>
+                </div>
+                <div className="rounded-md bg-muted/30 p-2">
+                  <p className="font-medium">{tr(lang, "نتائج البحث الاجتماعي", "Social search results", "ئەنجامی گەڕانی سۆشیال")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.social.results} {tr(lang, "نتيجة مسجلة", "results recorded", "ئەنجام تۆمارکراوە")} · {res.diagnostics.social.parties_with_results}/{res.diagnostics.social.searched_parties} {tr(lang, "جهة لها نتائج", "parties with results", "لایەن ئەنجامی هەیە")}</p>
+                </div>
+                <div className="rounded-md bg-muted/30 p-2 sm:col-span-2">
+                  <p className="font-medium">{tr(lang, "مصدر البيانات الاختياري", "Optional evidence connector", "پەیوەندی بەڵگەی هەڵبژاردە")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.alexandria.connected ? tr(lang, "متصل", "Connected", "پەیوەستە") : tr(lang, "غير متصل أو لم يقدم أدلة قابلة للاستخدام", "Not connected or no usable evidence returned", "پەیوەست نییە یان بەڵگەی بەسوود نەگەڕێندراوەتەوە")} {res.diagnostics.alexandria.note ? "— " + res.diagnostics.alexandria.note : ""}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">{tr(lang, "«إجابة» تعني أن النص وصل فقط؛ لا تعني أن المحرك ذكر العلامة أو أن ترتيبها قيس. التفاصيل والأسئلة الفعلية مسجلة في ملف Excel.", "“Answered” means text was returned; it does not mean the engine mentioned the brand or that a ranking was measured. Exact prompts and detail are in the Excel file.", "«وەڵام» واتای گەیشتنی دەقە؛ واتای باسکردنی براند یان پێوانەکردنی ڕیزبەندی نییە. وردەکاری و پرسیارە ڕاستەقینەکان لە فایلی Excel تۆمارکراون.")}</p>
+            </div>
+          )}
           {res.summary.map((s) => (
             <div key={s.market} className="rounded-lg bg-muted/30 px-2 py-1">
               <span className="font-medium">{s.label}</span>: {s.voice.map((v) => v.name + " " + (v.percent === null ? tr(lang, "غير متوفر", "n/a", "نییە") : String(v.percent) + "% (" + v.mentioned + "/" + v.answered + ")")).join(" · ")}

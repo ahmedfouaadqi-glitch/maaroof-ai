@@ -175,7 +175,25 @@ export const Route = createFileRoute("/api/dual-result")({
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
         if (pack.orgJsonld) payload.sections.push({ heading: "Organization JSON-LD", kind: "text", text: pack.orgJsonld });
         const summary = markets.map((m: any) => ({ market: m.code, label: lang === "ar" ? m.ar : m.en, voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })) }));
-        return Response.json({ payload, summary, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource }, charged: charge.tokens || 0, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        const summarizeStatuses = (items: Array<{ status: string }>) => ({
+          asked: items.length,
+          answered: items.filter((item) => item.status === "answered").length,
+          no_answer: items.filter((item) => item.status === "no_answer").length,
+          empty: items.filter((item) => item.status === "empty").length,
+          timeout: items.filter((item) => item.status === "timeout").length,
+          http_error: items.filter((item) => item.status === "http_error").length,
+          error: items.filter((item) => item.status === "error").length,
+        });
+        const pageUrls = parties.filter((party) => Boolean(party.url));
+        const socialPartiesWithResults = new Set(social.map((item) => item.party)).size;
+        const diagnostics = {
+          market_probes: summarizeStatuses(engineAnswers),
+          cluster_probes: summarizeStatuses(clusterAnswers),
+          pages: { urls: pageUrls.length, read: pageUrls.filter((party) => Boolean(party.pageText)).length, unread: pageUrls.filter((party) => !party.pageText).length },
+          social: { searched_parties: Math.min(parties.length, 5), parties_with_results: socialPartiesWithResults, results: social.length },
+          alexandria: { connected: alexandria.connected, note: alexandria.note || "" },
+        };
+        return Response.json({ payload, summary, diagnostics, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource }, charged: charge.tokens || 0, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },

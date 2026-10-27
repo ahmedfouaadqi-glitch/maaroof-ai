@@ -18,7 +18,7 @@ export type PartyEvidence = {
   description?: string | null;
 };
 
-export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer"; answer: string; urls: string[]; query?: string };
+export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string };
 
 export type ResearchInput = {
   brand: string;
@@ -289,12 +289,13 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     answer.query || NA[l],
     answer.answer || NA[l],
     answer.urls.join("\n") || NA[l],
+    answer.error || NA[l],
     answer.urls.length ? S("روابط أعادها المحرك؛ لم تتحقق مستقلًا", "URLs returned by engine; not independently verified", "بەستەرەکانی بزوێنەر؛ سەربەخۆ پشتڕاست نەکراونەتەوە") : NA[l],
   ]);
   const engineStatusSection: ExportSection = {
     heading: S("سجل إجابات المحركات العشرة", "Ten-engine answer and status log", "تۆماری وەڵام و دۆخی دە بزوێنەر"),
     kind: "table",
-    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال المرسل فعليًا", "Actual query sent", "پرسیاری ڕاستەقینەی نێردراو"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("السؤال المرسل فعليًا", "Actual query sent", "پرسیاری ڕاستەقینەی نێردراو"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("خطأ أو سبب عدم الإجابة", "Error or no-answer reason", "هۆی هەڵە یان بێ وەڵام"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
   };
   const clusterStatusRows: (string | number)[][] = (input.clusterAnswers || []).map((answer) => [
     marketLabel(answer.market),
@@ -302,12 +303,41 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     answer.engine,
     answer.status,
     answer.answer || NA[l],
+    answer.error || NA[l],
     S("استجابة مسجلة لمجموعة كلمات؛ لا تعني قياس ترتيب", "Recorded cluster response; not a ranking measurement", "وەڵامی کۆمەڵە وشەی تۆمارکراو؛ پێوانەی ڕیزبەندی نییە"),
   ]);
   const clusterStatusSection: ExportSection = {
     heading: S("نتائج اختبار مجموعات الكلمات", "Keyword-cluster probe results", "ئەنجامی تاقیکردنەوەی کۆمەڵە وشەکان"),
     kind: "table",
-    table: { columns: [S("السوق", "Market", "بازاڕ"), S("الكلمات المختبرة", "Keywords tested", "وشە تاقیکراوەکان"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("حد القياس", "Measurement limit", "سنووری پێوانە")], data: clusterStatusRows },
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("الكلمات المختبرة", "Keywords tested", "وشە تاقیکراوەکان"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("خطأ أو سبب عدم الإجابة", "Error or no-answer reason", "هۆی هەڵە یان بێ وەڵام"), S("حد القياس", "Measurement limit", "سنووری پێوانە")], data: clusterStatusRows },
+  };
+  const statusCounts = (items: Array<{ status: string }>) => ({
+    answered: items.filter((item) => item.status === "answered").length,
+    noAnswer: items.filter((item) => item.status === "no_answer").length,
+    empty: items.filter((item) => item.status === "empty").length,
+    timeout: items.filter((item) => item.status === "timeout").length,
+    httpError: items.filter((item) => item.status === "http_error").length,
+    error: items.filter((item) => item.status === "error").length,
+  });
+  const marketProbeCounts = statusCounts(engineAnswers);
+  const clusterProbeCounts = statusCounts(input.clusterAnswers || []);
+  const partyUrls = parties.filter((party) => Boolean(party.url));
+  const pageReadCount = partyUrls.filter((party) => Boolean(party.pageText)).length;
+  const socialResults = input.social || [];
+  const socialPartyCount = new Set(socialResults.map((item) => item.party)).size;
+  const alexandriaAttempted = input.alexandria?.connected || Boolean(input.alexandria?.note) ? 1 : 0;
+  const alexandriaSuccess = input.alexandria?.connected ? 1 : 0;
+  const executionRows: (string | number)[][] = [
+    [S("اختبارات المحركات حسب السوق", "Market engine probes", "تاقیکردنەوەی بزوێنەر بەپێی بازاڕ"), engineAnswers.length, marketProbeCounts.answered, marketProbeCounts.noAnswer, marketProbeCounts.empty, marketProbeCounts.timeout, marketProbeCounts.httpError, marketProbeCounts.error, S("الإجابة المسجلة لا تعني أن النتيجة صحيحة أو أن العلامة ظهرت؛ راجع نص السؤال والإجابة.", "A recorded answer does not prove accuracy or brand visibility; inspect the actual query and answer.", "تۆمارکردنی وەڵام بەڵگەی دروستی یان دەرکەوتنی براند نییە؛ پرسیار و وەڵام بپشکنە.")],
+    [S("اختبارات مجموعات الكلمات", "Keyword cluster probes", "تاقیکردنەوەی کۆمەڵە وشەکان"), (input.clusterAnswers || []).length, clusterProbeCounts.answered, clusterProbeCounts.noAnswer, clusterProbeCounts.empty, clusterProbeCounts.timeout, clusterProbeCounts.httpError, clusterProbeCounts.error, S("النتائج تخص مجموعة الكلمات المسجلة فقط؛ ليست ترتيبًا عامًا.", "Results apply only to the recorded keyword cluster; they are not general rankings.", "ئەنجامەکان تەنها بۆ کۆمەڵە وشەی تۆمارکراوە؛ ڕیزبەندی گشتی نییە.")],
+    [S("قراءة صفحات العلامة والمنافسين", "Brand and competitor page reads", "خوێندنەوەی پەڕەی براند و ڕکابەران"), partyUrls.length, pageReadCount, partyUrls.length - pageReadCount, 0, 0, 0, 0, S("عدد الصفحات ذات النص المستخرج من بين الروابط المعروفة؛ الرابط وحده لا يعني قراءة الصفحة.", "Pages with extracted text among known URLs; a URL alone does not mean the page was read.", "پەڕەکانی دەقی وەرگیراو لە نێوان بەستەرە ناسراوەکان؛ بەستەر بە تەنها واتای خوێندنەوە نییە.")],
+    [S("نتائج البحث الاجتماعي العامة", "Public social search results", "ئەنجامەکانی گەڕانی گشتیی سۆشیال"), Math.min(parties.length, 5), socialPartyCount, Math.max(0, Math.min(parties.length, 5) - socialPartyCount), 0, 0, 0, 0, S("العدد هو حساب الجهات التي ظهر لها رابط واحد على الأقل؛ عدم ظهور رابط لا يثبت عدم وجود محتوى.", "Counts parties with at least one result; no result does not prove no content exists.", "ژمارەی لایەنەکانی هەیە کەمترین یەک بەستەریان هەیە؛ نەبوونی ئەنجام بەڵگەی نەبوونی ناوەڕۆک نییە.")],
+    [S("مصدر Alexandria الاختياري", "Optional Alexandria source", "سەرچاوەی هەڵبژاردەی Alexandria"), alexandriaAttempted, alexandriaSuccess, Math.max(0, alexandriaAttempted - alexandriaSuccess), 0, 0, 0, 0, input.alexandria?.note || S("غير مهيأ أو لا توجد أدلة قابلة للاستخدام؛ لا تُستبدل بياناته ببيانات تخمينية.", "Not configured or no usable evidence; no speculative replacement data is used.", "ئامادە نەکراوە یان بەڵگەی بەسوود نییە؛ داتای خەمڵێنراو جێگای ناگرێتەوە.")],
+  ];
+  const executionSection: ExportSection = {
+    heading: S("التنفيذ والأخطاء", "Execution and errors", "جێبەجێکردن و هەڵەکان"),
+    kind: "table",
+    table: { columns: [S("النشاط", "Activity", "چالاکی"), S("المحاولات / الروابط", "Attempts / URLs", "هەوڵ / بەستەر"), S("إجابات / قراءات ناجحة", "Answered / read", "وەڵام / خوێندنەوە"), S("لا إجابة / غير متاح", "No answer / unavailable", "بێ وەڵام / بەردەست نییە"), S("فارغ", "Empty", "بەتاڵ"), S("انتهاء مهلة", "Timeouts", "کاتی تەواوبوون"), S("أخطاء HTTP", "HTTP errors", "هەڵەی HTTP"), S("أخطاء أخرى", "Other errors", "هەڵەی تر"), S("حدود التفسير", "Interpretation limits", "سنووری لێکدانەوە")], data: executionRows },
   };
   const evidenceRows: (string | number)[][] = [];
   for (const party of parties) if (party.url) evidenceRows.push([party.role, party.name, party.url, party.pageText ? S("تم جلب نص الصفحة", "Page text fetched", "دەقی پەڕە وەرگیرا") : S("رابط فقط؛ الصفحة لم تُقرأ", "URL only; page not read", "تەنها بەستەر؛ پەڕە نەخوێندراوەتەوە"), party.found]);
@@ -319,7 +349,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     table: { columns: [S("نوع المصدر", "Source type", "جۆری سەرچاوە"), S("الجهة / السياق", "Entity / context", "لایەن / پاشبنەما"), S("الرابط", "URL", "بەستەر"), S("ما الذي تحقق", "What was checked", "چی پشکنرا"), S("منشأ النتيجة", "Provenance", "سەرچاوەی ئەنجام")], data: evidenceRows },
   };
   sections.splice(1, 0, sourceInventory, ...originalDataSections);
-  sections.splice(2 + originalDataSections.length, 0, engineStatusSection, clusterStatusSection, evidenceSection);
+  sections.splice(2 + originalDataSections.length, 0, engineStatusSection, clusterStatusSection, executionSection, evidenceSection);
 
   return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: input.brand + " · " + markets.map(mName).join(" / "), lang: l, sections };
 }

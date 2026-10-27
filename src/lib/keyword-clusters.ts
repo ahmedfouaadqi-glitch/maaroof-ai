@@ -33,7 +33,7 @@ export function clusterQuestion(c: KeywordCluster, marketName: string): string {
   return `A user in ${marketName} searches for: ${c.keywords.map((k) => `"${k}"`).join(", ")}. Which providers, brands or websites would you recommend and why? Answer organically.`;
 }
 
-export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer"; answer: string; keywords: string[] };
+export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; error?: string };
 
 /** Measured score for one keyword: engines whose cluster answer contains it. null = not measured. */
 export function clusterScore(answers: ClusterAnswer[], market: string, keyword: string): { engines: string[]; answered: number } | null {
