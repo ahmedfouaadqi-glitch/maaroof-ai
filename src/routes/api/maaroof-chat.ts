@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { detectGeoFromRequest, effectiveGeo, normalizeGeoScope } from "@/lib/maaroof/geo.server";
 import { buildFiveAxisAuditGoal, detectFiveAxisAuditRequest, fiveAxisAuditReply } from "@/lib/maaroof/chat-axis-audit";
+import { MAX_DARDASHA_MESSAGE_CHARS } from "@/lib/maaroof/dardasha";
 
 async function authed(request: Request) {
   const auth = request.headers.get("authorization") || "";
@@ -67,8 +68,11 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         const workspace = await resolveWorkspace(admin, userId, body?.workspace_id ?? new URL(request.url).searchParams.get("workspace_id"));
         if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
         const workspaceId = workspace.id;
-        const message = String(body?.message || "").trim().slice(0, 2000);
+        const message = String(body?.message || "").trim();
         if (!message) return Response.json({ error: "message_required" }, { status: 400 });
+        if (message.length > MAX_DARDASHA_MESSAGE_CHARS) {
+          return Response.json({ error: "message_too_long", max_chars: MAX_DARDASHA_MESSAGE_CHARS }, { status: 413 });
+        }
         let threadId = typeof body?.thread_id === "string" && (body.thread_id === "legacy" || /^[0-9a-f-]{36}$/i.test(body.thread_id)) ? body.thread_id : "";
         if (threadId && threadId !== "legacy") {
           const { data: th } = await admin.from("chat_threads").select("id").eq("id", threadId).eq("user_id", userId).maybeSingle();
