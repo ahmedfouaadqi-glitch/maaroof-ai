@@ -76,9 +76,9 @@ export function authoritySignals(p: PartyEvidence) {
   };
 }
 
-/** Share of voice: share of answering engines whose answer names the party. */
+/** Share of voice counts direct primary answers only; gateway stand-ins are not direct engine observations. */
 export function shareOfVoice(answers: EngineAnswer[], name: string): { answered: number; mentioned: number; percent: number | null } {
-  const a = answers.filter((x) => x.status === "answered");
+  const a = answers.filter((x) => x.status === "answered" && x.provider_path !== "fallback");
   const n = name.toLowerCase().trim();
   const mentioned = n ? a.filter((x) => x.answer.toLowerCase().includes(n)).length : 0;
   return { answered: a.length, mentioned, percent: a.length ? Math.round((mentioned / a.length) * 100) : null };
@@ -129,7 +129,7 @@ export const ENGINE_KEYS = Object.keys(ENGINE_FORM);
 export function enginesMentioning(answers: EngineAnswer[], market: string, k: string): string[] {
   const kw = k.toLowerCase().trim();
   if (kw.length < 3) return [];
-  return [...new Set(answers.filter((a) => a.market === market && a.status === "answered" && a.answer.toLowerCase().includes(kw)).map((a) => a.engine))];
+  return [...new Set(answers.filter((a) => a.market === market && a.status === "answered" && a.provider_path !== "fallback" && a.answer.toLowerCase().includes(kw)).map((a) => a.engine))];
 }
 
 function dedupeNegatives(rows: Array<[string, string, string, string]>): Array<[string, string, string, string]> {
@@ -189,22 +189,30 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       const cs = clusterScore(input.clusterAnswers || [], m.code, r.k);
       const quotedKeyword = '"' + r.k.slice(0, 180).toLowerCase().replace(/"/g, "") + '"';
       const matchingProbes = engineAnswers.filter((answer) => answer.market === m.code && String(answer.query || "").toLowerCase().includes(quotedKeyword));
-      const answeredProbes = matchingProbes.filter((answer) => answer.status === "answered");
+      const directProbes = matchingProbes.filter((answer) => answer.provider_path !== "fallback");
+      const answeredProbes = directProbes.filter((answer) => answer.status === "answered");
+      const proxyAnsweredProbes = matchingProbes.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback");
       const eng = cs
         ? cs.engines
         : [...new Set(answeredProbes.filter((answer) => answer.answer.toLowerCase().includes(r.k.toLowerCase())).map((answer) => answer.engine))];
-      const NOT_M = S("لم تُقَس", "Not measured", "نەپێوراوە");
+      const NOT_M = S("لم تُقَس مباشرةً", "Not measured directly", "ڕاستەوخۆ نەپێوراوە");
       const score = cs ? (String(eng.length) + "/" + cs.answered) : answeredProbes.length ? (String(eng.length) + "/" + answeredProbes.length) : NOT_M;
       const engineLabel = eng.join(", ") || (cs || answeredProbes.length
-        ? S("لم يرد ذكر حرفي في الإجابات", "No literal mention in answers", "هیچ باسکردنێکی ڕاستەوخۆ نییە")
-        : S("لم تُختبر هذه الكلمة في سؤال المحرك", "Not tested in engine query", "ئەم وشەیە لە پرسیاری بزوێنەر تاقی نەکراوەتەوە"));
+        ? S("لم يرد ذكر حرفي في الإجابات المباشرة", "No literal mention in direct answers", "باسکردنی ڕاستەوخۆ لە وەڵامەکاندا نییە")
+        : proxyAnsweredProbes.length
+          ? S("أجاب المسار البديل؛ هذا ليس قياسًا مباشرًا لظهور المحرك", "Fallback model answered; this is not a direct engine visibility measurement", "ڕێڕەوی جێگرەوە وەڵامی دا؛ ئەمە پێوانەی ڕاستەوخۆی دەرکەوتنی بزوێنەر نییە")
+          : directProbes.length
+            ? S("أُرسلت الكلمة لكن لم تسجل إجابة مباشرة ناجحة", "Keyword was sent but no successful direct answer was recorded", "وشەکە نێردرا بەڵام وەڵامی ڕاستەوخۆی سەرکەوتوو تۆمار نەکرا")
+            : S("لم تُختبر هذه الكلمة في سؤال المحرك", "Not tested in engine query", "ئەم وشەیە لە پرسیاری بزوێنەر تاقی نەکراوەتەوە"));
       const provenance = cs
         ? S("سؤال مستقل لمجموعة الكلمة", "Separate cluster question", "پرسیاری جیا بۆ کۆمەڵە وشە")
         : answeredProbes.length
           ? SRC_ENG
-          : matchingProbes.length
-            ? S("أُرسلت الكلمة لكن لم تسجل إجابة ناجحة", "Keyword sent but no successful answers recorded", "وشەکە نێردرا بەڵام وەڵامی سەرکەوتوو تۆمار نەکرا")
-            : S("لم تُرسل الكلمة في سؤال المحرك", "Keyword was not sent in the engine query", "وشەکە لە پرسیاری بزوێنەر نەنێردرا");
+          : proxyAnsweredProbes.length
+            ? S("استجابة مسار بديل؛ لا تدخل في حصة الظهور المباشر", "Fallback response; excluded from direct visibility share", "وەڵامی ڕێڕەوی جێگرەوە؛ لە بەشی دەرکەوتنی ڕاستەوخۆدا ناژمێردرێت")
+            : directProbes.length
+              ? S("أُرسلت الكلمة لكن لم تسجل إجابة مباشرة ناجحة", "Keyword was sent but no successful direct answer was recorded", "وشەکە نێردرا بەڵام وەڵامی ڕاستەوخۆی سەرکەوتوو تۆمار نەکرا")
+              : S("لم تُرسل الكلمة في سؤال المحرك", "Keyword was not sent in engine query", "وشەکە لە پرسیاری بزوێنەر نەنێردرا");
       perEngine.push([r.k, mName(m), score, engineLabel, ax.axis, ax.rule,
         ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
     }
