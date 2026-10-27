@@ -43,6 +43,14 @@ describe("keyword intelligence auto-start", () => {
       answeredMarketCalls: 10, answeredClusterCalls: 5, readablePages: 3,
       socialResults: 4, structuredEvidence: 2, failedProbes: 0,
     })).toBe("available");
+    expect(deriveEvidenceState({
+      answeredMarketCalls: 0, answeredClusterCalls: 0, proxyAnswerCalls: 10,
+      readablePages: 0, socialResults: 0, structuredEvidence: 0, failedProbes: 10,
+    })).toBe("partial");
+    expect(deriveEvidenceState({
+      answeredMarketCalls: 10, answeredClusterCalls: 0, proxyAnswerCalls: 0,
+      readablePages: 0, socialResults: 0, structuredEvidence: 0, failedProbes: 0,
+    })).toBe("available");
     expect(hasChargeableMarketEvidence(0, false)).toBe(false);
     expect(hasChargeableMarketEvidence(1, false)).toBe(true);
     expect(hasChargeableMarketEvidence(0, true)).toBe(true);
