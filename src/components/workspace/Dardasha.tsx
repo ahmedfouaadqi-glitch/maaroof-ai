@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { validateAttachment, attachmentPath } from "@/lib/attachments";
 import { composeChatMessage, MAX_DARDASHA_MESSAGE_CHARS, type DardashaAttachment } from "@/lib/maaroof/dardasha";
 import { resolveCompetitiveContext, type CompetitiveWorkspaceContext } from "@/lib/competitive-context";
+import { shouldAutoStartKeywordResearch } from "@/lib/keyword-intelligence-flow";
 import type { Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -550,13 +551,30 @@ function SecondResult({
     }
   };
 
+  const autoResearch = shouldAutoStartKeywordResearch(requestText, workbookHints);
+  const autoRunKey = useRef("");
+  useEffect(() => {
+    if (!autoResearch || res || busy) return;
+    const signature = [
+      attachmentId, requestText, hintsKey, brand, site, category, targetMarket, competitors,
+      JSON.stringify(toServerGeoScope(geoScope)),
+    ].join("\u0001");
+    if (autoRunKey.current === signature) return;
+    autoRunKey.current = signature;
+    void run();
+    // run is intentionally recreated with current form state; signature prevents duplicate execution.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoResearch, attachmentId, requestText, hintsKey, brand, site, category, targetMarket, competitors, res, busy, geoScope]);
+
   const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-xs";
   const scopeDisplay = getCompactGeoScopeDisplay(geoScope, lang);
   const showRequiredInputs = !brand.trim() || !category.trim() || needMarket;
   return (
     <div className="mt-3 rounded-xl border border-primary/30 bg-background p-3">
       <p className="font-semibold text-foreground">{tr(lang, "تحليل العلامة والمنافسين لكل سوق", "Brand and competitor research by market", "لێکۆڵینەوەی براند و ڕکابەران بەپێی بازاڕ")}</p>
-      <p className="mt-1 text-muted-foreground">{tr(lang, "سيستعيد معروف بيانات العميل والطلب والملف أولًا، ثم يكتشف المنافسين. لن يبدأ البحث المدفوع إلا عند الضغط على زر البدء.", "Maaroof will first reuse the client, request, and workbook context, then discover competitors. Research starts only when you click the button.", "معروف سەرەتا پاشبنەمای کڕیار و داواکاری و فایل بەکاردەهێنێت؛ گەڕان تەنها بە کرتەکردن دەست پێدەکات.")}</p>
+      <p className="mt-1 text-muted-foreground">{autoResearch
+        ? tr(lang, "طلبت تحليل كلمات مفتاحية مع مخرجات Excel؛ سيبدأ البحث تلقائيًا باستخدام سياق الملف ومساحة العمل. إذا تعذر استعادة معلومة أساسية، سيطلبها معروف بدل افتراضها.", "You requested keyword analysis with an Excel output; research will start automatically using workbook and workspace context. If a required detail cannot be recovered, Maaroof will ask rather than assume it.", "داواتی شیکردنەوەی وشە و دەرئەنجامی Excel کراوە؛ گەڕان بە شێوەی خۆکار دەست پێدەکات. ئەگەر زانیارییەکی پێویست نەدۆزرایەوە، معروف دەیپرسێت.")
+        : tr(lang, "سيستعيد معروف بيانات العميل والطلب والملف أولًا، ثم يكتشف المنافسين. لن يبدأ البحث المدفوع إلا عند الضغط على زر البدء.", "Maaroof will first reuse the client, request, and workbook context, then discover competitors. Research starts only when you click the button.", "معروف سەرەتا پاشبنەمای کڕیار و داواکاری و فایل بەکاردەهێنێت؛ گەڕان تەنها بە کرتەکردن دەست پێدەکات.")}</p>
 
       <div className="mt-3 grid gap-2 rounded-lg bg-muted/35 p-3 sm:grid-cols-2">
         <div><span className="text-muted-foreground">{tr(lang, "العلامة", "Brand", "براند")}:</span> <strong>{brand || tr(lang, "مطلوب", "Required", "پێویستە")}</strong></div>
