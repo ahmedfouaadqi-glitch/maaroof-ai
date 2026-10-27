@@ -175,6 +175,22 @@ Build a useful first report. Use sources only from the evidence above. Include p
           sources: Array.isArray(parsed.sources) ? parsed.sources.slice(0, 50) : [],
           evidence,
           notes: Array.isArray(parsed.notes) ? parsed.notes.map((x: any) => text(x, 400)).slice(0, 20) : [],
+          export_payload: {
+            title: "MAAROOF Ai — ذكاء الكلمات المفتاحية — " + brand,
+            subtitle: [market, language].filter(Boolean).join(" · "),
+            lang: language === "en" || language === "ku" ? language : "ar",
+            sections: [
+              { heading: "الملخص التنفيذي", kind: "text", text: text(parsed.summary, 2000) },
+              { heading: "الكلمات القديمة والجديدة", kind: "table", table: { columns: ["الكلمة", "النوع", "السوق", "اللغة", "نية البحث", "التشابه", "حصة الصوت", "الكثافة", "سلطة الموضوع", "الأولوية", "المصدر"], data: normalizeRows(parsed.old_new_comparison, 200).map((x: any) => [x.keyword, x.type, x.market, x.language, x.intent, x.similarity, x.share_of_voice ?? "غير متاح", x.density ?? "غير متاح", x.authority, x.priority, x.source]) } },
+              { heading: "كلمات المنافسين", kind: "table", table: { columns: ["الكلمة", "النوع", "السوق", "اللغة", "نية البحث", "التشابه", "حصة الصوت", "الكثافة", "سلطة الموضوع", "الأولوية", "المصدر"], data: normalizeRows(parsed.competitor_keywords, 200).map((x: any) => [x.keyword, x.type, x.market, x.language, x.intent, x.similarity, x.share_of_voice ?? "غير متاح", x.density ?? "غير متاح", x.authority, x.priority, x.source]) } },
+              { heading: "كلمات التواصل الاجتماعي", kind: "table", table: { columns: ["الكلمة", "النوع", "السوق", "اللغة", "نية البحث", "التشابه", "حصة الصوت", "الكثافة", "سلطة الموضوع", "الأولوية", "المصدر"], data: normalizeRows(parsed.social_keywords, 200).map((x: any) => [x.keyword, x.type, x.market, x.language, x.intent, x.similarity, x.share_of_voice ?? "غير متاح", x.density ?? "غير متاح", x.authority, x.priority, x.source]) } },
+              { heading: "محاور الظهور الستة", kind: "table", table: { columns: ["المحور", "الدرجة", "الأساس", "الإجراءات"], data: axes.map((x: any) => [x.axis, x.score, x.basis, x.actions.join("؛ ")]) } },
+              { heading: "المدة المتوقعة", kind: "table", table: { columns: ["المرحلة", "أسابيع من", "أسابيع إلى", "العمل", "الثقة"], data: (Array.isArray(parsed.time_to_impact) ? parsed.time_to_impact : []).slice(0, 12).map((x: any) => [text(x.phase, 100), Number(x.weeks_min) || 0, Number(x.weeks_max) || 0, text(x.work, 400), text(x.confidence, 30)]) } },
+              { heading: "الكلمات السلبية", kind: "table", table: { columns: ["الكلمة", "تنطبق على", "السبب"], data: (Array.isArray(parsed.negative_keywords) ? parsed.negative_keywords : []).slice(0, 100).map((x: any) => [text(x.keyword, 250), text(x.applies_to, 50), text(x.reason, 400)]) } },
+              { heading: "المنافسون: القوة والفجوات", kind: "table", table: { columns: ["المنافس", "التشابه", "نقاط القوة", "نقاط الضعف", "الفجوات", "المصدر"], data: (Array.isArray(parsed.brand_vs_competitors) ? parsed.brand_vs_competitors : []).slice(0, 20).map((x: any) => [text(x.competitor, 200), list(x.overlap, 20).join("؛ "), list(x.strengths, 20).join("؛ "), list(x.weaknesses, 20).join("؛ "), list(x.gaps, 20).join("؛ "), text(x.source, 500)]) } },
+              { heading: "المصادر", kind: "table", table: { columns: ["المصدر", "الرابط", "استخدامه"], data: (Array.isArray(parsed.sources) ? parsed.sources : []).slice(0, 50).map((x: any) => [text(x.title, 250), text(x.url, 500), text(x.used_for, 300)]) } },
+            ],
+          },
           report_version: "keyword-intelligence-v1",
           generated_at: new Date().toISOString(),
         };
