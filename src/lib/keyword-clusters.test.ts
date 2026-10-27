@@ -21,13 +21,13 @@ describe("keyword clusters", () => {
     expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 2 });
     expect(clusterScore(ans, "US", "abaya")).toBeNull();
   });
-  it("does not count fallback stand-ins as direct visibility measurements", () => {
+  it("counts usable fallback responses as answers", () => {
     const ans = [
       { market: "US", engine: "gpt", status: "answered" as const, answer: "Try wedding dress shops", keywords: ["wedding dress"], provider_path: "primary" as const },
       { market: "US", engine: "claude", status: "answered" as const, answer: "Try wedding dress shops", keywords: ["wedding dress"], provider_path: "fallback" as const },
       { market: "US", engine: "grok", status: "no_answer" as const, answer: "", keywords: ["wedding dress"] },
     ];
-    expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 1 });
+    expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 2 });
   });
 
   it("counts direct answered clusters for visibility and separately counts usable responses for charging", () => {
@@ -38,7 +38,7 @@ describe("keyword clusters", () => {
       { market: "US", engine: "d", status: "no_answer" as const, answer: "", keywords: ["z"] },
     ];
     expect(answeredClusterCount([{ market: "US", engine: "a", status: "no_answer", answer: "", keywords: ["z"] }])).toBe(0);
-    expect(answeredClusterCount(responses)).toBe(1);
+    expect(answeredClusterCount(responses)).toBe(2);
     expect(billableClusterCount(responses)).toBe(2);
     expect(billableClusterCount([
       { market: "US", engine: "a", status: "answered", answer: "y", keywords: ["x"] },
@@ -46,7 +46,7 @@ describe("keyword clusters", () => {
     ])).toBe(1);
     expect(answeredClusterCount([
       { market: "US", engine: "a", status: "answered", answer: "y", keywords: ["x"], provider_path: "fallback" },
-    ])).toBe(0);
+    ])).toBe(1);
   });
 });
 

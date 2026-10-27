@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keywordVisibilityProbeQuestion } from "./probe-answer";
+import { keywordVisibilityProbeQuestion, directBrandAuthorityQuestion } from "./probe-answer";
 
 describe("keywordVisibilityProbeQuestion", () => {
   it("grounds a blind market test in actual keyword phrases without priming the target brand", () => {
@@ -22,5 +22,11 @@ describe("keywordVisibilityProbeQuestion", () => {
   it("does not invent a keyword list when no keyword samples are supplied", () => {
     const q = keywordVisibilityProbeQuestion("Fashion", "Australia");
     expect(q).toContain("Use the category to understand the search context.");
+  });
+  it("localizes Arabic market prompts and offers a separate direct brand-authority probe", () => {
+    expect(keywordVisibilityProbeQuestion("نظارات شمسية فاخرة", "لبنان", ["نظارات توم فورد"])).toContain("أجب كـ JSON");
+    const q = directBrandAuthorityQuestion("Mengotti Couture", "https://mengotticouture.com", "Luxury eyewear", "لبنان", "ar");
+    expect(q).toContain("Mengotti Couture");
+    expect(q).toContain("لا تخترع روابط");
   });
 });
