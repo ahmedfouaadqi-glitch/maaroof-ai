@@ -1,4 +1,6 @@
 // Pure: target markets named in a workbook (sheet/column names) or the request text. Never assumed.
+import { NAMES } from "./countries";
+
 export type Market = { code: string; en: string; ar: string; gl: string };
 
 const MARKETS: Array<Market & { rx: RegExp }> = [
@@ -19,15 +21,27 @@ const MARKETS: Array<Market & { rx: RegExp }> = [
   { code: "de", en: "Germany", ar: "ألمانيا", gl: "de", rx: /\bgermany\b|ألمانيا|المانيا/i },
 ];
 
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\\]\\]/g, "\\];
+
+/** Markets found in the given texts, in first-seen order. Empty when none is named. */");
+const MARKET_LOOKUP: Array<Market & { rx: RegExp }> = [
+  ...MARKETS,
+  ...Object.entries(NAMES).flatMap(([rawCode, names]) => {
+    const code = rawCode.toLowerCase();
+    if (MARKETS.some((market) => market.code === code)) return [];
+    return [{ code, en: names.en, ar: names.ar, gl: code, rx: new RegExp("\\b" + escapeRegex(names.en) + "\\b|" + escapeRegex(names.ar), "i") }];
+  }),
+];
+
 /** Markets found in the given texts, in first-seen order. Empty when none is named. */
 export function detectMarkets(texts: string[]): Market[] {
   const out: Market[] = [];
-  for (const t of texts) for (const m of MARKETS) if (m.rx.test(String(t || "")) && !out.some((o) => o.code === m.code)) out.push({ code: m.code, en: m.en, ar: m.ar, gl: m.gl });
+  for (const t of texts) for (const m of MARKET_LOOKUP) if (m.rx.test(String(t || "")) && !out.some((o) => o.code === m.code)) out.push({ code: m.code, en: m.en, ar: m.ar, gl: m.gl });
   return out;
 }
 
 export function marketByCode(code: string): Market | null {
-  const m = MARKETS.find((x) => x.code === String(code || "").toLowerCase());
+  const m = MARKET_LOOKUP.find((x) => x.code === String(code || "").toLowerCase());
   return m ? { code: m.code, en: m.en, ar: m.ar, gl: m.gl } : null;
 }
 
