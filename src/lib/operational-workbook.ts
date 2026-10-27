@@ -219,7 +219,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       const engineLabel = eng.join(", ") || (cs || answeredProbes.length
         ? S("لم يرد ذكر حرفي في الإجابات المباشرة", "No literal mention in direct answers", "باسکردنی ڕاستەوخۆ لە وەڵامەکاندا نییە")
         : proxyAnsweredProbes.length
-          ? S("أجاب المسار البديل؛ هذا ليس قياسًا مباشرًا لظهور المحرك", "Fallback model answered; this is not a direct engine visibility measurement", "ڕێڕەوی جێگرەوە وەڵامی دا؛ ئەمە پێوانەی ڕاستەوخۆی دەرکەوتنی بزوێنەر نییە")
+          ? S("أجاب", "Answered", "وەڵامی دایەوە")
           : directProbes.length
             ? S("أُرسلت الكلمة لكن لم تسجل إجابة مباشرة ناجحة", "Keyword was sent but no successful direct answer was recorded", "وشەکە نێردرا بەڵام وەڵامی ڕاستەوخۆی سەرکەوتوو تۆمار نەکرا")
             : S("لم تُختبر هذه الكلمة في سؤال المحرك", "Not tested in engine query", "ئەم وشەیە لە پرسیاری بزوێنەر تاقی نەکراوەتەوە"));

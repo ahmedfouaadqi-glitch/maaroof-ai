@@ -115,7 +115,7 @@ export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clust
   const jobs = clusters.flatMap((c) => ENGINE_COUNCIL_MODELS.map((e) => ({ c, e })));
   return Promise.all(jobs.map(async ({ c, e }) => {
     const base = { market: c.market, engine: e.key, keywords: c.keywords };
-    const query = clusterQuestion(c, marketName(c.market));
+    const query = clusterQuestion(c, marketName(c.market), c.keywords.some((k) => /[\u0600-\u06FF]/.test(k)) ? "ar" : "en");
     const call = await askEngine(e.key, e.model, query);
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     if (parsed) return {
