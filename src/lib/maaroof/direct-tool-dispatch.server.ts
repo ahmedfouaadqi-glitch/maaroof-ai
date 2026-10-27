@@ -33,6 +33,7 @@ const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/api/social-analysis": () => import("@/routes/api/social-analysis"),
   "/api/what-if": () => import("@/routes/api/what-if"),
   "/api/brand-authority": () => import("@/routes/api/brand-authority"),
+  "/api/keyword-intelligence": () => import("@/routes/api/keyword-intelligence"),
   "/api/geo-rewrite": () => import("@/routes/api/geo-rewrite"),
 };
 
