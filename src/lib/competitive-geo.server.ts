@@ -2,7 +2,7 @@
 import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { ENGINE_COUNCIL_MODELS } from "@/lib/maaroof/tool-council";
 import { OPENROUTER_URL } from "@/lib/maaroof/openrouter.server";
-import { blindProbeQuestion, parseProbeContent, hostOf } from "@/lib/maaroof/probe-answer";
+import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf } from "@/lib/maaroof/probe-answer";
 import type { Market } from "@/lib/market-scope";
 import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
 
@@ -58,13 +58,13 @@ async function askEngine(model: string, q: string, key: string): Promise<string>
 }
 
 /** Ten engines × each market, the same blind question. No answer stays "no_answer". */
-export async function askEnginesPerMarket(category: string, markets: Market[]): Promise<EngineAnswer[]> {
+export async function askEnginesPerMarket(category: string, markets: Market[], keywordSamples: Record<string, string[]> = {}): Promise<EngineAnswer[]> {
   const key = process.env.OPENROUTER_API_KEY;
   const jobs = markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
   return Promise.all(jobs.map(async ({ m, e }): Promise<EngineAnswer> => {
     if (!key) return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] };
     try {
-      const p = parseProbeContent(await askEngine(e.model, blindProbeQuestion(category, m.en), key));
+      const p = parseProbeContent(await askEngine(e.model, keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || []), key));
       return p ? { market: m.code, engine: e.key, status: "answered", answer: p.answer, urls: p.urls } : { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] };
     } catch { return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [] }; }
   }));
