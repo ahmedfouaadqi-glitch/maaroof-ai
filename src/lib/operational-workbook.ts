@@ -123,20 +123,17 @@ export function allKeywords(sheets: SheetData[], max = 20000): string[] {
 /** Occurrence count of the exact keyword in the supplied text, normalized by word count. */
 export function keywordDensity(text: string | null, keyword: string): { words: number; occurrences: number; percent: number } | null {
   if (!text || !keyword.trim()) return null;
-  const words = (text.match(/[\\p{L}\\p{N}]+/gu) || []).length;
+  const words = (text.match(/[\p{L}\p{N}]+/gu) || []).length;
   if (!words) return null;
-  const escaped = keyword.trim().replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\export function allKeywords(sheets: SheetData[], max = 20000): string[] {
-  const set = new Set<string>();
-  for (const s of sheets) { const i = keywordColumn(s); if (i < 0) continue; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) set.add(v); if (set.size >= max) return [...set]; } }
-  return [...set];
-}").replace(/\\s+/g, "\\\\s+");
+  let escaped = "";
+  for (const ch of keyword.trim()) escaped += "\\^$.*+?()[]{}|".includes(ch) ? "\\" + ch : ch;
   let occurrences = 0;
   try { occurrences = (text.match(new RegExp(escaped, "giu")) || []).length; } catch { return null; }
   return { words, occurrences, percent: Math.round((occurrences / words) * 10000) / 100 };
 }
 
 function lexicalSimilarity(a: string, b: string): number {
-  const tokens = (value: string) => new Set((value.toLowerCase().match(/[\\p{L}\\p{N}]+/gu) || []).filter((x) => x.length > 1));
+  const tokens = (value: string) => new Set((value.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter((x) => x.length > 1));
   const aa = tokens(a); const bb = tokens(b);
   if (!aa.size || !bb.size) return 0;
   const intersection = [...aa].filter((x) => bb.has(x)).length;
@@ -145,7 +142,8 @@ function lexicalSimilarity(a: string, b: string): number {
   return Math.round(Math.max(jaccard, containment * 0.7) * 100);
 }
 
-function termKindLabel(kind: KRow["kind"], lang: ExportLang): string {
+type KeywordRowKind = "file" | "brand" | "competitor" | "social" | "opportunity";
+function termKindLabel(kind: KeywordRowKind, lang: ExportLang): string {
   if (lang === "en") return ({ file: "Existing workbook", brand: "Found on brand site", competitor: "Found on competitor site", social: "Found on social", opportunity: "New opportunity" })[kind];
   if (lang === "ku") return ({ file: "لە فایل", brand: "لە ماڵپەڕی براند", competitor: "لە ماڵپەڕی ڕکابەر", social: "لە سۆشیال", opportunity: "دەرفەتی نوێ" })[kind];
   return ({ file: "من الملف", brand: "موجودة في موقع العلامة", competitor: "موجودة في موقع منافس", social: "موجودة في التواصل", opportunity: "فرصة جديدة" })[kind];
@@ -233,7 +231,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const comps = parties.filter((p) => p.role === "competitor");
 
   // Market keyword rows (deduped per market)
-  type KRow = { k: string; m: Market; sheet: string; vol: Cell | null; kind: "file" | "brand" | "competitor" | "social" | "opportunity"; intent?: string; url?: string; party?: string };
+  type KRow = { k: string; m: Market; sheet: string; vol: Cell | null; kind: KeywordRowKind; intent?: string; url?: string; party?: string };
   const kRows: KRow[] = [];
   for (const m of markets) {
     const seen = new Set<string>();
