@@ -20,6 +20,25 @@ export type PartyEvidence = {
 
 export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string };
 
+export type DiscoveredKeyword = {
+  keyword: string;
+  market: string;
+  kind: "brand" | "competitor" | "social" | "opportunity";
+  intent?: string;
+  language?: string;
+  party?: string;
+  source?: string;
+  url?: string;
+  rationale?: string;
+};
+export type KeywordSearchEvidence = {
+  market: string;
+  source_type: "website" | "competitor" | "social" | "web_search";
+  entity: string;
+  title: string;
+  url: string;
+  text: string;
+};
 export type ResearchInput = {
   brand: string;
   lang: ExportLang;
@@ -35,6 +54,12 @@ export type ResearchInput = {
   llms?: string;
   /** Separate per-cluster engine answers; keywords without one show "not measured". */
   clusterAnswers?: ClusterAnswer[];
+  /** Keywords discovered from live brand/competitor pages, public social sources and web search. */
+  discoveredKeywords?: DiscoveredKeyword[];
+  /** Search results used to propose new phrases, retaining actual source URLs. */
+  searchEvidence?: KeywordSearchEvidence[];
+  /** Workbook mode compares proposed terms against the uploaded baseline; web mode does not label them as old. */
+  sourceMode?: "workbook" | "web_discovery";
 };
 
 const NEG_RX = /\b(free|cheap(est)?|used|second ?hand|fake|replica|copy|jobs?|careers?|diy|download|pdf|wholesale|rent(al)?|repair|meaning|tutorial)\b|مجان|مستعمل|تقليد|وظائف|وظيفة|تحميل|ايجار|إيجار|تصليح/i;
@@ -166,20 +191,46 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const SRC_ENG = S("من إجابات المحركات", "From engine answers", "لە وەڵامی بزوێنەرەکان");
   const SRC_RULE = S("قاعدة مكتوبة (مقترح)", "Written rule (suggested)", "یاسا (پێشنیار)");
   const mName = (m: Market) => (l === "ar" ? m.ar : m.en);
-  const keywords = allKeywords(sheets);
+  const fileKeywords = allKeywords(sheets);
+  const discovered = (input.discoveredKeywords || []).filter((x) => String(x.keyword || "").trim().length >= 3);
+  const keywords = Array.from(new Set([...fileKeywords, ...discovered.map((x) => x.keyword.trim())]));
+  const newIdeas = discovered.filter((x) => x.kind === "opportunity");
+  const currentBrandIdeas = discovered.filter((x) => x.kind === "brand");
+  const competitorIdeas = discovered.filter((x) => x.kind === "competitor");
+  const socialIdeas = discovered.filter((x) => x.kind === "social");
   const brand = parties.find((p) => p.role === "brand");
   const comps = parties.filter((p) => p.role === "competitor");
 
   // Market keyword rows (deduped per market)
-  type KRow = { k: string; m: Market; sheet: string; vol: Cell | null };
+  type KRow = { k: string; m: Market; sheet: string; vol: Cell | null; kind: "file" | "brand" | "competitor" | "social" | "opportunity"; intent?: string; url?: string; party?: string };
   const kRows: KRow[] = [];
   for (const m of markets) {
     const seen = new Set<string>();
     for (const s of sheetsForMarket(sheets, markets, m).filter((x) => !/negative|سلبي/i.test(x.name))) {
       const ki = keywordColumn(s); if (ki < 0) continue;
       const vc = (detectColumns(s.columns) as any).volume; const vi = vc ? s.columns.indexOf(vc) : -1;
-      for (const r of s.rows) { const k = String(r[ki] ?? "").trim(); const key = k.toLowerCase(); if (!k || seen.has(key)) continue; seen.add(key); kRows.push({ k, m, sheet: s.name, vol: vi >= 0 ? r[vi] : null }); }
+      for (const r of s.rows) { const k = String(r[ki] ?? "").trim(); const key = k.toLowerCase(); if (!k || seen.has(key)) continue; seen.add(key); kRows.push({ k, m, sheet: s.name, vol: vi >= 0 ? r[vi] : null, kind: "file" }); }
     }
+  }
+
+  // Add live-discovered terms without mixing them into the uploaded workbook baseline.
+  const kSeen = new Set(kRows.map((r) => r.m.code + "|" + r.k.toLowerCase()));
+  for (const term of discovered) {
+    const market = markets.find((m) => m.code === term.market) || (markets.length === 1 ? markets[0] : null);
+    if (!market) continue;
+    const key = market.code + "|" + term.keyword.trim().toLowerCase();
+    if (kSeen.has(key)) continue;
+    kSeen.add(key);
+    kRows.push({
+      k: term.keyword.trim(),
+      m: market,
+      sheet: term.source || (term.kind === "opportunity" ? "New keyword opportunity" : term.kind === "brand" ? "Brand page" : term.kind === "competitor" ? "Competitor page" : "Social source"),
+      vol: null,
+      kind: term.kind,
+      intent: term.intent,
+      url: term.url,
+      party: term.party,
+    });
   }
 
   // Negatives
