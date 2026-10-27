@@ -46,15 +46,30 @@ export async function gatherParties(o: { brand: string; site?: string; competito
   }));
 }
 
-async function askEngine(model: string, q: string, key: string): Promise<string> {
-  const res = await fetch(OPENROUTER_URL, {
-    method: "POST", signal: AbortSignal.timeout(30_000),
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "HTTP-Referer": "https://maaroofai.com", "X-Title": "Maaroof AI" },
-    body: JSON.stringify({ model, temperature: 0.2, max_tokens: 900, messages: [{ role: "system", content: 'Answer only from what you know. Reply as JSON {"answer": string, "brands": string[], "urls": string[]}. Do not invent URLs.' }, { role: "user", content: q }] }),
-  });
-  if (!res.ok) return "";
-  const j: any = await res.json().catch(() => null);
-  return String(j?.choices?.[0]?.message?.content || "");
+type EngineCallResult = { content: string; status: "response" | "http_error" | "timeout" | "error" | "empty"; detail: string };
+
+async function askEngine(model: string, q: string, key: string): Promise<EngineCallResult> {
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST", signal: AbortSignal.timeout(30_000),
+      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json", "HTTP-Referer": "https://maaroofai.com", "X-Title": "Maaroof AI" },
+      body: JSON.stringify({ model, temperature: 0.2, max_tokens: 900, messages: [{ role: "system", content: 'Answer only from what you know. Reply as JSON {"answer": string, "brands": string[], "urls": string[]}. Do not invent URLs.' }, { role: "user", content: q }] }),
+    });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      return { content: "", status: "http_error", detail: "HTTP " + res.status };
+    }
+    const j: any = await res.json().catch(() => null);
+    if (!j) return { content: "", status: "empty", detail: "Provider returned an empty or invalid JSON payload" };
+    const content = String(j?.choices?.[0]?.message?.content || "").trim();
+    return content
+      ? { content, status: "response", detail: "" }
+      : { content: "", status: "empty", detail: "Provider response had no message content" };
+  } catch (error: any) {
+    const message = String(error?.message || error || "Unknown provider request error").slice(0, 140);
+    const isTimeout = error?.name === "TimeoutError" || error?.name === "AbortError" || /timed?\s*out|timeout/i.test(message);
+    return { content: "", status: isTimeout ? "timeout" : "error", detail: message };
+  }
 }
 
 /** Ten engines × each market, the same blind question. No answer stays "no_answer". */
@@ -63,13 +78,13 @@ export async function askEnginesPerMarket(category: string, markets: Market[], k
   const jobs = markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
   return Promise.all(jobs.map(async ({ m, e }): Promise<EngineAnswer> => {
     const query = keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || []);
-    if (!key) return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query };
-    try {
-      const p = parseProbeContent(await askEngine(e.model, query, key));
-      return p
-        ? { market: m.code, engine: e.key, status: "answered", answer: p.answer, urls: p.urls, query }
-        : { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query };
-    } catch { return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query }; }
+    if (!key) return { market: m.code, engine: e.key, status: "no_answer", answer: "", urls: [], query, error: "Provider API key is not configured" };
+    const call = await askEngine(e.model, query, key);
+    const parsed = call.status === "response" ? parseProbeContent(call.content) : null;
+    if (parsed) return { market: m.code, engine: e.key, status: "answered", answer: parsed.answer, urls: parsed.urls, query };
+    const status = call.status === "response" ? "empty" : call.status;
+    const detail = call.status === "response" ? "Provider returned no usable answer" : call.detail;
+    return { market: m.code, engine: e.key, status, answer: "", urls: [], query, error: detail };
   }));
 }
 
@@ -92,11 +107,13 @@ export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clust
   const jobs = clusters.flatMap((c) => ENGINE_COUNCIL_MODELS.map((e) => ({ c, e })));
   return Promise.all(jobs.map(async ({ c, e }) => {
     const base = { market: c.market, engine: e.key, keywords: c.keywords };
-    if (!key) return { ...base, status: "no_answer" as const, answer: "" };
-    try {
-      const p = parseProbeContent(await askEngine(e.model, clusterQuestion(c, marketName(c.market)), key));
-      return p ? { ...base, status: "answered" as const, answer: p.answer } : { ...base, status: "no_answer" as const, answer: "" };
-    } catch { return { ...base, status: "no_answer" as const, answer: "" }; }
+    if (!key) return { ...base, status: "no_answer" as const, answer: "", error: "Provider API key is not configured" };
+    const call = await askEngine(e.model, clusterQuestion(c, marketName(c.market)), key);
+    const parsed = call.status === "response" ? parseProbeContent(call.content) : null;
+    if (parsed) return { ...base, status: "answered" as const, answer: parsed.answer };
+    const status = call.status === "response" ? "empty" : call.status;
+    const detail = call.status === "response" ? "Provider returned no usable answer" : call.detail;
+    return { ...base, status, answer: "", error: detail };
   }));
 }
 
