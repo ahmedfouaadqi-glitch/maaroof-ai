@@ -145,7 +145,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           if (ids.length) {
             const { data: atts } = await scopeWorkspace(admin.from("task_attachments").select("id, name, analysis, structure, status").eq("user_id", userId).in("id", ids), workspaceId);
             for (const at of (atts || []) as any[]) {
-              if (at.structure?.digest) { fileCtx += `\n\n[FILE "${at.name}" — full structured read]\n${String(at.structure.digest).slice(0, 90000 / ids.length)}`; sheetCards.push({ name: at.name, ...at.structure, digest: undefined }); }
+              if (at.structure?.digest) { fileCtx += `\n\n[FILE "${at.name}" — full structured read]\n${String(at.structure.digest).slice(0, 90000 / ids.length)}`; sheetCards.push({ name: at.name, attachment_id: at.id, ...at.structure, digest: undefined }); }
               else if (at.analysis) fileCtx += `\n\n[FILE "${at.name}" — analysis]\n${String(at.analysis).slice(0, 12000)}`;
             }
           }
