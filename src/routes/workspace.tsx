@@ -712,6 +712,7 @@ function WorkspacePage() {
         {((!finalEvent && !running && events.length === 0) || isAxisAuditGoal) && <div className="maaroof-chat-frame mb-4"><Dardasha
             lang={locale}
             workspaceId={activeWorkspaceId}
+            workspaceContext={activeWorkspace}
             busyTask={running}
             geoScope={geoScope}
             onGeoScopeChange={setGeoScope}
