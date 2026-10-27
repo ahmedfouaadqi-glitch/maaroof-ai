@@ -48,7 +48,7 @@ export function clusterScore(answers: ClusterAnswer[], market: string, keyword: 
 export function answeredClusterCount(answers: ClusterAnswer[]): number {
   return new Set(
     answers
-      .filter((a) => a.status === "answered" && a.provider_path !== "fallback")
+      .filter((a) => a.status === "answered")
       .map((a) => a.market + "|" + a.keywords.join("|"))
   ).size;
 }
