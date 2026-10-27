@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildClusters, clusterScore, answeredClusterCount } from "./keyword-clusters";
+import { buildClusters, clusterScore, answeredClusterCount, billableClusterCount } from "./keyword-clusters";
 import { missingPackFields, buildPack } from "./machine-pack";
 
 describe("keyword clusters", () => {
@@ -30,14 +30,24 @@ describe("keyword clusters", () => {
     expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 1 });
   });
 
-  it("counts only clusters with a real answer for charging", () => {
-    expect(answeredClusterCount([{ market: "US", engine: "a", status: "no_answer", answer: "", keywords: ["x"] }])).toBe(0);
-    expect(answeredClusterCount([
+  it("counts direct answered clusters for visibility and separately counts usable responses for charging", () => {
+    const responses = [
+      { market: "US", engine: "a", status: "answered" as const, answer: "direct", keywords: ["x"], provider_path: "primary" as const },
+      { market: "US", engine: "b", status: "answered" as const, answer: "fallback", keywords: ["x"], provider_path: "fallback" as const },
+      { market: "US", engine: "c", status: "answered" as const, answer: "fallback", keywords: ["y"], provider_path: "fallback" as const },
+      { market: "US", engine: "d", status: "no_answer" as const, answer: "", keywords: ["z"] },
+    ];
+    expect(answeredClusterCount([{ market: "US", engine: "a", status: "no_answer", answer: "", keywords: ["z"] }])).toBe(0);
+    expect(answeredClusterCount(responses)).toBe(1);
+    expect(billableClusterCount(responses)).toBe(2);
+    expect(billableClusterCount([
       { market: "US", engine: "a", status: "answered", answer: "y", keywords: ["x"] },
       { market: "US", engine: "b", status: "answered", answer: "y", keywords: ["x"] },
     ])).toBe(1);
-  });
-});
+    expect(answeredClusterCount([
+      { market: "US", engine: "a", status: "answered", answer: "y", keywords: ["x"], provider_path: "fallback" },
+    ])).toBe(0);
+  });});
 
 describe("llms.txt missing fields", () => {
   it("lists every empty core field", () => {
