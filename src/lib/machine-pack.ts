@@ -8,15 +8,43 @@ export type Onboarding = {
   officialProfiles?: string;
   faqs?: { q: string; a: string }[];
 };
-export type PackInput = { brand: string; site?: string; summary?: string; markets?: string[]; lang?: ExportLang; onboarding?: Onboarding };
+export type PackInput = { brand: string; site?: string; summary?: string; markets?: string[]; lang?: ExportLang; onboarding?: Onboarding;
+  /** Text read from the brand's own site; only its headings are quoted, verbatim. */
+  siteText?: string | null; siteDescription?: string | null };
 
 const splitList = (s?: string) => (s || "").split(/[\n,،]+/).map((x) => x.trim()).filter(Boolean);
 const isUrl = (u: string) => /^https?:\/\/[^\s]+$/i.test(u);
-const LLMS_HEADINGS: Record<ExportLang, { aliases: string; markets: string; facts: string; faq: string; links: string; confirmed: string }> = {
-  ar: { aliases: "أسماء أخرى", markets: "الأسواق المسجلة", facts: "حقائق أساسية", faq: "أسئلة وأجوبة", links: "روابط", confirmed: "مدخلات مسجلة من المالك" },
-  en: { aliases: "Also known as", markets: "Markets (recorded inputs)", facts: "Key facts", faq: "Questions and answers", links: "Links", confirmed: "Recorded owner inputs" },
-  ku: { aliases: "ناوەکانی تر", markets: "بازاڕە تۆمارکراوەکان", facts: "ڕاستییە سەرەکییەکان", faq: "پرسیار و وەڵام", links: "بەستەرەکان", confirmed: "زانیاری تۆمارکراوی خاوەن" },
+const LLMS_HEADINGS: Record<ExportLang, { aliases: string; markets: string; facts: string; faq: string; links: string; confirmed: string; fromSite: string }> = {
+  ar: { aliases: "أسماء أخرى", markets: "الأسواق المسجلة", facts: "حقائق أساسية", faq: "أسئلة وأجوبة", links: "روابط", confirmed: "مدخلات مسجلة من المالك", fromSite: "من موقع العلامة" },
+  en: { aliases: "Also known as", markets: "Markets (recorded inputs)", facts: "Key facts", faq: "Questions and answers", links: "Links", confirmed: "Recorded owner inputs", fromSite: "From the brand site" },
+  ku: { aliases: "ناوەکانی تر", markets: "بازاڕە تۆمارکراوەکان", facts: "ڕاستییە سەرەکییەکان", faq: "پرسیار و وەڵام", links: "بەستەرەکان", confirmed: "زانیاری تۆمارکراوی خاوەن", fromSite: "لە ماڵپەڕی براند" },
 };
+
+/** Up to 8 headings quoted verbatim from the site text. */
+export function siteHeadings(text?: string | null): string[] {
+  if (!text) return [];
+  const out: string[] = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^#{1,3}\s+(.{3,120})$/); if (!m) continue;
+    const h = m[1].replace(/[*_`\[\]]/g, "").trim();
+    if (h && !out.includes(h)) out.push(h);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+export type PackField = "summary" | "site" | "markets" | "facts" | "faqs";
+/** Core llms.txt fields that have no recorded value (shown to the owner instead of guessing). */
+export function missingPackFields(i: PackInput): PackField[] {
+  const ob = i.onboarding || {};
+  const miss: PackField[] = [];
+  if (!(i.summary || i.siteDescription || splitList(ob.facts)[0])) miss.push("summary");
+  if (!(i.site && isUrl(i.site))) miss.push("site");
+  if (!((i.markets || []).length || splitList(ob.markets).length)) miss.push("markets");
+  if (!splitList(ob.facts).length) miss.push("facts");
+  if (!(ob.faqs || []).some((f) => f.q?.trim() && f.a?.trim())) miss.push("faqs");
+  return miss;
+}
 
 export function buildPack(i: PackInput) {
   const name = i.brand.trim() || "Brand";
@@ -28,16 +56,18 @@ export function buildPack(i: PackInput) {
   const facts = splitList(ob.facts).slice(0, 8);
   const aliases = splitList(ob.aliases);
   const faqs = (ob.faqs || []).filter((f) => f.q?.trim() && f.a?.trim()).slice(0, 10);
-  const summary = (i.summary || facts[0] || "").slice(0, 300);
+  const summary = (i.summary || i.siteDescription || facts[0] || "").slice(0, 300);
+  const siteHeads = siteHeadings(i.siteText);
   const lang = i.lang || "en";
   const labels = LLMS_HEADINGS[lang];
-  const hasSubstance = Boolean(summary || aliases.length || markets.length || facts.length || faqs.length || site || links.length);
+  const hasSubstance = Boolean(summary || siteHeads.length || aliases.length || markets.length || facts.length || faqs.length || site || links.length);
   const llms = hasSubstance ? [
     `# ${name}`, "",
     ...(summary ? [`> ${summary}`, ""] : []),
     ...(aliases.length ? [`## ${labels.aliases}`, ...aliases.map((a) => `- ${a}`), ""] : []),
     ...(markets.length ? [`## ${labels.markets}`, ...markets.map((m) => `- ${m}`), ""] : []),
     ...(facts.length ? [`## ${labels.facts}`, ...facts.map((f) => `- ${f}`), ""] : []),
+    ...(siteHeads.length ? [`## ${labels.fromSite}`, ...siteHeads.map((h) => `- ${h}`), ""] : []),
     ...(faqs.length ? [`## ${labels.faq}`, ...faqs.map((f) => `- ${f.q}: ${f.a}`), ""] : []),
     ...(site || links.length ? [`## ${labels.links}`, ...Array.from(new Set([site, ...links].filter(Boolean))).map((u) => `- [${u}](${u})`)] : []),
   ].join("\n").trim() : "";
@@ -52,7 +82,8 @@ export function buildPack(i: PackInput) {
   if (markets.length) org.areaServed = markets.map((m) => ({ "@type": "Place", name: m }));
   const faq = faqs.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) } : null;
 
-  return { llms, orgJsonld: hasSubstance ? JSON.stringify(org, null, 2) : "", faqJsonld: faq ? JSON.stringify(faq, null, 2) : "" };
+  const llmsFull = llms && i.siteText ? `${llms}\n\n---\n\n${i.siteText.slice(0, 12000).trim()}` : llms;
+  return { llms, llmsFull, missing: missingPackFields(i), orgJsonld: hasSubstance ? JSON.stringify(org, null, 2) : "", faqJsonld: faq ? JSON.stringify(faq, null, 2) : "" };
 }
 
 const TX = {

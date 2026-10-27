@@ -2,6 +2,7 @@
 import type { SheetData, Cell } from "./spreadsheet-reader";
 import { detectColumns } from "./spreadsheet-reader";
 import { sheetMatchesMarket, type Market } from "./market-scope";
+import { clusterScore, type ClusterAnswer } from "./keyword-clusters";
 import type { ExportPayload, ExportSection, ExportLang } from "./exports";
 
 export const NA = { ar: "غير متوفر", en: "Not available", ku: "بەردەست نییە" } as const;
@@ -32,6 +33,8 @@ export type ResearchInput = {
   alexandria?: { connected: boolean; note?: string };
   /** llms.txt produced for the brand ("" when there was nothing real to put in it). */
   llms?: string;
+  /** Separate per-cluster engine answers; keywords without one show "not measured". */
+  clusterAnswers?: ClusterAnswer[];
 };
 
 const NEG_RX = /\b(free|cheap(est)?|used|second ?hand|fake|replica|copy|jobs?|careers?|diy|download|pdf|wholesale|rent(al)?|repair|meaning|tutorial)\b|مجان|مستعمل|تقليد|وظائف|وظيفة|تحميل|ايجار|إيجار|تصليح/i;
@@ -175,9 +178,13 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     const pick = [...mk.filter((r) => winners.has(r.k.toLowerCase())), ...mk.filter((r) => !winners.has(r.k.toLowerCase()))].slice(0, 30);
     const answered = engineAnswers.filter((a) => a.market === m.code && a.status === "answered").length;
     for (const r of pick) {
-      const eng = enginesMentioning(engineAnswers, m.code, r.k); const ax = keywordAxis(r.k);
-      perEngine.push([r.k, mName(m), answered ? `${eng.length}/10` : NA[l], eng.join(", ") || (answered ? "0" : NA[l]), ax.axis, ax.rule,
-        ENGINE_KEYS.map((e) => `${e}: ${ENGINE_FORM[e](r.k, m.en)}`).join("\n"), answered ? SRC_ENG : NA[l]]);
+      const ax = keywordAxis(r.k);
+      const cs = clusterScore(input.clusterAnswers || [], m.code, r.k);
+      const eng = cs ? cs.engines : enginesMentioning(engineAnswers, m.code, r.k);
+      const NOT_M = S("لم تُقس", "Not measured", "نەپێوراوە");
+      const score = cs ? `${eng.length}/${cs.answered}` : eng.length ? `${eng.length}/${answered}` : NOT_M;
+      perEngine.push([r.k, mName(m), score, eng.join(", ") || (cs ? "0" : NOT_M), ax.axis, ax.rule,
+        ENGINE_KEYS.map((e) => `${e}: ${ENGINE_FORM[e](r.k, m.en)}`).join("\n"), cs ? S("سؤال مستقل لمجموعة الكلمة", "Separate cluster question", "پرسیاری جیا") : eng.length ? SRC_ENG : NA[l]]);
     }
   }
 
