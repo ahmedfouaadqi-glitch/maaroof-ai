@@ -20,9 +20,8 @@ export type CompletionFallbackResult = {
 };
 
 export const LOVABLE_RESEARCH_MODEL_CHAIN = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.5-pro",
-  "openai/gpt-5",
+  "google/gemini-3.7-flash",
+  "openai/gpt-5.5",
 ] as const;
 
 type CompletionFallbackOptions = {
