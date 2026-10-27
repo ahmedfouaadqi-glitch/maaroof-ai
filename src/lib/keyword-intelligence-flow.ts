@@ -30,6 +30,8 @@ export type EvidenceState = "available" | "partial" | "none";
 export function deriveEvidenceState(input: {
   answeredMarketCalls: number;
   answeredClusterCalls: number;
+  /** Answers returned by the gateway stand-in; helpful but not direct engine observations. */
+  proxyAnswerCalls?: number;
   readablePages: number;
   socialResults: number;
   structuredEvidence: number;
@@ -42,8 +44,9 @@ export function deriveEvidenceState(input: {
     input.socialResults,
     input.structuredEvidence,
   ].reduce((sum, count) => sum + Math.max(0, Number(count) || 0), 0);
-  if (!evidenceCount) return "none";
-  return input.failedProbes > 0 ? "partial" : "available";
+  const proxyAnswers = Math.max(0, Number(input.proxyAnswerCalls) || 0);
+  if (!evidenceCount) return proxyAnswers > 0 ? "partial" : "none";
+  return input.failedProbes > 0 || proxyAnswers > 0 ? "partial" : "available";
 }
 
 export function hasChargeableMarketEvidence(answeredMarkets: number, hasReadablePage: boolean): boolean {

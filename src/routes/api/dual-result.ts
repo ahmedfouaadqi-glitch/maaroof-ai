@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
         const sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
 
-        const { detectMarkets, marketByCode } = await import("@/lib/market-scope");
+        const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
         const { keywordColumn } = await import("@/lib/operational-workbook");
         const requestText = String(b?.request_text || b?.text || "").trim().slice(0, 12000);
         const marketText = String(b?.market_text || "").trim().slice(0, 240);
@@ -52,13 +52,36 @@ export const Route = createFileRoute("/api/dual-result")({
         const geoCountry = typeof geo.country === "string" ? geo.country.trim().slice(0, 120) : "";
         const geoCity = typeof geo.city === "string" ? geo.city.trim().slice(0, 120) : "";
 
+        // Use representative values from the workbook as context signals, not just worksheet headings.
+        // This lets the existing category resolver handle brands whose sector appears in row data.
+        const workbookValueSignals: string[] = [];
+        for (const sheet of sheets) {
+          const indices = new Set<number>();
+          const detectedKeywordIndex = keywordColumn(sheet);
+          if (detectedKeywordIndex >= 0) indices.add(detectedKeywordIndex);
+          sheet.columns.forEach((column: string, index: number) => {
+            if (/(product|service|category|industry|brand|title|name|search term|keyword|query|item|sku|description|product type|نوع المنتج|الخدمة|الفئة|الصناعة|اسم المنتج|الكلمة المفتاحية)/i.test(column)) indices.add(index);
+          });
+          for (const row of sheet.rows.slice(0, 30)) {
+            for (const index of indices) {
+              const value = String(row[index] ?? "").trim().replace(/\s+/g, " ");
+              if (value.length >= 3 && value.length <= 140 && !/^https?:\/\//i.test(value) && !/^\d+(?:[.,]\d+)?$/.test(value)) {
+                workbookValueSignals.push(value);
+                if (workbookValueSignals.length >= 120) break;
+              }
+            }
+            if (workbookValueSignals.length >= 120) break;
+          }
+          if (workbookValueSignals.length >= 120) break;
+        }
+
         const resolved = resolveCompetitiveContext({
           explicitBrand: b?.brand,
           explicitSite: b?.site,
           explicitCategory: b?.category,
           workspace,
           requestText,
-          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns)],
+          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns), ...workbookValueSignals],
         });
         const brand = resolved.brand;
         const site = resolved.site || undefined;
@@ -88,6 +111,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const markets = chosen.length ? chosen
           : userMarkets.length ? userMarkets
           : scopedMarkets.length ? scopedMarkets
+          : geoMode === "world" ? [GLOBAL_MARKET]
           : workbookMarkets;
         if (!markets.length) return Response.json({
           error: "no_market",
@@ -98,6 +122,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const marketSource = chosen.length ? "explicit"
           : userMarkets.length ? "user_input"
           : scopedMarkets.length ? "geographic_scope"
+          : geoMode === "world" ? "geographic_scope"
           : "workbook_or_request";
 
         const { sheetsForMarket: sheetsForTargetMarket } = await import("@/lib/market-scope");
@@ -151,9 +176,10 @@ export const Route = createFileRoute("/api/dual-result")({
             label: lang === "ar" ? m.ar : m.en,
             voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })),
           }));
-          const summarizeStatuses = (items: Array<{ status: string }>) => ({
+          const summarizeStatuses = (items: Array<{ status: string; provider_path?: string }>) => ({
             asked: items.length,
-            answered: items.filter((item) => item.status === "answered").length,
+            answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
+            fallback_answered: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
             no_answer: items.filter((item) => item.status === "no_answer").length,
             empty: items.filter((item) => item.status === "empty").length,
             timeout: items.filter((item) => item.status === "timeout").length,
@@ -174,7 +200,7 @@ export const Route = createFileRoute("/api/dual-result")({
             parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
             context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource },
             charged: 0,
-            clusters: { asked: 0, answered: 0, probes_asked: 0, probes_answered: 0 },
+            clusters: { asked: 0, answered: 0, billable_answered: 0, probes_asked: 0, probes_answered: 0, probes_fallback_answered: 0 },
             negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
             alexandria: partialAlexandria,
           });
@@ -191,7 +217,7 @@ export const Route = createFileRoute("/api/dual-result")({
           totalCharged += Number(charge.tokens || 0);
         }
         // Per-cluster questions (limit chosen by the user, 0-10 per market).
-        const { buildClusters, answeredClusterCount } = await import("@/lib/keyword-clusters");
+        const { buildClusters, answeredClusterCount, billableClusterCount } = await import("@/lib/keyword-clusters");
         const clusterLimit = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
         const winners = new Set<string>();
         const kwOf = (s: any) => { const i = keywordColumn(s); return i < 0 ? [] : s.rows.map((r: any) => String(r[i] ?? "")); };
@@ -200,11 +226,12 @@ export const Route = createFileRoute("/api/dual-result")({
         const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheetsForMarket(sheets, markets, m).filter((s: any) => !/negative|سلبي/i.test(s.name)).flatMap(kwOf), winners, clusterLimit));
         const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
         const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c) : [];
-        const answeredClusters = answeredClusterCount(clusterAnswers);
-        if (answeredClusters) {
+        const answeredClusters = answeredClusterCount(clusterAnswers); // direct visibility count only
+        const billableClusters = billableClusterCount(clusterAnswers); // charge usable results from either route
+        if (billableClusters) {
           const { chargeTokens: ct } = await import("@/lib/tokens.server");
-          let cc: any = await ct({ userId, toolKey: "competitive_geo.cluster", units: answeredClusters, meta: { attachment_id: id } });
-          if (!cc.ok && cc.reason === "unpriced") cc = await ct({ userId, toolKey: "compare", units: answeredClusters, meta: { attachment_id: id, sub: "competitive_geo.cluster" } });
+          let cc: any = await ct({ userId, toolKey: "competitive_geo.cluster", units: billableClusters, meta: { attachment_id: id } });
+          if (!cc.ok && cc.reason === "unpriced") cc = await ct({ userId, toolKey: "compare", units: billableClusters, meta: { attachment_id: id, sub: "competitive_geo.cluster" } });
           if (!cc.ok) return Response.json({ error: "insufficient_balance_clusters", left: cc.left }, { status: 402 });
           totalCharged += Number(cc.tokens || 0);
         }
@@ -224,15 +251,16 @@ export const Route = createFileRoute("/api/dual-result")({
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
         if (pack.orgJsonld) payload.sections.push({ heading: "Organization JSON-LD", kind: "text", text: pack.orgJsonld });
         const summary = markets.map((m: any) => ({ market: m.code, label: lang === "ar" ? m.ar : m.en, voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })) }));
-        const summarizeStatuses = (items: Array<{ status: string }>) => ({
-          asked: items.length,
-          answered: items.filter((item) => item.status === "answered").length,
-          no_answer: items.filter((item) => item.status === "no_answer").length,
-          empty: items.filter((item) => item.status === "empty").length,
-          timeout: items.filter((item) => item.status === "timeout").length,
-          http_error: items.filter((item) => item.status === "http_error").length,
-          error: items.filter((item) => item.status === "error").length,
-        });
+        const summarizeStatuses = (items: Array<{ status: string; provider_path?: string }>) => ({
+            asked: items.length,
+            answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
+            fallback_answered: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
+            no_answer: items.filter((item) => item.status === "no_answer").length,
+            empty: items.filter((item) => item.status === "empty").length,
+            timeout: items.filter((item) => item.status === "timeout").length,
+            http_error: items.filter((item) => item.status === "http_error").length,
+            error: items.filter((item) => item.status === "error").length,
+          });
         const pageUrls = parties.filter((party) => Boolean(party.url));
         const socialPartiesWithResults = new Set(social.map((item) => item.party)).size;
         const diagnostics = {
@@ -242,20 +270,26 @@ export const Route = createFileRoute("/api/dual-result")({
           social: { searched_parties: Math.min(parties.length, 5), parties_with_results: socialPartiesWithResults, results: social.length },
           alexandria: { connected: alexandria.connected, note: alexandria.note || "" },
         };
+        const proxyAnswerCalls = engineAnswers.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback").length
+          + clusterAnswers.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback").length;
         const evidenceState = deriveEvidenceState({
-          answeredMarketCalls: engineAnswers.filter((answer) => answer.status === "answered").length,
-          answeredClusterCalls: clusterAnswers.filter((answer) => answer.status === "answered").length,
+          answeredMarketCalls: engineAnswers.filter((answer) => answer.status === "answered" && answer.provider_path !== "fallback").length,
+          answeredClusterCalls: clusterAnswers.filter((answer) => answer.status === "answered" && answer.provider_path !== "fallback").length,
+          proxyAnswerCalls,
           readablePages: parties.filter((party) => Boolean(party.pageText)).length,
           socialResults: social.length,
           structuredEvidence: alex.evidence.length,
-          failedProbes: engineAnswers.filter((answer) => answer.status !== "answered").length + clusterAnswers.filter((answer) => answer.status !== "answered").length,
+          failedProbes: engineAnswers.filter((answer) => answer.status !== "answered" || answer.provider_path === "fallback").length
+            + clusterAnswers.filter((answer) => answer.status !== "answered" || answer.provider_path === "fallback").length,
         });
         const evidenceNote = evidenceState === "none"
           ? "No external evidence was retrieved. This workbook still contains source rows, execution statuses, exact queries, and failure reasons; it contains no measured visibility result."
           : evidenceState === "partial"
-            ? "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
+            ? proxyAnswerCalls
+              ? "Some responses used the automatic fallback model route. These can inform research, but are not direct observations of the named engines and are excluded from direct visibility/share-of-voice scores. Review the per-engine status and evidence sources."
+              : "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
             : "Some external evidence was retrieved. Results still need contextual validation and are not a ranking guarantee.";
-        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },

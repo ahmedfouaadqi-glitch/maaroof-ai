@@ -103,8 +103,8 @@ describe("operational workbook", () => {
     const asked = rows.find((r) => r[0] === "designer dress")!;
     const unasked = rows.find((r) => r[0] === "evening gown")!;
     expect(asked[2]).toBe("0/1");
-    expect(asked[3]).toBe("No literal mention in answers");
-    expect(unasked[2]).toBe("Not measured");
+    expect(asked[3]).toBe("No literal mention in direct answers");
+    expect(unasked[2]).toBe("Not measured directly");
     expect(unasked[3]).toBe("Not tested in engine query");
   });
 
@@ -131,13 +131,43 @@ describe("operational workbook", () => {
     });
     const execution = p.sections.find((s) => s.heading === "Execution and errors")!.table!.data;
     const marketProbes = execution.find((row) => row[0] === "Market engine probes")!;
-    expect(marketProbes.slice(1, 8)).toEqual([6, 1, 1, 1, 1, 1, 1]);
+    expect(marketProbes.slice(1, 8)).toEqual([6, 1, 0, 1, 1, 1, 1]);
     const clusters = execution.find((row) => row[0] === "Keyword cluster probes")!;
-    expect(clusters.slice(1, 8)).toEqual([2, 1, 0, 0, 1, 0, 0]);
+    expect(clusters.slice(1, 8)).toEqual([2, 1, 0, 0, 0, 1, 0]);
     const engineLog = p.sections.find((s) => s.heading === "Ten-engine answer and status log")!.table!.data;
     expect(engineLog.some((row) => row.includes("HTTP 429") && row.includes("http_error"))).toBe(true);
     const alexRow = execution.find((row) => row[0] === "Optional Alexandria source")!;
-    expect(alexRow.slice(1, 4)).toEqual([1, 0, 1]);
+    expect(alexRow.slice(1, 4)).toEqual([1, 0, 0]);
+  });
+
+  it("does not count fallback stand-in answers in direct share of voice", () => {
+    const answers = [
+      { market: "us", engine: "chatgpt", status: "answered" as const, answer: "Mengotti Couture is a retailer", urls: [], provider_path: "primary" as const },
+      { market: "us", engine: "gemini", status: "answered" as const, answer: "Mengotti Couture is a retailer", urls: [], provider_path: "fallback" as const },
+      { market: "us", engine: "claude", status: "answered" as const, answer: "Other retailer", urls: [], provider_path: "primary" as const },
+    ];
+    expect(shareOfVoice(answers, "Mengotti Couture")).toEqual({ answered: 2, mentioned: 1, percent: 50 });
+    expect(enginesMentioning(answers, "us", "Mengotti Couture")).toEqual(["chatgpt"]);
+
+    const payload = buildOperationalPayload({
+      brand: "Mengotti Couture",
+      lang: "en",
+      markets: detectMarkets(["USA"]),
+      sheets: [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: [["luxury eyewear"]], totalRows: 1, truncated: false }],
+      parties: [{ name: "Mengotti Couture", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: answers,
+      clusterAnswers: [
+        { market: "us", engine: "chatgpt", status: "answered" as const, answer: "Mengotti Couture is a retailer", keywords: ["luxury eyewear"], provider_path: "primary" as const },
+        { market: "us", engine: "gemini", status: "answered" as const, answer: "Mengotti Couture is a retailer", keywords: ["luxury eyewear"], provider_path: "fallback" as const },
+      ],
+    });
+    const log = payload.sections.find((section) => section.heading === "Ten-engine answer and status log")!.table!.data;
+    expect(log.some((row) => row.includes("Fallback route"))).toBe(true);
+    const execution = payload.sections.find((section) => section.heading === "Execution and errors")!.table!.data;
+    const marketProbes = execution.find((row) => row[0] === "Market engine probes")!;
+    expect(marketProbes.slice(1, 5)).toEqual([3, 2, 1, 0]);
+    const clusterProbes = execution.find((row) => row[0] === "Keyword cluster probes")!;
+    expect(clusterProbes.slice(1, 5)).toEqual([2, 1, 1, 0]);
   });
 
   it("classifies question keywords as AEO", () => {

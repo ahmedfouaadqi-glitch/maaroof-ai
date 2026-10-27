@@ -3,6 +3,8 @@ import { NAMES } from "./countries";
 
 export type Market = { code: string; en: string; ar: string; gl: string };
 
+export const GLOBAL_MARKET: Market = { code: "global", en: "Global", ar: "عالمي", gl: "world" };
+
 const MARKETS: Array<Market & { rx: RegExp }> = [
   { code: "us", en: "United States", ar: "الولايات المتحدة", gl: "us", rx: /\b(usa|u\.s\.a|united states|america)\b|أمريكا|امريكا|الولايات المتحدة/i },
   { code: "lb", en: "Lebanon", ar: "لبنان", gl: "lb", rx: /\blebanon\b|لبنان/i },
@@ -39,6 +41,7 @@ export function detectMarkets(texts: string[]): Market[] {
 }
 
 export function marketByCode(code: string): Market | null {
+  if (String(code || "").toLowerCase() === "global" || String(code || "").toLowerCase() === "world") return GLOBAL_MARKET;
   const m = MARKET_LOOKUP.find((x) => x.code === String(code || "").toLowerCase());
   return m ? { code: m.code, en: m.en, ar: m.ar, gl: m.gl } : null;
 }

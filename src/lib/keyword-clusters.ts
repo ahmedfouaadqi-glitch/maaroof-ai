@@ -33,18 +33,31 @@ export function clusterQuestion(c: KeywordCluster, marketName: string): string {
   return `A user in ${marketName} searches for: ${c.keywords.map((k) => `"${k}"`).join(", ")}. Which providers, brands or websites would you recommend and why? Answer organically.`;
 }
 
-export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; error?: string };
+export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string };
 
 /** Measured score for one keyword: engines whose cluster answer contains it. null = not measured. */
 export function clusterScore(answers: ClusterAnswer[], market: string, keyword: string): { engines: string[]; answered: number } | null {
   const kw = keyword.toLowerCase().trim();
   const rel = answers.filter((a) => a.market === market && a.keywords.some((k) => k.toLowerCase() === kw));
-  const answered = rel.filter((a) => a.status === "answered");
+  const answered = rel.filter((a) => a.status === "answered" && a.provider_path !== "fallback");
   if (!answered.length) return null;
   return { engines: [...new Set(answered.filter((a) => a.answer.toLowerCase().includes(kw)).map((a) => a.engine))], answered: answered.length };
 }
 
-/** Clusters that got at least one real answer — the only ones that are charged. */
+/** Distinct clusters with a direct primary-route answer; fallback stand-ins are not visibility measurements. */
 export function answeredClusterCount(answers: ClusterAnswer[]): number {
-  return new Set(answers.filter((a) => a.status === "answered").map((a) => `${a.market}|${a.keywords.join("|")}`)).size;
+  return new Set(
+    answers
+      .filter((a) => a.status === "answered" && a.provider_path !== "fallback")
+      .map((a) => a.market + "|" + a.keywords.join("|"))
+  ).size;
+}
+
+/** Distinct clusters with any usable response; used for usage charging, not visibility metrics. */
+export function billableClusterCount(answers: ClusterAnswer[]): number {
+  return new Set(
+    answers
+      .filter((a) => a.status === "answered")
+      .map((a) => a.market + "|" + a.keywords.join("|"))
+  ).size;
 }
