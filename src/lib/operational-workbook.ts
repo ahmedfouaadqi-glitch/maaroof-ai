@@ -132,8 +132,8 @@ export function enginesMentioning(answers: EngineAnswer[], market: string, k: st
   return [...new Set(answers.filter((a) => a.market === market && a.status === "answered" && a.answer.toLowerCase().includes(kw)).map((a) => a.engine))];
 }
 
-function dedupeNegatives(rows: Array<[string, string, string]>): Array<[string, string, string]> {
-  const seen = new Set<string>(); const out: Array<[string, string, string]> = [];
+function dedupeNegatives(rows: Array<[string, string, string, string]>): Array<[string, string, string, string]> {
+  const seen = new Set<string>(); const out: Array<[string, string, string, string]> = [];
   for (const r of rows) { const k = r[0].toLowerCase().replace(/\s+/g, " ").trim(); if (!k || seen.has(k)) continue; seen.add(k); out.push(r); }
   return out;
 }
@@ -164,9 +164,17 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   }
 
   // Negatives
-  const negRaw: Array<[string, string, string]> = [];
-  for (const s of sheets.filter((x) => /negative|سلبي/i.test(x.name))) { const i = keywordColumn(s) >= 0 ? keywordColumn(s) : 0; for (const r of s.rows) negRaw.push([String(r[i] ?? "").trim(), s.name, SRC_FILE]); }
-  for (const n of negativeCandidates(keywords)) negRaw.push([n.keyword, n.rule, SRC_RULE]);
+  const negRaw: Array<[string, string, string, string]> = [];
+  for (const s of sheets.filter((x) => /negative|سلبي/i.test(x.name))) {
+    const i = keywordColumn(s) >= 0 ? keywordColumn(s) : 0;
+    s.rows.forEach((r, rowIndex) => {
+      const keyword = String(r[i] ?? "").trim();
+      if (keyword) negRaw.push([keyword, S("موجودة في المصدر — تحتاج مراجعة", "Existing source entry — review required", "لە سەرچاوە هەیە — پێویستی بە پێداچوونەوەیە"), S("مصنفة في الملف الأصلي؛ لم يُعَد التحقق منها", "Marked in the original workbook; not independently validated", "لە فایلە سەرەکییەکەدا نیشان کراوە؛ دووبارە پشتڕاست نەکراوەتەوە"), SRC_FILE + ": " + s.name + ", row " + (rowIndex + 2)]);
+    });
+  }
+  for (const n of negativeCandidates(keywords)) {
+    negRaw.push([n.keyword, S("مرشحة بقاعدة — ليست قرار استبعاد", "Rule-based candidate — not a final exclusion", "پێشنیاری یاسایی — بڕیاری کۆتایی نییە"), S("قاعدة مطابقة", "Matched rule", "یاسای هاوتا") + ": " + n.rule + "; " + S("يلزم التحقق", "Review required", "پێویستی بە پشکنین"), SRC_RULE]);
+  }
   const negs = dedupeNegatives(negRaw);
 
   // Per-engine keyword fit: winners first, else first keywords of each market (max 30 per market)
@@ -213,7 +221,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const TEAM = S("يحتاج فريقك", "Needs your team", "تیمەکەت");
   const NOT = S("لم يُنفّذ: لا بيانات كافية", "Not done: not enough data", "ئەنجام نەدرا");
   const plan: (string | number)[][] = [
-    [1, S("قائمة كلمات سلبية منظفة", "Clean negative keyword list", "لیستی نەرێنی"), negs.length ? DONE : NOT, negs.length ? S(`${negs.length} كلمة في تبويب الكلمات السلبية`, `${negs.length} keywords in the Negative sheet`, `${negs.length}`) : NA[l], S("انسخها إلى Google Ads ← الأدوات ← قوائم الكلمات السلبية ← اربطها بالحملات", "Copy into Google Ads → Tools → Negative keyword lists → apply to campaigns", "Google Ads")],
+    [1, S("قائمة الكلمات السلبية للمراجعة", "Negative keyword review list", "لیستی وشە نەرێنییەکان بۆ پێداچوونەوە"), negs.length ? DONE : NOT, negs.length ? S(`${negs.length} كلمة في تبويب الكلمات السلبية`, `${negs.length} keywords in the Negative sheet`, `${negs.length}`) : NA[l], S("انسخها إلى Google Ads ← الأدوات ← قوائم الكلمات السلبية ← اربطها بالحملات", "Copy into Google Ads → Tools → Negative keyword lists → apply to campaigns", "Google Ads")],
     [2, "llms.txt", input.llms ? DONE : NOT, input.llms ? S("جاهز في نهاية هذا الملف ويمكن نسخه من الدردشة", "Ready at the end of this file and copyable in chat", "ئامادەیە") : S("أكمل بطاقة هوية العلامة أولاً", "Complete the brand identity card first", "کارتی ناسنامە"), S("ارفع الملف إلى جذر الموقع: /llms.txt", "Upload to the site root as /llms.txt", "/llms.txt")],
     [3, S("كلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), perEngine.length ? DONE : NOT, S(`${perEngine.length} كلمة مع درجة التطابق`, `${perEngine.length} keywords with match score`, `${perEngine.length}`), S("اكتب صفحة أو سؤالاً شائعاً لكل كلمة درجتها منخفضة", "Write a page or FAQ answer for each low-score keyword", "پەڕە بنووسە")],
     [4, S("سد فجوات GEO", "Close GEO gaps", "GEO"), TEAM, S(`${bench.filter((r) => r[2] !== S("العلامة", "Brand", "براند") && typeof r[5] === "string" && /^[1-9]/.test(String(r[5]))).length} حالة ذكر فيها محرك منافساً`, "Cases where an engine named a competitor", ""), S("أضف حقائق بأرقام ومصادر في أول 150 كلمة من الصفحات الأساسية", "Add numbered, sourced facts in the first 150 words of key pages", "")],
@@ -235,10 +243,55 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       [S("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), S("افتح تبويب «خطة التنفيذ»", "Open the “Execution plan” sheet", "پلان"), "-"],
     ] } },
     { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("التبويب", "Sheet", "پەڕە"), S("حجم البحث", "Volume", "قەبارە"), S("المحور المقترح", "Suggested axis", "تەوەر"), SRC], data: kRows.map((r) => [r.k, mName(r.m), r.sheet, cell(r.vol, l), keywordAxis(r.k).axis, SRC_FILE]) } },
-    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("درجة التطابق", "Match score", "پلە"), S("النماذج التي ذكرتها", "Engines that mentioned it", "بزوێنەرەکان"), S("المحور", "Axis", "تەوەر"), S("سبب المحور", "Axis reason", "هۆکار"), S("الصيغة المقترحة لكل نموذج", "Suggested phrasing per engine", "پێشنیار"), SRC], data: perEngine } },
+    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("الذكر الحرفي / الإجابات", "Literal mention / answered", "باسکردنی ڕاستەوخۆ"), S("النماذج التي ذكرتها حرفيًا", "Engines with a literal mention", "بزوێنەرەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis rule", "یاسای تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), SRC], data: perEngine } },
     { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
-    { heading: S("الكلمات السلبية", "Negative keywords", "وشە نەرێنییەکان"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار"), SRC], data: negs } },
+    { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
   ];
-  return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: `${input.brand} · ${markets.map(mName).join(" / ")}`, lang: l, sections };
+  const sourceInventoryRows: (string | number)[][] = sheets.map((sheet) => [
+    sheet.name,
+    sheet.totalRows,
+    sheet.rows.length,
+    sheet.truncated ? S("مقتطعة في الذاكرة؛ راجع الملف الأصلي لبقية الصفوف", "Truncated in memory; use the original for remaining rows", "لە بیرگەدا سنووردار کراوە؛ فایلە سەرەکییەکە بپشکنە") : S("كل الصفوف المقروءة متاحة", "All read rows included", "هەموو ڕیزە خوێندراوەکان لەخۆگرتووە"),
+  ]);
+  const sourceInventory: ExportSection = {
+    heading: S("سلامة المصدر وفهرس الأوراق", "Source integrity & sheet inventory", "سەلامەتی سەرچاوە و لیستی پەڕەکان"),
+    kind: "table",
+    table: { columns: [S("الورقة الأصلية", "Source sheet", "پەڕەی سەرچاوە"), S("صفوف المصدر", "Source rows", "ڕیزەکانی سەرچاوە"), S("صفوف مرفقة", "Rows included", "ڕیزەکان"), S("حالة الاكتمال", "Completeness", "دۆخی تەواوی")], data: sourceInventoryRows },
+  };
+  const originalDataSections: ExportSection[] = sheets.map((sheet) => ({
+    heading: (S("البيانات الأصلية", "Original data", "داتای سەرەکی") + " — " + sheet.name).slice(0, 180),
+    kind: "table",
+    table: {
+      columns: sheet.columns.length ? sheet.columns : [S("الصف", "Row", "ڕیز")],
+      data: sheet.rows.map((row) => (sheet.columns.length ? sheet.columns.map((_, i) => row[i] ?? "") : row)),
+    },
+  }));
+  const marketLabel = (code: string) => mName(markets.find((market) => market.code === code) || ({ code, en: code, ar: code, gl: code } as Market));
+  const engineStatusRows: (string | number)[][] = engineAnswers.map((answer) => [
+    marketLabel(answer.market),
+    answer.engine,
+    answer.status,
+    answer.answer || NA[l],
+    answer.urls.join("\n") || NA[l],
+    answer.urls.length ? S("روابط أعادها المحرك؛ لم تتحقق مستقلًا", "URLs returned by engine; not independently verified", "بەستەرەکانی بزوێنەر؛ سەربەخۆ پشتڕاست نەکراونەتەوە") : NA[l],
+  ]);
+  const engineStatusSection: ExportSection = {
+    heading: S("سجل إجابات المحركات العشرة", "Ten-engine answer and status log", "تۆماری وەڵام و دۆخی دە بزوێنەر"),
+    kind: "table",
+    table: { columns: [S("السوق", "Market", "بازاڕ"), S("المحرك", "Engine", "بزوێنەر"), S("الحالة", "Status", "دۆخ"), S("الإجابة المسجلة", "Recorded answer", "وەڵامی تۆمارکراو"), S("الروابط المعادة", "Returned URLs", "بەستەرە گەڕاوەکان"), S("ملاحظة التحقق", "Validation note", "تێبینی پشکنین")], data: engineStatusRows },
+  };
+  const evidenceRows: (string | number)[][] = [];
+  for (const party of parties) if (party.url) evidenceRows.push([party.role, party.name, party.url, party.pageText ? S("تم جلب نص الصفحة", "Page text fetched", "دەقی پەڕە وەرگیرا") : S("رابط فقط؛ الصفحة لم تُقرأ", "URL only; page not read", "تەنها بەستەر؛ پەڕە نەخوێندراوەتەوە"), party.found]);
+  for (const answer of engineAnswers) for (const url of answer.urls) evidenceRows.push([S("إجابة محرك", "Engine answer", "وەڵامی بزوێنەر"), answer.engine + " · " + marketLabel(answer.market), url, S("أعاد المحرك الرابط؛ يلزم التحقق المستقل", "Engine returned the URL; independent validation required", "بزوێنەر بەستەرەکەی گەڕاندەوە؛ پێویستی بە پشتڕاستکردنەوەی سەربەخۆیە"), answer.status]);
+  for (const item of input.social || []) evidenceRows.push([S("نتيجة بحث اجتماعي", "Social search result", "ئەنجامی گەڕانی سۆشیال"), item.party, item.url, item.text, SRC_WEB]);
+  const evidenceSection: ExportSection = {
+    heading: S("سجل الأدلة والمصادر", "Evidence and source registry", "تۆماری بەڵگە و سەرچاوە"),
+    kind: "table",
+    table: { columns: [S("نوع المصدر", "Source type", "جۆری سەرچاوە"), S("الجهة / السياق", "Entity / context", "لایەن / پاشبنەما"), S("الرابط", "URL", "بەستەر"), S("ما الذي تحقق", "What was checked", "چی پشکنرا"), S("منشأ النتيجة", "Provenance", "سەرچاوەی ئەنجام")], data: evidenceRows },
+  };
+  sections.splice(1, 0, sourceInventory, ...originalDataSections);
+  sections.splice(2 + originalDataSections.length, 0, engineStatusSection, evidenceSection);
+
+  return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: input.brand + " · " + markets.map(mName).join(" / "), lang: l, sections };
 }
