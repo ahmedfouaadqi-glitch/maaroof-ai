@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectMarkets } from "./market-scope";
-import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA } from "./operational-workbook";
+import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA, enginesMentioning, keywordAxis } from "./operational-workbook";
 
 describe("market scope", () => {
   it("reads markets from sheet names", () => {
@@ -27,10 +27,24 @@ describe("operational workbook", () => {
     ], "Mengotti");
     expect(v).toEqual({ answered: 2, mentioned: 1, percent: 50 });
   });
-  it("keeps every file row and marks missing evidence as not available", () => {
-    const rows = Array.from({ length: 1200 }, (_, i) => [`kw ${i}`, i]);
-    const p = buildOperationalPayload({ brand: "B", lang: "en", markets: detectMarkets(["USA"]), sheets: [{ name: "USA KEYWORDS", columns: ["Keyword", "Volume"], rows, totalRows: 1200, truncated: false }], parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }], engineAnswers: [] });
-    expect(p.sections.find((s) => s.heading.includes("USA KEYWORDS"))!.table!.data.length).toBe(1200);
-    expect(p.sections.find((s) => s.heading === "Competitor benchmark")!.table!.data[0][2]).toBe(NA.en);
+  it("builds exactly six sheets with unique keywords and negatives", () => {
+    const rows = [["dior bag", 10], ["Dior Bag", 10], ["dior bag free", 5]];
+    const p = buildOperationalPayload({ brand: "B", lang: "en", markets: detectMarkets(["USA"]), sheets: [{ name: "USA KEYWORDS", columns: ["Keyword", "Volume"], rows, totalRows: 3, truncated: false }, { name: "NEGATIVE KEYWORDS", columns: ["Keyword"], rows: [["free"], ["Free"]], totalRows: 2, truncated: false }], parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }], engineAnswers: [] });
+    expect(p.sections.length).toBe(6);
+    expect(p.sections[1].table!.data.length).toBe(2);
+    const neg = p.sections.find((s) => s.heading === "Negative keywords")!.table!.data.map((r) => String(r[0]).toLowerCase());
+    expect(new Set(neg).size).toBe(neg.length);
+    expect(p.sections.find((s) => s.heading === "Brand vs competitors")!.table!.data[0][4]).toBe(NA.en);
+  });
+  it("match score counts engines whose answer names the keyword", () => {
+    const ans = [
+      { market: "us", engine: "chatgpt", status: "answered" as const, answer: "Buy a dior bag at X", urls: [] },
+      { market: "us", engine: "gemini", status: "answered" as const, answer: "Try Farfetch", urls: [] },
+    ];
+    expect(enginesMentioning(ans, "us", "Dior Bag")).toEqual(["chatgpt"]);
+  });
+  it("classifies question keywords as AEO", () => {
+    expect(keywordAxis("how to clean a dior bag").axis).toBe("AEO");
+    expect(keywordAxis("best luxury bags").axis).toBe("GEO");
   });
 });
