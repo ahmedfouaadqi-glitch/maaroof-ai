@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectMarkets } from "./market-scope";
-import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA, enginesMentioning, keywordAxis } from "./operational-workbook";
+import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA, enginesMentioning, keywordAxis, keywordAxisScores } from "./operational-workbook";
 
 describe("market scope", () => {
   it("reads markets from sheet names", () => {
@@ -170,8 +170,31 @@ describe("operational workbook", () => {
     expect(clusterProbes.slice(1, 5)).toEqual([2, 1, 1, 0]);
   });
 
-  it("classifies question keywords as AEO", () => {
+  it("classifies question keywords and recommendation keywords", () => {
     expect(keywordAxis("how to clean a dior bag").axis).toBe("AEO");
     expect(keywordAxis("best luxury bags").axis).toBe("GEO");
+  });
+
+  it("exposes all six heuristic axes without presenting them as measured visibility", () => {
+    const scores = keywordAxisScores("AI answer citations and sources");
+    expect(Object.keys(scores).sort()).toEqual(["AEO", "GEO", "GSEO", "SEO", "SGE", "SGEO"].sort());
+    expect(scores.SGEO).toBeGreaterThan(scores.SEO);
+    expect(keywordAxis("technical SEO audit").axis).toBe("GSEO");
+    expect(keywordAxis("Google AI overview").axis).toBe("SGE");
+  });
+
+  it("includes more than 30 keywords per market in the operational output", () => {
+    const keywords = Array.from({ length: 42 }, (_, i) => ["designer dress " + i]);
+    const p = buildOperationalPayload({
+      brand: "B",
+      lang: "en",
+      markets: detectMarkets(["USA"]),
+      sheets: [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: keywords, totalRows: keywords.length, truncated: false }],
+      parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: [],
+    });
+    const perEngine = p.sections.find((s) => s.heading === "Keywords per engine")!;
+    expect(perEngine.table!.data).toHaveLength(42);
+    expect(perEngine.table!.columns).toContain("Six-axis heuristic scores (not measured)");
   });
 });
