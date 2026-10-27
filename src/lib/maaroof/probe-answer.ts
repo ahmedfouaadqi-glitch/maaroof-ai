@@ -17,6 +17,20 @@ export function blindProbeQuestion(topic: string, region: string): string {
   return `What are the five best providers or solutions for ${category} in ${market}? Recommend organically without favoring any brand.`;
 }
 
+/**
+ * A blind market visibility probe grounded in actual workbook keywords.
+ * It intentionally omits the target brand so mention/share-of-voice is not primed.
+ */
+export function keywordVisibilityProbeQuestion(topic: string, region: string, keywords: string[] = []): string {
+  const category = String(topic || "").replace(/\s+/g, " ").trim().slice(0, 240) || "the products or services in the uploaded workbook";
+  const market = String(region || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  const phrases = [...new Set(keywords.map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 8);
+  const keywordContext = phrases.length
+    ? "Actual search phrases from the uploaded workbook: " + phrases.map((value) => '"' + value.slice(0, 180) + '"').join(", ") + "."
+    : "Use the category to understand the search context.";
+  return "In " + market + ", a customer is searching in this product/service category: " + category + ". " + keywordContext + " Based only on your existing knowledge, which relevant brands, product providers, retailers, or websites would you naturally recommend? Keep recommendations relevant to these products or services; do not switch to SEO tools or marketing agencies unless the search phrases are explicitly about those services. Reply as JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}. Do not invent URLs; include URLs only when you know them to be real.";
+}
+
 /** Parse a model reply. Returns null when there is no usable answer text. */
 export function parseProbeContent(content: unknown): ParsedProbe | null {
   const raw = typeof content === "string" ? content.trim() : "";
