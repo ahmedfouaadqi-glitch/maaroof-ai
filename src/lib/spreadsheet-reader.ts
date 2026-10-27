@@ -98,7 +98,7 @@ const ROLE_RX: Array<[ColumnRole, RegExp]> = [
   ["difficulty", /difficulty|\bkd\b|صعوبة/i],
   ["intent", /intent|نية|النية/i],
   ["competition", /competition|منافسة/i],
-  ["url", /\burl\b|landing|page|رابط|صفحة/i],
+  ["url", /\burl\b|landing|رابط|صفحة الهبوط/i],
 ];
 
 /** Column roles from header names only — never guessed from values. */
