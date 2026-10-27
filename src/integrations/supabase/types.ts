@@ -5045,6 +5045,7 @@ export type Database = {
           question: string | null
           size: number
           status: string
+          structure: Json | null
           tokens_charged: number
           user_id: string
           workspace_id: string | null
@@ -5060,6 +5061,7 @@ export type Database = {
           question?: string | null
           size?: number
           status?: string
+          structure?: Json | null
           tokens_charged?: number
           user_id: string
           workspace_id?: string | null
@@ -5075,6 +5077,7 @@ export type Database = {
           question?: string | null
           size?: number
           status?: string
+          structure?: Json | null
           tokens_charged?: number
           user_id?: string
           workspace_id?: string | null

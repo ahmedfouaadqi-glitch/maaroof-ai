@@ -519,6 +519,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       const { data: kf } = await factsQuery.order("created_at", { ascending: false }).limit(20);
       mciHintLine += factsContextLine(freshFacts((kf || []) as Array<{ fact: string; source: string; expires_at?: string | null }>));
     } catch {}
+    // Files the user uploaded in this space during the last 24h: read first, never search the web for them.
+    try {
+      let aq = (db() as any).from("task_attachments").select("name, analysis, structure").eq("user_id", ctx.userId).eq("status", "done").gte("created_at", new Date(Date.now() - 86400000).toISOString());
+      aq = ctx.workspaceId ? aq.eq("workspace_id", ctx.workspaceId) : aq.is("workspace_id", null);
+      const { data: atts } = await aq.order("created_at", { ascending: false }).limit(3);
+      const parts = ((atts || []) as any[]).map((a) => `[ATTACHED FILE "${a.name}" — already read]\n${String(a.structure?.digest || a.analysis || "").slice(0, 15000)}`).filter((x) => x.length > 60);
+      if (parts.length) {
+        mciHintLine += `\n\nThe user's attached files are already available below. Treat reading/analysing them as the first step; never search the web or email to obtain them and never say they are unavailable.\n${parts.join("\n\n")}\n\n`;
+        await ctx.emit("attachments_context", { files: ((atts || []) as any[]).map((a) => a.name) });
+      }
+    } catch {}
     // User's own recent tool runs (saved results + chosen options) — read-only, fail-open.
     let historyLine = "";
     try {
