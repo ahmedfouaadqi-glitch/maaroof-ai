@@ -532,7 +532,7 @@ function SecondResult({
     setSite((current) => current.trim() ? current : resolved.site);
     setCategory((current) => current.trim() ? current : resolved.category);
     setCompetitors((current) => current.trim() ? current : competitorSuggestions);
-  }, [workspaceContext, requestText, hintsKey]);
+  }, [workspaceContext, requestText, hintsKey, competitorSuggestions]);
 
   const run = async () => {
     setBusy(true);
