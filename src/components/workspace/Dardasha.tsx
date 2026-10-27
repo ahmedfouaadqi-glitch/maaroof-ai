@@ -5,6 +5,8 @@ import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { validateAttachment, attachmentPath } from "@/lib/attachments";
 import { composeChatMessage, MAX_DARDASHA_MESSAGE_CHARS, type DardashaAttachment } from "@/lib/maaroof/dardasha";
+import { resolveCompetitiveContext, type CompetitiveWorkspaceContext } from "@/lib/competitive-context";
+import type { Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
 import { AssistantMessage } from "./AssistantMessage";
@@ -47,13 +49,14 @@ async function call(method: string, body?: unknown, workspaceId?: string | null,
 
 /** «دردشة»: one surface for chat, files and tasks. A task starts only after the user clicks approve. */
 export function Dardasha({
-  lang, onPrepareTask, busyTask, workspaceId = null, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed, axisAuditTask,
+  lang, onPrepareTask, busyTask, workspaceId = null, workspaceContext, geoScope, onGeoScopeChange, chatPrefill, onPrefillConsumed, axisAuditTask,
 }: {
   lang: L;
   /** Prepares a task draft for review; does not start execution. */
   onPrepareTask: (goal: string) => void;
   busyTask?: boolean;
   workspaceId?: string | null;
+  workspaceContext?: Workspace | null;
   geoScope: GeoScope;
   onGeoScopeChange: (scope: GeoScope) => void;
   chatPrefill?: { text: string; taskId?: string } | null;
@@ -300,7 +303,7 @@ export function Dardasha({
                 {isGeoScopeConfigured(geoScope) && <span className="rounded-full bg-muted/70 px-2 py-0.5">{tr(lang, "سياق جغرافي مفعّل", "Geographic context active", "پاشبنەمای جوگرافی چالاکە")}</span>}
               </div>}
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
-              {m.role === "assistant" && m.sheets && m.sheets.length > 0 && <SheetInventory sheets={m.sheets} lang={lang} reply={m.content} />}
+              {m.role === "assistant" && m.sheets && m.sheets.length > 0 && <SheetInventory sheets={m.sheets} lang={lang} reply={m.content} requestText={requestContext} workspaceContext={workspaceContext} geoScope={geoScope} workspaceId={workspaceId} />}
               {m.role === "assistant" && m.council && <CouncilCards council={m.council} lang={lang} />}
               {m.role === "assistant" && m.axisAuditRequest && (
                 <FiveAxisAuditCards
@@ -412,7 +415,20 @@ function sheetExportPayload(cards: SheetCard[], reply: string, lang: L) {
   return { title: tr(lang, "تحليل الملف — معروف", "File analysis — Maaroof", "شیکردنەوەی فایل"), lang, sections };
 }
 
-function SheetInventory({ sheets, lang, reply }: { sheets: SheetCard[]; lang: L; reply: string }) {
+function SheetInventory({
+  sheets, lang, reply, requestText, workspaceContext, geoScope, workspaceId,
+}: {
+  sheets: SheetCard[];
+  lang: L;
+  reply: string;
+  requestText: string;
+  workspaceContext?: Workspace | null;
+  geoScope: GeoScope;
+  workspaceId?: string | null;
+}) {
+  const workbookHints = sheets.flatMap((c) => c.sheets.flatMap((s) => [
+    s.name, ...s.columns, ...s.sample.flatMap((row) => row.map((cell) => String(cell))),
+  ]));
   return (
     <div className="mt-3 space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 text-xs">
       {sheets.map((c, ci) => (
@@ -424,56 +440,166 @@ function SheetInventory({ sheets, lang, reply }: { sheets: SheetCard[]; lang: L;
         </div>
       ))}
       <ExportButtons size="xs" build={() => sheetExportPayload(sheets, reply, lang) as any} />
-      {sheets.find((c) => c.attachment_id) && <SecondResult attachmentId={sheets.find((c) => c.attachment_id)!.attachment_id!} lang={lang} />}
+      {sheets.find((c) => c.attachment_id) && (
+        <SecondResult
+          attachmentId={sheets.find((c) => c.attachment_id)!.attachment_id!}
+          lang={lang}
+          workspaceId={workspaceId || null}
+          workspaceContext={workspaceContext}
+          requestText={requestText}
+          geoScope={geoScope}
+          workbookHints={workbookHints}
+        />
+      )}
     </div>
   );
 }
 
-type DualRes = { payload: any; summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>; parties: Array<{ name: string; role: string; url: string | null; read: boolean }>; charged: number; llms?: string; negatives?: string[] };
+type DualRes = {
+  payload: any;
+  summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>;
+  parties: Array<{ name: string; role: string; url: string | null; read: boolean }>;
+  charged: number;
+  llms?: string;
+  negatives?: string[];
+  context?: { brand: string; site: string; category: string; categorySource: string; marketSource: string };
+};
 
-function SecondResult({ attachmentId, lang }: { attachmentId: string; lang: L }) {
-  const [brand, setBrand] = useState(""); const [site, setSite] = useState(""); const [category, setCategory] = useState(""); const [competitors, setCompetitors] = useState("");
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [res, setRes] = useState<DualRes | null>(null);
+function SecondResult({
+  attachmentId, lang, workspaceId, workspaceContext, requestText, geoScope, workbookHints,
+}: {
+  attachmentId: string;
+  lang: L;
+  workspaceId: string | null;
+  workspaceContext?: Workspace | null;
+  requestText: string;
+  geoScope: GeoScope;
+  workbookHints: string[];
+}) {
+  const seed = resolveCompetitiveContext({
+    workspace: workspaceContext as CompetitiveWorkspaceContext | null,
+    requestText,
+    workbookSignals: workbookHints,
+  });
+  const [brand, setBrand] = useState(seed.brand);
+  const [site, setSite] = useState(seed.site);
+  const [category, setCategory] = useState(seed.category);
+  const [competitors, setCompetitors] = useState("");
+  const [targetMarket, setTargetMarket] = useState("");
+  const [needMarket, setNeedMarket] = useState(false);
+  const [editContext, setEditContext] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [res, setRes] = useState<DualRes | null>(null);
+  const hintsKey = workbookHints.join("\u0000");
+
+  useEffect(() => {
+    const resolved = resolveCompetitiveContext({
+      workspace: workspaceContext as CompetitiveWorkspaceContext | null,
+      requestText,
+      workbookSignals: workbookHints,
+    });
+    setBrand((current) => current.trim() ? current : resolved.brand);
+    setSite((current) => current.trim() ? current : resolved.site);
+    setCategory((current) => current.trim() ? current : resolved.category);
+  }, [workspaceContext, requestText, hintsKey]);
+
   const run = async () => {
-    setBusy(true); setErr("");
+    setBusy(true);
+    setErr("");
     try {
-      const r = await fetch(withPreviewAuth("/api/dual-result"), { method: "POST", headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ attachment_id: attachmentId, brand, site, category, competitors, lang }) });
+      const r = await fetch(withPreviewAuth("/api/dual-result"), {
+        method: "POST",
+        headers: { Authorization: "Bearer " + await token(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attachment_id: attachmentId,
+          workspace_id: workspaceId || undefined,
+          request_text: requestText,
+          geo_scope: toServerGeoScope(geoScope),
+          market_text: targetMarket,
+          brand,
+          site,
+          category,
+          competitors: competitors.split(/[,،\n]/).map((value) => value.trim()).filter(Boolean),
+          lang,
+        }),
+      });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
-        const msg: Record<string, string> = { no_market: tr(lang, "لم يُذكر أي سوق في الملف. اكتب السوق المستهدف في رسالتك.", "No market is named in the file. Name the target market in your message.", "هیچ بازاڕێک ناونەبراوە."), no_evidence: tr(lang, "لم نحصل على أي دليل من الويب أو المحركات، ولم يُخصم شيء.", "No evidence from the web or engines; nothing was charged.", "هیچ بەڵگەیەک نییە؛ هیچ نەبڕدرا."), missing_input: tr(lang, "اكتب اسم العلامة والمجال.", "Enter the brand and category.", "ناوی براند و بوار بنووسە.") };
-        setErr(msg[j?.error] || j?.ar || j?.error || "error");
-      } else setRes(j);
-    } catch { setErr(tr(lang, "تعذّر الاتصال.", "Connection failed.", "پەیوەندی سەرکەوتوو نەبوو.")); }
-    setBusy(false);
+        if (j?.error === "no_market") setNeedMarket(true);
+        if (j?.error === "category_required" || j?.error === "brand_required") setEditContext(true);
+        const messages: Record<string, string> = {
+          no_market: tr(lang, "لم أتمكن من تحديد السوق من الملف أو الطلب أو النطاق المختار. أدخل السوق المستهدف مرة واحدة.", "I could not determine the market from the workbook, request, or selected scope. Enter the target market once.", "نەتوانرا بازاڕ دیاری بکرێت؛ یەک جار بازاڕ بنووسە."),
+          category_required: tr(lang, "لم أجد دليلًا كافيًا لتحديد المجال من مساحة العمل أو الملف. أدخل المجال فقط.", "I could not reliably infer the business category from the workspace or workbook. Enter only the category.", "بوارەکە لە پاشبنەما و فایلەوە دیاری نەکرا؛ تەنها بوار بنووسە."),
+          brand_required: tr(lang, "تعذر استعادة اسم العلامة. أدخله مرة واحدة.", "The brand name could not be recovered. Enter it once.", "ناوی براند دیاری نەکرا؛ یەک جار بینووسە."),
+          workspace_not_found: tr(lang, "تعذر التحقق من مساحة العمل المختارة. حدّث الصفحة ثم أعد المحاولة.", "The selected workspace could not be verified. Refresh and retry.", "شوێنی کار پشتڕاست نەکرایەوە."),
+          attachment_workspace_mismatch: tr(lang, "الملف لا ينتمي إلى مساحة العمل الحالية؛ لم يُستخدم.", "This file does not belong to the active workspace and was not used.", "ئەم فایلە هی شوێنی کاری چالاک نییە."),
+          not_found: tr(lang, "تعذر العثور على الملف المرفق.", "The attached file could not be found.", "فایلەکە نەدۆزرایەوە."),
+          not_spreadsheet: tr(lang, "هذا المسار يحتاج إلى ملف Excel أو CSV.", "This research flow needs an Excel or CSV workbook.", "ئەم ڕێگایە فایلێکی Excel یان CSV دەوێت."),
+          no_evidence: tr(lang, "لم تُجمع أدلة عامة كافية من الويب أو المحركات؛ لم يتم إنشاء تقرير تخميني.", "The web or engines returned no usable evidence, so no speculative report was created.", "بەڵگەی بەسوود بەدەست نەهات."),
+        };
+        setErr(messages[j?.error] || j?.ar || j?.error || tr(lang, "تعذر تنفيذ البحث.", "Research could not be completed.", "لێکۆڵینەوە تەواو نەبوو."));
+        return;
+      }
+      setNeedMarket(false);
+      setRes(j);
+    } catch {
+      setErr(tr(lang, "تعذر الاتصال بخدمة البحث.", "Could not connect to the research service.", "پەیوەندی بە خزمەتگوزاری گەڕان نەکرا."));
+    } finally {
+      setBusy(false);
+    }
   };
-  const inp = "w-full rounded-lg border border-border bg-background px-2 py-1 text-xs";
+
+  const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-xs";
+  const scopeDisplay = getCompactGeoScopeDisplay(geoScope, lang);
+  const showRequiredInputs = !brand.trim() || !category.trim() || needMarket;
   return (
     <div className="mt-3 rounded-xl border border-primary/30 bg-background p-3">
-      <p className="font-semibold text-foreground">{tr(lang, "النتيجة الثانية: بحث العلامة والمنافسين لكل سوق", "Second result: brand & competitor research per market", "ئەنجامی دووەم: لێکۆڵینەوەی ڕکابەران")}</p>
-      <p className="mt-1 text-muted-foreground">{tr(lang, "الأسواق تُقرأ من الملف. يُخصم الرصيد فقط عند النجاح.", "Markets are read from the file. Charged only on success.", "بازاڕەکان لە فایل دەخوێندرێنەوە.")}</p>
-      {!res && (
+      <p className="font-semibold text-foreground">{tr(lang, "تحليل العلامة والمنافسين لكل سوق", "Brand and competitor research by market", "لێکۆڵینەوەی براند و ڕکابەران بەپێی بازاڕ")}</p>
+      <p className="mt-1 text-muted-foreground">{tr(lang, "سيستعيد معروف بيانات العميل والطلب والملف أولًا، ثم يكتشف المنافسين. لن يبدأ البحث المدفوع إلا عند الضغط على زر البدء.", "Maaroof will first reuse the client, request, and workbook context, then discover competitors. Research starts only when you click the button.", "معروف سەرەتا پاشبنەمای کڕیار و داواکاری و فایل بەکاردەهێنێت؛ گەڕان تەنها بە کرتەکردن دەست پێدەکات.")}</p>
+
+      <div className="mt-3 grid gap-2 rounded-lg bg-muted/35 p-3 sm:grid-cols-2">
+        <div><span className="text-muted-foreground">{tr(lang, "العلامة", "Brand", "براند")}:</span> <strong>{brand || tr(lang, "مطلوب", "Required", "پێویستە")}</strong></div>
+        <div className="min-w-0"><span className="text-muted-foreground">{tr(lang, "الموقع", "Website", "ماڵپەڕ")}:</span> <span className="break-all">{site || tr(lang, "غير مسجل", "Not saved", "تۆمار نەکراوە")}</span></div>
+        <div><span className="text-muted-foreground">{tr(lang, "المجال", "Category", "بوار")}:</span> <strong>{category || tr(lang, "مطلوب", "Required", "پێویستە")}</strong></div>
+        <div><span className="text-muted-foreground">{tr(lang, "النطاق", "Scope", "سنوور")}:</span> <strong>{scopeDisplay.label}</strong></div>
+        <div className="sm:col-span-2 text-muted-foreground">{tr(lang, "المنافسون", "Competitors", "ڕکابەران")}: {competitors.trim() || tr(lang, "سيتم اكتشافهم تلقائيًا؛ أدخل أسماء إضافية فقط إن أردت.", "Discovered automatically; add names only if needed.", "بە شێوەی خۆکار دەدۆزرێنەوە؛ ناوی زیادە تەنها ئەگەر بتەوێت.")}</div>
+        {seed.categorySource === "inferred" && category && <p className="sm:col-span-2 text-[11px] text-muted-foreground">{tr(lang, "المجال مستنتج من مؤشرات الاسم والموقع والطلب أو الملف؛ راجعه إذا لم يكن دقيقًا.", "Category inferred from the name, website, request, or workbook; review it if inaccurate.", "بوارەکە لە نیشانەکانی ناو و ماڵپەڕ و فایلەوە خەمڵێنراوە.")}</p>}
+      </div>
+
+      {(showRequiredInputs || editContext) && (
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <input className={inp} value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={tr(lang, "اسم العلامة", "Brand name", "ناوی براند")} />
-          <input className={inp} value={site} onChange={(e) => setSite(e.target.value)} placeholder={tr(lang, "رابط الموقع (اختياري)", "Website (optional)", "ماڵپەڕ")} dir="ltr" />
-          <input className={inp} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={tr(lang, "المجال، مثل: أزياء فاخرة", "Category, e.g. luxury fashion", "بوار")} />
-          <input className={inp} value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder={tr(lang, "منافسون إضافيون (اختياري — يُكتشفون تلقائياً)", "Extra competitors (optional — found automatically)", "ڕکابەران")} />
-          <button type="button" disabled={busy || !brand.trim() || !category.trim()} onClick={run} className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50 sm:col-span-2">
-            {busy ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />{tr(lang, "جارٍ البحث وسؤال المحركات العشرة…", "Researching and asking the ten engines…", "لێکۆڵینەوە…")}</> : tr(lang, "ابدأ البحث", "Start research", "دەستپێبکە")}
-          </button>
+          {(!brand.trim() || editContext) && <input className={inputClass} value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={tr(lang, "اسم العلامة التجارية", "Brand name", "ناوی براند")} />}
+          {(!category.trim() || editContext) && <input className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={tr(lang, "المجال التجاري", "Business category", "بوار")} />}
+          {needMarket && <input className={inputClass} value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)} placeholder={tr(lang, "السوق المستهدف، مثل United States أو العراق", "Target market, e.g. United States or Iraq", "بازاڕی ئامانج")} />}
+          {editContext && <>
+            <input className={inputClass} value={site} onChange={(e) => setSite(e.target.value)} placeholder={tr(lang, "رابط الموقع (اختياري)", "Website (optional)", "ماڵپەڕ")} dir="ltr" />
+            <input className={inputClass} value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder={tr(lang, "منافسون إضافيون (اختياري)", "Additional competitors (optional)", "ڕکابەری زیادە")} />
+            {!needMarket && <input className={inputClass} value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)} placeholder={tr(lang, "تحديد سوق إضافي (اختياري)", "Optional market override", "بازاڕی زیادە")} />}
+          </>}
         </div>
       )}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onClick={() => setEditContext((value) => !value)} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          {editContext ? tr(lang, "إخفاء التعديل", "Hide edits", "شاردنەوەی دەستکاری") : tr(lang, "تعديل بيانات البحث (اختياري)", "Edit research details (optional)", "دەستکاری زانیاری گەڕان")}
+        </button>
+        <button type="button" disabled={busy || !brand.trim() || !category.trim() || (needMarket && !targetMarket.trim())} onClick={run} className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+          {busy ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />{tr(lang, "جارٍ البحث والتحقق…", "Researching and verifying…", "گەڕان و پشتڕاستکردنەوە…")}</> : tr(lang, "ابدأ البحث", "Start research", "دەستپێبکە")}
+        </button>
+      </div>
       {err && <p className="mt-2 text-destructive">{err}</p>}
       {res && (
         <div className="mt-2 space-y-2">
+          {res.context && <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-muted-foreground">{tr(lang, "سياق التحليل الفعلي", "Resolved analysis context", "پاشبنەمای شیکردنەوە")}: {res.context.brand} · {res.context.category} · {res.context.marketSource}</div>}
           {res.summary.map((s) => (
             <div key={s.market} className="rounded-lg bg-muted/30 px-2 py-1">
-              <span className="font-medium">{s.label}</span>: {s.voice.map((v) => `${v.name} ${v.percent === null ? tr(lang, "غير متوفر", "n/a", "نییە") : `${v.percent}% (${v.mentioned}/${v.answered})`}`).join(" · ")}
+              <span className="font-medium">{s.label}</span>: {s.voice.map((v) => v.name + " " + (v.percent === null ? tr(lang, "غير متوفر", "n/a", "نییە") : String(v.percent) + "% (" + v.mentioned + "/" + v.answered + ")")).join(" · ")}
             </div>
           ))}
-          <ul className="space-y-0.5">{res.parties.map((p, i) => <li key={i}>{p.name} — {p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">{p.url}</a> : tr(lang, "لا يوجد رابط", "no link", "بەستەر نییە")} {!p.read && `(${tr(lang, "لم تُقرأ الصفحة", "page not read", "نەخوێندرایەوە")})`}</li>)}</ul>
+          <ul className="space-y-0.5">{res.parties.map((p, i) => <li key={i}>{p.name} — {p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">{p.url}</a> : tr(lang, "لم يُعثر على رابط موثوق", "No verified URL found", "بەستەری پشتڕاستکراو نەدۆزرایەوە")} {!p.read && " (" + tr(lang, "لم تُقرأ الصفحة", "page not read", "نەخوێندرایەوە") + ")"}</li>)}</ul>
           <div className="flex flex-wrap gap-1">
             {res.llms && <button type="button" onClick={() => navigator.clipboard.writeText(res.llms!)} className="rounded-lg border border-border px-2 py-1 text-xs">{tr(lang, "نسخ llms.txt", "Copy llms.txt", "کۆپی llms.txt")}</button>}
-            {!!res.negatives?.length && <button type="button" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([res.negatives!.join("\n")], { type: "text/plain" })); a.download = "negative-keywords.txt"; a.click(); }} className="rounded-lg border border-border px-2 py-1 text-xs">{tr(lang, `تحميل الكلمات السلبية (${res.negatives.length})`, `Download negatives (${res.negatives.length})`, "داگرتن")}</button>}
+            {!!res.negatives?.length && <button type="button" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([res.negatives!.join("\n")], { type: "text/plain" })); a.download = "negative-keywords.txt"; a.click(); }} className="rounded-lg border border-border px-2 py-1 text-xs">{tr(lang, "تحميل الكلمات السلبية", "Download negative keywords", "داگرتنی وشە نەرێنییەکان")}</button>}
           </div>
           <ExportButtons size="xs" build={() => res.payload} />
         </div>

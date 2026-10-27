@@ -1,4 +1,6 @@
 // Pure: target markets named in a workbook (sheet/column names) or the request text. Never assumed.
+import { NAMES } from "./countries";
+
 export type Market = { code: string; en: string; ar: string; gl: string };
 
 const MARKETS: Array<Market & { rx: RegExp }> = [
@@ -19,19 +21,40 @@ const MARKETS: Array<Market & { rx: RegExp }> = [
   { code: "de", en: "Germany", ar: "ألمانيا", gl: "de", rx: /\bgermany\b|ألمانيا|المانيا/i },
 ];
 
+// Add the remaining countries supported by the geographic selector without duplicating existing market rules.
+const MARKET_LOOKUP: Array<Market & { rx: RegExp }> = [
+  ...MARKETS,
+  ...Object.entries(NAMES).flatMap(([rawCode, names]) => {
+    const code = rawCode.toLowerCase();
+    if (MARKETS.some((market) => market.code === code)) return [];
+    return [{ code, en: names.en, ar: names.ar, gl: code, rx: new RegExp("\\b" + names.en + "\\b|" + names.ar, "i") }];
+  }),
+];
+
 /** Markets found in the given texts, in first-seen order. Empty when none is named. */
 export function detectMarkets(texts: string[]): Market[] {
   const out: Market[] = [];
-  for (const t of texts) for (const m of MARKETS) if (m.rx.test(String(t || "")) && !out.some((o) => o.code === m.code)) out.push({ code: m.code, en: m.en, ar: m.ar, gl: m.gl });
+  for (const t of texts) for (const m of MARKET_LOOKUP) if (m.rx.test(String(t || "")) && !out.some((o) => o.code === m.code)) out.push({ code: m.code, en: m.en, ar: m.ar, gl: m.gl });
   return out;
 }
 
 export function marketByCode(code: string): Market | null {
-  const m = MARKETS.find((x) => x.code === String(code || "").toLowerCase());
+  const m = MARKET_LOOKUP.find((x) => x.code === String(code || "").toLowerCase());
   return m ? { code: m.code, en: m.en, ar: m.ar, gl: m.gl } : null;
 }
 
 /** True when a sheet name belongs to that market. */
 export function sheetMatchesMarket(sheetName: string, m: Market): boolean {
   return detectMarkets([sheetName]).some((x) => x.code === m.code);
+}
+
+/**
+ * Assign generic workbook tabs to a single target market only when no tab is
+ * explicitly market-labelled. With multiple markets, never duplicate one tab
+ * across markets without evidence.
+ */
+export function sheetsForMarket<T extends { name: string }>(sheets: T[], markets: Market[], market: Market): T[] {
+  const matched = sheets.filter((sheet) => sheetMatchesMarket(sheet.name, market));
+  if (matched.length > 0 || markets.length !== 1) return matched;
+  return sheets;
 }
