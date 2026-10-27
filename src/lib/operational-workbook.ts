@@ -177,22 +177,36 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   }
   const negs = dedupeNegatives(negRaw);
 
-  // Per-engine keyword fit: winners first, else first keywords of each market (max 30 per market)
+  // Per-engine keyword fit. A keyword is measured only when it was present in the actual query or in a separate cluster probe.
   const winners = new Set<string>();
   for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) { const i = keywordColumn(s); if (i >= 0) for (const r of s.rows) winners.add(String(r[i] ?? "").trim().toLowerCase()); }
   const perEngine: (string | number)[][] = [];
   for (const m of markets) {
     const mk = kRows.filter((r) => r.m.code === m.code);
     const pick = [...mk.filter((r) => winners.has(r.k.toLowerCase())), ...mk.filter((r) => !winners.has(r.k.toLowerCase()))].slice(0, 30);
-    const answered = engineAnswers.filter((a) => a.market === m.code && a.status === "answered").length;
     for (const r of pick) {
       const ax = keywordAxis(r.k);
       const cs = clusterScore(input.clusterAnswers || [], m.code, r.k);
-      const eng = cs ? cs.engines : enginesMentioning(engineAnswers, m.code, r.k);
-      const NOT_M = S("لم تُقس", "Not measured", "نەپێوراوە");
-      const score = cs ? `${eng.length}/${cs.answered}` : eng.length ? `${eng.length}/${answered}` : NOT_M;
-      perEngine.push([r.k, mName(m), score, eng.join(", ") || (cs ? "0" : NOT_M), ax.axis, ax.rule,
-        ENGINE_KEYS.map((e) => `${e}: ${ENGINE_FORM[e](r.k, m.en)}`).join("\n"), cs ? S("سؤال مستقل لمجموعة الكلمة", "Separate cluster question", "پرسیاری جیا") : eng.length ? SRC_ENG : NA[l]]);
+      const quotedKeyword = '"' + r.k.slice(0, 180).toLowerCase().replace(/"/g, "") + '"';
+      const matchingProbes = engineAnswers.filter((answer) => answer.market === m.code && String(answer.query || "").toLowerCase().includes(quotedKeyword));
+      const answeredProbes = matchingProbes.filter((answer) => answer.status === "answered");
+      const eng = cs
+        ? cs.engines
+        : [...new Set(answeredProbes.filter((answer) => answer.answer.toLowerCase().includes(r.k.toLowerCase())).map((answer) => answer.engine))];
+      const NOT_M = S("لم تُقَس", "Not measured", "نەپێوراوە");
+      const score = cs ? (String(eng.length) + "/" + cs.answered) : answeredProbes.length ? (String(eng.length) + "/" + answeredProbes.length) : NOT_M;
+      const engineLabel = eng.join(", ") || (cs || answeredProbes.length
+        ? S("لم يرد ذكر حرفي في الإجابات", "No literal mention in answers", "هیچ باسکردنێکی ڕاستەوخۆ نییە")
+        : S("لم تُختبر هذه الكلمة في سؤال المحرك", "Not tested in engine query", "ئەم وشەیە لە پرسیاری بزوێنەر تاقی نەکراوەتەوە"));
+      const provenance = cs
+        ? S("سؤال مستقل لمجموعة الكلمة", "Separate cluster question", "پرسیاری جیا بۆ کۆمەڵە وشە")
+        : answeredProbes.length
+          ? SRC_ENG
+          : matchingProbes.length
+            ? S("أُرسلت الكلمة لكن لم تسجل إجابة ناجحة", "Keyword sent but no successful answers recorded", "وشەکە نێردرا بەڵام وەڵامی سەرکەوتوو تۆمار نەکرا")
+            : S("لم تُرسل الكلمة في سؤال المحرك", "Keyword was not sent in the engine query", "وشەکە لە پرسیاری بزوێنەر نەنێردرا");
+      perEngine.push([r.k, mName(m), score, engineLabel, ax.axis, ax.rule,
+        ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
     }
   }
 
@@ -221,7 +235,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const TEAM = S("يحتاج فريقك", "Needs your team", "تیمەکەت");
   const NOT = S("لم يُنفّذ: لا بيانات كافية", "Not done: not enough data", "ئەنجام نەدرا");
   const plan: (string | number)[][] = [
-    [1, S("قائمة الكلمات السلبية للمراجعة", "Negative keyword review list", "لیستی وشە نەرێنییەکان بۆ پێداچوونەوە"), negs.length ? DONE : NOT, negs.length ? S(`${negs.length} كلمة في تبويب الكلمات السلبية`, `${negs.length} keywords in the Negative sheet`, `${negs.length}`) : NA[l], S("انسخها إلى Google Ads ← الأدوات ← قوائم الكلمات السلبية ← اربطها بالحملات", "Copy into Google Ads → Tools → Negative keyword lists → apply to campaigns", "Google Ads")],
+    [1, S("مرشحات الكلمات السلبية للمراجعة", "Negative keyword candidates for review", "پێشنیاری وشە نەرێنییەکان بۆ پێداچوونەوە"), negs.length ? S("تحتاج مراجعة بشرية", "Human review required", "پێویستی بە پێداچوونەوەی مرۆییە") : NOT, negs.length ? S(String(negs.length) + " مرشحًا؛ ليست قرارات استبعاد نهائية", String(negs.length) + " candidates; not final exclusion decisions", String(negs.length)) : NA[l], S("تحقق من نية البحث والسوق ونوع المطابقة قبل اعتماد أي استبعاد", "Validate search intent, market, and match type before applying exclusions", "پێش جێبەجێکردنی ڕەتکردنەوە، نیەت و بازاڕ و جۆری هاوتایی بپشکنە")],
     [2, "llms.txt", input.llms ? DONE : NOT, input.llms ? S("جاهز في نهاية هذا الملف ويمكن نسخه من الدردشة", "Ready at the end of this file and copyable in chat", "ئامادەیە") : S("أكمل بطاقة هوية العلامة أولاً", "Complete the brand identity card first", "کارتی ناسنامە"), S("ارفع الملف إلى جذر الموقع: /llms.txt", "Upload to the site root as /llms.txt", "/llms.txt")],
     [3, S("كلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), perEngine.length ? DONE : NOT, S(`${perEngine.length} كلمة مع درجة التطابق`, `${perEngine.length} keywords with match score`, `${perEngine.length}`), S("اكتب صفحة أو سؤالاً شائعاً لكل كلمة درجتها منخفضة", "Write a page or FAQ answer for each low-score keyword", "پەڕە بنووسە")],
     [4, S("سد فجوات GEO", "Close GEO gaps", "GEO"), TEAM, S(`${bench.filter((r) => r[2] !== S("العلامة", "Brand", "براند") && typeof r[5] === "string" && /^[1-9]/.test(String(r[5]))).length} حالة ذكر فيها محرك منافساً`, "Cases where an engine named a competitor", ""), S("أضف حقائق بأرقام ومصادر في أول 150 كلمة من الصفحات الأساسية", "Add numbered, sourced facts in the first 150 words of key pages", "")],
