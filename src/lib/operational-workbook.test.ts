@@ -77,6 +77,37 @@ describe("operational workbook", () => {
     ];
     expect(enginesMentioning(ans, "us", "Dior Bag")).toEqual(["chatgpt"]);
   });
+  it("does not call an unasked keyword zero visibility, and distinguishes a measured zero mention", () => {
+    const p = buildOperationalPayload({
+      brand: "B",
+      lang: "en",
+      markets: detectMarkets(["USA"]),
+      sheets: [{
+        name: "USA KEYWORDS",
+        columns: ["Keyword"],
+        rows: [["designer dress"], ["evening gown"]],
+        totalRows: 2,
+        truncated: false,
+      }],
+      parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: [{
+        market: "us",
+        engine: "chatgpt",
+        status: "answered",
+        answer: "Try boutiques",
+        urls: [],
+        query: 'In United States: "designer dress"',
+      }],
+    });
+    const rows = p.sections.find((s) => s.heading === "Keywords per engine")!.table!.data;
+    const asked = rows.find((r) => r[0] === "designer dress")!;
+    const unasked = rows.find((r) => r[0] === "evening gown")!;
+    expect(asked[2]).toBe("0/1");
+    expect(asked[3]).toBe("No literal mention in answers");
+    expect(unasked[2]).toBe("Not measured");
+    expect(unasked[3]).toBe("Not tested in engine query");
+  });
+
   it("classifies question keywords as AEO", () => {
     expect(keywordAxis("how to clean a dior bag").axis).toBe("AEO");
     expect(keywordAxis("best luxury bags").axis).toBe("GEO");
