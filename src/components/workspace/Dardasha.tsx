@@ -471,6 +471,8 @@ type DualRes = {
   summary: Array<{ market: string; label: string; voice: Array<{ name: string; percent: number | null; mentioned: number; answered: number }> }>;
   parties: Array<{ name: string; role: string; url: string | null; read: boolean }>;
   charged: number;
+  evidence_state?: "available" | "partial" | "none";
+  evidence_note?: string;
   llms?: string;
   negatives?: string[];
   clusters?: { asked: number; answered: number; probes_asked: number; probes_answered: number };
@@ -637,6 +639,15 @@ function SecondResult({
       {res && (
         <div className="mt-2 space-y-2">
           {res.context && <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-muted-foreground">{tr(lang, "سياق التحليل الفعلي", "Resolved analysis context", "پاشبنەمای شیکردنەوە")}: {res.context.brand} · {res.context.category} · {res.context.marketSource}</div>}
+          {res.evidence_state && res.evidence_state !== "available" && (
+            <div role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="font-semibold">{res.evidence_state === "none"
+                ? tr(lang, "لم تُجمع أدلة خارجية قابلة للاستخدام", "No usable external evidence was retrieved", "هیچ بەڵگەی دەرەکیی بەسوود بەدەست نەهاتووە")
+                : tr(lang, "النتائج الخارجية جزئية", "External evidence is partial", "بەڵگەی دەرەکی تەواو نییە")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{res.evidence_note || tr(lang, "راجع حالات التنفيذ قبل الاعتماد على الاستنتاجات.", "Review execution statuses before relying on findings.", "پێش پشتبەستن بە دەرئەنجامەکان، دۆخی جێبەجێکردن بپشکنە.")}</p>
+              <p className="mt-1 text-xs">{tr(lang, "يمكنك رغم ذلك تنزيل المصنف؛ ستجد بيانات المصدر وحالات الأدوات دون اختلاق نتائج ظهور أو ترتيب.", "You can still export the workbook; it preserves source data and execution states without inventing visibility or ranking results.", "هێشتا دەتوانیت فایلەکە هەناردە بکەیت؛ داتای سەرچاوە و دۆخی ئامرازەکان دەپارێزێت بەبێ دروستکردنی ئەنجامی دەرکەوتن یان ڕیزبەندی.")}</p>
+            </div>
+          )}
           {res.diagnostics && (
             <div className="rounded-lg border border-border/60 bg-background p-3">
               <p className="font-semibold">{tr(lang, "حالة التنفيذ والأدلة", "Execution and evidence status", "دۆخی جێبەجێکردن و بەڵگە")}</p>

@@ -29,6 +29,25 @@ describe("keyword intelligence auto-start", () => {
     expect(shouldAutoStartKeywordResearch("Analyze this Excel workbook and export a report", ["Employee", "Salary", "Department"])).toBe(false);
   });
 
+  it("keeps the workbook deliverable when external evidence is absent or partial", async () => {
+    const { deriveEvidenceState, hasChargeableMarketEvidence } = await import("./keyword-intelligence-flow");
+    expect(deriveEvidenceState({
+      answeredMarketCalls: 0, answeredClusterCalls: 0, readablePages: 0,
+      socialResults: 0, structuredEvidence: 0, failedProbes: 10,
+    })).toBe("none");
+    expect(deriveEvidenceState({
+      answeredMarketCalls: 1, answeredClusterCalls: 0, readablePages: 0,
+      socialResults: 0, structuredEvidence: 0, failedProbes: 9,
+    })).toBe("partial");
+    expect(deriveEvidenceState({
+      answeredMarketCalls: 10, answeredClusterCalls: 5, readablePages: 3,
+      socialResults: 4, structuredEvidence: 2, failedProbes: 0,
+    })).toBe("available");
+    expect(hasChargeableMarketEvidence(0, false)).toBe(false);
+    expect(hasChargeableMarketEvidence(1, false)).toBe(true);
+    expect(hasChargeableMarketEvidence(0, true)).toBe(true);
+  });
+
   it("recognizes a keyword signal in sheet metadata", () => {
     expect(hasKeywordWorkbookSignals(["Source data", "الكلمات المفتاحية", "Volume"])).toBe(true);
   });

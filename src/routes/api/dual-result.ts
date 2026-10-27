@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { resolveCompetitiveContext } from "@/lib/competitive-context";
+import { deriveEvidenceState, hasChargeableMarketEvidence } from "@/lib/keyword-intelligence-flow";
 
 // Second result: competitor + GEO research per target market, returned as an export payload.
 export const Route = createFileRoute("/api/dual-result")({
@@ -134,14 +135,61 @@ export const Route = createFileRoute("/api/dual-result")({
         ]);
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
-        if (!answeredMarkets && !anyPage) return Response.json({ error: "no_evidence" }, { status: 502 });
-
-        // Charge only successful markets; fall back to the parent tool price.
-        const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
-        const units = Math.max(1, answeredMarkets);
-        let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id, markets: markets.map((m: any) => m.code) } });
-        if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id, sub: "competitive_geo.market" } });
-        if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, charge.left), { status: 402 });
+        const marketEvidenceAvailable = hasChargeableMarketEvidence(answeredMarkets, anyPage);
+        if (!marketEvidenceAvailable) {
+          // Preserve source data and explain initial probe failures without triggering further paid
+          // cluster/social/structured-data requests when market probes and page reads yielded no evidence.
+          const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
+          const skippedSourceNote = "Skipped because the initial market probes and page reads returned no usable external evidence; no additional source requests were made.";
+          const partialAlexandria = { connected: false, note: skippedSourceNote };
+          const payload = buildOperationalPayload({
+            brand, lang, markets, sheets, parties, engineAnswers,
+            social: [], alexandria: partialAlexandria, clusterAnswers: [],
+          });
+          const summary = markets.map((m: any) => ({
+            market: m.code,
+            label: lang === "ar" ? m.ar : m.en,
+            voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })),
+          }));
+          const summarizeStatuses = (items: Array<{ status: string }>) => ({
+            asked: items.length,
+            answered: items.filter((item) => item.status === "answered").length,
+            no_answer: items.filter((item) => item.status === "no_answer").length,
+            empty: items.filter((item) => item.status === "empty").length,
+            timeout: items.filter((item) => item.status === "timeout").length,
+            http_error: items.filter((item) => item.status === "http_error").length,
+            error: items.filter((item) => item.status === "error").length,
+          });
+          const urls = parties.filter((party) => Boolean(party.url));
+          const diagnostics = {
+            market_probes: summarizeStatuses(engineAnswers),
+            cluster_probes: summarizeStatuses([]),
+            pages: { urls: urls.length, read: 0, unread: urls.length },
+            social: { searched_parties: 0, parties_with_results: 0, results: 0 },
+            alexandria: partialAlexandria,
+          };
+          return Response.json({
+            payload, summary, diagnostics, evidence_state: "none" as const,
+            evidence_note: "No external evidence was retrieved. The workbook still preserves the original rows, actual market queries, and failed/no-answer statuses. Additional paid research stages were skipped.",
+            parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
+            context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource },
+            charged: 0,
+            clusters: { asked: 0, answered: 0, probes_asked: 0, probes_answered: 0 },
+            negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
+            alexandria: partialAlexandria,
+          });
+        }
+        // Do not charge for a market probe when it produced no usable answer and no page was read.
+        // Still continue building a partial workbook so the user receives source data and failure diagnostics.
+        let totalCharged = 0;
+        if (marketEvidenceAvailable) {
+          const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
+          const units = Math.max(1, answeredMarkets);
+          let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id, markets: markets.map((m: any) => m.code) } });
+          if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id, sub: "competitive_geo.market" } });
+          if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, charge.left), { status: 402 });
+          totalCharged += Number(charge.tokens || 0);
+        }
         // Per-cluster questions (limit chosen by the user, 0-10 per market).
         const { buildClusters, answeredClusterCount } = await import("@/lib/keyword-clusters");
         const clusterLimit = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
@@ -158,6 +206,7 @@ export const Route = createFileRoute("/api/dual-result")({
           let cc: any = await ct({ userId, toolKey: "competitive_geo.cluster", units: answeredClusters, meta: { attachment_id: id } });
           if (!cc.ok && cc.reason === "unpriced") cc = await ct({ userId, toolKey: "compare", units: answeredClusters, meta: { attachment_id: id, sub: "competitive_geo.cluster" } });
           if (!cc.ok) return Response.json({ error: "insufficient_balance_clusters", left: cc.left }, { status: 402 });
+          totalCharged += Number(cc.tokens || 0);
         }
 
         const social = await gatherSocial(parties.map((p) => p.name), userId);
@@ -193,7 +242,20 @@ export const Route = createFileRoute("/api/dual-result")({
           social: { searched_parties: Math.min(parties.length, 5), parties_with_results: socialPartiesWithResults, results: social.length },
           alexandria: { connected: alexandria.connected, note: alexandria.note || "" },
         };
-        return Response.json({ payload, summary, diagnostics, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource }, charged: charge.tokens || 0, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        const evidenceState = deriveEvidenceState({
+          answeredMarketCalls: engineAnswers.filter((answer) => answer.status === "answered").length,
+          answeredClusterCalls: clusterAnswers.filter((answer) => answer.status === "answered").length,
+          readablePages: parties.filter((party) => Boolean(party.pageText)).length,
+          socialResults: social.length,
+          structuredEvidence: alex.evidence.length,
+          failedProbes: engineAnswers.filter((answer) => answer.status !== "answered").length + clusterAnswers.filter((answer) => answer.status !== "answered").length,
+        });
+        const evidenceNote = evidenceState === "none"
+          ? "No external evidence was retrieved. This workbook still contains source rows, execution statuses, exact queries, and failure reasons; it contains no measured visibility result."
+          : evidenceState === "partial"
+            ? "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
+            : "Some external evidence was retrieved. Results still need contextual validation and are not a ranking guarantee.";
+        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },
