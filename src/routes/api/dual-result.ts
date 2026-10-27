@@ -85,12 +85,10 @@ export const Route = createFileRoute("/api/dual-result")({
           ...marketColumnSignals,
           requestText,
         ]);
-        const workspaceMarkets = detectMarkets([String(workspace?.country || ""), String(workspace?.city || "")]);
         const markets = chosen.length ? chosen
           : userMarkets.length ? userMarkets
           : scopedMarkets.length ? scopedMarkets
-          : workbookMarkets.length ? workbookMarkets
-          : workspaceMarkets;
+          : workbookMarkets;
         if (!markets.length) return Response.json({
           error: "no_market",
           need: ["market"],
@@ -100,8 +98,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const marketSource = chosen.length ? "explicit"
           : userMarkets.length ? "user_input"
           : scopedMarkets.length ? "geographic_scope"
-          : workbookMarkets.length ? "workbook_or_request"
-          : "workspace_country_fallback";
+          : "workbook_or_request";
 
         const competitors = (Array.isArray(b?.competitors) ? b.competitors : String(b?.competitors || "").split(/[,،\n]/))
           .map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
@@ -127,8 +124,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const { keywordColumn } = await import("@/lib/operational-workbook");
         const kwOf = (s: any) => { const i = keywordColumn(s); return i < 0 ? [] : s.rows.map((r: any) => String(r[i] ?? "")); };
         for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) for (const k of kwOf(s)) winners.add(k.trim().toLowerCase());
-        const { sheetMatchesMarket } = await import("@/lib/market-scope");
-        const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheets.filter((s) => sheetMatchesMarket(s.name, m)).flatMap(kwOf), winners, clusterLimit));
+        const { sheetsForMarket } = await import("@/lib/market-scope");
+        const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheetsForMarket(sheets, markets, m).filter((s: any) => !/negative|سلبي/i.test(s.name)).flatMap(kwOf), winners, clusterLimit));
         const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
         const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c) : [];
         const answeredClusters = answeredClusterCount(clusterAnswers);
