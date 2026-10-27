@@ -43,6 +43,22 @@ export const Route = createFileRoute("/api/dual-result")({
         const anyPage = parties.some((p) => p.pageText);
         if (!answeredMarkets && !anyPage) return Response.json({ error: "no_evidence" }, { status: 502 });
 
+        // Per-cluster questions (limit chosen by the user, 0-10 per market).
+        const { buildClusters, answeredClusterCount } = await import("@/lib/keyword-clusters");
+        const clusterLimit = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
+        const winners = new Set<string>();
+        for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) for (const r of s.rows) winners.add(String(r[0] ?? "").trim().toLowerCase());
+        const { sheetMatchesMarket } = await import("@/lib/market-scope");
+        const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheets.filter((s) => sheetMatchesMarket(s.name, m)).flatMap((s) => s.rows.map((r) => String(r[0] ?? ""))), winners, clusterLimit));
+        const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
+        const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c) : [];
+        const answeredClusters = answeredClusterCount(clusterAnswers);
+        if (answeredClusters) {
+          const { chargeTokens: ct } = await import("@/lib/tokens.server");
+          let cc: any = await ct({ userId, toolKey: "competitive_geo.cluster", units: answeredClusters, meta: { attachment_id: id } });
+          if (!cc.ok && cc.reason === "unpriced") cc = await ct({ userId, toolKey: "compare", units: answeredClusters, meta: { attachment_id: id, sub: "competitive_geo.cluster" } });
+          if (!cc.ok) return Response.json({ error: "insufficient_balance_clusters", left: cc.left }, { status: 402 });
+        }
         // Charge only successful markets; fall back to the parent tool price.
         const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
         const units = Math.max(1, answeredMarkets);
@@ -54,15 +70,18 @@ export const Route = createFileRoute("/api/dual-result")({
         const { data: prof } = await db.from("profiles").select("onboarding").eq("id", userId).maybeSingle();
         const { buildPack } = await import("@/lib/machine-pack");
         const brandParty = parties.find((p) => p.role === "brand");
-        const pack = buildPack({ brand, site: brandParty?.url || site, summary: brandParty?.description || undefined, markets: markets.map((m: any) => (lang === "ar" ? m.ar : m.en)), lang, onboarding: ((prof as any)?.onboarding || {}) as any });
-        // Alexandria evidence layer is not wired in this app yet; report it honestly.
-        const alexandria = { connected: false };
+        const pack = buildPack({ brand, site: brandParty?.url || site, summary: undefined, siteDescription: brandParty?.description || null, siteText: brandParty?.pageText || null, markets: markets.map((m: any) => (lang === "ar" ? m.ar : m.en)), lang, onboarding: ((prof as any)?.onboarding || {}) as any });
+        const { gatherAlexandria } = await import("@/lib/competitive-geo.server");
+        const alex = await gatherAlexandria(`${brand} ${category} ${markets.map((m: any) => m.en).join(", ")}`);
+        const alexandria = { connected: alex.connected, note: alex.note };
         const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
-        const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms });
+        const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
+        if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة الإسكندرية" : "Alexandria evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
+        if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
         if (pack.orgJsonld) payload.sections.push({ heading: "Organization JSON-LD", kind: "text", text: pack.orgJsonld });
         const summary = markets.map((m: any) => ({ market: m.code, label: lang === "ar" ? m.ar : m.en, voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })) }));
-        return Response.json({ payload, summary, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), charged: charge.tokens || 0, llms: pack.llms, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        return Response.json({ payload, summary, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), charged: charge.tokens || 0, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },

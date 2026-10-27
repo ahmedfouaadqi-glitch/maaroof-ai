@@ -82,7 +82,8 @@ export function buildPack(i: PackInput) {
   if (markets.length) org.areaServed = markets.map((m) => ({ "@type": "Place", name: m }));
   const faq = faqs.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) } : null;
 
-  return { llms, orgJsonld: hasSubstance ? JSON.stringify(org, null, 2) : "", faqJsonld: faq ? JSON.stringify(faq, null, 2) : "" };
+  const llmsFull = llms && i.siteText ? `${llms}\n\n---\n\n${i.siteText.slice(0, 12000).trim()}` : llms;
+  return { llms, llmsFull, missing: missingPackFields(i), orgJsonld: hasSubstance ? JSON.stringify(org, null, 2) : "", faqJsonld: faq ? JSON.stringify(faq, null, 2) : "" };
 }
 
 const TX = {
