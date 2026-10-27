@@ -104,7 +104,7 @@ describe("operational workbook", () => {
     const unasked = rows.find((r) => r[0] === "evening gown")!;
     expect(asked[2]).toBe("0/1");
     expect(asked[3]).toBe("No literal mention in direct answers");
-    expect(unasked[2]).toBe("Not measured");
+    expect(unasked[2]).toBe("Not measured directly");
     expect(unasked[3]).toBe("Not tested in engine query");
   });
 
