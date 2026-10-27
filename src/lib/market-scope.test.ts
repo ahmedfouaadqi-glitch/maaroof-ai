@@ -22,6 +22,15 @@ describe("sheetsForMarket", () => {
   });
 });
 
+describe("explicit global market", () => {
+  it("resolves the global scope without inventing a country", () => {
+    expect(marketByCode("global")).toEqual({ code: "global", en: "Global", ar: "عالمي", gl: "world" });
+    expect(marketByCode("world")?.code).toBe("global");
+    const unlabelled = [{ name: "Master Keywords" }, { name: "Products" }];
+    expect(sheetsForMarket(unlabelled, [marketByCode("global")!], marketByCode("global")!)).toEqual(unlabelled);
+  });
+});
+
 describe("geographic market coverage", () => {
   it("recognizes countries from the workspace geographic selector even if they were not in the legacy market list", () => {
     expect(detectMarkets(["Italy"]).map((market) => market.code)).toContain("it");
