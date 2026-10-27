@@ -18,7 +18,7 @@ export type PartyEvidence = {
   description?: string | null;
 };
 
-export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer"; answer: string; urls: string[]; query?: string };
+export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string };
 
 export type ResearchInput = {
   brand: string;
