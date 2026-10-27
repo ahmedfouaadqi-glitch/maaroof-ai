@@ -22,3 +22,20 @@ describe("tool council", () => {
     expect(s.decision).toBe("disagree");
   });
 });
+
+import { parseVerdict, withFallback } from "./tool-council";
+describe("council fallback", () => {
+  it("uses the gateway when OpenRouter fails for that engine", async () => {
+    const v = await withFallback("grok", async () => ({ engine: "grok", status: "no_answer", reason: "http_402" }), async () => ({ engine: "grok", status: "answered", agree: true, score: 70, note: "" }));
+    expect(v.status).toBe("answered");
+    expect(v.via).toBe("gateway");
+  });
+  it("stays no_answer when both routes fail", async () => {
+    const v = await withFallback("claude", async () => { throw new Error("x"); }, async () => ({ engine: "claude", status: "no_answer", reason: "timeout" }));
+    expect(v.status).toBe("no_answer");
+  });
+  it("parses a valid verdict and rejects junk", () => {
+    expect(parseVerdict("qwen", 'ok {"agree":false,"score":140,"note":"n"}')).toMatchObject({ score: 100, agree: false });
+    expect(parseVerdict("qwen", "no json")).toBeNull();
+  });
+});
