@@ -35,3 +35,14 @@ export function marketByCode(code: string): Market | null {
 export function sheetMatchesMarket(sheetName: string, m: Market): boolean {
   return detectMarkets([sheetName]).some((x) => x.code === m.code);
 }
+
+/**
+ * Assign generic workbook tabs to a single target market only when no tab is
+ * explicitly market-labelled. With multiple markets, never duplicate one tab
+ * across markets without evidence.
+ */
+export function sheetsForMarket<T extends { name: string }>(sheets: T[], markets: Market[], market: Market): T[] {
+  const matched = sheets.filter((sheet) => sheetMatchesMarket(sheet.name, market));
+  if (matched.length > 0 || markets.length !== 1) return matched;
+  return sheets;
+}
