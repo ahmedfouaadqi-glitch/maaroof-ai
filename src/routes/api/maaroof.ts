@@ -188,12 +188,12 @@ export const Route = createFileRoute("/api/maaroof")({
           try {
             if (verifiedWorkspaceId) {
               const { data: ws } = await db.from("workspaces").select("name, brand_url, brand_summary, keywords, country, entity_truth_card, profile").eq("id", verifiedWorkspaceId).eq("owner_id", userId).maybeSingle();
-              let { data: kf, error: workspaceFactsError } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).eq("workspace_id", verifiedWorkspaceId).order("created_at", { ascending: false }).limit(20);
+              const { data: kf, error: workspaceFactsError } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).eq("workspace_id", verifiedWorkspaceId).order("created_at", { ascending: false }).limit(20);
               if (workspaceFactsError) {
-                console.warn("[maaroof] workspace knowledge lookup failed; retrying by user_id", workspaceFactsError.message);
-                const fallbackFacts = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
-                kf = fallbackFacts.data;
-                workspaceFactsError = fallbackFacts.error;
+                // Never widen a workspace-scoped lookup to owner-wide facts.
+                // On a schema/query error, omit saved facts for this run rather than
+                // mixing knowledge from another workspace into the current plan.
+                console.warn("[maaroof] workspace knowledge lookup failed; preserving strict workspace scope", workspaceFactsError.message);
               }
               const card = (ws as any)?.entity_truth_card || {};
               own = {
@@ -203,12 +203,10 @@ export const Route = createFileRoute("/api/maaroof")({
               };
             } else {
               const { data: ep } = await db.from("profiles").select("brand_name, brand_keywords, specialty_scope, target_markets, entity_type").eq("id", userId).maybeSingle();
-              let { data: kf, error: accountFactsError } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).is("workspace_id", null).order("created_at", { ascending: false }).limit(20);
+              const { data: kf, error: accountFactsError } = await db.from("knowledge_facts").select("fact").eq("user_id", userId).is("workspace_id", null).order("created_at", { ascending: false }).limit(20);
               if (accountFactsError) {
-                console.warn("[maaroof] account knowledge scope failed; retrying by user_id", accountFactsError.message);
-                const fallbackFacts = await db.from("knowledge_facts").select("fact").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
-                kf = fallbackFacts.data;
-                accountFactsError = fallbackFacts.error;
+                // Account-wide context must exclude facts attached to any workspace.
+                console.warn("[maaroof] account knowledge lookup failed; preserving main-account scope", accountFactsError.message);
               }
               own = {
                 brand: (ep as any)?.brand_name || null,

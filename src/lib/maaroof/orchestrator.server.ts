@@ -31,6 +31,7 @@ import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
+import { buildExecutionBatches } from "./execution-scheduler";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -42,7 +43,7 @@ function db() {
 
 // Map tool keys -> internal API path + body builder
 type ToolCall = { tool: string; input: any; reason?: string };
-type PlanStep = ToolCall;
+type PlanStep = ToolCall & { depends_on?: string[] };
 
 /** Tools that fan out to many engines or crawl; they get a longer timeout. */
 const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking"]);
@@ -548,7 +549,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     const planUserMsg = mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
-      `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "..." } ], "final_answer_hint": "..." }\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
+      `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "...", "depends_on": ["<prior tool key whose output is required>"] } ], "final_answer_hint": "..." }. Set depends_on only when the step consumes output from an earlier step; use only tool keys that already appear earlier in the plan. Independent steps may omit it.\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     let planResp: { text: string; tokens: number; usd: number };
     try {
       planResp = await call("planning", [
@@ -564,7 +565,15 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    let steps = Array.isArray(planObj.steps) ? planObj.steps.slice(0, MAX_STEPS) : [];
+    let steps = Array.isArray(planObj.steps)
+      ? planObj.steps.slice(0, MAX_STEPS).map((step) => ({
+          ...step,
+          // Treat planner output as untrusted: dependencies must be simple tool keys.
+          depends_on: Array.isArray((step as any)?.depends_on)
+            ? (step as any).depends_on.filter((dep: unknown): dep is string => typeof dep === "string").slice(0, 12)
+            : [],
+        }))
+      : [];
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
     if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
@@ -1347,10 +1356,16 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
     };
     if (ctx.runOptions?.parallelTools) {
-      for (let b = 0; b < steps.length; b += 3) {
+      // Parallel execution is dependency-aware: tools consuming previous results
+      // (for example compare, GEO rewrite, translate) run only after their sources.
+      const batches = buildExecutionBatches(steps, 3);
+      for (const batch of batches) {
         if (ctx.signal.aborted) break;
-        const batch = Array.from({ length: Math.min(3, steps.length - b) }, (_, k) => b + k);
-        await Promise.allSettled(batch.map(async (i) => { if (await reuseStep(i)) return; if (overBudget()) return salvageSkip(i); return runStep(i); }));
+        await Promise.allSettled(batch.map(async (i) => {
+          if (await reuseStep(i)) return;
+          if (overBudget()) return salvageSkip(i);
+          return runStep(i);
+        }));
       }
     } else for (let i = 0; i < steps.length; i++) {
       if (ctx.signal.aborted) break;
