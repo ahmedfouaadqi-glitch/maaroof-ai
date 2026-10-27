@@ -98,16 +98,35 @@ export function allKeywords(sheets: SheetData[], max = 20000): string[] {
 const t3 = (l: ExportLang, ar: string, en: string, ku: string) => (l === "ar" ? ar : l === "ku" ? ku : en);
 const cell = (v: Cell | null | undefined, l: ExportLang): string | number => (v === null || v === undefined || v === "" ? NA[l] : v);
 
-export type Axis = "GEO" | "SGE" | "AEO" | "SEO" | "Social";
+export type Axis = "SEO" | "AEO" | "GEO" | "SGE" | "GSEO" | "SGEO";
 
-/** Rule-based axis per keyword, with the rule that matched (labelled "recommended", not measured). */
+const AXES: Axis[] = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"];
+
+/**
+ * Heuristic axis classification, not a live ranking or visibility measurement.
+ * The six axes are kept distinct so reports can explain their basis.
+ */
 export function keywordAxis(k: string): { axis: Axis; rule: string } {
+  const t = k.toLowerCase().trim();
+  if (/^(what|how|why|which|where|when|who|is|can|does)\b|\?|ما هو|ما هي|كيف|لماذا|أين|هل/.test(t)) return { axis: "AEO", rule: "question / answer intent" };
+  if (/\b(best|top|vs|versus|compare|comparison|alternative|review|near me)\b|أفضل|مقارنة|بديل|تقييم|بالقرب مني/.test(t)) return { axis: "GEO", rule: "recommendation, comparison, or answer-engine intent" };
+  if (/\b(ai overview|google ai|generative search|featured snippet)\b|نظرة عامة بالذكاء الاصطناعي/i.test(t)) return { axis: "SGE", rule: "AI search overview intent" };
+  if (/\b(organic ranking|search visibility|seo audit|technical seo)\b|ترتيب عضوي|تدقيق seo/i.test(t)) return { axis: "GSEO", rule: "organic search and generative visibility intersection" };
+  if (/\b(citation|cited|sources|authoritative|entity|generative engine|ai answer)\b|استشهاد|مصادر موثوقة|كيان موثق|محرك توليدي/i.test(t)) return { axis: "SGEO", rule: "generative citation and cross-search opportunity" };
+  return { axis: "SEO", rule: "default organic-search intent; validate against page and SERP evidence" };
+}
+
+/** Six transparent heuristic scores (0–100); these are recommendations, never measured performance. */
+export function keywordAxisScores(k: string): Record<Axis, number> {
+  const { axis } = keywordAxis(k);
+  const scores = Object.fromEntries(AXES.map((name) => [name, name === axis ? 70 : 25])) as Record<Axis, number>;
   const t = k.toLowerCase();
-  if (/instagram|tiktok|facebook|snapchat|youtube|انستغرام|تيك ?توك/.test(t)) return { axis: "Social", rule: "social platform word" };
-  if (/^(what|how|why|which|where|when|who|is|can|does)\b|\?|ما هو|ما هي|كيف|لماذا|أين|هل/.test(t)) return { axis: "AEO", rule: "question form" };
-  if (/\b(best|top|vs|versus|compare|alternative|review)s?\b|أفضل|مقارنة|بديل/.test(t)) return { axis: "GEO", rule: "comparison/recommendation" };
-  if (t.split(/\s+/).length >= 5) return { axis: "SGE", rule: "long descriptive query" };
-  return { axis: "SEO", rule: "short commercial term" };
+  if (/\b(buy|price|shop|near me|best)\b|شراء|سعر|متجر|أفضل/.test(t)) scores.SEO = Math.max(scores.SEO, 65);
+  if (/\b(what|how|why|which|where|when|who)\b|\?|ما هو|كيف|لماذا|هل/.test(t)) scores.AEO = Math.max(scores.AEO, 75);
+  if (/\b(citation|sources|authoritative|generative|ai answer)\b|استشهاد|مصادر|توليدي/.test(t)) { scores.GEO = Math.max(scores.GEO, 60); scores.SGEO = Math.max(scores.SGEO, 75); }
+  if (/\b(ai overview|google ai|featured snippet)\b|نظرة عامة بالذكاء الاصطناعي/i.test(t)) scores.SGE = Math.max(scores.SGE, 75);
+  if (/\b(organic ranking|search visibility|seo audit)\b|ترتيب عضوي|تدقيق seo/i.test(t)) scores.GSEO = Math.max(scores.GSEO, 75);
+  return scores;
 }
 
 /** Suggested phrasing of a keyword per engine retrieval style. Always labelled as suggestion. */
@@ -214,7 +233,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
               ? S("أُرسلت الكلمة لكن لم تسجل إجابة مباشرة ناجحة", "Keyword was sent but no successful direct answer was recorded", "وشەکە نێردرا بەڵام وەڵامی ڕاستەوخۆی سەرکەوتوو تۆمار نەکرا")
               : S("لم تُرسل الكلمة في سؤال المحرك", "Keyword was not sent in engine query", "وشەکە لە پرسیاری بزوێنەر نەنێردرا");
       perEngine.push([r.k, mName(m), score, engineLabel, ax.axis, ax.rule,
-        ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
+        AXES.map((axis) => axis + ": " + keywordAxisScores(r.k)[axis]).join(" · "), ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
     }
   }
 
@@ -265,7 +284,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       [S("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), S("افتح تبويب «خطة التنفيذ»", "Open the “Execution plan” sheet", "پلان"), "-"],
     ] } },
     { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("التبويب", "Sheet", "پەڕە"), S("حجم البحث", "Volume", "قەبارە"), S("المحور المقترح", "Suggested axis", "تەوەر"), SRC], data: kRows.map((r) => [r.k, mName(r.m), r.sheet, cell(r.vol, l), keywordAxis(r.k).axis, SRC_FILE]) } },
-    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("الذكر الحرفي / الإجابات", "Literal mention / answered", "باسکردنی ڕاستەوخۆ"), S("النماذج التي ذكرتها حرفيًا", "Engines with a literal mention", "بزوێنەرەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis rule", "یاسای تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), SRC], data: perEngine } },
+    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("الذكر الحرفي / الإجابات", "Literal mention / answered", "باسکردنی ڕاستەوخۆ"), S("النماذج التي ذكرتها حرفيًا", "Engines with a literal mention", "بزوێنەرەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis rule", "یاسای تەوەر"), S("درجات المحاور الستة (تقديرية)", "Six-axis heuristic scores (not measured)", "نمرەی شەش تەوەر (خەمڵێنراو)"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), SRC], data: perEngine } },
     { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
