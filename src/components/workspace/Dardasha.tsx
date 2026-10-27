@@ -18,10 +18,11 @@ import { CouncilCards, type Council } from "./CouncilCards";
 type Quota = { unlimited: boolean; cap: number; remaining: number | null; resets_at: string };
 type L = "ar" | "en" | "ku";
 type Task = { kind: "scan" | "plan" | "recommend" | "simulate"; goal: string };
-type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null; axisAuditRequest?: boolean; council?: Council | null };
+type Msg = { id?: string; role: "user" | "assistant"; content: string; needs_task?: boolean; task?: Task | null; axisAuditRequest?: boolean; council?: Council | null; sheets?: SheetCard[] };
+type SheetCard = { name: string; source?: string; totalRows: number; sheets: Array<{ name: string; totalRows: number; columns: string[]; sample: (string | number)[][] }> };
 type Thread = { id: string; title: string; updated_at: string | null };
 type ChatTaskDraft = { messageKey: string; goal: string };
-type Att = DardashaAttachment & { busy?: boolean; failed?: boolean };
+type Att = DardashaAttachment & { busy?: boolean; failed?: boolean; id?: string; reason?: string };
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 const token = async () => (await supabase.auth.getSession()).data.session?.access_token || "";
 
@@ -134,9 +135,13 @@ export function Dardasha({
         const r = await fetch(withPreviewAuth("/api/attachment-analyze"), { method: "POST", headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ path, name, mime: f.type || "application/octet-stream", question: text, lang, workspace_id: workspaceId }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || "failed");
-        setAtts((p) => p.map((a) => (a.name === name && a.busy ? { name, analysis: String(j.analysis || "") } : a)));
-      } catch {
-        setAtts((p) => p.map((a) => (a.name === name && a.busy ? { name, analysis: "", failed: true } : a)));
+        setAtts((p) => p.map((a) => (a.name === name && a.busy ? { name, analysis: String(j.analysis || ""), id: j.id ? String(j.id) : undefined } : a)));
+      } catch (e: any) {
+        const code = String(e?.message || "");
+        const reason = code === "balance" ? tr(lang, "الرصيد غير كافٍ لتحليل الملف", "Not enough balance to analyse the file", "باڵانس بەس نییە")
+          : code === "unreadable_sheet" || code === "unreadable_office" ? tr(lang, "تعذّرت قراءة الجدول؛ احفظه بصيغة xlsx أو csv وأعد رفعه", "Could not read the sheet; save as xlsx or csv and re-upload", "خشتەکە نەخوێندرایەوە")
+          : tr(lang, "تعذّر التحليل؛ لم يُخصم شيء", "Analysis failed; nothing charged", "شیکردنەوە سەرکەوتوو نەبوو");
+        setAtts((p) => p.map((a) => (a.name === name && a.busy ? { name, analysis: "", failed: true, reason } : a)));
       }
     }
   };
@@ -149,11 +154,12 @@ export function Dardasha({
       setErr(tr(lang, "أكمل تحديد الدولة والمنطقة أو المدينة قبل إرسال الطلب.", "Choose the required country and region/city before sending.", "پێش ناردن وڵات و ناوچە/شار دیاری بکە."));
       return;
     }
+    const attachmentIds = ready.map((a) => a.id).filter(Boolean) as string[];
     setText(""); setAtts([]); setErr(""); setBusy(true);
     setMsgs((p) => [...p, { role: "user", content: m }]);
     try {
       const r = await call("POST", {
-        message: m, lang, workspace_id: workspaceId,
+        message: m, lang, workspace_id: workspaceId, attachment_ids: attachmentIds,
         task_id: contextTaskId || undefined,
         thread_id: threadId || undefined,
         geo_scope: toServerGeoScope(geoScope),
@@ -166,7 +172,7 @@ export function Dardasha({
         return;
       }
       if (r.json.quota) setQuota(r.json.quota);
-      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null, axisAuditRequest: r.json.axis_audit_request === true, council: r.json.council || null }]);
+      setMsgs((p) => [...p, { role: "assistant", content: r.json.text, needs_task: r.json.needs_task, task: r.json.task || null, axisAuditRequest: r.json.axis_audit_request === true, council: r.json.council || null, sheets: Array.isArray(r.json.sheets) ? r.json.sheets : [] }]);
       if (r.json.thread_id && r.json.thread_id !== threadId) {
         const nid = String(r.json.thread_id);
         setThreads((ts) => [{ id: nid, title: m.slice(0, 60), updated_at: new Date().toISOString() }, ...ts.filter((t) => t.id !== nid)]);
@@ -289,6 +295,7 @@ export function Dardasha({
                 {isGeoScopeConfigured(geoScope) && <span className="rounded-full bg-muted/70 px-2 py-0.5">{tr(lang, "سياق جغرافي مفعّل", "Geographic context active", "پاشبنەمای جوگرافی چالاکە")}</span>}
               </div>}
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
+              {m.role === "assistant" && m.sheets && m.sheets.length > 0 && <SheetInventory sheets={m.sheets} lang={lang} reply={m.content} />}
               {m.role === "assistant" && m.council && <CouncilCards council={m.council} lang={lang} />}
               {m.role === "assistant" && m.axisAuditRequest && (
                 <FiveAxisAuditCards
@@ -387,5 +394,30 @@ export function Dardasha({
         </div>
       </div>
     </section>
+  );
+}
+
+function sheetExportPayload(cards: SheetCard[], reply: string, lang: L) {
+  const sections: any[] = [{ heading: tr(lang, "تحليل معروف", "Maaroof analysis", "شیکردنەوەی معروف"), kind: "text", text: reply }];
+  for (const c of cards) {
+    sections.push({ heading: `${c.name} — ${tr(lang, "جرد التبويبات", "Sheet inventory", "لیستی پەڕەکان")}`, kind: "table", table: { columns: [tr(lang, "التبويب", "Sheet", "پەڕە"), tr(lang, "الصفوف", "Rows", "ڕیز"), tr(lang, "الأعمدة", "Columns", "ستوون")], data: c.sheets.map((s) => [s.name, s.totalRows, s.columns.join(", ")]) } });
+    for (const s of c.sheets) if (s.sample?.length) sections.push({ heading: `${s.name} — ${tr(lang, "عينة من الملف الأصلي", "Sample from source file", "نموونە")}`, kind: "table", table: { columns: s.columns, data: s.sample.map((r) => s.columns.map((_, i) => r[i] ?? "")) } });
+  }
+  return { title: tr(lang, "تحليل الملف — معروف", "File analysis — Maaroof", "شیکردنەوەی فایل"), lang, sections };
+}
+
+function SheetInventory({ sheets, lang, reply }: { sheets: SheetCard[]; lang: L; reply: string }) {
+  return (
+    <div className="mt-3 space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 text-xs">
+      {sheets.map((c, ci) => (
+        <div key={ci}>
+          <p className="font-semibold text-foreground">{tr(lang, "محتوى الملف", "File contents", "ناوەڕۆکی فایل")}: {c.name} · {c.sheets.length} {tr(lang, "تبويب", "sheets", "پەڕە")} · {c.totalRows} {tr(lang, "صف", "rows", "ڕیز")}</p>
+          <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+            {c.sheets.map((s, i) => <li key={i} className="rounded-lg bg-background px-2 py-1"><span className="font-medium">{s.name}</span> <span className="text-muted-foreground tabular-nums">· {s.totalRows} {tr(lang, "صف", "rows", "ڕیز")} · {s.columns.length} {tr(lang, "عمود", "cols", "ستوون")}</span></li>)}
+          </ul>
+        </div>
+      ))}
+      <ExportButtons size="xs" build={() => sheetExportPayload(sheets, reply, lang) as any} />
+    </div>
   );
 }
