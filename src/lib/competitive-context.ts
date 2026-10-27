@@ -109,8 +109,10 @@ export function resolveCompetitiveContext(input: {
     } catch {}
   }
 
+  const summary = clean(workspace.brand_summary, 240);
+  const usableSummary = summary && !/^(retail|e-?commerce|shop|store|business|company|client|brand|general|متجر|متجر إلكتروني|تجارة إلكترونية|تجارة تجزئة|شركة|علامة تجارية)$/i.test(summary) ? summary : "";
   const workspaceCategory =
-    clean(workspace.brand_summary, 240) ||
+    usableSummary ||
     textByKeys(workspace.profile, ["industry", "sector", "category", "business_type", "specialty", "specialization", "business_description", "industry_name"]) ||
     textByKeys(truth, ["sector", "industry", "category", "business_category", "product_category", "business_type"]) ||
     textByKeys(workspace.onboarding, ["industry", "sector", "category", "business_type", "specialty", "business_description"]);
