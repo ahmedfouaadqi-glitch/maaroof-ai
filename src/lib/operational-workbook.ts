@@ -1,7 +1,7 @@
 // Pure: builds the second result (operational workbook) from the file rows and recorded research. No invented values.
 import type { SheetData, Cell } from "./spreadsheet-reader";
 import { detectColumns } from "./spreadsheet-reader";
-import { sheetMatchesMarket, type Market } from "./market-scope";
+import { sheetsForMarket, type Market } from "./market-scope";
 import { clusterScore, type ClusterAnswer } from "./keyword-clusters";
 import type { ExportPayload, ExportSection, ExportLang } from "./exports";
 
@@ -156,7 +156,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const kRows: KRow[] = [];
   for (const m of markets) {
     const seen = new Set<string>();
-    for (const s of sheets.filter((x) => sheetMatchesMarket(x.name, m))) {
+    for (const s of sheetsForMarket(sheets, markets, m).filter((x) => !/negative|سلبي/i.test(x.name))) {
       const ki = keywordColumn(s); if (ki < 0) continue;
       const vc = (detectColumns(s.columns) as any).volume; const vi = vc ? s.columns.indexOf(vc) : -1;
       for (const r of s.rows) { const k = String(r[ki] ?? "").trim(); const key = k.toLowerCase(); if (!k || seen.has(key)) continue; seen.add(key); kRows.push({ k, m, sheet: s.name, vol: vi >= 0 ? r[vi] : null }); }
