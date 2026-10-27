@@ -111,6 +111,22 @@ export function sectionsFromResult(value: any, heading = "Result", depth = 0): E
 
 /** Build a full ExportPayload from an arbitrary tool result. */
 export function payloadFromResult(title: string, result: any, subtitle?: string): ExportPayload {
+  // Domain-specific reports may provide a curated export schema. Preserve that
+  // schema instead of flattening it into nested generic key/value sections.
+  const curated = result?.export_payload;
+  if (curated && typeof curated === "object" && Array.isArray(curated.sections)) {
+    let engineAnswers: any[] = [];
+    let entity: ResultEntity | undefined;
+    try { engineAnswers = engineAnswersOf(result); entity = entityFromResult(result) || undefined; } catch {}
+    return {
+      title: String(curated.title || title),
+      subtitle: String(curated.subtitle || subtitle || ""),
+      lang: curated.lang === "en" || curated.lang === "ku" ? curated.lang : "ar",
+      sections: curated.sections as ExportSection[],
+      entity,
+      engineAnswers,
+    };
+  }
   const base = sectionsFromResult(result, title);
   let engineAnswers: any[] = [];
   let entity: ResultEntity | undefined;
