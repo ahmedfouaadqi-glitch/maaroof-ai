@@ -178,9 +178,8 @@ export const Route = createFileRoute("/api/dual-result")({
           }));
           const summarizeStatuses = (items: Array<{ status: string; provider_path?: string }>) => ({
             asked: items.length,
-            answered: items.filter((item) => item.status === "answered").length,
-            primary_route: items.filter((item) => item.provider_path === "primary").length,
-            fallback_route: items.filter((item) => item.provider_path === "fallback").length,
+            answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
+            fallback_answered: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
             no_answer: items.filter((item) => item.status === "no_answer").length,
             empty: items.filter((item) => item.status === "empty").length,
             timeout: items.filter((item) => item.status === "timeout").length,
@@ -254,9 +253,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const summary = markets.map((m: any) => ({ market: m.code, label: lang === "ar" ? m.ar : m.en, voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })) }));
         const summarizeStatuses = (items: Array<{ status: string; provider_path?: string }>) => ({
             asked: items.length,
-            answered: items.filter((item) => item.status === "answered").length,
-            primary_route: items.filter((item) => item.provider_path === "primary").length,
-            fallback_route: items.filter((item) => item.provider_path === "fallback").length,
+            answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
+            fallback_answered: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
             no_answer: items.filter((item) => item.status === "no_answer").length,
             empty: items.filter((item) => item.status === "empty").length,
             timeout: items.filter((item) => item.status === "timeout").length,
