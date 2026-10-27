@@ -21,15 +21,13 @@ const MARKETS: Array<Market & { rx: RegExp }> = [
   { code: "de", en: "Germany", ar: "ألمانيا", gl: "de", rx: /\bgermany\b|ألمانيا|المانيا/i },
 ];
 
-const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\\]\\]/g, "\\];
-
-/** Markets found in the given texts, in first-seen order. Empty when none is named. */");
+// Add the remaining countries supported by the geographic selector without duplicating existing market rules.
 const MARKET_LOOKUP: Array<Market & { rx: RegExp }> = [
   ...MARKETS,
   ...Object.entries(NAMES).flatMap(([rawCode, names]) => {
     const code = rawCode.toLowerCase();
     if (MARKETS.some((market) => market.code === code)) return [];
-    return [{ code, en: names.en, ar: names.ar, gl: code, rx: new RegExp("\\b" + escapeRegex(names.en) + "\\b|" + escapeRegex(names.ar), "i") }];
+    return [{ code, en: names.en, ar: names.ar, gl: code, rx: new RegExp("\\b" + names.en + "\\b|" + names.ar, "i") }];
   }),
 ];
 
