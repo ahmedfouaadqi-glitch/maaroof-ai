@@ -15,6 +15,7 @@ describe("dardasha", () => {
     const longPrompt = "تحليل شامل ".repeat(350);
     expect(longPrompt.length).toBeGreaterThan(2000);
     expect(composeChatMessage(longPrompt, [])).toBe(longPrompt.trim());
+    expect(composeChatMessage(longPrompt, [{ name: "keywords.xlsx", analysis: "ملخص البيانات" }])).toBe(`${longPrompt.trim()}\n\n[مرفق: keywords.xlsx] ملخص البيانات`);
     expect(MAX_DARDASHA_MESSAGE_CHARS).toBe(12000);
   });
   it("rescue is automatic", () => { expect(AUTO_RUN_OPTIONS.salvage_on_failure).toBe(true); });
