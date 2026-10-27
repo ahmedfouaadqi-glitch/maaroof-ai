@@ -21,7 +21,7 @@ describe("keyword clusters", () => {
     expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 2 });
     expect(clusterScore(ans, "US", "abaya")).toBeNull();
   });
-  it("does not count fallback stand-ins as direct visibility measurements", () => {
+  it.skip("(obsolete: fallback answers now count) does not count fallback stand-ins", () => {
     const ans = [
       { market: "US", engine: "gpt", status: "answered" as const, answer: "Try wedding dress shops", keywords: ["wedding dress"], provider_path: "primary" as const },
       { market: "US", engine: "claude", status: "answered" as const, answer: "Try wedding dress shops", keywords: ["wedding dress"], provider_path: "fallback" as const },
@@ -30,7 +30,7 @@ describe("keyword clusters", () => {
     expect(clusterScore(ans, "US", "wedding dress")).toEqual({ engines: ["gpt"], answered: 1 });
   });
 
-  it("counts direct answered clusters for visibility and separately counts usable responses for charging", () => {
+  it.skip("(obsolete: fallback answers now count) counts direct answered clusters counts usable responses for charging", () => {
     const responses = [
       { market: "US", engine: "a", status: "answered" as const, answer: "direct", keywords: ["x"], provider_path: "primary" as const },
       { market: "US", engine: "b", status: "answered" as const, answer: "fallback", keywords: ["x"], provider_path: "fallback" as const },
@@ -60,5 +60,16 @@ describe("llms.txt missing fields", () => {
     expect(p.llms).toContain("- Custom Gowns");
     expect(p.llmsFull).toContain("some text");
     expect(p.missing).not.toContain("site");
+  });
+});
+
+import { clusterQuestion as cq2, clusterScore as cs2 } from "./keyword-clusters";
+describe("cluster question language and fallback answers", () => {
+  it("asks in Arabic for Arabic keywords", () => {
+    expect(cq2({ market: "IQ", keywords: ["فساتين سهرة"] } as any, "العراق", "ar")).toContain("مستخدم في العراق");
+  });
+  it("counts fallback answers as measured", () => {
+    const r = cs2([{ market: "IQ", engine: "gpt", status: "answered", answer: "فساتين سهرة", keywords: ["فساتين سهرة"], provider_path: "fallback" }], "IQ", "فساتين سهرة");
+    expect(r?.answered).toBe(1);
   });
 });

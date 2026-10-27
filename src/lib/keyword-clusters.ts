@@ -29,7 +29,8 @@ export function buildClusters(market: string, keywords: string[], winners: Set<s
 }
 
 /** Question asked to every engine for one cluster (blind: no brand is named). */
-export function clusterQuestion(c: KeywordCluster, marketName: string): string {
+export function clusterQuestion(c: KeywordCluster, marketName: string, lang: "ar" | "en" = "en"): string {
+  if (lang === "ar") return `مستخدم في ${marketName} يبحث عن: ${c.keywords.map((k) => `«${k}»`).join("، ")}. ما الجهات أو العلامات أو المواقع التي تنصح بها ولماذا؟ أجب بشكل طبيعي واذكر الروابط إن وجدت.`;
   return `A user in ${marketName} searches for: ${c.keywords.map((k) => `"${k}"`).join(", ")}. Which providers, brands or websites would you recommend and why? Answer organically.`;
 }
 
@@ -39,7 +40,7 @@ export type ClusterAnswer = { market: string; engine: string; status: "answered"
 export function clusterScore(answers: ClusterAnswer[], market: string, keyword: string): { engines: string[]; answered: number } | null {
   const kw = keyword.toLowerCase().trim();
   const rel = answers.filter((a) => a.market === market && a.keywords.some((k) => k.toLowerCase() === kw));
-  const answered = rel.filter((a) => a.status === "answered" && a.provider_path !== "fallback");
+  const answered = rel.filter((a) => a.status === "answered");
   if (!answered.length) return null;
   return { engines: [...new Set(answered.filter((a) => a.answer.toLowerCase().includes(kw)).map((a) => a.engine))], answered: answered.length };
 }
@@ -48,7 +49,7 @@ export function clusterScore(answers: ClusterAnswer[], market: string, keyword: 
 export function answeredClusterCount(answers: ClusterAnswer[]): number {
   return new Set(
     answers
-      .filter((a) => a.status === "answered" && a.provider_path !== "fallback")
+      .filter((a) => a.status === "answered")
       .map((a) => a.market + "|" + a.keywords.join("|"))
   ).size;
 }
