@@ -291,27 +291,6 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
               : S("تحقق يدويًا من النتائج والنية قبل القرار", "Validate SERPs and intent before deciding", "پێش بڕیار نیەت و ئەنجامەکان بپشکنە")]);
     }
   }
-  const keywordCoverageSection: ExportSection = {
-    heading: S("مصفوفة تغطية الكلمات وفجوات المنافسة", "Keyword coverage and competitor gap matrix", "ماتریسی پۆششی وشە و کەلێنی ڕکابەری"),
-    kind: "table",
-    table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("تغطية العلامة (نصية)", "Brand coverage (text)", "پۆششی براند"), S("المنافسون الذين يذكرون الكلمة", "Competitors with literal mention", "ڕکابەرانی باسکەر"), S("النتيجة", "Finding", "دەرئەنجام"), S("الإجراء المقترح", "Suggested action", "کرداری پێشنیارکراو")], data: coverageRows },
-  };
-
-  // Execution plan: what Maaroof did now vs what the team does
-  const DONE = S("نُفّذ بواسطة معروف", "Done by Maaroof", "ئەنجامدرا");
-  const TEAM = S("يحتاج فريقك", "Needs your team", "تیمەکەت");
-  const NOT = S("لم يُنفّذ: لا بيانات كافية", "Not done: not enough data", "ئەنجام نەدرا");
-  const plan: (string | number)[][] = [
-    [1, S("مرشحات الكلمات السلبية للمراجعة", "Negative keyword candidates for review", "پێشنیاری وشە نەرێنییەکان بۆ پێداچوونەوە"), negs.length ? S("تحتاج مراجعة بشرية", "Human review required", "پێویستی بە پێداچوونەوەی مرۆییە") : NOT, negs.length ? S(String(negs.length) + " مرشحًا؛ ليست قرارات استبعاد نهائية", String(negs.length) + " candidates; not final exclusion decisions", String(negs.length)) : NA[l], S("تحقق من نية البحث والسوق ونوع المطابقة قبل اعتماد أي استبعاد", "Validate search intent, market, and match type before applying exclusions", "پێش جێبەجێکردنی ڕەتکردنەوە، نیەت و بازاڕ و جۆری هاوتایی بپشکنە")],
-    [2, "llms.txt", input.llms ? DONE : NOT, input.llms ? S("جاهز في نهاية هذا الملف ويمكن نسخه من الدردشة", "Ready at the end of this file and copyable in chat", "ئامادەیە") : S("أكمل بطاقة هوية العلامة أولاً", "Complete the brand identity card first", "کارتی ناسنامە"), S("ارفع الملف إلى جذر الموقع: /llms.txt", "Upload to the site root as /llms.txt", "/llms.txt")],
-    [3, S("كلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), perEngine.length ? DONE : NOT, S(`${perEngine.length} كلمة مع درجة التطابق`, `${perEngine.length} keywords with match score`, `${perEngine.length}`), S("اكتب صفحة أو سؤالاً شائعاً لكل كلمة درجتها منخفضة", "Write a page or FAQ answer for each low-score keyword", "پەڕە بنووسە")],
-    [4, S("سد فجوات GEO", "Close GEO gaps", "GEO"), TEAM, S(`${bench.filter((r) => r[2] !== S("العلامة", "Brand", "براند") && typeof r[5] === "string" && /^[1-9]/.test(String(r[5]))).length} حالة ذكر فيها محرك منافساً`, "Cases where an engine named a competitor", ""), S("أضف حقائق بأرقام ومصادر في أول 150 كلمة من الصفحات الأساسية", "Add numbered, sourced facts in the first 150 words of key pages", "")],
-    [5, S("بيانات Schema (Organization/FAQ)", "Schema data (Organization/FAQ)", "Schema"), input.llms ? DONE : NOT, S("تُنتج مع حزمة قراءة الآلة", "Produced with the machine-readable pack", ""), S("ضع الكود داخل <head> في الموقع", "Paste the code inside the site <head>", "<head>")],
-    [6, S("طبقة الأدلة والبيانات المهيكلة", "Structured Evidence & Data Layer", "چینی بەڵگە و داتای ڕێکخراو"), input.alexandria?.connected ? DONE : NOT, input.alexandria?.connected ? (input.alexandria.note || "") : S("غير متصلة حالياً؛ لم تُستخدم أي بيانات منها", "Not connected; no data was used from it", "پەیوەست نییە"), S("تحتاج ربطاً قبل الاعتماد عليها", "Needs connecting before use", "")],
-  ];
-
-  const answeredTotal = engineAnswers.filter((a) => a.status === "answered").length;
-  const brandVoice = brand ? markets.map((m) => { const v = shareOfVoice(engineAnswers.filter((a) => a.market === m.code), brand.name); return `${mName(m)}: ${v.percent === null ? NA[l] : `${v.percent}%`}`; }).join(" · ") : NA[l];
   const sections: ExportSection[] = [
     { heading: S("ابدأ هنا", "Start here", "لێرە دەستپێبکە"), kind: "table", table: { columns: [S("البند", "Item", "بڕگە"), S("القيمة", "Value", "بەها"), SRC], data: [
       [S("العلامة", "Brand", "براند"), input.brand, S("أدخله المستخدم", "Entered by user", "بەکارهێنەر")],
