@@ -1,7 +1,7 @@
 // Analyzes an uploaded image/PDF/text file. Owner-only; charges only after success.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { attachmentKind, ownsPath, ATTACHMENT_MAX_BYTES } from "@/lib/attachments";
+import { attachmentKind, ownsPath, ATTACHMENT_MAX_BYTES, xmlToText, officeTextEntry } from "@/lib/attachments";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, FACTUAL_SAFETY_PROMPT } from "@/lib/lovable-ai";
 
 const TOOL = "attachment.analyze";
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/attachment-analyze")({
         const mime = String(body.mime || ""); const question = String(body.question || "").slice(0, 1000);
         const context = body.context === "interview" ? "interview" : "task";
         const lang = body.lang === "en" ? "English" : body.lang === "ku" ? "Kurdish (Sorani)" : "Arabic";
-        const kind = attachmentKind(mime);
+        const kind = attachmentKind(mime, name);
         const pathIsScoped = workspaceId
           ? ownsPath(a.userId, path) && !path.includes("..") && path.startsWith(a.userId + "/" + workspaceId + "/")
           : ownsPath(a.userId, path) && !path.includes("..") && path.slice(a.userId.length + 1).indexOf("/") === -1;
@@ -68,9 +68,26 @@ export const Route = createFileRoute("/api/attachment-analyze")({
         const { data: row, error: insertError } = await a.db.from("task_attachments").insert({ user_id: a.userId, workspace_id: workspaceId, context, path, name, mime, size: buf.byteLength, question, status: "analyzing" }).select("id").single();
         if (insertError || !row) return Response.json({ error: "attachment_record_failed" }, { status: 500 });
         const prompt = `${FACTUAL_SAFETY_PROMPT}\nYou analyze a file the user uploaded for a GEO/SEO/AEO task. Describe only what is visible in the file, then answer the user's question. Mark anything not directly visible as a hypothesis. Answer in ${lang}.\nUser question: ${question || "Summarize and extract the useful facts for brand visibility in AI answers."}`;
+        // Unreadable binaries: record honestly, never guess contents, never charge.
+        if (kind === "binary") {
+          const isAr = lang === "Arabic"; const kb = Math.round(buf.byteLength / 1024);
+          const analysis = isAr ? `حُفظ الملف «${name}» (${mime || "غير معروف"}، ${kb}KB) لكن لا يمكن قراءة محتواه من هذا النوع، فلم يُستخرج منه أي شيء ولم يُخصم رصيد.` : `Saved "${name}" (${mime || "unknown"}, ${kb}KB), but this file type cannot be read, so nothing was extracted and nothing was charged.`;
+          await a.db.from("task_attachments").update({ analysis, status: "done", tokens_charged: 0 }).eq("id", row.id);
+          return Response.json({ id: row.id, analysis, charged: 0, unreadable: true });
+        }
         const content: any[] = [{ type: "text", text: prompt }];
         if (kind === "text") content.push({ type: "text", text: new TextDecoder().decode(buf).slice(0, 60000) });
-        else content.push({ type: "image_url", image_url: { url: `data:${mime};base64,${b64(buf)}` } });
+        else if (kind === "office") {
+          let extracted = "";
+          try {
+            const { unzipSync } = await import("fflate");
+            const files = unzipSync(new Uint8Array(buf), { filter: (f) => officeTextEntry(f.name) });
+            extracted = Object.keys(files).sort().map((k) => xmlToText(new TextDecoder().decode(files[k]))).join("\n\n").slice(0, 60000);
+          } catch {}
+          if (!extracted) { await a.db.from("task_attachments").update({ status: "failed" }).eq("id", row.id); return Response.json({ error: "unreadable_office" }, { status: 422 }); }
+          content.push({ type: "text", text: extracted });
+        }
+        else content.push({ type: "image_url", image_url: { url: `data:${kind === "pdf" ? "application/pdf" : mime};base64,${b64(buf)}` } });
 
         try {
           const apiKey = process.env.LOVABLE_API_KEY;
@@ -91,7 +108,12 @@ export const Route = createFileRoute("/api/attachment-analyze")({
             const f = taskFact(`${name}`, analysis);
             if (f) await a.db.from("knowledge_facts").insert({ user_id: a.userId, workspace_id: workspaceId, source: context === "interview" ? "interview" : "task", source_ref: row?.id, ...f });
           } catch {}
-          return Response.json({ id: row?.id, analysis, charged });
+          let council = null;
+          try {
+            const { runToolCouncil } = await import("@/lib/maaroof/tool-council.server");
+            council = await runToolCouncil({ tool: "attachment.analyze", input: name, result: analysis, lang: lang === "English" ? "en" : lang === "Arabic" ? "ar" : "ku" });
+          } catch {}
+          return Response.json({ id: row?.id, analysis, charged, council });
         } catch (e: any) {
           await a.db.from("task_attachments").update({ status: "failed" }).eq("id", row?.id);
           return Response.json({ error: "analysis_failed", detail: String(e?.message || e).slice(0, 100) }, { status: 502 });

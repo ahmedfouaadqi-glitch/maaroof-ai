@@ -3,7 +3,7 @@ import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle, Check, C
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
-import { validateAttachment, attachmentPath, ATTACHMENT_MIME } from "@/lib/attachments";
+import { validateAttachment, attachmentPath } from "@/lib/attachments";
 import { composeChatMessage, type DardashaAttachment } from "@/lib/maaroof/dardasha";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -124,14 +124,14 @@ export function Dardasha({
   const addFiles = async (files: File[]) => {
     if (!user) return;
     for (const f of files) {
-      if (validateAttachment(f) !== "ok") { setErr(tr(lang, `«${f.name}» غير مدعوم (صورة، PDF أو نص حتى 10MB).`, `"${f.name}" unsupported (image, PDF or text up to 10MB).`, `«${f.name}» پشتگیری ناکرێت.`)); continue; }
+      if (validateAttachment(f) !== "ok") { setErr(tr(lang, `«${f.name}» فارغ أو أكبر من 10MB.`, `"${f.name}" is empty or over 10MB.`, `«${f.name}» بەتاڵە یان لە 10MB گەورەترە.`)); continue; }
       const name = f.name || "paste.png";
       setAtts((p) => [...p, { name, analysis: "", busy: true }]);
       try {
         const path = attachmentPath(user.id, name, Date.now(), workspaceId);
-        const up = await supabase.storage.from("task-files").upload(path, f, { contentType: f.type });
+        const up = await supabase.storage.from("task-files").upload(path, f, { contentType: f.type || "application/octet-stream" });
         if (up.error) throw new Error("upload");
-        const r = await fetch(withPreviewAuth("/api/attachment-analyze"), { method: "POST", headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ path, name, mime: f.type, question: text, lang, workspace_id: workspaceId }) });
+        const r = await fetch(withPreviewAuth("/api/attachment-analyze"), { method: "POST", headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ path, name, mime: f.type || "application/octet-stream", question: text, lang, workspace_id: workspaceId }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || "failed");
         setAtts((p) => p.map((a) => (a.name === name && a.busy ? { name, analysis: String(j.analysis || "") } : a)));
@@ -375,7 +375,7 @@ export function Dardasha({
       )}
       {err && <p className="maaroof-chat-error mt-2 shrink-0 text-xs text-destructive">{err}</p>}
       <div className="maaroof-chat-composer mt-3 flex w-full min-w-0 shrink-0 items-center gap-2 rounded-[1.75rem] border border-border/70 bg-card/60 p-2 shadow-sm backdrop-blur-md transition focus-within:border-primary/30 focus-within:shadow-md">
-        <input ref={fileRef} type="file" multiple accept={ATTACHMENT_MIME.join(",")} className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
+        <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
         <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-transparent bg-transparent text-muted-foreground transition hover:bg-muted hover:text-primary" aria-label="attach" title={tr(lang, "إرفاق ملف", "Attach file", "هاوپێچکردنی فایل")}><Paperclip className="size-4" /></button>
         <textarea id="dardasha-message-input" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onPaste={(e) => { const fs = Array.from(e.clipboardData.files || []); if (fs.length) { e.preventDefault(); void addFiles(fs); } }}
