@@ -41,6 +41,10 @@ export type ToolKey =
  */
 export type Capability =
   | "geo_analysis"
+  | "keyword_research"
+  | "sge"
+  | "gseo"
+  | "sgeo"
   | "seo"
   | "aeo"
   | "visibility"
@@ -275,6 +279,17 @@ export const TOOL_CATALOG: ToolDef[] = [
     preferredModels: ["google/gemini-2.5-pro"],
     costProfile: "medium",
     dna: "Simulator: explores branching business scenarios.",
+  },
+  {
+    key: "keyword_intelligence", group: "tools", costPerRun: 3,
+    labels: { ar: "ذكاء الكلمات المفتاحية", en: "Keyword Intelligence", ku: "زانیاریی وشە سەرەکییەکان" },
+    capabilities: ["keyword_research", "seo", "geo_analysis", "aeo", "sge", "gseo", "sgeo", "competitor_analysis", "market_intelligence", "social_analysis", "brand_authority"],
+    strengths: ["old/new keyword comparison", "competitor and social keyword gaps", "six-axis scoring with source evidence"],
+    weaknesses: ["metrics depend on available search and page evidence", "ranking timelines are estimates, not guarantees"],
+    preferredModels: ["google/gemini-2.5-pro"],
+    costProfile: "heavy",
+    riskLevel: "medium",
+    dna: "Keyword intelligence specialist: compares existing and newly discovered keywords across markets, competitors, social sources, and SEO/GEO/AEO/SGE/GSEO/SGEO.",
   },
   {
     key: "brand_authority", group: "tools", costPerRun: 3,
