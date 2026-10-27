@@ -55,7 +55,7 @@ function textByKeys(value: unknown, keys: string[], depth = 0): string {
 }
 
 const CATEGORY_RULES: Array<{ category: string; pattern: RegExp }> = [
-  { category: "Luxury fashion & couture", pattern: /\b(couture|haute couture|luxury fashion|designer gowns?|evening gowns?)\b|أزياء فاخرة|هوت كوتور|فساتين سهرة/gi },
+  { category: "Luxury fashion & couture", pattern: /\b(couture|haute couture|luxury fashion|designer gowns?|evening gowns?|designer dress(?:es)?|evening dress(?:es)?)\b|أزياء فاخرة|هوت كوتور|فساتين سهرة/gi },
   { category: "Fashion & apparel", pattern: /\b(fashion|apparel|clothing|garments?|dress(?:es)?|bridal wear|wedding dress(?:es)?|boutique|textiles?|shoes?|handbags?|abaya|abayas)\b|أزياء|ملابس|فساتين|أحذية|حقائب|عباءات|عباية/gi },
   { category: "Jewelry & accessories", pattern: /\b(jewelry|jewellery|diamonds?|gold jewelry|watches|accessories)\b|مجوهرات|ألماس|ذهب|ساعات/gi },
   { category: "Beauty, cosmetics & fragrance", pattern: /\b(beauty|cosmetics?|skincare|makeup|perfume|fragrance|hair care)\b|تجميل|مستحضرات تجميل|عطور|عناية بالبشرة/gi },
