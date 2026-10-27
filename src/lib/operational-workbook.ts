@@ -103,7 +103,7 @@ export function authoritySignals(p: PartyEvidence) {
 
 /** Share of voice counts direct primary answers only; gateway stand-ins are not direct engine observations. */
 export function shareOfVoice(answers: EngineAnswer[], name: string): { answered: number; mentioned: number; percent: number | null } {
-  const a = answers.filter((x) => x.status === "answered");
+  const a = answers.filter((x) => x.status === "answered" && x.provider_path !== "fallback");
   const n = name.toLowerCase().trim();
   const mentioned = n ? a.filter((x) => x.answer.toLowerCase().includes(n)).length : 0;
   return { answered: a.length, mentioned, percent: a.length ? Math.round((mentioned / a.length) * 100) : null };
@@ -118,6 +118,37 @@ export function allKeywords(sheets: SheetData[], max = 20000): string[] {
   const set = new Set<string>();
   for (const s of sheets) { const i = keywordColumn(s); if (i < 0) continue; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) set.add(v); if (set.size >= max) return [...set]; } }
   return [...set];
+}
+
+/** Occurrence count of the exact keyword in the supplied text, normalized by word count. */
+export function keywordDensity(text: string | null, keyword: string): { words: number; occurrences: number; percent: number } | null {
+  if (!text || !keyword.trim()) return null;
+  const words = (text.match(/[\\p{L}\\p{N}]+/gu) || []).length;
+  if (!words) return null;
+  const escaped = keyword.trim().replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\export function allKeywords(sheets: SheetData[], max = 20000): string[] {
+  const set = new Set<string>();
+  for (const s of sheets) { const i = keywordColumn(s); if (i < 0) continue; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) set.add(v); if (set.size >= max) return [...set]; } }
+  return [...set];
+}").replace(/\\s+/g, "\\\\s+");
+  let occurrences = 0;
+  try { occurrences = (text.match(new RegExp(escaped, "giu")) || []).length; } catch { return null; }
+  return { words, occurrences, percent: Math.round((occurrences / words) * 10000) / 100 };
+}
+
+function lexicalSimilarity(a: string, b: string): number {
+  const tokens = (value: string) => new Set((value.toLowerCase().match(/[\\p{L}\\p{N}]+/gu) || []).filter((x) => x.length > 1));
+  const aa = tokens(a); const bb = tokens(b);
+  if (!aa.size || !bb.size) return 0;
+  const intersection = [...aa].filter((x) => bb.has(x)).length;
+  const jaccard = intersection / new Set([...aa, ...bb]).size;
+  const containment = intersection / Math.min(aa.size, bb.size);
+  return Math.round(Math.max(jaccard, containment * 0.7) * 100);
+}
+
+function termKindLabel(kind: KRow["kind"], lang: ExportLang): string {
+  if (lang === "en") return ({ file: "Existing workbook", brand: "Found on brand site", competitor: "Found on competitor site", social: "Found on social", opportunity: "New opportunity" })[kind];
+  if (lang === "ku") return ({ file: "لە فایل", brand: "لە ماڵپەڕی براند", competitor: "لە ماڵپەڕی ڕکابەر", social: "لە سۆشیال", opportunity: "دەرفەتی نوێ" })[kind];
+  return ({ file: "من الملف", brand: "موجودة في موقع العلامة", competitor: "موجودة في موقع منافس", social: "موجودة في التواصل", opportunity: "فرصة جديدة" })[kind];
 }
 
 const t3 = (l: ExportLang, ar: string, en: string, ku: string) => (l === "ar" ? ar : l === "ku" ? ku : en);
@@ -242,8 +273,17 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       if (keyword) negRaw.push([keyword, S("موجودة في المصدر — تحتاج مراجعة", "Existing source entry — review required", "لە سەرچاوە هەیە — پێویستی بە پێداچوونەوەیە"), S("مصنفة في الملف الأصلي؛ لم يُعَد التحقق منها", "Marked in the original workbook; not independently validated", "لە فایلە سەرەکییەکەدا نیشان کراوە؛ دووبارە پشتڕاست نەکراوەتەوە"), SRC_FILE + ": " + s.name + ", row " + (rowIndex + 2)]);
     });
   }
-  for (const n of negativeCandidates(keywords)) {
-    negRaw.push([n.keyword, S("مرشحة بقاعدة — ليست قرار استبعاد", "Rule-based candidate — not a final exclusion", "پێشنیاری یاسایی — بڕیاری کۆتایی نییە"), S("قاعدة مطابقة", "Matched rule", "یاسای هاوتا") + ": " + n.rule + "; " + S("يلزم التحقق", "Review required", "پێویستی بە پشکنین"), SRC_RULE]);
+  for (const n of negativeCandidates(fileKeywords)) {
+    negRaw.push([n.keyword, S("كلمة سلبية مقترحة للعلامة", "Brand negative-keyword candidate", "پێشنیاری وشەی نەرێنی بۆ براند"), S("قاعدة مطابقة", "Matched rule", "یاسای هاوتا") + ": " + n.rule + "; " + S("راجع النية قبل الاستبعاد", "Review intent before excluding", "پێش ڕەتکردنەوە نیەت بپشکنە"), SRC_RULE]);
+  }
+  for (const term of discovered) {
+    const matched = negativeCandidates([term.keyword])[0];
+    if (!matched) continue;
+    const appliesTo = term.kind === "competitor" ? S("مرشح سلبي مرتبط بكلمات المنافس", "Competitor-keyword negative candidate", "پێشنیاری نەرێنی بۆ وشەی ڕکابەر")
+      : term.kind === "social" ? S("مرشح سلبي من التواصل الاجتماعي", "Social-keyword negative candidate", "پێشنیاری نەرێنی لە سۆشیال")
+      : term.kind === "brand" ? S("مرشح سلبي مرتبط بموقع العلامة", "Brand-site negative candidate", "پێشنیاری نەرێنی لە ماڵپەڕی براند")
+      : S("مرشح سلبي لفرصة مقترحة", "Proposed-opportunity negative candidate", "پێشنیاری نەرێنی بۆ دەرفەت");
+    negRaw.push([term.keyword, appliesTo, S("قاعدة مطابقة", "Matched rule", "یاسای هاوتا") + ": " + matched.rule + "; " + S("تحقق من الملاءمة قبل الاستبعاد", "Check relevance before excluding", "پێش ڕەتکردنەوە گونجاوی بپشکنە"), (term.url || term.source || SRC_RULE)]);
   }
   const negs = dedupeNegatives(negRaw);
 
@@ -266,7 +306,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
         ? cs.engines
         : [...new Set(answeredProbes.filter((answer) => answer.answer.toLowerCase().includes(r.k.toLowerCase())).map((answer) => answer.engine))];
       const NOT_M = S("لم تُقَس مباشرةً", "Not measured directly", "ڕاستەوخۆ نەپێوراوە");
-      const score = cs ? (String(eng.length) + "/" + cs.answered) : answeredProbes.length ? (String(eng.length) + "/" + answeredProbes.length) : NOT_M;
+      const score = cs ? (String(Math.round((eng.length / Math.max(1, cs.answered)) * 100)) + "% (" + eng.length + "/" + cs.answered + ")") : answeredProbes.length ? (String(Math.round((eng.length / Math.max(1, answeredProbes.length)) * 100)) + "% (" + eng.length + "/" + answeredProbes.length + ")") : NOT_M;
       const engineLabel = eng.join(", ") || (cs || answeredProbes.length
         ? S("لم يرد ذكر حرفي في الإجابات المباشرة", "No literal mention in direct answers", "باسکردنی ڕاستەوخۆ لە وەڵامەکاندا نییە")
         : proxyAnsweredProbes.length
@@ -374,8 +414,8 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       [S("الكلمات السلبية", "Negative keywords", "نەرێنی"), negs.length, `${SRC_FILE} + ${SRC_RULE}`],
       [S("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), S("افتح تبويب «خطة التنفيذ»", "Open the “Execution plan” sheet", "پلان"), "-"],
     ] } },
-    { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("التبويب", "Sheet", "پەڕە"), S("حجم البحث", "Volume", "قەبارە"), S("المحور المقترح", "Suggested axis", "تەوەر"), SRC], data: kRows.map((r) => [r.k, mName(r.m), r.sheet, cell(r.vol, l), keywordAxis(r.k).axis, SRC_FILE]) } },
-    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("الذكر الحرفي / الإجابات", "Literal mention / answered", "باسکردنی ڕاستەوخۆ"), S("النماذج التي ذكرتها حرفيًا", "Engines with a literal mention", "بزوێنەرەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis rule", "یاسای تەوەر"), S("درجات المحاور الستة (تقديرية)", "Six-axis heuristic scores (not measured)", "نمرەی شەش تەوەر (خەمڵێنراو)"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), SRC], data: perEngine } },
+    { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("النوع", "Type", "جۆر"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حجم البحث", "Volume", "قەبارە"), S("المحور", "Axis", "تەوەر"), S("المصدر", "Source", "سەرچاوە")], data: kRows.map((r) => [r.k, mName(r.m), termKindLabel(r.kind, l), r.intent || NA[l], cell(r.vol, l), keywordAxis(r.k).axis, r.url || r.sheet || (r.kind === "file" ? SRC_FILE : NA[l])]) } },
+    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("نوع الكلمة", "Keyword type", "جۆری وشە"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حصة الذكر في الإجابات", "Mention share in answers", "بەشی باسکردن لە وەڵامەکان"), S("النماذج التي ذكرتها حرفيًا", "Models with a literal mention", "مۆدێلەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis basis", "بنەمای تەوەر"), S("ملاءمة المحاور الستة", "Six-axis fit scores", "گونجاوی شەش تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), S("المصدر", "Source", "سەرچاوە")], data: perEngine } },
     { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
