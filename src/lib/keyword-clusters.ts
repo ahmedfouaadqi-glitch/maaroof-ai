@@ -44,7 +44,20 @@ export function clusterScore(answers: ClusterAnswer[], market: string, keyword: 
   return { engines: [...new Set(answered.filter((a) => a.answer.toLowerCase().includes(kw)).map((a) => a.engine))], answered: answered.length };
 }
 
-/** Clusters that got at least one real answer — the only ones that are charged. */
+/** Distinct clusters with a direct primary-route answer; fallback stand-ins are not visibility measurements. */
 export function answeredClusterCount(answers: ClusterAnswer[]): number {
-  return new Set(answers.filter((a) => a.status === "answered").map((a) => `${a.market}|${a.keywords.join("|")}`)).size;
+  return new Set(
+    answers
+      .filter((a) => a.status === "answered" && a.provider_path !== "fallback")
+      .map((a) => a.market + "|" + a.keywords.join("|"))
+  ).size;
+}
+
+/** Distinct clusters with any usable response; used for usage charging, not visibility metrics. */
+export function billableClusterCount(answers: ClusterAnswer[]): number {
+  return new Set(
+    answers
+      .filter((a) => a.status === "answered")
+      .map((a) => a.market + "|" + a.keywords.join("|"))
+  ).size;
 }
