@@ -292,7 +292,7 @@ export function Dardasha({
               } : undefined}
               style={m.role === "assistant" ? { backgroundImage: "radial-gradient(380px circle at var(--chat-x, 50%) var(--chat-y, 50%), hsl(var(--primary) / 0.055), transparent 74%)" } : undefined}
               className={m.role === "user"
-                ? "max-w-[85%] whitespace-pre-wrap rounded-2xl border border-primary/10 bg-primary/10 px-4 py-2.5 text-sm leading-6 text-foreground shadow-sm"
+                ? "max-w-[85%] whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-2xl border border-primary/10 bg-primary/10 px-4 py-2.5 text-sm leading-6 text-foreground shadow-sm"
                 : "relative max-w-full min-w-0 rounded-2xl border border-border/55 bg-card/45 p-3 text-sm leading-7 shadow-sm backdrop-blur-sm transition duration-200 hover:border-primary/20 hover:shadow-md sm:p-4"}
             >
               {m.role === "assistant" && <div className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground">
