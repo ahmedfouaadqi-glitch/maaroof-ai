@@ -808,10 +808,12 @@
 }
 
 
-/* Dardasha chat workspace: separate conversation history, flexible message area, compact geo scope. */
+/* Dardasha: prioritize the actual conversation over stacked workspace chrome. */
 .maaroof-workspace-page .maaroof-chat-shell {
-  height: clamp(32rem, calc(100dvh - 16rem), 54rem);
-  max-height: calc(100dvh - 7rem);
+  height: max(34rem, calc(100dvh - 9rem));
+  max-height: calc(100dvh - 5.5rem);
+  min-height: 0;
+  padding: clamp(0.65rem, 1.2vw, 1.15rem);
 }
 
 .maaroof-workspace-page .maaroof-chat-layout {
@@ -966,8 +968,9 @@
 
 @media (max-height: 760px) and (min-width: 768px) {
   .maaroof-workspace-page .maaroof-chat-shell {
-    height: clamp(28rem, calc(100dvh - 13rem), 43rem);
+    height: calc(100dvh - 6rem);
     max-height: calc(100dvh - 5rem);
+    min-height: 24rem;
   }
 }
 
