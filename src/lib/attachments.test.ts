@@ -1,14 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { validateAttachment, attachmentKind, attachmentPath, ownsPath } from "./attachments";
+import { validateAttachment, attachmentKind, attachmentPath, ownsPath, xmlToText, officeTextEntry } from "./attachments";
 
 describe("attachments", () => {
   it("rejects files over 10MB", () => {
     expect(validateAttachment({ size: 10 * 1024 * 1024 + 1, type: "image/png" })).toBe("too_large");
     expect(validateAttachment({ size: 1000, type: "image/png" })).toBe("ok");
   });
-  it("accepts images, PDF and text only", () => {
+  it("accepts any file type and picks the right reader", () => {
+    expect(validateAttachment({ size: 10, type: "application/zip" })).toBe("ok");
     expect(attachmentKind("application/pdf")).toBe("pdf");
-    expect(attachmentKind("application/zip")).toBeNull();
+    expect(attachmentKind("", "report.docx")).toBe("office");
+    expect(attachmentKind("application/octet-stream", "main.py")).toBe("text");
+    expect(attachmentKind("application/zip", "a.zip")).toBe("binary");
+    expect(attachmentKind("image/heic", "a.heic")).toBe("binary");
+  });
+  it("extracts plain text from office xml", () => {
+    expect(xmlToText("<w:p><w:t>Hello &amp; hi</w:t></w:p>")).toBe("Hello & hi");
+    expect(officeTextEntry("word/document.xml")).toBe(true);
+    expect(officeTextEntry("word/styles.xml")).toBe(false);
   });
   it("stores inside the owner's folder and blocks others", () => {
     const p = attachmentPath("u1", "my logo.png", 5);
