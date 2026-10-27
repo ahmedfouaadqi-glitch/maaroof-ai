@@ -257,6 +257,46 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   }
   for (const s of input.social || []) bench.push([S("تواصل اجتماعي", "Social", "سۆشیال"), s.party, S("منشور عام", "Public post", "پۆست"), S("بحث ويب", "Web search", "گەڕان"), s.url, NA[l], NA[l], NA[l], publishedKeywords(s.text, keywords).slice(0, 15).join(", ") || "0", NA[l], NA[l], SRC_WEB]);
 
+  // Keyword-level coverage matrix. Coverage is literal text presence in the supplied page text,
+  // not an inference that a page ranks for the keyword.
+  const coverageRows: (string | number)[][] = [];
+  for (const m of markets) {
+    const marketRows = kRows.filter((row) => row.m.code === m.code);
+    for (const row of marketRows) {
+      const brandHasPage = Boolean(brand?.pageText);
+      const brandHas = brandHasPage ? publishedKeywords(brand!.pageText, [row.k]).length > 0 : false;
+      const competitorPages = comps.filter((p) => Boolean(p.pageText));
+      const coveredBy = competitorPages.filter((p) => publishedKeywords(p.pageText, [row.k]).length > 0).map((p) => p.name);
+      const unknownCompetitors = comps.filter((p) => !p.pageText).map((p) => p.name);
+      const coverageStatus = !brandHasPage
+        ? S("تعذر التحقق من تغطية العلامة", "Brand coverage unknown: page text unavailable", "پۆششی براند نەزانراوە")
+        : brandHas
+          ? S("موجودة حرفيًا في نص العلامة", "Literal keyword found in brand page text", "وشەکە لە دەقی برانددا هەیە")
+          : S("فجوة محتملة: لم تظهر حرفيًا في النص المقدم", "Potential gap: not found literally in supplied text", "کەلێنی ئەگەری: لە دەقی پێشکەشکراودا نەدۆزرایەوە");
+      const competitorStatus = comps.length === 0
+        ? S("لم تُحدد منافسات", "No competitors supplied", "ڕکابەری دیاری نەکراوە")
+        : coveredBy.length
+          ? coveredBy.join(", ")
+          : unknownCompetitors.length
+            ? S("لا ظهور حرفي في الصفحات المقروءة؛ صفحات غير مقروءة: ", "No literal match on readable pages; unreadable pages: ", "پەڕە نەخوێندراوەکان: ") + unknownCompetitors.join(", ")
+            : S("لا ظهور حرفي في نصوص المنافسين المقدمة", "No literal match in supplied competitor page text", "لە دەقی پێشکەشکراوی ڕکابەراندا نەدۆزرایەوە");
+      coverageRows.push([row.k, mName(m), brandHasPage ? (brandHas ? S("نعم", "Yes", "بەڵێ") : S("لا", "No", "نەخێر")) : NA[l],
+        competitorStatus, coverageStatus,
+        !brandHasPage || unknownCompetitors.length
+          ? S("بيانات غير مكتملة؛ لا تُعامل كفجوة مؤكدة", "Incomplete evidence; do not treat as a confirmed gap", "بەڵگە تەواو نییە")
+          : !brandHas && coveredBy.length
+            ? S("أولوية مراجعة — المنافس يغطيها نصيًا", "Review priority — competitor mentions it literally", "پێویستی بە پێداچوونەوە")
+            : brandHas && coveredBy.length
+              ? S("تغطية مشتركة نصيًا", "Shared literal coverage", "پۆششی هاوبەش")
+              : S("تحقق يدويًا من النتائج والنية قبل القرار", "Validate SERPs and intent before deciding", "پێش بڕیار نیەت و ئەنجامەکان بپشکنە")]);
+    }
+  }
+  const keywordCoverageSection: ExportSection = {
+    heading: S("مصفوفة تغطية الكلمات وفجوات المنافسة", "Keyword coverage and competitor gap matrix", "ماتریسی پۆششی وشە و کەلێنی ڕکابەری"),
+    kind: "table",
+    table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("تغطية العلامة (نصية)", "Brand coverage (text)", "پۆششی براند"), S("المنافسون الذين يذكرون الكلمة", "Competitors with literal mention", "ڕکابەرانی باسکەر"), S("النتيجة", "Finding", "دەرئەنجام"), S("الإجراء المقترح", "Suggested action", "کرداری پێشنیارکراو")], data: coverageRows },
+  };
+
   // Execution plan: what Maaroof did now vs what the team does
   const DONE = S("نُفّذ بواسطة معروف", "Done by Maaroof", "ئەنجامدرا");
   const TEAM = S("يحتاج فريقك", "Needs your team", "تیمەکەت");
@@ -380,7 +420,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     kind: "table",
     table: { columns: [S("نوع المصدر", "Source type", "جۆری سەرچاوە"), S("الجهة / السياق", "Entity / context", "لایەن / پاشبنەما"), S("الرابط", "URL", "بەستەر"), S("ما الذي تحقق", "What was checked", "چی پشکنرا"), S("منشأ النتيجة", "Provenance", "سەرچاوەی ئەنجام")], data: evidenceRows },
   };
-  sections.splice(1, 0, sourceInventory, ...originalDataSections);
+  sections.splice(1, 0, sourceInventory, ...originalDataSections, keywordCoverageSection);
   sections.splice(2 + originalDataSections.length, 0, engineStatusSection, clusterStatusSection, executionSection, evidenceSection);
 
   return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: input.brand + " · " + markets.map(mName).join(" / "), lang: l, sections };
