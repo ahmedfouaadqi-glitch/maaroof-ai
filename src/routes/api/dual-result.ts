@@ -53,9 +53,11 @@ export const Route = createFileRoute("/api/dual-result")({
         const { buildClusters, answeredClusterCount } = await import("@/lib/keyword-clusters");
         const clusterLimit = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
         const winners = new Set<string>();
-        for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) for (const r of s.rows) winners.add(String(r[0] ?? "").trim().toLowerCase());
+        const { keywordColumn } = await import("@/lib/operational-workbook");
+        const kwOf = (s: any) => { const i = keywordColumn(s); return i < 0 ? [] : s.rows.map((r: any) => String(r[i] ?? "")); };
+        for (const s of sheets.filter((x) => /winner|رابح/i.test(x.name))) for (const k of kwOf(s)) winners.add(k.trim().toLowerCase());
         const { sheetMatchesMarket } = await import("@/lib/market-scope");
-        const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheets.filter((s) => sheetMatchesMarket(s.name, m)).flatMap((s) => s.rows.map((r) => String(r[0] ?? ""))), winners, clusterLimit));
+        const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheets.filter((s) => sheetMatchesMarket(s.name, m)).flatMap(kwOf), winners, clusterLimit));
         const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
         const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c) : [];
         const answeredClusters = answeredClusterCount(clusterAnswers);
