@@ -6,7 +6,7 @@ import { ENGINE_COUNCIL_MODELS, summarizeCouncil, parseVerdict, withFallback, ty
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 
-const GATEWAY_MODEL = "google/gemini-2.5-flash";
+const GATEWAY_MODEL = "google/gemini-3.8-flash";
 
 async function ask(engine: string, url: string, headers: Record<string, string>, model: string, messages: any[], timeoutMs: number): Promise<EngineVerdict> {
   try {
