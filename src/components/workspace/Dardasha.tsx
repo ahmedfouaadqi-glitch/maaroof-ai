@@ -459,8 +459,7 @@ function SheetInventory({
 type ProbeDiagnostics = {
   asked: number;
   answered: number;
-  primary_route: number;
-  fallback_route: number;
+  fallback_answered: number;
   no_answer: number;
   empty: number;
   timeout: number;
@@ -656,11 +655,11 @@ function SecondResult({
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-md bg-muted/30 p-2">
                   <p className="font-medium">{tr(lang, "استعلامات المحركات حسب السوق", "Market engine probes", "تاقیکردنەوەی بزوێنەر بەپێی بازاڕ")}</p>
-                  <p className="mt-1 text-muted-foreground">{res.diagnostics.market_probes.answered}/{res.diagnostics.market_probes.asked} {tr(lang, "إجابة", "answered", "وەڵام")}; {res.diagnostics.market_probes.no_answer} {tr(lang, "بلا إجابة", "no answer", "بێ وەڵام")}; {res.diagnostics.market_probes.empty} {tr(lang, "فارغة", "empty", "بەتاڵ")}; {res.diagnostics.market_probes.timeout} {tr(lang, "انتهاء مهلة", "timeouts", "کاتی تەواوبوون")}; {res.diagnostics.market_probes.http_error} HTTP; {res.diagnostics.market_probes.error} {tr(lang, "أخطاء أخرى", "other errors", "هەڵەی تر")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.market_probes.answered}/{res.diagnostics.market_probes.asked} {tr(lang, "إجابة مباشرة", "direct answers", "وەڵامی ڕاستەوخۆ")}; {res.diagnostics.market_probes.fallback_answered} {tr(lang, "إجابة عبر المسار البديل (ليست قياس ظهور مباشر)", "fallback answers (not direct visibility)", "وەڵامی ڕێڕەوی جێگرەوە (پێوانەی ڕاستەوخۆ نییە)")}; {res.diagnostics.market_probes.no_answer} {tr(lang, "بلا إجابة", "no answer", "بێ وەڵام")}; {res.diagnostics.market_probes.empty} {tr(lang, "فارغة", "empty", "بەتاڵ")}; {res.diagnostics.market_probes.timeout} {tr(lang, "انتهاء مهلة", "timeouts", "کاتی تەواوبوون")}; {res.diagnostics.market_probes.http_error} HTTP; {res.diagnostics.market_probes.error} {tr(lang, "أخطاء أخرى", "other errors", "هەڵەی تر")}</p>
                 </div>
                 <div className="rounded-md bg-muted/30 p-2">
                   <p className="font-medium">{tr(lang, "استعلامات مجموعات الكلمات", "Keyword cluster probes", "تاقیکردنەوەی کۆمەڵە وشەکان")}</p>
-                  <p className="mt-1 text-muted-foreground">{res.diagnostics.cluster_probes.answered}/{res.diagnostics.cluster_probes.asked} {tr(lang, "إجابة", "answered", "وەڵام")}; {res.diagnostics.cluster_probes.no_answer} {tr(lang, "بلا إجابة", "no answer", "بێ وەڵام")}; {res.diagnostics.cluster_probes.empty} {tr(lang, "فارغة", "empty", "بەتاڵ")}; {res.diagnostics.cluster_probes.timeout} {tr(lang, "انتهاء مهلة", "timeouts", "کاتی تەواوبوون")}; {res.diagnostics.cluster_probes.http_error} HTTP; {res.diagnostics.cluster_probes.error} {tr(lang, "أخطاء أخرى", "other errors", "هەڵەی تر")}</p>
+                  <p className="mt-1 text-muted-foreground">{res.diagnostics.cluster_probes.answered}/{res.diagnostics.cluster_probes.asked} {tr(lang, "إجابة مباشرة", "direct answers", "وەڵامی ڕاستەوخۆ")}; {res.diagnostics.cluster_probes.fallback_answered} {tr(lang, "إجابة عبر المسار البديل (ليست قياس ظهور مباشر)", "fallback answers (not direct visibility)", "وەڵامی ڕێڕەوی جێگرەوە (پێوانەی ڕاستەوخۆ نییە)")}; {res.diagnostics.cluster_probes.no_answer} {tr(lang, "بلا إجابة", "no answer", "بێ وەڵام")}; {res.diagnostics.cluster_probes.empty} {tr(lang, "فارغة", "empty", "بەتاڵ")}; {res.diagnostics.cluster_probes.timeout} {tr(lang, "انتهاء مهلة", "timeouts", "کاتی تەواوبوون")}; {res.diagnostics.cluster_probes.http_error} HTTP; {res.diagnostics.cluster_probes.error} {tr(lang, "أخطاء أخرى", "other errors", "هەڵەی تر")}</p>
                 </div>
                 <div className="rounded-md bg-muted/30 p-2">
                   <p className="font-medium">{tr(lang, "قراءة صفحات المصادر", "Source page reads", "خوێندنەوەی پەڕەی سەرچاوە")}</p>
