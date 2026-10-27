@@ -27,18 +27,6 @@ function hasCompetitors(input: Record<string, unknown> | null | undefined): bool
   return typeof value === "string" && value.split(/[\n,؛;|]+/).some((v) => v.trim().length > 1);
 }
 
-function dependsOnPriorOutputs(step: ExecutionStepLike, prior: ExecutionStepLike[]): boolean {
-  if (step.tool === "translate" || step.tool === "teach_space") return prior.length > 0;
-  if (step.tool === "compare" && !hasCompetitors(step.input)) {
-    return prior.some((p) => COMPETITOR_SOURCES.has(p.tool));
-  }
-  if (step.tool === "geo_rewrite") {
-    const text = String(step.input?.text ?? "").trim();
-    return text.length < 25 && prior.some((p) => CONTENT_PRODUCERS.has(p.tool));
-  }
-  return false;
-}
-
 /** Earlier step indexes whose successful outputs may be consumed by this step. */
 export function dependenciesForStep(steps: ExecutionStepLike[], index: number): number[] {
   const step = steps[index];
