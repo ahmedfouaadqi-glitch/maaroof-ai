@@ -27,14 +27,48 @@ describe("operational workbook", () => {
     ], "Mengotti");
     expect(v).toEqual({ answered: 2, mentioned: 1, percent: 50 });
   });
-  it("builds exactly six sheets with unique keywords and negatives", () => {
+  it("preserves source rows, deduplicates keywords, and labels negative candidates for review", () => {
     const rows = [["dior bag", 10], ["Dior Bag", 10], ["dior bag free", 5]];
-    const p = buildOperationalPayload({ brand: "B", lang: "en", markets: detectMarkets(["USA"]), sheets: [{ name: "USA KEYWORDS", columns: ["Keyword", "Volume"], rows, totalRows: 3, truncated: false }, { name: "NEGATIVE KEYWORDS", columns: ["Keyword"], rows: [["free"], ["Free"]], totalRows: 2, truncated: false }], parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }], engineAnswers: [] });
-    expect(p.sections.length).toBe(6);
-    expect(p.sections[1].table!.data.length).toBe(2);
-    const neg = p.sections.find((s) => s.heading === "Negative keywords")!.table!.data.map((r) => String(r[0]).toLowerCase());
-    expect(new Set(neg).size).toBe(neg.length);
+    const sourceSheets = [
+      { name: "USA KEYWORDS", columns: ["Keyword", "Volume"], rows, totalRows: 3, truncated: false },
+      { name: "NEGATIVE KEYWORDS", columns: ["Keyword"], rows: [["free"], ["Free"]], totalRows: 2, truncated: false },
+    ];
+    const p = buildOperationalPayload({
+      brand: "B",
+      lang: "en",
+      markets: detectMarkets(["USA"]),
+      sheets: sourceSheets,
+      parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: [],
+    });
+    expect(p.sections.length).toBeGreaterThan(6);
+    const originals = p.sections.find((s) => s.heading === "Original data — USA KEYWORDS");
+    expect(originals?.table?.data).toEqual(rows);
+    const keywordSection = p.sections.find((s) => s.heading === "Keywords by market");
+    expect(keywordSection?.table?.data.length).toBe(2);
+    const neg = p.sections.find((s) => s.heading === "Negative keywords — review required")!.table!.data;
+    const normalized = neg.map((r) => String(r[0]).toLowerCase());
+    expect(new Set(normalized).size).toBe(normalized.length);
+    expect(neg.some((r) => String(r[1]).includes("candidate") && String(r[2]).includes("review"))).toBe(true);
     expect(p.sections.find((s) => s.heading === "Brand vs competitors")!.table!.data[0][4]).toBe(NA.en);
+  });
+
+  it("exports exact engine queries, answer statuses, and recorded cluster responses", () => {
+    const p = buildOperationalPayload({
+      brand: "B",
+      lang: "en",
+      markets: detectMarkets(["USA"]),
+      sheets: [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: [["designer dress"]], totalRows: 1, truncated: false }],
+      parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: [{ market: "us", engine: "chatgpt", status: "answered", answer: "Try boutiques", urls: ["https://example.org"], query: "Actual query with designer dress" }],
+      clusterAnswers: [{ market: "us", engine: "chatgpt", keywords: ["designer dress"], status: "answered", answer: "Try boutiques" }],
+    });
+    const engines = p.sections.find((s) => s.heading === "Ten-engine answer and status log")!;
+    expect(engines.table!.data[0]).toContain("Actual query with designer dress");
+    expect(engines.table!.data[0]).toContain("answered");
+    const clusters = p.sections.find((s) => s.heading === "Keyword-cluster probe results")!;
+    expect(clusters.table!.data[0]).toContain("designer dress");
+    expect(clusters.table!.data[0]).toContain("Try boutiques");
   });
   it("match score counts engines whose answer names the keyword", () => {
     const ans = [
