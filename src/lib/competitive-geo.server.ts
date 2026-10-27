@@ -81,3 +81,37 @@ export async function gatherSocial(names: string[], userId: string): Promise<Arr
   }));
   return out;
 }
+
+/** Ten engines × each keyword cluster: a separate blind question per cluster. */
+export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clusters").KeywordCluster[], marketName: (code: string) => string): Promise<import("@/lib/keyword-clusters").ClusterAnswer[]> {
+  const key = process.env.OPENROUTER_API_KEY;
+  const { clusterQuestion } = await import("@/lib/keyword-clusters");
+  const jobs = clusters.flatMap((c) => ENGINE_COUNCIL_MODELS.map((e) => ({ c, e })));
+  return Promise.all(jobs.map(async ({ c, e }) => {
+    const base = { market: c.market, engine: e.key, keywords: c.keywords };
+    if (!key) return { ...base, status: "no_answer" as const, answer: "" };
+    try {
+      const p = parseProbeContent(await askEngine(e.model, clusterQuestion(c, marketName(c.market)), key));
+      return p ? { ...base, status: "answered" as const, answer: p.answer } : { ...base, status: "no_answer" as const, answer: "" };
+    } catch { return { ...base, status: "no_answer" as const, answer: "" }; }
+  }));
+}
+
+/**
+ * Optional Alexandria evidence source. Connected only when ALEXANDRIA_API_URL is configured and answers.
+ * Any failure keeps it "not connected" — no substitute data is produced.
+ */
+export async function gatherAlexandria(query: string): Promise<{ connected: boolean; note?: string; evidence: Array<{ url: string; text: string }> }> {
+  const url = process.env.ALEXANDRIA_API_URL;
+  if (!url || !/^https:\/\//i.test(url)) return { connected: false, evidence: [] };
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (process.env.ALEXANDRIA_API_KEY) headers.Authorization = `Bearer ${process.env.ALEXANDRIA_API_KEY}`;
+    const r = await fetch(url, { method: "POST", headers, body: JSON.stringify({ query }), signal: AbortSignal.timeout(30_000) });
+    if (!r.ok) return { connected: false, note: `HTTP ${r.status}`, evidence: [] };
+    const j: any = await r.json().catch(() => null);
+    const rows: any[] = Array.isArray(j?.data) ? j.data : Array.isArray(j?.results) ? j.results : [];
+    const evidence = rows.map((x) => ({ url: String(x?.url || x?.source || ""), text: String(x?.text || x?.content || x?.markdown || "").slice(0, 4000) })).filter((x) => /^https?:\/\//.test(x.url) && x.text);
+    return evidence.length ? { connected: true, note: `${evidence.length}`, evidence } : { connected: false, note: "no_evidence", evidence: [] };
+  } catch { return { connected: false, note: "unreachable", evidence: [] }; }
+}
