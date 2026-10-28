@@ -14,6 +14,7 @@ export type EntityContext = {
 /** The brand key(s) each tool endpoint actually reads. */
 const BRAND_KEYS: Record<string, string[]> = {
   visibility: ["brand"],
+  keyword_strategy: ["brand"],
   compare: ["brand"],
   known: ["brand"],
   geo_strategist: ["brand"],
