@@ -230,6 +230,6 @@ describe("operational workbook", () => {
     });
     const perEngine = p.sections.find((s) => s.heading === "Keywords per engine")!;
     expect(perEngine.table!.data).toHaveLength(42);
-    expect(perEngine.table!.columns).toContain("Six-axis fit scores");
+    expect(perEngine.table!.columns).toContain("Estimated six-axis fit");
   });
 });
