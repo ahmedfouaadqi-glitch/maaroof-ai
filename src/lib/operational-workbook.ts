@@ -299,8 +299,8 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       const quotedKeyword = '"' + r.k.slice(0, 180).toLowerCase().replace(/"/g, "") + '"';
       const matchingProbes = engineAnswers.filter((answer) => answer.market === m.code && String(answer.query || "").toLowerCase().includes(quotedKeyword));
       const directProbes = matchingProbes;
-      const answeredProbes = directProbes.filter((answer) => answer.status === "answered");
-      const proxyAnsweredProbes = ([] as typeof matchingProbes);
+      const answeredProbes = directProbes.filter((answer) => answer.status === "answered" && answer.provider_path !== "fallback");
+      const proxyAnsweredProbes = directProbes.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback");
       const eng = cs
         ? cs.engines
         : [...new Set(answeredProbes.filter((answer) => answer.answer.toLowerCase().includes(r.k.toLowerCase())).map((answer) => answer.engine))];
@@ -322,8 +322,19 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
             : directProbes.length
               ? S("أُرسلت الكلمة لكن لم تسجل إجابة مباشرة ناجحة", "Keyword was sent but no successful direct answer was recorded", "وشەکە نێردرا بەڵام وەڵامی ڕاستەوخۆی سەرکەوتوو تۆمار نەکرا")
               : S("لم تُرسل الكلمة في سؤال المحرك", "Keyword was not sent in engine query", "وشەکە لە پرسیاری بزوێنەر نەنێردرا");
-      perEngine.push([r.k, mName(m), score, engineLabel, ax.axis, ax.rule,
-        AXES.map((axis) => axis + ": " + keywordAxisScores(r.k)[axis]).join(" · "), ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
+      perEngine.push([
+        r.k,
+        mName(m),
+        termKindLabel(r.kind, l),
+        r.intent || NA[l],
+        score,
+        engineLabel,
+        ax.axis,
+        ax.rule,
+        AXES.map((axis) => axis + ": " + keywordAxisScores(r.k)[axis]).join(" · "),
+        ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"),
+        r.url || provenance,
+      ]);
     }
   }
 
