@@ -586,8 +586,16 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
       steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
     }
-    // Skill tools (selected or inferred from the task text) are guaranteed in the plan.
-    if (!userTools.length && ctx.selectedSkills?.length) {
+    // The search-visibility skill is a composite workflow: use one entry tool
+    // and reuse its existing site/search/competitor/social/engine methods internally.
+    // Do not schedule the same methodology as separate billable steps.
+    if (!userTools.length && ctx.selectedSkills?.includes("search_visibility_strategy")) {
+      const reusedMethodology = new Set(["analyze", "research", "compare", "known", "visibility", "geo_strategist", "applied_ranking", "social_analysis", "brand_authority"]);
+      steps = steps.filter((step) => !reusedMethodology.has(step.tool));
+      if (!steps.some((step) => step.tool === "keyword_strategy")) {
+        steps.push({ tool: "keyword_strategy", input: {}, reason: "تشغّل المهارة الموحّدة البحث والمقارنة والتواصل والنماذج في تقرير واحد، باستخدام منهجية الأدوات الموجودة داخلياً." } as PlanStep);
+      }
+    } else if (!userTools.length && ctx.selectedSkills?.length) {
       try {
         const { executableToolsFor } = await import("./skill-inference");
         for (const k of executableToolsFor(ctx.selectedSkills)) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "مطلوبة للمهارة المختارة لهذه المهمة." } as PlanStep);
@@ -1066,7 +1074,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 4) EXECUTE
     const results: Array<{ tool: string; ok: boolean; output: any }> = [];
     // The ten-model council is asked by default on every task unless the user turned the live probe off.
-    if (ctx.liveProbe !== false && !steps.some((st: any) => st.tool === "visibility") && toolPath("visibility")
+    if (ctx.liveProbe !== false && !steps.some((st: any) => st.tool === "keyword_strategy") && !steps.some((st: any) => st.tool === "visibility") && toolPath("visibility")
       && (!settings.enabled_tools.length || settings.enabled_tools.includes("visibility"))) {
       steps.push({ tool: "visibility", input: {}, reason: ctx.language === "en" ? "Ask the ten AI models directly (default)." : "استجواب النماذج العشرة مباشرة (افتراضي)." } as any);
     }
