@@ -294,7 +294,10 @@ export async function discoverKeywordIdeas(o: {
     const source = sourceMap.get(String(item?.source_id || ""));
     if (!keyword || keyword.length < 3 || !market || !source) return;
     if (kind !== "opportunity" && !pageTextFor(source).includes(keyword.toLocaleLowerCase())) return;
-    if (kind === "opportunity" && existing.has(keyword.toLowerCase())) return;
+    if (kind === "opportunity" && (
+      existing.has(keyword.toLowerCase()) ||
+      sources.some((candidate) => candidate.source_type === "website" && candidate.text.toLowerCase().includes(keyword.toLowerCase()))
+    )) return;
     if (kind === "brand" && source.source_type !== "website") return;
     if (kind === "competitor" && source.source_type !== "competitor") return;
     if (kind === "social" && source.source_type !== "social") return;
