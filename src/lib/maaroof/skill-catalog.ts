@@ -11,8 +11,10 @@ export type MaaroofSkill = {
   icon: SkillIconKey;
   label: { ar: string; en: string; ku: string };
   description: { ar: string; en: string; ku: string };
-  /** Tool keys (from TOOL_CATALOG) the skill is served by. */
+  /** Executable tool keys (from TOOL_CATALOG) used to run this skill. */
   tools: string[];
+  /** Existing tool methodologies reused internally by the composite tool, not extra calls. */
+  methodologyTools?: string[];
   /** Keywords used for lightweight goal matching across ar/en/ku. */
   keywords: string[];
 };
@@ -71,11 +73,12 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     icon: "chart",
     label: { ar: "استراتيجية الظهور في البحث والذكاء الاصطناعي", en: "Search & AI Visibility Strategy", ku: "ستراتیژی دەرکەوتن لە گەڕان و زیرەکی دەستکرد" },
     description: {
-      ar: "يجمع ملف الكلمات المفتاحية مع أدلة الموقع والبحث والمنافسين وقياس إجابات النماذج، ثم يحولها إلى أولويات تنفيذ. ويعرض SGEO كمؤشر تداخل مشتق بين SEO وAEO وGEO وSGE، مع إبقاء GSEO منفصلًا.",
-      en: "Combines keyword files with website, web research, competitor and model-answer evidence, then turns findings into priorities. SGEO is shown as a derived overlap index across SEO, AEO, GEO and SGE; GSEO remains separate.",
-      ku: "فایلی وشە سەرەکییەکان لەگەڵ بەڵگەی ماڵپەڕ و گەڕان و ڕکابەر و وەڵامی مۆدێلەکان کۆدەکاتەوە و دەیکاتە پێشینەی جێبەجێکردن. SGEO پێوەرێکی مشتەقە و GSEO جیاواز دەمێنێتەوە.",
+      ar: "تحليل الكلمات المفتاحية بملف أو بدونه: عند إرفاق ملف نقارن الكلمات القديمة بالجديدة، وعند عدم إرفاقه نستخرج المصطلحات الموجودة عبر فحص الموقع والبحث والمنافسين والتواصل. يتضمن التقرير حصة الصوت وكثافة الكلمات والحقائق ومؤشرات السلطة ورأي النماذج ومحاور SEO وGEO وAEO وSGE وGSEO وSGEO والمدة المتوقعة والكلمات السلبية والمصادر.",
+      en: "Keyword research with or without a workbook: uploaded files enable old-vs-new comparison; without a file, Maaroof discovers existing terms from site pages, web search, competitors and social sources. One report includes share of voice, keyword and fact density, authority signals, model answers, six-axis fit, timeline, negatives and sources.",
+      ku: "لێکۆڵینەوەی وشە سەرەکییەکان بە فایل یان بەبێ فایل: بە فایل وشە کۆن و نوێ بەراورد دەکرێن؛ بەبێ فایل وشەکان لە ماڵپەڕ و گەڕان و ڕکابەران و سۆشیال دەدۆزرێنەوە. ڕاپۆرتەکە بەشی دەنگ، چڕی، نیشانەکانی متمانە، وەڵامی مۆدێلەکان، شەش تەوەر، ماوە، وشە نەرێنی و سەرچاوەکان دەگرێتەوە.",
     },
-    tools: ["analyze", "research", "compare", "known", "visibility", "geo_strategist", "applied_ranking"],
+    tools: ["keyword_strategy"],
+    methodologyTools: ["analyze", "research", "compare", "known", "visibility", "geo_strategist", "applied_ranking", "social_analysis", "brand_authority"],
     keywords: [
       "search visibility", "search engine visibility", "keyword research", "keyword strategy",
       "seo", "aeo", "geo", "sge", "sgeo", "gseo", "keywords",
@@ -202,6 +205,7 @@ export type SkillLocaleKey = "ar" | "en" | "ku";
 export type SkillFramework = { goal: string; sources: string; plan: string; cost: string; evidence: string; output: string; nextStep: string };
 
 const SOURCES_BY_TOOL: Record<string, { ar: string; en: string; ku: string }> = {
+  keyword_strategy: { ar: "الملف أو صفحات الموقع الرسمية، نتائج الويب، صفحات المنافسين، المصادر الاجتماعية، وإجابات النماذج العشرة", en: "Workbook or official site pages, web results, competitor pages, public social sources and ten-engine answers", ku: "فایل یان پەڕەی فەرمی، ئەنجامی وێب، پەڕەی ڕکابەران، سەرچاوەی سۆشیال و وەڵامی دە مۆدێل" },
   known: { ar: "النماذج العشرة", en: "The ten models", ku: "دە مۆدێلەکە" },
   visibility: { ar: "فحص النماذج الحي", en: "Live model probe", ku: "پشکنینی ڕاستەوخۆ" },
   analyze: { ar: "صفحات موقعك الرسمي", en: "Your official site pages", ku: "پەڕەکانی ماڵپەڕی فەرمی" },
@@ -215,7 +219,7 @@ const SOURCES_BY_TOOL: Record<string, { ar: string; en: string; ku: string }> = 
 /** Unified 7-part framework for any skill (goal, sources, plan, cost, evidence, output, next step). Pure. */
 export function skillFramework(skill: MaaroofSkill, locale: SkillLocaleKey): SkillFramework {
   const L = (ar: string, en: string, ku: string) => (locale === "en" ? en : locale === "ku" ? ku : ar);
-  const sources = Array.from(new Set(skill.tools.map((t) => SOURCES_BY_TOOL[t]?.[locale]).filter(Boolean))) as string[];
+  const sources = Array.from(new Set([...skill.tools, ...(skill.methodologyTools || [])].map((t) => SOURCES_BY_TOOL[t]?.[locale]).filter(Boolean))) as string[];
   if (!sources.length) sources.push(L("مدخلاتك وبطاقة حقيقة الكيان", "Your inputs and Entity Truth Card", "داتاکانت و کارتی ڕاستی"));
   return {
     goal: skill.description[locale],
