@@ -17,6 +17,7 @@ export type ToolKey =
   | "feasibility"
   | "bizdev"
   | "research"
+  | "keyword_strategy"
   | "visibility"
   | "brand_boost"
   | "company_email"
@@ -43,6 +44,10 @@ export type Capability =
   | "geo_analysis"
   | "seo"
   | "aeo"
+  | "keyword_research"
+  | "sge"
+  | "gseo"
+  | "sgeo"
   | "visibility"
   | "competitor_analysis"
   | "market_intelligence"
@@ -245,6 +250,17 @@ export const TOOL_CATALOG: ToolDef[] = [
     preferredModels: ["google/gemini-2.5-pro"],
     costProfile: "medium",
     dna: "GEO strategist: designs a 30/60/90-day generative-visibility plan.",
+  },
+  {
+    key: "keyword_strategy", group: "tools", costPerRun: 5,
+    labels: { ar: "ذكاء الكلمات المفتاحية", en: "Keyword Intelligence", ku: "زانیاریی وشە سەرەکییەکان" },
+    capabilities: ["keyword_research", "seo", "geo_analysis", "aeo", "sge", "gseo", "sgeo", "competitor_analysis", "market_intelligence", "visibility", "social_analysis", "brand_authority", "ranking"],
+    strengths: ["uploaded-baseline vs new-term comparison", "official-site and competitor discovery", "public social and ten-engine evidence", "one integrated export"],
+    weaknesses: ["keyword volume and rankings are reported only when real source data exists", "future impact is an estimate"],
+    preferredModels: ["google/gemini-2.5-pro"],
+    costProfile: "heavy",
+    riskLevel: "medium",
+    dna: "Keyword intelligence operator: reuses Maaroof's website crawl, market research, competitor comparison, social evidence and ten-engine probes to produce one eight-section keyword report; workbook comparison is enabled only when a baseline file is attached.",
   },
   {
     key: "competitor_monitor", group: "tools", costPerRun: 1,
