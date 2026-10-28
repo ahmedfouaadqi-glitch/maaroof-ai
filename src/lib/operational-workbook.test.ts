@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectMarkets } from "./market-scope";
-import { factDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA, enginesMentioning, keywordAxis, keywordAxisScores } from "./operational-workbook";
+import { factDensity, keywordDensity, negativeCandidates, shareOfVoice, buildOperationalPayload, NA, enginesMentioning, keywordAxis, keywordAxisScores } from "./operational-workbook";
 
 describe("market scope", () => {
   it("reads markets from sheet names", () => {
@@ -102,10 +102,10 @@ describe("operational workbook", () => {
     const rows = p.sections.find((s) => s.heading === "Keywords per engine")!.table!.data;
     const asked = rows.find((r) => r[0] === "designer dress")!;
     const unasked = rows.find((r) => r[0] === "evening gown")!;
-    expect(asked[2]).toBe("0/1");
-    expect(asked[3]).toBe("No literal mention in direct answers");
-    expect(unasked[2]).toBe("Not measured directly");
-    expect(unasked[3]).toBe("Not tested in engine query");
+    expect(asked[4]).toBe("0% (0/1)");
+    expect(asked[5]).toBe("No literal mention in direct answers");
+    expect(unasked[4]).toBe("Not measured directly");
+    expect(unasked[5]).toBe("Not tested in engine query");
   });
 
   it("reports distinct provider failures in the execution summary", () => {
@@ -170,6 +170,41 @@ describe("operational workbook", () => {
     expect(clusterProbes.slice(1, 5)).toEqual([2, 1, 1, 0]);
   });
 
+  it("measures exact keyword density only when source text is present", () => {
+    expect(keywordDensity("Dior bag by Dior", "Dior")).toEqual({ words: 4, occurrences: 2, percent: 50 });
+    expect(keywordDensity(null, "Dior")).toBeNull();
+  });
+
+  it("includes source-aware new terms and compares old vs new only when a workbook is present", () => {
+    const markets = detectMarkets(["USA"]);
+    const sourceSheets = [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: [["old phrase"]], totalRows: 1, truncated: false }];
+    const discovered = [
+      { keyword: "custom bridal couture", market: "us", kind: "opportunity" as const, intent: "transactional", source: "Opportunity based on brand page", url: "https://brand.example/" },
+      { keyword: "competitor luxury dresses", market: "us", kind: "competitor" as const, intent: "commercial", party: "Competitor", source: "Competitor website", url: "https://competitor.example/" },
+      { keyword: "bridal appointment questions", market: "us", kind: "social" as const, intent: "informational", party: "Brand", source: "Public social result", url: "https://social.example/post" },
+    ];
+    const parties = [
+      { name: "Brand", role: "brand" as const, url: "https://brand.example/", found: "user", title: "Brand bridal couture", description: "Custom bridal couture", pageText: "Brand provides custom bridal couture. Founded 2012. Contact us for bridal appointment questions." },
+      { name: "Competitor", role: "competitor" as const, url: "https://competitor.example/", found: "web_search", title: "Competitor luxury dresses", description: "Designer dresses", pageText: "Competitor luxury dresses and designer gowns. Contact the store for appointments." },
+    ];
+    const workbookReport = buildOperationalPayload({
+      brand: "Brand", lang: "en", markets, sheets: sourceSheets, parties, engineAnswers: [],
+      discoveredKeywords: discovered, sourceMode: "workbook",
+      social: [{ party: "Brand", url: "https://social.example/post", text: "bridal appointment questions" }],
+    });
+    expect(workbookReport.sections.some((x) => x.heading === "Old vs new keyword comparison")).toBe(true);
+    expect(workbookReport.sections.some((x) => x.heading === "Old and new keyword scorecard")).toBe(true);
+    expect(workbookReport.sections.some((x) => x.heading === "Keywords found on competitor pages")).toBe(true);
+    expect(workbookReport.sections.some((x) => x.heading === "Social-media keywords and topics")).toBe(true);
+
+    const webReport = buildOperationalPayload({
+      brand: "Brand", lang: "en", markets, sheets: [], parties, engineAnswers: [],
+      discoveredKeywords: discovered, sourceMode: "web_discovery",
+      social: [{ party: "Brand", url: "https://social.example/post", text: "bridal appointment questions" }],
+    });
+    expect(webReport.sections.some((x) => x.heading === "Old vs new keyword comparison")).toBe(false);
+    expect(webReport.sections.some((x) => x.heading === "New keyword opportunities")).toBe(true);
+  });
   it("classifies question keywords and recommendation keywords", () => {
     expect(keywordAxis("how to clean a dior bag").axis).toBe("AEO");
     expect(keywordAxis("best luxury bags").axis).toBe("GEO");
@@ -195,6 +230,6 @@ describe("operational workbook", () => {
     });
     const perEngine = p.sections.find((s) => s.heading === "Keywords per engine")!;
     expect(perEngine.table!.data).toHaveLength(42);
-    expect(perEngine.table!.columns).toContain("Six-axis heuristic scores (not measured)");
+    expect(perEngine.table!.columns).toContain("Six-axis fit scores");
   });
 });
