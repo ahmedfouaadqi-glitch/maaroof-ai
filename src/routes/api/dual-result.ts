@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { resolveCompetitiveContext } from "@/lib/competitive-context";
 import { deriveEvidenceState, hasChargeableMarketEvidence } from "@/lib/keyword-intelligence-flow";
+import { fcScrape, fcSearch } from "@/lib/firecrawl";
 
 // Second result: competitor + GEO research per target market, returned as an export payload.
 export const Route = createFileRoute("/api/dual-result")({
@@ -14,8 +15,9 @@ export const Route = createFileRoute("/api/dual-result")({
         if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
         const b: any = await request.json().catch(() => ({}));
         const lang = ["ar", "en", "ku"].includes(b?.lang) ? b.lang : "ar";
-        const id = String(b?.attachment_id || "");
-        if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "missing_input", need: ["attachment_id"] }, { status: 400 });
+        const id = String(b?.attachment_id || "").trim();
+        if (id && !/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "invalid_attachment" }, { status: 400 });
+        const hasAttachment = Boolean(id);
 
         const workspaceId = b?.workspace_id == null || b.workspace_id === "" ? null : String(b.workspace_id);
         let workspace: any = null;
@@ -28,20 +30,23 @@ export const Route = createFileRoute("/api/dual-result")({
           workspace = space;
         }
 
-        const { data: at } = await db.from("task_attachments")
-          .select("id, path, name, mime, workspace_id")
-          .eq("id", id).eq("user_id", userId).maybeSingle();
-        if (!at) return Response.json({ error: "not_found" }, { status: 404 });
-        if (((at as any).workspace_id || null) !== workspaceId) {
-          return Response.json({ error: "attachment_workspace_mismatch" }, { status: 403 });
+        let sheets: any[] = [];
+        if (hasAttachment) {
+          const { data: at } = await db.from("task_attachments")
+            .select("id, path, name, mime, workspace_id")
+            .eq("id", id).eq("user_id", userId).maybeSingle();
+          if (!at) return Response.json({ error: "not_found" }, { status: 404 });
+          if (((at as any).workspace_id || null) !== workspaceId) {
+            return Response.json({ error: "attachment_workspace_mismatch" }, { status: 403 });
+          }
+          const { isSpreadsheetName } = await import("@/lib/spreadsheet-reader");
+          const kind = isSpreadsheetName((at as any).name, (at as any).mime || "");
+          if (!kind) return Response.json({ error: "not_spreadsheet" }, { status: 422 });
+          const { data: file } = await db.storage.from("task-files").download((at as any).path);
+          if (!file) return Response.json({ error: "file_unavailable" }, { status: 422 });
+          const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
+          sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
         }
-        const { isSpreadsheetName } = await import("@/lib/spreadsheet-reader");
-        const kind = isSpreadsheetName((at as any).name, (at as any).mime || "");
-        if (!kind) return Response.json({ error: "not_spreadsheet" }, { status: 422 });
-        const { data: file } = await db.storage.from("task-files").download((at as any).path);
-        if (!file) return Response.json({ error: "file_unavailable" }, { status: 422 });
-        const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
-        const sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
 
         const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
         const { keywordColumn } = await import("@/lib/operational-workbook");
