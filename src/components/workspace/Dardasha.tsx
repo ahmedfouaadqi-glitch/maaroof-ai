@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { validateAttachment, attachmentPath } from "@/lib/attachments";
 import { composeChatMessage, MAX_DARDASHA_MESSAGE_CHARS, type DardashaAttachment } from "@/lib/maaroof/dardasha";
 import { resolveCompetitiveContext, type CompetitiveWorkspaceContext } from "@/lib/competitive-context";
-import { shouldAutoStartKeywordResearch } from "@/lib/keyword-intelligence-flow";
+import { shouldAutoStartKeywordResearch, shouldStartKeywordStrategyWithoutWorkbook } from "@/lib/keyword-intelligence-flow";
 import type { Workspace } from "@/components/maaroof/WorkspaceSwitcher";
 import { ShinyText } from "@/components/motion/effects";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -305,6 +305,17 @@ export function Dardasha({
               </div>}
               {m.role === "assistant" ? <AssistantMessage content={m.content} lang={lang} /> : m.content}
               {m.role === "assistant" && m.sheets && m.sheets.length > 0 && <SheetInventory sheets={m.sheets} lang={lang} reply={m.content} requestText={requestContext} workspaceContext={workspaceContext} geoScope={geoScope} workspaceId={workspaceId} />}
+              {m.role === "assistant" && i === msgs.length - 1 && (!m.sheets || m.sheets.length === 0) && shouldStartKeywordStrategyWithoutWorkbook(requestContext) && (
+                <SecondResult
+                  attachmentId=""
+                  lang={lang}
+                  workspaceId={workspaceId || null}
+                  workspaceContext={workspaceContext}
+                  requestText={requestContext}
+                  geoScope={geoScope}
+                  workbookHints={[]}
+                />
+              )}
               {m.role === "assistant" && m.council && <CouncilCards council={m.council} lang={lang} />}
               {m.role === "assistant" && m.axisAuditRequest && (
                 <FiveAxisAuditCards
@@ -490,7 +501,7 @@ type DualRes = {
 function SecondResult({
   attachmentId, lang, workspaceId, workspaceContext, requestText, geoScope, workbookHints,
 }: {
-  attachmentId: string;
+  attachmentId?: string;
   lang: L;
   workspaceId: string | null;
   workspaceContext?: Workspace | null;
@@ -542,7 +553,7 @@ function SecondResult({
         method: "POST",
         headers: { Authorization: "Bearer " + await token(), "Content-Type": "application/json" },
         body: JSON.stringify({
-          attachment_id: attachmentId,
+          ...(attachmentId ? { attachment_id: attachmentId } : {}),
           workspace_id: workspaceId || undefined,
           request_text: requestText,
           geo_scope: toServerGeoScope(geoScope),
@@ -580,7 +591,9 @@ function SecondResult({
     }
   };
 
-  const autoResearch = shouldAutoStartKeywordResearch(requestText, workbookHints);
+  const autoResearch = attachmentId
+    ? shouldAutoStartKeywordResearch(requestText, workbookHints)
+    : shouldStartKeywordStrategyWithoutWorkbook(requestText);
   const autoRunKey = useRef("");
   useEffect(() => {
     if (!autoResearch || res || busy) return;
