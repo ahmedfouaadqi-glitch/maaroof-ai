@@ -52,10 +52,13 @@ export const Route = createFileRoute("/api/dual-result")({
         const { keywordColumn, allKeywords } = await import("@/lib/operational-workbook");
         const requestText = String(b?.request_text || b?.text || b?.goal || b?.query || "").trim().slice(0, 12000);
         const marketText = String(b?.market_text || b?.market || b?.country || "").trim().slice(0, 240);
-        const geo = b?.geo_scope && typeof b.geo_scope === "object" ? b.geo_scope : {};
-        const geoMode = ["auto", "world", "country", "city"].includes(String(geo.mode)) ? String(geo.mode) : "auto";
-        const geoCountry = typeof geo.country === "string" ? geo.country.trim().slice(0, 120) : "";
-        const geoCity = typeof geo.city === "string" ? geo.city.trim().slice(0, 120) : "";
+        // Accept both the chat selector shape ({ mode }) and the orchestrator scope shape ({ scope }).
+        const geoRaw = b?.geo_scope && typeof b.geo_scope === "object" ? b.geo_scope
+          : b?.scope && typeof b.scope === "object" ? b.scope : {};
+        const geoModeRaw = String(geoRaw.mode || geoRaw.scope || "auto");
+        const geoMode = ["auto", "world", "country", "city"].includes(geoModeRaw) ? geoModeRaw : "auto";
+        const geoCountry = typeof geoRaw.country === "string" ? geoRaw.country.trim().slice(0, 120) : "";
+        const geoCity = typeof geoRaw.city === "string" ? geoRaw.city.trim().slice(0, 120) : "";
 
         // Workspace and profile are both valid sources for the brand's identity.
         const { data: profile } = await db.from("profiles")
@@ -266,8 +269,8 @@ export const Route = createFileRoute("/api/dual-result")({
         if (marketEvidenceAvailable) {
           const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
           const units = Math.max(1, answeredMarkets);
-          let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id, markets: markets.map((m: any) => m.code) } });
-          if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id, sub: "competitive_geo.market" } });
+          let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id || null, source_mode: hasAttachment ? "workbook" : "web_discovery", markets: markets.map((m: any) => m.code) } });
+          if (!charge.ok && charge.reason === "unpriced") charge = await chargeTokens({ userId, toolKey: "compare", units, meta: { attachment_id: id || null, source_mode: hasAttachment ? "workbook" : "web_discovery", sub: "competitive_geo.market" } });
           if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, charge.left), { status: 402 });
           totalCharged += Number(charge.tokens || 0);
         }
