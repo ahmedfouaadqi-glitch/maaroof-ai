@@ -443,8 +443,12 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       ? Math.round(((input.social || []).filter((x) => x.party === term.party).length / Math.max(1, (input.social || []).length)) * 100) + "%"
       : party ? (shareOfVoice(engineAnswers.filter((x) => x.market === term.market), party.name).percent == null ? NA[l] : shareOfVoice(engineAnswers.filter((x) => x.market === term.market), party.name).percent + "%") : NA[l];
     const axes = keywordAxisScores(term.keyword);
+    const kindLabel = term.source?.startsWith("Workbook:")
+      ? S("كلمة قديمة من الملف", "Existing workbook keyword", "وشەی کۆنی فایل")
+      : termKindLabel(mode, l);
     return [
       term.keyword,
+      kindLabel,
       market ? mName(market) : term.market,
       term.party || party?.name || term.source || NA[l],
       term.intent || NA[l],
@@ -460,6 +464,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   };
   const termColumns = [
     S("الكلمة المفتاحية", "Keyword", "وشەی سەرەکی"),
+    S("النوع", "Type", "جۆر"),
     S("السوق", "Market", "بازاڕ"),
     S("الجهة/المصدر", "Entity/source", "لایەن/سەرچاوە"),
     S("نية البحث", "Search intent", "نیەتی گەڕان"),
@@ -494,25 +499,42 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     table: { columns: termColumns, data: socialIdeas.map((x) => termEvidenceRow(x, "social")) },
   });
 
-  if (sourceMode === "workbook" && fileKeywords.length && newIdeas.length) {
-    const oldNewRows = newIdeas.map((idea) => {
-      const best = fileKeywords.map((old) => ({ old, similarity: lexicalSimilarity(idea.keyword, old) }))
-        .sort((a, b) => b.similarity - a.similarity)[0];
-      const market = markets.find((m) => m.code === idea.market);
-      const cluster = clusterScore(input.clusterAnswers || [], idea.market, idea.keyword);
-      const share = cluster ? Math.round(cluster.engines.length / Math.max(1, cluster.answered) * 100) + "% (" + cluster.engines.length + "/" + cluster.answered + ")" : NA[l];
-      const axis = keywordAxis(idea.keyword);
-      const axes = keywordAxisScores(idea.keyword);
-      const source = idea.url || idea.source || NA[l];
-      return [idea.keyword, best?.old || NA[l], best ? best.similarity + "%" : "0%", market ? mName(market) : idea.market, idea.language || l, idea.intent || NA[l], share, axis.axis, AXES.map((a) => a + ": " + axes[a]).join(" · "), source];
-    });
+  if (sourceMode === "workbook" && fileKeywords.length) {
+    const oldScorecardTerms: DiscoveredKeyword[] = kRows.filter((row) => row.kind === "file").slice(0, 1500).map((row) => ({
+      keyword: row.k, market: row.m.code, kind: "brand", party: brand?.name,
+      source: "Workbook: " + row.sheet, url: brand?.url || undefined, intent: row.intent,
+    }));
+    const scorecardRows = [
+      ...oldScorecardTerms.map((term) => termEvidenceRow(term, "brand")),
+      ...newIdeas.map((term) => termEvidenceRow(term, "opportunity")),
+    ];
     discoveredSections.unshift({
-      heading: S("مقارنة الكلمات القديمة والجديدة", "Old vs new keyword comparison", "بەراوردی وشە کۆن و نوێ"),
+      heading: S("بطاقة الكلمات القديمة والجديدة", "Old and new keyword scorecard", "کارتی نمرەدانی وشە کۆن و نوێ"),
       kind: "table",
-      table: { columns: [S("الكلمة الجديدة", "New keyword", "وشەی نوێ"), S("أقرب كلمة قديمة", "Closest old keyword", "نزیکترین وشەی کۆن"), S("التشابه اللفظي", "Text similarity", "هاوشێوەیی وشەیی"), S("السوق", "Market", "بازاڕ"), S("اللغة", "Language", "زمان"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حصة ذكر النماذج", "Model mention share", "بەشی باسکردن"), S("المحور الأساسي", "Primary axis", "تەوەری سەرەکی"), S("قوة الملاءمة للمحاور الستة", "Six-axis fit score", "هێزی گونجاوی شەش تەوەر"), S("المصدر", "Source", "سەرچاوە")], data: oldNewRows },
+      table: { columns: termColumns, data: scorecardRows },
     });
+    if (newIdeas.length) {
+      const oldNewRows = newIdeas.map((idea) => {
+        const best = fileKeywords.map((old) => ({ old, similarity: lexicalSimilarity(idea.keyword, old) }))
+          .sort((a, b) => b.similarity - a.similarity)[0];
+        const evidenceRow = termEvidenceRow(idea, "opportunity");
+        return [idea.keyword, best?.old || NA[l], best ? best.similarity + "%" : "0%", evidenceRow[2], idea.language || l, evidenceRow[4], evidenceRow[5], evidenceRow[6], evidenceRow[7], evidenceRow[8], evidenceRow[9], keywordAxis(idea.keyword).axis, evidenceRow[10], evidenceRow[11]];
+      });
+      discoveredSections.unshift({
+        heading: S("مقارنة الكلمات القديمة والجديدة", "Old vs new keyword comparison", "بەراوردی وشە کۆن و نوێ"),
+        kind: "table",
+        table: { columns: [
+          S("الكلمة الجديدة", "New keyword", "وشەی نوێ"), S("أقرب كلمة قديمة", "Closest old keyword", "نزیکترین وشەی کۆن"),
+          S("التشابه اللفظي", "Text similarity", "هاوشێوەیی وشەیی"), S("السوق", "Market", "بازاڕ"),
+          S("اللغة", "Language", "زمان"), S("نية البحث", "Search intent", "نیەتی گەڕان"),
+          S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("ذكر النماذج للكلمة", "Model mention share", "بەشی باسکردن"),
+          S("كثافة الكلمة", "Keyword density", "چڕی وشە"), S("الحقائق لكل 100 كلمة", "Facts per 100 words", "ڕاستی بۆ هەر ١٠٠ وشە"),
+          S("مؤشرات الموثوقية", "Credibility signals", "نیشانەکانی متمانە"), S("المحور الأساسي", "Primary axis", "تەوەری سەرەکی"),
+          S("قوة الملاءمة للمحاور الستة", "Six-axis fit score", "هێزی گونجاوی شەش تەوەر"), S("المصدر", "Source", "سەرچاوە"),
+        ], data: oldNewRows },
+      });
+    }
   }
-
   const timelineSection: ExportSection = {
     heading: S("المدة المتوقعة لظهور أثر الكلمات", "Expected timeline for keyword impact", "ماوەی چاوەڕوانکراو بۆ کاریگەری وشەکان"),
     kind: "table",
