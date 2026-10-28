@@ -11,7 +11,13 @@ describe("skill catalog", () => {
   });
   it("every skill uses only existing tools", () => {
     const tools = new Set((TOOL_CATALOG as any[]).map((t) => t.key));
-    for (const s of MAAROOF_SKILLS) for (const t of s.tools) expect(tools.has(t)).toBe(true);
+    for (const s of MAAROOF_SKILLS) for (const t of [...s.tools, ...(s.methodologyTools || [])]) expect(tools.has(t)).toBe(true);
+  });
+  it("runs search visibility as one composite tool while retaining the existing methodology tools", () => {
+    const skill = MAAROOF_SKILLS.find((item) => item.key === "search_visibility_strategy")!;
+    expect(skill.tools).toEqual(["keyword_strategy"]);
+    expect(skill.methodologyTools).toEqual(expect.arrayContaining(["analyze", "research", "compare", "visibility", "social_analysis", "brand_authority"]));
+    expect(skillFramework(skill, "en").sources).toContain("ten-engine answers");
   });
   it("does not connect any skill to the temporarily paused monitor", () => {
     for (const skill of MAAROOF_SKILLS) expect(skill.tools).not.toContain("competitor_monitor");
