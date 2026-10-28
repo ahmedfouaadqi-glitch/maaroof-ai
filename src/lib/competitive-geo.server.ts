@@ -165,8 +165,8 @@ export async function discoverKeywordIdeas(o: {
         market: market.code,
         title: String(r?.title || "").trim().slice(0, 180),
         url: String(r?.url || "").trim().slice(0, 500),
-        text: String(r?.description || r?.snippet || "").replace(/\\s+/g, " ").trim().slice(0, 500),
-      })).filter((r) => /^https?:\\/\\//i.test(r.url) && (r.title || r.text));
+        text: String(r?.description || r?.snippet || "").replace(/\s+/g, " ").trim().slice(0, 500),
+      })).filter((r) => /^https?:\/\//i.test(r.url) && (r.title || r.text));
     } catch {
       return [] as Array<{ market: string; title: string; url: string; text: string }>;
     }
@@ -192,7 +192,7 @@ export async function discoverKeywordIdeas(o: {
       market: "all",
       title: String(p.title || p.name).slice(0, 180),
       url: String(p.url || ""),
-      text: [p.title, p.description, p.pageText].filter(Boolean).join("\\n").slice(0, 5000),
+      text: [p.title, p.description, p.pageText].filter(Boolean).join("\n").slice(0, 5000),
     });
   }
   for (const post of o.social.slice(0, 30)) {
@@ -249,7 +249,7 @@ export async function discoverKeywordIdeas(o: {
     "Markets: " + JSON.stringify(o.markets.map((m) => ({ code: m.code, name: m.en, local_name: m.ar }))),
     "Source records: " + JSON.stringify(sourceContext),
     "Return exact schema: {brand_current_keywords:[{keyword,market,intent,language,source_id}],competitor_keywords:[{keyword,market,intent,language,party,source_id}],social_keywords:[{keyword,market,intent,language,party,source_id}],new_opportunities:[{keyword,market,intent,language,rationale,source_id}]}.",
-  ].join("\\n");
+  ].join("\n");
 
   let parsed: any = null;
   try {
@@ -289,7 +289,7 @@ export async function discoverKeywordIdeas(o: {
   const terms: DiscoveredKeyword[] = [];
   const seen = new Set<string>();
   const add = (item: any, kind: DiscoveredKeyword["kind"]) => {
-    const keyword = String(item?.keyword || "").replace(/\\s+/g, " ").trim().slice(0, 180);
+    const keyword = String(item?.keyword || "").replace(/\s+/g, " ").trim().slice(0, 180);
     const market = o.markets.find((m) => m.code === String(item?.market || "")) || (o.markets.length === 1 ? o.markets[0] : null);
     const source = sourceMap.get(String(item?.source_id || ""));
     if (!keyword || keyword.length < 3 || !market || !source) return;
@@ -301,7 +301,7 @@ export async function discoverKeywordIdeas(o: {
     if (kind === "brand" && source.source_type !== "website") return;
     if (kind === "competitor" && source.source_type !== "competitor") return;
     if (kind === "social" && source.source_type !== "social") return;
-    if ((kind === "brand" || kind === "competitor" || kind === "social") && source.url && !/^https?:\\/\\//i.test(source.url)) return;
+    if ((kind === "brand" || kind === "competitor" || kind === "social") && source.url && !/^https?:\/\//i.test(source.url)) return;
     const key = [market.code, kind, keyword.toLowerCase(), source.url].join("|");
     if (seen.has(key)) return;
     seen.add(key);
