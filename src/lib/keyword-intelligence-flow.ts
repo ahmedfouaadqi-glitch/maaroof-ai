@@ -20,7 +20,11 @@ export function hasKeywordWorkbookSignals(workbookHints: string[]): boolean {
  */
 export function shouldAutoStartKeywordResearch(requestText: string, workbookHints: string[]): boolean {
   const request = String(requestText || "").trim();
-  if (!request || !ANALYSIS_INTENT.test(request) || !WORKBOOK_OUTPUT.test(request)) return false;
+  if (!request) return false;
+  // An explicit request for keyword research should run the keyword workflow even
+  // when the user did not separately say "export to Excel".
+  if (shouldStartKeywordStrategyWithoutWorkbook(request)) return true;
+  if (!ANALYSIS_INTENT.test(request) || !WORKBOOK_OUTPUT.test(request)) return false;
   return KEYWORD_SIGNAL.test(request) || hasKeywordWorkbookSignals(workbookHints);
 }
 
