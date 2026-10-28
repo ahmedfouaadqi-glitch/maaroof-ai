@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasKeywordWorkbookSignals, shouldAutoStartKeywordResearch } from "./keyword-intelligence-flow";
+import { hasKeywordWorkbookSignals, shouldAutoStartKeywordResearch, shouldStartKeywordStrategyWithoutWorkbook } from "./keyword-intelligence-flow";
 
 describe("keyword intelligence auto-start", () => {
   const keywordWorkbook = ["Keywords by market", "Keyword", "Volume", "United States"];
@@ -17,8 +17,17 @@ describe("keyword intelligence auto-start", () => {
     expect(shouldAutoStartKeywordResearch("Hello", keywordWorkbook)).toBe(false);
   });
 
-  it("does not start without an explicit workbook output request", () => {
-    expect(shouldAutoStartKeywordResearch("Analyze the keywords and explain the findings", keywordWorkbook)).toBe(false);
+  it("starts when the user explicitly asks for keyword analysis even without saying Excel", () => {
+    expect(shouldAutoStartKeywordResearch("Analyze the keywords and explain the findings", keywordWorkbook)).toBe(true);
+  });
+
+  it("starts without an attachment for direct keyword-generation requests", () => {
+    expect(shouldStartKeywordStrategyWithoutWorkbook("اعطني كلمات مفتاحية جديدة لموقعي")).toBe(true);
+    expect(shouldStartKeywordStrategyWithoutWorkbook("Find new keywords for my official website")).toBe(true);
+  });
+
+  it("does not start for a general SEO explanation request", () => {
+    expect(shouldStartKeywordStrategyWithoutWorkbook("What is SEO and how does it work?")).toBe(false);
   });
 
   it("can recognize keyword intent from the request even if headers are ambiguous", () => {
