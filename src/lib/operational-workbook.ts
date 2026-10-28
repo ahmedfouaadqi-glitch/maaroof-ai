@@ -381,21 +381,35 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
           : unknownCompetitors.length
             ? S("لا ظهور حرفي في الصفحات المقروءة؛ صفحات غير مقروءة: ", "No literal match on readable pages; unreadable pages: ", "پەڕە نەخوێندراوەکان: ") + unknownCompetitors.join(", ")
             : S("لا ظهور حرفي في نصوص المنافسين المقدمة", "No literal match in supplied competitor page text", "لە دەقی پێشکەشکراوی ڕکابەراندا نەدۆزرایەوە");
+      const socialHits = (input.social || []).filter((item) => publishedKeywords(item.text, [row.k]).length > 0);
+      const socialStatus = socialHits.length
+        ? socialHits.map((item) => item.party + " — " + item.url).join("; ")
+        : S("لم يظهر حرفيًا في النصوص الاجتماعية المسترجعة", "No literal match in retrieved social text", "لە دەقی سۆشیالدا بە ڕاستەوخۆ نەدۆزرایەوە");
+      const cluster = clusterScore(input.clusterAnswers || [], m.code, row.k);
+      const modelShare = cluster
+        ? Math.round(cluster.engines.length / Math.max(1, cluster.answered) * 100) + "% (" + cluster.engines.length + "/" + cluster.answered + ")"
+        : S("لم تُقَس مباشرةً", "Not measured directly", "ڕاستەوخۆ نەپێوراوە");
+      const sourceLinks = [
+        brand?.url,
+        ...competitorPages.filter((p) => publishedKeywords(p.pageText, [row.k]).length > 0).map((p) => p.url),
+        ...socialHits.map((p) => p.url),
+      ].filter(Boolean).join("; ");
       coverageRows.push([row.k, mName(m), brandHasPage ? (brandHas ? S("نعم", "Yes", "بەڵێ") : S("لا", "No", "نەخێر")) : NA[l],
-        competitorStatus, coverageStatus,
+        competitorStatus, socialStatus, modelShare, coverageStatus,
         !brandHasPage || unknownCompetitors.length
           ? S("بيانات غير مكتملة؛ لا تُعامل كفجوة مؤكدة", "Incomplete evidence; do not treat as a confirmed gap", "بەڵگە تەواو نییە")
           : !brandHas && coveredBy.length
             ? S("أولوية مراجعة — المنافس يغطيها نصيًا", "Review priority — competitor mentions it literally", "پێویستی بە پێداچوونەوە")
             : brandHas && coveredBy.length
               ? S("تغطية مشتركة نصيًا", "Shared literal coverage", "پۆششی هاوبەش")
-              : S("تحقق يدويًا من النتائج والنية قبل القرار", "Validate SERPs and intent before deciding", "پێش بڕیار نیەت و ئەنجامەکان بپشکنە")]);
+              : S("تحقق يدويًا من النتائج والنية قبل القرار", "Validate SERPs and intent before deciding", "پێش بڕیار نیەت و ئەنجامەکان بپشکنە"),
+        sourceLinks || NA[l]]);
     }
   }
   const keywordCoverageSection: ExportSection = {
     heading: S("مصفوفة تغطية الكلمات وفجوات المنافسة", "Keyword coverage and competitor gap matrix", "ماتریسی پۆششی وشە و کەلێنی ڕکابەری"),
     kind: "table",
-    table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("تغطية العلامة (نصية)", "Brand coverage (text)", "پۆششی براند"), S("المنافسون الذين يذكرون الكلمة", "Competitors with literal mention", "ڕکابەرانی باسکەر"), S("النتيجة", "Finding", "دەرئەنجام"), S("الإجراء المقترح", "Suggested action", "کرداری پێشنیارکراو")], data: coverageRows },
+    table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("تغطية العلامة (نصية)", "Brand coverage (text)", "پۆششی براند"), S("المنافسون الذين يذكرون الكلمة", "Competitors with literal mention", "ڕکابەرانی باسکەر"), S("المصادر الاجتماعية التي تذكرها", "Social sources with literal mention", "سەرچاوەکانی سۆشیال"), S("ذكر النماذج للكلمة", "Model mention share", "بەشی باسکردن"), S("النتيجة", "Finding", "دەرئەنجام"), S("الإجراء المقترح", "Suggested action", "کرداری پێشنیارکراو"), S("المصادر", "Sources", "سەرچاوەکان")], data: coverageRows },
   };
 
   // Execution plan: what Maaroof did now vs what the team does
