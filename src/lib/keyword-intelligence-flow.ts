@@ -24,6 +24,17 @@ export function shouldAutoStartKeywordResearch(requestText: string, workbookHint
   return KEYWORD_SIGNAL.test(request) || hasKeywordWorkbookSignals(workbookHints);
 }
 
+/**
+ * Detect an explicit keyword-research request when no workbook is attached.
+ * This deliberately does not trigger for general questions that merely mention SEO/GEO.
+ */
+export function shouldStartKeywordStrategyWithoutWorkbook(requestText: string): boolean {
+  const request = String(requestText || "").trim();
+  if (!request) return false;
+  const asksForKeywords = /keyword research|keyword ideas|keyword list|keywords for|discover keywords|find keywords|generate keywords|keywords?|الكلمات المفتاحية|كلمات مفتاحية|كلمات بحث|كلمات للبحث|عبارات البحث|مصطلحات البحث|اكتشف الكلمات|استخرج الكلمات|اعطني كلمات|أعطني كلمات|اعطني الكلم|أعطني الكلم|توليد الكلمات|بحث الكلمات|تحليل الكلمات/i.test(request);
+  const action = /\b(find|discover|generate|research|analy[sz]e|audit|list|give|suggest|extract|compare|review)\b|ابحث|اكتشف|استخرج|حلل|تحليل|اعطني|أعطني|اقترح|قارن|راجع|دقق|ولد|ولّد|أنشئ|انشئ|اعمل/i.test(request);
+  return asksForKeywords && action;
+}
 export type EvidenceState = "available" | "partial" | "none";
 
 /** Evidence presence is separate from whether every requested source succeeded. */
