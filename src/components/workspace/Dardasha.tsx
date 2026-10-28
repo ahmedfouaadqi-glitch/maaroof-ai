@@ -613,9 +613,11 @@ function SecondResult({
   const showRequiredInputs = !brand.trim() || !category.trim() || needMarket;
   return (
     <div className="mt-3 rounded-xl border border-primary/30 bg-background p-3">
-      <p className="font-semibold text-foreground">{tr(lang, "تحليل العلامة والمنافسين لكل سوق", "Brand and competitor research by market", "لێکۆڵینەوەی براند و ڕکابەران بەپێی بازاڕ")}</p>
+      <p className="font-semibold text-foreground">{tr(lang, "ذكاء الكلمات المفتاحية والمنافسين لكل سوق", "Keyword intelligence and competitor research by market", "زانیاریی وشە سەرەکییەکان و ڕکابەران بەپێی بازاڕ")}</p>
       <p className="mt-1 text-muted-foreground">{autoResearch
-        ? tr(lang, "طلبت تحليل كلمات مفتاحية مع مخرجات Excel؛ سيبدأ البحث تلقائيًا باستخدام سياق الملف ومساحة العمل. إذا تعذر استعادة معلومة أساسية، سيطلبها معروف بدل افتراضها.", "You requested keyword analysis with an Excel output; research will start automatically using workbook and workspace context. If a required detail cannot be recovered, Maaroof will ask rather than assume it.", "داواتی شیکردنەوەی وشە و دەرئەنجامی Excel کراوە؛ گەڕان بە شێوەی خۆکار دەست پێدەکات. ئەگەر زانیارییەکی پێویست نەدۆزرایەوە، معروف دەیپرسێت.")
+        ? (attachmentId
+          ? tr(lang, "سيُستخدم ملفك كخط أساس للكلمات القديمة، وستقارن به الكلمات المكتشفة والجديدة.", "Your workbook is the baseline for existing terms; discovered and new keywords will be compared against it.", "فایلەکەت بنەمای وشە کۆنەکانە و وشە نوێیەکان بەراورد دەکرێن.")
+          : tr(lang, "لم ترفق ملفًا؛ سيبحث معروف في الموقع الرسمي والمنافسين والمصادر الاجتماعية، ثم يختبر الكلمات على النماذج العشرة. لن تظهر مقارنة القديم بالجديد.", "No workbook is attached. Maaroof will use the official site, competitors and public social sources, then test terms across ten engines. Old-vs-new comparison is omitted.", "فایلێک نییە؛ معروف ماڵپەڕ و ڕکابەران و سەرچاوەکانی سۆشیال دەگەڕێت و وشەکان لە دە مۆدێل تاقی دەکاتەوە."))
         : tr(lang, "سيستعيد معروف بيانات العميل والطلب والملف أولًا، ثم يكتشف المنافسين. لن يبدأ البحث المدفوع إلا عند الضغط على زر البدء.", "Maaroof will first reuse the client, request, and workbook context, then discover competitors. Research starts only when you click the button.", "معروف سەرەتا پاشبنەمای کڕیار و داواکاری و فایل بەکاردەهێنێت؛ گەڕان تەنها بە کرتەکردن دەست پێدەکات.")}</p>
 
       <div className="mt-3 grid gap-2 rounded-lg bg-muted/35 p-3 sm:grid-cols-2">
