@@ -1,7 +1,6 @@
 /**
- * Detect explicit requests to run keyword intelligence from an uploaded workbook.
- * This helper has no side effects: it only decides whether the UI should start
- * the existing research flow automatically.
+ * Decide whether a user request should launch the existing keyword research flow.
+ * This helper has no side effects; it only controls UI auto-start behavior.
  */
 const KEYWORD_SIGNAL = /keyword|search term|query|seo|geo|aeo|sge|keyword research|كلمات? مفتاحية|الكلمات|مصطلحات البحث|عبارات البحث|تحسين محركات البحث|ظهور العلامة|ظهور العلامة التجارية/i;
 const ANALYSIS_INTENT = /\b(analy[sz]e|analysis|audit|research|review|classify|extract|optimi[sz]e)\b|حلل|تحليل|تحليله|دقق|تدقيق|راجع|مراجعة|استخرج|استخراج|صنف|تصنيف|حسن|تحسين/i;
