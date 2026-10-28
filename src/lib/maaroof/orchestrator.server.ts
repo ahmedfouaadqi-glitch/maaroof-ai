@@ -46,7 +46,7 @@ type ToolCall = { tool: string; input: any; reason?: string };
 type PlanStep = ToolCall & { depends_on?: string[] };
 
 /** Tools that fan out to many engines or crawl; they get a longer timeout. */
-const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking"]);
+const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking", "keyword_strategy"]);
 
 function toolPath(toolKey: string): string | null {
   const map: Record<string, string> = {
@@ -58,6 +58,7 @@ function toolPath(toolKey: string): string | null {
     feasibility: "/api/feasibility",
     bizdev: "/api/bizdev",
     research: "/api/research",
+    keyword_strategy: "/api/dual-result",
     visibility: "/api/visibility",
     brand_boost: "/api/brand-boost",
     company_email: "/api/company-email",
@@ -76,11 +77,11 @@ function toolPath(toolKey: string): string | null {
 // and often emits arrays/objects here, which used to crash the endpoint (500).
 const TEXT_FIELDS = new Set([
   "brand", "brand_name", "business_name", "project_name", "app_name", "app_url",
-  "keywords", "brand_keywords", "sector", "city", "country", "text", "url",
+  "keywords", "brand_keywords", "sector", "city", "country", "site", "website", "category", "market_text", "request_text", "text", "url",
   "source_url", "description", "sourceText", "topic", "goal", "kind", "action",
 ]);
 // Fields that must stay arrays of strings.
-const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls", "probe_engines"]);
+const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls", "probe_engines", "markets"]);
 
 function flatten(v: unknown): string {
   if (v == null) return "";
