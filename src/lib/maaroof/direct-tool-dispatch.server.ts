@@ -34,6 +34,7 @@ const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/api/what-if": () => import("@/routes/api/what-if"),
   "/api/brand-authority": () => import("@/routes/api/brand-authority"),
   "/api/geo-rewrite": () => import("@/routes/api/geo-rewrite"),
+  "/api/dual-result": () => import("@/routes/api/dual-result"),
 };
 
 export function resolveDirectPostHandler(routeLike: unknown): Handler | null {
