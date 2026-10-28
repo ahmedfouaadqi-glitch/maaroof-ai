@@ -49,16 +49,33 @@ export const Route = createFileRoute("/api/dual-result")({
         }
 
         const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
-        const { keywordColumn } = await import("@/lib/operational-workbook");
-        const requestText = String(b?.request_text || b?.text || "").trim().slice(0, 12000);
-        const marketText = String(b?.market_text || "").trim().slice(0, 240);
+        const { keywordColumn, allKeywords } = await import("@/lib/operational-workbook");
+        const requestText = String(b?.request_text || b?.text || b?.goal || b?.query || "").trim().slice(0, 12000);
+        const marketText = String(b?.market_text || b?.market || b?.country || "").trim().slice(0, 240);
         const geo = b?.geo_scope && typeof b.geo_scope === "object" ? b.geo_scope : {};
         const geoMode = ["auto", "world", "country", "city"].includes(String(geo.mode)) ? String(geo.mode) : "auto";
         const geoCountry = typeof geo.country === "string" ? geo.country.trim().slice(0, 120) : "";
         const geoCity = typeof geo.city === "string" ? geo.city.trim().slice(0, 120) : "";
 
+        // Workspace and profile are both valid sources for the brand's identity.
+        const { data: profile } = await db.from("profiles")
+          .select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links")
+          .eq("id", userId).maybeSingle();
+        const linkText = typeof (profile as any)?.entity_links === "string"
+          ? (profile as any).entity_links
+          : JSON.stringify((profile as any)?.entity_links || "");
+        const profileSite = linkText.match(/https?:\/\/[^\s"'<>),]+/i)?.[0] || "";
+        const contextWorkspace = workspace || {
+          name: (profile as any)?.brand_name || "",
+          brand_summary: (profile as any)?.specialty_scope || "",
+          country: (profile as any)?.hq_country || "",
+          keywords: (profile as any)?.brand_keywords || "",
+          profile: { industry: (profile as any)?.entity_type || "", specialty: (profile as any)?.specialty_scope || "" },
+          entity_truth_card: {},
+          onboarding: {},
+        };
+
         // Use representative values from the workbook as context signals, not just worksheet headings.
-        // This lets the existing category resolver handle brands whose sector appears in row data.
         const workbookValueSignals: string[] = [];
         for (const sheet of sheets) {
           const indices = new Set<number>();
@@ -81,18 +98,49 @@ export const Route = createFileRoute("/api/dual-result")({
         }
 
         const resolved = resolveCompetitiveContext({
-          explicitBrand: b?.brand,
-          explicitSite: b?.site,
-          explicitCategory: b?.category,
-          workspace,
+          explicitBrand: b?.brand || b?.brand_name || (profile as any)?.brand_name,
+          explicitSite: b?.site || b?.website || profileSite,
+          explicitCategory: b?.category || b?.sector,
+          workspace: contextWorkspace,
           requestText,
-          workbookSignals: [...sheets.map((s) => s.name), ...sheets.flatMap((s) => s.columns), ...workbookValueSignals],
+          workbookSignals: [
+            ...sheets.map((sheet) => sheet.name),
+            ...sheets.flatMap((sheet) => sheet.columns),
+            ...workbookValueSignals,
+            (profile as any)?.specialty_scope || "",
+            (profile as any)?.entity_type || "",
+          ],
         });
-        const brand = resolved.brand;
-        const site = resolved.site || undefined;
-        const category = resolved.category;
+        const brand = resolved.brand || String((profile as any)?.brand_name || "").trim();
+        let site: string | undefined = resolved.site || undefined;
+        let category = resolved.category || String(b?.category || b?.sector || (profile as any)?.specialty_scope || "").trim();
+
+        // When no workbook is attached, use the official site as a discovery source rather than requiring an old keyword list.
+        if (!hasAttachment && brand && !site) {
+          try {
+            const found: any = await fcSearch('"' + brand + '" official website', { limit: 3, lang: lang === "ku" ? "en" : lang }, { userId, toolKey: "competitive_geo" });
+            const rows = found?.data?.web || found?.web || found?.data || [];
+            const url = (Array.isArray(rows) ? rows : []).find((x: any) => /^https?:\/\//i.test(String(x?.url || "")))?.url;
+            if (url) site = String(url);
+          } catch {}
+        }
+        if (!hasAttachment && site && !category) {
+          try {
+            const scraped: any = await fcScrape(site, {}, { userId, toolKey: "competitive_geo" });
+            const data = scraped?.data || scraped;
+            const pageText = String(data?.markdown || "").slice(0, 12000);
+            const pageCategory = resolveCompetitiveContext({
+              explicitBrand: brand,
+              explicitSite: site,
+              workspace: contextWorkspace,
+              requestText,
+              workbookSignals: [data?.metadata?.title || "", data?.metadata?.description || "", pageText],
+            });
+            category = pageCategory.category;
+          } catch {}
+        }
         if (!brand) return Response.json({ error: "brand_required", need: ["brand"] }, { status: 422 });
-        if (!category) return Response.json({ error: "category_required", need: ["category"] }, { status: 422 });
+        if (!category) return Response.json({ error: "category_required", need: ["category"], site: site || null }, { status: 422 });
 
         const chosen = (Array.isArray(b?.markets) ? b.markets : []).map((m: any) => marketByCode(String(m))).filter(Boolean);
         const userMarkets = detectMarkets([marketText]);
@@ -113,21 +161,23 @@ export const Route = createFileRoute("/api/dual-result")({
           ...marketColumnSignals,
           requestText,
         ]);
-        const markets = chosen.length ? chosen
+        let markets = chosen.length ? chosen
           : userMarkets.length ? userMarkets
           : scopedMarkets.length ? scopedMarkets
           : geoMode === "world" ? [GLOBAL_MARKET]
           : workbookMarkets;
+        if (!markets.length && !hasAttachment) markets = [GLOBAL_MARKET];
         if (!markets.length) return Response.json({
           error: "no_market",
           need: ["market"],
-          sheets: sheets.map((s) => s.name),
+          sheets: sheets.map((sheet) => sheet.name),
           detected_category: category,
         }, { status: 422 });
         const marketSource = chosen.length ? "explicit"
           : userMarkets.length ? "user_input"
           : scopedMarkets.length ? "geographic_scope"
           : geoMode === "world" ? "geographic_scope"
+          : !hasAttachment && markets.some((market: any) => market.code === "global") ? "default_global"
           : "workbook_or_request";
 
         const { sheetsForMarket: sheetsForTargetMarket } = await import("@/lib/market-scope");
