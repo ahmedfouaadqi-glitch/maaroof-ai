@@ -116,7 +116,7 @@ export function keywordColumn(s: SheetData): number {
 
 export function allKeywords(sheets: SheetData[], max = 20000): string[] {
   const set = new Set<string>();
-  for (const s of sheets) { const i = keywordColumn(s); if (i < 0) continue; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) set.add(v); if (set.size >= max) return [...set]; } }
+  for (const s of sheets) { if (/negative|سلبي/i.test(s.name)) continue; const i = keywordColumn(s); if (i < 0) continue; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) set.add(v); if (set.size >= max) return [...set]; } }
   return [...set];
 }
 
@@ -221,6 +221,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const SRC_RULE = S("قاعدة مكتوبة (مقترح)", "Written rule (suggested)", "یاسا (پێشنیار)");
   const mName = (m: Market) => (l === "ar" ? m.ar : m.en);
   const fileKeywords = allKeywords(sheets);
+  const sourceMode = input.sourceMode || (sheets.length ? "workbook" : "web_discovery");
   const discovered = (input.discoveredKeywords || []).filter((x) => String(x.keyword || "").trim().length >= 3);
   const keywords = Array.from(new Set([...fileKeywords, ...discovered.map((x) => x.keyword.trim())]));
   const newIdeas = discovered.filter((x) => x.kind === "opportunity");
@@ -404,7 +405,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   const sections: ExportSection[] = [
     { heading: S("ابدأ هنا", "Start here", "لێرە دەستپێبکە"), kind: "table", table: { columns: [S("البند", "Item", "بڕگە"), S("القيمة", "Value", "بەها"), SRC], data: [
       [S("العلامة", "Brand", "براند"), input.brand, S("أدخله المستخدم", "Entered by user", "بەکارهێنەر")],
-      [S("الأسواق", "Markets", "بازاڕەکان"), markets.map(mName).join(" / ") || NA[l], SRC_FILE],
+      [S("الأسواق", "Markets", "بازاڕەکان"), markets.map(mName).join(" / ") || NA[l], sourceMode === "workbook" ? SRC_FILE : SRC_WEB],
       [S(sourceMode === "workbook" ? "الكلمات القديمة في الملف" : "الكلمات المكتشفة والمقترحة", sourceMode === "workbook" ? "Existing keywords in workbook" : "Discovered and proposed keywords", "وشە دۆزراوە و پێشنیارکراو"), sourceMode === "workbook" ? fileKeywords.length : kRows.length, sourceMode === "workbook" ? SRC_FILE : SRC_WEB],
       [S("فرص كلمات جديدة", "New keyword opportunities", "دەرفەتی وشەی نوێ"), newIdeas.length, SRC_WEB],
       [S("المنافسون", "Competitors", "ڕکابەران"), comps.map((c) => c.name).join(", ") || NA[l], comps.some((c) => c.found === "web_search") ? S("بحث ويب", "Web search", "گەڕان") : S("أدخله المستخدم", "Entered by user", "")],
@@ -419,7 +420,6 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
   ];
-  const sourceMode = input.sourceMode || (sheets.length ? "workbook" : "web_discovery");
   const authorityLabel = (party: PartyEvidence | undefined) => {
     if (!party?.pageText) return NA[l];
     const signal = authoritySignals(party);
