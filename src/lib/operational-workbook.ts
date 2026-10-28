@@ -441,7 +441,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     ] } },
     { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("النوع", "Type", "جۆر"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حجم البحث", "Volume", "قەبارە"), S("المحور", "Axis", "تەوەر"), S("المصدر", "Source", "سەرچاوە")], data: kRows.map((r) => [r.k, mName(r.m), termKindLabel(r.kind, l), r.intent || NA[l], cell(r.vol, l), keywordAxis(r.k).axis, r.url || r.sheet || (r.kind === "file" ? SRC_FILE : NA[l])]) } },
     { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("نوع الكلمة", "Keyword type", "جۆری وشە"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حصة الذكر في الإجابات", "Mention share in answers", "بەشی باسکردن لە وەڵامەکان"), S("النماذج التي ذكرتها حرفيًا", "Models with a literal mention", "مۆدێلەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis basis", "بنەمای تەوەر"), S("ملاءمة تقديرية للمحاور الستة", "Estimated six-axis fit", "گونجاوی خەمڵێنراوی شەش تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), S("المصدر", "Source", "سەرچاوە")], data: perEngine } },
-    { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
+    { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت ضمن العينة", "Sampled share of voice", "بەشی دەنگ لە نموونەدا"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
   ];
@@ -575,6 +575,21 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     },
   };
 
+  const interpretationSection: ExportSection = {
+    heading: S("طريقة قراءة المؤشرات", "How to read the metrics", "چۆنیەتی خوێندنەوەی پێوەرەکان"),
+    kind: "table",
+    table: {
+      columns: [S("المؤشر", "Metric", "پێوەر"), S("ماذا تعني النتيجة", "What the result means", "واتای ئەنجام")],
+      data: [
+        [S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("نسبة الذكر داخل عينة الإجابات المباشرة أو النتائج العامة المسترجعة؛ ليست عدد مشاهدات أو ترتيبًا في محرك البحث.", "Share of mentions within sampled direct model answers or retrieved public results; not impression volume or search ranking.", "ڕێژەی باسکردن لە ناو نموونەی وەڵام و ئەنجامە گشتییەکاندا." )],
+        [S("كثافة الكلمة", "Keyword density", "چڕی وشە"), S("عدد مرات ظهور العبارة حرفيًا في النص المقروء مقارنة بعدد كلماته. تظهر «غير متاح» إذا لم يتوفر نص صالح.", "Literal occurrences in readable source text relative to its word count. Shown as unavailable when readable text is missing.", "ژمارەی دەرکەوتنی وشە لە دەقی خوێندراو بە پێی قەبارەی دەق.")],
+        [S("حقائق لكل 100 كلمة", "Facts per 100 words", "ڕاستی بۆ هەر ١٠٠ وشە"), S("كثافة الإشارات الرقمية القابلة للرصد في النص، لا تقييم لصحة كل ادعاء.", "Density of observable numeric facts in the text, not a validation of every claim.", "چڕی ئاماژە ژمارەییەکانە، نەک پشتڕاستکردنەوەی هەموو بانگەشە.")],
+        [S("مؤشرات السلطة والموثوقية", "Authority and credibility signals", "نیشانەکانی متمانە"), S("عدد ستة عناصر ظاهرة في الصفحة: العنوان والوصف ووسائل الاتصال وصفحة التعريف والأسئلة الشائعة. ليست درجة Domain Authority خارجية.", "Count of six visible page elements: title, description, contact details, about page and FAQ signals. It is not a third-party Domain Authority score.", "ژمارەی شەش نیشانەی دیار لە پەڕە؛ نمرەی Domain Authorityی دەرەکی نییە.")],
+        [S("المحاور الستة", "Six axes", "شەش تەوەر"), S("درجة ملاءمة تقديرية للكلمة وفق قواعد معروف؛ لا تمثل مركزًا فعليًا في نتائج البحث.", "Estimated keyword-to-axis fit under Maaroof rules; not an actual search-result position.", "گونجاوی خەمڵێنراوی وشەیە، نەک پلەی ڕاستەقینە لە ئەنجامی گەڕان.")],
+        [S("المدة المتوقعة", "Expected timeline", "ماوەی چاوەڕوانکراو"), S("نطاق تخطيطي يتغير حسب الموقع والفهرسة والمنافسة والتنفيذ؛ ليس موعدًا مضمونًا.", "Planning range that varies with the site, indexing, competition and execution; not a guarantee.", "ماوەی پلانە و بە پێی ماڵپەڕ و ئیندێکس و ڕکابەری دەگۆڕێت.")],
+      ],
+    },
+  };
   const sourceInventoryRows: (string | number)[][] = sheets.map((sheet) => [
     sheet.name,
     sheet.totalRows,
@@ -667,7 +682,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     kind: "table",
     table: { columns: [S("نوع المصدر", "Source type", "جۆری سەرچاوە"), S("الجهة / السياق", "Entity / context", "لایەن / پاشبنەما"), S("الرابط", "URL", "بەستەر"), S("ما الذي تحقق", "What was checked", "چی پشکنرا"), S("منشأ النتيجة", "Provenance", "سەرچاوەی ئەنجام")], data: evidenceRows },
   };
-  sections.splice(1, 0, ...discoveredSections, timelineSection);
+  sections.splice(1, 0, ...discoveredSections, timelineSection, interpretationSection);
   if (sheets.length) sections.splice(1 + discoveredSections.length + 1, 0, sourceInventory, ...originalDataSections, keywordCoverageSection);
   else sections.splice(1 + discoveredSections.length + 1, 0, keywordCoverageSection);
   sections.splice((sheets.length ? 2 + originalDataSections.length : 2) + discoveredSections.length + 1, 0, engineStatusSection, clusterStatusSection, executionSection, evidenceSection);
