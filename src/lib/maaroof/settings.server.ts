@@ -319,7 +319,7 @@ const DEFAULTS: MaaroofSettings = {
   enabled_tools: [
     "suggest","geo_rewrite","analyze","research","feasibility","bizdev",
     "brand_boost","what_if","applied_ranking","visibility","social_analysis",
-    "compare","company_email","geo_strategist","competitor_monitor","brand_authority","known",
+    "compare","company_email","geo_strategist","competitor_monitor","brand_authority","known","keyword_strategy",
   ],
   system_prompt_extra: "",
   kill_switch: false,
@@ -461,8 +461,11 @@ export async function getMaaroofSettings(force = false): Promise<MaaroofSettings
     for (const row of (data as any[]) || []) {
       if (row.key in DEFAULTS) out[row.key] = row.value;
     }
-    // Core discovery tool must never silently drop out of a saved list.
-    if (Array.isArray(out.enabled_tools) && out.enabled_tools.length && !out.enabled_tools.includes("known")) out.enabled_tools = [...out.enabled_tools, "known"];
+    // Core discovery and keyword-strategy tools must never silently drop out of a saved list.
+    if (Array.isArray(out.enabled_tools) && out.enabled_tools.length) {
+      const required = ["known", "keyword_strategy"].filter((key) => !out.enabled_tools.includes(key));
+      if (required.length) out.enabled_tools = [...out.enabled_tools, ...required];
+    }
     // The admin "free plan policy" owns the free daily session cap.
     try {
       const { data: policy } = await db()
