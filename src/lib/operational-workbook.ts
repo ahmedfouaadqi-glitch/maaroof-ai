@@ -405,7 +405,8 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     { heading: S("ابدأ هنا", "Start here", "لێرە دەستپێبکە"), kind: "table", table: { columns: [S("البند", "Item", "بڕگە"), S("القيمة", "Value", "بەها"), SRC], data: [
       [S("العلامة", "Brand", "براند"), input.brand, S("أدخله المستخدم", "Entered by user", "بەکارهێنەر")],
       [S("الأسواق", "Markets", "بازاڕەکان"), markets.map(mName).join(" / ") || NA[l], SRC_FILE],
-      [S("كلمات الملف (بلا تكرار)", "File keywords (unique)", "وشەکان"), kRows.length, SRC_FILE],
+      [S(sourceMode === "workbook" ? "الكلمات القديمة في الملف" : "الكلمات المكتشفة والمقترحة", sourceMode === "workbook" ? "Existing keywords in workbook" : "Discovered and proposed keywords", "وشە دۆزراوە و پێشنیارکراو"), sourceMode === "workbook" ? fileKeywords.length : kRows.length, sourceMode === "workbook" ? SRC_FILE : SRC_WEB],
+      [S("فرص كلمات جديدة", "New keyword opportunities", "دەرفەتی وشەی نوێ"), newIdeas.length, SRC_WEB],
       [S("المنافسون", "Competitors", "ڕکابەران"), comps.map((c) => c.name).join(", ") || NA[l], comps.some((c) => c.found === "web_search") ? S("بحث ويب", "Web search", "گەڕان") : S("أدخله المستخدم", "Entered by user", "")],
       [S("إجابات المحركات", "Engine answers", "وەڵامەکان"), `${answeredTotal}/${engineAnswers.length}`, SRC_ENG],
       [S("حصة صوت العلامة", "Brand share of voice", "بەشی دەنگ"), brandVoice, SRC_ENG],
@@ -418,6 +419,113 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
   ];
+  const sourceMode = input.sourceMode || (sheets.length ? "workbook" : "web_discovery");
+  const authorityLabel = (party: PartyEvidence | undefined) => {
+    if (!party?.pageText) return NA[l];
+    const signal = authoritySignals(party);
+    const count = [signal.title, signal.description, signal.phone, signal.email, signal.about, signal.faq].filter(Boolean).length;
+    return count + "/6";
+  };
+  const termEvidenceRow = (term: DiscoveredKeyword, mode: "brand" | "competitor" | "social" | "opportunity"): (string | number)[] => {
+    const market = markets.find((m) => m.code === term.market);
+    const socialSource = (input.social || []).find((x) => (term.url && x.url === term.url) || (term.party && x.party === term.party));
+    const party = mode === "brand" || mode === "opportunity"
+      ? (parties.find((x) => x.role === "brand" && (!term.url || x.url === term.url)) || parties.find((x) => x.role === "brand"))
+      : parties.find((x) => (term.url && x.url === term.url) || (term.party && x.name === term.party));
+    const sourceText = mode === "social" ? (socialSource?.text || "") : (party?.pageText || "");
+    const density = factDensity(sourceText || null);
+    const kwDensity = keywordDensity(sourceText || null, term.keyword);
+    const cluster = clusterScore(input.clusterAnswers || [], term.market, term.keyword);
+    const mentionShare = cluster
+      ? Math.round((cluster.engines.length / Math.max(1, cluster.answered)) * 100) + "% (" + cluster.engines.length + "/" + cluster.answered + ")"
+      : NA[l];
+    const engineShare = mode === "social" && (input.social || []).length
+      ? Math.round(((input.social || []).filter((x) => x.party === term.party).length / Math.max(1, (input.social || []).length)) * 100) + "%"
+      : party ? (shareOfVoice(engineAnswers.filter((x) => x.market === term.market), party.name).percent == null ? NA[l] : shareOfVoice(engineAnswers.filter((x) => x.market === term.market), party.name).percent + "%") : NA[l];
+    const axes = keywordAxisScores(term.keyword);
+    return [
+      term.keyword,
+      market ? mName(market) : term.market,
+      term.party || party?.name || term.source || NA[l],
+      term.intent || NA[l],
+      engineShare,
+      mentionShare,
+      kwDensity ? (kwDensity.percent + "% (" + kwDensity.occurrences + "/" + kwDensity.words + ")") : NA[l],
+      density ? density.per100 : NA[l],
+      authorityLabel(party),
+      AXES.map((axis) => axis + ": " + axes[axis]).join(" · "),
+      term.url || party?.url || socialSource?.url || NA[l],
+      term.rationale || NA[l],
+    ];
+  };
+  const termColumns = [
+    S("الكلمة المفتاحية", "Keyword", "وشەی سەرەکی"),
+    S("السوق", "Market", "بازاڕ"),
+    S("الجهة/المصدر", "Entity/source", "لایەن/سەرچاوە"),
+    S("نية البحث", "Search intent", "نیەتی گەڕان"),
+    S("حصة الصوت", "Share of voice", "بەشی دەنگ"),
+    S("ذكر النماذج للكلمة", "Model mention of keyword", "باسکردنی وشە لەلایەن مۆدێلەکان"),
+    S("كثافة الكلمة في النص", "Keyword density in text", "چڕی وشە لە دەق"),
+    S("الحقائق لكل 100 كلمة", "Facts per 100 words", "ڕاستی بۆ هەر ١٠٠ وشە"),
+    S("مؤشرات موثوقية الصفحة", "Page credibility signals", "نیشانەکانی متمانەی پەڕە"),
+    S("قوة الملاءمة للمحاور الستة", "Six-axis fit score", "هێزی گونجاوی شەش تەوەر"),
+    S("المصدر", "Source", "سەرچاوە"),
+    S("سبب الاقتراح", "Why this term", "هۆکاری پێشنیار"),
+  ];
+  const discoveredSections: ExportSection[] = [];
+  if (currentBrandIdeas.length) discoveredSections.push({
+    heading: S("كلمات موجودة في موقع العلامة", "Keywords found on the brand website", "وشەکانی دۆزراوە لە ماڵپەڕی براند"),
+    kind: "table",
+    table: { columns: termColumns, data: currentBrandIdeas.map((x) => termEvidenceRow(x, "brand")) },
+  });
+  if (newIdeas.length) discoveredSections.push({
+    heading: S("فرص الكلمات المفتاحية الجديدة", "New keyword opportunities", "دەرفەتی وشە سەرەکییە نوێکان"),
+    kind: "table",
+    table: { columns: termColumns, data: newIdeas.map((x) => termEvidenceRow(x, "opportunity")) },
+  });
+  if (competitorIdeas.length) discoveredSections.push({
+    heading: S("الكلمات المفتاحية المرصودة لدى المنافسين", "Keywords found on competitor pages", "وشەکانی دۆزراوە لە ماڵپەڕی ڕکابەران"),
+    kind: "table",
+    table: { columns: termColumns, data: competitorIdeas.map((x) => termEvidenceRow(x, "competitor")) },
+  });
+  if (socialIdeas.length) discoveredSections.push({
+    heading: S("الكلمات والموضوعات في التواصل الاجتماعي", "Social-media keywords and topics", "وشە و بابەتەکانی سۆشیال"),
+    kind: "table",
+    table: { columns: termColumns, data: socialIdeas.map((x) => termEvidenceRow(x, "social")) },
+  });
+
+  if (sourceMode === "workbook" && fileKeywords.length && newIdeas.length) {
+    const oldNewRows = newIdeas.map((idea) => {
+      const best = fileKeywords.map((old) => ({ old, similarity: lexicalSimilarity(idea.keyword, old) }))
+        .sort((a, b) => b.similarity - a.similarity)[0];
+      const market = markets.find((m) => m.code === idea.market);
+      const cluster = clusterScore(input.clusterAnswers || [], idea.market, idea.keyword);
+      const share = cluster ? Math.round(cluster.engines.length / Math.max(1, cluster.answered) * 100) + "% (" + cluster.engines.length + "/" + cluster.answered + ")" : NA[l];
+      const axis = keywordAxis(idea.keyword);
+      const axes = keywordAxisScores(idea.keyword);
+      const source = idea.url || idea.source || NA[l];
+      return [idea.keyword, best?.old || NA[l], best ? best.similarity + "%" : "0%", market ? mName(market) : idea.market, idea.language || l, idea.intent || NA[l], share, axis.axis, AXES.map((a) => a + ": " + axes[a]).join(" · "), source];
+    });
+    discoveredSections.unshift({
+      heading: S("مقارنة الكلمات القديمة والجديدة", "Old vs new keyword comparison", "بەراوردی وشە کۆن و نوێ"),
+      kind: "table",
+      table: { columns: [S("الكلمة الجديدة", "New keyword", "وشەی نوێ"), S("أقرب كلمة قديمة", "Closest old keyword", "نزیکترین وشەی کۆن"), S("التشابه اللفظي", "Text similarity", "هاوشێوەیی وشەیی"), S("السوق", "Market", "بازاڕ"), S("اللغة", "Language", "زمان"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حصة ذكر النماذج", "Model mention share", "بەشی باسکردن"), S("المحور الأساسي", "Primary axis", "تەوەری سەرەکی"), S("قوة الملاءمة للمحاور الستة", "Six-axis fit score", "هێزی گونجاوی شەش تەوەر"), S("المصدر", "Source", "سەرچاوە")], data: oldNewRows },
+    });
+  }
+
+  const timelineSection: ExportSection = {
+    heading: S("المدة المتوقعة لظهور أثر الكلمات", "Expected timeline for keyword impact", "ماوەی چاوەڕوانکراو بۆ کاریگەری وشەکان"),
+    kind: "table",
+    table: {
+      columns: [S("المرحلة", "Phase", "قۆناغ"), S("المدة التقديرية", "Estimated time", "ماوەی خەمڵێنراو"), S("ما الذي يحدث", "What to expect", "چی چاوەڕوان بکرێت"), S("شرط التقدم", "Progress check", "پشکنینی پێشکەوتن")],
+      data: [
+        [S("إضافة الكلمات وتحديث الصفحات", "Add terms and update pages", "زیادکردنی وشە و نوێکردنەوەی پەڕە"), S("1–2 أسبوع", "1–2 weeks", "١–٢ هەفتە"), S("توزيع الكلمات على صفحات أو أسئلة مناسبة، مع حقائق ومصادر فعلية", "Assign terms to relevant pages or FAQs with real facts and sources", "دابەشکردنی وشە بۆ پەڕە و پرسیاری گونجاو"), S("نشر التحديثات فعلياً", "Publish the changes", "نوێکارییەکان بڵاوبکەوە")],
+        [S("إعادة الزحف والفهرسة", "Recrawl and indexing", "دووبارە کرال و ئیندێکس"), S("2–6 أسابيع", "2–6 weeks", "٢–٦ هەفتە"), S("قد تبدأ محركات البحث في ملاحظة الصفحات المعدلة؛ يختلف ذلك حسب الموقع والمحرك", "Search engines may begin processing updated pages; timing varies by site and engine", "پەڕە نوێکراوەکان لەوانەیە دەست بە پرۆسەکردن بکەن"), S("فحص ظهور الصفحات والاستعلامات", "Check page and query visibility", "پشکنینی دەرکەوتنی پەڕە و وشە")],
+        [S("قياس المؤشرات الأولى", "First signal review", "پێداچوونەوەی نیشانە سەرەتاییەکان"), S("4–12 أسبوع", "4–12 weeks", "٤–١٢ هەفتە"), S("مقارنة الظهور والزيارات وذكر العلامة في إجابات النماذج مع خط أساس", "Compare visibility, visits and model mentions against a baseline", "بەراوردی دەرکەوتن و سەردان و باسکردنی براند"), S("إعادة فحص النماذج والصفحات", "Repeat model and page checks", "دووبارە پشکنینی مۆدێل و پەڕە")],
+      ],
+    },
+  };
+
   const sourceInventoryRows: (string | number)[][] = sheets.map((sheet) => [
     sheet.name,
     sheet.totalRows,
@@ -504,13 +612,16 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
   for (const party of parties) if (party.url) evidenceRows.push([party.role, party.name, party.url, party.pageText ? S("تم جلب نص الصفحة", "Page text fetched", "دەقی پەڕە وەرگیرا") : S("رابط فقط؛ الصفحة لم تُقرأ", "URL only; page not read", "تەنها بەستەر؛ پەڕە نەخوێندراوەتەوە"), party.found]);
   for (const answer of engineAnswers) for (const url of answer.urls) evidenceRows.push([S("إجابة محرك", "Engine answer", "وەڵامی بزوێنەر"), answer.engine + " · " + marketLabel(answer.market), url, S("أعاد المحرك الرابط؛ يلزم التحقق المستقل", "Engine returned the URL; independent validation required", "بزوێنەر بەستەرەکەی گەڕاندەوە؛ پێویستی بە پشتڕاستکردنەوەی سەربەخۆیە"), answer.status]);
   for (const item of input.social || []) evidenceRows.push([S("نتيجة بحث اجتماعي", "Social search result", "ئەنجامی گەڕانی سۆشیال"), item.party, item.url, item.text, SRC_WEB]);
+  for (const item of input.searchEvidence || []) evidenceRows.push([item.source_type, item.entity + " · " + item.market, item.url || NA[l], item.title + " — " + item.text, SRC_WEB]);
   const evidenceSection: ExportSection = {
     heading: S("سجل الأدلة والمصادر", "Evidence and source registry", "تۆماری بەڵگە و سەرچاوە"),
     kind: "table",
     table: { columns: [S("نوع المصدر", "Source type", "جۆری سەرچاوە"), S("الجهة / السياق", "Entity / context", "لایەن / پاشبنەما"), S("الرابط", "URL", "بەستەر"), S("ما الذي تحقق", "What was checked", "چی پشکنرا"), S("منشأ النتيجة", "Provenance", "سەرچاوەی ئەنجام")], data: evidenceRows },
   };
-  sections.splice(1, 0, sourceInventory, ...originalDataSections, keywordCoverageSection);
-  sections.splice(2 + originalDataSections.length, 0, engineStatusSection, clusterStatusSection, executionSection, evidenceSection);
+  sections.splice(1, 0, ...discoveredSections, timelineSection);
+  if (sheets.length) sections.splice(1 + discoveredSections.length + 1, 0, sourceInventory, ...originalDataSections, keywordCoverageSection);
+  else sections.splice(1 + discoveredSections.length + 1, 0, keywordCoverageSection);
+  sections.splice((sheets.length ? 2 + originalDataSections.length : 2) + discoveredSections.length + 1, 0, engineStatusSection, clusterStatusSection, executionSection, evidenceSection);
 
   return { title: S("المصنف التشغيلي", "Operational workbook", "کتێبی کارپێکردن"), subtitle: input.brand + " · " + markets.map(mName).join(" / "), lang: l, sections };
 }
