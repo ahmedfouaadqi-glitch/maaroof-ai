@@ -440,7 +440,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       [S("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), S("افتح تبويب «خطة التنفيذ»", "Open the “Execution plan” sheet", "پلان"), "-"],
     ] } },
     { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("النوع", "Type", "جۆر"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حجم البحث", "Volume", "قەبارە"), S("المحور", "Axis", "تەوەر"), S("المصدر", "Source", "سەرچاوە")], data: kRows.map((r) => [r.k, mName(r.m), termKindLabel(r.kind, l), r.intent || NA[l], cell(r.vol, l), keywordAxis(r.k).axis, r.url || r.sheet || (r.kind === "file" ? SRC_FILE : NA[l])]) } },
-    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("نوع الكلمة", "Keyword type", "جۆری وشە"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حصة الذكر في الإجابات", "Mention share in answers", "بەشی باسکردن لە وەڵامەکان"), S("النماذج التي ذكرتها حرفيًا", "Models with a literal mention", "مۆدێلەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis basis", "بنەمای تەوەر"), S("ملاءمة المحاور الستة", "Six-axis fit scores", "گونجاوی شەش تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), S("المصدر", "Source", "سەرچاوە")], data: perEngine } },
+    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("نوع الكلمة", "Keyword type", "جۆری وشە"), S("نية البحث", "Search intent", "نیەتی گەڕان"), S("حصة الذكر في الإجابات", "Mention share in answers", "بەشی باسکردن لە وەڵامەکان"), S("النماذج التي ذكرتها حرفيًا", "Models with a literal mention", "مۆدێلەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis basis", "بنەمای تەوەر"), S("ملاءمة تقديرية للمحاور الستة", "Estimated six-axis fit", "گونجاوی خەمڵێنراوی شەش تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), S("المصدر", "Source", "سەرچاوە")], data: perEngine } },
     { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
@@ -498,7 +498,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     S("كثافة الكلمة في النص", "Keyword density in text", "چڕی وشە لە دەق"),
     S("الحقائق لكل 100 كلمة", "Facts per 100 words", "ڕاستی بۆ هەر ١٠٠ وشە"),
     S("مؤشرات موثوقية الصفحة", "Page credibility signals", "نیشانەکانی متمانەی پەڕە"),
-    S("قوة الملاءمة للمحاور الستة", "Six-axis fit score", "هێزی گونجاوی شەش تەوەر"),
+    S("ملاءمة تقديرية للمحاور الستة", "Estimated six-axis keyword fit", "گونجاوی خەمڵێنراوی شەش تەوەر"),
     S("المصدر", "Source", "سەرچاوە"),
     S("سبب الاقتراح", "Why this term", "هۆکاری پێشنیار"),
   ];
@@ -540,7 +540,9 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
     });
     if (newIdeas.length) {
       const oldNewRows = newIdeas.map((idea) => {
-        const best = fileKeywords.map((old) => ({ old, similarity: lexicalSimilarity(idea.keyword, old) }))
+        const oldForMarket = kRows.filter((row) => row.kind === "file" && row.m.code === idea.market).map((row) => row.k);
+        const comparisonBaseline = oldForMarket.length ? oldForMarket : fileKeywords;
+        const best = comparisonBaseline.map((old) => ({ old, similarity: lexicalSimilarity(idea.keyword, old) }))
           .sort((a, b) => b.similarity - a.similarity)[0];
         const evidenceRow = termEvidenceRow(idea, "opportunity");
         return [idea.keyword, best?.old || NA[l], best ? best.similarity + "%" : "0%", evidenceRow[2], idea.language || l, evidenceRow[4], evidenceRow[5], evidenceRow[6], evidenceRow[7], evidenceRow[8], evidenceRow[9], keywordAxis(idea.keyword).axis, evidenceRow[10], evidenceRow[11]];
