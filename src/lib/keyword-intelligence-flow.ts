@@ -14,9 +14,9 @@ export function hasKeywordWorkbookSignals(workbookHints: string[]): boolean {
 }
 
 /**
- * Auto-start costly research only when the user explicitly requested analysis
- * and a workbook export/output, and the attached workbook looks like keyword data.
- * General uploads and summary-only requests stay on the normal chat path.
+ * Auto-start the keyword workflow when the user explicitly requests keyword
+ * research, with or without a workbook. Other workbook tasks still require a
+ * clear keyword signal plus an explicit analysis/export intent.
  */
 export function shouldAutoStartKeywordResearch(requestText: string, workbookHints: string[]): boolean {
   const request = String(requestText || "").trim();
