@@ -22,7 +22,7 @@ const T = {
     run: "ابدأ التحليل", busy: "يجري التحليل…", selectedFile: "الملف المحدد",
     workspace: "مساحة العمل النشطة", noWorkspace: "الحساب الأساسي",
     liveNote: "عند عدم تفعيل الفحص الحي لن تُعرض درجات SEO/SERP تخمينية. كما أن مزود البحث الحالي لا يكشف بصورة موثوقة اقتباسات Google AI Overviews، لذلك ستظهر SGE/AEO كـ«لم تُقَس» حتى يتوفر مصدر يدعمها.",
-    errors: { upload_failed: "فشل رفع الملف", workspace_not_found: "مساحة العمل غير موجودة أو لا تملك صلاحية الوصول إليها", unsupported_spreadsheet: "صيغة الملف غير مدعومة", file_too_large: "حجم الملف أكبر من الحد التشغيلي الحالي (25MB)" },
+    errors: { upload_failed: "فشل رفع الملف", workspace_not_found: "مساحة العمل غير موجودة أو لا تملك صلاحية الوصول إليها", workspace_required: "اختر مساحة عمل من الشريط الجانبي قبل تشغيل الأداة لضمان عزل البيانات.", workspace_context_unavailable: "تعذر التحقق من مساحة العمل. حاول مجدداً.", unsupported_spreadsheet: "صيغة الملف غير مدعومة", file_too_large: "حجم الملف أكبر من الحد التشغيلي الحالي (25MB)" },
   },
   en: {
     title: "Competitive Keyword Intelligence",
@@ -35,7 +35,7 @@ const T = {
     run: "Run analysis", busy: "Analyzing…", selectedFile: "Selected file",
     workspace: "Active workspace", noWorkspace: "Main account",
     liveNote: "Without live checking, SEO/SERP scores remain unmeasured. The current search provider does not reliably expose Google AI Overview citations, so SGE/AEO will remain unmeasured until a suitable source is connected.",
-    errors: { upload_failed: "File upload failed", workspace_not_found: "Workspace not found or not accessible", unsupported_spreadsheet: "Unsupported file format", file_too_large: "File exceeds the current operational limit (25MB)" },
+    errors: { upload_failed: "File upload failed", workspace_not_found: "Workspace not found or not accessible", workspace_required: "Select a workspace from the sidebar before running this tool to isolate data.", workspace_context_unavailable: "Could not verify workspace context. Try again.", unsupported_spreadsheet: "Unsupported file format", file_too_large: "File exceeds the current operational limit (25MB)" },
   },
   ku: {
     title: "زیرەکی وشە سەرەکییە ڕکابەرییەکان",
@@ -48,7 +48,7 @@ const T = {
     run: "دەستپێکردن", busy: "شیکردنەوە…", selectedFile: "فایلی هەڵبژێردراو",
     workspace: "شوێنی کاری چالاک", noWorkspace: "هەژماری سەرەکی",
     liveNote: "ئەگەر پشکنینی ڕاستەوخۆ چالاک نەبێت، نمرەی خەمڵێنراوی SERP نیشان نادرێت. پێوانەی SGE/AEO تا بەردەستبوونی سەرچاوەی گونجاو نەپێوراو دەمێنێتەوە.",
-    errors: { upload_failed: "بارکردنی فایل سەرکەوتوو نەبوو", workspace_not_found: "شوێنی کار نەدۆزرایەوە یان دەسەڵاتت نییە", unsupported_spreadsheet: "فۆرماتی فایل پشتگیری ناکرێت", file_too_large: "قەبارەی فایل لە سنووری 25MB زیاترە" },
+    errors: { upload_failed: "بارکردنی فایل سەرکەوتوو نەبوو", workspace_not_found: "شوێنی کار نەدۆزرایەوە یان دەسەڵاتت نییە", workspace_required: "پێش بەکارهێنان لە لایەنی لاوەکی شوێنی کار هەڵبژێرە بۆ جیاکردنەوەی داتا.", workspace_context_unavailable: "نەتوانرا پاشبنەمای شوێنی کار پشتڕاست بکرێتەوە. دووبارە هەوڵ بدەرەوە.", unsupported_spreadsheet: "فۆرماتی فایل پشتگیری ناکرێت", file_too_large: "قەبارەی فایل لە سنووری 25MB زیاترە" },
   },
 } as const;
 
