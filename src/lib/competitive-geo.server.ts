@@ -7,6 +7,7 @@ import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf, type ProbeLa
 import type { Market } from "@/lib/market-scope";
 import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
 import { evidenceCacheKey, getKeywordEvidence, putKeywordEvidence } from "@/lib/keyword-evidence-cache.server";
+import { isPlatformUrl } from "@/lib/site-keyword-extractor";
 
 const rowsOf = (r: any): any[] => (r?.data?.web || r?.data || r?.web || []) as any[];
 
@@ -51,29 +52,74 @@ export async function gatherParties(o: {
   const parties: Array<Omit<PartyEvidence, "pageText">> = [{ name: o.brand, role: "brand", url: o.site || null, found: "user" }];
   for (const c of o.competitors.slice(0, 4)) parties.push({ name: c, role: "competitor", url: null, found: "user" });
   if (o.category && parties.length < 5) {
-    // Candidates from a real web search per market; each keeps its result url.
+    // Candidates come from real search results. Social platforms are not commercial competitors.
     const brandHost = o.site ? hostOf(o.site) : "";
     for (const m of o.markets.slice(0, 3)) {
       try {
-        const rows = rowsOf(await fcSearch(`${o.category} ${m.en}`, { limit: 6, location: m.en }, { userId: o.userId, toolKey: "competitive_geo" }));
+        const rows = rowsOf(await fcSearch(o.category + " " + m.en, { limit: 6, location: m.en }, { userId: o.userId, toolKey: "competitive_geo" }));
         for (const r of rows) {
-          const h = hostOf(String(r?.url || ""));
-          if (!h || h === brandHost || parties.some((p) => p.url && hostOf(p.url) === h)) continue;
-          parties.push({ name: h, role: "competitor", url: r.url, found: "web_search" });
+          const resultUrl = String(r?.url || "");
+          const host = hostOf(resultUrl);
+          if (!host || host === brandHost || isPlatformUrl(resultUrl) || parties.some((p) => p.url && hostOf(p.url) === host)) continue;
+          parties.push({ name: host, role: "competitor", url: resultUrl, found: "web_search" });
           if (parties.length >= 5) break;
         }
       } catch { /* search failed: no candidate invented */ }
       if (parties.length >= 5) break;
     }
   }
-  return Promise.all(parties.map(async (p) => {
-    const url = p.url || (await findSite(p.name, o.userId, o.workspaceId));
-    const isOfficialBrandPage = p.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
-    const pg = isOfficialBrandPage
+
+  const resolved = await Promise.all(parties.map(async (party) => {
+    const url = party.url || await findSite(party.name, o.userId, o.workspaceId);
+    const excludedPlatform = party.role === "competitor" && Boolean(url) && isPlatformUrl(String(url));
+    if (excludedPlatform) return { ...party, url, pageText: null, title: null, description: null, additionalPages: [], cacheHit: false, excludedPlatform: true };
+    const isOfficialBrandPage = party.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
+    const page = isOfficialBrandPage
       ? o.brandPageEvidence!
       : url ? await readPage(url, o.userId, o.workspaceId) : { text: null, title: null, description: null, cacheHit: false };
-    return { ...p, url, pageText: pg.text, title: pg.title, description: pg.description, cacheHit: Boolean(pg.cacheHit) };
+
+    const additionalPages: Array<{ url: string; text: string | null; title?: string | null; description?: string | null }> = [];
+    if (party.role === "competitor" && url && !isPlatformUrl(String(url))) {
+      const host = hostOf(url);
+      const query = "site:" + host + " " + o.category + " (services OR products OR solutions)";
+      const searchScope = {
+        userId: o.userId, workspaceId: o.workspaceId, evidenceType: "service-page-search",
+        evidenceKey: await evidenceCacheKey({ host, category: o.category, market: o.markets[0]?.code || "" }),
+      };
+      const cachedPageSearch = await getKeywordEvidence<{ urls: string[] }>(searchScope);
+      let serviceUrls = cachedPageSearch?.urls || [];
+      if (!cachedPageSearch) {
+        try {
+          const rows = rowsOf(await fcSearch(query, { limit: 5, location: o.markets[0]?.en }, { userId: o.userId, toolKey: "competitive_geo" }));
+          const candidates = rows.map((row) => String(row?.url || "")).filter((candidate) => {
+            if (!/^https?:\/\//i.test(candidate) || isPlatformUrl(candidate) || hostOf(candidate) !== host || candidate === url) return false;
+            try {
+              const path = new URL(candidate).pathname.toLocaleLowerCase();
+              return path !== "/" && !/\.(pdf|jpg|jpeg|png|webp|svg)(?:$|\?)/i.test(path);
+            } catch { return false; }
+          });
+          serviceUrls = [...new Set(candidates)].sort((a, b) => {
+            const preferred = /service|product|solution|what-we-do|our-work|catalog|offer|خدمات|منتج|حلول/i;
+            return Number(preferred.test(b)) - Number(preferred.test(a));
+          }).slice(0, 1);
+          if (serviceUrls.length) await putKeywordEvidence(searchScope, { urls: serviceUrls });
+        } catch { serviceUrls = []; }
+      }
+      for (const serviceUrl of serviceUrls.slice(0, 1)) {
+        const servicePage = await readPage(serviceUrl, o.userId, o.workspaceId);
+        if (servicePage.text || servicePage.title || servicePage.description) {
+          additionalPages.push({ url: serviceUrl, text: servicePage.text, title: servicePage.title, description: servicePage.description });
+        }
+      }
+    }
+    return {
+      ...party, url, pageText: page.text, title: page.title, description: page.description,
+      additionalPages, cacheHit: Boolean(page.cacheHit), excludedPlatform: false,
+    };
   }));
+  return resolved
+    .filter((party) => !party.excludedPlatform)
+    .map(({ excludedPlatform: _excludedPlatform, ...party }) => party as PartyEvidence);
 }
 
 type EngineCallResult = {
