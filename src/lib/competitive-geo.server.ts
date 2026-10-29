@@ -248,7 +248,8 @@ export async function askEnginesForKeywordVisibility(o: {
       evidenceKey: await evidenceCacheKey({ market: market.code, keyword, engine: engine.key, model: engine.model, query }),
     };
     const cached = await getKeywordEvidence<EngineAnswer>(scope);
-    if (cached && cached.status === "answered") return { ...cached, cacheHit: true };
+    // Reuse both successful responses and recorded failures until their cache TTL expires.
+    if (cached && cached.status) return { ...cached, cacheHit: true };
     // Expanded samples must restore prior results without silently re-running paid calls.
     // A missing/expired cache entry remains explicitly unmeasured in the resulting report.
     if (o.cacheOnly) return {
@@ -265,7 +266,8 @@ export async function askEnginesForKeywordVisibility(o: {
       answer: "", urls: [], query, provider_path: call.providerPath || undefined,
       model_used: call.modelUsed || undefined, error: call.detail || "Provider returned no usable answer", cacheHit: false, probe_kind: "keyword_visibility",
     };
-    if (parsed) await putKeywordEvidence(scope, { ...answer, cacheHit: undefined });
+    // Preserve failure status too, so expanding a sample does not repeat provider calls silently.
+    await putKeywordEvidence(scope, { ...answer, cacheHit: undefined }, parsed ? 24 : 6);
     return answer;
   }));
 }
