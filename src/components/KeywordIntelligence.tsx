@@ -253,8 +253,10 @@ export function KeywordIntelligence() {
         {estimate && (
           <div className="mt-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs leading-6 text-foreground">
             <div>{l === "en" ? "Keywords in file" : "الكلمات في الملف"}: <b>{estimate.total_keywords}</b>{estimate.sample_keywords != null && <> · {l === "en" ? "Sample measured now" : "العينة التي ستُقاس الآن"}: <b>{estimate.sample_keywords}</b></>}</div>
-            <div>{l === "en" ? "Questions to the ten engines" : "أسئلة للمحركات العشرة"}: <b>{estimate.engine_questions}</b> · {l === "en" ? "Live search checks" : "فحوص بحث حي"}: <b>{estimate.live_search_checks}</b></div>
+            <div>{l === "en" ? "Questions to the ten engines" : "أسئلة المحركات العشرة"}: <b>{estimate.engine_questions}</b> · {l === "en" ? "Live search checks" : "فحوص البحث الحي"}: <b>{estimate.live_search_checks}</b></div>
+            {estimate.new_keyword_checks != null && <div>{l === "en" ? "Planned new-keyword checks (per market)" : "فحوص الكلمات الجديدة المخططة لكل سوق"}: <b>{estimate.new_keyword_checks}</b></div>}
             <div>{l === "en" ? "Estimated cost" : "التكلفة التقديرية"}: <b>{estimate.estimated_tokens}</b> · {l === "en" ? "Your balance" : "رصيدك"}: <b>{estimate.unlimited ? (l === "en" ? "Unlimited" : "غير محدود") : estimate.balance}</b></div>
+            <p className="text-[11px] text-muted-foreground">{l === "en" ? "Fresh calls may be lower when matching evidence already exists in this workspace's 24-hour cache." : "قد يقل عدد الاستدعاءات الجديدة عند وجود أدلة مطابقة مسبقاً في ذاكرة مساحة العمل لمدة 24 ساعة."}</p>
             <p className="text-muted-foreground">{l === "en" ? "You are charged only for successful answers." : "يُخصم فقط مقابل الإجابات الناجحة."}</p>
             <button onClick={() => run("run")} disabled={busy} className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{l === "en" ? "Start" : "ابدأ"}</button>
           </div>
