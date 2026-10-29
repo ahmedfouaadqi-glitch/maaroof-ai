@@ -15,8 +15,8 @@ const T = {
     title: "ذكاء الكلمات المفتاحية التنافسية",
     hint: "يمكنك تحليل كلمات الموقع أو إرفاق مصنف. تُفصل لغة المحتوى عن السوق المستهدف.",
     brand: "العلامة", site: "الموقع الرسمي", category: "المجال / القطاع",
-    comps: "المنافسون (اختياري، افصل بفاصلة)", market: "السوق المستهدف / الدولة",
-    contentLanguage: "لغة المحتوى والكلمات", file: "إرفاق ملف كلمات مفتاحية (XLSX / XLSM / CSV / TSV)",
+    comps: "المنافسون (اختياري، افصل بفاصلة)", market: "الأسواق المستهدفة (افصل بينها بفاصلة)",
+    contentLanguage: "لغة المحتوى والكلمات", marketHint: "مثال: العراق، السعودية، الإمارات، لبنان. تُدمج الأسواق المكتوبة مع الأسواق التي يكتشفها النظام من تبويبات الملف.", file: "إرفاق ملف كلمات مفتاحية (XLSX / XLSM / CSV / TSV)",
     liveSearch: "فحص حي لنتائج البحث والروابط (Live Verification)",
     liveLimit: "عدد الكلمات للفحص الحي لكل سوق (1–50)",
     run: "ابدأ التحليل", busy: "يجري التحليل…", selectedFile: "الملف المحدد",
@@ -28,8 +28,8 @@ const T = {
     title: "Competitive Keyword Intelligence",
     hint: "Analyze site keywords or attach a workbook. Content language and target market are independent.",
     brand: "Brand", site: "Official website", category: "Business sector",
-    comps: "Competitors (optional, comma separated)", market: "Target market / country",
-    contentLanguage: "Content and keyword language", file: "Attach keyword workbook (XLSX / XLSM / CSV / TSV)",
+    comps: "Competitors (optional, comma separated)", market: "Target markets (comma separated)",
+    contentLanguage: "Content and keyword language", marketHint: "Example: Iraq, Saudi Arabia, UAE, Lebanon. Typed markets are merged with markets detected from workbook tabs.", file: "Attach keyword workbook (XLSX / XLSM / CSV / TSV)",
     liveSearch: "Live search results and link verification (Live Verification)",
     liveLimit: "Keywords to check live per market (1–50)",
     run: "Run analysis", busy: "Analyzing…", selectedFile: "Selected file",
@@ -41,8 +41,8 @@ const T = {
     title: "زیرەکی وشە سەرەکییە ڕکابەرییەکان",
     hint: "وشەکانی ماڵپەڕ شیکەرەوە یان فایلێکی خشتەیی هاوپێچ بکە. زمانی ناوەڕۆک لە بازاڕی ئامانج جیاوازە.",
     brand: "براند", site: "ماڵپەڕی فەرمی", category: "بواری کار",
-    comps: "ڕکابەران (ئارەزوومەندانە)", market: "بازاڕی ئامانج / وڵات",
-    contentLanguage: "زمانی ناوەڕۆک و وشەکان", file: "هاوپێچکردنی فایل (XLSX / XLSM / CSV / TSV)",
+    comps: "ڕکابەران (ئارەزوومەندانە)", market: "بازاڕە ئامانجەکان (بە کۆما جیا بکەوە)",
+    contentLanguage: "زمانی ناوەڕۆک و وشەکان", marketHint: "نموونە: عێراق، سعودیە، ئیمارات، لوبنان. بازاڕە نووسراوەکان لەگەڵ بازاڕی ناسراو لە پەڕەکانی فایل تێکەڵ دەکرێن.", file: "هاوپێچکردنی فایل (XLSX / XLSM / CSV / TSV)",
     liveSearch: "پشکنینی ڕاستەوخۆی ئەنجامی گەڕان و بەستەرەکان (Live Verification)",
     liveLimit: "ژمارەی وشە بۆ پشکنینی ڕاستەوخۆ لە هەر بازاڕێک (1–50)",
     run: "دەستپێکردن", busy: "شیکردنەوە…", selectedFile: "فایلی هەڵبژێردراو",
@@ -212,6 +212,7 @@ export function KeywordIntelligence() {
           {field(c.site, site, setSite)}
           {field(c.category, category, setCategory)}
           {field(c.market, market, setMarket)}
+          <p className="text-[11px] leading-5 text-muted-foreground sm:col-span-2">{c.marketHint}</p>
           <label className="block text-xs text-muted-foreground">{c.contentLanguage}
             <select value={contentLanguage} onChange={(e) => setContentLanguage(e.target.value as ContentLanguage)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
               {Object.entries(LANGUAGE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
@@ -240,9 +241,14 @@ export function KeywordIntelligence() {
           </label>}
           <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{c.liveNote}</p>
         </div>
-        <button onClick={() => run("estimate")} disabled={busy || !brand.trim()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-          {busy && <Loader2 className="size-4 animate-spin" />}{busy ? c.busy : (l === "en" ? "Estimate cost" : "تقدير التكلفة")}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button onClick={() => run("run")} disabled={busy || !brand.trim()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+            {busy && <Loader2 className="size-4 animate-spin" />}{busy ? c.busy : c.run}
+          </button>
+          <button onClick={() => run("estimate")} disabled={busy || !brand.trim()} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-50">
+            {busy && <Loader2 className="size-4 animate-spin" />}{l === "en" ? "Estimate cost first (optional)" : "تقدير التكلفة أولاً (اختياري)"}
+          </button>
+        </div>
         {estimate && (
           <div className="mt-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs leading-6 text-foreground">
             <div>{l === "en" ? "Keywords in file" : "الكلمات في الملف"}: <b>{estimate.total_keywords}</b>{estimate.sample_keywords != null && <> · {l === "en" ? "Sample measured now" : "العينة التي ستُقاس الآن"}: <b>{estimate.sample_keywords}</b></>}</div>
