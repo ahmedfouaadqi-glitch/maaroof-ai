@@ -21,14 +21,33 @@ export function blindProbeQuestion(topic: string, region: string): string {
  * A blind market visibility probe grounded in actual workbook keywords.
  * It intentionally omits the target brand so mention/share-of-voice is not primed.
  */
-export function keywordVisibilityProbeQuestion(topic: string, region: string, keywords: string[] = []): string {
-  const category = String(topic || "").replace(/\s+/g, " ").trim().slice(0, 240) || "the products or services in the uploaded workbook";
-  const market = String(region || "").replace(/\s+/g, " ").trim().slice(0, 120);
+export type ProbeLanguage = "ar" | "en" | "ku" | "fr" | "de" | "es";
+
+/**
+ * Build a blind model-visibility prompt in the selected content language.
+ * Keyword text is preserved as supplied; target market remains a separate input.
+ */
+export function keywordVisibilityProbeQuestion(
+  topic: string,
+  region: string,
+  keywords: string[] = [],
+  contentLanguage: ProbeLanguage = "en",
+): string {
+  const category = String(topic || "").replace(/\\s+/g, " ").trim().slice(0, 240) || "the products or services in the uploaded workbook";
+  const market = String(region || "").replace(/\\s+/g, " ").trim().slice(0, 120);
   const phrases = [...new Set(keywords.map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 8);
   const keywordContext = phrases.length
-    ? "Actual search phrases from the uploaded workbook: " + phrases.map((value) => '"' + value.slice(0, 180) + '"').join(", ") + "."
-    : "Use the category to understand the search context.";
-  return "In " + market + ", a customer is searching in this product/service category: " + category + ". " + keywordContext + " Based only on your existing knowledge, which relevant brands, product providers, retailers, or websites would you naturally recommend? Keep recommendations relevant to these products or services; do not switch to SEO tools or marketing agencies unless the search phrases are explicitly about those services. Reply as JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}. Do not invent URLs; include URLs only when you know them to be real.";
+    ? phrases.map((value) => '"' + value.slice(0, 180) + '"' ).join(", ")
+    : category;
+  const prompts: Record<ProbeLanguage, string> = {
+    en: "In " + market + ", a customer searches in this category: " + category + ". Actual phrases: " + keywordContext + ". Based only on existing knowledge, which relevant brands, providers, retailers, or websites would you naturally recommend? Stay within the category; do not recommend SEO agencies unless the phrases request them. Reply as JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}. Do not invent URLs.",
+    ar: "في سوق " + market + "، يبحث العميل ضمن هذا التخصص: " + category + ". عبارات البحث الفعلية: " + keywordContext + ". بناءً على معرفتك فقط، ما العلامات أو المزودين أو المتاجر أو المواقع التي توصي بها طبيعياً؟ التزم بالتخصص ولا تقترح وكالات SEO إلا إذا كانت العبارات تطلب ذلك. أجب بالعربية بتنسيق JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}. لا تختلق روابط.",
+    ku: "لە بازاڕی " + market + "، کڕیارێک لەم بوارەدا دەگەڕێت: " + category + ". دەستەواژە ڕاستەقینەکان: " + keywordContext + ". تەنها لەسەر زانیاریی خۆت، کام براند و دابینکەر و فرۆشگا پێشنیار دەکەیت؟ لە بوارەکەدا بمێنەوە و URL دروست مەکە. JSON: {\"answer\": string, \"brands\": string[], \"urls\": string[]}.",
+    fr: "Sur le marché " + market + ", un client recherche dans cette catégorie : " + category + ". Requêtes réelles : " + keywordContext + ". Selon vos connaissances, quelles marques, quels fournisseurs ou sites recommanderiez-vous naturellement ? Restez dans la catégorie et n’inventez pas d’URL. Répondez en français au format JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}.",
+    de: "Im Markt " + market + " sucht ein Kunde in dieser Kategorie: " + category + ". Tatsächliche Suchbegriffe: " + keywordContext + ". Welche passenden Marken, Anbieter oder Websites würden Sie anhand Ihres Wissens empfehlen? Bleiben Sie bei der Kategorie und erfinden Sie keine URLs. Antworten Sie auf Deutsch als JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}.",
+    es: "En el mercado " + market + ", un cliente busca en esta categoría: " + category + ". Consultas reales: " + keywordContext + ". Según su conocimiento, ¿qué marcas, proveedores o sitios recomendaría de forma natural? Manténgase en la categoría y no invente URL. Responda en español en JSON {\"answer\": string, \"brands\": string[], \"urls\": string[]}.",
+  };
+  return prompts[contentLanguage] || prompts.en;
 }
 
 /** Parse a model reply. Returns null when there is no usable answer text. */
