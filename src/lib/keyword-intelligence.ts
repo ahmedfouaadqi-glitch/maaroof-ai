@@ -49,14 +49,28 @@ export function engineMentions(answers: EngineAnswer[], k: string): { engines: s
 }
 
 /** New keywords = phrases competitors' pages or engine answers use that the brand list lacks. */
-export function newKeywordCandidates(brandList: string[], competitors: PartyEvidence[], answers: EngineAnswer[], max = 40): Array<{ keyword: string; from: "competitor" | "engines"; party?: string }> {
+export function newKeywordCandidates(brandList: string[], competitors: PartyEvidence[], answers: EngineAnswer[], max = 40): Array<{ keyword: string; from: "competitor" | "engines"; party?: string; sourceUrl?: string; snippet?: string }> {
   const have = new Set(brandList.map(norm));
-  const out: Array<{ keyword: string; from: "competitor" | "engines"; party?: string }> = [];
+  const out: Array<{ keyword: string; from: "competitor" | "engines"; party?: string; sourceUrl?: string; snippet?: string }> = [];
   const seen = new Set<string>();
-  const push = (k: string, from: "competitor" | "engines", party?: string) => { const n = norm(k); if (have.has(n) || seen.has(n)) return; seen.add(n); out.push({ keyword: k, from, party }); };
-  for (const c of competitors) for (const k of extractSiteKeywords({ text: c.pageText, title: c.title, description: c.description }, 20)) if (k.keyword.includes(" ")) push(k.keyword, "competitor", c.name);
+  const excerpt = (text: string | null | undefined, keyword: string) => {
+    const source = String(text || "");
+    const at = norm(source).indexOf(norm(keyword));
+    return at < 0 ? "" : source.slice(Math.max(0, at - 100), Math.min(source.length, at + keyword.length + 180)).replace(/\s+/g, " ").trim();
+  };
+  const push = (k: string, from: "competitor" | "engines", party?: string, sourceUrl?: string, sourceText?: string) => {
+    const n = norm(k);
+    if (have.has(n) || seen.has(n)) return;
+    seen.add(n);
+    out.push({ keyword: k, from, party, sourceUrl, snippet: excerpt(sourceText, k) });
+  };
+  for (const c of competitors) {
+    for (const k of extractSiteKeywords({ text: c.pageText, title: c.title, description: c.description }, 20)) {
+      if (k.keyword.includes(" ")) push(k.keyword, "competitor", c.name, c.url || undefined, c.pageText);
+    }
+  }
   const answerText = answers.filter((a) => a.status === "answered").map((a) => a.answer).join("\n");
-  for (const k of extractSiteKeywords({ text: answerText }, 30)) if (k.keyword.includes(" ")) push(k.keyword, "engines");
+  for (const k of extractSiteKeywords({ text: answerText }, 30)) if (k.keyword.includes(" ")) push(k.keyword, "engines", undefined, undefined, answerText);
   return out.slice(0, max);
 }
 
@@ -72,9 +86,14 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     ? allKeywords(input.sheets)
     : extractSiteKeywords({ text: brand?.pageText, title: brand?.title, description: brand?.description }, 60).map((k) => k.keyword);
   const discoveredMap = new Map((input.discovered || []).map((d) => [norm(d.keyword), d]));
-  const fresh: Array<{ keyword: string; from: "competitor" | "engines"; party?: string }> = input.discovered
-    ? [...new Map((input.discovered).map((d) => [norm(d.keyword), { keyword: d.keyword, from: "engines" as const }])).values()]
-    : newKeywordCandidates(brandList, comps, answers);
+  const competitorCandidates = newKeywordCandidates(brandList, comps, [], 40);
+  const discoveryCandidates = (input.discovered || []).map((d) => ({
+    keyword: d.keyword, from: "engines" as const, sourceUrl: undefined, snippet: d.snippet,
+  }));
+  // Keep competitor-derived opportunities even when engine discovery is available.
+  // Deduplicate by normalized phrase, preferring a literal competitor-page source when present.
+  const fresh: Array<{ keyword: string; from: "competitor" | "engines"; party?: string; sourceUrl?: string; snippet?: string }> =
+    [...new Map([...competitorCandidates, ...discoveryCandidates].map((item) => [norm(item.keyword), item])).values()].slice(0, 80);
   const sampleSet = input.sampleKeywords ? new Set(input.sampleKeywords.map(norm)) : null;
   const authority = (p?: PartyEvidence) => {
     if (!p?.pageText) return NM;
@@ -108,7 +127,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   brandCols.push(S("المحركات التي اقترحتها", "Engines that proposed it", "مۆدێلە پێشنیارکەرەکان"), S("مقتطف الإجابة", "Answer excerpt", "پارچەی وەڵام"));
   const brandRows: (string | number)[][] = [];
   for (const k of brandList) { const o = opinion(k); const r: (string | number)[] = [k, S("حالية", "Current", "ئێستا"), SRC_CUR, o.share, density(brand, k), facts(brand), authority(brand), o.engines]; if (input.hasFile) r.push(S("موجودة في الملف", "In file", "لە فایلدا")); r.push("-", "-"); brandRows.push(r); }
-  for (const n of fresh) { const o = opinion(n.keyword); const d = discoveredMap.get(norm(n.keyword)); const r: (string | number)[] = [n.keyword, d ? (d.confirmed ? S("جديدة", "New", "نوێ") : S("جديدة — إشارة من محرك واحد", "New — single-engine signal", "نوێ — یەک مۆدێل")) : S("جديدة", "New", "نوێ"), n.from === "competitor" ? S("من صفحة منافس", "From competitor page", "لە ڕکابەر") + (n.party ? `: ${n.party}` : "") : S("من إجابات النماذج", "From model answers", "لە وەڵامی مۆدێل"), o.share, density(brand, n.keyword), NM, NM, o.engines]; if (input.hasFile) r.push(S("غير موجودة في الملف — فرصة", "Not in file — opportunity", "لە فایلدا نییە — دەرفەت")); r.push(d ? `${d.engines.length}/${d.answered || 10}: ${d.engines.join(", ")}` : "-", d?.snippet || "-"); brandRows.push(r); }
+  for (const n of fresh) { const o = opinion(n.keyword); const d = discoveredMap.get(norm(n.keyword)); const r: (string | number)[] = [n.keyword, d ? (d.confirmed ? S("جديدة", "New", "نوێ") : S("جديدة — إشارة من محرك واحد", "New — single-engine signal", "نوێ — یەک مۆدێل")) : S("جديدة", "New", "نوێ"), n.from === "competitor" ? S("من صفحة منافس", "From competitor page", "لە ڕکابەر") + (n.party ? `: ${n.party}` : "") : S("من إجابات النماذج", "From model answers", "لە وەڵامی مۆدێل"), o.share, density(brand, n.keyword), NM, NM, o.engines]; if (input.hasFile) r.push(S("غير موجودة في الملف — فرصة", "Not in file — opportunity", "لە فایلدا نییە — دەرفەت")); r.push(d ? `${d.engines.length}/${d.answered || 10}: ${d.engines.join(", ")}` : (n.party || "-"), d?.snippet || n.snippet || "-"); brandRows.push(r); }
 
   // 2. Competitors
   const compKw = new Map<string, string[]>();
@@ -193,8 +212,14 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const axisRows: (string | number)[][] = [];
   for (const market of markets) {
     for (const k of axisList) {
-      if (sampleSet && !sampleSet.has(norm(k)) && !discoveredMap.has(norm(k))) {
-        axisRows.push([k, l === "ar" ? market.ar : market.en, ...AXES_ORDER.map(() => NM), S("خارج العينة المختارة لهذا التشغيل", "Outside the sample selected for this run", "لە دەرەوەی نموونەی ئەم جارە"), NM, NM, NM, NM]);
+      if (sampleSet && !sampleSet.has(norm(k))) {
+        axisRows.push([
+          k, l === "ar" ? market.ar : market.en,
+          ...AXES_ORDER.map(() => NM),
+          S("خارج العينة المختارة لهذا التشغيل", "Outside the sample selected for this run", "لە دەرەوەی نموونەی ئەم جارە"),
+          S("لم تُقَس هذه الكلمة في التشغيل الحالي؛ لم تُنفذ لها فحوص حية ضمن العينة المختارة.", "This keyword was not measured in the current run because it was not included in the selected live sample.", "ئەم وشەیە لە نموونەی هەڵبژێردراوی پشکنینی ڕاستەوخۆدا نەبوو."),
+          NM, NM, NM, NM
+        ]);
         continue;
       }
       const measured = measureKeywordAxes({
@@ -210,6 +235,26 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       const reasons = LIVE_AXES.filter((axis) => measured[axis].value === null)
         .map((axis) => `${axis}: ${explainReason(axis, measured[axis].reason || "measurement_unavailable")}`)
         .join(" | ");
+      const evidenceDetailsText = LIVE_AXES.map((axis) => {
+        const measurement = measured[axis];
+        const reason = measurement.value === null ? explainReason(axis, measurement.reason || "measurement_unavailable") : "";
+        const url = measurement.evidenceUrl ? ` URL: ${measurement.evidenceUrl}` : "";
+        const pos = axis === "SEO" && measurement.position ? ` SERP position #${measurement.position}.` : "";
+        const engineNames = measurement.engines?.length ? ` Engines: ${measurement.engines.join(", ")}.` : "";
+        return `${axis}=${measurement.value === null ? NM : measurement.value}.${pos} ${reason}${url}${engineNames}`.trim();
+      });
+      const relatedAnswers = answers.filter((answer) =>
+        answer.market === market.code && answer.status === "answered" &&
+        norm(answer.query || "").includes(norm(k)) &&
+        norm(answer.answer).includes(norm(input.brand))
+      );
+      const literalEngineEvidence = relatedAnswers.slice(0, 10).map((answer) => {
+        const kwAt = norm(answer.answer).indexOf(norm(input.brand));
+        const excerpt = kwAt < 0 ? answer.answer.slice(0, 240) : answer.answer.slice(Math.max(0, kwAt - 100), Math.min(answer.answer.length, kwAt + input.brand.length + 160));
+        const links = (answer.urls || []).filter((url) => /^https?:\/\//i.test(url)).join(", ");
+        return `${answer.engine}: “${excerpt.replace(/\s+/g, " ").trim()}”${links ? ` · ${links}` : ""}`;
+      });
+      const evidenceDetails = [...evidenceDetailsText ? [evidenceDetailsText] : [], ...literalEngineEvidence.map((item) => `Literal answer evidence: ${item}`)].join(" | ");
       const engines = measured.GEO.engines?.join(", ") || NM;
       const position = measured.SEO.position ? String(measured.SEO.position) : NM;
       const seoEvidence = measured.SEO.evidenceUrl || NM;
@@ -219,6 +264,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
         l === "ar" ? market.ar : market.en,
         ...AXES_ORDER.map((axis) => measured[axis].value === null ? NM : measured[axis].value),
         reasons || S("اكتملت القياسات المتاحة لهذه الكلمة", "All requested available measurements completed for this keyword", "پێوانە بەردەستەکان تەواو بوون"),
+        evidenceDetails,
         position,
         seoEvidence,
         seoProvider,
@@ -311,7 +357,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     table(S("1. ملخص التحليل وحالة الأدلة", "1. Analysis summary and evidence status", "1. پوختەی شیکاری و دۆخی بەڵگە"), [S("المؤشر", "Indicator", "پێوەر"), S("القيمة", "Value", "بەها")], analysisRows),
     table(S("2. الكلمات الحالية والجديدة", "2. Current and new keywords", "2. وشەکانی ئێستا و نوێ"), brandCols, brandRows),
     table(S("3. المنافسون والمقارنات والإشارات الاجتماعية", "3. Competitors, comparisons and social signals", "3. ڕکابەران و بەراورد و نیشانە کۆمەڵایەتییەکان"), competitorColumns, competitorAndComparisonRows),
-    table(S("4. مصفوفة المحاور الستة", "4. Six-axis measurement matrix", "4. تۆڕی پێوانەی شەش تەوەر"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("مصدر القياس", "Measurement source", "سەرچاوەی پێوانە"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
+    table(S("4. مصفوفة المحاور الستة", "4. Six-axis measurement matrix", "4. تۆڕی پێوانەی شەش تەوەر"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("تفسير الدرجة والدليل الحرفي والرابط", "Score explanation, literal evidence and URL", "ڕوونکردنەوەی بەها و بەڵگەی وشەبەوشە و بەستەر"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("مصدر القياس", "Measurement source", "سەرچاوەی پێوانە"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
     table(S("5. الكلمات السلبية — أربع مجموعات", "5. Negative keywords — four groups", "5. وشە نەرێنییەکان — چوار گروپ"), [S("المجموعة", "Group", "گروپ"), S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار")], negRows),
     table(S("6. سجل المصادر والروابط الحقيقية", "6. Real source-link registry", "6. تۆماری سەرچاوە و بەستەری ڕاستەقینە"), [S("الرابط أو ملاحظة المصدر", "URL or source note", "بەستەر یان تێبینی سەرچاوە")], srcRows),
   ];
