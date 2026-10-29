@@ -85,6 +85,11 @@ export function KeywordIntelligence() {
       setWorkspaceId(id);
       if (!id || !auth.user?.id) {
         setWorkspaceName(c.noWorkspace);
+        setBrand(String(p.brand_name || p.entity_name || ""));
+        setSite(String(p.website || p.entity_website || ""));
+        setCategory(String(p.specialty || p.sector || ""));
+        setMarket(String(p.hq_country || ""));
+        setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(p.language) ? p.language : l) as ContentLanguage);
         return;
       }
       const { data, error } = await supabase.from("workspaces")
@@ -93,16 +98,21 @@ export function KeywordIntelligence() {
       if (cancelled) return;
       if (error || !data) {
         setWorkspaceName(c.noWorkspace);
+        setBrand(String(p.brand_name || p.entity_name || ""));
+        setSite(String(p.website || p.entity_website || ""));
+        setCategory(String(p.specialty || p.sector || ""));
+        setMarket(String(p.hq_country || ""));
+        setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(p.language) ? p.language : l) as ContentLanguage);
         return;
       }
       setWorkspaceName(data.name);
       const truth: any = data.entity_truth_card || {};
       const profile: any = data.profile || {};
-      setBrand((current) => current.trim() ? current : String(truth.entity_name || profile.brand_name || data.name || ""));
-      setSite((current) => current.trim() ? current : String(data.brand_url || truth.website_url || profile.website || ""));
-      setCategory((current) => current.trim() ? current : String(truth.sector || data.brand_summary || profile.sector || ""));
-      setMarket((current) => current.trim() ? current : [data.city, data.country].filter(Boolean).join(", "));
-      if (data.language && ["ar", "en", "ku"].includes(data.language)) setContentLanguage((current) => current === l ? data.language as ContentLanguage : current);
+      setBrand(String(truth.entity_name || profile.brand_name || data.name || ""));
+      setSite(String(data.brand_url || truth.website_url || profile.website || ""));
+      setCategory(String(truth.sector || data.brand_summary || profile.sector || ""));
+      setMarket([data.city, data.country].filter(Boolean).join(", "));
+      setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(data.language) ? data.language : (["ar", "en", "ku", "fr", "de", "es"].includes(p.language) ? p.language : l)) as ContentLanguage);
     }
     void loadWorkspace();
     const onStorage = (event: StorageEvent) => {
@@ -116,7 +126,7 @@ export function KeywordIntelligence() {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("maaroof:workspace-changed", onWorkspaceChanged);
     };
-  }, [auth.user?.id, l]);
+  }, [auth.user?.id, auth.profile, l]);
 
   async function run() {
     setBusy(true); setErr(""); setPayload(null);
