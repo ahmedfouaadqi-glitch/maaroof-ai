@@ -108,8 +108,14 @@ export function KeywordIntelligence() {
     const onStorage = (event: StorageEvent) => {
       if (event.key === WORKSPACE_KEY) void loadWorkspace();
     };
+    const onWorkspaceChanged = () => void loadWorkspace();
     window.addEventListener("storage", onStorage);
-    return () => { cancelled = true; window.removeEventListener("storage", onStorage); };
+    window.addEventListener("maaroof:workspace-changed", onWorkspaceChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("maaroof:workspace-changed", onWorkspaceChanged);
+    };
   }, [auth.user?.id, l]);
 
   async function run() {
