@@ -17,6 +17,7 @@ export type KiInput = ResearchInput & {
   liveSearchEvidence?: LiveSearchEvidence[];
   liveSerpRequested?: boolean;
   contentLanguage?: string;
+  competitorValidation?: Array<{ name: string; url: string | null; category: string; status: "verified" | "sector_mismatch" | "insufficient_evidence" }>;
 };
 
 const t3 = (l: ExportLang, ar: string, en: string, ku: string) => (l === "ar" ? ar : l === "ku" ? ku : en);
@@ -115,6 +116,14 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   for (const [name, list] of compKw) for (const k of list) { const n = norm(k); allComp.set(n, [...(allComp.get(n) || []), name]); }
   for (const [k, names] of allComp) cmpRows.push([k, brandSet.has(k) ? S("مشتركة", "Shared", "هاوبەش") : S("فجوة: لدى المنافس فقط", "Gap: competitor only", "بۆشایی"), names.join(", "), brandSet.has(k) ? S("تشابه", "Similarity", "لێکچوون") : S("ضعف لدى العلامة", "Brand weakness", "لاوازی")]);
   for (const k of brandList) if (!allComp.has(norm(k)) && comps.some((c) => c.pageText)) cmpRows.push([k, S("لدى العلامة فقط", "Brand only", "تەنها براند"), "-", S("قوة لدى العلامة", "Brand strength", "هێز")]);
+  for (const excluded of input.competitorValidation || []) {
+    if (excluded.status === "sector_mismatch") cmpRows.push([
+      excluded.name,
+      S("مستبعد: قطاع مختلف", "Excluded: sector mismatch", "بوار جیاواز — لابراو"),
+      excluded.category || NM,
+      S("لم يُستخدم في المقارنة؛ تحقّق الموقع الرسمي", "Not used in comparison; official-site evidence", "لە بەراورددا بەکارنەهاتووە"),
+    ]);
+  }
 
   // 4. Social
   const socialRows: (string | number)[][] = [];
@@ -221,6 +230,14 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   for (const s of input.social || []) if (/^https?:\/\//.test(s.url)) src.add(s.url);
   const srcRows: (string | number)[][] = [...src].map((u) => [u]);
   if (input.hasFile) for (const s of input.sheets) srcRows.push([S("الملف المرفق: ", "Attached file: ", "فایل: ") + s.name]);
+  for (const validation of input.competitorValidation || []) {
+    const status = validation.status === "verified"
+      ? S("قطاع متحقق", "Sector verified", "بوار پشتڕاستکراوە")
+      : validation.status === "sector_mismatch"
+        ? S("قطاع غير مطابق — مستبعد", "Sector mismatch — excluded", "بوار ناگونجاو — لابراو")
+        : S("أدلة غير كافية", "Insufficient evidence", "بەڵگەی کەم");
+    srcRows.push([S("تدقيق المنافس: ", "Competitor validation: ", "پشکنینی ڕکابەر: ") + validation.name + " | " + status + " | " + (validation.category || NM) + " | " + (validation.url || NM)]);
+  }
 
   const table = (heading: string, columns: string[], data: (string | number)[][]): ExportSection => ({ heading, kind: "table", table: { columns, data: data.length ? data : [columns.map((_, i) => (i === 0 ? NM : "-"))] } });
   const sections: ExportSection[] = [
