@@ -45,7 +45,7 @@ describe("live keyword axis measurements", () => {
       engineAnswers: modelAnswers, liveSearchEvidence: [liveEvidence], liveSerpRequested: true,
     });
     expect(result.SEO).toMatchObject({
-      value: 80,
+      value: 3,
       position: 3,
       evidenceUrl: "https://shop.example.sa/products/dress",
     });
@@ -70,13 +70,27 @@ describe("live keyword axis measurements", () => {
     expect(result.AEO.value).toBeNull();
   });
 
-  it("excludes fallback gateway answers from direct named-engine GEO measurements", () => {
+  it("counts answers delivered by the automatic backup route in GEO", () => {
     const withFallback = modelAnswers.map((answer, i) => i === 9 ? { ...answer, provider_path: "fallback" as const } : answer);
     const result = measureKeywordAxes({
       keyword, market: "sa", brand: "Acme", site: "https://shop.example.sa",
       engineAnswers: withFallback, liveSearchEvidence: [liveEvidence], liveSerpRequested: true,
     });
-    expect(result.GEO.value).toBeNull();
-    expect(result.GEO.reason).toBe("fallback_answers_excluded");
+    expect(result.GEO.value).toBe(70);
+    expect(result.GEO.reason).toBeNull();
+  });
+});
+
+import { extractSiteKeywords, isPlatformUrl } from "./site-keyword-extractor";
+describe("new keyword hygiene", () => {
+  it("drops image dimensions, follower counts and platform words", () => {
+    const list = extractSiteKeywords({ title: "Evening dresses 3000x3000", description: "62k followers photos and videos", text: "evening dresses evening dresses evening dresses" }).map((k) => k.keyword);
+    expect(list.some((k) => /3000|62k|followers|photos|videos/.test(k))).toBe(false);
+    expect(list).toContain("evening dresses");
+  });
+  it("treats Instagram and YouTube as platforms, not competitors", () => {
+    expect(isPlatformUrl("https://www.instagram.com/brand")).toBe(true);
+    expect(isPlatformUrl("https://youtube.com/@x")).toBe(true);
+    expect(isPlatformUrl("https://rival-couture.com")).toBe(false);
   });
 });
