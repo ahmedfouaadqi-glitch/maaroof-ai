@@ -223,6 +223,33 @@ export const Route = createFileRoute("/api/dual-result")({
           keywordSamplesByMarket[market.code] = candidates;
         }
 
+        // Stratified sample: only these keywords are measured live in this run (others read "out of sample").
+        const { stratifiedSample, sheetStrata, DEFAULT_SAMPLE_PER_MARKET } = await import("@/lib/keyword-discovery");
+        const sampleLimit = Math.max(10, Math.min(500, Math.floor(Number(b?.sample_limit) || DEFAULT_SAMPLE_PER_MARKET)));
+        const skipKeywords = Array.isArray(b?.skip_keywords) ? b.skip_keywords.map((x: any) => String(x)).slice(0, 5000) : [];
+        const totalKeywords = sheetStrata(sheets, keywordColumn).flat().length;
+        const sampleKeywords = hasFile ? stratifiedSample(sheetStrata(sheets, keywordColumn), sampleLimit, skipKeywords) : [];
+        const clusterLimitEstimate = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
+        if (b?.estimate_only === true) {
+          // No calls and no charge: count questions and price them against the balance.
+          const { resolveToolCost, isUnlimitedAccount } = await import("@/lib/tokens.server");
+          const m = Math.min(markets.length, 5);
+          const price = async (key: string) => (await resolveToolCost(userId, key)).tokens || 0;
+          const [pm, pc, pd] = await Promise.all([price("competitive_geo.market"), price("competitive_geo.cluster"), price("keyword_intelligence.discovery")]);
+          const clustersPlanned = m * clusterLimitEstimate;
+          const serpChecks = liveSerpRequested ? m * Math.min(liveSearchLimit, sampleKeywords.length || liveSearchLimit) : 0;
+          const unlimited = await isUnlimitedAccount(userId);
+          const { data: bal } = await db.from("profiles").select("tokens_balance").eq("id", userId).maybeSingle();
+          return Response.json({
+            estimate: {
+              total_keywords: totalKeywords, sample_keywords: hasFile ? sampleKeywords.length : null, skipped_already_measured: skipKeywords.length,
+              markets: m, engine_questions: m * 10 + clustersPlanned * 10 + m * 10, live_search_checks: serpChecks,
+              estimated_tokens: pm * m + pc * clustersPlanned + pd * m * 10,
+              balance: unlimited ? null : Number((bal as any)?.tokens_balance || 0), unlimited,
+            },
+          });
+        }
+
         const competitors = (Array.isArray(b?.competitors) ? b.competitors : String(b?.competitors || "").split(/[,،\n]/))
           .map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
         const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
@@ -325,7 +352,9 @@ export const Route = createFileRoute("/api/dual-result")({
           const seenKeywords = new Set<string>();
           for (const market of markets.slice(0, 5)) {
             const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
-            const words = allKeywords(targetSheets, Number.POSITIVE_INFINITY).slice(0, liveSearchLimit);
+            const sampleSet = new Set(sampleKeywords.map((k: string) => k.toLocaleLowerCase()));
+            const pool = allKeywords(targetSheets, Number.POSITIVE_INFINITY);
+            const words = (sampleSet.size ? pool.filter((k: string) => sampleSet.has(k.toLocaleLowerCase())) : pool).slice(0, liveSearchLimit);
             for (const keyword of words) {
               const key = market.code + "|" + keyword.toLocaleLowerCase();
               if (seenKeywords.has(key)) continue;
@@ -450,6 +479,23 @@ export const Route = createFileRoute("/api/dual-result")({
           totalCharged += Number(cc.tokens || 0);
         }
 
+        // New keywords: real discovery questions to the ten engines, charged per successful answer only.
+        const { askEnginesForDiscovery } = await import("@/lib/competitive-geo.server");
+        const { discoveryConsensus } = await import("@/lib/keyword-discovery");
+        const discoveryAnswers = await askEnginesForDiscovery({
+          brand, category, markets: markets.slice(0, 5),
+          competitors: parties.filter((p) => p.role === "competitor").map((p) => p.name), contentLanguage: contentLanguage as any,
+        });
+        const knownKeywords = allKeywordsFn(sheets);
+        const discovered = discoveryConsensus(discoveryAnswers, knownKeywords, knownKeywords).slice(0, 80);
+        const discoveryAnswered = discoveryAnswers.filter((a) => a.status === "answered").length;
+        if (discoveryAnswered) {
+          const { chargeTokens: ct } = await import("@/lib/tokens.server");
+          let dc: any = await ct({ userId, toolKey: "keyword_intelligence.discovery", units: discoveryAnswered, meta: { attachment_id: id } });
+          if (!dc.ok && dc.reason === "unpriced") dc = await ct({ userId, toolKey: "compare", units: discoveryAnswered, meta: { attachment_id: id, sub: "keyword_intelligence.discovery" } });
+          if (dc.ok) totalCharged += Number(dc.tokens || 0);
+        }
+
         const social = await gatherSocial(parties.map((p) => p.name), userId);
         const { data: prof } = await db.from("profiles").select("onboarding").eq("id", userId).maybeSingle();
         const { buildPack } = await import("@/lib/machine-pack");
@@ -462,7 +508,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
         payload.subtitle = [lang === "ar" ? "لغة المحتوى: " : "Content language: ", contentLanguage, lang === "ar" ? "السوق المستهدف: " : " · Target market: ", markets.map((m: any) => lang === "ar" ? m.ar : m.en).join(", "), lang === "ar" ? "فحص نتائج البحث المباشر: " : " · Live search check: ", liveSerpRequested ? (lang === "ar" ? "مطلوب" : "requested") : (lang === "ar" ? "لم يُطلب" : "not requested")].join("");
         const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
-        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage, competitorValidation });
+        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage, competitorValidation, discovered, sampleKeywords: hasFile ? sampleKeywords : undefined, totalKeywords, charged: totalCharged });
         payload.excelLayout = "six_sheets";
         if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة البيانات المهيكلة الموثقة" : "Verified structured data evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
         if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
@@ -507,7 +553,7 @@ export const Route = createFileRoute("/api/dual-result")({
               ? "All successful engine answers are counted. Review the per-engine status and evidence sources."
               : "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
             : "Some external evidence was retrieved. Results still need contextual validation and are not a ranking guarantee.";
-        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        return Response.json({ measured_keywords: [...skipKeywords, ...sampleKeywords], payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },
