@@ -95,7 +95,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   // Keep competitor-derived opportunities even when engine discovery is available.
   // Deduplicate by normalized phrase, preferring a literal competitor-page source when present.
   const fresh: Array<{ keyword: string; from: "competitor" | "engines"; party?: string; sourceUrl?: string; snippet?: string }> =
-    [...new Map([...discoveryCandidates, ...competitorCandidates].map((item) => [norm(item.keyword), item])).values()].slice(0, 80);
+    [...new Map([...discoveryCandidates, ...competitorCandidates].map((item) => [norm(item.keyword), item])).values()].slice(0, Math.min(400, 80 * Math.max(1, input.markets.length)));
   const sampleSet = input.sampleKeywords ? new Set(input.sampleKeywords.map(norm)) : null;
   const sampledPairSet = input.sampledMarketKeywords
     ? new Set(input.sampledMarketKeywords.map((item) => item.market + "|" + norm(item.keyword)))
