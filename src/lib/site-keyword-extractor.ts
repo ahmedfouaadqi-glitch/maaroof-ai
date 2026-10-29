@@ -10,13 +10,22 @@ const STOP = new Set((
 ).split(/\s+/));
 
 const tokens = (s: string) => (s.toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}'-]*/gu) || []).filter((w) => !/^\d+$/.test(w));
-const good = (w: string) => w.length >= 3 && !STOP.has(w);
+const NOISE = new Set("followers following follower posts photos videos video photo likes views reels stories subscribers instagram facebook tiktok youtube twitter linkedin pinterest snapchat whatsapp http https www com html php jpg jpeg png webp gif svg mp4 px rgb utf javascript cookie cookies".split(" "));
+// Technical junk: dimensions (3000x3000), counts (62k), mixed digit tokens, file names.
+const isNoise = (w: string) => NOISE.has(w) || /\d/.test(w) || /^[a-z]{1,2}$/.test(w);
+const good = (w: string) => w.length >= 3 && !STOP.has(w) && !isNoise(w);
+
+const PLATFORMS = ["instagram.com", "facebook.com", "youtube.com", "youtu.be", "tiktok.com", "x.com", "twitter.com", "linkedin.com", "pinterest.com", "snapchat.com", "wikipedia.org", "amazon.com", "reddit.com", "threads.net"];
+/** True when the URL belongs to a public social/publishing platform rather than a brand's own site. */
+export function isPlatformUrl(url?: string | null): boolean {
+  try { const h = new URL(String(url)).hostname.toLowerCase().replace(/^www\./, ""); return PLATFORMS.some((p) => h === p || h.endsWith("." + p)); } catch { return false; }
+}
 
 function grams(text: string, n: number): string[] {
   const t = tokens(text); const out: string[] = [];
   for (let i = 0; i + n <= t.length; i++) {
     const g = t.slice(i, i + n);
-    if (!good(g[0]) || !good(g[n - 1])) continue;
+    if (!good(g[0]) || !good(g[n - 1]) || g.some(isNoise)) continue;
     out.push(g.join(" "));
   }
   return out;

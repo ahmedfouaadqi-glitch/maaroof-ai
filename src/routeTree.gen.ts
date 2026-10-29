@@ -30,7 +30,6 @@ import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
 import { Route as ApiAttachmentAnalyzeRouteImport } from './routes/api/attachment-analyze'
-import { Route as ApiKeywordUploadRouteImport } from './routes/api/keyword-upload'
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-authority'
 import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
@@ -43,6 +42,7 @@ import { Route as ApiDualResultRouteImport } from './routes/api/dual-result'
 import { Route as ApiFeasibilityRouteImport } from './routes/api/feasibility'
 import { Route as ApiGeoRewriteRouteImport } from './routes/api/geo-rewrite'
 import { Route as ApiGeoStrategistRouteImport } from './routes/api/geo-strategist'
+import { Route as ApiKeywordUploadRouteImport } from './routes/api/keyword-upload'
 import { Route as ApiKnownRouteImport } from './routes/api/known'
 import { Route as ApiMaaroofRouteImport } from './routes/api/maaroof'
 import { Route as ApiMaaroofChatRouteImport } from './routes/api/maaroof-chat'
@@ -172,11 +172,6 @@ const ApiAttachmentAnalyzeRoute = ApiAttachmentAnalyzeRouteImport.update({
   path: '/api/attachment-analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiKeywordUploadRoute = ApiKeywordUploadRouteImport.update({
-  id: '/api/keyword-upload',
-  path: '/api/keyword-upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiBizdevRoute = ApiBizdevRouteImport.update({
   id: '/api/bizdev',
   path: '/api/bizdev',
@@ -235,6 +230,11 @@ const ApiGeoRewriteRoute = ApiGeoRewriteRouteImport.update({
 const ApiGeoStrategistRoute = ApiGeoStrategistRouteImport.update({
   id: '/api/geo-strategist',
   path: '/api/geo-strategist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiKeywordUploadRoute = ApiKeywordUploadRouteImport.update({
+  id: '/api/keyword-upload',
+  path: '/api/keyword-upload',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiKnownRoute = ApiKnownRouteImport.update({
@@ -378,7 +378,6 @@ export interface FileRoutesByFullPath {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/attachment-analyze': typeof ApiAttachmentAnalyzeRoute
-  '/api/keyword-upload': typeof ApiKeywordUploadRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
@@ -391,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/keyword-upload': typeof ApiKeywordUploadRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
   '/api/maaroof-chat': typeof ApiMaaroofChatRoute
@@ -437,7 +437,6 @@ export interface FileRoutesByTo {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/attachment-analyze': typeof ApiAttachmentAnalyzeRoute
-  '/api/keyword-upload': typeof ApiKeywordUploadRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
@@ -450,6 +449,7 @@ export interface FileRoutesByTo {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/keyword-upload': typeof ApiKeywordUploadRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
   '/api/maaroof-chat': typeof ApiMaaroofChatRoute
@@ -497,7 +497,6 @@ export interface FileRoutesById {
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
   '/api/attachment-analyze': typeof ApiAttachmentAnalyzeRoute
-  '/api/keyword-upload': typeof ApiKeywordUploadRoute
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
@@ -510,6 +509,7 @@ export interface FileRoutesById {
   '/api/feasibility': typeof ApiFeasibilityRoute
   '/api/geo-rewrite': typeof ApiGeoRewriteRoute
   '/api/geo-strategist': typeof ApiGeoStrategistRoute
+  '/api/keyword-upload': typeof ApiKeywordUploadRoute
   '/api/known': typeof ApiKnownRoute
   '/api/maaroof': typeof ApiMaaroofRoute
   '/api/maaroof-chat': typeof ApiMaaroofChatRoute
@@ -558,7 +558,6 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/attachment-analyze'
-    | '/api/keyword-upload'
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
@@ -571,6 +570,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/keyword-upload'
     | '/api/known'
     | '/api/maaroof'
     | '/api/maaroof-chat'
@@ -617,7 +617,6 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/attachment-analyze'
-    | '/api/keyword-upload'
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
@@ -630,6 +629,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/keyword-upload'
     | '/api/known'
     | '/api/maaroof'
     | '/api/maaroof-chat'
@@ -676,7 +676,6 @@ export interface FileRouteTypes {
     | '/api/analyze'
     | '/api/applied-ranking'
     | '/api/attachment-analyze'
-    | '/api/keyword-upload'
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
@@ -689,6 +688,7 @@ export interface FileRouteTypes {
     | '/api/feasibility'
     | '/api/geo-rewrite'
     | '/api/geo-strategist'
+    | '/api/keyword-upload'
     | '/api/known'
     | '/api/maaroof'
     | '/api/maaroof-chat'
@@ -736,7 +736,6 @@ export interface RootRouteChildren {
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
   ApiAttachmentAnalyzeRoute: typeof ApiAttachmentAnalyzeRoute
-  ApiKeywordUploadRoute: typeof ApiKeywordUploadRoute
   ApiBizdevRoute: typeof ApiBizdevRoute
   ApiBrandAuthorityRoute: typeof ApiBrandAuthorityRoute
   ApiBrandBoostRoute: typeof ApiBrandBoostRoute
@@ -749,6 +748,7 @@ export interface RootRouteChildren {
   ApiFeasibilityRoute: typeof ApiFeasibilityRoute
   ApiGeoRewriteRoute: typeof ApiGeoRewriteRoute
   ApiGeoStrategistRoute: typeof ApiGeoStrategistRoute
+  ApiKeywordUploadRoute: typeof ApiKeywordUploadRoute
   ApiKnownRoute: typeof ApiKnownRoute
   ApiMaaroofRoute: typeof ApiMaaroofRoute
   ApiMaaroofChatRoute: typeof ApiMaaroofChatRoute
@@ -919,13 +919,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAttachmentAnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/keyword-upload': {
-      id: '/api/keyword-upload'
-      path: '/api/keyword-upload'
-      fullPath: '/api/keyword-upload'
-      preLoaderRoute: typeof ApiKeywordUploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/bizdev': {
       id: '/api/bizdev'
       path: '/api/bizdev'
@@ -1008,6 +1001,13 @@ declare module '@tanstack/react-router' {
       path: '/api/geo-strategist'
       fullPath: '/api/geo-strategist'
       preLoaderRoute: typeof ApiGeoStrategistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/keyword-upload': {
+      id: '/api/keyword-upload'
+      path: '/api/keyword-upload'
+      fullPath: '/api/keyword-upload'
+      preLoaderRoute: typeof ApiKeywordUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/known': {
@@ -1221,7 +1221,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiAppliedRankingRoute: ApiAppliedRankingRoute,
   ApiAttachmentAnalyzeRoute: ApiAttachmentAnalyzeRoute,
-  ApiKeywordUploadRoute: ApiKeywordUploadRoute,
   ApiBizdevRoute: ApiBizdevRoute,
   ApiBrandAuthorityRoute: ApiBrandAuthorityRoute,
   ApiBrandBoostRoute: ApiBrandBoostRoute,
@@ -1234,6 +1233,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeasibilityRoute: ApiFeasibilityRoute,
   ApiGeoRewriteRoute: ApiGeoRewriteRoute,
   ApiGeoStrategistRoute: ApiGeoStrategistRoute,
+  ApiKeywordUploadRoute: ApiKeywordUploadRoute,
   ApiKnownRoute: ApiKnownRoute,
   ApiMaaroofRoute: ApiMaaroofRoute,
   ApiMaaroofChatRoute: ApiMaaroofChatRoute,
