@@ -15,7 +15,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const b: any = await request.json().catch(() => ({}));
         const lang = ["ar", "en", "ku"].includes(b?.lang) ? b.lang : "ar";
         const id = String(b?.attachment_id || "");
-        if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "missing_input", need: ["attachment_id"] }, { status: 400 });
+        const hasFile = Boolean(id);
+        if (hasFile && !/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "missing_input", need: ["attachment_id"] }, { status: 400 });
 
         const workspaceId = b?.workspace_id == null || b.workspace_id === "" ? null : String(b.workspace_id);
         let workspace: any = null;
@@ -28,20 +29,24 @@ export const Route = createFileRoute("/api/dual-result")({
           workspace = space;
         }
 
-        const { data: at } = await db.from("task_attachments")
-          .select("id, path, name, mime, workspace_id")
-          .eq("id", id).eq("user_id", userId).maybeSingle();
-        if (!at) return Response.json({ error: "not_found" }, { status: 404 });
-        if (((at as any).workspace_id || null) !== workspaceId) {
-          return Response.json({ error: "attachment_workspace_mismatch" }, { status: 403 });
+        // No file attached: keywords come from scanning the brand site (see below).
+        let sheets: any[] = [];
+        if (hasFile) {
+          const { data: at } = await db.from("task_attachments")
+            .select("id, path, name, mime, workspace_id")
+            .eq("id", id).eq("user_id", userId).maybeSingle();
+          if (!at) return Response.json({ error: "not_found" }, { status: 404 });
+          if (((at as any).workspace_id || null) !== workspaceId) {
+            return Response.json({ error: "attachment_workspace_mismatch" }, { status: 403 });
+          }
+          const { isSpreadsheetName } = await import("@/lib/spreadsheet-reader");
+          const kind = isSpreadsheetName((at as any).name, (at as any).mime || "");
+          if (!kind) return Response.json({ error: "not_spreadsheet" }, { status: 422 });
+          const { data: file } = await db.storage.from("task-files").download((at as any).path);
+          if (!file) return Response.json({ error: "file_unavailable" }, { status: 422 });
+          const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
+          sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
         }
-        const { isSpreadsheetName } = await import("@/lib/spreadsheet-reader");
-        const kind = isSpreadsheetName((at as any).name, (at as any).mime || "");
-        if (!kind) return Response.json({ error: "not_spreadsheet" }, { status: 422 });
-        const { data: file } = await db.storage.from("task-files").download((at as any).path);
-        if (!file) return Response.json({ error: "file_unavailable" }, { status: 422 });
-        const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
-        const sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
 
         const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
         const { keywordColumn } = await import("@/lib/operational-workbook");
