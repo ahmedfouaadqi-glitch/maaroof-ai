@@ -367,9 +367,9 @@ export const Route = createFileRoute("/api/dual-result")({
             brand, lang, markets, sheets, parties, engineAnswers,
             social: [], alexandria: partialAlexandria, clusterAnswers: [],
           });
-          payload.subtitle = [lang === "ar" ? "لغة المحتوى: " : "Content language: ", contentLanguage, lang === "ar" ? "السوق المستهدف: " : " · Target market: ", markets.map((m: any) => lang === "ar" ? m.ar : m.en).join(", "), lang === "ar" ? "فحص نتائج البحث المباشر: " : " · Live search check: ", liveSerpRequested ? (lang === "ar" ? "مطلوب" : "requested") : (lang === "ar" ? "لم يُطلب" : "not requested")].join("");
+          payload.subtitle = [lang === "ar" ? "المجال المتحقق: " : "Verified sector: ", category, " · ", lang === "ar" ? "مصدر المجال: " : "Sector source: ", categorySource, " · ", lang === "ar" ? "لغة المحتوى: " : "Content language: ", contentLanguage, " · ", lang === "ar" ? "السوق المستهدف: " : "Target market: ", markets.map((m: any) => lang === "ar" ? m.ar : m.en).join(", "), " · ", lang === "ar" ? "فحص نتائج البحث المباشر: " : "Live search check: ", liveSerpRequested ? (lang === "ar" ? "مطلوب" : "requested") : (lang === "ar" ? "لم يُطلب" : "not requested")].join("");
           const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
-          payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social: [], clusterAnswers: [], hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage });
+          payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social: [], clusterAnswers: [], hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage, competitorValidation });
           const summary = markets.map((m: any) => ({
             market: m.code,
             label: lang === "ar" ? m.ar : m.en,
@@ -397,7 +397,8 @@ export const Route = createFileRoute("/api/dual-result")({
             payload, summary, diagnostics, evidence_state: "none" as const,
             evidence_note: "No external evidence was retrieved. The workbook still preserves the original rows, actual market queries, and failed/no-answer statuses. Additional paid research stages were skipped.",
             parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
-            context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection },
+            competitor_validation: competitorValidation,
+            context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation },
             charged: 0,
             clusters: { asked: 0, answered: 0, billable_answered: 0, probes_asked: 0, probes_answered: 0, probes_fallback_answered: 0 },
             negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
@@ -494,7 +495,7 @@ export const Route = createFileRoute("/api/dual-result")({
               ? "Some responses used the automatic fallback model route. These can inform research, but are not direct observations of the named engines and are excluded from direct visibility/share-of-voice scores. Review the per-engine status and evidence sources."
               : "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
             : "Some external evidence was retrieved. Results still need contextual validation and are not a ranking guarantee.";
-        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },
