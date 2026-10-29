@@ -30,10 +30,8 @@ export function extractPhrases(answer: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const raw of String(answer || "").split(/\n|؛|;/)) {
+    if (!/^\s*(?:[-*•–]|\d+[.)-])\s*\S/.test(raw)) continue; // only listed lines
     const line = raw.replace(/^\s*(?:[-*•–]|\d+[.)-])\s*/, "").replace(/[«»"“”'`*]/g, "").replace(/[.،,:]+$/, "").trim();
-    if (!line || line === raw.trim() && !/^\s*(?:[-*•–]|\d+[.)-])/.test(raw)) {
-      if (!/^\s*(?:[-*•–]|\d+[.)-])/.test(raw)) continue;
-    }
     const words = line.split(/\s+/).filter(Boolean);
     if (words.length < 2 || words.length > 6 || NOISE.test(line)) continue;
     const n = norm(line);
