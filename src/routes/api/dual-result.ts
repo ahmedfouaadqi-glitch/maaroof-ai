@@ -124,7 +124,7 @@ export const Route = createFileRoute("/api/dual-result")({
           if (cachedOfficialPage) {
             officialBrandPageEvidence = { ...cachedOfficialPage, cacheHit: true };
           } else {
-            officialBrandPageEvidence = await readOfficialBrandEvidence(site, userId);
+            officialBrandPageEvidence = await readOfficialBrandEvidence(site, userId, workspaceId);
             if (officialBrandPageEvidence.text || officialBrandPageEvidence.title || officialBrandPageEvidence.description) {
               await putKeywordEvidence(officialPageScope, officialBrandPageEvidence);
             }
@@ -290,7 +290,7 @@ export const Route = createFileRoute("/api/dual-result")({
           engineAnswers = cachedMarketStage.engineAnswers.map((answer) => ({ ...answer, cacheHit: true }));
         } else {
           [parties, engineAnswers] = await Promise.all([
-            gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence }),
+            gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId, workspaceId, brandPageEvidence: officialBrandPageEvidence }),
             askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket, contentLanguage),
           ]);
           const reusableEvidence = parties.some((party) => Boolean(party.pageText)) || engineAnswers.some((answer) => answer.status === "answered");
@@ -346,7 +346,7 @@ export const Route = createFileRoute("/api/dual-result")({
           if (excludedCompetitors.length) {
             const trustedNames = firstValidation.keep.filter((party) => party.role === "competitor").map((party) => party.name);
             // Re-discover the vacancies against the verified brand sector instead of retaining unrelated entities.
-            const refreshed = await gatherParties({ brand, site, competitors: trustedNames, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence });
+            const refreshed = await gatherParties({ brand, site, competitors: trustedNames, category, markets: markets.slice(0, 5), userId, workspaceId, brandPageEvidence: officialBrandPageEvidence });
             const secondValidation = validateCompetitors(refreshed);
             parties = secondValidation.keep;
             excludedCompetitors = [...excludedCompetitors, ...secondValidation.excluded];
