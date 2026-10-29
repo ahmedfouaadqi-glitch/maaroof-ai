@@ -1073,9 +1073,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps.push({ tool: "visibility", input: {}, reason: ctx.language === "en" ? "Ask the ten AI models directly (default)." : "استجواب النماذج العشرة مباشرة (افتراضي)." } as any);
     }
     const specialists = new Set<string>();
+    const resultSignatureForStep = (step: PlanStep) => reusableResultKey(step.tool, {
+      input: step.input,
+      goal: ctx.goal,
+      language: ctx.language,
+      workspace_id: ctx.workspaceId || null,
+      geo_scope: ctx.geoScope || null,
+      prior_results: results.map((result) => ({ tool: result.tool, ok: result.ok, output: result.output })),
+    });
     const runStep = async (i: number) => {
       const step = steps[i];
-      const inputSignature = reusableResultKey(step.tool, step.input);
+      const inputSignature = resultSignatureForStep(step);
       // Old queued plans may still contain this key; skip it before agent creation, dispatch or billing.
       if (step.tool === "competitor_monitor") {
         const skip = { skipped: "temporarily_paused", tool: "competitor_monitor" };
@@ -1347,7 +1355,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const overBudget = () => !!ctx.runOptions?.salvageOnFailure && Date.now() - startedExec > SALVAGE_BUDGET_MS;
     const reuseStep = async (i: number) => {
       const step = steps[i];
-      const signature = reusableResultKey(step.tool, step.input);
+      const signature = resultSignatureForStep(step);
       // Prefer exact-input matches; legacy results are reusable only when unambiguous.
       const reuseKey = Object.prototype.hasOwnProperty.call(reusedOut, signature)
         ? signature
