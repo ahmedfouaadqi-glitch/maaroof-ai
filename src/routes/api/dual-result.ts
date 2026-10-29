@@ -566,7 +566,7 @@ export const Route = createFileRoute("/api/dual-result")({
                 evidenceKey: await evidenceCacheKey({ analysisScopeKey, market: market.code, keyword, query, lang: contentLanguage }),
               };
               const cached = await getKeywordEvidence<any>(cacheScope);
-              if (cached && Array.isArray(cached.results) && cached.results.length) {
+              if (cached && Array.isArray(cached.results)) {
                 liveSearchEvidence.push({ ...cached, cacheHit: true });
               } else {
                 liveSearchEvidence.push({
@@ -619,7 +619,7 @@ export const Route = createFileRoute("/api/dual-result")({
                 evidenceKey: await evidenceCacheKey({ analysisScopeKey, market: market.code, keyword, query, lang: contentLanguage }),
               };
               const cached = await getKeywordEvidence<any>(cacheScope);
-              if (cached && Array.isArray(cached.results) && cached.results.length) {
+              if (cached && Array.isArray(cached.results)) {
                 liveSearchEvidence.push({ ...cached, cacheHit: true });
               } else {
                 try {
@@ -638,7 +638,7 @@ export const Route = createFileRoute("/api/dual-result")({
                     ...(!results.length ? { error: "live_search_unavailable" } : {}),
                   };
                   liveSearchEvidence.push({ ...observation, cacheHit: false });
-                  if (results.length) await putKeywordEvidence(cacheScope, observation);
+                  await putKeywordEvidence(cacheScope, observation, results.length ? 24 : 4);
                 } catch (error: any) {
                   liveSearchEvidence.push({
                     keyword, market: market.code, query, status: "unavailable", results: [],
