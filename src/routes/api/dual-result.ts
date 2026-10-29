@@ -486,6 +486,7 @@ export const Route = createFileRoute("/api/dual-result")({
           brand, category, markets: markets.slice(0, 5),
           competitors: parties.filter((p) => p.role === "competitor").map((p) => p.name), contentLanguage: contentLanguage as any,
         });
+        const { allKeywords: allKeywordsFn } = await import("@/lib/operational-workbook");
         const knownKeywords = allKeywordsFn(sheets);
         const discovered = discoveryConsensus(discoveryAnswers, knownKeywords, knownKeywords).slice(0, 80);
         const discoveryAnswered = discoveryAnswers.filter((a) => a.status === "answered").length;
