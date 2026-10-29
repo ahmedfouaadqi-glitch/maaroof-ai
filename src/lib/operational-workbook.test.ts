@@ -175,12 +175,20 @@ describe("operational workbook", () => {
     expect(keywordAxis("best luxury bags").axis).toBe("GEO");
   });
 
-  it("exposes all six heuristic axes without presenting them as measured visibility", () => {
+  it("keeps heuristic intent classification separate from measured axis output", () => {
     const scores = keywordAxisScores("AI answer citations and sources");
     expect(Object.keys(scores).sort()).toEqual(["AEO", "GEO", "GSEO", "SEO", "SGE", "SGEO"].sort());
-    expect(scores.SGEO).toBeGreaterThan(scores.SEO);
     expect(keywordAxis("technical SEO audit").axis).toBe("GSEO");
     expect(keywordAxis("Google AI overview").axis).toBe("SGE");
+    const p = buildOperationalPayload({
+      brand: "B", lang: "en", markets: detectMarkets(["USA"]),
+      sheets: [{ name: "USA KEYWORDS", columns: ["Keyword"], rows: [["AI answer citations and sources"]], totalRows: 1, truncated: false }],
+      parties: [{ name: "B", role: "brand", url: null, found: "user", pageText: null }],
+      engineAnswers: [],
+    });
+    const row = p.sections.find((s) => s.heading === "Keywords per engine")!.table!.data[0];
+    expect(row[6]).toContain("SEO: Not measured");
+    expect(row[6]).not.toContain("SEO: 25");
   });
 
   it("includes more than 30 keywords per market in the operational output", () => {
@@ -195,6 +203,6 @@ describe("operational workbook", () => {
     });
     const perEngine = p.sections.find((s) => s.heading === "Keywords per engine")!;
     expect(perEngine.table!.data).toHaveLength(42);
-    expect(perEngine.table!.columns).toContain("Six-axis heuristic scores (not measured)");
+    expect(perEngine.table!.columns).toContain("Six-axis scores");
   });
 });
