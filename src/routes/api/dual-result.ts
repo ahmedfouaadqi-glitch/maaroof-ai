@@ -302,7 +302,10 @@ export const Route = createFileRoute("/api/dual-result")({
         const { sheetsForMarket } = await import("@/lib/market-scope");
         const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheetsForMarket(sheets, markets, m).filter((s: any) => !/negative|سلبي/i.test(s.name)).flatMap(kwOf), winners, clusterLimit));
         const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
-        const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c, contentLanguage) : [];
+        const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (code) => {
+          const market = markets.find((item: any) => item.code === code) as any;
+          return contentLanguage === "ar" || contentLanguage === "ku" ? (market?.ar || code) : (market?.en || code);
+        }, contentLanguage) : [];
         const answeredClusters = answeredClusterCount(clusterAnswers); // direct visibility count only
         const billableClusters = billableClusterCount(clusterAnswers); // charge usable results from either route
         if (billableClusters) {
