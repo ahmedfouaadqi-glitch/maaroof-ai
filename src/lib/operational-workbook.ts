@@ -20,7 +20,7 @@ export type PartyEvidence = {
   cacheHit?: boolean;
 };
 
-export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string; cacheHit?: boolean };
+export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string; cacheHit?: boolean; probe_kind?: "keyword_visibility" };
 
 export type ResearchInput = {
   brand: string;
