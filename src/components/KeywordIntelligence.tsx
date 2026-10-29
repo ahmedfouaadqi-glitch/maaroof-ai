@@ -15,8 +15,8 @@ const T = {
     title: "ذكاء الكلمات المفتاحية التنافسية",
     hint: "يمكنك تحليل كلمات الموقع أو إرفاق مصنف. تُفصل لغة المحتوى عن السوق المستهدف.",
     brand: "العلامة", site: "الموقع الرسمي", category: "المجال / القطاع",
-    comps: "المنافسون (اختياري، افصل بفاصلة)", market: "السوق المستهدف / الدولة",
-    contentLanguage: "لغة المحتوى والكلمات", file: "إرفاق ملف كلمات مفتاحية (XLSX / XLSM / CSV / TSV)",
+    comps: "المنافسون (اختياري، افصل بفاصلة)", market: "الأسواق المستهدفة (افصل بينها بفاصلة)",
+    contentLanguage: "لغة المحتوى والكلمات", marketHint: "مثال: العراق، السعودية، الإمارات، لبنان. تُدمج الأسواق المكتوبة مع الأسواق التي يكتشفها النظام من تبويبات الملف.", file: "إرفاق ملف كلمات مفتاحية (XLSX / XLSM / CSV / TSV)",
     liveSearch: "فحص حي لنتائج البحث والروابط (Live Verification)",
     liveLimit: "عدد الكلمات للفحص الحي لكل سوق (1–50)",
     run: "ابدأ التحليل", busy: "يجري التحليل…", selectedFile: "الملف المحدد",
@@ -28,8 +28,8 @@ const T = {
     title: "Competitive Keyword Intelligence",
     hint: "Analyze site keywords or attach a workbook. Content language and target market are independent.",
     brand: "Brand", site: "Official website", category: "Business sector",
-    comps: "Competitors (optional, comma separated)", market: "Target market / country",
-    contentLanguage: "Content and keyword language", file: "Attach keyword workbook (XLSX / XLSM / CSV / TSV)",
+    comps: "Competitors (optional, comma separated)", market: "Target markets (comma separated)",
+    contentLanguage: "Content and keyword language", marketHint: "Example: Iraq, Saudi Arabia, UAE, Lebanon. Typed markets are merged with markets detected from workbook tabs.", file: "Attach keyword workbook (XLSX / XLSM / CSV / TSV)",
     liveSearch: "Live search results and link verification (Live Verification)",
     liveLimit: "Keywords to check live per market (1–50)",
     run: "Run analysis", busy: "Analyzing…", selectedFile: "Selected file",
@@ -41,8 +41,8 @@ const T = {
     title: "زیرەکی وشە سەرەکییە ڕکابەرییەکان",
     hint: "وشەکانی ماڵپەڕ شیکەرەوە یان فایلێکی خشتەیی هاوپێچ بکە. زمانی ناوەڕۆک لە بازاڕی ئامانج جیاوازە.",
     brand: "براند", site: "ماڵپەڕی فەرمی", category: "بواری کار",
-    comps: "ڕکابەران (ئارەزوومەندانە)", market: "بازاڕی ئامانج / وڵات",
-    contentLanguage: "زمانی ناوەڕۆک و وشەکان", file: "هاوپێچکردنی فایل (XLSX / XLSM / CSV / TSV)",
+    comps: "ڕکابەران (ئارەزوومەندانە)", market: "بازاڕە ئامانجەکان (بە کۆما جیا بکەوە)",
+    contentLanguage: "زمانی ناوەڕۆک و وشەکان", marketHint: "نموونە: عێراق، سعودیە، ئیمارات، لوبنان. بازاڕە نووسراوەکان لەگەڵ بازاڕی ناسراو لە پەڕەکانی فایل تێکەڵ دەکرێن.", file: "هاوپێچکردنی فایل (XLSX / XLSM / CSV / TSV)",
     liveSearch: "پشکنینی ڕاستەوخۆی ئەنجامی گەڕان و بەستەرەکان (Live Verification)",
     liveLimit: "ژمارەی وشە بۆ پشکنینی ڕاستەوخۆ لە هەر بازاڕێک (1–50)",
     run: "دەستپێکردن", busy: "شیکردنەوە…", selectedFile: "فایلی هەڵبژێردراو",
@@ -176,7 +176,7 @@ export function KeywordIntelligence() {
           lang: l,
           request_text: c.title,
           estimate_only: mode === "estimate",
-          skip_keywords: mode === "expand" ? measured : [],
+          skip_keyword_pairs: mode === "expand" ? measured : [],
         }),
       });
       const j = await response.json().catch(() => ({}));
@@ -184,7 +184,8 @@ export function KeywordIntelligence() {
       if (mode === "estimate") { setEstimate(j.estimate || null); return; }
       setEstimate(null);
       setPayload(j.payload);
-      if (Array.isArray(j.measured_keywords)) setMeasured(j.measured_keywords);
+      if (Array.isArray(j.measured_pairs)) setMeasured(j.measured_pairs);
+      else if (Array.isArray(j.measured_keywords)) setMeasured(j.measured_keywords);
       if (Array.isArray(j.parties)) {
         setComps(j.parties.filter((party: any) => party?.role === "competitor").map((party: any) => String(party.name || "")).filter(Boolean).join(", "));
       }
@@ -212,6 +213,7 @@ export function KeywordIntelligence() {
           {field(c.site, site, setSite)}
           {field(c.category, category, setCategory)}
           {field(c.market, market, setMarket)}
+          <p className="text-[11px] leading-5 text-muted-foreground sm:col-span-2">{c.marketHint}</p>
           <label className="block text-xs text-muted-foreground">{c.contentLanguage}
             <select value={contentLanguage} onChange={(e) => setContentLanguage(e.target.value as ContentLanguage)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
               {Object.entries(LANGUAGE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
@@ -240,14 +242,21 @@ export function KeywordIntelligence() {
           </label>}
           <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{c.liveNote}</p>
         </div>
-        <button onClick={() => run("estimate")} disabled={busy || !brand.trim()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-          {busy && <Loader2 className="size-4 animate-spin" />}{busy ? c.busy : (l === "en" ? "Estimate cost" : "تقدير التكلفة")}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button onClick={() => run("run")} disabled={busy || !brand.trim()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+            {busy && <Loader2 className="size-4 animate-spin" />}{busy ? c.busy : c.run}
+          </button>
+          <button onClick={() => run("estimate")} disabled={busy || !brand.trim()} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-50">
+            {busy && <Loader2 className="size-4 animate-spin" />}{l === "en" ? "Estimate cost first (optional)" : "تقدير التكلفة أولاً (اختياري)"}
+          </button>
+        </div>
         {estimate && (
           <div className="mt-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs leading-6 text-foreground">
             <div>{l === "en" ? "Keywords in file" : "الكلمات في الملف"}: <b>{estimate.total_keywords}</b>{estimate.sample_keywords != null && <> · {l === "en" ? "Sample measured now" : "العينة التي ستُقاس الآن"}: <b>{estimate.sample_keywords}</b></>}</div>
-            <div>{l === "en" ? "Questions to the ten engines" : "أسئلة للمحركات العشرة"}: <b>{estimate.engine_questions}</b> · {l === "en" ? "Live search checks" : "فحوص بحث حي"}: <b>{estimate.live_search_checks}</b></div>
+            <div>{l === "en" ? "Questions to the ten engines" : "أسئلة المحركات العشرة"}: <b>{estimate.engine_questions}</b> · {l === "en" ? "Live search checks" : "فحوص البحث الحي"}: <b>{estimate.live_search_checks}</b></div>
+            {estimate.new_keyword_checks != null && <div>{l === "en" ? "Planned new-keyword checks (per market)" : "فحوص الكلمات الجديدة المخططة لكل سوق"}: <b>{estimate.new_keyword_checks}</b></div>}
             <div>{l === "en" ? "Estimated cost" : "التكلفة التقديرية"}: <b>{estimate.estimated_tokens}</b> · {l === "en" ? "Your balance" : "رصيدك"}: <b>{estimate.unlimited ? (l === "en" ? "Unlimited" : "غير محدود") : estimate.balance}</b></div>
+            <p className="text-[11px] text-muted-foreground">{l === "en" ? "Fresh calls may be lower when matching evidence already exists in this workspace's 24-hour cache." : "قد يقل عدد الاستدعاءات الجديدة عند وجود أدلة مطابقة مسبقاً في ذاكرة مساحة العمل لمدة 24 ساعة."}</p>
             <p className="text-muted-foreground">{l === "en" ? "You are charged only for successful answers." : "يُخصم فقط مقابل الإجابات الناجحة."}</p>
             <button onClick={() => run("run")} disabled={busy} className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{l === "en" ? "Start" : "ابدأ"}</button>
           </div>
@@ -263,10 +272,43 @@ export function KeywordIntelligence() {
           {payload.sections.map((section, i) => section.table && (
             <section key={i} className="overflow-x-auto rounded-xl border border-border">
               <h3 className="bg-muted px-3 py-2 text-sm font-semibold">{section.heading}</h3>
-              <table className="w-full text-xs">
-                <thead><tr>{section.table.columns.map((header, j) => <th key={j} className="border-b border-border px-2 py-1 text-start font-medium">{header}</th>)}</tr></thead>
-                <tbody>{section.table.data.map((row, j) => <tr key={j} className="border-b border-border/50">{row.map((value, k) => <td key={k} className="px-2 py-1 align-top">{String(value)}</td>)}</tr>)}</tbody>
-              </table>
+              {section.table.columns.some((column) => /تفسير الدرجة|score explanation|ڕوونکردنەوەی بەها/i.test(column)) ? (
+                <div className="space-y-2 p-3">
+                  {section.table.data.map((row, j) => (
+                    <details key={j} className="rounded-lg border border-border/70 bg-background">
+                      <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium">
+                        <span className="font-semibold">{String(row[0] ?? "")}</span>
+                        <span className="mx-2 text-muted-foreground">· {String(row[1] ?? "")}</span>
+                        <span className="mt-1 flex flex-wrap gap-1.5">
+                          {section.table!.columns.slice(2, 8).map((header, k) => (
+                            <span key={k} className="rounded-md bg-muted px-1.5 py-1 text-[10px]">{header}: {String(row[k + 2] ?? "")}</span>
+                          ))}
+                        </span>
+                      </summary>
+                      <div className="grid gap-2 border-t border-border p-3 sm:grid-cols-2">
+                        {section.table!.columns.map((header, k) => {
+                          const value = String(row[k] ?? "");
+                          if (!value || k < 2) return null;
+                          const parts = value.split(/(https?:\/\/[^\s|]+)/g);
+                          return <div key={k} className="min-w-0 text-xs leading-5">
+                            <div className="font-semibold text-foreground">{header}</div>
+                            <div className="break-words text-muted-foreground">
+                              {parts.map((part, partIndex) => /^https?:\/\//i.test(part)
+                                ? <a key={partIndex} href={part.replace(/[),.;]+$/, "")} target="_blank" rel="noreferrer" className="break-all text-primary underline">{part}</a>
+                                : <span key={partIndex}>{part}</span>)}
+                            </div>
+                          </div>;
+                        })}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead><tr>{section.table.columns.map((header, j) => <th key={j} className="border-b border-border px-2 py-1 text-start font-medium">{header}</th>)}</tr></thead>
+                  <tbody>{section.table.data.map((row, j) => <tr key={j} className="border-b border-border/50">{row.map((value, k) => <td key={k} className="px-2 py-1 align-top">{String(value)}</td>)}</tr>)}</tbody>
+                </table>
+              )}
             </section>
           ))}
         </div>

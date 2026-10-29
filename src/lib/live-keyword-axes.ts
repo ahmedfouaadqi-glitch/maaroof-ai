@@ -98,13 +98,17 @@ export function measureKeywordAxes(input: {
     }
   }
 
+  const keywordSpecific = input.engineAnswers.filter((answer) =>
+    answer.market === market && answer.probe_kind === "keyword_visibility" &&
+    normalize(answer.query || "").includes(keyword)
+  );
   const clusterRelated = (input.clusterAnswers || []).filter((answer) =>
     answer.market === market && answer.keywords.some((k) => normalize(k) === keyword)
   );
   const modelRelated = input.engineAnswers.filter((answer) =>
     answer.market === market && normalize(answer.query || "").includes(keyword)
   );
-  const selected = clusterRelated.length ? clusterRelated : modelRelated;
+  const selected = keywordSpecific.length ? keywordSpecific : clusterRelated.length ? clusterRelated : modelRelated;
   const expectedEngines = ENGINE_COUNCIL_MODELS.map((engine) => engine.key);
   const byEngine = new Map<string, { status: string; answer: string; provider_path?: string; urls?: string[] }>();
   for (const answer of selected) {

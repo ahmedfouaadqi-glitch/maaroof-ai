@@ -6,56 +6,120 @@ import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf, type ProbeLanguage } from "@/lib/maaroof/probe-answer";
 import type { Market } from "@/lib/market-scope";
 import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
+import { evidenceCacheKey, getKeywordEvidence, putKeywordEvidence } from "@/lib/keyword-evidence-cache.server";
+import { isPlatformUrl } from "@/lib/site-keyword-extractor";
 
 const rowsOf = (r: any): any[] => (r?.data?.web || r?.data || r?.web || []) as any[];
 
-async function readPage(url: string, userId: string) {
+type PageRead = { text: string | null; title: string | null; description: string | null; cacheHit?: boolean };
+
+async function readPage(url: string, userId: string, workspaceId?: string | null): Promise<PageRead> {
+  const scope = { userId, workspaceId, evidenceType: "page", evidenceKey: await evidenceCacheKey({ url: String(url || "").trim() }) };
+  const cached = await getKeywordEvidence<Omit<PageRead, "cacheHit">>(scope);
+  if (cached && (cached.text || cached.title || cached.description)) return { ...cached, cacheHit: true };
   try {
     const r: any = await fcScrape(url, {}, { userId, toolKey: "competitive_geo" });
     const d = r?.data ?? r;
-    return { text: String(d?.markdown || "").slice(0, 60000) || null, title: d?.metadata?.title || null, description: d?.metadata?.description || null };
-  } catch { return { text: null, title: null, description: null }; }
+    const page = { text: String(d?.markdown || "").slice(0, 60000) || null, title: d?.metadata?.title || null, description: d?.metadata?.description || null };
+    if (page.text || page.title || page.description) await putKeywordEvidence(scope, page);
+    return { ...page, cacheHit: false };
+  } catch { return { text: null, title: null, description: null, cacheHit: false }; }
 }
 
 /** Preflight official-domain evidence so category correction can happen before competitor discovery. */
-export async function readOfficialBrandEvidence(url: string, userId: string) {
-  return readPage(url, userId);
+export async function readOfficialBrandEvidence(url: string, userId: string, workspaceId?: string | null) {
+  return readPage(url, userId, workspaceId);
 }
 
-async function findSite(name: string, userId: string): Promise<string | null> {
-  try { const r = rowsOf(await fcSearch(`${name} official site`, { limit: 3 }, { userId, toolKey: "competitive_geo" })); return r[0]?.url || null; } catch { return null; }
+async function findSite(name: string, userId: string, workspaceId?: string | null): Promise<string | null> {
+  const query = String(name || "").trim() + " official site";
+  const scope = { userId, workspaceId, evidenceType: "site-search", evidenceKey: await evidenceCacheKey(query) };
+  const cached = await getKeywordEvidence<{ url: string }>(scope);
+  if (cached && /^https?:\/\//i.test(cached.url)) return cached.url;
+  try {
+    const r = rowsOf(await fcSearch(query, { limit: 3 }, { userId, toolKey: "competitive_geo" }));
+    const url = String(r[0]?.url || "");
+    if (/^https?:\/\//i.test(url)) await putKeywordEvidence(scope, { url });
+    return url || null;
+  } catch { return null; }
 }
 
 export async function gatherParties(o: {
   brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string;
-  brandPageEvidence?: { text: string | null; title: string | null; description: string | null };
+  brandPageEvidence?: { text: string | null; title: string | null; description: string | null; cacheHit?: boolean };
+  workspaceId?: string | null;
 }): Promise<PartyEvidence[]> {
   const parties: Array<Omit<PartyEvidence, "pageText">> = [{ name: o.brand, role: "brand", url: o.site || null, found: "user" }];
   for (const c of o.competitors.slice(0, 4)) parties.push({ name: c, role: "competitor", url: null, found: "user" });
   if (o.category && parties.length < 5) {
-    // Candidates from a real web search per market; each keeps its result url.
+    // Candidates come from real search results. Social platforms are not commercial competitors.
     const brandHost = o.site ? hostOf(o.site) : "";
     for (const m of o.markets.slice(0, 3)) {
       try {
-        const rows = rowsOf(await fcSearch(`${o.category} ${m.en}`, { limit: 6, location: m.en }, { userId: o.userId, toolKey: "competitive_geo" }));
+        const rows = rowsOf(await fcSearch(o.category + " " + m.en, { limit: 6, location: m.en }, { userId: o.userId, toolKey: "competitive_geo" }));
         for (const r of rows) {
-          const h = hostOf(String(r?.url || ""));
-          if (!h || h === brandHost || parties.some((p) => p.url && hostOf(p.url) === h)) continue;
-          parties.push({ name: h, role: "competitor", url: r.url, found: "web_search" });
+          const resultUrl = String(r?.url || "");
+          const host = hostOf(resultUrl);
+          if (!host || host === brandHost || isPlatformUrl(resultUrl) || parties.some((p) => p.url && hostOf(p.url) === host)) continue;
+          parties.push({ name: host, role: "competitor", url: resultUrl, found: "web_search" });
           if (parties.length >= 5) break;
         }
       } catch { /* search failed: no candidate invented */ }
       if (parties.length >= 5) break;
     }
   }
-  return Promise.all(parties.map(async (p) => {
-    const url = p.url || (await findSite(p.name, o.userId));
-    const isOfficialBrandPage = p.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
-    const pg = isOfficialBrandPage
+
+  const resolved = await Promise.all(parties.map(async (party) => {
+    const url = party.url || await findSite(party.name, o.userId, o.workspaceId);
+    const excludedPlatform = party.role === "competitor" && Boolean(url) && isPlatformUrl(String(url));
+    if (excludedPlatform) return { ...party, url, pageText: null, title: null, description: null, additionalPages: [], cacheHit: false, excludedPlatform: true };
+    const isOfficialBrandPage = party.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
+    const page = isOfficialBrandPage
       ? o.brandPageEvidence!
-      : url ? await readPage(url, o.userId) : { text: null, title: null, description: null };
-    return { ...p, url, pageText: pg.text, title: pg.title, description: pg.description };
+      : url ? await readPage(url, o.userId, o.workspaceId) : { text: null, title: null, description: null, cacheHit: false };
+
+    const additionalPages: Array<{ url: string; text: string | null; title?: string | null; description?: string | null }> = [];
+    if (party.role === "competitor" && url && !isPlatformUrl(String(url))) {
+      const host = hostOf(url);
+      const query = "site:" + host + " " + o.category + " (services OR products OR solutions)";
+      const searchScope = {
+        userId: o.userId, workspaceId: o.workspaceId, evidenceType: "service-page-search",
+        evidenceKey: await evidenceCacheKey({ host, category: o.category, market: o.markets[0]?.code || "" }),
+      };
+      const cachedPageSearch = await getKeywordEvidence<{ urls: string[] }>(searchScope);
+      let serviceUrls = cachedPageSearch?.urls || [];
+      if (!cachedPageSearch) {
+        try {
+          const rows = rowsOf(await fcSearch(query, { limit: 5, location: o.markets[0]?.en }, { userId: o.userId, toolKey: "competitive_geo" }));
+          const candidates = rows.map((row) => String(row?.url || "")).filter((candidate) => {
+            if (!/^https?:\/\//i.test(candidate) || isPlatformUrl(candidate) || hostOf(candidate) !== host || candidate === url) return false;
+            try {
+              const path = new URL(candidate).pathname.toLocaleLowerCase();
+              return path !== "/" && !/\.(pdf|jpg|jpeg|png|webp|svg)(?:$|\?)/i.test(path);
+            } catch { return false; }
+          });
+          serviceUrls = [...new Set(candidates)].sort((a, b) => {
+            const preferred = /service|product|solution|what-we-do|our-work|catalog|offer|خدمات|منتج|حلول/i;
+            return Number(preferred.test(b)) - Number(preferred.test(a));
+          }).slice(0, 1);
+          if (serviceUrls.length) await putKeywordEvidence(searchScope, { urls: serviceUrls });
+        } catch { serviceUrls = []; }
+      }
+      for (const serviceUrl of serviceUrls.slice(0, 1)) {
+        const servicePage = await readPage(serviceUrl, o.userId, o.workspaceId);
+        if (servicePage.text || servicePage.title || servicePage.description) {
+          additionalPages.push({ url: serviceUrl, text: servicePage.text, title: servicePage.title, description: servicePage.description });
+        }
+      }
+    }
+    return {
+      ...party, url, pageText: page.text, title: page.title, description: page.description,
+      additionalPages, cacheHit: Boolean(page.cacheHit), excludedPlatform: false,
+    };
   }));
+  return resolved
+    .filter((party) => !party.excludedPlatform)
+    .map(({ excludedPlatform: _excludedPlatform, ...party }) => party as PartyEvidence);
 }
 
 type EngineCallResult = {
@@ -155,6 +219,56 @@ export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clust
       provider_path: call.providerPath || undefined, model_used: call.modelUsed || undefined,
       error: call.detail || "Provider returned no usable answer",
     };
+  }));
+}
+
+
+/** One independent blind visibility probe per sampled keyword × engine, cached per workspace. */
+export async function askEnginesForKeywordVisibility(o: {
+  category: string;
+  markets: Market[];
+  keywordsByMarket: Record<string, string[]>;
+  contentLanguage: ProbeLanguage;
+  userId: string;
+  workspaceId?: string | null;
+  /** When true, read prior evidence only and never call a provider on a cache miss. */
+  cacheOnly?: boolean;
+}): Promise<EngineAnswer[]> {
+  const jobs = o.markets.flatMap((market) =>
+    (o.keywordsByMarket[market.code] || []).map((keyword) => ({ market, keyword }))
+      .flatMap(({ market, keyword }) => ENGINE_COUNCIL_MODELS.map((engine) => ({ market, keyword, engine })))
+  );
+  return Promise.all(jobs.map(async ({ market, keyword, engine }): Promise<EngineAnswer> => {
+    const marketLabel = o.contentLanguage === "ar" || o.contentLanguage === "ku" ? market.ar : market.en;
+    const query = keywordVisibilityProbeQuestion(o.category, marketLabel, [keyword], o.contentLanguage);
+    const scope = {
+      userId: o.userId,
+      workspaceId: o.workspaceId,
+      evidenceType: "keyword-engine-probe",
+      evidenceKey: await evidenceCacheKey({ market: market.code, keyword, engine: engine.key, model: engine.model, query }),
+    };
+    const cached = await getKeywordEvidence<EngineAnswer>(scope);
+    // Reuse both successful responses and recorded failures until their cache TTL expires.
+    if (cached && cached.status) return { ...cached, cacheHit: true };
+    // Expanded samples must restore prior results without silently re-running paid calls.
+    // A missing/expired cache entry remains explicitly unmeasured in the resulting report.
+    if (o.cacheOnly) return {
+      market: market.code, engine: engine.key, status: "no_answer", answer: "", urls: [], query,
+      error: "cached_evidence_unavailable_not_requeried", cacheHit: true, probe_kind: "keyword_visibility",
+    };
+    const call = await askEngine(engine.key, engine.model, query);
+    const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
+    const answer: EngineAnswer = parsed ? {
+      market: market.code, engine: engine.key, status: "answered", answer: parsed.answer, urls: parsed.urls, query,
+      provider_path: call.providerPath || undefined, model_used: call.modelUsed || undefined, cacheHit: false, probe_kind: "keyword_visibility",
+    } : {
+      market: market.code, engine: engine.key, status: call.status === "answered" ? "empty" : call.status as any,
+      answer: "", urls: [], query, provider_path: call.providerPath || undefined,
+      model_used: call.modelUsed || undefined, error: call.detail || "Provider returned no usable answer", cacheHit: false, probe_kind: "keyword_visibility",
+    };
+    // Preserve failure status too, so expanding a sample does not repeat provider calls silently.
+    await putKeywordEvidence(scope, { ...answer, cacheHit: undefined }, parsed ? 24 : 6);
+    return answer;
   }));
 }
 

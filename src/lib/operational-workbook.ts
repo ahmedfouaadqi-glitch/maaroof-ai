@@ -16,9 +16,12 @@ export type PartyEvidence = {
   pageText: string | null;
   title?: string | null;
   description?: string | null;
+  /** True only when the page evidence was served from the scoped cache. */
+  cacheHit?: boolean;
+  additionalPages?: Array<{ url: string; text: string | null; title?: string | null; description?: string | null }>;
 };
 
-export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string };
+export type EngineAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; urls: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string; cacheHit?: boolean; probe_kind?: "keyword_visibility" };
 
 export type ResearchInput = {
   brand: string;

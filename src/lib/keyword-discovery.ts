@@ -2,7 +2,7 @@
 // Nothing is invented: every discovered phrase appears literally in at least one recorded answer.
 import type { SheetData } from "./spreadsheet-reader";
 
-export type DiscoveryAnswer = { market: string; engine: string; status: string; answer: string; query?: string };
+export type DiscoveryAnswer = { market: string; engine: string; status: string; answer: string; query?: string; cacheHit?: boolean };
 export type DiscoveredKeyword = {
   keyword: string;
   market: string;
