@@ -27,6 +27,13 @@ export const Route = createFileRoute("/api/keyword-upload")({
 
         const rawWorkspaceId = String(form.get("workspace_id") || "").trim();
         let workspaceId: string | null = null;
+        if (!rawWorkspaceId) {
+          const { count, error: workspaceCountError } = await db.from("workspaces")
+            .select("id", { count: "exact", head: true })
+            .eq("owner_id", userId);
+          if (workspaceCountError) return Response.json({ error: "workspace_context_unavailable" }, { status: 503 });
+          if ((count || 0) > 0) return Response.json({ error: "workspace_required" }, { status: 400 });
+        }
         if (rawWorkspaceId) {
           if (!/^[0-9a-f-]{36}$/i.test(rawWorkspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
           const { data: workspace } = await db.from("workspaces").select("id").eq("id", rawWorkspaceId).eq("owner_id", userId).maybeSingle();
