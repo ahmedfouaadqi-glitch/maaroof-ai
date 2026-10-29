@@ -188,11 +188,11 @@ export async function askEnginesForKeywordVisibility(o: {
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     const answer: EngineAnswer = parsed ? {
       market: market.code, engine: engine.key, status: "answered", answer: parsed.answer, urls: parsed.urls, query,
-      provider_path: call.providerPath || undefined, model_used: call.modelUsed || undefined, cacheHit: false,
+      provider_path: call.providerPath || undefined, model_used: call.modelUsed || undefined, cacheHit: false, probe_kind: "keyword_visibility",
     } : {
       market: market.code, engine: engine.key, status: call.status === "answered" ? "empty" : call.status as any,
       answer: "", urls: [], query, provider_path: call.providerPath || undefined,
-      model_used: call.modelUsed || undefined, error: call.detail || "Provider returned no usable answer", cacheHit: false,
+      model_used: call.modelUsed || undefined, error: call.detail || "Provider returned no usable answer", cacheHit: false, probe_kind: "keyword_visibility",
     };
     if (parsed) await putKeywordEvidence(scope, { ...answer, cacheHit: undefined });
     return answer;
