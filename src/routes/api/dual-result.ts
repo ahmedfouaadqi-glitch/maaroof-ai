@@ -153,6 +153,10 @@ export const Route = createFileRoute("/api/dual-result")({
             }
             if (candidates.length >= 8) break;
           }
+          if (!hasFile && !candidates.length) {
+            const wk = Array.isArray(workspace?.keywords) ? workspace.keywords : String(workspace?.keywords || "").split(/[,،\n]/);
+            for (const k of wk.map((x: any) => String(x).trim()).filter((x: string) => x.length >= 3).slice(0, 8)) candidates.push(k.slice(0, 180));
+          }
           keywordSamplesByMarket[market.code] = candidates;
         }
 
