@@ -251,14 +251,22 @@ export const Route = createFileRoute("/api/dual-result")({
           const price = async (key: string) => (await resolveToolCost(userId, key)).tokens || 0;
           const [pm, pc, pd] = await Promise.all([price("competitive_geo.market"), price("competitive_geo.cluster"), price("keyword_intelligence.discovery")]);
           const clustersPlanned = m * clusterLimitEstimate;
-          const serpChecks = liveSerpRequested ? m * Math.min(liveSearchLimit, sampleKeywords.length || liveSearchLimit) : 0;
+          const serpChecks = liveSerpRequested ? m * liveSearchLimit : 0;
+          const keywordProbeQuestions = liveSerpRequested ? serpChecks * 10 : 0;
+          const newKeywordChecks = liveSerpRequested ? m * Math.floor(liveSearchLimit / 2) : 0;
           const unlimited = await isUnlimitedAccount(userId);
           const { data: bal } = await db.from("profiles").select("tokens_balance").eq("id", userId).maybeSingle();
           return Response.json({
             estimate: {
-              total_keywords: totalKeywords, sample_keywords: hasFile ? sampleKeywords.length : null, skipped_already_measured: skipKeywords.length,
-              markets: m, engine_questions: m * 10 + clustersPlanned * 10 + m * 10, live_search_checks: serpChecks,
-              estimated_tokens: pm * m + pc * clustersPlanned + pd * m * 10,
+              total_keywords: totalKeywords,
+              sample_keywords: liveSerpRequested ? serpChecks : (hasFile ? sampleKeywords.length : null),
+              new_keyword_checks: newKeywordChecks,
+              skipped_already_measured: skipKeywordPairs.length || skipKeywords.length,
+              markets: m,
+              engine_questions: m * 10 + clustersPlanned * 10 + m * 10 + keywordProbeQuestions,
+              live_search_checks: serpChecks,
+              estimated_tokens: pm * m + pc * clustersPlanned + pd * (m * 10 + keywordProbeQuestions),
+              cache_note: "An existing workspace evidence cache can reduce fresh calls and charges.",
               balance: unlimited ? null : Number((bal as any)?.tokens_balance || 0), unlimited,
             },
           });
