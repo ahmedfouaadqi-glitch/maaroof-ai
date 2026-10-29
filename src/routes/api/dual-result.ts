@@ -95,7 +95,7 @@ export const Route = createFileRoute("/api/dual-result")({
         if (!category) return Response.json({ error: "category_required", need: ["category"] }, { status: 422 });
 
         const chosen = (Array.isArray(b?.markets) ? b.markets : []).map((m: any) => marketByCode(String(m))).filter(Boolean);
-        const userMarkets = detectMarkets([marketText]);
+        const userMarkets = detectMarkets(hasFile ? [marketText] : [marketText, String(workspace?.country || "")]);
         const scopedMarkets = (geoMode === "country" || geoMode === "city") ? detectMarkets([geoCountry, geoCity]) : [];
         const marketColumnSignals = sheets.flatMap((sheet: any) => {
           const signals: string[] = [];
@@ -163,6 +163,13 @@ export const Route = createFileRoute("/api/dual-result")({
           gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId }),
           askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket),
         ]);
+        if (!hasFile) {
+          // No file: current keywords are the ones the brand's own page actually uses.
+          const { extractSiteKeywords, siteKeywordSheet } = await import("@/lib/site-keyword-extractor");
+          const bp = parties.find((p) => p.role === "brand");
+          const list = extractSiteKeywords({ text: bp?.pageText, title: bp?.title, description: bp?.description }, 60);
+          if (list.length) sheets = [siteKeywordSheet(list, lang === "ar" ? "كلمات الموقع" : "Site keywords")];
+        }
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
         const marketEvidenceAvailable = hasChargeableMarketEvidence(answeredMarkets, anyPage);
@@ -176,6 +183,8 @@ export const Route = createFileRoute("/api/dual-result")({
             brand, lang, markets, sheets, parties, engineAnswers,
             social: [], alexandria: partialAlexandria, clusterAnswers: [],
           });
+          const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
+          payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social: [], clusterAnswers: [], hasFile });
           const summary = markets.map((m: any) => ({
             market: m.code,
             label: lang === "ar" ? m.ar : m.en,
@@ -251,6 +260,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const alexandria = { connected: alex.connected, note: alex.note };
         const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
         const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
+        const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
+        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile });
         if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة البيانات المهيكلة الموثقة" : "Verified structured data evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
         if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
