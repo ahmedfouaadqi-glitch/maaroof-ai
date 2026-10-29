@@ -460,7 +460,6 @@ export const Route = createFileRoute("/api/dual-result")({
           evidenceKey: await evidenceCacheKey({ analysisScopeKey, clusters, contentLanguage }),
         };
         const cachedClusters = await getKeywordEvidence<any[]>(clusterScope);
-        const clusterCacheHit = Boolean(cachedClusters);
         const clusterAnswers = cachedClusters
           ? cachedClusters.map((answer: any) => ({ ...answer, cacheHit: true }))
           : (clusters.length ? await askEnginesPerCluster(clusters, (code) => {
@@ -489,7 +488,6 @@ export const Route = createFileRoute("/api/dual-result")({
           evidenceKey: await evidenceCacheKey({ analysisScopeKey, category, markets: markets.map((m: any) => m.code), competitors: discoveryCompetitors, contentLanguage }),
         };
         const cachedDiscovery = await getKeywordEvidence<any[]>(discoveryScope);
-        const discoveryCacheHit = Boolean(cachedDiscovery);
         const discoveryAnswers = cachedDiscovery
           ? cachedDiscovery.map((answer: any) => ({ ...answer, cacheHit: true }))
           : await askEnginesForDiscovery({
@@ -623,7 +621,14 @@ export const Route = createFileRoute("/api/dual-result")({
         const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
         payload.subtitle = [lang === "ar" ? "لغة المحتوى: " : "Content language: ", contentLanguage, lang === "ar" ? "السوق المستهدف: " : " · Target market: ", markets.map((m: any) => lang === "ar" ? m.ar : m.en).join(", "), lang === "ar" ? "فحص نتائج البحث المباشر: " : " · Live search check: ", liveSerpRequested ? (lang === "ar" ? "مطلوب" : "requested") : (lang === "ar" ? "لم يُطلب" : "not requested")].join("");
         const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
-        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage, competitorValidation, discovered, sampleKeywords: hasFile ? sampleKeywords : undefined, totalKeywords, charged: totalCharged });
+        payload.sections = buildKeywordIntelligenceSections({
+          brand, lang, markets, sheets, parties,
+          engineAnswers: [...engineAnswers, ...keywordProbeAnswers],
+          social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage,
+          competitorValidation, discovered, sampleKeywords: liveMeasurementKeywords,
+          sampledMarketKeywords: liveSampledPairs, totalKeywords: totalKeywords + discovered.filter((item: any) => !item.inFile).length,
+          charged: totalCharged,
+        });
         payload.excelLayout = "six_sheets";
         if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة البيانات المهيكلة الموثقة" : "Verified structured data evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
         if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
@@ -668,7 +673,11 @@ export const Route = createFileRoute("/api/dual-result")({
               ? "All successful engine answers are counted. Review the per-engine status and evidence sources."
               : "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
             : "Some external evidence was retrieved. Results still need contextual validation and are not a ranking guarantee.";
-        return Response.json({ measured_keywords: [...skipKeywords, ...sampleKeywords], payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        const measuredPairs = [...new Set([
+          ...skipKeywordPairs,
+          ...liveSampledPairs.map((item) => item.market + "|" + item.keyword),
+        ])];
+        return Response.json({ measured_keywords: [...skipKeywords, ...sampleKeywords], measured_pairs: measuredPairs, payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },
