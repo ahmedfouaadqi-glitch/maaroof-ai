@@ -62,7 +62,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const comps = input.parties.filter((p) => p.role === "competitor");
   const answers = input.engineAnswers;
   const brandList = input.hasFile
-    ? allKeywords(input.sheets).slice(0, 300)
+    ? allKeywords(input.sheets)
     : extractSiteKeywords({ text: brand?.pageText, title: brand?.title, description: brand?.description }, 60).map((k) => k.keyword);
   const fresh = newKeywordCandidates(brandList, comps, answers);
   const authority = (p?: PartyEvidence) => {
