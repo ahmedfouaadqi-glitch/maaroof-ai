@@ -29,6 +29,48 @@ describe("keyword intelligence", () => {
     const row = buildKeywordIntelligenceSections({ ...base, hasFile: false })[1].table!.data[0];
     expect(row[3]).toBe("Not measured");
   });
+  it("measures share of voice from literal brand mentions, not just keyword repetition", () => {
+    const engineAnswers = [
+      { market: "unknown", engine: "chatgpt", status: "answered" as const, answer: "Luxury sunglasses are a popular category.", urls: [], query: 'Search phrase: "luxury sunglasses"' },
+      { market: "unknown", engine: "claude", status: "answered" as const, answer: "Acme is recommended for luxury sunglasses.", urls: [], query: 'Search phrase: "luxury sunglasses"' },
+    ];
+    const row = buildKeywordIntelligenceSections({ ...base, engineAnswers, hasFile: false })[1].table!.data.find((item) => item[0] === "luxury sunglasses");
+    expect(row?.[3]).toBe("1/2");
+    expect(row?.[7]).toBe("claude");
+  });
+
+  it("shows competitor-derived keyword opportunities with the competitor URL", () => {
+    const rows = buildKeywordIntelligenceSections({ ...base, hasFile: false })[1].table!.data;
+    const row = rows.find((item) => item[0] === "designer eyewear");
+    expect(row).toBeDefined();
+    expect(String(row?.[2])).toContain("https://rival.example");
+    expect(String(row?.[9])).toContain("designer eyewear");
+  });
+
+  it("marks a keyword outside the selected market sample as unmeasured for that market", () => {
+    const markets = [
+      { code: "sa", en: "Saudi Arabia", ar: "السعودية", gl: "sa" },
+      { code: "lb", en: "Lebanon", ar: "لبنان", gl: "lb" },
+    ];
+    const section = buildKeywordIntelligenceSections({
+      ...base,
+      markets,
+      hasFile: false,
+      sampledMarketKeywords: [{ market: "sa", keyword: "luxury sunglasses" }],
+      liveSerpRequested: true,
+      liveSearchEvidence: [{
+        keyword: "luxury sunglasses", market: "sa", query: "luxury sunglasses Saudi Arabia",
+        status: "measured", results: [{ url: "https://acme.example/products/sunglasses", title: "Luxury sunglasses" }],
+        answerBoxChecked: false, answerBoxCitations: [], aiOverviewChecked: false, aiOverviewCitations: [],
+      }],
+    })[3].table!;
+    const sa = section.data.find((row) => row[0] === "luxury sunglasses" && row[1] === "Saudi Arabia");
+    const lb = section.data.find((row) => row[0] === "luxury sunglasses" && row[1] === "Lebanon");
+    expect(String(sa?.[8])).not.toContain("Outside the sample");
+    expect(String(lb?.[8])).toContain("Outside the sample");
+    expect(String(lb?.[9])).toContain("not measured");
+  });
+
   it("sorts negatives into four groups", () => {
     const groups = new Set(buildKeywordIntelligenceSections({ ...base, hasFile: false })[4].table!.data.map((r) => r[0]));
     expect([...groups]).toEqual(["Brand", "Competitors", "Comparison", "Social"]);
