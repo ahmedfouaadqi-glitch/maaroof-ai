@@ -107,7 +107,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const site = resolved.site || undefined;
         let category = resolved.category;
         let categorySource: string = resolved.categorySource;
-        let officialBrandPageEvidence: { text: string | null; title: string | null; description: string | null } | undefined;
+        let officialBrandPageEvidence: { text: string | null; title: string | null; description: string | null; cacheHit?: boolean } | undefined;
         let officialCategoryEvidence: ReturnType<typeof inferCategoryFromVerifiedEvidence> | null = null;
         let categoryCorrection: { previous: string; current: string; persisted: boolean; evidence: string[] } | null = null;
         if (!brand) return Response.json({ error: "brand_required", need: ["brand"] }, { status: 422 });
