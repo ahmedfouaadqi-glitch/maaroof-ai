@@ -116,9 +116,14 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     const clusterProbes = (input.clusterAnswers || []).filter((answer) =>
       answer.keywords.some((phrase) => norm(phrase) === keyword)
     );
-    const marketProbes = clusterProbes.length
-      ? clusterProbes
-      : answers.filter((answer) => norm(answer.query || "").includes(keyword));
+    const keywordSpecificProbes = answers.filter((answer) =>
+      answer.probe_kind === "keyword_visibility" && norm(answer.query || "").includes(keyword)
+    );
+    const marketProbes = keywordSpecificProbes.length
+      ? keywordSpecificProbes
+      : clusterProbes.length
+        ? clusterProbes
+        : answers.filter((answer) => norm(answer.query || "").includes(keyword));
     // Every successful answer counts, whichever route delivered it.
     const direct = marketProbes.filter((answer) => answer.status === "answered");
     if (!marketProbes.length || !direct.length) return { share: NM, engines: NM };
