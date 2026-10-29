@@ -2,7 +2,7 @@
 -- Cache rows are scoped by user + workspace and expire after a bounded period.
 create table if not exists public.keyword_intelligence_evidence_cache (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null,
   workspace_id uuid null references public.workspaces(id) on delete cascade,
   scope_key text not null,
   evidence_type text not null,
@@ -18,6 +18,9 @@ create index if not exists keyword_intelligence_evidence_cache_expiry_idx
   on public.keyword_intelligence_evidence_cache (expires_at);
 create index if not exists keyword_intelligence_evidence_cache_workspace_idx
   on public.keyword_intelligence_evidence_cache (user_id, workspace_id, evidence_type);
+
+grant select, insert, update, delete on public.keyword_intelligence_evidence_cache to authenticated;
+grant all on public.keyword_intelligence_evidence_cache to service_role;
 
 alter table public.keyword_intelligence_evidence_cache enable row level security;
 

@@ -631,10 +631,10 @@ export const Route = createFileRoute("/api/dual-result")({
                     .slice(0, 10)
                     .map((item) => ({ url: String(item.url), title: String(item.title || item.description || "") }));
                   const observation = {
-                    keyword, market: market.code, query, status: results.length ? "measured" : "unavailable",
+                    keyword, market: market.code, query, status: (results.length ? "measured" : "unavailable") as "measured" | "unavailable",
                     provider: String(found?.fetch_source || "available_search_provider"), results,
-                    answerBoxChecked: false, answerBoxCitations: [],
-                    aiOverviewChecked: false, aiOverviewCitations: [],
+                    answerBoxChecked: false, answerBoxCitations: [] as string[],
+                    aiOverviewChecked: false, aiOverviewCitations: [] as string[],
                     ...(!results.length ? { error: "live_search_unavailable" } : {}),
                   };
                   liveSearchEvidence.push({ ...observation, cacheHit: false });
