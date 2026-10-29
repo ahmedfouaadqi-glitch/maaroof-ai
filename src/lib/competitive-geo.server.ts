@@ -6,6 +6,7 @@ import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf, type ProbeLanguage } from "@/lib/maaroof/probe-answer";
 import type { Market } from "@/lib/market-scope";
 import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
+import { evidenceCacheKey, getKeywordEvidence, putKeywordEvidence } from "@/lib/keyword-evidence-cache.server";
 
 const rowsOf = (r: any): any[] => (r?.data?.web || r?.data || r?.web || []) as any[];
 
@@ -155,6 +156,46 @@ export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clust
       provider_path: call.providerPath || undefined, model_used: call.modelUsed || undefined,
       error: call.detail || "Provider returned no usable answer",
     };
+  }));
+}
+
+
+/** One independent blind visibility probe per sampled keyword × engine, cached per workspace. */
+export async function askEnginesForKeywordVisibility(o: {
+  category: string;
+  markets: Market[];
+  keywordsByMarket: Record<string, string[]>;
+  contentLanguage: ProbeLanguage;
+  userId: string;
+  workspaceId?: string | null;
+}): Promise<EngineAnswer[]> {
+  const jobs = o.markets.flatMap((market) =>
+    (o.keywordsByMarket[market.code] || []).map((keyword) => ({ market, keyword }))
+      .flatMap(({ market, keyword }) => ENGINE_COUNCIL_MODELS.map((engine) => ({ market, keyword, engine })))
+  );
+  return Promise.all(jobs.map(async ({ market, keyword, engine }): Promise<EngineAnswer> => {
+    const marketLabel = o.contentLanguage === "ar" || o.contentLanguage === "ku" ? market.ar : market.en;
+    const query = keywordVisibilityProbeQuestion(o.category, marketLabel, [keyword], o.contentLanguage);
+    const scope = {
+      userId: o.userId,
+      workspaceId: o.workspaceId,
+      evidenceType: "keyword-engine-probe",
+      evidenceKey: await evidenceCacheKey({ market: market.code, keyword, engine: engine.key, model: engine.model, query }),
+    };
+    const cached = await getKeywordEvidence<EngineAnswer>(scope);
+    if (cached && cached.status === "answered") return { ...cached, cacheHit: true };
+    const call = await askEngine(engine.key, engine.model, query);
+    const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
+    const answer: EngineAnswer = parsed ? {
+      market: market.code, engine: engine.key, status: "answered", answer: parsed.answer, urls: parsed.urls, query,
+      provider_path: call.providerPath || undefined, model_used: call.modelUsed || undefined, cacheHit: false,
+    } : {
+      market: market.code, engine: engine.key, status: call.status === "answered" ? "empty" : call.status as any,
+      answer: "", urls: [], query, provider_path: call.providerPath || undefined,
+      model_used: call.modelUsed || undefined, error: call.detail || "Provider returned no usable answer", cacheHit: false,
+    };
+    if (parsed) await putKeywordEvidence(scope, { ...answer, cacheHit: undefined });
+    return answer;
   }));
 }
 
