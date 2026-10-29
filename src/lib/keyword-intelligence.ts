@@ -72,8 +72,8 @@ export function newKeywordCandidates(brandList: string[], competitors: PartyEvid
       ...(c.additionalPages || []),
     ];
     for (const page of sourcePages) {
-      for (const k of extractSiteKeywords({ text: page.text, title: page.title || c.title, description: page.description || c.description }, 20)) {
-        if (k.keyword.includes(" ")) push(k.keyword, "competitor", c.name, page.url, page.text);
+      for (const k of extractSiteKeywords({ text: page.text, title: page.title || c.title || undefined, description: page.description || c.description || undefined }, 20)) {
+        if (k.keyword.includes(" ")) push(k.keyword, "competitor", c.name, page.url ?? undefined, page.text ?? undefined);
       }
     }
   }
