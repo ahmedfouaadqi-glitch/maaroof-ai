@@ -29,6 +29,7 @@ export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   what_if: { fields: ["brand", "changes", "kind", "axes"] },
   brand_authority: { fields: ["brand_name", "brand_keywords", "source_url", "ping"] },
   geo_rewrite: { fields: ["text"] },
+  keyword_intelligence: { fields: ["brand", "site", "category", "competitors", "market_text", "attachment_id", "lang"], enums: { lang: ["ar", "en", "ku"] } },
 };
 
 /** One planner-readable line describing a tool's accepted options. */
