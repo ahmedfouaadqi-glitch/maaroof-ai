@@ -482,7 +482,7 @@ export const Route = createFileRoute("/api/dual-result")({
         // Do not charge for a market probe when it produced no usable answer and no page was read.
         // Still continue building a partial workbook so the user receives source data and failure diagnostics.
         let totalCharged = 0;
-        if (marketEvidenceAvailable) {
+        if (marketEvidenceAvailable && !marketStageCacheHit) {
           const { chargeTokens, chargeFailureBody } = await import("@/lib/tokens.server");
           const units = Math.max(1, answeredMarkets);
           let charge: any = await chargeTokens({ userId, toolKey: "competitive_geo.market", units, meta: { attachment_id: id, markets: markets.map((m: any) => m.code) } });
