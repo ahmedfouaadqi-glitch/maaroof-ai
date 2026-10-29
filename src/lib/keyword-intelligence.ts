@@ -17,6 +17,12 @@ export type KiInput = ResearchInput & {
   liveSearchEvidence?: LiveSearchEvidence[];
   liveSerpRequested?: boolean;
   contentLanguage?: string;
+  /** New keywords proposed literally by the ten engines (keyword-discovery.ts). */
+  discovered?: import("./keyword-discovery").DiscoveredKeyword[];
+  /** When set, only these file keywords were measured live in this run. */
+  sampleKeywords?: string[];
+  totalKeywords?: number;
+  charged?: number;
   competitorValidation?: Array<{ name: string; url: string | null; category: string; status: "verified" | "sector_mismatch" | "insufficient_evidence" }>;
 };
 
@@ -65,7 +71,11 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const brandList = input.hasFile
     ? allKeywords(input.sheets)
     : extractSiteKeywords({ text: brand?.pageText, title: brand?.title, description: brand?.description }, 60).map((k) => k.keyword);
-  const fresh = newKeywordCandidates(brandList, comps, answers);
+  const discoveredMap = new Map((input.discovered || []).map((d) => [norm(d.keyword), d]));
+  const fresh: Array<{ keyword: string; from: "competitor" | "engines"; party?: string }> = input.discovered
+    ? [...new Map((input.discovered).map((d) => [norm(d.keyword), { keyword: d.keyword, from: "engines" as const }])).values()]
+    : newKeywordCandidates(brandList, comps, answers);
+  const sampleSet = input.sampleKeywords ? new Set(input.sampleKeywords.map(norm)) : null;
   const authority = (p?: PartyEvidence) => {
     if (!p?.pageText) return NM;
     const a = authoritySignals(p);
@@ -95,9 +105,10 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const SRC_CUR = input.hasFile ? S("من الملف", "From file", "لە فایل") : S("من فحص الموقع", "From site scan", "لە پشکنینی ماڵپەڕ");
   const brandCols = [S("الكلمة", "Keyword", "وشە"), S("النوع", "Type", "جۆر"), S("المصدر", "Source", "سەرچاوە"), S("حصة الصوت في النماذج", "Share of voice in models", "بەشی دەنگ"), S("الكثافة في صفحة العلامة (/100 كلمة)", "Density on brand page (/100 words)", "چڕی"), S("كثافة الحقائق", "Fact density", "چڕی ڕاستییەکان"), S("السلطة", "Authority", "دەسەڵات"), S("رأي النماذج", "Model opinion", "ڕای مۆدێلەکان")];
   if (input.hasFile) brandCols.push(S("مقارنة القديم بالجديد", "Old vs new", "کۆن و نوێ"));
+  brandCols.push(S("المحركات التي اقترحتها", "Engines that proposed it", "مۆدێلە پێشنیارکەرەکان"), S("مقتطف الإجابة", "Answer excerpt", "پارچەی وەڵام"));
   const brandRows: (string | number)[][] = [];
-  for (const k of brandList) { const o = opinion(k); const r: (string | number)[] = [k, S("حالية", "Current", "ئێستا"), SRC_CUR, o.share, density(brand, k), facts(brand), authority(brand), o.engines]; if (input.hasFile) r.push(S("موجودة في الملف", "In file", "لە فایلدا")); brandRows.push(r); }
-  for (const n of fresh) { const o = opinion(n.keyword); const r: (string | number)[] = [n.keyword, S("جديدة", "New", "نوێ"), n.from === "competitor" ? S("من صفحة منافس", "From competitor page", "لە ڕکابەر") + (n.party ? `: ${n.party}` : "") : S("من إجابات النماذج", "From model answers", "لە وەڵامی مۆدێل"), o.share, density(brand, n.keyword), NM, NM, o.engines]; if (input.hasFile) r.push(S("غير موجودة في الملف — فرصة", "Not in file — opportunity", "لە فایلدا نییە — دەرفەت")); brandRows.push(r); }
+  for (const k of brandList) { const o = opinion(k); const r: (string | number)[] = [k, S("حالية", "Current", "ئێستا"), SRC_CUR, o.share, density(brand, k), facts(brand), authority(brand), o.engines]; if (input.hasFile) r.push(S("موجودة في الملف", "In file", "لە فایلدا")); r.push("-", "-"); brandRows.push(r); }
+  for (const n of fresh) { const o = opinion(n.keyword); const d = discoveredMap.get(norm(n.keyword)); const r: (string | number)[] = [n.keyword, d ? (d.confirmed ? S("جديدة", "New", "نوێ") : S("جديدة — إشارة من محرك واحد", "New — single-engine signal", "نوێ — یەک مۆدێل")) : S("جديدة", "New", "نوێ"), n.from === "competitor" ? S("من صفحة منافس", "From competitor page", "لە ڕکابەر") + (n.party ? `: ${n.party}` : "") : S("من إجابات النماذج", "From model answers", "لە وەڵامی مۆدێل"), o.share, density(brand, n.keyword), NM, NM, o.engines]; if (input.hasFile) r.push(S("غير موجودة في الملف — فرصة", "Not in file — opportunity", "لە فایلدا نییە — دەرفەت")); r.push(d ? `${d.engines.length}/${d.answered || 10}: ${d.engines.join(", ")}` : "-", d?.snippet || "-"); brandRows.push(r); }
 
   // 2. Competitors
   const compKw = new Map<string, string[]>();
@@ -182,6 +193,10 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const axisRows: (string | number)[][] = [];
   for (const market of markets) {
     for (const k of axisList) {
+      if (sampleSet && !sampleSet.has(norm(k)) && !discoveredMap.has(norm(k))) {
+        axisRows.push([k, l === "ar" ? market.ar : market.en, ...AXES_ORDER.map(() => NM), S("خارج العينة المختارة لهذا التشغيل", "Outside the sample selected for this run", "لە دەرەوەی نموونەی ئەم جارە"), NM, NM, NM, NM]);
+        continue;
+      }
       const measured = measureKeywordAxes({
         keyword: k,
         market: market.code,
@@ -252,6 +267,9 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     [S("فرص الكلمات الجديدة", "New keyword opportunities", "دەرفەتی وشە نوێیەکان"), fresh.length],
     [S("المنافسون", "Competitors", "ڕکابەران"), comps.length],
     [S("إجابات ناجحة من المحركات العشرة", "Successful answers from the ten engines", "وەڵامی سەرکەوتوو"), answers.filter((answer) => answer.status === "answered").length],
+    [S("حجم العينة المقاسة من الكلي", "Measured sample of total", "قەبارەی نموونە"), sampleSet ? `${sampleSet.size}/${input.totalKeywords ?? brandList.length}` : `${brandList.length}/${brandList.length}`],
+    [S("كلمات جديدة اقترحها محركان أو أكثر", "New keywords proposed by 2+ engines", "وشەی نوێ لە ٢+ مۆدێل"), (input.discovered || []).filter((d) => d.confirmed).length],
+    [S("التكلفة الفعلية المخصومة", "Actual tokens charged", "تێچووی ڕاستەقینە"), input.charged ?? NM],
     [S("عمليات بحث حي ذات نتائج", "Live search checks with results", "پشکنینی گەڕانی ڕاستەوخۆ"), liveObserved],
     [S("قيم محاور مقاسة فعلياً", "Axis values actually measured", "بەها پێوراوە ڕاستەقینەکان"), measuredAxisCells],
     [S("قاعدة القياس", "Measurement rule", "یاسای پێوانە"), S("لا تُحتسب الدرجة دون دليل مسجل؛ غياب الدليل يظهر «لم تُقَس».", "Scores require recorded evidence; absent evidence remains “Not measured.”", "بەها بەبێ بەڵگەی تۆمارکراو ناژمێردرێت؛ بەڵگەی نەبوو بە «نەپێوراوە» دەردەکەوێت.")],

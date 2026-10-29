@@ -109,6 +109,21 @@ export async function askEnginesPerMarket(category: string, markets: Market[], k
   }));
 }
 
+/** Ten engines × each market: one discovery question asking for real customer search phrases. */
+export async function askEnginesForDiscovery(o: { brand: string; category: string; markets: Market[]; competitors: string[]; contentLanguage: ProbeLanguage }): Promise<import("@/lib/keyword-discovery").DiscoveryAnswer[]> {
+  const { discoveryQuestion } = await import("@/lib/keyword-discovery");
+  const jobs = o.markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
+  return Promise.all(jobs.map(async ({ m, e }) => {
+    const marketLabel = o.contentLanguage === "ar" || o.contentLanguage === "ku" ? m.ar : m.en;
+    const query = discoveryQuestion({ brand: o.brand, category: o.category, market: marketLabel, competitors: o.competitors, lang: o.contentLanguage });
+    const call = await askEngine(e.key, e.model, query);
+    const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
+    return parsed
+      ? { market: m.code, engine: e.key, status: "answered", answer: parsed.answer, query }
+      : { market: m.code, engine: e.key, status: call.status === "answered" ? "empty" : call.status, answer: "", query };
+  }));
+}
+
 /** Public social pages/posts that mention each party (search results only; nothing invented). */
 export async function gatherSocial(names: string[], userId: string): Promise<Array<{ party: string; url: string; text: string }>> {
   const out: Array<{ party: string; url: string; text: string }> = [];
