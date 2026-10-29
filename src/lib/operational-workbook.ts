@@ -89,7 +89,7 @@ export function keywordColumn(s: SheetData): number {
   return col ? s.columns.indexOf(col) : -1;
 }
 
-export function allKeywords(sheets: SheetData[], max = 20000): string[] {
+export function allKeywords(sheets: SheetData[], max = Number.POSITIVE_INFINITY): string[] {
   const set = new Set<string>();
   for (const s of sheets) { const i = keywordColumn(s); if (i < 0) continue; for (const r of s.rows) { const v = String(r[i] ?? "").trim(); if (v) set.add(v); if (set.size >= max) return [...set]; } }
   return [...set];
@@ -233,7 +233,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
               ? S("أُرسلت الكلمة لكن لم تسجل إجابة مباشرة ناجحة", "Keyword was sent but no successful direct answer was recorded", "وشەکە نێردرا بەڵام وەڵامی ڕاستەوخۆی سەرکەوتوو تۆمار نەکرا")
               : S("لم تُرسل الكلمة في سؤال المحرك", "Keyword was not sent in engine query", "وشەکە لە پرسیاری بزوێنەر نەنێردرا");
       perEngine.push([r.k, mName(m), score, engineLabel, ax.axis, ax.rule,
-        AXES.map((axis) => axis + ": " + keywordAxisScores(r.k)[axis]).join(" · "), ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
+        AXES.map((axis) => axis + ": " + t3(l, "لم تُقَس", "Not measured", "نەپێوراوە")).join(" · "), ENGINE_KEYS.map((e) => e + ": " + ENGINE_FORM[e](r.k, m.en)).join("\n"), provenance]);
     }
   }
 
@@ -324,7 +324,7 @@ export function buildOperationalPayload(input: ResearchInput): ExportPayload {
       [S("الخطوة التالية", "Next step", "هەنگاوی داهاتوو"), S("افتح تبويب «خطة التنفيذ»", "Open the “Execution plan” sheet", "پلان"), "-"],
     ] } },
     { heading: S("الكلمات حسب الأسواق", "Keywords by market", "وشە بەپێی بازاڕ"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("التبويب", "Sheet", "پەڕە"), S("حجم البحث", "Volume", "قەبارە"), S("المحور المقترح", "Suggested axis", "تەوەر"), SRC], data: kRows.map((r) => [r.k, mName(r.m), r.sheet, cell(r.vol, l), keywordAxis(r.k).axis, SRC_FILE]) } },
-    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("الذكر الحرفي / الإجابات", "Literal mention / answered", "باسکردنی ڕاستەوخۆ"), S("النماذج التي ذكرتها حرفيًا", "Engines with a literal mention", "بزوێنەرەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis rule", "یاسای تەوەر"), S("درجات المحاور الستة (تقديرية)", "Six-axis heuristic scores (not measured)", "نمرەی شەش تەوەر (خەمڵێنراو)"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), SRC], data: perEngine } },
+    { heading: S("الكلمات لكل نموذج", "Keywords per engine", "وشە بۆ هەر بزوێنەر"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), S("الذكر الحرفي / الإجابات", "Literal mention / answered", "باسکردنی ڕاستەوخۆ"), S("النماذج التي ذكرتها حرفيًا", "Engines with a literal mention", "بزوێنەرەکانی باسکردنی ڕاستەوخۆ"), S("المحور المقترح", "Suggested axis", "تەوەری پێشنیارکراو"), S("سبب المحور", "Axis rule", "یاسای تەوەر"), S("درجات المحاور الستة", "Six-axis scores", "نمرەی شەش تەوەر"), S("صيغة سؤال مقترحة", "Suggested query phrasing", "داواکاری پێشنیارکراو"), SRC], data: perEngine } },
     { heading: S("العلامة مقابل المنافسين", "Brand vs competitors", "براند و ڕکابەران"), kind: "table", table: { columns: [S("السوق", "Market", "بازاڕ"), S("الطرف", "Party", "لایەن"), S("الدور", "Role", "ڕۆڵ"), S("كيف وُجد", "Found via", "دۆزرایەوە"), S("الرابط", "URL", "بەستەر"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("حقائق/100 كلمة", "Facts/100 words", "ڕاستی"), S("بطاقة السلطة", "Authority card", "کارت"), S("كلمات الملف المنشورة", "File keywords published", "بڵاوکراوە"), S("قوة", "Strength", "هێز"), S("ضعف", "Weakness", "لاوازی"), SRC], data: bench } },
     { heading: S("الكلمات السلبية — للمراجعة", "Negative keywords — review required", "وشە نەرێنییەکان — پێداچوونەوە"), kind: "table", table: { columns: [S("الكلمة", "Keyword", "وشە"), S("التصنيف", "Classification", "پۆلێن"), S("السبب / ملاحظة التحقق", "Reason / validation note", "هۆکار / تێبینی پشکنین"), SRC], data: negs } },
     { heading: S("خطة التنفيذ", "Execution plan", "پلانی جێبەجێکردن"), kind: "table", table: { columns: ["#", S("الخطوة", "Step", "هەنگاو"), S("الحالة", "Status", "دۆخ"), S("الناتج", "Output", "ئەنجام"), S("كيف تُنفذ", "How to do it", "چۆن")], data: plan } },
