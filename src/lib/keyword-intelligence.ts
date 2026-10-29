@@ -95,7 +95,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   // Keep competitor-derived opportunities even when engine discovery is available.
   // Deduplicate by normalized phrase, preferring a literal competitor-page source when present.
   const fresh: Array<{ keyword: string; from: "competitor" | "engines"; party?: string; sourceUrl?: string; snippet?: string }> =
-    [...new Map([...competitorCandidates, ...discoveryCandidates].map((item) => [norm(item.keyword), item])).values()].slice(0, 80);
+    [...new Map([...discoveryCandidates, ...competitorCandidates].map((item) => [norm(item.keyword), item])).values()].slice(0, 80);
   const sampleSet = input.sampleKeywords ? new Set(input.sampleKeywords.map(norm)) : null;
   const sampledPairSet = input.sampledMarketKeywords
     ? new Set(input.sampledMarketKeywords.map((item) => item.market + "|" + norm(item.keyword)))
@@ -103,7 +103,12 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const authority = (p?: PartyEvidence) => {
     if (!p?.pageText) return NM;
     const a = authoritySignals(p);
-    return `${[a.title, a.description, a.phone, a.email, a.about, a.faq].filter(Boolean).length}/6`;
+    const count = [a.title, a.description, a.phone, a.email, a.about, a.faq].filter(Boolean).length;
+    return String(count) + "/6 " + S(
+      "(إشارات داخل الصفحة؛ سلطة الروابط الخلفية لم تُقَس لغياب بيانات روابط مرجعية)",
+      "(on-page signals; backlink authority not measured because verified backlink data is unavailable)",
+      "(نیشانەی ناو پەڕە؛ دەسەڵاتی بەستەری دەرەوە نەپێوراوە)"
+    );
   };
   const facts = (p?: PartyEvidence) => { const f = factDensity(p?.pageText || null); return f ? f.per100 : NM; };
   const opinion = (k: string) => {
@@ -117,7 +122,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     // Every successful answer counts, whichever route delivered it.
     const direct = marketProbes.filter((answer) => answer.status === "answered");
     if (!marketProbes.length || !direct.length) return { share: NM, engines: NM };
-    const mentioned = [...new Set(direct.filter((answer) => norm(answer.answer).includes(keyword)).map((answer) => answer.engine))];
+    const mentioned = [...new Set(direct.filter((answer) => norm(answer.answer).includes(norm(input.brand))).map((answer) => answer.engine))];
     return {
       share: `${mentioned.length}/${direct.length}`,
       engines: mentioned.join(", ") || S("لم تذكرها إجابات المحركات", "No literal mention in engine answers", "لە وەڵامە ڕاستەوخۆکاندا باس نەکراوە"),
@@ -127,7 +132,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
 
   // 1. Brand keywords (current + new)
   const SRC_CUR = input.hasFile ? S("من الملف", "From file", "لە فایل") : S("من فحص الموقع", "From site scan", "لە پشکنینی ماڵپەڕ");
-  const brandCols = [S("الكلمة", "Keyword", "وشە"), S("النوع", "Type", "جۆر"), S("المصدر", "Source", "سەرچاوە"), S("حصة الصوت في النماذج", "Share of voice in models", "بەشی دەنگ"), S("الكثافة في صفحة العلامة (/100 كلمة)", "Density on brand page (/100 words)", "چڕی"), S("كثافة الحقائق", "Fact density", "چڕی ڕاستییەکان"), S("السلطة", "Authority", "دەسەڵات"), S("رأي النماذج", "Model opinion", "ڕای مۆدێلەکان")];
+  const brandCols = [S("الكلمة", "Keyword", "وشە"), S("النوع", "Type", "جۆر"), S("المصدر", "Source", "سەرچاوە"), S("حصة الصوت في النماذج", "Share of voice in models", "بەشی دەنگ"), S("الكثافة في صفحة العلامة (/100 كلمة)", "Density on brand page (/100 words)", "چڕی"), S("كثافة الحقائق", "Fact density", "چڕی ڕاستییەکان"), S("إشارات السلطة داخل الصفحة", "On-page authority signals", "نیشانەی دەسەڵاتی ناو پەڕە"), S("رأي النماذج", "Model opinion", "ڕای مۆدێلەکان")];
   if (input.hasFile) brandCols.push(S("مقارنة القديم بالجديد", "Old vs new", "کۆن و نوێ"));
   brandCols.push(S("المحركات التي اقترحتها", "Engines that proposed it", "مۆدێلە پێشنیارکەرەکان"), S("مقتطف الإجابة", "Answer excerpt", "پارچەی وەڵام"));
   const brandRows: (string | number)[][] = [];
