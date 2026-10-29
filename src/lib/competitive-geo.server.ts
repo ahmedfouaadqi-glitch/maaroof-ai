@@ -10,26 +10,43 @@ import { evidenceCacheKey, getKeywordEvidence, putKeywordEvidence } from "@/lib/
 
 const rowsOf = (r: any): any[] => (r?.data?.web || r?.data || r?.web || []) as any[];
 
-async function readPage(url: string, userId: string) {
+type PageRead = { text: string | null; title: string | null; description: string | null; cacheHit?: boolean };
+
+async function readPage(url: string, userId: string, workspaceId?: string | null): Promise<PageRead> {
+  const scope = { userId, workspaceId, evidenceType: "page", evidenceKey: await evidenceCacheKey({ url: String(url || "").trim() }) };
+  const cached = await getKeywordEvidence<Omit<PageRead, "cacheHit">>(scope);
+  if (cached && (cached.text || cached.title || cached.description)) return { ...cached, cacheHit: true };
   try {
     const r: any = await fcScrape(url, {}, { userId, toolKey: "competitive_geo" });
     const d = r?.data ?? r;
-    return { text: String(d?.markdown || "").slice(0, 60000) || null, title: d?.metadata?.title || null, description: d?.metadata?.description || null };
-  } catch { return { text: null, title: null, description: null }; }
+    const page = { text: String(d?.markdown || "").slice(0, 60000) || null, title: d?.metadata?.title || null, description: d?.metadata?.description || null };
+    if (page.text || page.title || page.description) await putKeywordEvidence(scope, page);
+    return { ...page, cacheHit: false };
+  } catch { return { text: null, title: null, description: null, cacheHit: false }; }
 }
 
 /** Preflight official-domain evidence so category correction can happen before competitor discovery. */
-export async function readOfficialBrandEvidence(url: string, userId: string) {
-  return readPage(url, userId);
+export async function readOfficialBrandEvidence(url: string, userId: string, workspaceId?: string | null) {
+  return readPage(url, userId, workspaceId);
 }
 
-async function findSite(name: string, userId: string): Promise<string | null> {
-  try { const r = rowsOf(await fcSearch(`${name} official site`, { limit: 3 }, { userId, toolKey: "competitive_geo" })); return r[0]?.url || null; } catch { return null; }
+async function findSite(name: string, userId: string, workspaceId?: string | null): Promise<string | null> {
+  const query = String(name || "").trim() + " official site";
+  const scope = { userId, workspaceId, evidenceType: "site-search", evidenceKey: await evidenceCacheKey(query) };
+  const cached = await getKeywordEvidence<{ url: string }>(scope);
+  if (cached && /^https?:\/\//i.test(cached.url)) return cached.url;
+  try {
+    const r = rowsOf(await fcSearch(query, { limit: 3 }, { userId, toolKey: "competitive_geo" }));
+    const url = String(r[0]?.url || "");
+    if (/^https?:\/\//i.test(url)) await putKeywordEvidence(scope, { url });
+    return url || null;
+  } catch { return null; }
 }
 
 export async function gatherParties(o: {
   brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string;
-  brandPageEvidence?: { text: string | null; title: string | null; description: string | null };
+  brandPageEvidence?: { text: string | null; title: string | null; description: string | null; cacheHit?: boolean };
+  workspaceId?: string | null;
 }): Promise<PartyEvidence[]> {
   const parties: Array<Omit<PartyEvidence, "pageText">> = [{ name: o.brand, role: "brand", url: o.site || null, found: "user" }];
   for (const c of o.competitors.slice(0, 4)) parties.push({ name: c, role: "competitor", url: null, found: "user" });
@@ -50,12 +67,12 @@ export async function gatherParties(o: {
     }
   }
   return Promise.all(parties.map(async (p) => {
-    const url = p.url || (await findSite(p.name, o.userId));
+    const url = p.url || (await findSite(p.name, o.userId, o.workspaceId));
     const isOfficialBrandPage = p.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
     const pg = isOfficialBrandPage
       ? o.brandPageEvidence!
-      : url ? await readPage(url, o.userId) : { text: null, title: null, description: null };
-    return { ...p, url, pageText: pg.text, title: pg.title, description: pg.description };
+      : url ? await readPage(url, o.userId, o.workspaceId) : { text: null, title: null, description: null, cacheHit: false };
+    return { ...p, url, pageText: pg.text, title: pg.title, description: pg.description, cacheHit: Boolean(pg.cacheHit) };
   }));
 }
 
