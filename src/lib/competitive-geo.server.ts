@@ -3,7 +3,7 @@ import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { ENGINE_COUNCIL_MODELS } from "@/lib/maaroof/tool-council";
 import { completionWithFallback } from "@/lib/maaroof/provider-fallback.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
-import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf } from "@/lib/maaroof/probe-answer";
+import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf, type ProbeLanguage } from "@/lib/maaroof/probe-answer";
 import type { Market } from "@/lib/market-scope";
 import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
 
@@ -78,10 +78,10 @@ async function askEngine(engine: string, model: string, q: string): Promise<Engi
 }
 
 /** Ten engines × each market, the same blind question. No answer stays "no_answer". */
-export async function askEnginesPerMarket(category: string, markets: Market[], keywordSamples: Record<string, string[]> = {}): Promise<EngineAnswer[]> {
+export async function askEnginesPerMarket(category: string, markets: Market[], keywordSamples: Record<string, string[]> = {}, contentLanguage: ProbeLanguage = "en"): Promise<EngineAnswer[]> {
   const jobs = markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
   return Promise.all(jobs.map(async ({ m, e }): Promise<EngineAnswer> => {
-    const query = keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || []);
+    const query = keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || [], contentLanguage);
     const call = await askEngine(e.key, e.model, query);
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     if (parsed) return {
@@ -110,7 +110,7 @@ export async function gatherSocial(names: string[], userId: string): Promise<Arr
 }
 
 /** Ten engines × each keyword cluster: a separate blind question per cluster. */
-export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clusters").KeywordCluster[], marketName: (code: string) => string): Promise<import("@/lib/keyword-clusters").ClusterAnswer[]> {
+export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clusters").KeywordCluster[], marketName: (code: string) => string, contentLanguage: ProbeLanguage = "en"): Promise<import("@/lib/keyword-clusters").ClusterAnswer[]> {
   const { clusterQuestion } = await import("@/lib/keyword-clusters");
   const jobs = clusters.flatMap((c) => ENGINE_COUNCIL_MODELS.map((e) => ({ c, e })));
   return Promise.all(jobs.map(async ({ c, e }) => {
