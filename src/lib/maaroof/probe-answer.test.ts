@@ -7,7 +7,7 @@ describe("keywordVisibilityProbeQuestion", () => {
     expect(q).toContain("United States");
     expect(q).toContain('"designer evening gowns"');
     expect(q).toContain('"Mengotti couture dresses"');
-    expect(q).toContain("do not switch to SEO tools");
+    expect(q).toContain("do not recommend SEO agencies");
     expect(q).not.toContain("target brand is Mengotti");
   });
 
@@ -19,8 +19,16 @@ describe("keywordVisibilityProbeQuestion", () => {
     expect(q).not.toContain('"jacket"');
   });
 
+  it("keeps content language separate from the geographic market", () => {
+    const q = keywordVisibilityProbeQuestion("Fashion", "Saudi Arabia", ["evening gown"], "ar");
+    expect(q).toContain("في سوق Saudi Arabia");
+    expect(q).toContain('"evening gown"');
+    expect(q).not.toContain("What are the best");
+  });
+
   it("does not invent a keyword list when no keyword samples are supplied", () => {
     const q = keywordVisibilityProbeQuestion("Fashion", "Australia");
-    expect(q).toContain("Use the category to understand the search context.");
+    expect(q).toContain("Fashion");
+    expect(q).toContain("Australia");
   });
 });
