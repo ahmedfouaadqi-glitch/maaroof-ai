@@ -48,9 +48,13 @@ function linkedAxis(
 ): AxisMeasurement {
   if (!liveSerpRequested) return blank("live_search_not_requested");
   if (!evidence || evidence.status !== "measured") return blank(evidence?.error || "live_search_unavailable", evidence?.provider);
-  const checked = kind === "answerBox" ? evidence.answerBoxChecked : evidence.aiOverviewChecked;
-  const citations = kind === "answerBox" ? evidence.answerBoxCitations : evidence.aiOverviewCitations;
-  if (checked !== true) return blank(kind === "answerBox" ? "answer_box_not_exposed_by_provider" : "ai_overview_not_exposed_by_provider", evidence.provider);
+  const checked = kind === "answerBox"
+    ? evidence.answerBoxChecked
+    : evidence.aiOverviewChecked === true || evidence.answerBoxChecked === true;
+  const citations = kind === "answerBox"
+    ? evidence.answerBoxCitations
+    : [...(evidence.aiOverviewCitations || []), ...(evidence.answerBoxCitations || [])];
+  if (checked !== true) return blank(kind === "answerBox" ? "answer_box_not_exposed_by_provider" : "ai_overview_and_answer_box_not_exposed_by_provider", evidence.provider);
   if (!site) return blank("target_site_missing", evidence.provider);
   const evidenceUrl = (citations || []).find((url) => domainMatches(url, site)) || null;
   return { value: evidenceUrl ? 100 : 0, reason: null, evidenceUrl, provider: evidence.provider || null };
@@ -123,7 +127,7 @@ export function measureKeywordAxes(input: {
     geo = { value: Math.round((engines.length / expectedEngines.length) * 100), reason: null, engines };
   }
 
-  const aeo = linkedAxis(search, site, "answerBox", input.liveSerpRequested);
+  const aeo = blank("aeo_requires_a_dedicated_answer_engine_measurement");
   const sge = linkedAxis(search, site, "aiOverview", input.liveSerpRequested);
   return {
     SEO: seo,
