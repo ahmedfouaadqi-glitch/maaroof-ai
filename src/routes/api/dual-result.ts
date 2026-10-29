@@ -460,7 +460,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
         payload.subtitle = [lang === "ar" ? "لغة المحتوى: " : "Content language: ", contentLanguage, lang === "ar" ? "السوق المستهدف: " : " · Target market: ", markets.map((m: any) => lang === "ar" ? m.ar : m.en).join(", "), lang === "ar" ? "فحص نتائج البحث المباشر: " : " · Live search check: ", liveSerpRequested ? (lang === "ar" ? "مطلوب" : "requested") : (lang === "ar" ? "لم يُطلب" : "not requested")].join("");
         const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
-        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage });
+        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage, competitorValidation });
         if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة البيانات المهيكلة الموثقة" : "Verified structured data evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
         if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
