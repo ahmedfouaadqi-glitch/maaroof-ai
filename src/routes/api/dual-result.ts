@@ -100,7 +100,9 @@ export const Route = createFileRoute("/api/dual-result")({
         if (!category) return Response.json({ error: "category_required", need: ["category"] }, { status: 422 });
 
         const chosen = (Array.isArray(b?.markets) ? b.markets : []).map((m: any) => marketByCode(String(m))).filter(Boolean);
-        const userMarkets = detectMarkets(hasFile ? [marketText] : [marketText, String(workspace?.country || "")]);
+        // An explicit target market replaces the workspace default; do not silently add both markets.
+        const marketHints = marketText ? [marketText] : [String(workspace?.country || "")].filter(Boolean);
+        const userMarkets = detectMarkets(marketHints);
         const scopedMarkets = (geoMode === "country" || geoMode === "city") ? detectMarkets([geoCountry, geoCity]) : [];
         const marketColumnSignals = sheets.flatMap((sheet: any) => {
           const signals: string[] = [];
