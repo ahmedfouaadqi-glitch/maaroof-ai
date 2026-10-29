@@ -455,12 +455,23 @@ export const Route = createFileRoute("/api/dual-result")({
         const { sheetsForMarket } = await import("@/lib/market-scope");
         const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheetsForMarket(sheets, markets, m).filter((s: any) => !/negative|سلبي/i.test(s.name)).flatMap(kwOf), winners, clusterLimit));
         const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
-        const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (code) => {
-          const market = markets.find((item: any) => item.code === code) as any;
-          return contentLanguage === "ar" || contentLanguage === "ku" ? (market?.ar || code) : (market?.en || code);
-        }, contentLanguage) : [];
-        const answeredClusters = answeredClusterCount(clusterAnswers); // direct visibility count only
-        const billableClusters = billableClusterCount(clusterAnswers); // charge usable results from either route
+        const clusterScope = {
+          userId, workspaceId, evidenceType: "cluster-answers",
+          evidenceKey: await evidenceCacheKey({ analysisScopeKey, clusters, contentLanguage }),
+        };
+        const cachedClusters = await getKeywordEvidence<any[]>(clusterScope);
+        const clusterCacheHit = Boolean(cachedClusters);
+        const clusterAnswers = cachedClusters
+          ? cachedClusters.map((answer: any) => ({ ...answer, cacheHit: true }))
+          : (clusters.length ? await askEnginesPerCluster(clusters, (code) => {
+              const market = markets.find((item: any) => item.code === code) as any;
+              return contentLanguage === "ar" || contentLanguage === "ku" ? (market?.ar || code) : (market?.en || code);
+            }, contentLanguage) : []);
+        if (!cachedClusters && clusterAnswers.some((answer: any) => answer.status === "answered")) {
+          await putKeywordEvidence(clusterScope, clusterAnswers.map(({ cacheHit, ...answer }: any) => answer));
+        }
+        const answeredClusters = answeredClusterCount(clusterAnswers);
+        const billableClusters = billableClusterCount(clusterAnswers.filter((answer: any) => !answer.cacheHit));
         if (billableClusters) {
           const { chargeTokens: ct } = await import("@/lib/tokens.server");
           let cc: any = await ct({ userId, toolKey: "competitive_geo.cluster", units: billableClusters, meta: { attachment_id: id } });
@@ -472,14 +483,26 @@ export const Route = createFileRoute("/api/dual-result")({
         // New keywords: real discovery questions to the ten engines, charged per successful answer only.
         const { askEnginesForDiscovery } = await import("@/lib/competitive-geo.server");
         const { discoveryConsensus } = await import("@/lib/keyword-discovery");
-        const discoveryAnswers = await askEnginesForDiscovery({
-          brand, category, markets: markets.slice(0, 5),
-          competitors: parties.filter((p) => p.role === "competitor").map((p) => p.name), contentLanguage: contentLanguage as any,
-        });
+        const discoveryCompetitors = parties.filter((p) => p.role === "competitor").map((p) => p.name);
+        const discoveryScope = {
+          userId, workspaceId, evidenceType: "discovery-answers",
+          evidenceKey: await evidenceCacheKey({ analysisScopeKey, category, markets: markets.map((m: any) => m.code), competitors: discoveryCompetitors, contentLanguage }),
+        };
+        const cachedDiscovery = await getKeywordEvidence<any[]>(discoveryScope);
+        const discoveryCacheHit = Boolean(cachedDiscovery);
+        const discoveryAnswers = cachedDiscovery
+          ? cachedDiscovery.map((answer: any) => ({ ...answer, cacheHit: true }))
+          : await askEnginesForDiscovery({
+              brand, category, markets: markets.slice(0, 5),
+              competitors: discoveryCompetitors, contentLanguage: contentLanguage as any,
+            });
+        if (!cachedDiscovery && discoveryAnswers.some((answer: any) => answer.status === "answered")) {
+          await putKeywordEvidence(discoveryScope, discoveryAnswers.map(({ cacheHit, ...answer }: any) => answer));
+        }
         const { allKeywords: allKeywordsFn } = await import("@/lib/operational-workbook");
         const knownKeywords = allKeywordsFn(sheets);
         const discovered = discoveryConsensus(discoveryAnswers, knownKeywords, knownKeywords).slice(0, 80);
-        const discoveryAnswered = discoveryAnswers.filter((a) => a.status === "answered").length;
+        const discoveryAnswered = discoveryAnswers.filter((a: any) => a.status === "answered" && !a.cacheHit).length;
         if (discoveryAnswered) {
           const { chargeTokens: ct } = await import("@/lib/tokens.server");
           let dc: any = await ct({ userId, toolKey: "keyword_intelligence.discovery", units: discoveryAnswered, meta: { attachment_id: id } });
