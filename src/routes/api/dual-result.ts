@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
-import { resolveCompetitiveContext } from "@/lib/competitive-context";
+import { resolveCompetitiveContext, inferCategoryFromVerifiedEvidence } from "@/lib/competitive-context";
 import { deriveEvidenceState, hasChargeableMarketEvidence } from "@/lib/keyword-intelligence-flow";
 
 // Second result: competitor + GEO research per target market, returned as an export payload.
@@ -95,8 +95,53 @@ export const Route = createFileRoute("/api/dual-result")({
         });
         const brand = resolved.brand;
         const site = resolved.site || undefined;
-        const category = resolved.category;
+        let category = resolved.category;
+        let categorySource: string = resolved.categorySource;
+        let officialBrandPageEvidence: { text: string | null; title: string | null; description: string | null } | undefined;
+        let categoryCorrection: { previous: string; current: string; persisted: boolean; evidence: string[] } | null = null;
         if (!brand) return Response.json({ error: "brand_required", need: ["brand"] }, { status: 422 });
+
+        // Read the official domain before discovering competitors, then reuse this evidence below.
+        // Only high-confidence page evidence can override an inconsistent stored/user-prefilled sector.
+        if (site) {
+          const { readOfficialBrandEvidence } = await import("@/lib/competitive-geo.server");
+          officialBrandPageEvidence = await readOfficialBrandEvidence(site, userId);
+          const websiteCategory = inferCategoryFromVerifiedEvidence(officialBrandPageEvidence);
+          if (websiteCategory.confidence === "high" && websiteCategory.category && websiteCategory.category !== category) {
+            const previous = category;
+            category = websiteCategory.category;
+            categorySource = "official_site_verified";
+            const truth: any = workspace?.entity_truth_card || {};
+            const profile: any = workspace?.profile || {};
+            const storedValues = [
+              workspace?.brand_summary, truth.sector, truth.industry, truth.category,
+              profile.industry, profile.sector, profile.category, profile.specialty,
+            ].map((value) => String(value || "").trim().toLocaleLowerCase()).filter(Boolean);
+            const requestedCategory = String(b?.category || "").trim().toLocaleLowerCase();
+            const valueWasWorkspaceDefault = !requestedCategory || storedValues.includes(requestedCategory);
+            let persisted = false;
+            if (workspaceId && valueWasWorkspaceDefault) {
+              const verification = {
+                status: "verified",
+                source_url: site,
+                page_title: officialBrandPageEvidence.title || "",
+                previous_category: previous,
+                verified_category: category,
+                confidence: websiteCategory.confidence,
+                evidence_sources: websiteCategory.sources,
+                checked_at: new Date().toISOString(),
+              };
+              const updatedTruth = { ...truth, sector: category, category_verification: verification };
+              const { error: updateError } = await db.from("workspaces").update({
+                brand_summary: category,
+                entity_truth_card: updatedTruth,
+              }).eq("id", workspaceId).eq("owner_id", userId);
+              persisted = !updateError;
+              if (persisted) workspace = { ...workspace, brand_summary: category, entity_truth_card: updatedTruth };
+            }
+            categoryCorrection = { previous, current: category, persisted, evidence: websiteCategory.sources };
+          }
+        }
         if (!category) return Response.json({ error: "category_required", need: ["category"] }, { status: 422 });
 
         const chosen = (Array.isArray(b?.markets) ? b.markets : []).map((m: any) => marketByCode(String(m))).filter(Boolean);
@@ -171,7 +216,7 @@ export const Route = createFileRoute("/api/dual-result")({
           .map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
         const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
         const [parties, engineAnswers] = await Promise.all([
-          gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId }),
+          gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence }),
           askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket, contentLanguage),
         ]);
         if (!hasFile) {
@@ -275,7 +320,7 @@ export const Route = createFileRoute("/api/dual-result")({
             payload, summary, diagnostics, evidence_state: "none" as const,
             evidence_note: "No external evidence was retrieved. The workbook still preserves the original rows, actual market queries, and failed/no-answer statuses. Additional paid research stages were skipped.",
             parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
-            context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested },
+            context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection },
             charged: 0,
             clusters: { asked: 0, answered: 0, billable_answered: 0, probes_asked: 0, probes_answered: 0, probes_fallback_answered: 0 },
             negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
