@@ -17,11 +17,19 @@ async function readPage(url: string, userId: string) {
   } catch { return { text: null, title: null, description: null }; }
 }
 
+/** Preflight official-domain evidence so category correction can happen before competitor discovery. */
+export async function readOfficialBrandEvidence(url: string, userId: string) {
+  return readPage(url, userId);
+}
+
 async function findSite(name: string, userId: string): Promise<string | null> {
   try { const r = rowsOf(await fcSearch(`${name} official site`, { limit: 3 }, { userId, toolKey: "competitive_geo" })); return r[0]?.url || null; } catch { return null; }
 }
 
-export async function gatherParties(o: { brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string }): Promise<PartyEvidence[]> {
+export async function gatherParties(o: {
+  brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string;
+  brandPageEvidence?: { text: string | null; title: string | null; description: string | null };
+}): Promise<PartyEvidence[]> {
   const parties: Array<Omit<PartyEvidence, "pageText">> = [{ name: o.brand, role: "brand", url: o.site || null, found: "user" }];
   for (const c of o.competitors.slice(0, 4)) parties.push({ name: c, role: "competitor", url: null, found: "user" });
   if (o.category && parties.length < 5) {
@@ -42,7 +50,10 @@ export async function gatherParties(o: { brand: string; site?: string; competito
   }
   return Promise.all(parties.map(async (p) => {
     const url = p.url || (await findSite(p.name, o.userId));
-    const pg = url ? await readPage(url, o.userId) : { text: null, title: null, description: null };
+    const isOfficialBrandPage = p.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
+    const pg = isOfficialBrandPage
+      ? o.brandPageEvidence!
+      : url ? await readPage(url, o.userId) : { text: null, title: null, description: null };
     return { ...p, url, pageText: pg.text, title: pg.title, description: pg.description };
   }));
 }
