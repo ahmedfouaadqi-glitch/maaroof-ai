@@ -1,11 +1,10 @@
-// Pure: builds the eight-section keyword intelligence result from recorded evidence only.
+// Pure: builds the six-sheet keyword intelligence result from recorded evidence only.
 // Anything not measured reads "not measured"; no invented numbers.
 import type { ExportSection, ExportLang } from "./exports";
 import type { ResearchInput, EngineAnswer, PartyEvidence } from "./operational-workbook";
 import { allKeywords, authoritySignals, factDensity, negativeCandidates } from "./operational-workbook";
 import { measureKeywordAxes, LIVE_AXES, type LiveAxis, type LiveSearchEvidence } from "./live-keyword-axes";
 import { extractSiteKeywords } from "./site-keyword-extractor";
-import { ingestionFor } from "./keyword-ingestion-timeline";
 import { sanitizeDeep } from "./brand-sanitize";
 
 export const AXES_ORDER = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"] as const;
@@ -205,9 +204,6 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       ]);
     }
   }
-
-  // 6. Ingestion
-  const ingRows = [...fresh.map((f) => [f.keyword, ingestionFor(true, l).initial, ingestionFor(true, l).full]), ...brandList.slice(0, 30).map((k) => [k, ingestionFor(false, l).initial, ingestionFor(false, l).full])];
 
   // 7. Negatives in four groups
   const G = [
