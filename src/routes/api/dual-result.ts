@@ -239,7 +239,8 @@ export const Route = createFileRoute("/api/dual-result")({
         // Stratified sample: only these keywords are measured live in this run (others read "out of sample").
         const { stratifiedSample, sheetStrata, DEFAULT_SAMPLE_PER_MARKET } = await import("@/lib/keyword-discovery");
         const sampleLimit = Math.max(10, Math.min(500, Math.floor(Number(b?.sample_limit) || DEFAULT_SAMPLE_PER_MARKET)));
-        const skipKeywords = Array.isArray(b?.skip_keywords) ? b.skip_keywords.map((x: any) => String(x)).slice(0, 5000) : [];
+        const skipKeywordPairs = Array.isArray(b?.skip_keyword_pairs) ? b.skip_keyword_pairs.map((x: any) => String(x)).slice(0, 10000) : [];
+        const skipKeywords = skipKeywordPairs.length ? [] : (Array.isArray(b?.skip_keywords) ? b.skip_keywords.map((x: any) => String(x)).slice(0, 5000) : []);
         const totalKeywords = sheetStrata(sheets, keywordColumn).flat().length;
         const sampleKeywords = hasFile ? stratifiedSample(sheetStrata(sheets, keywordColumn), sampleLimit, skipKeywords) : [];
         const clusterLimitEstimate = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
@@ -378,54 +379,9 @@ export const Route = createFileRoute("/api/dual-result")({
           keyword: string; market: string; query: string; status: "measured" | "unavailable";
           provider?: string; results: Array<{ url: string; title: string }>;
           answerBoxChecked: boolean; answerBoxCitations: string[];
-          aiOverviewChecked: boolean; aiOverviewCitations: string[]; error?: string;
+          aiOverviewChecked: boolean; aiOverviewCitations: string[]; error?: string; cacheHit?: boolean;
         }> = [];
-        if (liveSerpRequested) {
-          const { allKeywords } = await import("@/lib/operational-workbook");
-          const { fcSearch } = await import("@/lib/firecrawl");
-          const seenKeywords = new Set<string>();
-          for (const market of markets.slice(0, 5)) {
-            const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
-            const sampleSet = new Set(sampleKeywords.map((k: string) => k.toLocaleLowerCase()));
-            const pool = allKeywords(targetSheets, Number.POSITIVE_INFINITY);
-            const words = (sampleSet.size ? pool.filter((k: string) => sampleSet.has(k.toLocaleLowerCase())) : pool).slice(0, liveSearchLimit);
-            for (const keyword of words) {
-              const key = market.code + "|" + keyword.toLocaleLowerCase();
-              if (seenKeywords.has(key)) continue;
-              seenKeywords.add(key);
-              const marketQueryLabel = contentLanguage === "ar" ? market.ar : market.en;
-              const query = [keyword, marketQueryLabel].filter(Boolean).join(" ");
-              try {
-                const found: any = await fcSearch(query, {
-                  limit: 10,
-                  lang: contentLanguage,
-                  location: market.en,
-                }, { userId, toolKey: "keyword_intelligence.serp" });
-                const raw = (found?.data?.web || found?.data || found?.web || []) as any[];
-                const results = raw.filter((item) => /^https?:\/\//i.test(String(item?.url || "")))
-                  .slice(0, 10)
-                  .map((item) => ({ url: String(item.url), title: String(item.title || item.description || "") }));
-                liveSearchEvidence.push({
-                  keyword, market: market.code, query, status: results.length ? "measured" : "unavailable",
-                  provider: String(found?.fetch_source || "available_search_provider"),
-                  results,
-                  // Current provider response contract does not expose these rich-result citations.
-                  // Mark them unavailable instead of inferring Google AI Overview presence.
-                  answerBoxChecked: false, answerBoxCitations: [],
-                  aiOverviewChecked: false, aiOverviewCitations: [],
-                  ...(results.length ? {} : { error: "live_search_unavailable" }),
-                });
-              } catch (error: any) {
-                liveSearchEvidence.push({
-                  keyword, market: market.code, query, status: "unavailable",
-                  results: [], answerBoxChecked: false, answerBoxCitations: [],
-                  aiOverviewChecked: false, aiOverviewCitations: [],
-                  error: String(error?.scope || error?.code || "live_search_unavailable").slice(0, 100),
-                });
-              }
-            }
-          }
-        }
+
 
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
@@ -529,6 +485,107 @@ export const Route = createFileRoute("/api/dual-result")({
           let dc: any = await ct({ userId, toolKey: "keyword_intelligence.discovery", units: discoveryAnswered, meta: { attachment_id: id } });
           if (!dc.ok && dc.reason === "unpriced") dc = await ct({ userId, toolKey: "compare", units: discoveryAnswered, meta: { attachment_id: id, sub: "keyword_intelligence.discovery" } });
           if (dc.ok) totalCharged += Number(dc.tokens || 0);
+        }
+
+        const liveSampledPairs: Array<{ market: string; keyword: string }> = [];
+        const liveSampledKeywordsByMarket: Record<string, string[]> = {};
+        const liveMeasurementKeywords: string[] = [];
+        const keywordProbeAnswers: any[] = [];
+        if (liveSerpRequested) {
+          const { allKeywords } = await import("@/lib/operational-workbook");
+          const { fcSearch } = await import("@/lib/firecrawl");
+          const { askEnginesForKeywordVisibility } = await import("@/lib/competitive-geo.server");
+          const filePoolSet = new Set(sampleKeywords.map((keyword: string) => keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim()));
+          const seenPairKeys = new Set<string>();
+          for (const market of markets.slice(0, 5)) {
+            const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
+            const pool = allKeywords(targetSheets, Number.POSITIVE_INFINITY);
+            const skipSet = new Set(skipKeywordPairs.filter((pair: string) => pair.startsWith(market.code + "|")).map((pair: string) => pair.slice(market.code.length + 1).toLocaleLowerCase().replace(/\s+/g, " ").trim()));
+            const currentCandidates = pool.filter((keyword: string) =>
+              (!hasFile || filePoolSet.has(keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim())) &&
+              !skipSet.has(keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim())
+            );
+            const newCandidates = discovered.filter((item: any) =>
+              item.market === market.code && !item.inFile &&
+              !skipSet.has(String(item.keyword).toLocaleLowerCase().replace(/\s+/g, " ").trim())
+            ).map((item: any) => String(item.keyword).trim());
+            const halfFile = Math.ceil(liveSearchLimit / 2);
+            const halfNew = Math.floor(liveSearchLimit / 2);
+            let selected = [...currentCandidates.slice(0, halfFile), ...newCandidates.slice(0, halfNew)];
+            const chosenKeys = new Set(selected.map((keyword) => keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim()));
+            // If one pool is short, fill unused slots from the other pool without duplicates.
+            for (const keyword of [...currentCandidates.slice(halfFile), ...newCandidates.slice(halfNew)]) {
+              if (selected.length >= liveSearchLimit) break;
+              const key = keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+              if (!chosenKeys.has(key)) { selected.push(keyword); chosenKeys.add(key); }
+            }
+            const pairs = selected.slice(0, liveSearchLimit);
+            liveSampledKeywordsByMarket[market.code] = pairs;
+            for (const keyword of pairs) {
+              const pairKey = market.code + "|" + keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+              if (seenPairKeys.has(pairKey)) continue;
+              seenPairKeys.add(pairKey);
+              liveSampledPairs.push({ market: market.code, keyword });
+              if (!liveMeasurementKeywords.some((existing) => existing.toLocaleLowerCase() === keyword.toLocaleLowerCase())) liveMeasurementKeywords.push(keyword);
+              const marketQueryLabel = contentLanguage === "ar" || contentLanguage === "ku" ? market.ar : market.en;
+              const query = [keyword, marketQueryLabel].filter(Boolean).join(" ");
+              const cacheScope = {
+                userId, workspaceId, evidenceType: "serp",
+                evidenceKey: await evidenceCacheKey({ analysisScopeKey, market: market.code, keyword, query, lang: contentLanguage }),
+              };
+              const cached = await getKeywordEvidence<any>(cacheScope);
+              if (cached && Array.isArray(cached.results) && cached.results.length) {
+                liveSearchEvidence.push({ ...cached, cacheHit: true });
+                continue;
+              }
+              try {
+                const found: any = await fcSearch(query, {
+                  limit: 10, lang: contentLanguage, location: market.en,
+                }, { userId, toolKey: "keyword_intelligence.serp" });
+                const raw = (found?.data?.web || found?.data || found?.web || []) as any[];
+                const results = raw.filter((item) => /^https?:\/\//i.test(String(item?.url || "")))
+                  .slice(0, 10)
+                  .map((item) => ({ url: String(item.url), title: String(item.title || item.description || "") }));
+                const observation = {
+                  keyword, market: market.code, query, status: results.length ? "measured" : "unavailable",
+                  provider: String(found?.fetch_source || "available_search_provider"), results,
+                  answerBoxChecked: false, answerBoxCitations: [],
+                  aiOverviewChecked: false, aiOverviewCitations: [],
+                  ...(!results.length ? { error: "live_search_unavailable" } : {}),
+                };
+                liveSearchEvidence.push({ ...observation, cacheHit: false });
+                if (results.length) await putKeywordEvidence(cacheScope, observation);
+              } catch (error: any) {
+                liveSearchEvidence.push({
+                  keyword, market: market.code, query, status: "unavailable", results: [],
+                  answerBoxChecked: false, answerBoxCitations: [], aiOverviewChecked: false, aiOverviewCitations: [],
+                  error: String(error?.scope || error?.code || "live_search_unavailable").slice(0, 100), cacheHit: false,
+                });
+              }
+            }
+          }
+          const keywordProbeMarkets = Object.fromEntries(Object.entries(liveSampledKeywordsByMarket).map(([market, keywords]) => [market, keywords]));
+          const currentProbeAnswers = await askEnginesForKeywordVisibility({
+            category, markets: markets.slice(0, 5), keywordsByMarket: keywordProbeMarkets,
+            contentLanguage: contentLanguage as any, userId, workspaceId,
+          });
+          keywordProbeAnswers.push(...currentProbeAnswers);
+          const newlyAnsweredProbes = currentProbeAnswers.filter((answer: any) => answer.status === "answered" && !answer.cacheHit).length;
+          if (newlyAnsweredProbes) {
+            const { chargeTokens: ct } = await import("@/lib/tokens.server");
+            let probeCharge: any = await ct({
+              userId, toolKey: "keyword_intelligence.discovery", units: newlyAnsweredProbes,
+              meta: { attachment_id: id, sub: "keyword_live_probes", sampled_pairs: liveSampledPairs.length },
+            });
+            if (!probeCharge.ok && probeCharge.reason === "unpriced") {
+              probeCharge = await ct({
+                userId, toolKey: "compare", units: newlyAnsweredProbes,
+                meta: { attachment_id: id, sub: "keyword_live_probes" },
+              });
+            }
+            if (!probeCharge.ok) return Response.json({ error: "insufficient_balance_keyword_probes", left: probeCharge.left }, { status: 402 });
+            totalCharged += Number(probeCharge.tokens || 0);
+          }
         }
 
         const social = await gatherSocial(parties.map((p) => p.name), userId);
