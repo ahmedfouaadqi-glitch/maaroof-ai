@@ -4,7 +4,6 @@ import type { ExportSection, ExportLang } from "./exports";
 import type { ResearchInput, EngineAnswer, PartyEvidence } from "./operational-workbook";
 import { allKeywords, authoritySignals, factDensity, negativeCandidates } from "./operational-workbook";
 import { measureKeywordAxes, LIVE_AXES, type LiveAxis, type LiveSearchEvidence } from "./live-keyword-axes";
-import { clusterScore } from "./keyword-clusters";
 import { extractSiteKeywords } from "./site-keyword-extractor";
 import { ingestionFor } from "./keyword-ingestion-timeline";
 import { sanitizeDeep } from "./brand-sanitize";
@@ -72,10 +71,22 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   };
   const facts = (p?: PartyEvidence) => { const f = factDensity(p?.pageText || null); return f ? f.per100 : NM; };
   const opinion = (k: string) => {
-    const cs = input.clusterAnswers?.length ? input.markets.map((m) => clusterScore(input.clusterAnswers!, m.code, k)).find(Boolean) : null;
-    const m = cs ? { engines: cs.engines, answered: cs.answered } : engineMentions(answers, k);
-    if (!m.answered) return { share: NM, engines: NM };
-    return { share: `${m.engines.length}/${m.answered}`, engines: m.engines.join(", ") || S("لم تذكرها النماذج", "Not mentioned by models", "باس نەکراوە") };
+    const keyword = norm(k);
+    const clusterProbes = (input.clusterAnswers || []).filter((answer) =>
+      answer.keywords.some((phrase) => norm(phrase) === keyword)
+    );
+    const marketProbes = clusterProbes.length
+      ? clusterProbes
+      : answers.filter((answer) => norm(answer.query || "").includes(keyword));
+    // Only primary replies from the named engines are eligible for direct mention reporting.
+    // Fallback/gateway responses are useful context but are not direct observations of that engine.
+    const direct = marketProbes.filter((answer) => answer.status === "answered" && answer.provider_path === "primary");
+    if (!marketProbes.length || !direct.length) return { share: NM, engines: NM };
+    const mentioned = [...new Set(direct.filter((answer) => norm(answer.answer).includes(keyword)).map((answer) => answer.engine))];
+    return {
+      share: `${mentioned.length}/${direct.length}`,
+      engines: mentioned.join(", ") || S("لم تذكرها الإجابات المباشرة", "No literal mention in direct replies", "لە وەڵامە ڕاستەوخۆکاندا باس نەکراوە"),
+    };
   };
   const density = (p: PartyEvidence | undefined, k: string) => { const d = keywordDensity(p?.pageText, k); return d === null ? NM : d; };
 
