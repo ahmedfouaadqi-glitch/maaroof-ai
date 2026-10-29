@@ -269,10 +269,43 @@ export function KeywordIntelligence() {
           {payload.sections.map((section, i) => section.table && (
             <section key={i} className="overflow-x-auto rounded-xl border border-border">
               <h3 className="bg-muted px-3 py-2 text-sm font-semibold">{section.heading}</h3>
-              <table className="w-full text-xs">
-                <thead><tr>{section.table.columns.map((header, j) => <th key={j} className="border-b border-border px-2 py-1 text-start font-medium">{header}</th>)}</tr></thead>
-                <tbody>{section.table.data.map((row, j) => <tr key={j} className="border-b border-border/50">{row.map((value, k) => <td key={k} className="px-2 py-1 align-top">{String(value)}</td>)}</tr>)}</tbody>
-              </table>
+              {section.table.columns.some((column) => /تفسير الدرجة|score explanation|ڕوونکردنەوەی بەها/i.test(column)) ? (
+                <div className="space-y-2 p-3">
+                  {section.table.data.map((row, j) => (
+                    <details key={j} className="rounded-lg border border-border/70 bg-background">
+                      <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium">
+                        <span className="font-semibold">{String(row[0] ?? "")}</span>
+                        <span className="mx-2 text-muted-foreground">· {String(row[1] ?? "")}</span>
+                        <span className="mt-1 flex flex-wrap gap-1.5">
+                          {section.table!.columns.slice(2, 8).map((header, k) => (
+                            <span key={k} className="rounded-md bg-muted px-1.5 py-1 text-[10px]">{header}: {String(row[k + 2] ?? "")}</span>
+                          ))}
+                        </span>
+                      </summary>
+                      <div className="grid gap-2 border-t border-border p-3 sm:grid-cols-2">
+                        {section.table!.columns.map((header, k) => {
+                          const value = String(row[k] ?? "");
+                          if (!value || k < 2) return null;
+                          const parts = value.split(/(https?:\/\/[^\s|]+)/g);
+                          return <div key={k} className="min-w-0 text-xs leading-5">
+                            <div className="font-semibold text-foreground">{header}</div>
+                            <div className="break-words text-muted-foreground">
+                              {parts.map((part, partIndex) => /^https?:\/\//i.test(part)
+                                ? <a key={partIndex} href={part.replace(/[),.;]+$/, "")} target="_blank" rel="noreferrer" className="break-all text-primary underline">{part}</a>
+                                : <span key={partIndex}>{part}</span>)}
+                            </div>
+                          </div>;
+                        })}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead><tr>{section.table.columns.map((header, j) => <th key={j} className="border-b border-border px-2 py-1 text-start font-medium">{header}</th>)}</tr></thead>
+                  <tbody>{section.table.data.map((row, j) => <tr key={j} className="border-b border-border/50">{row.map((value, k) => <td key={k} className="px-2 py-1 align-top">{String(value)}</td>)}</tr>)}</tbody>
+                </table>
+              )}
             </section>
           ))}
         </div>
