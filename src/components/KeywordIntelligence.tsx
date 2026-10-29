@@ -176,7 +176,7 @@ export function KeywordIntelligence() {
           lang: l,
           request_text: c.title,
           estimate_only: mode === "estimate",
-          skip_keywords: mode === "expand" ? measured : [],
+          skip_keyword_pairs: mode === "expand" ? measured : [],
         }),
       });
       const j = await response.json().catch(() => ({}));
@@ -184,7 +184,8 @@ export function KeywordIntelligence() {
       if (mode === "estimate") { setEstimate(j.estimate || null); return; }
       setEstimate(null);
       setPayload(j.payload);
-      if (Array.isArray(j.measured_keywords)) setMeasured(j.measured_keywords);
+      if (Array.isArray(j.measured_pairs)) setMeasured(j.measured_pairs);
+      else if (Array.isArray(j.measured_keywords)) setMeasured(j.measured_keywords);
       if (Array.isArray(j.parties)) {
         setComps(j.parties.filter((party: any) => party?.role === "competitor").map((party: any) => String(party.name || "")).filter(Boolean).join(", "));
       }
