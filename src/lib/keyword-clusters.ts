@@ -42,7 +42,7 @@ export function clusterQuestion(c: KeywordCluster, marketName: string, lang: "ar
   return prompts[lang] || prompts.en;
 }
 
-export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string };
+export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string; cacheHit?: boolean };
 
 /** Measured score for one keyword: engines whose cluster answer contains it. null = not measured. */
 export function clusterScore(answers: ClusterAnswer[], market: string, keyword: string): { engines: string[]; answered: number } | null {
