@@ -189,21 +189,21 @@ export const Route = createFileRoute("/api/dual-result")({
           ...marketColumnSignals,
           requestText,
         ]);
-        const markets = chosen.length ? chosen
-          : userMarkets.length ? userMarkets
-          : scopedMarkets.length ? scopedMarkets
-          : geoMode === "world" ? [GLOBAL_MARKET]
-          : workbookMarkets;
+        const mergedMarkets = geoMode === "world"
+          ? [GLOBAL_MARKET]
+          : [...chosen, ...userMarkets, ...scopedMarkets, ...workbookMarkets];
+        const markets = [...new Map(mergedMarkets.map((market: any) => [market.code, market])).values()].slice(0, 5);
         if (!markets.length) return Response.json({
           error: "no_market",
           need: ["market"],
           sheets: sheets.map((s) => s.name),
           detected_category: category,
         }, { status: 422 });
-        const marketSource = chosen.length ? "explicit"
+        const marketSource = geoMode === "world" ? "geographic_scope"
+          : [chosen.length, userMarkets.length, scopedMarkets.length, workbookMarkets.length].filter(Boolean).length > 1 ? "merged_user_and_workbook"
+          : chosen.length ? "explicit"
           : userMarkets.length ? "user_input"
           : scopedMarkets.length ? "geographic_scope"
-          : geoMode === "world" ? "geographic_scope"
           : "workbook_or_request";
 
         const { sheetsForMarket: sheetsForTargetMarket } = await import("@/lib/market-scope");
