@@ -185,7 +185,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       const measured = measureKeywordAxes({
         keyword: k,
         market: market.code,
-        brand,
+        brand: input.brand,
         site: input.parties.find((p) => p.role === "brand")?.url,
         engineAnswers: answers,
         clusterAnswers: input.clusterAnswers,
