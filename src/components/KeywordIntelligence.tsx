@@ -62,6 +62,7 @@ export function KeywordIntelligence() {
   const c = T[l];
   const auth = useAuth();
   const p: any = auth?.profile || {};
+  const hasProfile = Boolean(auth?.profile);
   const [brand, setBrand] = useState<string>(p.brand_name || p.entity_name || "");
   const [site, setSite] = useState<string>(p.website || p.entity_website || "");
   const [category, setCategory] = useState<string>(p.specialty || p.sector || "");
@@ -79,9 +80,11 @@ export function KeywordIntelligence() {
 
   useEffect(() => {
     let cancelled = false;
+    let requestNo = 0;
     async function loadWorkspace() {
+      const currentRequest = ++requestNo;
       const id = typeof window !== "undefined" ? localStorage.getItem(WORKSPACE_KEY) || "" : "";
-      if (cancelled) return;
+      if (cancelled || currentRequest !== requestNo) return;
       setWorkspaceId(id);
       if (!id || !auth.user?.id) {
         setWorkspaceName(c.noWorkspace);
@@ -95,7 +98,7 @@ export function KeywordIntelligence() {
       const { data, error } = await supabase.from("workspaces")
         .select("id,name,brand_url,brand_summary,country,city,language,profile,entity_truth_card,keywords")
         .eq("id", id).eq("owner_id", auth.user.id).maybeSingle();
-      if (cancelled) return;
+      if (cancelled || currentRequest !== requestNo) return;
       if (error || !data) {
         setWorkspaceName(c.noWorkspace);
         setBrand(String(p.brand_name || p.entity_name || ""));
@@ -126,7 +129,7 @@ export function KeywordIntelligence() {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("maaroof:workspace-changed", onWorkspaceChanged);
     };
-  }, [auth.user?.id, auth.profile, l]);
+  }, [auth.user?.id, hasProfile, l]);
 
   async function run() {
     setBusy(true); setErr(""); setPayload(null);
