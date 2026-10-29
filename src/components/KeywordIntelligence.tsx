@@ -135,13 +135,17 @@ export function KeywordIntelligence() {
     };
   }, [auth.user?.id, hasProfile, l]);
 
-  async function run() {
-    setBusy(true); setErr(""); setPayload(null);
+  const [estimate, setEstimate] = useState<any>(null);
+  const [measured, setMeasured] = useState<string[]>([]);
+  const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(null);
+  async function run(mode: "estimate" | "run" | "expand" = "estimate") {
+    setBusy(true); setErr(""); if (mode !== "estimate") setPayload(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("unauthorized");
       let attachmentId: string | undefined;
-      if (file) {
+      if (file && uploaded?.file === file) attachmentId = uploaded.id;
+      else if (file) {
         const form = new FormData();
         form.set("file", file);
         if (workspaceId) form.set("workspace_id", workspaceId);
@@ -154,6 +158,7 @@ export function KeywordIntelligence() {
         if (!upload.ok) throw new Error(uploaded?.error || "upload_failed");
         attachmentId = String(uploaded.attachment_id || "");
         if (!attachmentId) throw new Error("upload_failed");
+        setUploaded({ file, id: attachmentId });
       }
       const response = await apiFetch("/api/dual-result", {
         method: "POST",
@@ -170,11 +175,16 @@ export function KeywordIntelligence() {
           competitors: comps.split(/[,،\n]/).map((x) => x.trim()).filter(Boolean),
           lang: l,
           request_text: c.title,
+          estimate_only: mode === "estimate",
+          skip_keywords: mode === "expand" ? measured : [],
         }),
       });
       const j = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(j?.error || "failed");
+      if (mode === "estimate") { setEstimate(j.estimate || null); return; }
+      setEstimate(null);
       setPayload(j.payload);
+      if (Array.isArray(j.measured_keywords)) setMeasured(j.measured_keywords);
       if (Array.isArray(j.parties)) {
         setComps(j.parties.filter((party: any) => party?.role === "competitor").map((party: any) => String(party.name || "")).filter(Boolean).join(", "));
       }
@@ -230,9 +240,21 @@ export function KeywordIntelligence() {
           </label>}
           <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{c.liveNote}</p>
         </div>
-        <button onClick={run} disabled={busy || !brand.trim()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-          {busy && <Loader2 className="size-4 animate-spin" />}{busy ? c.busy : c.run}
+        <button onClick={() => run("estimate")} disabled={busy || !brand.trim()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+          {busy && <Loader2 className="size-4 animate-spin" />}{busy ? c.busy : (l === "en" ? "Estimate cost" : "تقدير التكلفة")}
         </button>
+        {estimate && (
+          <div className="mt-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs leading-6 text-foreground">
+            <div>{l === "en" ? "Keywords in file" : "الكلمات في الملف"}: <b>{estimate.total_keywords}</b>{estimate.sample_keywords != null && <> · {l === "en" ? "Sample measured now" : "العينة التي ستُقاس الآن"}: <b>{estimate.sample_keywords}</b></>}</div>
+            <div>{l === "en" ? "Questions to the ten engines" : "أسئلة للمحركات العشرة"}: <b>{estimate.engine_questions}</b> · {l === "en" ? "Live search checks" : "فحوص بحث حي"}: <b>{estimate.live_search_checks}</b></div>
+            <div>{l === "en" ? "Estimated cost" : "التكلفة التقديرية"}: <b>{estimate.estimated_tokens}</b> · {l === "en" ? "Your balance" : "رصيدك"}: <b>{estimate.unlimited ? (l === "en" ? "Unlimited" : "غير محدود") : estimate.balance}</b></div>
+            <p className="text-muted-foreground">{l === "en" ? "You are charged only for successful answers." : "يُخصم فقط مقابل الإجابات الناجحة."}</p>
+            <button onClick={() => run("run")} disabled={busy} className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{l === "en" ? "Start" : "ابدأ"}</button>
+          </div>
+        )}
+        {payload && measured.length > 0 && file && (
+          <button onClick={() => run("expand")} disabled={busy} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50">{l === "en" ? "Expand sample" : "توسيع العينة"}</button>
+        )}
         {err && <p role="alert" className="mt-2 text-xs text-destructive">{err}</p>}
       </div>
       {payload && (
