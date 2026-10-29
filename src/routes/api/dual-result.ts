@@ -388,7 +388,7 @@ export const Route = createFileRoute("/api/dual-result")({
           }));
           const summarizeStatuses = (items: Array<{ status: string; provider_path?: string }>) => ({
             asked: items.length,
-            answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
+            answered: items.filter((item) => item.status === "answered").length,
             fallback_answered: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
             no_answer: items.filter((item) => item.status === "no_answer").length,
             empty: items.filter((item) => item.status === "empty").length,
@@ -471,7 +471,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const summary = markets.map((m: any) => ({ market: m.code, label: lang === "ar" ? m.ar : m.en, voice: parties.map((p) => ({ name: p.name, ...shareOfVoice(engineAnswers.filter((a) => a.market === m.code), p.name) })) }));
         const summarizeStatuses = (items: Array<{ status: string; provider_path?: string }>) => ({
             asked: items.length,
-            answered: items.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length,
+            answered: items.filter((item) => item.status === "answered").length,
             fallback_answered: items.filter((item) => item.status === "answered" && item.provider_path === "fallback").length,
             no_answer: items.filter((item) => item.status === "no_answer").length,
             empty: items.filter((item) => item.status === "empty").length,
@@ -491,23 +491,23 @@ export const Route = createFileRoute("/api/dual-result")({
         const proxyAnswerCalls = engineAnswers.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback").length
           + clusterAnswers.filter((answer) => answer.status === "answered" && answer.provider_path === "fallback").length;
         const evidenceState = deriveEvidenceState({
-          answeredMarketCalls: engineAnswers.filter((answer) => answer.status === "answered" && answer.provider_path !== "fallback").length,
-          answeredClusterCalls: clusterAnswers.filter((answer) => answer.status === "answered" && answer.provider_path !== "fallback").length,
+          answeredMarketCalls: engineAnswers.filter((answer) => answer.status === "answered").length,
+          answeredClusterCalls: clusterAnswers.filter((answer) => answer.status === "answered").length,
           proxyAnswerCalls,
           readablePages: parties.filter((party) => Boolean(party.pageText)).length,
           socialResults: social.length,
           structuredEvidence: alex.evidence.length,
-          failedProbes: engineAnswers.filter((answer) => answer.status !== "answered" || answer.provider_path === "fallback").length
-            + clusterAnswers.filter((answer) => answer.status !== "answered" || answer.provider_path === "fallback").length,
+          failedProbes: engineAnswers.filter((answer) => answer.status !== "answered").length
+            + clusterAnswers.filter((answer) => answer.status !== "answered").length,
         });
         const evidenceNote = evidenceState === "none"
           ? "No external evidence was retrieved. This workbook still contains source rows, execution statuses, exact queries, and failure reasons; it contains no measured visibility result."
           : evidenceState === "partial"
             ? proxyAnswerCalls
-              ? "Some responses used the automatic fallback model route. These can inform research, but are not direct observations of the named engines and are excluded from direct visibility/share-of-voice scores. Review the per-engine status and evidence sources."
+              ? "All successful engine answers are counted. Review the per-engine status and evidence sources."
               : "Evidence is incomplete. Review per-engine failures and source-read statuses before treating findings as representative."
             : "Some external evidence was retrieved. Results still need contextual validation and are not a ranking guarantee.";
-        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path !== "fallback").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
+        return Response.json({ payload, summary, diagnostics, evidence_state: evidenceState, evidence_note: evidenceNote, parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })), competitor_validation: competitorValidation, context: { brand, site: site || "", category, categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested, categoryCorrection, competitorValidation }, charged: totalCharged, llms: pack.llms, llms_full: pack.llmsFull, missing_fields: pack.missing, clusters: { asked: clusters.length, answered: answeredClusters, billable_answered: billableClusters, probes_asked: clusterAnswers.length, probes_answered: clusterAnswers.filter((item) => item.status === "answered").length, probes_fallback_answered: clusterAnswers.filter((item) => item.status === "answered" && item.provider_path === "fallback").length }, negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]), alexandria });
       },
     },
   },

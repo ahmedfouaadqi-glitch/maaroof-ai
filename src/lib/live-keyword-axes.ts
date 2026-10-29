@@ -88,10 +88,11 @@ export function measureKeywordAxes(input: {
     const index = results.findIndex((item) => domainMatches(item.url, site));
     if (index >= 0) {
       const position = index + 1;
-      seo = { value: Math.max(10, 110 - position * 10), reason: null, position, evidenceUrl: results[index].url, provider: search.provider || null };
+      // The value is the observed rank itself — no derived score.
+      seo = { value: position, reason: null, position, evidenceUrl: results[index].url, provider: search.provider || null };
     } else if (results.length >= 10) {
-      // A zero is valid only when the provider returned a complete ten-result observation.
-      seo = { value: 0, reason: null, position: null, evidenceUrl: null, provider: search.provider || null };
+      // Observed fact: the site is absent from a complete top-ten result set.
+      seo = { value: null, reason: "not_in_top_ten", position: null, evidenceUrl: null, provider: search.provider || null };
     } else {
       seo = blank("fewer_than_ten_results", search.provider);
     }
@@ -105,37 +106,50 @@ export function measureKeywordAxes(input: {
   );
   const selected = clusterRelated.length ? clusterRelated : modelRelated;
   const expectedEngines = ENGINE_COUNCIL_MODELS.map((engine) => engine.key);
-  const byEngine = new Map<string, { status: string; answer: string; provider_path?: string }>();
+  const byEngine = new Map<string, { status: string; answer: string; provider_path?: string; urls?: string[] }>();
   for (const answer of selected) {
     const current = byEngine.get(answer.engine);
     if (!current || (current.status !== "answered" && answer.status === "answered")) {
       byEngine.set(answer.engine, answer);
     }
   }
-  const directAnswered = expectedEngines.filter((engine) => {
-    const answer = byEngine.get(engine);
-    return answer?.status === "answered" && answer.provider_path === "primary";
-  });
+  // Every successful answer counts, whichever route delivered it (direct or automatic backup).
+  const answeredEngines = expectedEngines.filter((engine) => byEngine.get(engine)?.status === "answered");
   let geo: AxisMeasurement;
   if (!brand) geo = blank("brand_not_configured");
   else if (!selected.length) geo = blank("keyword_not_probed_by_ten_engines");
-  else if (directAnswered.length !== expectedEngines.length) {
-    const hadFallback = selected.some((answer) => answer.status === "answered" && answer.provider_path === "fallback");
-    geo = blank(hadFallback ? "fallback_answers_excluded" : "incomplete_ten_engine_evidence");
-  } else {
-    const engines = expectedEngines.filter((engine) => normalize(byEngine.get(engine)?.answer || "").includes(brand));
-    geo = { value: Math.round((engines.length / expectedEngines.length) * 100), reason: null, engines };
+  else if (!answeredEngines.length) geo = blank("incomplete_ten_engine_evidence");
+  else {
+    const engines = answeredEngines.filter((engine) => normalize(byEngine.get(engine)?.answer || "").includes(brand));
+    // Observed ratio: engines that mentioned the brand out of engines that answered.
+    geo = { value: Math.round((engines.length / answeredEngines.length) * 100), reason: null, engines };
   }
+  let sgeo: AxisMeasurement;
+  if (!site) sgeo = blank("target_site_missing");
+  else if (!answeredEngines.length) sgeo = blank("incomplete_ten_engine_evidence");
+  else {
+    const withUrls = answeredEngines.filter((engine) => Array.isArray(byEngine.get(engine)?.urls));
+    if (!withUrls.length) sgeo = blank("engine_citations_not_recorded");
+    else {
+      const citing = withUrls.filter((engine) => (byEngine.get(engine)?.urls || []).some((u) => domainMatches(u, site)));
+      const evidenceUrl = citing.length ? (byEngine.get(citing[0])?.urls || []).find((u) => domainMatches(u, site)) || null : null;
+      sgeo = { value: Math.round((citing.length / withUrls.length) * 100), reason: null, engines: citing, evidenceUrl };
+    }
+  }
+  // GSEO = real intersection: both SEO rank and GEO mention were observed for this keyword.
+  let gseo: AxisMeasurement;
+  if (geo.value === null || (seo.value === null && seo.reason !== "not_in_top_ten")) gseo = blank("gseo_requires_both_seo_and_geo_observations", search?.provider);
+  else gseo = { value: seo.position && (geo.engines?.length || 0) > 0 ? 100 : 0, reason: null, position: seo.position ?? null, evidenceUrl: seo.evidenceUrl ?? null, engines: geo.engines };
 
-  const aeo = blank("aeo_requires_a_dedicated_answer_engine_measurement");
+  const aeo = linkedAxis(search, site, "answerBox", input.liveSerpRequested);
   const sge = linkedAxis(search, site, "aiOverview", input.liveSerpRequested);
   return {
     SEO: seo,
     AEO: aeo,
     GEO: geo,
     SGE: sge,
-    GSEO: blank("gseo_requires_verified_dedicated_measurement", search?.provider),
-    SGEO: blank("sgeo_requires_verified_ai_citation_measurement", search?.provider),
+    GSEO: gseo,
+    SGEO: sgeo,
   };
 }
 

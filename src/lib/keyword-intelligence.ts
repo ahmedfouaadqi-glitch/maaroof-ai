@@ -1,5 +1,6 @@
 // Pure: builds the six-sheet keyword intelligence result from recorded evidence only.
 // Anything not measured reads "not measured"; no invented numbers.
+import { isPlatformUrl } from "./site-keyword-extractor";
 import type { ExportSection, ExportLang } from "./exports";
 import type { ResearchInput, EngineAnswer, PartyEvidence } from "./operational-workbook";
 import { allKeywords, authoritySignals, factDensity, negativeCandidates } from "./operational-workbook";
@@ -58,7 +59,8 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const S = (ar: string, en: string, ku: string) => t3(l, ar, en, ku);
   const NM = S("لم تُقس", "Not measured", "نەپێوراوە");
   const brand = input.parties.find((p) => p.role === "brand");
-  const comps = input.parties.filter((p) => p.role === "competitor");
+  // Social/publishing platforms are never commercial competitors; they belong in the social section.
+  const comps = input.parties.filter((p) => p.role === "competitor" && !isPlatformUrl(p.url));
   const answers = input.engineAnswers;
   const brandList = input.hasFile
     ? allKeywords(input.sheets)
@@ -78,14 +80,13 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     const marketProbes = clusterProbes.length
       ? clusterProbes
       : answers.filter((answer) => norm(answer.query || "").includes(keyword));
-    // Only primary replies from the named engines are eligible for direct mention reporting.
-    // Fallback/gateway responses are useful context but are not direct observations of that engine.
-    const direct = marketProbes.filter((answer) => answer.status === "answered" && answer.provider_path === "primary");
+    // Every successful answer counts, whichever route delivered it.
+    const direct = marketProbes.filter((answer) => answer.status === "answered");
     if (!marketProbes.length || !direct.length) return { share: NM, engines: NM };
     const mentioned = [...new Set(direct.filter((answer) => norm(answer.answer).includes(keyword)).map((answer) => answer.engine))];
     return {
       share: `${mentioned.length}/${direct.length}`,
-      engines: mentioned.join(", ") || S("لم تذكرها الإجابات المباشرة", "No literal mention in direct replies", "لە وەڵامە ڕاستەوخۆکاندا باس نەکراوە"),
+      engines: mentioned.join(", ") || S("لم تذكرها إجابات المحركات", "No literal mention in engine answers", "لە وەڵامە ڕاستەوخۆکاندا باس نەکراوە"),
     };
   };
   const density = (p: PartyEvidence | undefined, k: string) => { const d = keywordDensity(p?.pageText, k); return d === null ? NM : d; };
@@ -138,14 +139,17 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const markets = input.markets.length ? input.markets : [{ code: "unknown", en: "Unspecified market", ar: "سوق غير محدد", gl: "" }];
   const explainReason = (axis: LiveAxis, reason: string) => {
     const ar: Record<string, string> = {
+      not_in_top_ten: "فُحصت أول عشر نتائج بحث فعلياً ولم يظهر موقع العلامة بينها",
+      engine_citations_not_recorded: "لم تسجل إجابات المحركات روابط استشهاد لهذه الكلمة",
+      gseo_requires_both_seo_and_geo_observations: "يتطلب هذا المحور قياس الترتيب (SEO) وذكر المحركات (GEO) معاً، وأحدهما لم يُقس",
       live_search_not_requested: "لم يُطلب فحص ترتيب مباشر (SERP) لهذه الكلمة في هذا الطلب",
       live_search_unavailable: "تعذر الوصول إلى نتائج البحث المباشرة لهذا السوق الجغرافي",
       live_search_not_completed: "لم يكتمل فحص نتائج البحث المباشرة لهذه الكلمة",
       target_site_missing: "لم يُحدد نطاق الموقع المستهدف للتحقق من ترتيبه",
       fewer_than_ten_results: "لم يقدم مزود البحث عشرة نتائج صالحة لإثبات الترتيب ضمن أول عشرة",
       keyword_not_probed_by_ten_engines: "الكلمة مستخلصة من المصدر ولم تُمرر في فحص مستقل مناسب للمحركات العشرة",
-      fallback_answers_excluded: "الإجابات جاءت عبر مسار بديل ولا تُحتسب كقياس مباشر للمحركات المسماة",
-      incomplete_ten_engine_evidence: "لم تتوفر إجابات مباشرة مكتملة من المحركات العشرة",
+      fallback_answers_excluded: "لم تكتمل إجابات المحركات لهذه الكلمة",
+      incomplete_ten_engine_evidence: "لم تُجب أي من المحركات العشرة على سؤال هذه الكلمة",
       brand_not_configured: "اسم العلامة غير محدد لقياس الذكر",
       aeo_requires_a_dedicated_answer_engine_measurement: "يتطلب هذا المحور قياساً مستقلاً لمحرك الإجابات؛ لا تتوفر أدلة كافية",
       answer_box_not_exposed_by_provider: "مزود البحث الحالي لا يكشف أدلة مقتبسات Answer Box",
@@ -154,14 +158,17 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       sgeo_requires_verified_ai_citation_measurement: "لم يُنفذ قياس مستقل موثوق للاستشهادات التوليدية عبر البحث",
     };
     const en: Record<string, string> = {
+      not_in_top_ten: "The top ten live results were checked and the brand site was not among them",
+      engine_citations_not_recorded: "Engine answers recorded no citation links for this keyword",
+      gseo_requires_both_seo_and_geo_observations: "GSEO needs both an SEO rank check and a GEO engine check; one was not measured",
       live_search_not_requested: "Direct SERP checking was not requested for this keyword in this run",
       live_search_unavailable: "Direct search results for this geographic market could not be retrieved",
       live_search_not_completed: "Live search checking did not complete for this keyword",
       target_site_missing: "No target website domain was supplied for ranking verification",
       fewer_than_ten_results: "The search provider returned fewer than ten valid results to verify top-ten position",
       keyword_not_probed_by_ten_engines: "The keyword was extracted from source data but was not independently probed by the ten engines",
-      fallback_answers_excluded: "Responses used a fallback route and are excluded from direct named-engine measurement",
-      incomplete_ten_engine_evidence: "A complete set of direct answers from all ten engines was not available",
+      fallback_answers_excluded: "Engine answers for this keyword were incomplete",
+      incomplete_ten_engine_evidence: "None of the ten engines answered the question for this keyword",
       brand_not_configured: "No brand name was configured for mention measurement",
       aeo_requires_a_dedicated_answer_engine_measurement: "AEO requires a dedicated answer-engine measurement; sufficient evidence is unavailable",
       answer_box_not_exposed_by_provider: "The current search provider does not expose Answer Box citations",
@@ -244,7 +251,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     [S("الكلمات الحالية", "Current keywords", "وشەکانی ئێستا"), brandList.length],
     [S("فرص الكلمات الجديدة", "New keyword opportunities", "دەرفەتی وشە نوێیەکان"), fresh.length],
     [S("المنافسون", "Competitors", "ڕکابەران"), comps.length],
-    [S("إجابات مباشرة ناجحة من المحركات", "Successful direct engine answers", "وەڵامی ڕاستەوخۆی سەرکەوتوو"), answers.filter((answer) => answer.status === "answered" && answer.provider_path === "primary").length],
+    [S("إجابات ناجحة من المحركات العشرة", "Successful answers from the ten engines", "وەڵامی سەرکەوتوو"), answers.filter((answer) => answer.status === "answered").length],
     [S("عمليات بحث حي ذات نتائج", "Live search checks with results", "پشکنینی گەڕانی ڕاستەوخۆ"), liveObserved],
     [S("قيم محاور مقاسة فعلياً", "Axis values actually measured", "بەها پێوراوە ڕاستەقینەکان"), measuredAxisCells],
     [S("قاعدة القياس", "Measurement rule", "یاسای پێوانە"), S("لا تُحتسب الدرجة دون دليل مسجل؛ غياب الدليل يظهر «لم تُقَس».", "Scores require recorded evidence; absent evidence remains “Not measured.”", "بەها بەبێ بەڵگەی تۆمارکراو ناژمێردرێت؛ بەڵگەی نەبوو بە «نەپێوراوە» دەردەکەوێت.")],
