@@ -1,4 +1,6 @@
 import { isPlaceholderName } from "@/lib/maaroof/event-labels";
+import { reusableResultKey } from "./jobs";
+import { buildEvidenceFinalAnswer } from "./finalizer";
 // Architecture & Concept: Ahmed Maaroof
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
@@ -1071,8 +1073,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       steps.push({ tool: "visibility", input: {}, reason: ctx.language === "en" ? "Ask the ten AI models directly (default)." : "استجواب النماذج العشرة مباشرة (افتراضي)." } as any);
     }
     const specialists = new Set<string>();
+    const resultSignatureForStep = (step: PlanStep) => reusableResultKey(step.tool, {
+      input: step.input,
+      goal: ctx.goal,
+      language: ctx.language,
+      workspace_id: ctx.workspaceId || null,
+      geo_scope: ctx.geoScope || null,
+      prior_results: results.map((result) => ({ tool: result.tool, ok: result.ok, output: result.output })),
+    });
     const runStep = async (i: number) => {
       const step = steps[i];
+      const inputSignature = resultSignatureForStep(step);
       // Old queued plans may still contain this key; skip it before agent creation, dispatch or billing.
       if (step.tool === "competitor_monitor") {
         const skip = { skipped: "temporarily_paused", tool: "competitor_monitor" };
@@ -1297,7 +1308,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         }
         results.push({ tool: step.tool, ok, output: json });
         await ctx.emit("tool_result", {
-          index: i, tool: step.tool, ok, output: json,
+          index: i, tool: step.tool, ok, output: json, input_signature: inputSignature,
           duration_ms: Date.now() - toolStartedAt,
           transport: toolTransport,
           http_status: resp.status,
@@ -1330,7 +1341,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const err = { error: String(e?.message || e).slice(0, 800) };
         results.push({ tool: step.tool, ok: false, output: err });
         await ctx.emit("tool_result", {
-          index: i, tool: step.tool, ok: false, output: err,
+          index: i, tool: step.tool, ok: false, output: err, input_signature: inputSignature,
           duration_ms: Date.now() - toolStartedAt,
           transport: toolTransport,
         });
@@ -1344,10 +1355,16 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const overBudget = () => !!ctx.runOptions?.salvageOnFailure && Date.now() - startedExec > SALVAGE_BUDGET_MS;
     const reuseStep = async (i: number) => {
       const step = steps[i];
-      if (!Object.prototype.hasOwnProperty.call(reusedOut, step.tool)) return false;
+      const signature = resultSignatureForStep(step);
+      // Prefer exact-input matches; legacy results are reusable only when unambiguous.
+      const reuseKey = Object.prototype.hasOwnProperty.call(reusedOut, signature)
+        ? signature
+        : Object.prototype.hasOwnProperty.call(reusedOut, step.tool) ? step.tool : null;
+      if (!reuseKey) return false;
+      const output = reusedOut[reuseKey];
       await ctx.emit("tool_call", { index: i, tool: step.tool, input: step.input, reason: step.reason, reused: true });
-      results.push({ tool: step.tool, ok: true, output: reusedOut[step.tool] });
-      await ctx.emit("tool_result", { index: i, tool: step.tool, ok: true, output: reusedOut[step.tool], reused: true });
+      results.push({ tool: step.tool, ok: true, output });
+      await ctx.emit("tool_result", { index: i, tool: step.tool, ok: true, output, input_signature: signature, reused: true });
       return true;
     };
     const salvageSkip = async (i: number) => {
@@ -1377,13 +1394,26 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
       // Reflect every 3 steps
       if ((i + 1) % 3 === 0 && i < steps.length - 1) {
-        const ref = await call("reflection", [
-          { role: "system", content: effectivePrompt },
-          { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
-        ]);
-        totalUsd += ref.usd; totalTokens += ref.tokens;
-        await ctx.emit("reflection", { text: sanitizeReflection(ref.text) });
-        await logMsg("reflection", { text: ref.text }, ref.tokens, ref.usd);
+        try {
+          const ref = await call("reflection", [
+            { role: "system", content: effectivePrompt },
+            { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
+          ]);
+          totalUsd += ref.usd; totalTokens += ref.tokens;
+          await ctx.emit("reflection", { text: sanitizeReflection(ref.text) });
+          await logMsg("reflection", { text: ref.text }, ref.tokens, ref.usd);
+        } catch {
+          // Mid-run reflection is advisory. Keep successful tool outputs and continue without rerunning tools.
+          try {
+            const message = ctx.language === "ar"
+              ? "اكتملت خطوات الأدوات حتى الآن؛ تعذّرت المراجعة الوسيطة، لذلك سيستمر التنفيذ اعتماداً على النتائج المحفوظة."
+              : ctx.language === "ku"
+                ? "ئامرازەکان تا ئێستا ئەنجام دراون؛ هەڵسەنگاندنی ناوەڕاست بەردەست نەبوو، جێبەجێکردن بە ئەنجامە تۆمارکراوەکان بەردەوام دەبێت."
+                : "Tool steps completed so far; interim reflection was unavailable. Continuing from recorded results.";
+            await ctx.emit("narration", { phase: "reflection", text: message });
+            await ctx.emit("reflection_skipped", { reason: "model_unavailable", completed_tools: results.filter((r) => r.ok).length });
+          } catch {}
+        }
       }
     }
 
@@ -1395,11 +1425,26 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const trustInstruction = trustEnabled
       ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
       : "";
-    const finalResp = await call("final", [
+    let finalResp: { text: string; tokens: number; usd: number };
+    try {
+      finalResp = await call("final", [
       { role: "system", content: effectivePrompt },
       { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
     ]);
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
+    } catch {
+      // Final drafting is a presentation layer, not a prerequisite for delivering successful tool evidence.
+      finalResp = { text: buildEvidenceFinalAnswer(ctx.goal, results, ctx.language, geo.label), tokens: 0, usd: 0 };
+      try {
+        const message = ctx.language === "ar"
+          ? "تعذّرت الصياغة النهائية الآلية؛ أُصدر الآن تقرير احتياطي من نتائج الأدوات المسجلة دون إعادة تشغيلها."
+          : ctx.language === "ku"
+            ? "داڕشتنی کۆتایی بەردەست نەبوو؛ ڕاپۆرتێکی جێگرەوە لە ئەنجامە تۆمارکراوەکان پێشکەش دەکرێت، بەبێ دووبارەکردنەوەی ئامرازەکان."
+            : "Automated final drafting was unavailable; delivering a fallback report from recorded tool results without rerunning tools.";
+        await ctx.emit("narration", { phase: "summarizing", text: message });
+        await ctx.emit("finalizer_fallback", { reason: "model_unavailable", completed_tools: results.filter((r) => r.ok).length });
+      } catch {}
+    }
 
     let finalText = finalResp.text;
     let trust: any = null;

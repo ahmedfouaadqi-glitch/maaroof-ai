@@ -47,18 +47,54 @@ export function parseAfter(v: string | null): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
-/** Successful tool outputs from earlier tool_result payloads, keyed by tool (last wins). Pure. */
-export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; output?: unknown } | null | undefined>): Record<string, any> {
+/** Stable result key prevents a resumed run from reusing a tool result for a different input. */
+function stableInput(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableInput);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => [key, stableInput(item)]));
+  }
+  return value;
+}
+
+export function reusableResultKey(tool: string, input: unknown): string {
+  const serialized = JSON.stringify(stableInput(input ?? null));
+  let hash = 2166136261;
+  for (let i = 0; i < serialized.length; i++) {
+    hash ^= serialized.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return "reuse:" + tool + ":" + (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+/** Only successful, usable results are eligible for reuse. New events are keyed by exact input;
+ * legacy events without signatures are reusable only when a tool has one unambiguous result. */
+export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; output?: unknown; input_signature?: unknown } | null | undefined>): Record<string, any> {
   const out: Record<string, any> = {};
+  const legacyByTool = new Map<string, any[]>();
+  const toolsWithSignatures = new Set(payloads
+    .filter((p) => p && p.ok === true && typeof p.tool === "string" &&
+      typeof p.input_signature === "string" && p.input_signature.startsWith("reuse:"))
+    .map((p) => String(p!.tool)));
   for (const p of payloads) {
     if (!p || p.ok !== true || typeof p.tool !== "string") continue;
     const o: any = p.output;
     if (o && typeof o === "object" && (o.error || o.skipped || o.needs_input)) continue;
-    out[p.tool] = o;
+    if (typeof p.input_signature === "string" && p.input_signature.startsWith("reuse:")) {
+      out[p.input_signature] = o;
+      continue;
+    }
+    // Once any signed output exists for this tool, never let an old unsigned result be a fallback
+    // for a different signature.
+    if (toolsWithSignatures.has(p.tool)) continue;
+    const legacy = legacyByTool.get(p.tool) || [];
+    legacy.push(o);
+    legacyByTool.set(p.tool, legacy);
   }
+  for (const [tool, values] of legacyByTool) if (values.length === 1) out[tool] = values[0];
   return out;
 }
-
 /**
  * Polling decision for a job watcher. `status` is the HTTP status, or null for a network error.
  * Transient problems (network, auth refresh, rate limit, server errors) keep watching. Pure.

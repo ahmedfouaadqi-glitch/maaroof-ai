@@ -13,24 +13,24 @@ describe("keyword intelligence", () => {
     expect(ingestionFor(true, "ar").initial).toContain("20");
     expect(ingestionFor(true, "ar").full).toContain("3 أشهر");
   });
-  it("produces eight sections with axes in the approved order", () => {
+  it("produces six consolidated sheets with axes in the approved order", () => {
     const s = buildKeywordIntelligenceSections({ ...base, hasFile: false });
-    expect(s).toHaveLength(8);
-    expect(s[4].table!.columns.slice(2, 8)).toEqual(["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"]);
-    expect(s[4].table!.columns).toContain("Unmeasured reason");
+    expect(s).toHaveLength(6);
+    expect(s[3].table!.columns.slice(2, 8)).toEqual(["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"]);
+    expect(s[3].table!.columns).toContain("Unmeasured reason");
     expect([...AXES_ORDER]).toEqual(["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"]);
   });
   it("drops the old-vs-new column without a file and keeps it with one", () => {
-    expect(buildKeywordIntelligenceSections({ ...base, hasFile: false })[0].table!.columns).not.toContain("Old vs new");
+    expect(buildKeywordIntelligenceSections({ ...base, hasFile: false })[1].table!.columns).not.toContain("Old vs new");
     const sheets = [{ name: "KW", columns: ["Keyword"], rows: [["luxury sunglasses"]], totalRows: 1, truncated: false }];
-    expect(buildKeywordIntelligenceSections({ ...base, sheets, hasFile: true })[0].table!.columns).toContain("Old vs new");
+    expect(buildKeywordIntelligenceSections({ ...base, sheets, hasFile: true })[1].table!.columns).toContain("Old vs new");
   });
   it("reads unmeasured share of voice as not measured", () => {
-    const row = buildKeywordIntelligenceSections({ ...base, hasFile: false })[0].table!.data[0];
+    const row = buildKeywordIntelligenceSections({ ...base, hasFile: false })[1].table!.data[0];
     expect(row[3]).toBe("Not measured");
   });
   it("sorts negatives into four groups", () => {
-    const groups = new Set(buildKeywordIntelligenceSections({ ...base, hasFile: false })[6].table!.data.map((r) => r[0]));
+    const groups = new Set(buildKeywordIntelligenceSections({ ...base, hasFile: false })[4].table!.data.map((r) => r[0]));
     expect([...groups]).toEqual(["Brand", "Competitors", "Comparison", "Social"]);
   });
   it("extracts only words that appear on the page", () => {

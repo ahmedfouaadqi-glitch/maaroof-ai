@@ -1,11 +1,10 @@
-// Pure: builds the eight-section keyword intelligence result from recorded evidence only.
+// Pure: builds the six-sheet keyword intelligence result from recorded evidence only.
 // Anything not measured reads "not measured"; no invented numbers.
 import type { ExportSection, ExportLang } from "./exports";
 import type { ResearchInput, EngineAnswer, PartyEvidence } from "./operational-workbook";
 import { allKeywords, authoritySignals, factDensity, negativeCandidates } from "./operational-workbook";
 import { measureKeywordAxes, LIVE_AXES, type LiveAxis, type LiveSearchEvidence } from "./live-keyword-axes";
 import { extractSiteKeywords } from "./site-keyword-extractor";
-import { ingestionFor } from "./keyword-ingestion-timeline";
 import { sanitizeDeep } from "./brand-sanitize";
 
 export const AXES_ORDER = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"] as const;
@@ -192,7 +191,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       const engines = measured.GEO.engines?.join(", ") || NM;
       const position = measured.SEO.position ? String(measured.SEO.position) : NM;
       const seoEvidence = measured.SEO.evidenceUrl || NM;
-      const seoProvider = measured.SEO.provider || NM;
+      const seoProvider = measured.SEO.value === null ? NM : S("نتيجة بحث حي", "Live search result", "ئەنجامی گەڕانی ڕاستەوخۆ");
       axisRows.push([
         k,
         l === "ar" ? market.ar : market.en,
@@ -205,9 +204,6 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       ]);
     }
   }
-
-  // 6. Ingestion
-  const ingRows = [...fresh.map((f) => [f.keyword, ingestionFor(true, l).initial, ingestionFor(true, l).full]), ...brandList.slice(0, 30).map((k) => [k, ingestionFor(false, l).initial, ingestionFor(false, l).full])];
 
   // 7. Negatives in four groups
   const G = [
@@ -240,15 +236,59 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   }
 
   const table = (heading: string, columns: string[], data: (string | number)[][]): ExportSection => ({ heading, kind: "table", table: { columns, data: data.length ? data : [columns.map((_, i) => (i === 0 ? NM : "-"))] } });
+  const measuredAxisCells = axisRows.reduce((count, row) => count + row.slice(2, 8).filter((value) => typeof value === "number").length, 0);
+  const liveObserved = (input.liveSearchEvidence || []).filter((item) => item.status === "measured").length;
+  const analysisRows: (string | number)[][] = [
+    [S("العلامة", "Brand", "براند"), input.brand],
+    [S("الأسواق المستهدفة", "Target markets", "بازاڕە ئامانجەکان"), markets.map((market) => l === "ar" ? market.ar : market.en).join(" / ") || NM],
+    [S("الكلمات الحالية", "Current keywords", "وشەکانی ئێستا"), brandList.length],
+    [S("فرص الكلمات الجديدة", "New keyword opportunities", "دەرفەتی وشە نوێیەکان"), fresh.length],
+    [S("المنافسون", "Competitors", "ڕکابەران"), comps.length],
+    [S("إجابات مباشرة ناجحة من المحركات", "Successful direct engine answers", "وەڵامی ڕاستەوخۆی سەرکەوتوو"), answers.filter((answer) => answer.status === "answered" && answer.provider_path === "primary").length],
+    [S("عمليات بحث حي ذات نتائج", "Live search checks with results", "پشکنینی گەڕانی ڕاستەوخۆ"), liveObserved],
+    [S("قيم محاور مقاسة فعلياً", "Axis values actually measured", "بەها پێوراوە ڕاستەقینەکان"), measuredAxisCells],
+    [S("قاعدة القياس", "Measurement rule", "یاسای پێوانە"), S("لا تُحتسب الدرجة دون دليل مسجل؛ غياب الدليل يظهر «لم تُقَس».", "Scores require recorded evidence; absent evidence remains “Not measured.”", "بەها بەبێ بەڵگەی تۆمارکراو ناژمێردرێت؛ بەڵگەی نەبوو بە «نەپێوراوە» دەردەکەوێت.")],
+  ];
+  const competitorAndComparisonRows: (string | number)[][] = [
+    ...compRows,
+    ...cmpRows.map((row) => [
+      S("مقارنة الكلمات", "Keyword comparison", "بەراوردی وشەکان"),
+      NM,
+      row[0],
+      row[1],
+      NM,
+      NM,
+      NM,
+      String(row[2]) + " · " + String(row[3]),
+    ]),
+    ...socialRows.map((row) => [
+      row[0],
+      row[1],
+      S("نتيجة بحث اجتماعي", "Social search result", "ئەنجامی گەڕانی سۆشیال"),
+      NM,
+      row[2],
+      row[3],
+      NM,
+      S("رابط ونتيجة بحث؛ لا يثبت غياب المنشورات عدم وجودها", "Observed search link; absence of results does not prove absence of posts", "بەستەر و ئەنجامی گەڕان؛ نەبوونی ئەنجام نەبوونی پۆست ناسەلمێنێت"),
+    ]),
+  ];
+  const competitorColumns = [
+    S("الجهة / نوع السجل", "Entity / record type", "لایەن / جۆری تۆمار"),
+    S("الرابط", "URL", "بەستەر"),
+    S("الكلمة / البند", "Keyword / item", "وشە / بڕگە"),
+    S("الحصة / الحالة", "Share / status", "بەش / دۆخ"),
+    S("الكثافة / الكلمات", "Density / keywords", "چڕی / وشەکان"),
+    S("كثافة الحقائق", "Fact density", "چڕی ڕاستی"),
+    S("السلطة", "Authority", "دەسەڵات"),
+    S("الأدلة والملاحظات", "Evidence and notes", "بەڵگە و تێبینی"),
+  ];
   const sections: ExportSection[] = [
-    table(S("1. كلمات العلامة: الحالية والجديدة", "1. Brand keywords: current and new", "1. وشەکانی براند"), brandCols, brandRows),
-    table(S("2. المنافسون وكلماتهم", "2. Competitors and their keywords", "2. ڕکابەران"), [S("المنافس", "Competitor", "ڕکابەر"), S("الرابط", "URL", "بەستەر"), S("الكلمة", "Keyword", "وشە"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("الكثافة", "Density", "چڕی"), S("كثافة الحقائق", "Fact density", "ڕاستی"), S("السلطة", "Authority", "دەسەڵات"), S("رأي النماذج", "Model opinion", "ڕا")], compRows),
-    table(S("3. المقارنة بين العلامة والمنافسين", "3. Brand vs competitors", "3. بەراورد"), [S("الكلمة", "Keyword", "وشە"), S("الحالة", "Status", "دۆخ"), S("لدى", "Held by", "لای"), S("التقييم", "Assessment", "هەڵسەنگاندن")], cmpRows),
-    table(S("4. التواصل الاجتماعي", "4. Social media", "4. سۆشیال"), [S("الطرف", "Party", "لایەن"), S("الرابط", "URL", "بەستەر"), S("الكلمات الموجودة", "Keywords found", "وشەکان"), S("كثافة ذكر الاسم", "Name mention density", "چڕی ناو")], socialRows),
-    table(S("5. المحاور الستة (قياس قائم على الأدلة فقط)", "5. Six axes (evidence-only measurement)", "5. شەش تەوەر (پێوانەی بەڵگەدار)"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("مزود البحث", "Search provider", "دابینکەری گەڕان"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
-    table(S("6. مدة تغذية النماذج بالكلمات", "6. Time for models to absorb keywords", "6. ماوەی تێگەیشتن"), [S("الكلمة", "Keyword", "وشە"), S("الفهرسة الأولية", "Initial indexing", "سەرەتایی"), S("الاستيعاب الشامل", "Full absorption", "تەواو")], ingRows),
-    table(S("7. الكلمات السلبية", "7. Negative keywords", "7. وشە نەرێنییەکان"), [S("المجموعة", "Group", "گروپ"), S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار")], negRows),
-    table(S("8. المصادر", "8. Sources", "8. سەرچاوەکان"), [S("المصدر", "Source", "سەرچاوە")], srcRows),
+    table(S("1. ملخص التحليل وحالة الأدلة", "1. Analysis summary and evidence status", "1. پوختەی شیکاری و دۆخی بەڵگە"), [S("المؤشر", "Indicator", "پێوەر"), S("القيمة", "Value", "بەها")], analysisRows),
+    table(S("2. الكلمات الحالية والجديدة", "2. Current and new keywords", "2. وشەکانی ئێستا و نوێ"), brandCols, brandRows),
+    table(S("3. المنافسون والمقارنات والإشارات الاجتماعية", "3. Competitors, comparisons and social signals", "3. ڕکابەران و بەراورد و نیشانە کۆمەڵایەتییەکان"), competitorColumns, competitorAndComparisonRows),
+    table(S("4. مصفوفة المحاور الستة", "4. Six-axis measurement matrix", "4. تۆڕی پێوانەی شەش تەوەر"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("مصدر القياس", "Measurement source", "سەرچاوەی پێوانە"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
+    table(S("5. الكلمات السلبية — أربع مجموعات", "5. Negative keywords — four groups", "5. وشە نەرێنییەکان — چوار گروپ"), [S("المجموعة", "Group", "گروپ"), S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار")], negRows),
+    table(S("6. سجل المصادر والروابط الحقيقية", "6. Real source-link registry", "6. تۆماری سەرچاوە و بەستەری ڕاستەقینە"), [S("الرابط أو ملاحظة المصدر", "URL or source note", "بەستەر یان تێبینی سەرچاوە")], srcRows),
   ];
   return sanitizeDeep(sections, l === "ar" ? "ar" : "en");
 }
