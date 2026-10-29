@@ -66,7 +66,7 @@ describe("llms.txt missing fields", () => {
 import { clusterQuestion as cq2, clusterScore as cs2 } from "./keyword-clusters";
 describe("cluster question language and fallback answers", () => {
   it("asks in Arabic for Arabic keywords", () => {
-    expect(cq2({ market: "IQ", keywords: ["فساتين سهرة"] } as any, "العراق", "ar")).toContain("مستخدم في العراق");
+    expect(cq2({ market: "IQ", keywords: ["فساتين سهرة"] } as any, "العراق", "ar")).toContain("في سوق العراق");
   });
   it("counts fallback answers as measured", () => {
     const r = cs2([{ market: "IQ", engine: "gpt", status: "answered", answer: "فساتين سهرة", keywords: ["فساتين سهرة"], provider_path: "fallback" }], "IQ", "فساتين سهرة");
