@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { resolveCompetitiveContext, inferCategoryFromVerifiedEvidence } from "@/lib/competitive-context";
 import { deriveEvidenceState, hasChargeableMarketEvidence } from "@/lib/keyword-intelligence-flow";
+import { evidenceCacheKey, getKeywordEvidence, putKeywordEvidence } from "@/lib/keyword-evidence-cache.server";
 
 // Second result: competitor + GEO research per target market, returned as an export payload.
 export const Route = createFileRoute("/api/dual-result")({
@@ -115,7 +116,19 @@ export const Route = createFileRoute("/api/dual-result")({
         // Only high-confidence page evidence can override an inconsistent stored/user-prefilled sector.
         if (site) {
           const { readOfficialBrandEvidence } = await import("@/lib/competitive-geo.server");
-          officialBrandPageEvidence = await readOfficialBrandEvidence(site, userId);
+          const officialPageScope = {
+            userId, workspaceId, evidenceType: "official-brand-page",
+            evidenceKey: await evidenceCacheKey({ site: site.toLowerCase().trim() }),
+          };
+          const cachedOfficialPage = await getKeywordEvidence<{ text: string | null; title: string | null; description: string | null }>(officialPageScope);
+          if (cachedOfficialPage) {
+            officialBrandPageEvidence = { ...cachedOfficialPage, cacheHit: true };
+          } else {
+            officialBrandPageEvidence = await readOfficialBrandEvidence(site, userId);
+            if (officialBrandPageEvidence.text || officialBrandPageEvidence.title || officialBrandPageEvidence.description) {
+              await putKeywordEvidence(officialPageScope, officialBrandPageEvidence);
+            }
+          }
           const websiteCategory = inferCategoryFromVerifiedEvidence(officialBrandPageEvidence);
           officialCategoryEvidence = websiteCategory;
           if (websiteCategory.confidence === "high" && websiteCategory.category && websiteCategory.category !== category) {
