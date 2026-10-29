@@ -16,6 +16,15 @@ describe("resumable tool results", () => {
     ]);
     expect(reused.analyze).toBeUndefined();
   });
+  it("never falls back to legacy results when signed outputs for that tool exist", () => {
+    const signature = reusableResultKey("analyze", { site: "https://a.example" });
+    const reused = reusableResults([
+      { tool: "analyze", ok: true, output: { finding: "legacy, different input" } },
+      { tool: "analyze", ok: true, input_signature: signature, output: { finding: "signed input" } },
+    ]);
+    expect(reused[signature]).toEqual({ finding: "signed input" });
+    expect(reused.analyze).toBeUndefined();
+  });
   it("ignores failures, skipped outputs, and needs-input results", () => {
     const reused = reusableResults([
       { tool: "analyze", ok: false, output: { error: "timeout" } },
