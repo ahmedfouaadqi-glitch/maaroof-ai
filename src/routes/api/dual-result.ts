@@ -98,6 +98,7 @@ export const Route = createFileRoute("/api/dual-result")({
         let category = resolved.category;
         let categorySource: string = resolved.categorySource;
         let officialBrandPageEvidence: { text: string | null; title: string | null; description: string | null } | undefined;
+        let officialCategoryEvidence: ReturnType<typeof inferCategoryFromVerifiedEvidence> | null = null;
         let categoryCorrection: { previous: string; current: string; persisted: boolean; evidence: string[] } | null = null;
         if (!brand) return Response.json({ error: "brand_required", need: ["brand"] }, { status: 422 });
 
@@ -107,6 +108,7 @@ export const Route = createFileRoute("/api/dual-result")({
           const { readOfficialBrandEvidence } = await import("@/lib/competitive-geo.server");
           officialBrandPageEvidence = await readOfficialBrandEvidence(site, userId);
           const websiteCategory = inferCategoryFromVerifiedEvidence(officialBrandPageEvidence);
+          officialCategoryEvidence = websiteCategory;
           if (websiteCategory.confidence === "high" && websiteCategory.category && websiteCategory.category !== category) {
             const previous = category;
             category = websiteCategory.category;
@@ -215,7 +217,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const competitors = (Array.isArray(b?.competitors) ? b.competitors : String(b?.competitors || "").split(/[,،\n]/))
           .map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
         const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
-        const [parties, engineAnswers] = await Promise.all([
+        let [parties, engineAnswers] = await Promise.all([
           gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence }),
           askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket, contentLanguage),
         ]);
@@ -226,6 +228,81 @@ export const Route = createFileRoute("/api/dual-result")({
           const list = extractSiteKeywords({ text: bp?.pageText, title: bp?.title, description: bp?.description }, 60);
           if (list.length) sheets = [siteKeywordSheet(list, lang === "ar" ? "كلمات الموقع" : "Site keywords")];
         }
+        // Validate competitor entities against the same verified sector evidence where available.
+        // Ambiguous pages are retained; only high-confidence, clearly unrelated sectors are excluded.
+        type CompetitorValidation = { name: string; url: string | null; category: string; status: "verified" | "sector_mismatch" | "insufficient_evidence" };
+        let competitorValidation: CompetitorValidation[] = [];
+        let excludedCompetitors: CompetitorValidation[] = [];
+        const brandSector = officialCategoryEvidence?.confidence === "high" ? officialCategoryEvidence.category : "";
+        const sectorFamily = (value: string) => {
+          const normalized = value.trim().toLocaleLowerCase();
+          if (normalized === "luxury fashion & couture" || normalized === "fashion & apparel") return "fashion";
+          return normalized;
+        };
+        const validateCompetitors = (items: typeof parties): { keep: typeof parties; checks: CompetitorValidation[]; excluded: CompetitorValidation[] } => {
+          const keep: typeof parties = [];
+          const checks: CompetitorValidation[] = [];
+          const excluded: CompetitorValidation[] = [];
+          for (const party of items) {
+            if (party.role !== "competitor") { keep.push(party); continue; }
+            const observed = inferCategoryFromVerifiedEvidence({ title: party.title, description: party.description, pageText: party.pageText });
+            const mismatched = Boolean(brandSector && observed.confidence === "high" && observed.category &&
+              sectorFamily(observed.category) !== sectorFamily(brandSector));
+            const check: CompetitorValidation = {
+              name: party.name,
+              url: party.url || null,
+              category: observed.category || "",
+              status: mismatched ? "sector_mismatch" : observed.confidence === "high" ? "verified" : "insufficient_evidence",
+            };
+            checks.push(check);
+            if (mismatched) excluded.push(check);
+            else keep.push(party);
+          }
+          return { keep, checks, excluded };
+        };
+        if (brandSector) {
+          const firstValidation = validateCompetitors(parties);
+          excludedCompetitors = firstValidation.excluded;
+          if (excludedCompetitors.length) {
+            const trustedNames = firstValidation.keep.filter((party) => party.role === "competitor").map((party) => party.name);
+            // Re-discover the vacancies against the verified brand sector instead of retaining unrelated entities.
+            const refreshed = await gatherParties({ brand, site, competitors: trustedNames, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence });
+            const secondValidation = validateCompetitors(refreshed);
+            parties = secondValidation.keep;
+            excludedCompetitors = [...excludedCompetitors, ...secondValidation.excluded];
+            competitorValidation = [...secondValidation.checks.filter((item) => item.status !== "sector_mismatch"), ...excludedCompetitors];
+          } else {
+            parties = firstValidation.keep;
+            competitorValidation = firstValidation.checks;
+          }
+
+          if (workspaceId) {
+            const previousTruth: any = workspace?.entity_truth_card || {};
+            const verifiedCompetitors = parties.filter((party) => party.role === "competitor").map((party) => {
+              const check = competitorValidation.find((item) => item.name === party.name && item.status !== "sector_mismatch");
+              return { name: party.name, url: party.url || null, category: check?.category || "", verification_status: check?.status || "insufficient_evidence" };
+            });
+            const updatedTruth = {
+              ...previousTruth,
+              competitors: verifiedCompetitors,
+              competitor_verification: {
+                target_markets: markets.map((market: any) => market.code),
+                brand_sector: brandSector,
+                checked_at: new Date().toISOString(),
+                excluded_count: excludedCompetitors.length,
+              },
+            };
+            const { error: competitorSaveError } = await db.from("workspaces").update({
+              entity_truth_card: updatedTruth,
+            }).eq("id", workspaceId).eq("owner_id", userId);
+            if (!competitorSaveError) workspace = { ...workspace, entity_truth_card: updatedTruth };
+          }
+        } else {
+          competitorValidation = parties.filter((party) => party.role === "competitor").map((party) => ({
+            name: party.name, url: party.url || null, category: "", status: "insufficient_evidence" as const,
+          }));
+        }
+
         // The user must explicitly opt in to direct search-result checks. No SERP calls are made by default.
         const liveSearchEvidence: Array<{
           keyword: string; market: string; query: string; status: "measured" | "unavailable";
