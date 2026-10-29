@@ -29,9 +29,17 @@ export function buildClusters(market: string, keywords: string[], winners: Set<s
 }
 
 /** Question asked to every engine for one cluster (blind: no brand is named). */
-export function clusterQuestion(c: KeywordCluster, marketName: string, lang: "ar" | "en" = "en"): string {
-  if (lang === "ar") return `مستخدم في ${marketName} يبحث عن: ${c.keywords.map((k) => `«${k}»`).join("، ")}. ما الجهات أو العلامات أو المواقع التي تنصح بها ولماذا؟ أجب بشكل طبيعي واذكر الروابط إن وجدت.`;
-  return `A user in ${marketName} searches for: ${c.keywords.map((k) => `"${k}"`).join(", ")}. Which providers, brands or websites would you recommend and why? Answer organically.`;
+export function clusterQuestion(c: KeywordCluster, marketName: string, lang: "ar" | "en" | "ku" | "fr" | "de" | "es" = "en"): string {
+  const phrases = c.keywords.map((k) => '"' + k + '"' ).join(", ");
+  const prompts = {
+    ar: "في سوق " + marketName + "، يبحث مستخدم عن: " + phrases + ". ما العلامات أو المزودين أو المواقع المناسبة التي توصي بها ولماذا؟ أجب بالعربية، واذكر الروابط فقط إذا كنت تعرف أنها صحيحة. لا تختلق مصادر.",
+    ku: "لە بازاڕی " + marketName + "، بەکارهێنەر بۆ ئەمانە دەگەڕێت: " + phrases + ". کام براند و دابینکەر و ماڵپەڕ پێشنیار دەکەیت؟ بە کوردی وەڵام بدەوە و URL دروست مەکە.",
+    fr: "Sur le marché " + marketName + ", un utilisateur recherche : " + phrases + ". Quelles marques ou quels fournisseurs recommanderiez-vous, et pourquoi ? Répondez en français et n’inventez aucune source ni URL.",
+    de: "Im Markt " + marketName + " sucht ein Nutzer nach: " + phrases + ". Welche Marken oder Anbieter empfehlen Sie und warum? Antworten Sie auf Deutsch und erfinden Sie keine Quellen oder URLs.",
+    es: "En el mercado " + marketName + ", una persona busca: " + phrases + ". ¿Qué marcas o proveedores recomendaría y por qué? Responda en español y no invente fuentes ni URL.",
+    en: "A user in " + marketName + " searches for: " + phrases + ". Which providers, brands or websites would you recommend and why? Answer in English and do not invent sources or URLs.",
+  };
+  return prompts[lang] || prompts.en;
 }
 
 export type ClusterAnswer = { market: string; engine: string; status: "answered" | "no_answer" | "empty" | "timeout" | "http_error" | "error"; answer: string; keywords: string[]; query?: string; error?: string; provider_path?: "primary" | "fallback"; model_used?: string };
