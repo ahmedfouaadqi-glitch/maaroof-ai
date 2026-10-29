@@ -81,7 +81,8 @@ async function askEngine(engine: string, model: string, q: string): Promise<Engi
 export async function askEnginesPerMarket(category: string, markets: Market[], keywordSamples: Record<string, string[]> = {}, contentLanguage: ProbeLanguage = "en"): Promise<EngineAnswer[]> {
   const jobs = markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
   return Promise.all(jobs.map(async ({ m, e }): Promise<EngineAnswer> => {
-    const query = keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || [], contentLanguage);
+    const marketLabel = contentLanguage === "ar" || contentLanguage === "ku" ? m.ar : m.en;
+    const query = keywordVisibilityProbeQuestion(category, marketLabel, keywordSamples[m.code] || [], contentLanguage);
     const call = await askEngine(e.key, e.model, query);
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     if (parsed) return {
