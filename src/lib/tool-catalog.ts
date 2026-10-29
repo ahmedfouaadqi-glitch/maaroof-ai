@@ -27,6 +27,7 @@ export type ToolKey =
   | "what_if"
   | "brand_authority"
   | "geo_rewrite"
+  | "keyword_intelligence"
   | "maaroof"
   | "translate"
   | "agent.command"
@@ -295,6 +296,16 @@ export const TOOL_CATALOG: ToolDef[] = [
     preferredModels: ["google/gemini-2.5-flash"],
     costProfile: "light",
     dna: "Rewriter: reshapes existing copy for generative engines.",
+  },
+  {
+    key: "keyword_intelligence", group: "tools", costPerRun: 3,
+    labels: { ar: "ذكاء الكلمات المفتاحية التنافسية", en: "Competitive Keyword Intelligence", ku: "زیرەکی وشە سەرەکییە ڕکابەرییەکان" },
+    capabilities: ["geo_analysis", "visibility", "competitor_analysis", "knowledge_extraction"],
+    strengths: ["works with or without a keyword file", "six-axis view", "competitor and social comparison"],
+    weaknesses: ["needs a readable brand site when no file is attached"],
+    preferredModels: ["google/gemini-2.5-pro"],
+    costProfile: "heavy",
+    dna: "Keyword strategist: compares brand, competitor and social keywords with evidence from ten engines.",
   },
   { key: "agent.command",      group: "agent", costPerRun: 1, labels: { ar: "أمر مباشر للوكيل",        en: "Agent Command",       ku: "فەرمانی ئاراستە" } },
   { key: "agent.run_targets",  group: "agent", costPerRun: 2, labels: { ar: "تشغيل الأهداف تلقائياً",   en: "Run Targets",         ku: "جێبەجێکردنی ئامانجەکان" } },

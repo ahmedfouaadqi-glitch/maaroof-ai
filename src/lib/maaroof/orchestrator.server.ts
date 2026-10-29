@@ -68,6 +68,7 @@ function toolPath(toolKey: string): string | null {
     what_if: "/api/what-if",
     brand_authority: "/api/brand-authority",
     geo_rewrite: "/api/geo-rewrite",
+    keyword_intelligence: "/api/dual-result",
   };
   return map[toolKey] || null;
 }

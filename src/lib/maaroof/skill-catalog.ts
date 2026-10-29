@@ -75,7 +75,7 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
       en: "Combines keyword files with website, web research, competitor and model-answer evidence, then turns findings into priorities. SGEO is shown as a derived overlap index across SEO, AEO, GEO and SGE; GSEO remains separate.",
       ku: "فایلی وشە سەرەکییەکان لەگەڵ بەڵگەی ماڵپەڕ و گەڕان و ڕکابەر و وەڵامی مۆدێلەکان کۆدەکاتەوە و دەیکاتە پێشینەی جێبەجێکردن. SGEO پێوەرێکی مشتەقە و GSEO جیاواز دەمێنێتەوە.",
     },
-    tools: ["analyze", "research", "compare", "known", "visibility", "geo_strategist", "applied_ranking"],
+    tools: ["keyword_intelligence", "analyze", "research", "compare", "known", "visibility", "geo_strategist", "applied_ranking"],
     keywords: [
       "search visibility", "search engine visibility", "keyword research", "keyword strategy",
       "seo", "aeo", "geo", "sge", "sgeo", "gseo", "keywords",

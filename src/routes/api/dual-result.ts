@@ -15,7 +15,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const b: any = await request.json().catch(() => ({}));
         const lang = ["ar", "en", "ku"].includes(b?.lang) ? b.lang : "ar";
         const id = String(b?.attachment_id || "");
-        if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "missing_input", need: ["attachment_id"] }, { status: 400 });
+        const hasFile = Boolean(id);
+        if (hasFile && !/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "missing_input", need: ["attachment_id"] }, { status: 400 });
 
         const workspaceId = b?.workspace_id == null || b.workspace_id === "" ? null : String(b.workspace_id);
         let workspace: any = null;
@@ -28,20 +29,24 @@ export const Route = createFileRoute("/api/dual-result")({
           workspace = space;
         }
 
-        const { data: at } = await db.from("task_attachments")
-          .select("id, path, name, mime, workspace_id")
-          .eq("id", id).eq("user_id", userId).maybeSingle();
-        if (!at) return Response.json({ error: "not_found" }, { status: 404 });
-        if (((at as any).workspace_id || null) !== workspaceId) {
-          return Response.json({ error: "attachment_workspace_mismatch" }, { status: 403 });
+        // No file attached: keywords come from scanning the brand site (see below).
+        let sheets: any[] = [];
+        if (hasFile) {
+          const { data: at } = await db.from("task_attachments")
+            .select("id, path, name, mime, workspace_id")
+            .eq("id", id).eq("user_id", userId).maybeSingle();
+          if (!at) return Response.json({ error: "not_found" }, { status: 404 });
+          if (((at as any).workspace_id || null) !== workspaceId) {
+            return Response.json({ error: "attachment_workspace_mismatch" }, { status: 403 });
+          }
+          const { isSpreadsheetName } = await import("@/lib/spreadsheet-reader");
+          const kind = isSpreadsheetName((at as any).name, (at as any).mime || "");
+          if (!kind) return Response.json({ error: "not_spreadsheet" }, { status: 422 });
+          const { data: file } = await db.storage.from("task-files").download((at as any).path);
+          if (!file) return Response.json({ error: "file_unavailable" }, { status: 422 });
+          const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
+          sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
         }
-        const { isSpreadsheetName } = await import("@/lib/spreadsheet-reader");
-        const kind = isSpreadsheetName((at as any).name, (at as any).mime || "");
-        if (!kind) return Response.json({ error: "not_spreadsheet" }, { status: 422 });
-        const { data: file } = await db.storage.from("task-files").download((at as any).path);
-        if (!file) return Response.json({ error: "file_unavailable" }, { status: 422 });
-        const { readSpreadsheetBytes } = await import("@/lib/spreadsheet-reader.server");
-        const sheets = await readSpreadsheetBytes(await file.arrayBuffer(), kind, (at as any).name);
 
         const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
         const { keywordColumn } = await import("@/lib/operational-workbook");
@@ -90,7 +95,7 @@ export const Route = createFileRoute("/api/dual-result")({
         if (!category) return Response.json({ error: "category_required", need: ["category"] }, { status: 422 });
 
         const chosen = (Array.isArray(b?.markets) ? b.markets : []).map((m: any) => marketByCode(String(m))).filter(Boolean);
-        const userMarkets = detectMarkets([marketText]);
+        const userMarkets = detectMarkets(hasFile ? [marketText] : [marketText, String(workspace?.country || "")]);
         const scopedMarkets = (geoMode === "country" || geoMode === "city") ? detectMarkets([geoCountry, geoCity]) : [];
         const marketColumnSignals = sheets.flatMap((sheet: any) => {
           const signals: string[] = [];
@@ -148,6 +153,10 @@ export const Route = createFileRoute("/api/dual-result")({
             }
             if (candidates.length >= 8) break;
           }
+          if (!hasFile && !candidates.length) {
+            const wk = Array.isArray(workspace?.keywords) ? workspace.keywords : String(workspace?.keywords || "").split(/[,،\n]/);
+            for (const k of wk.map((x: any) => String(x).trim()).filter((x: string) => x.length >= 3).slice(0, 8)) candidates.push(k.slice(0, 180));
+          }
           keywordSamplesByMarket[market.code] = candidates;
         }
 
@@ -158,6 +167,13 @@ export const Route = createFileRoute("/api/dual-result")({
           gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId }),
           askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket),
         ]);
+        if (!hasFile) {
+          // No file: current keywords are the ones the brand's own page actually uses.
+          const { extractSiteKeywords, siteKeywordSheet } = await import("@/lib/site-keyword-extractor");
+          const bp = parties.find((p) => p.role === "brand");
+          const list = extractSiteKeywords({ text: bp?.pageText, title: bp?.title, description: bp?.description }, 60);
+          if (list.length) sheets = [siteKeywordSheet(list, lang === "ar" ? "كلمات الموقع" : "Site keywords")];
+        }
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
         const marketEvidenceAvailable = hasChargeableMarketEvidence(answeredMarkets, anyPage);
@@ -171,6 +187,8 @@ export const Route = createFileRoute("/api/dual-result")({
             brand, lang, markets, sheets, parties, engineAnswers,
             social: [], alexandria: partialAlexandria, clusterAnswers: [],
           });
+          const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
+          payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social: [], clusterAnswers: [], hasFile });
           const summary = markets.map((m: any) => ({
             market: m.code,
             label: lang === "ar" ? m.ar : m.en,
@@ -246,6 +264,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const alexandria = { connected: alex.connected, note: alex.note };
         const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
         const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
+        const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
+        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile });
         if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة البيانات المهيكلة الموثقة" : "Verified structured data evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
         if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });

@@ -61,6 +61,7 @@ const HOWTO_KEY: Record<ToolKey, string> = {
   what_if: "guide_how_what_if",
   brand_authority: "guide_how_brand_authority",
   geo_rewrite: "guide_how_geo_rewrite",
+  keyword_intelligence: "guide_how_keyword_intelligence",
   maaroof: "guide_how_maaroof",
   translate: "guide_how_translate",
   "agent.command": "guide_how_agent_command",

@@ -23,6 +23,7 @@ export const TOOL_UI: Record<string, LazyExoticComponent<ComponentType<any>>> = 
   research: lazy(() => import("@/components/SmartResearch").then((m) => ({ default: m.SmartResearch }))),
   company_email: lazy(() => import("@/components/CompanyOutreach").then((m) => ({ default: m.CompanyOutreach }))),
   security_scan: lazy(() => import("@/components/SecurityScanCard").then((m) => ({ default: (p: any) => m.SecurityScanCard({ lang: p?.lang || "ar" }) }))),
+  keyword_intelligence: lazy(() => import("@/components/KeywordIntelligence").then((m) => ({ default: m.KeywordIntelligence }))),
   report: lazy(() => import("@/components/ReportBuilder").then((m) => ({ default: m.ReportBuilder }))),
 };
 
