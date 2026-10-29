@@ -16,6 +16,8 @@ export function buildEvidenceFinalAnswer(
 ): string {
   const successful = results.filter((result) => result.ok);
   const failed = results.filter((result) => !result.ok);
+  const ar = language === "ar";
+  const ku = language === "ku";
   const title = ar ? "تقرير احتياطي مبني على النتائج المسجلة" : ku ? "ڕاپۆرتی جێگرەوەی پشتبەستوو بە ئەنجامە تۆمارکراوەکان" : "Evidence-based fallback report";
   const goalLabel = ar ? "الهدف" : ku ? "ئامانج" : "Goal";
   const marketLabel = ar ? "النطاق" : ku ? "بازنە" : "Scope";
