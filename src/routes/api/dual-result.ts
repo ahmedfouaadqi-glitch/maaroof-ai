@@ -14,6 +14,7 @@ export const Route = createFileRoute("/api/dual-result")({
         if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
         const b: any = await request.json().catch(() => ({}));
         const lang = ["ar", "en", "ku"].includes(b?.lang) ? b.lang : "ar";
+        const requestedContentLanguage = ["ar", "en", "ku", "fr", "de", "es"].includes(b?.content_language) ? b.content_language : null;
         const id = String(b?.attachment_id || "");
         const hasFile = Boolean(id);
         if (hasFile && !/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "missing_input", need: ["attachment_id"] }, { status: 400 });
@@ -23,11 +24,15 @@ export const Route = createFileRoute("/api/dual-result")({
         if (workspaceId) {
           if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
           const { data: space } = await db.from("workspaces")
-            .select("id, owner_id, name, brand_url, brand_summary, keywords, country, city, profile, entity_truth_card, onboarding, settings")
+            .select("id, owner_id, name, brand_url, brand_summary, keywords, country, city, language, profile, entity_truth_card, onboarding, settings")
             .eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
           if (!space) return Response.json({ error: "workspace_not_found" }, { status: 404 });
           workspace = space;
         }
+
+        const contentLanguage = requestedContentLanguage || (["ar", "en", "ku"].includes(workspace?.language) ? workspace.language : "en");
+        const liveSerpRequested = b?.live_search === true;
+        const liveSearchLimit = Math.max(1, Math.min(50, Math.floor(Number(b?.live_search_limit) || 10)));
 
         // No file attached: keywords come from scanning the brand site (see below).
         let sheets: any[] = [];
@@ -51,7 +56,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const { detectMarkets, marketByCode, GLOBAL_MARKET } = await import("@/lib/market-scope");
         const { keywordColumn } = await import("@/lib/operational-workbook");
         const requestText = String(b?.request_text || b?.text || "").trim().slice(0, 12000);
-        const marketText = String(b?.market_text || "").trim().slice(0, 240);
+        const marketText = String(b?.target_market || b?.market_text || "").trim().slice(0, 240);
         const geo = b?.geo_scope && typeof b.geo_scope === "object" ? b.geo_scope : {};
         const geoMode = ["auto", "world", "country", "city"].includes(String(geo.mode)) ? String(geo.mode) : "auto";
         const geoCountry = typeof geo.country === "string" ? geo.country.trim().slice(0, 120) : "";
@@ -165,7 +170,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
         const [parties, engineAnswers] = await Promise.all([
           gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId }),
-          askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket),
+          askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket, contentLanguage),
         ]);
         if (!hasFile) {
           // No file: current keywords are the ones the brand's own page actually uses.
@@ -174,6 +179,57 @@ export const Route = createFileRoute("/api/dual-result")({
           const list = extractSiteKeywords({ text: bp?.pageText, title: bp?.title, description: bp?.description }, 60);
           if (list.length) sheets = [siteKeywordSheet(list, lang === "ar" ? "كلمات الموقع" : "Site keywords")];
         }
+        // The user must explicitly opt in to direct search-result checks. No SERP calls are made by default.
+        const liveSearchEvidence: Array<{
+          keyword: string; market: string; query: string; status: "measured" | "unavailable";
+          provider?: string; results: Array<{ url: string; title: string }>;
+          answerBoxChecked: boolean; answerBoxCitations: string[];
+          aiOverviewChecked: boolean; aiOverviewCitations: string[]; error?: string;
+        }> = [];
+        if (liveSerpRequested) {
+          const { allKeywords } = await import("@/lib/operational-workbook");
+          const { fcSearch } = await import("@/lib/firecrawl");
+          const seenKeywords = new Set<string>();
+          for (const market of markets.slice(0, 5)) {
+            const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
+            const words = allKeywords(targetSheets, Number.POSITIVE_INFINITY).slice(0, liveSearchLimit);
+            for (const keyword of words) {
+              const key = market.code + "|" + keyword.toLocaleLowerCase();
+              if (seenKeywords.has(key)) continue;
+              seenKeywords.add(key);
+              const query = keyword + " " + market.en;
+              try {
+                const found: any = await fcSearch(query, {
+                  limit: 10,
+                  lang: contentLanguage,
+                  location: market.en,
+                }, { userId, toolKey: "keyword_intelligence.serp" });
+                const raw = (found?.data?.web || found?.data || found?.web || []) as any[];
+                const results = raw.filter((item) => /^https?:\/\//i.test(String(item?.url || "")))
+                  .slice(0, 10)
+                  .map((item) => ({ url: String(item.url), title: String(item.title || item.description || "") }));
+                liveSearchEvidence.push({
+                  keyword, market: market.code, query, status: results.length ? "measured" : "unavailable",
+                  provider: String(found?.fetch_source || "available_search_provider"),
+                  results,
+                  // Current provider response contract does not expose these rich-result citations.
+                  // Mark them unavailable instead of inferring Google AI Overview presence.
+                  answerBoxChecked: false, answerBoxCitations: [],
+                  aiOverviewChecked: false, aiOverviewCitations: [],
+                  ...(results.length ? {} : { error: "live_search_unavailable" }),
+                });
+              } catch (error: any) {
+                liveSearchEvidence.push({
+                  keyword, market: market.code, query, status: "unavailable",
+                  results: [], answerBoxChecked: false, answerBoxCitations: [],
+                  aiOverviewChecked: false, aiOverviewCitations: [],
+                  error: String(error?.scope || error?.code || "live_search_unavailable").slice(0, 100),
+                });
+              }
+            }
+          }
+        }
+
         const answeredMarkets = new Set(engineAnswers.filter((a) => a.status === "answered").map((a) => a.market)).size;
         const anyPage = parties.some((p) => p.pageText);
         const marketEvidenceAvailable = hasChargeableMarketEvidence(answeredMarkets, anyPage);
@@ -188,7 +244,7 @@ export const Route = createFileRoute("/api/dual-result")({
             social: [], alexandria: partialAlexandria, clusterAnswers: [],
           });
           const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
-          payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social: [], clusterAnswers: [], hasFile });
+          payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social: [], clusterAnswers: [], hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage });
           const summary = markets.map((m: any) => ({
             market: m.code,
             label: lang === "ar" ? m.ar : m.en,
@@ -216,7 +272,7 @@ export const Route = createFileRoute("/api/dual-result")({
             payload, summary, diagnostics, evidence_state: "none" as const,
             evidence_note: "No external evidence was retrieved. The workbook still preserves the original rows, actual market queries, and failed/no-answer statuses. Additional paid research stages were skipped.",
             parties: parties.map((p) => ({ name: p.name, role: p.role, url: p.url, read: !!p.pageText })),
-            context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource },
+            context: { brand, site: site || "", category, categorySource: resolved.categorySource, marketSource, contentLanguage, targetMarket: marketText, liveSerpRequested },
             charged: 0,
             clusters: { asked: 0, answered: 0, billable_answered: 0, probes_asked: 0, probes_answered: 0, probes_fallback_answered: 0 },
             negatives: (payload.sections.find((x: any) => x.table && x.heading.match(/سلبي|Negative|نەرێنی/))?.table?.data || []).map((r: any) => r[0]),
@@ -243,7 +299,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const { sheetsForMarket } = await import("@/lib/market-scope");
         const clusters = markets.slice(0, 5).flatMap((m: any) => buildClusters(m.code, sheetsForMarket(sheets, markets, m).filter((s: any) => !/negative|سلبي/i.test(s.name)).flatMap(kwOf), winners, clusterLimit));
         const { askEnginesPerCluster } = await import("@/lib/competitive-geo.server");
-        const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c) : [];
+        const clusterAnswers = clusters.length ? await askEnginesPerCluster(clusters, (c) => (markets.find((m: any) => m.code === c) as any)?.en || c, contentLanguage) : [];
         const answeredClusters = answeredClusterCount(clusterAnswers); // direct visibility count only
         const billableClusters = billableClusterCount(clusterAnswers); // charge usable results from either route
         if (billableClusters) {
@@ -265,7 +321,7 @@ export const Route = createFileRoute("/api/dual-result")({
         const { buildOperationalPayload, shareOfVoice } = await import("@/lib/operational-workbook");
         const payload = buildOperationalPayload({ brand, lang, markets, sheets, parties, engineAnswers, social, alexandria, llms: pack.llms, clusterAnswers });
         const { buildKeywordIntelligenceSections } = await import("@/lib/keyword-intelligence");
-        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile });
+        payload.sections = buildKeywordIntelligenceSections({ brand, lang, markets, sheets, parties, engineAnswers, social, clusterAnswers, hasFile, liveSearchEvidence, liveSerpRequested, contentLanguage });
         if (alex.connected) payload.sections.push({ heading: lang === "ar" ? "أدلة البيانات المهيكلة الموثقة" : "Verified structured data evidence", kind: "table", table: { columns: ["URL", lang === "ar" ? "النص" : "Text"], data: alex.evidence.slice(0, 50).map((e) => [e.url, e.text.slice(0, 800)]) } } as any);
         if (pack.llmsFull && pack.llmsFull !== pack.llms) payload.sections.push({ heading: "llms-full.txt", kind: "text", text: pack.llmsFull });
         if (pack.llms) payload.sections.push({ heading: "llms.txt", kind: "text", text: pack.llms });
