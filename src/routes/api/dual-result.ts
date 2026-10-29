@@ -239,9 +239,17 @@ export const Route = createFileRoute("/api/dual-result")({
         // Stratified sample: only these keywords are measured live in this run (others read "out of sample").
         const { stratifiedSample, sheetStrata, DEFAULT_SAMPLE_PER_MARKET } = await import("@/lib/keyword-discovery");
         const defaultSampleLimit = liveSerpRequested ? Math.max(DEFAULT_SAMPLE_PER_MARKET, liveSearchLimit * Math.min(markets.length, 5)) : DEFAULT_SAMPLE_PER_MARKET;
-        const sampleLimit = Math.max(10, Math.min(500, Math.floor(Number(b?.sample_limit) || defaultSampleLimit)));
         const skipKeywordPairs = Array.isArray(b?.skip_keyword_pairs) ? b.skip_keyword_pairs.map((x: any) => String(x)).slice(0, 10000) : [];
         const skipKeywords = skipKeywordPairs.length ? [] : (Array.isArray(b?.skip_keywords) ? b.skip_keywords.map((x: any) => String(x)).slice(0, 5000) : []);
+        const priorMeasuredPairCount = new Set(skipKeywordPairs.map((pair: string) => {
+          const separator = pair.indexOf("|");
+          return separator < 0 ? "" : pair.slice(0, separator) + "|" + pair.slice(separator + 1).toLocaleLowerCase().replace(/\s+/g, " ").trim();
+        }).filter(Boolean)).size;
+        const requestedSampleLimit = Math.floor(Number(b?.sample_limit) || 0);
+        const baseSampleLimit = requestedSampleLimit > 0 ? requestedSampleLimit : defaultSampleLimit;
+        // As the user expands, scan beyond the original first sample instead of repeatedly hitting it.
+        const expansionSampleFloor = priorMeasuredPairCount > 0 ? defaultSampleLimit + priorMeasuredPairCount : baseSampleLimit;
+        const sampleLimit = Math.max(10, Math.min(500, Math.max(baseSampleLimit, expansionSampleFloor)));
         const totalKeywords = sheetStrata(sheets, keywordColumn).flat().length;
         const sampleKeywords = hasFile ? stratifiedSample(sheetStrata(sheets, keywordColumn), sampleLimit, skipKeywords) : [];
         const clusterLimitEstimate = Math.max(0, Math.min(10, Number(b?.cluster_limit ?? 3) || 0));
@@ -519,44 +527,38 @@ export const Route = createFileRoute("/api/dual-result")({
 
         const liveSampledPairs: Array<{ market: string; keyword: string }> = [];
         const liveSampledKeywordsByMarket: Record<string, string[]> = {};
+        const newlySampledKeywordsByMarket: Record<string, string[]> = {};
         const liveMeasurementKeywords: string[] = [];
         const keywordProbeAnswers: any[] = [];
         if (liveSerpRequested) {
           const { allKeywords } = await import("@/lib/operational-workbook");
           const { fcSearch } = await import("@/lib/firecrawl");
           const { askEnginesForKeywordVisibility } = await import("@/lib/competitive-geo.server");
-          const filePoolSet = new Set(sampleKeywords.map((keyword: string) => keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim()));
+          const normalizeKeyword = (value: string) => String(value || "").toLocaleLowerCase().replace(/\s+/g, " ").trim();
+          const filePoolSet = new Set(sampleKeywords.map((keyword: string) => normalizeKeyword(keyword)));
           const seenPairKeys = new Set<string>();
+          const priorPairsByMarket: Record<string, string[]> = {};
+
+          // Restore all previously sampled pairs into this report, using cache-only reads.
+          // Expired/missing evidence is explicitly marked unavailable; it is never silently re-fetched.
           for (const market of markets.slice(0, 5)) {
-            const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
-            const pool = allKeywords(targetSheets, Number.POSITIVE_INFINITY);
-            const skipSet = new Set(skipKeywordPairs.filter((pair: string) => pair.startsWith(market.code + "|")).map((pair: string) => pair.slice(market.code.length + 1).toLocaleLowerCase().replace(/\s+/g, " ").trim()));
-            const currentCandidates = pool.filter((keyword: string) =>
-              (!hasFile || filePoolSet.has(keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim())) &&
-              !skipSet.has(keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim())
-            );
-            const newCandidates = discovered.filter((item: any) =>
-              item.market === market.code && !item.inFile &&
-              !skipSet.has(String(item.keyword).toLocaleLowerCase().replace(/\s+/g, " ").trim())
-            ).map((item: any) => String(item.keyword).trim());
-            const halfFile = Math.ceil(liveSearchLimit / 2);
-            const halfNew = Math.floor(liveSearchLimit / 2);
-            let selected = [...currentCandidates.slice(0, halfFile), ...newCandidates.slice(0, halfNew)];
-            const chosenKeys = new Set(selected.map((keyword) => keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim()));
-            // If one pool is short, fill unused slots from the other pool without duplicates.
-            for (const keyword of [...currentCandidates.slice(halfFile), ...newCandidates.slice(halfNew)]) {
-              if (selected.length >= liveSearchLimit) break;
-              const key = keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim();
-              if (!chosenKeys.has(key)) { selected.push(keyword); chosenKeys.add(key); }
-            }
-            const pairs = selected.slice(0, liveSearchLimit);
-            liveSampledKeywordsByMarket[market.code] = pairs;
-            for (const keyword of pairs) {
-              const pairKey = market.code + "|" + keyword.toLocaleLowerCase().replace(/\s+/g, " ").trim();
-              if (seenPairKeys.has(pairKey)) continue;
+            const seenPrior = new Set<string>();
+            const priorKeywords = skipKeywordPairs
+              .filter((pair: string) => pair.startsWith(market.code + "|"))
+              .map((pair: string) => pair.slice(market.code.length + 1).trim())
+              .filter((keyword: string) => {
+                const key = normalizeKeyword(keyword);
+                if (!key || seenPrior.has(key)) return false;
+                seenPrior.add(key);
+                return true;
+              });
+            priorPairsByMarket[market.code] = priorKeywords;
+            liveSampledKeywordsByMarket[market.code] = [...priorKeywords];
+            for (const keyword of priorKeywords) {
+              const pairKey = market.code + "|" + normalizeKeyword(keyword);
               seenPairKeys.add(pairKey);
               liveSampledPairs.push({ market: market.code, keyword });
-              if (!liveMeasurementKeywords.some((existing) => existing.toLocaleLowerCase() === keyword.toLocaleLowerCase())) liveMeasurementKeywords.push(keyword);
+              if (!liveMeasurementKeywords.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) liveMeasurementKeywords.push(keyword);
               const marketQueryLabel = contentLanguage === "ar" || contentLanguage === "ku" ? market.ar : market.en;
               const query = [keyword, marketQueryLabel].filter(Boolean).join(" ");
               const cacheScope = {
@@ -566,37 +568,98 @@ export const Route = createFileRoute("/api/dual-result")({
               const cached = await getKeywordEvidence<any>(cacheScope);
               if (cached && Array.isArray(cached.results) && cached.results.length) {
                 liveSearchEvidence.push({ ...cached, cacheHit: true });
-                continue;
-              }
-              try {
-                const found: any = await fcSearch(query, {
-                  limit: 10, lang: contentLanguage, location: market.en,
-                }, { userId, toolKey: "keyword_intelligence.serp" });
-                const raw = (found?.data?.web || found?.data || found?.web || []) as any[];
-                const results = raw.filter((item) => /^https?:\/\//i.test(String(item?.url || "")))
-                  .slice(0, 10)
-                  .map((item) => ({ url: String(item.url), title: String(item.title || item.description || "") }));
-                const observation = {
-                  keyword, market: market.code, query, status: results.length ? "measured" : "unavailable",
-                  provider: String(found?.fetch_source || "available_search_provider"), results,
-                  answerBoxChecked: false, answerBoxCitations: [],
-                  aiOverviewChecked: false, aiOverviewCitations: [],
-                  ...(!results.length ? { error: "live_search_unavailable" } : {}),
-                };
-                liveSearchEvidence.push({ ...observation, cacheHit: false });
-                if (results.length) await putKeywordEvidence(cacheScope, observation);
-              } catch (error: any) {
+              } else {
                 liveSearchEvidence.push({
                   keyword, market: market.code, query, status: "unavailable", results: [],
                   answerBoxChecked: false, answerBoxCitations: [], aiOverviewChecked: false, aiOverviewCitations: [],
-                  error: String(error?.scope || error?.code || "live_search_unavailable").slice(0, 100), cacheHit: false,
+                  error: "cached_evidence_expired_or_unavailable_not_requeried", cacheHit: true,
                 });
               }
             }
           }
-          const keywordProbeMarkets = Object.fromEntries(Object.entries(liveSampledKeywordsByMarket).map(([market, keywords]) => [market, keywords]));
+
+          for (const market of markets.slice(0, 5)) {
+            const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
+            const pool = allKeywords(targetSheets, Number.POSITIVE_INFINITY);
+            const skipSet = new Set((priorPairsByMarket[market.code] || []).map(normalizeKeyword));
+            const currentCandidates = pool.filter((keyword: string) =>
+              (!hasFile || filePoolSet.has(normalizeKeyword(keyword))) &&
+              !skipSet.has(normalizeKeyword(keyword))
+            );
+            const newCandidates = discovered.filter((item: any) =>
+              item.market === market.code && !item.inFile &&
+              !skipSet.has(normalizeKeyword(String(item.keyword)))
+            ).map((item: any) => String(item.keyword).trim());
+            const halfFile = Math.ceil(liveSearchLimit / 2);
+            const halfNew = Math.floor(liveSearchLimit / 2);
+            let selected = [...currentCandidates.slice(0, halfFile), ...newCandidates.slice(0, halfNew)];
+            const chosenKeys = new Set(selected.map((keyword) => normalizeKeyword(keyword)));
+            // If one pool is short, fill unused slots from the other pool without duplicates.
+            for (const keyword of [...currentCandidates.slice(halfFile), ...newCandidates.slice(halfNew)]) {
+              if (selected.length >= liveSearchLimit) break;
+              const key = normalizeKeyword(keyword);
+              if (!chosenKeys.has(key)) { selected.push(keyword); chosenKeys.add(key); }
+            }
+            const pairs = selected.slice(0, liveSearchLimit);
+            newlySampledKeywordsByMarket[market.code] = [];
+            for (const keyword of pairs) {
+              const pairKey = market.code + "|" + normalizeKeyword(keyword);
+              if (seenPairKeys.has(pairKey)) continue;
+              seenPairKeys.add(pairKey);
+              liveSampledPairs.push({ market: market.code, keyword });
+              newlySampledKeywordsByMarket[market.code].push(keyword);
+              const combined = liveSampledKeywordsByMarket[market.code] || [];
+              if (!combined.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) combined.push(keyword);
+              liveSampledKeywordsByMarket[market.code] = combined;
+              if (!liveMeasurementKeywords.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) liveMeasurementKeywords.push(keyword);
+              const combined = liveSampledKeywordsByMarket[market.code] || [];
+              if (!combined.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) combined.push(keyword);
+              const marketQueryLabel = contentLanguage === "ar" || contentLanguage === "ku" ? market.ar : market.en;
+              const query = [keyword, marketQueryLabel].filter(Boolean).join(" ");
+              const cacheScope = {
+                userId, workspaceId, evidenceType: "serp",
+                evidenceKey: await evidenceCacheKey({ analysisScopeKey, market: market.code, keyword, query, lang: contentLanguage }),
+              };
+              const cached = await getKeywordEvidence<any>(cacheScope);
+              if (cached && Array.isArray(cached.results) && cached.results.length) {
+                liveSearchEvidence.push({ ...cached, cacheHit: true });
+              } else {
+                try {
+                  const found: any = await fcSearch(query, {
+                    limit: 10, lang: contentLanguage, location: market.en,
+                  }, { userId, toolKey: "keyword_intelligence.serp" });
+                  const raw = (found?.data?.web || found?.data || found?.web || []) as any[];
+                  const results = raw.filter((item) => /^https?:\/\//i.test(String(item?.url || "")))
+                    .slice(0, 10)
+                    .map((item) => ({ url: String(item.url), title: String(item.title || item.description || "") }));
+                  const observation = {
+                    keyword, market: market.code, query, status: results.length ? "measured" : "unavailable",
+                    provider: String(found?.fetch_source || "available_search_provider"), results,
+                    answerBoxChecked: false, answerBoxCitations: [],
+                    aiOverviewChecked: false, aiOverviewCitations: [],
+                    ...(!results.length ? { error: "live_search_unavailable" } : {}),
+                  };
+                  liveSearchEvidence.push({ ...observation, cacheHit: false });
+                  if (results.length) await putKeywordEvidence(cacheScope, observation);
+                } catch (error: any) {
+                  liveSearchEvidence.push({
+                    keyword, market: market.code, query, status: "unavailable", results: [],
+                    answerBoxChecked: false, answerBoxCitations: [], aiOverviewChecked: false, aiOverviewCitations: [],
+                    error: String(error?.scope || error?.code || "live_search_unavailable").slice(0, 100), cacheHit: false,
+                  });
+                }
+              }
+            }
+          }
+
+          // Prior pairs only read cached model answers. New pairs may call providers when not cached.
+          const priorProbeAnswers = await askEnginesForKeywordVisibility({
+            category, markets: markets.slice(0, 5), keywordsByMarket: priorPairsByMarket,
+            contentLanguage: contentLanguage as any, userId, workspaceId, cacheOnly: true,
+          });
+          keywordProbeAnswers.push(...priorProbeAnswers);
           const currentProbeAnswers = await askEnginesForKeywordVisibility({
-            category, markets: markets.slice(0, 5), keywordsByMarket: keywordProbeMarkets,
+            category, markets: markets.slice(0, 5), keywordsByMarket: newlySampledKeywordsByMarket,
             contentLanguage: contentLanguage as any, userId, workspaceId,
           });
           keywordProbeAnswers.push(...currentProbeAnswers);
