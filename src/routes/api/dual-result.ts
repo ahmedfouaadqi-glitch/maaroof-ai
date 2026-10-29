@@ -612,8 +612,6 @@ export const Route = createFileRoute("/api/dual-result")({
               if (!combined.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) combined.push(keyword);
               liveSampledKeywordsByMarket[market.code] = combined;
               if (!liveMeasurementKeywords.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) liveMeasurementKeywords.push(keyword);
-              const combined = liveSampledKeywordsByMarket[market.code] || [];
-              if (!combined.some((existing) => normalizeKeyword(existing) === normalizeKeyword(keyword))) combined.push(keyword);
               const marketQueryLabel = contentLanguage === "ar" || contentLanguage === "ku" ? market.ar : market.en;
               const query = [keyword, marketQueryLabel].filter(Boolean).join(" ");
               const cacheScope = {
