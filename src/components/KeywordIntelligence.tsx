@@ -111,6 +111,10 @@ export function KeywordIntelligence() {
       setWorkspaceName(data.name);
       const truth: any = data.entity_truth_card || {};
       const profile: any = data.profile || {};
+      const savedCompetitors = Array.isArray(truth.competitors)
+        ? truth.competitors.map((item: any) => typeof item === "string" ? item : String(item?.name || "")).filter(Boolean)
+        : [];
+      setComps(savedCompetitors.join(", "));
       setBrand(String(truth.entity_name || profile.brand_name || data.name || ""));
       setSite(String(data.brand_url || truth.website_url || profile.website || ""));
       setCategory(String(truth.sector || data.brand_summary || profile.sector || ""));
@@ -171,6 +175,9 @@ export function KeywordIntelligence() {
       const j = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(j?.error || "failed");
       setPayload(j.payload);
+      if (Array.isArray(j.parties)) {
+        setComps(j.parties.filter((party: any) => party?.role === "competitor").map((party: any) => String(party.name || "")).filter(Boolean).join(", "));
+      }
     } catch (e: any) {
       const code = String(e?.message || "failed");
       const custom = (c.errors as Record<string, string>)[code];
