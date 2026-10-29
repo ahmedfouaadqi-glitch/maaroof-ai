@@ -67,8 +67,14 @@ export function newKeywordCandidates(brandList: string[], competitors: PartyEvid
     out.push({ keyword: k, from, party, sourceUrl, snippet: excerpt(sourceText, k) });
   };
   for (const c of competitors) {
-    for (const k of extractSiteKeywords({ text: c.pageText, title: c.title, description: c.description }, 20)) {
-      if (k.keyword.includes(" ")) push(k.keyword, "competitor", c.name, c.url || undefined, c.pageText);
+    const sourcePages = [
+      { url: c.url || undefined, text: c.pageText, title: c.title, description: c.description },
+      ...(c.additionalPages || []),
+    ];
+    for (const page of sourcePages) {
+      for (const k of extractSiteKeywords({ text: page.text, title: page.title || c.title, description: page.description || c.description }, 20)) {
+        if (k.keyword.includes(" ")) push(k.keyword, "competitor", c.name, page.url, page.text);
+      }
     }
   }
   const answerText = answers.filter((a) => a.status === "answered").map((a) => a.answer).join("\n");
@@ -88,7 +94,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     ? allKeywords(input.sheets)
     : extractSiteKeywords({ text: brand?.pageText, title: brand?.title, description: brand?.description }, 60).map((k) => k.keyword);
   const discoveredMap = new Map((input.discovered || []).map((d) => [norm(d.keyword), d]));
-  const competitorCandidates = newKeywordCandidates(brandList, comps, [], 40);
+  const competitorCandidates = newKeywordCandidates(brandList, comps, [], Math.min(200, 40 * Math.max(1, input.markets.length)));
   const discoveryCandidates = (input.discovered || []).map((d) => ({
     keyword: d.keyword, from: "engines" as const, sourceUrl: undefined, snippet: d.snippet,
   }));
@@ -110,7 +116,8 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       "(نیشانەی ناو پەڕە؛ دەسەڵاتی بەستەری دەرەوە نەپێوراوە)"
     );
   };
-  const facts = (p?: PartyEvidence) => { const f = factDensity(p?.pageText || null); return f ? f.per100 : NM; };
+  const partyText = (p?: PartyEvidence) => [p?.pageText, ...(p?.additionalPages || []).map((page) => page.text)].filter(Boolean).join("\n");
+  const facts = (p?: PartyEvidence) => { const f = factDensity(partyText(p) || null); return f ? f.per100 : NM; };
   const opinion = (k: string) => {
     const keyword = norm(k);
     const clusterProbes = (input.clusterAnswers || []).filter((answer) =>
@@ -133,7 +140,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       engines: mentioned.join(", ") || S("لم تذكرها إجابات المحركات", "No literal mention in engine answers", "لە وەڵامە ڕاستەوخۆکاندا باس نەکراوە"),
     };
   };
-  const density = (p: PartyEvidence | undefined, k: string) => { const d = keywordDensity(p?.pageText, k); return d === null ? NM : d; };
+  const density = (p: PartyEvidence | undefined, k: string) => { const d = keywordDensity(partyText(p), k); return d === null ? NM : d; };
 
   // 1. Brand keywords (current + new)
   const SRC_CUR = input.hasFile ? S("من الملف", "From file", "لە فایل") : S("من فحص الموقع", "From site scan", "لە پشکنینی ماڵپەڕ");
@@ -148,10 +155,23 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const compKw = new Map<string, string[]>();
   const compRows: (string | number)[][] = [];
   for (const c of comps) {
-    const list = extractSiteKeywords({ text: c.pageText, title: c.title, description: c.description }, 25).map((k) => k.keyword);
+    const sourcePages = [
+      { url: c.url || undefined, text: c.pageText, title: c.title, description: c.description },
+      ...(c.additionalPages || []),
+    ];
+    const list = [...new Set(sourcePages.flatMap((page) =>
+      extractSiteKeywords({ text: page.text, title: page.title || c.title, description: page.description || c.description }, 25).map((item) => item.keyword)
+    ))];
     compKw.set(c.name, list);
     if (!list.length) compRows.push([c.name, c.url || NM, NM, NM, NM, NM, NM, NM]);
-    for (const k of list) { const o = opinion(k); compRows.push([c.name, c.url || NM, k, o.share, density(c, k), facts(c), authority(c), o.engines]); }
+    for (const k of list) {
+      const sourcePage = sourcePages.find((page) =>
+        extractSiteKeywords({ text: page.text, title: page.title || c.title, description: page.description || c.description }, 25)
+          .some((item) => norm(item.keyword) === norm(k))
+      );
+      const o = opinion(k);
+      compRows.push([c.name, sourcePage?.url || c.url || NM, k, o.share, density(c, k), facts(c), authority(c), o.engines]);
+    }
   }
 
   // 3. Comparison
@@ -305,7 +325,10 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
 
   // 8. Sources (real links only)
   const src = new Set<string>();
-  for (const p of input.parties) if (p.url) src.add(p.url);
+  for (const p of input.parties) {
+    if (p.url) src.add(p.url);
+    for (const page of p.additionalPages || []) if (page.url) src.add(page.url);
+  }
   for (const a of answers) for (const u of a.urls || []) if (/^https?:\/\//.test(u)) src.add(u);
   for (const s of input.social || []) if (/^https?:\/\//.test(s.url)) src.add(s.url);
   const srcRows: (string | number)[][] = [...src].map((u) => [u]);
@@ -366,7 +389,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     S("الحصة / الحالة", "Share / status", "بەش / دۆخ"),
     S("الكثافة / الكلمات", "Density / keywords", "چڕی / وشەکان"),
     S("كثافة الحقائق", "Fact density", "چڕی ڕاستی"),
-    S("السلطة", "Authority", "دەسەڵات"),
+    S("إشارات السلطة داخل الصفحة", "On-page authority signals", "نیشانەی دەسەڵاتی ناو پەڕە"),
     S("الأدلة والملاحظات", "Evidence and notes", "بەڵگە و تێبینی"),
   ];
   const sections: ExportSection[] = [
