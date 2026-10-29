@@ -231,6 +231,8 @@ export async function askEnginesForKeywordVisibility(o: {
   contentLanguage: ProbeLanguage;
   userId: string;
   workspaceId?: string | null;
+  /** When true, read prior evidence only and never call a provider on a cache miss. */
+  cacheOnly?: boolean;
 }): Promise<EngineAnswer[]> {
   const jobs = o.markets.flatMap((market) =>
     (o.keywordsByMarket[market.code] || []).map((keyword) => ({ market, keyword }))
@@ -247,6 +249,12 @@ export async function askEnginesForKeywordVisibility(o: {
     };
     const cached = await getKeywordEvidence<EngineAnswer>(scope);
     if (cached && cached.status === "answered") return { ...cached, cacheHit: true };
+    // Expanded samples must restore prior results without silently re-running paid calls.
+    // A missing/expired cache entry remains explicitly unmeasured in the resulting report.
+    if (o.cacheOnly) return {
+      market: market.code, engine: engine.key, status: "no_answer", answer: "", urls: [], query,
+      error: "cached_evidence_unavailable_not_requeried", cacheHit: true, probe_kind: "keyword_visibility",
+    };
     const call = await askEngine(engine.key, engine.model, query);
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     const answer: EngineAnswer = parsed ? {
