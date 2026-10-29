@@ -21,6 +21,15 @@ export const Route = createFileRoute("/api/dual-result")({
 
         const workspaceId = b?.workspace_id == null || b.workspace_id === "" ? null : String(b.workspace_id);
         let workspace: any = null;
+        if (!workspaceId) {
+          // Fail closed for accounts that have workspaces: do not silently run a workspace-scoped tool
+          // against the account-level context when the caller forgot to select a workspace.
+          const { count, error: workspaceCountError } = await db.from("workspaces")
+            .select("id", { count: "exact", head: true })
+            .eq("owner_id", userId);
+          if (workspaceCountError) return Response.json({ error: "workspace_context_unavailable" }, { status: 503 });
+          if ((count || 0) > 0) return Response.json({ error: "workspace_required" }, { status: 400 });
+        }
         if (workspaceId) {
           if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
           const { data: space } = await db.from("workspaces")
