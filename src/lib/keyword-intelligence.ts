@@ -21,6 +21,8 @@ export type KiInput = ResearchInput & {
   discovered?: import("./keyword-discovery").DiscoveredKeyword[];
   /** When set, only these file keywords were measured live in this run. */
   sampleKeywords?: string[];
+  /** Exact market+keyword pairs measured live in this run. */
+  sampledMarketKeywords?: Array<{ market: string; keyword: string }>;
   totalKeywords?: number;
   charged?: number;
   competitorValidation?: Array<{ name: string; url: string | null; category: string; status: "verified" | "sector_mismatch" | "insufficient_evidence" }>;
@@ -95,6 +97,9 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const fresh: Array<{ keyword: string; from: "competitor" | "engines"; party?: string; sourceUrl?: string; snippet?: string }> =
     [...new Map([...competitorCandidates, ...discoveryCandidates].map((item) => [norm(item.keyword), item])).values()].slice(0, 80);
   const sampleSet = input.sampleKeywords ? new Set(input.sampleKeywords.map(norm)) : null;
+  const sampledPairSet = input.sampledMarketKeywords
+    ? new Set(input.sampledMarketKeywords.map((item) => item.market + "|" + norm(item.keyword)))
+    : null;
   const authority = (p?: PartyEvidence) => {
     if (!p?.pageText) return NM;
     const a = authoritySignals(p);
@@ -212,7 +217,8 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
   const axisRows: (string | number)[][] = [];
   for (const market of markets) {
     for (const k of axisList) {
-      if (sampleSet && !sampleSet.has(norm(k))) {
+      if ((sampledPairSet && !sampledPairSet.has(market.code + "|" + norm(k))) ||
+          (!sampledPairSet && sampleSet && !sampleSet.has(norm(k)))) {
         axisRows.push([
           k, l === "ar" ? market.ar : market.en,
           ...AXES_ORDER.map(() => NM),
