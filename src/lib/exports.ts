@@ -46,6 +46,8 @@ export type ExportPayload = {
   entity?: import("@/lib/machine-pack").ResultEntity;
   /** Raw per-engine answers; labelled in the export language at export time. */
   engineAnswers?: any[];
+  /** Export only the six curated section tables as six worksheets. */
+  excelLayout?: "six_sheets";
 };
 
 const BRAND = "MAAROOF Ai";
@@ -522,6 +524,49 @@ export async function exportToExcel(payload: ExportPayload) {
   const lang = payload.lang || "ar";
   const cardLabels = CARD_LABELS[lang];
   const { default: ExcelJS } = await import("exceljs");
+  if (payload.excelLayout === "six_sheets") {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = BRAND;
+    workbook.subject = payload.title;
+    const sections = payload.sections.filter((section) => section.kind === "table" && section.table).slice(0, 6);
+    const used = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      const section = sections[i];
+      const fallbackHeading = lang === "en" ? "Sheet " + (i + 1) : lang === "ku" ? "پەڕە " + (i + 1) : "ورقة " + (i + 1);
+      const requested = (section?.heading || fallbackHeading).slice(0, 31).trim() || fallbackHeading;
+      let name = requested;
+      let suffix = 2;
+      while (used.has(name)) {
+        const tail = " (" + suffix++ + ")";
+        name = requested.slice(0, 31 - tail.length) + tail;
+      }
+      used.add(name);
+      const ws = workbook.addWorksheet(name, { views: [{ rightToLeft: lang !== "en", state: "frozen", ySplit: 4 }] });
+      const columns = section?.table?.columns || [lang === "en" ? "Status" : lang === "ku" ? "دۆخ" : "الحالة"];
+      const data = section?.table?.data || [[lang === "en" ? "No data recorded" : lang === "ku" ? "هیچ داتایەک تۆمار نەکراوە" : "لا توجد بيانات مسجلة"]];
+      ws.addRow([section?.heading || fallbackHeading]);
+      ws.addRow([payload.title]);
+      ws.addRow([payload.subtitle || (BRAND + " · " + SITE)]);
+      ws.addRow(columns);
+      ws.addRows(data);
+      ws.mergeCells(1, 1, 1, Math.max(1, columns.length));
+      ws.getRow(1).height = 28;
+      ws.getRow(1).font = { name: "Arial", size: 16, bold: true, color: { argb: "FFFFFFFF" } };
+      ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F2454" } };
+      ws.getRow(2).font = { name: "Arial", size: 11, bold: true, color: { argb: "FF4338CA" } };
+      ws.getRow(4).font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
+      ws.getRow(4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
+      ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: Math.max(1, columns.length) } };
+      ws.columns = columns.map((header) => ({ width: /url|رابط|بەستەر/i.test(String(header)) ? 48 : String(header).length > 22 ? 28 : 22 }));
+      ws.eachRow((row, rowNumber) => {
+        row.alignment = { vertical: "top", wrapText: true, horizontal: lang === "en" ? "left" : "right" };
+        if (rowNumber > 4) row.height = 30;
+      });
+    }
+    const bytes = await workbook.xlsx.writeBuffer();
+    download(bytes as BlobPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx", payload.title);
+    return;
+  }
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND;
   workbook.subject = payload.title;
