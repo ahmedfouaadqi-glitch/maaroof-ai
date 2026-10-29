@@ -73,6 +73,10 @@ export function reusableResultKey(tool: string, input: unknown): string {
 export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; output?: unknown; input_signature?: unknown } | null | undefined>): Record<string, any> {
   const out: Record<string, any> = {};
   const legacyByTool = new Map<string, any[]>();
+  const toolsWithSignatures = new Set(payloads
+    .filter((p) => p && p.ok === true && typeof p.tool === "string" &&
+      typeof p.input_signature === "string" && p.input_signature.startsWith("reuse:"))
+    .map((p) => String(p!.tool)));
   for (const p of payloads) {
     if (!p || p.ok !== true || typeof p.tool !== "string") continue;
     const o: any = p.output;
@@ -81,6 +85,9 @@ export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; 
       out[p.input_signature] = o;
       continue;
     }
+    // Once any signed output exists for this tool, never let an old unsigned result be a fallback
+    // for a different signature.
+    if (toolsWithSignatures.has(p.tool)) continue;
     const legacy = legacyByTool.get(p.tool) || [];
     legacy.push(o);
     legacyByTool.set(p.tool, legacy);
@@ -88,7 +95,6 @@ export function reusableResults(payloads: Array<{ tool?: unknown; ok?: unknown; 
   for (const [tool, values] of legacyByTool) if (values.length === 1) out[tool] = values[0];
   return out;
 }
-
 /**
  * Polling decision for a job watcher. `status` is the HTTP status, or null for a network error.
  * Transient problems (network, auth refresh, rate limit, server errors) keep watching. Pure.
