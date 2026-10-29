@@ -24,6 +24,12 @@ describe("spreadsheet reader", () => {
     expect(s.rows.length).toBe(5);
     expect(s.truncated).toBe(true);
   });
+  it("does not silently truncate default workbook reads after five thousand rows", () => {
+    const rows = Array.from({ length: 5105 }, (_, i) => `<row r="${i + 1}"><c r="A${i + 1}"><v>${i}</v></c></row>`).join("");
+    const sheet = parseXlsxEntries({ "xl/worksheets/sheet1.xml": `<sheetData>${rows}</sheetData>` })[0];
+    expect(sheet.rows.length).toBe(5104);
+    expect(sheet.truncated).toBe(false);
+  });
   it("column letters map to indexes", () => { expect(colIndex("AA3")).toBe(26); });
   it("parses CSV with quoted commas", () => {
     const s = parseCsv('Keyword,CPC\n"dress, red",1.5\n');

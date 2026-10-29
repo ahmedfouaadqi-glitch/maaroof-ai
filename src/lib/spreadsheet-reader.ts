@@ -5,7 +5,8 @@ export type ColumnRole = "keyword" | "volume" | "cpc" | "difficulty" | "intent" 
 export type SheetSummary = { name: string; totalRows: number; columns: string[]; roles: Partial<Record<ColumnRole, string>>; numeric: Record<string, { min: number; max: number; sum: number; count: number }>; sample: Cell[][] };
 export type WorkbookStructure = { source: "xlsx" | "csv" | "gsheet"; sheets: SheetSummary[]; totalRows: number };
 
-export const MAX_ROWS_PER_SHEET = 5000;
+// Avoid an arbitrary row truncation in keyword workbooks. Runtime memory and upload-size limits still apply.
+export const MAX_ROWS_PER_SHEET = Number.POSITIVE_INFINITY;
 
 const decode = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/&amp;/g, "&");
 const attr = (tag: string, name: string) => { const m = tag.match(new RegExp(`\\b${name}="([^"]*)"`)); return m ? decode(m[1]) : ""; };

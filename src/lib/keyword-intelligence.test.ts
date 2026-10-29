@@ -16,7 +16,8 @@ describe("keyword intelligence", () => {
   it("produces eight sections with axes in the approved order", () => {
     const s = buildKeywordIntelligenceSections({ ...base, hasFile: false });
     expect(s).toHaveLength(8);
-    expect(s[4].table!.columns.slice(1)).toEqual(["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"]);
+    expect(s[4].table!.columns.slice(2, 8)).toEqual(["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"]);
+    expect(s[4].table!.columns).toContain("Unmeasured reason");
     expect([...AXES_ORDER]).toEqual(["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"]);
   });
   it("drops the old-vs-new column without a file and keeps it with one", () => {

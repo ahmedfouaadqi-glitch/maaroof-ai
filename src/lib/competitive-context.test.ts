@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inferCategoryFromSignals, resolveCompetitiveContext } from "./competitive-context";
+import { inferCategoryFromSignals, inferCategoryFromVerifiedEvidence, resolveCompetitiveContext } from "./competitive-context";
 
 describe("competitive context resolution", () => {
   it("reuses the workspace identity and website without asking again", () => {
@@ -42,6 +42,27 @@ describe("competitive context resolution", () => {
   it("infers finance and education as distinct sectors for generic brand names", () => {
     expect(inferCategoryFromSignals(["digital banking", "payment processing", "financial services"])).toBe("Finance & banking");
     expect(inferCategoryFromSignals(["online courses", "e-learning academy", "training"])).toBe("Education & training");
+  });
+
+  it("corrects a sector only when official-site metadata and content agree strongly", () => {
+    const verified = inferCategoryFromVerifiedEvidence({
+      title: "Medical Clinic and Diagnostic Center",
+      description: "Patient care, diagnostic equipment and pharmacy services",
+      pageText: "Our medical clinic provides patient care, medical diagnostics and pharmacy services.",
+    });
+    expect(verified.confidence).toBe("high");
+    expect(verified.category).toBe("Healthcare & medical");
+    expect(verified.sources).toContain("official_site_title");
+  });
+
+  it("does not auto-correct the sector when official-site evidence is ambiguous", () => {
+    const verified = inferCategoryFromVerifiedEvidence({
+      title: "Welcome to Our Company",
+      description: "We provide quality service to all customers",
+      pageText: "Learn about our team, our history and contact information.",
+    });
+    expect(verified.confidence).toBe("insufficient");
+    expect(verified.category).toBe("");
   });
 
   it("uses real workbook signals to resolve an otherwise generic workspace", () => {

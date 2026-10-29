@@ -16,7 +16,7 @@ export type CompetitiveContextResolution = {
   brand: string;
   site: string;
   category: string;
-  categorySource: "provided" | "workspace" | "inferred" | "unresolved";
+  categorySource: "provided" | "workspace" | "inferred" | "unresolved" | "official_site_verified";
 };
 
 function clean(value: unknown, max = 200): string {
@@ -99,6 +99,56 @@ export function inferCategoryFromSignals(signals: Array<string | null | undefine
     }
   }
   return winner;
+}
+
+export type VerifiedCategoryEvidence = {
+  category: string;
+  confidence: "high" | "insufficient";
+  score: number;
+  hits: number;
+  sources: string[];
+};
+
+/**
+ * Conservatively infer a sector from a verified official-site page.
+ * Metadata has higher weight than body text; ambiguous matches do not authorize auto-correction.
+ */
+export function inferCategoryFromVerifiedEvidence(input: {
+  title?: string | null;
+  description?: string | null;
+  pageText?: string | null;
+}): VerifiedCategoryEvidence {
+  const title = clean(input.title, 500);
+  const description = clean(input.description, 1200);
+  const body = clean(input.pageText, 12000);
+  const scores = CATEGORY_RULES.map((rule) => {
+    const titleHits = (title.match(rule.pattern) || []).length;
+    const descriptionHits = (description.match(rule.pattern) || []).length;
+    const bodyHits = (body.match(rule.pattern) || []).length;
+    return {
+      category: rule.category,
+      score: titleHits * 5 + descriptionHits * 4 + Math.min(bodyHits, 8),
+      hits: titleHits + descriptionHits + bodyHits,
+      headerHits: titleHits + descriptionHits,
+      bodyHits,
+    };
+  }).sort((a, b) => b.score - a.score);
+  const best = scores[0];
+  const runnerUp = scores[1];
+  const clearMargin = Boolean(best && (!runnerUp || best.score - runnerUp.score >= 2));
+  const enoughEvidence = Boolean(best && best.score >= 6 && (best.headerHits >= 1 || best.bodyHits >= 4));
+  const confidence = best && clearMargin && enoughEvidence ? "high" : "insufficient";
+  return {
+    category: confidence === "high" ? best.category : "",
+    confidence,
+    score: best?.score || 0,
+    hits: best?.hits || 0,
+    sources: [
+      ...(title ? ["official_site_title"] : []),
+      ...(description ? ["official_site_description"] : []),
+      ...(body ? ["official_site_page_text"] : []),
+    ],
+  };
 }
 
 export function resolveCompetitiveContext(input: {

@@ -3,7 +3,7 @@ import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { ENGINE_COUNCIL_MODELS } from "@/lib/maaroof/tool-council";
 import { completionWithFallback } from "@/lib/maaroof/provider-fallback.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
-import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf } from "@/lib/maaroof/probe-answer";
+import { keywordVisibilityProbeQuestion, parseProbeContent, hostOf, type ProbeLanguage } from "@/lib/maaroof/probe-answer";
 import type { Market } from "@/lib/market-scope";
 import type { PartyEvidence, EngineAnswer } from "@/lib/operational-workbook";
 
@@ -17,11 +17,19 @@ async function readPage(url: string, userId: string) {
   } catch { return { text: null, title: null, description: null }; }
 }
 
+/** Preflight official-domain evidence so category correction can happen before competitor discovery. */
+export async function readOfficialBrandEvidence(url: string, userId: string) {
+  return readPage(url, userId);
+}
+
 async function findSite(name: string, userId: string): Promise<string | null> {
   try { const r = rowsOf(await fcSearch(`${name} official site`, { limit: 3 }, { userId, toolKey: "competitive_geo" })); return r[0]?.url || null; } catch { return null; }
 }
 
-export async function gatherParties(o: { brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string }): Promise<PartyEvidence[]> {
+export async function gatherParties(o: {
+  brand: string; site?: string; competitors: string[]; category: string; markets: Market[]; userId: string;
+  brandPageEvidence?: { text: string | null; title: string | null; description: string | null };
+}): Promise<PartyEvidence[]> {
   const parties: Array<Omit<PartyEvidence, "pageText">> = [{ name: o.brand, role: "brand", url: o.site || null, found: "user" }];
   for (const c of o.competitors.slice(0, 4)) parties.push({ name: c, role: "competitor", url: null, found: "user" });
   if (o.category && parties.length < 5) {
@@ -42,7 +50,10 @@ export async function gatherParties(o: { brand: string; site?: string; competito
   }
   return Promise.all(parties.map(async (p) => {
     const url = p.url || (await findSite(p.name, o.userId));
-    const pg = url ? await readPage(url, o.userId) : { text: null, title: null, description: null };
+    const isOfficialBrandPage = p.role === "brand" && o.brandPageEvidence && url && o.site && hostOf(url) === hostOf(o.site);
+    const pg = isOfficialBrandPage
+      ? o.brandPageEvidence!
+      : url ? await readPage(url, o.userId) : { text: null, title: null, description: null };
     return { ...p, url, pageText: pg.text, title: pg.title, description: pg.description };
   }));
 }
@@ -78,10 +89,11 @@ async function askEngine(engine: string, model: string, q: string): Promise<Engi
 }
 
 /** Ten engines × each market, the same blind question. No answer stays "no_answer". */
-export async function askEnginesPerMarket(category: string, markets: Market[], keywordSamples: Record<string, string[]> = {}): Promise<EngineAnswer[]> {
+export async function askEnginesPerMarket(category: string, markets: Market[], keywordSamples: Record<string, string[]> = {}, contentLanguage: ProbeLanguage = "en"): Promise<EngineAnswer[]> {
   const jobs = markets.flatMap((m) => ENGINE_COUNCIL_MODELS.map((e) => ({ m, e })));
   return Promise.all(jobs.map(async ({ m, e }): Promise<EngineAnswer> => {
-    const query = keywordVisibilityProbeQuestion(category, m.en, keywordSamples[m.code] || []);
+    const marketLabel = contentLanguage === "ar" || contentLanguage === "ku" ? m.ar : m.en;
+    const query = keywordVisibilityProbeQuestion(category, marketLabel, keywordSamples[m.code] || [], contentLanguage);
     const call = await askEngine(e.key, e.model, query);
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     if (parsed) return {
@@ -110,12 +122,12 @@ export async function gatherSocial(names: string[], userId: string): Promise<Arr
 }
 
 /** Ten engines × each keyword cluster: a separate blind question per cluster. */
-export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clusters").KeywordCluster[], marketName: (code: string) => string): Promise<import("@/lib/keyword-clusters").ClusterAnswer[]> {
+export async function askEnginesPerCluster(clusters: import("@/lib/keyword-clusters").KeywordCluster[], marketName: (code: string) => string, contentLanguage: ProbeLanguage = "en"): Promise<import("@/lib/keyword-clusters").ClusterAnswer[]> {
   const { clusterQuestion } = await import("@/lib/keyword-clusters");
   const jobs = clusters.flatMap((c) => ENGINE_COUNCIL_MODELS.map((e) => ({ c, e })));
   return Promise.all(jobs.map(async ({ c, e }) => {
     const base = { market: c.market, engine: e.key, keywords: c.keywords };
-    const query = clusterQuestion(c, marketName(c.market), c.keywords.some((k) => /[\u0600-\u06FF]/.test(k)) ? "ar" : "en");
+    const query = clusterQuestion(c, marketName(c.market), contentLanguage);
     const call = await askEngine(e.key, e.model, query);
     const parsed = call.status === "answered" ? parseProbeContent(call.content) : null;
     if (parsed) return {

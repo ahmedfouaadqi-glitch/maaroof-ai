@@ -75,6 +75,7 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
       else localStorage.removeItem(STORAGE_KEY);
     }
     onChange(w);
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("maaroof:workspace-changed", { detail: { workspaceId: w?.id ?? null } }));
   }
 
   async function submit() {
