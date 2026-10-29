@@ -238,7 +238,8 @@ export const Route = createFileRoute("/api/dual-result")({
 
         // Stratified sample: only these keywords are measured live in this run (others read "out of sample").
         const { stratifiedSample, sheetStrata, DEFAULT_SAMPLE_PER_MARKET } = await import("@/lib/keyword-discovery");
-        const sampleLimit = Math.max(10, Math.min(500, Math.floor(Number(b?.sample_limit) || DEFAULT_SAMPLE_PER_MARKET)));
+        const defaultSampleLimit = liveSerpRequested ? Math.max(DEFAULT_SAMPLE_PER_MARKET, liveSearchLimit * Math.min(markets.length, 5)) : DEFAULT_SAMPLE_PER_MARKET;
+        const sampleLimit = Math.max(10, Math.min(500, Math.floor(Number(b?.sample_limit) || defaultSampleLimit)));
         const skipKeywordPairs = Array.isArray(b?.skip_keyword_pairs) ? b.skip_keyword_pairs.map((x: any) => String(x)).slice(0, 10000) : [];
         const skipKeywords = skipKeywordPairs.length ? [] : (Array.isArray(b?.skip_keywords) ? b.skip_keywords.map((x: any) => String(x)).slice(0, 5000) : []);
         const totalKeywords = sheetStrata(sheets, keywordColumn).flat().length;
@@ -507,7 +508,7 @@ export const Route = createFileRoute("/api/dual-result")({
         }
         const { allKeywords: allKeywordsFn } = await import("@/lib/operational-workbook");
         const knownKeywords = allKeywordsFn(sheets);
-        const discovered = discoveryConsensus(discoveryAnswers, knownKeywords, knownKeywords).slice(0, 80);
+        const discovered = discoveryConsensus(discoveryAnswers, knownKeywords, knownKeywords).slice(0, Math.min(400, 80 * Math.min(markets.length, 5)));
         const discoveryAnswered = discoveryAnswers.filter((a: any) => a.status === "answered" && !a.cacheHit).length;
         if (discoveryAnswered) {
           const { chargeTokens: ct } = await import("@/lib/tokens.server");
