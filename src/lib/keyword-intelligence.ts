@@ -2,7 +2,8 @@
 // Anything not measured reads "not measured"; no invented numbers.
 import type { ExportSection, ExportLang } from "./exports";
 import type { ResearchInput, EngineAnswer, PartyEvidence } from "./operational-workbook";
-import { allKeywords, authoritySignals, factDensity, keywordAxisScores, negativeCandidates } from "./operational-workbook";
+import { allKeywords, authoritySignals, factDensity, negativeCandidates } from "./operational-workbook";
+import { measureKeywordAxes, LIVE_AXES, type LiveAxis, type LiveSearchEvidence } from "./live-keyword-axes";
 import { clusterScore } from "./keyword-clusters";
 import { extractSiteKeywords } from "./site-keyword-extractor";
 import { ingestionFor } from "./keyword-ingestion-timeline";
@@ -13,6 +14,10 @@ export const AXES_ORDER = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"] as const;
 export type KiInput = ResearchInput & {
   /** True when the user attached a keyword file; false = keywords came from the site scan. */
   hasFile: boolean;
+  /** Live provider results, present only when the user explicitly opted into live search. */
+  liveSearchEvidence?: LiveSearchEvidence[];
+  liveSerpRequested?: boolean;
+  contentLanguage?: string;
 };
 
 const t3 = (l: ExportLang, ar: string, en: string, ku: string) => (l === "ar" ? ar : l === "ku" ? ku : en);
@@ -109,9 +114,75 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     socialRows.push([s.party, s.url, found.slice(0, 15).join(", ") || S("لا كلمات مطابقة", "No matching keywords", "هیچ"), keywordDensity(s.text, s.party) ?? NM]);
   }
 
-  // 5. Six axes (rule-based estimate, labelled)
-  const axisList = [...brandList.slice(0, 80), ...fresh.map((f) => f.keyword)];
-  const axisRows = axisList.map((k) => { const sc = keywordAxisScores(k); return [k, ...AXES_ORDER.map((a) => sc[a])]; });
+  // 5. Six axes (evidence-only; missing evidence stays unmeasured)
+  const axisList = [...new Set([...brandList, ...fresh.map((f) => f.keyword)])];
+  const markets = input.markets.length ? input.markets : [{ code: "unknown", en: "Unspecified market", ar: "سوق غير محدد", gl: "" }];
+  const explainReason = (axis: LiveAxis, reason: string) => {
+    const ar: Record<string, string> = {
+      live_search_not_requested: "لم يُطلب فحص ترتيب مباشر (SERP) لهذه الكلمة في هذا الطلب",
+      live_search_unavailable: "تعذر الوصول إلى نتائج البحث المباشرة لهذا السوق الجغرافي",
+      live_search_not_completed: "لم يكتمل فحص نتائج البحث المباشرة لهذه الكلمة",
+      target_site_missing: "لم يُحدد نطاق الموقع المستهدف للتحقق من ترتيبه",
+      fewer_than_ten_results: "لم يقدم مزود البحث عشرة نتائج صالحة لإثبات الترتيب ضمن أول عشرة",
+      keyword_not_probed_by_ten_engines: "الكلمة مستخلصة من المصدر ولم تُمرر في فحص مستقل مناسب للمحركات العشرة",
+      fallback_answers_excluded: "الإجابات جاءت عبر مسار بديل ولا تُحتسب كقياس مباشر للمحركات المسماة",
+      incomplete_ten_engine_evidence: "لم تتوفر إجابات مباشرة مكتملة من المحركات العشرة",
+      brand_not_configured: "اسم العلامة غير محدد لقياس الذكر",
+      aeo_requires_a_dedicated_answer_engine_measurement: "يتطلب هذا المحور قياساً مستقلاً لمحرك الإجابات؛ لا تتوفر أدلة كافية",
+      answer_box_not_exposed_by_provider: "مزود البحث الحالي لا يكشف أدلة مقتبسات Answer Box",
+      ai_overview_and_answer_box_not_exposed_by_provider: "مزود البحث الحالي لا يكشف اقتباسات Google AI Overviews أو Answer Boxes",
+      gseo_requires_verified_dedicated_measurement: "لم يُنفذ قياس مستقل موثوق لمحور GSEO",
+      sgeo_requires_verified_ai_citation_measurement: "لم يُنفذ قياس مستقل موثوق للاستشهادات التوليدية عبر البحث",
+    };
+    const en: Record<string, string> = {
+      live_search_not_requested: "Direct SERP checking was not requested for this keyword in this run",
+      live_search_unavailable: "Direct search results for this geographic market could not be retrieved",
+      live_search_not_completed: "Live search checking did not complete for this keyword",
+      target_site_missing: "No target website domain was supplied for ranking verification",
+      fewer_than_ten_results: "The search provider returned fewer than ten valid results to verify top-ten position",
+      keyword_not_probed_by_ten_engines: "The keyword was extracted from source data but was not independently probed by the ten engines",
+      fallback_answers_excluded: "Responses used a fallback route and are excluded from direct named-engine measurement",
+      incomplete_ten_engine_evidence: "A complete set of direct answers from all ten engines was not available",
+      brand_not_configured: "No brand name was configured for mention measurement",
+      aeo_requires_a_dedicated_answer_engine_measurement: "AEO requires a dedicated answer-engine measurement; sufficient evidence is unavailable",
+      answer_box_not_exposed_by_provider: "The current search provider does not expose Answer Box citations",
+      ai_overview_and_answer_box_not_exposed_by_provider: "The current search provider does not expose Google AI Overview or Answer Box citations",
+      gseo_requires_verified_dedicated_measurement: "No dedicated, verified GSEO measurement was performed",
+      sgeo_requires_verified_ai_citation_measurement: "No dedicated measurement of generative citations across search was performed",
+    };
+    const messages = l === "ar" ? ar : en;
+    return messages[reason] || reason;
+  };
+  const axisRows: (string | number)[][] = [];
+  for (const market of markets) {
+    for (const k of axisList) {
+      const measured = measureKeywordAxes({
+        keyword: k,
+        market: market.code,
+        brand,
+        site: input.parties.find((p) => p.role === "brand")?.url,
+        engineAnswers: answers,
+        clusterAnswers: input.clusterAnswers,
+        liveSearchEvidence: input.liveSearchEvidence,
+        liveSerpRequested: input.liveSerpRequested === true,
+      });
+      const reasons = LIVE_AXES.filter((axis) => measured[axis].value === null)
+        .map((axis) => `${axis}: ${explainReason(axis, measured[axis].reason || "measurement_unavailable")}`)
+        .join(" | ");
+      const engines = measured.GEO.engines?.join(", ") || NM;
+      const position = measured.SEO.position ? String(measured.SEO.position) : NM;
+      const seoEvidence = measured.SEO.evidenceUrl || NM;
+      axisRows.push([
+        k,
+        l === "ar" ? market.ar : market.en,
+        ...AXES_ORDER.map((axis) => measured[axis].value === null ? NM : measured[axis].value),
+        reasons || S("اكتملت القياسات المتاحة لهذه الكلمة", "All requested available measurements completed for this keyword", "پێوانە بەردەستەکان تەواو بوون"),
+        position,
+        seoEvidence,
+        engines,
+      ]);
+    }
+  }
 
   // 6. Ingestion
   const ingRows = [...fresh.map((f) => [f.keyword, ingestionFor(true, l).initial, ingestionFor(true, l).full]), ...brandList.slice(0, 30).map((k) => [k, ingestionFor(false, l).initial, ingestionFor(false, l).full])];
@@ -144,7 +215,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     table(S("2. المنافسون وكلماتهم", "2. Competitors and their keywords", "2. ڕکابەران"), [S("المنافس", "Competitor", "ڕکابەر"), S("الرابط", "URL", "بەستەر"), S("الكلمة", "Keyword", "وشە"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("الكثافة", "Density", "چڕی"), S("كثافة الحقائق", "Fact density", "ڕاستی"), S("السلطة", "Authority", "دەسەڵات"), S("رأي النماذج", "Model opinion", "ڕا")], compRows),
     table(S("3. المقارنة بين العلامة والمنافسين", "3. Brand vs competitors", "3. بەراورد"), [S("الكلمة", "Keyword", "وشە"), S("الحالة", "Status", "دۆخ"), S("لدى", "Held by", "لای"), S("التقييم", "Assessment", "هەڵسەنگاندن")], cmpRows),
     table(S("4. التواصل الاجتماعي", "4. Social media", "4. سۆشیال"), [S("الطرف", "Party", "لایەن"), S("الرابط", "URL", "بەستەر"), S("الكلمات الموجودة", "Keywords found", "وشەکان"), S("كثافة ذكر الاسم", "Name mention density", "چڕی ناو")], socialRows),
-    table(S("5. المحاور الستة (تقدير بقاعدة مكتوبة، ليس قياساً حياً)", "5. Six axes (rule-based estimate, not a live measurement)", "5. شەش تەوەر (خەمڵاندن)"), [S("الكلمة", "Keyword", "وشە"), ...AXES_ORDER], axisRows),
+    table(S("5. المحاور الستة (قياس قائم على الأدلة فقط)", "5. Six axes (evidence-only measurement)", "5. شەش تەوەر (پێوانەی بەڵگەدار)"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
     table(S("6. مدة تغذية النماذج بالكلمات", "6. Time for models to absorb keywords", "6. ماوەی تێگەیشتن"), [S("الكلمة", "Keyword", "وشە"), S("الفهرسة الأولية", "Initial indexing", "سەرەتایی"), S("الاستيعاب الشامل", "Full absorption", "تەواو")], ingRows),
     table(S("7. الكلمات السلبية", "7. Negative keywords", "7. وشە نەرێنییەکان"), [S("المجموعة", "Group", "گروپ"), S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار")], negRows),
     table(S("8. المصادر", "8. Sources", "8. سەرچاوەکان"), [S("المصدر", "Source", "سەرچاوە")], srcRows),
