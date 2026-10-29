@@ -266,10 +266,31 @@ export const Route = createFileRoute("/api/dual-result")({
         const competitors = (Array.isArray(b?.competitors) ? b.competitors : String(b?.competitors || "").split(/[,،\n]/))
           .map((x: any) => String(x).trim()).filter(Boolean).slice(0, 4);
         const { gatherParties, askEnginesPerMarket, gatherSocial } = await import("@/lib/competitive-geo.server");
-        let [parties, engineAnswers] = await Promise.all([
-          gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence }),
-          askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket, contentLanguage),
-        ]);
+        const analysisScopeKey = await evidenceCacheKey({
+          brand, site: site || "", category, markets: markets.map((market: any) => market.code),
+          contentLanguage, attachmentId: id || null, keywordSamplesByMarket,
+        });
+        const marketStageScope = { userId, workspaceId, evidenceType: "market-stage", evidenceKey: analysisScopeKey };
+        const cachedMarketStage = await getKeywordEvidence<{ parties: any[]; engineAnswers: any[] }>(marketStageScope);
+        const marketStageCacheHit = Boolean(cachedMarketStage);
+        let parties: any[];
+        let engineAnswers: any[];
+        if (cachedMarketStage) {
+          parties = cachedMarketStage.parties.map((party) => ({ ...party, cacheHit: true }));
+          engineAnswers = cachedMarketStage.engineAnswers.map((answer) => ({ ...answer, cacheHit: true }));
+        } else {
+          [parties, engineAnswers] = await Promise.all([
+            gatherParties({ brand, site, competitors, category, markets: markets.slice(0, 5), userId, brandPageEvidence: officialBrandPageEvidence }),
+            askEnginesPerMarket(category, markets.slice(0, 5), keywordSamplesByMarket, contentLanguage),
+          ]);
+          const reusableEvidence = parties.some((party) => Boolean(party.pageText)) || engineAnswers.some((answer) => answer.status === "answered");
+          if (reusableEvidence) {
+            await putKeywordEvidence(marketStageScope, {
+              parties: parties.map(({ cacheHit, ...party }) => party),
+              engineAnswers: engineAnswers.map(({ cacheHit, ...answer }) => answer),
+            });
+          }
+        }
         if (!hasFile) {
           // No file: current keywords are the ones the brand's own page actually uses.
           const { extractSiteKeywords, siteKeywordSheet } = await import("@/lib/site-keyword-extractor");
