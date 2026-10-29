@@ -183,6 +183,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
       const engines = measured.GEO.engines?.join(", ") || NM;
       const position = measured.SEO.position ? String(measured.SEO.position) : NM;
       const seoEvidence = measured.SEO.evidenceUrl || NM;
+      const seoProvider = measured.SEO.provider || NM;
       axisRows.push([
         k,
         l === "ar" ? market.ar : market.en,
@@ -190,6 +191,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
         reasons || S("اكتملت القياسات المتاحة لهذه الكلمة", "All requested available measurements completed for this keyword", "پێوانە بەردەستەکان تەواو بوون"),
         position,
         seoEvidence,
+        seoProvider,
         engines,
       ]);
     }
@@ -226,7 +228,7 @@ export function buildKeywordIntelligenceSections(input: KiInput): ExportSection[
     table(S("2. المنافسون وكلماتهم", "2. Competitors and their keywords", "2. ڕکابەران"), [S("المنافس", "Competitor", "ڕکابەر"), S("الرابط", "URL", "بەستەر"), S("الكلمة", "Keyword", "وشە"), S("حصة الصوت", "Share of voice", "بەشی دەنگ"), S("الكثافة", "Density", "چڕی"), S("كثافة الحقائق", "Fact density", "ڕاستی"), S("السلطة", "Authority", "دەسەڵات"), S("رأي النماذج", "Model opinion", "ڕا")], compRows),
     table(S("3. المقارنة بين العلامة والمنافسين", "3. Brand vs competitors", "3. بەراورد"), [S("الكلمة", "Keyword", "وشە"), S("الحالة", "Status", "دۆخ"), S("لدى", "Held by", "لای"), S("التقييم", "Assessment", "هەڵسەنگاندن")], cmpRows),
     table(S("4. التواصل الاجتماعي", "4. Social media", "4. سۆشیال"), [S("الطرف", "Party", "لایەن"), S("الرابط", "URL", "بەستەر"), S("الكلمات الموجودة", "Keywords found", "وشەکان"), S("كثافة ذكر الاسم", "Name mention density", "چڕی ناو")], socialRows),
-    table(S("5. المحاور الستة (قياس قائم على الأدلة فقط)", "5. Six axes (evidence-only measurement)", "5. شەش تەوەر (پێوانەی بەڵگەدار)"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
+    table(S("5. المحاور الستة (قياس قائم على الأدلة فقط)", "5. Six axes (evidence-only measurement)", "5. شەش تەوەر (پێوانەی بەڵگەدار)"), [S("الكلمة", "Keyword", "وشە"), S("السوق", "Market", "بازاڕ"), ...AXES_ORDER, S("سبب عدم القياس", "Unmeasured reason", "هۆکاری نەپێوانە"), S("موضع SEO", "SEO position", "شوێنی SEO"), S("رابط دليل SEO", "SEO evidence URL", "بەستەری بەڵگە"), S("مزود البحث", "Search provider", "دابینکەری گەڕان"), S("المحركات التي ذكرت العلامة", "Engines mentioning brand", "بزوێنەرەکانی باسکردنی براند")], axisRows),
     table(S("6. مدة تغذية النماذج بالكلمات", "6. Time for models to absorb keywords", "6. ماوەی تێگەیشتن"), [S("الكلمة", "Keyword", "وشە"), S("الفهرسة الأولية", "Initial indexing", "سەرەتایی"), S("الاستيعاب الشامل", "Full absorption", "تەواو")], ingRows),
     table(S("7. الكلمات السلبية", "7. Negative keywords", "7. وشە نەرێنییەکان"), [S("المجموعة", "Group", "گروپ"), S("الكلمة", "Keyword", "وشە"), S("السبب", "Reason", "هۆکار")], negRows),
     table(S("8. المصادر", "8. Sources", "8. سەرچاوەکان"), [S("المصدر", "Source", "سەرچاوە")], srcRows),
