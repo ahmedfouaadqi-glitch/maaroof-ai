@@ -320,9 +320,23 @@ export const Route = createFileRoute("/api/visibility")({
                   });
                 }
                 if (!r.ok) return { kind: "error" as const, provider, model: String(model || "") };
-                const j: any = await r.json();
-                const p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
-                return p ? { kind: "ok" as const, p, provider, model: String(j?.model || model || "") } : { kind: "empty" as const, provider, model: String(j?.model || model || "") };
+                let j: any = await r.json();
+                let p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
+                let actualModel = String(j?.model || model || "");
+                if (!p && provider === "openrouter") {
+                  // Empty OpenRouter payloads are failures too: retry once through Lovable.
+                  provider = "lovable_ai";
+                  const fallbackCtl = new AbortController();
+                  const fallbackTimer = setTimeout(() => fallbackCtl.abort(), PA.PROBE_TIMEOUT_MS);
+                  try {
+                    const fallbackResponse = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, { method: "POST", headers: lovableAiHeaders(apiKey), signal: fallbackCtl.signal, body: JSON.stringify(payload) });
+                    if (!fallbackResponse.ok) return { kind: "error" as const, provider, model: String(model || "") };
+                    j = await fallbackResponse.json();
+                    p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
+                    actualModel = String(j?.model || model || "");
+                  } finally { clearTimeout(fallbackTimer); }
+                }
+                return p ? { kind: "ok" as const, p, provider, model: actualModel } : { kind: "empty" as const, provider, model: actualModel };
               } catch (err: any) {
                 return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "unknown" as const, model: String(model || "") };
               } finally { clearTimeout(t); }
