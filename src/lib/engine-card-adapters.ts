@@ -55,6 +55,13 @@ export function fromResearch(res: any): EngineCard[] {
 
 /** Post suggester: score each variant's likely citation per family from its text. */
 export function fromSuggestion(res: any): EngineCard[] {
+  // Prefer the real ten-engine council answers; only engines that answered get a score.
+  const ce = Array.isArray(res?.council?.engines) ? res.council.engines : [];
+  if (ce.length) {
+    return ce
+      .filter((v: any) => v?.status === "answered" && (ALL as readonly string[]).includes(v.engine))
+      .map((v: any) => ({ key: v.engine, score: v.score, text: v.note ? cleanCouncilText(String(v.note)) : undefined, basis: "measured" as const }));
+  }
   const vs = Array.isArray(res?.variants) ? res.variants : [];
   if (vs.length === 0) return [];
   const best: Record<EngineFamily, { s: number; p: string }> = { live_index: { s: -1, p: "" }, knowledge_graph: { s: -1, p: "" }, deep_reasoning: { s: -1, p: "" } };

@@ -4,7 +4,7 @@ import { fcSearch } from "@/lib/firecrawl";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
-import { resolveToolModel, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
+import { resolveToolModel, resolveEngineModels } from "@/lib/ai-engines.server";
 import { ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
 import { detectGeoFromRequest } from "@/lib/maaroof/geo.server";
 import { asText } from "@/lib/input-coerce";
@@ -32,11 +32,12 @@ const LANG_NAME: Record<string, string> = { ar: "Arabic", en: "English", ku: "Ku
 
 async function askEngines(brand: string, sector: string, place: string, lang: string, _n: number, apiKey: string, cache?: { admin: any; hours: number }) {
   // All ten engines are asked in every depth; depth changes research breadth, not engine count.
-  const { engines, excluded } = await excludeUnhealthyEngines([...ENGINE_KEYS] as EngineKey[]);
+  // Every engine is asked on every run; past errors never exclude an engine.
+  const engines = [...ENGINE_KEYS] as EngineKey[];
+  const excluded: Array<{ engine: string }> = [];
   const models = await resolveEngineModels(engines);
   const byEngine: Record<string, string[]> = {};
   const status: Record<string, EngineStatus> = {};
-  for (const x of excluded as Array<{ engine: string }>) status[x.engine] = "not_called";
   let cached = 0, called = 0;
   await Promise.allSettled(engines.map(async (e) => {
     const ck = `${e}|${requestFingerprint([brand, sector, place, "v2"])}`;
@@ -45,10 +46,9 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
       if (hit) { byEngine[e] = hit; status[e] = hit.length ? "answered" : "empty"; cached++; return; }
     }
     called++;
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 45000);
-    try {
-      const call = async (maxTokens: number) => {
-        const model = String(models[e]?.model || "");
+    const call = async (model: string, maxTokens: number, ms: number) => {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms);
+      try {
         const reasoning = /^openai\/|gemini-2\.5-pro|gemini-3/.test(model) ? { reasoning_effort: "low" } : {};
         const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
           method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
@@ -57,21 +57,28 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
             { role: "user", content: `Brand: "${brand}"${sector ? `\nSector: ${sector}` : ""}\nMarket: ${place}\nWho are its main competitors in this market?` },
           ] }),
         });
-        if (!r.ok) return null;
+        if (!r.ok) return { list: [] as string[], truncated: false, failed: true, timeout: false };
         const j: any = await r.json();
         const ch = j?.choices?.[0];
         const p = extractJsonObject<any>(ch?.message?.content) || {};
         const list: string[] = Array.isArray(p.competitors) ? p.competitors.map((x: any) => String(x).slice(0, 100)).filter(Boolean).slice(0, 8) : [];
-        return { list, truncated: ch?.finish_reason === "length" };
-      };
-      let res = await call(2500);
-      if (res && !res.list.length && res.truncated) res = await call(4000);
-      if (!res) { status[e] = "error"; return; }
-      const list = res.list;
-      byEngine[e] = list;
-      status[e] = list.length ? "answered" : "empty";
-      if (cache && list.length) await setEngineCache(cache.admin, ck, e, list);
-    } catch (err: any) { status[e] = err?.name === "AbortError" ? "timeout" : "error"; } finally { clearTimeout(t); }
+        return { list, truncated: ch?.finish_reason === "length", failed: false, timeout: false };
+      } catch (err: any) {
+        return { list: [] as string[], truncated: false, failed: true, timeout: err?.name === "AbortError" };
+      } finally { clearTimeout(t); }
+    };
+    const primaryModel = String(models[e]?.model || "google/gemini-3.8-flash");
+    let res = await call(primaryModel, 2500, 30000);
+    if (!res.failed && !res.list.length && res.truncated) res = await call(primaryModel, 4000, 30000);
+    // Safety valve: on failure or empty answer, ask the same engine question via the gateway's stable model.
+    if (res.failed || !res.list.length) {
+      const fb = await call("google/gemini-3.8-flash", 2500, 20000);
+      if (fb.list.length || !res.failed) res = fb.list.length ? fb : res;
+      else res = fb;
+    }
+    byEngine[e] = res.list;
+    status[e] = res.list.length ? "answered" : res.failed ? (res.timeout ? "timeout" : "error") : "empty";
+    if (cache && res.list.length) await setEngineCache(cache.admin, ck, e, res.list);
   }));
   return { byEngine, status, asked: engines, excluded, cached, called };
 }
