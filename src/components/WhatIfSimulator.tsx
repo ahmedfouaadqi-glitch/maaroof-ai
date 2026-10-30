@@ -20,12 +20,12 @@ const CHANGES = [
   { id: "press", label: "auto.public_relations_campaign" },
 ];
 
-export function WhatIfSimulator({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+export function WhatIfSimulator({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t } = useI18n();
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
-  const [brand, setBrand] = useState((auth?.profile as any)?.brand_name ?? "");
+  const [brand, setBrand] = useState(String(workspace?.entity_truth_card?.entity_name || workspace?.name || (auth?.profile as any)?.brand_name || ""));
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
