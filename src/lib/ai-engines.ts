@@ -150,9 +150,9 @@ export function enginesForPlan(plan?: string | null, isAdmin = false): EngineKey
 }
 
 /**
- * Per-engine answering style for live probes. Derived from the scoring rules in
- * platform-probe.server.ts so proxied engines answer with their real bias
- * instead of one generic voice. Labelled transparent stand-ins elsewhere.
+ * Per-engine answering style for live probes. The persona guides the request
+ * sent through the configured engine integration; it does not replace the
+ * underlying engine or redefine the proxy connection route.
  */
 export const ENGINE_PERSONA: Record<EngineKey, string> = {
   chatgpt: "You are ChatGPT (OpenAI). Favor well-known brands with Wikipedia/official presence and clear structured info.",
