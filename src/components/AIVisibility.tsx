@@ -113,8 +113,6 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
     finally { setBusy(false); }
   };
 
-  const findEngine = (name: string) => ENGINES.find((e) => e.name.toLowerCase() === String(name || "").toLowerCase());
-
   const kwOptionalLabel =
     outLang === "ar" ? " (اختياري)" :
     outLang === "ku" ? " (ئارەزوومەندانە)" :
@@ -168,7 +166,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="text-[10px] uppercase tracking-widest text-primary font-bold">{t("ag_vis_score")}</div>
-              <div className="mt-1 text-3xl font-bold text-gradient">{out.visibility_percent}%</div>
+              <div className="mt-1 text-3xl font-bold text-gradient">{out.visibility_percent == null ? "—" : String(out.visibility_percent) + "%"}</div>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 {out.basis === "live_engine_probe" ? (outLang === "ar" ? "معدل ذكر محسوب من الإجابات الحية الناجحة فقط؛ وليس ضماناً لما يظهر لكل مستخدم في واجهة المحرك." : outLang === "ku" ? "ڕێژەی هێنانی ناو لە وەڵامە زیندووە سەرکەوتووەکان هەژمار کراوە." : "Mention rate calculated from successful live API answers; not a guarantee of consumer-facing results.") : "No live measurement available."}
               </p>
