@@ -199,6 +199,6 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 }
 
 // Back-compat: keep standalone export used by /agent route.
-export function AIVisibility() {
-  return <VisibilityPanel />;
+export function AIVisibility({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+  return <VisibilityPanel workspaceId={workspaceId} />;
 }
