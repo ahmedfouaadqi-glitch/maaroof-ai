@@ -29,6 +29,8 @@ describe("calculateVisibilityProbeMetrics", () => {
     expect(metrics.mention_rate.value_pct).toBe(66.67);
     expect(metrics.recommendation_rate.value_pct).toBe(66.67);
     expect(metrics.share_of_voice).toEqual({ value_pct: 50, numerator: 2, denominator: 4 });
+    expect(metrics.competitors.map((item) => item.brand)).toEqual(["Other Brand", "Second Brand"]);
+    expect(metrics.competitors[0].share_of_voice_pct).toBe(25);
     expect(metrics.citation_rate).toEqual({ value_pct: 33.33, numerator: 1, denominator: 3 });
     expect(metrics.top5_rate).toEqual({ value_pct: 100, numerator: 2, denominator: 2 });
     expect(metrics.average_rank).toBe(1.5);
