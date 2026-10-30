@@ -50,7 +50,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   }, []);
   useEffect(() => { if (keywords && !topic) setTopic(keywords); }, [keywords, topic]);
 
-  const maxN = cost?.maxEngines ?? 9;
+  const maxN = cost?.maxEngines ?? 10;
   useEffect(() => {
     if (!sel.length) { setCost(null); return; }
     costFn({ data: { toolKey: "visibility.probe", units: sel.length * 2 } }).then(setCost).catch(() => setCost(null));
