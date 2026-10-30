@@ -820,16 +820,60 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
     (async () => {
       if (!user) { setLoading(false); return; }
       setLoading(true);
-      let query = supabase
+      let operationQuery = supabase
+        .from("brand_operations")
+        .select("id, created_at, operation_type, brand_name, status, duration_ms, charged_units, request_meta, result_meta")
+        .eq("user_id", user.id);
+      operationQuery = workspaceId
+        ? operationQuery.eq("workspace_id", workspaceId)
+        : operationQuery.is("workspace_id", null);
+      const { data: operations, error: operationsError } = await operationQuery
+        .order("created_at", { ascending: false }).limit(100);
+
+      if (!operationsError && operations) {
+        const ids = operations.map((operation) => operation.id);
+        let eventCounts = new Map<string, number>();
+        if (ids.length) {
+          let eventQuery = supabase.from("brand_operation_events")
+            .select("operation_id").eq("user_id", user.id).in("operation_id", ids);
+          eventQuery = workspaceId
+            ? eventQuery.eq("workspace_id", workspaceId)
+            : eventQuery.is("workspace_id", null);
+          const { data: events } = await eventQuery;
+          eventCounts = (events || []).reduce((map, event) => {
+            map.set(event.operation_id, (map.get(event.operation_id) || 0) + 1);
+            return map;
+          }, new Map<string, number>());
+        }
+        const unifiedRows = operations.map((operation) => ({
+          created_at: operation.created_at,
+          action: operation.operation_type,
+          operation_id: operation.id,
+          metadata: {
+            brand: operation.brand_name,
+            status: operation.status,
+            duration_ms: operation.duration_ms,
+            charged_units: operation.charged_units,
+            event_count: eventCounts.get(operation.id) || 0,
+            ...(operation.request_meta as any || {}),
+            ...(operation.result_meta as any || {}),
+          },
+        }));
+        if (!cancelled) { setRows(unifiedRows); setLoading(false); }
+        return;
+      }
+
+      // Compatibility fallback for historical rows while the new ledger migration is rolling out.
+      let legacyQuery = supabase
         .from("activity_log")
         .select("created_at, action, metadata")
         .eq("user_id", user.id)
         .in("action", ["brand_boost", "brand_authority"]);
-      query = workspaceId
-        ? query.eq("metadata->>workspace_id", workspaceId)
-        : query.is("metadata->>workspace_id", null);
-      const { data } = await query.order("created_at", { ascending: false }).limit(100);
-      if (!cancelled) { setRows(data || []); setLoading(false); }
+      legacyQuery = workspaceId
+        ? legacyQuery.eq("metadata->>workspace_id", workspaceId)
+        : legacyQuery.is("metadata->>workspace_id", null);
+      const { data: legacyRows } = await legacyQuery.order("created_at", { ascending: false }).limit(100);
+      if (!cancelled) { setRows(legacyRows || []); setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, [user?.id, refreshKey, workspaceId]);
@@ -848,7 +892,9 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
     a === "brand_boost"
       ? (lang === "ar" ? "تشغيل تعزيز" : lang === "ku" ? "بەهێزکردن" : "Run boost")
       : a === "brand_authority"
-      ? (lang === "ar" ? "محرك السلطة" : lang === "ku" ? "بزوێنەری دەسەڵات" : "Authority")
+      ? (lang === "ar" ? "توليد ونشر بطاقة العلامة" : lang === "ku" ? "دروستکردن و بڵاوکردنەوەی کارتی براند" : "Generate/publish brand card")
+      : a === "visibility_probe"
+      ? (lang === "ar" ? "اختبار المحركات" : lang === "ku" ? "تاقیکردنەوەی بزوێنەرەکان" : "Engine probe")
       : a;
 
   return (
@@ -891,7 +937,15 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
                     <td className="px-2 py-1.5 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
                     <td className="px-2 py-1.5 font-semibold">{actionLabel(r.action)}</td>
                     <td className="px-2 py-1.5">{String(m.brand || "—")}</td>
-                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{m.slug ? `slug: ${m.slug}` : ""}{m.cost ? ` · ${m.cost} credits` : ""}{m.pinged ? " · pinged" : ""}</td>
+                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">
+                      {m.slug ? `slug: ${m.slug}` : ""}
+                      {m.status ? ` · ${m.status}` : ""}
+                      {m.charged_units != null ? ` · ${m.charged_units} units` : m.cost ? ` · ${m.cost} credits` : ""}
+                      {m.duration_ms != null ? ` · ${m.duration_ms} ms` : ""}
+                      {m.event_count ? ` · ${m.event_count} events` : ""}
+                      {m.operation_id ? <span className="block font-mono">{String(m.operation_id).slice(0, 12)}…</span> : ""}
+                      {m.pinged ? " · pinged" : ""}
+                    </td>
                   </tr>
                 );
               })}
