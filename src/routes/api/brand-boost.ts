@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
+import { recordBrandOperation } from "@/lib/brand-operations.server";
 import { describeMarket } from "@/lib/geo-scope.server";
 import { fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
@@ -318,6 +319,23 @@ ${evidenceBlock}`;
           await admin.from("profiles").update({
             monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + BRAND_BOOST_COST,
           }).eq("id", userId);
+          const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+          await recordBrandOperation(admin, {
+            id: _runId,
+            userId,
+            workspaceId,
+            operationType: "brand_boost",
+            brandName: String(brand_name),
+            durationMs: Date.now() - _t0,
+            chargedUnits: BRAND_BOOST_COST,
+            requestMeta: { engines: targets, connection_modes: Object.fromEntries(merged.map((p: any) => [p.platform, p.is_proxy ? "proxy" : "direct"])) },
+            resultMeta: {
+              evidence_count: evidence.length,
+              engine_responses: merged.filter((p: any) => Boolean(p.current_answer)).length,
+              recommended_actions: merged.reduce((n: number, p: any) => n + (p.recommended_actions?.length || 0), 0),
+              summary: String(planParsed.summary || "").slice(0, 500),
+            },
+          });
           await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: {
             operation_id: _runId,
             workspace_id: workspaceId,
