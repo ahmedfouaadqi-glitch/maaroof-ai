@@ -319,7 +319,6 @@ ${evidenceBlock}`;
           await admin.from("profiles").update({
             monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + BRAND_BOOST_COST,
           }).eq("id", userId);
-          const { recordBrandOperation } = await import("@/lib/brand-operations.server");
           await recordBrandOperation(admin, {
             id: _runId,
             userId,
