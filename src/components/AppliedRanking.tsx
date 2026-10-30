@@ -161,7 +161,7 @@ function PillarCard({ icon, title, p, t }: { icon: React.ReactNode; title: strin
   );
 }
 
-export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+export function AppliedRanking({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -169,10 +169,10 @@ export function AppliedRanking({ workspaceId = null }: { workspaceId?: string | 
   const L = (lang === "en" || lang === "ku" ? lang : "ar") as "ar" | "en" | "ku";
   const t = LBL[L];
 
-  const [brand, setBrand] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [sector, setSector] = useState("");
-  const [website, setWebsite] = useState("");
+  const [brand, setBrand] = useState(String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""));
+  const [keywords, setKeywords] = useState(Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || ""));
+  const [sector, setSector] = useState(String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || ""));
+  const [website, setWebsite] = useState(String(workspace?.brand_url || ""));
   const [appName, setAppName] = useState("");
   const [appUrl, setAppUrl] = useState("");
   const [notes, setNotes] = useState("");
