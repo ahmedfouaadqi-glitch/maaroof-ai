@@ -20,7 +20,7 @@ const CHANGES = [
   { id: "press", label: "auto.public_relations_campaign" },
 ];
 
-export function WhatIfSimulator() {
+export function WhatIfSimulator({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t } = useI18n();
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
@@ -42,7 +42,7 @@ export function WhatIfSimulator() {
       const r = await apiFetch("/api/what-if", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ brand, lang, changes: { selected, note } }),
+        body: JSON.stringify({ brand, lang, changes: { selected, note }, workspace_id: workspaceId }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error || "failed");
