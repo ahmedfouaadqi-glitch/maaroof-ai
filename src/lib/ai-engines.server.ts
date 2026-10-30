@@ -1,4 +1,4 @@
-// Server-side bridge between the nine answer engines and the governed model
+// Server-side bridge between the ten answer engines and the governed model
 // registry (Part 12). Every tool that talks to the Lovable AI Gateway resolves
 // its model through here instead of hardcoding a model string.
 import {
