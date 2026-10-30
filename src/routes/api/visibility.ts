@@ -23,7 +23,7 @@ const LANG_INSTRUCTION: Record<string, string> = {
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
 You are a STRICT, evidence-based AI Visibility analyst for ${m.market}.
-Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
+Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
 
 LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
@@ -38,6 +38,8 @@ Each AI platform uses a DIFFERENT citation mechanism — name it explicitly:
 - Grok (xAI): real-time X (Twitter) signal + general web. Favors brand presence on X, recent buzz, viral mentions, news. citation_method = "x_realtime + web_search".
 - Mistral (Le Chat): web search via Brave/SerpAPI partners, training corpus. Favors EU-friendly sources, multilingual content, structured pages. citation_method = "training_corpus + brave_search".
 - DeepSeek: efficient reasoning model with web tool. Favors technical docs, GitHub/Stack Overflow content, structured factual pages, multilingual sources (Chinese + English strong). citation_method = "training_corpus + web_search".
+- Kimi (Moonshot AI): assess this engine from the returned response and citations; do not infer undocumented retrieval behavior.
+- Qwen (Alibaba): assess this engine from the returned response and citations; do not infer undocumented retrieval behavior.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -69,10 +71,12 @@ Return ONLY valid JSON in this exact shape:
     { "name": "Copilot", ... },
     { "name": "Grok", ... },
     { "name": "Mistral", ... },
-    { "name": "DeepSeek", ... }
+    { "name": "DeepSeek", ... },
+    { "name": "Kimi", ... },
+    { "name": "Qwen", ... }
   ]
 }
-visibility_percent MUST be the weighted average of the 8 platform scores (rounded). All text fields MUST be in REPORT language.`;
+visibility_percent MUST be the arithmetic mean of all 10 platform scores (rounded), and must be treated as a model estimate rather than an independently verified visibility measurement. All text fields MUST be in REPORT language.`;
 
 function clamp(n: unknown) {
   const value = Number.parseInt(String(n ?? 0), 10);
@@ -90,7 +94,7 @@ function toArray(value: unknown, max = 6) {
 }
 
 function normalizePlatforms(value: unknown): Array<any> {
-  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi"];
+  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi", "Qwen"];
   const arr = Array.isArray(value) ? value : [];
   const byName = new Map<string, any>();
   for (const item of arr) {
@@ -130,12 +134,13 @@ function normalizeResult(parsed: any, fallbackText = "") {
   const platformAvg = platforms.length
     ? Math.round(platforms.reduce((s, p) => s + (p.score || 0), 0) / platforms.length)
     : clamp(parsed?.visibility_percent);
-  const visibility_percent = clamp(parsed?.visibility_percent) || platformAvg;
+  const visibility_percent = platformAvg;
 
   const confidence = ["high", "medium", "low"].includes(parsed?.confidence) ? parsed.confidence : "medium";
 
   return {
     visibility_percent,
+    visibility_score_basis: "arithmetic_mean_of_10_model_estimates",
     confidence,
     sentiment,
     appearance_summary: String(parsed?.appearance_summary || fallbackText || "").trim().slice(0, 500),
