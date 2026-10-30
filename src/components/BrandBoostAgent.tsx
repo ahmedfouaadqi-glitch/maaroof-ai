@@ -626,7 +626,7 @@ function safeDecode(s: string): string {
 
 function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null }) {
   const { t, lang } = useI18n();
-  const [data, setData] = useState<{ packs: any[]; hits: any[]; stats?: { total: number; known: number; first: string | null; last: string | null } } | null>(null);
+  const [data, setData] = useState<{ packs: any[]; hits: any[]; stats?: { total: number; known: number; verified: number; first: string | null; last: string | null } } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -651,11 +651,12 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
 
   const hits = data?.hits || [];
   const byBot = useMemo(() => {
-    const m = new Map<string, { count: number; last: string; paths: Set<string> }>();
+    const m = new Map<string, { count: number; verified: number; last: string; paths: Set<string> }>();
     for (const h of hits) {
       const key = h.bot_name || "Unknown";
-      const cur = m.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
+      const cur = m.get(key) || { count: 0, verified: 0, last: h.hit_at, paths: new Set() };
       cur.count++;
+      if (h.verification_status === "verified") cur.verified++;
       if (h.hit_at > cur.last) cur.last = h.hit_at;
       if (h.path) cur.paths.add(h.path);
       m.set(key, cur);
@@ -663,6 +664,7 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
     return m;
   }, [hits]);
   const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown" && k !== "Browser").length;
+  const verifiedCount = hits.filter((h) => h.verification_status === "verified").length;
   const catLabel = (b: string | null | undefined): string => {
     const c: BotCategory = botCategory(b);
     const L: Record<BotCategory, [string, string, string]> = {
@@ -684,7 +686,7 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
     sections: [
       { heading: lang === "ar" ? "الملخص" : "Summary", kind: "kv", rows: [
         [lang === "ar" ? "إجمالي الزيارات" : "Total visits", String(stats?.total ?? hits.length)],
-        [lang === "ar" ? "زيارات زواحف معروفة" : "Known crawler visits", String(stats?.known ?? 0)],
+        [lang === "ar" ? "طلبات اجتازت DNS" : "DNS-verified crawler requests", String(stats?.verified ?? verifiedCount)],
         [lang === "ar" ? "أول زيارة" : "First visit", stats?.first ? new Date(stats.first).toLocaleString() : "-"],
         [lang === "ar" ? "آخر زيارة" : "Last visit", stats?.last ? new Date(stats.last).toLocaleString() : "-"],
       ] } as any,
@@ -693,8 +695,8 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
         data: Array.from(byBot.entries()).map(([b, i]) => [botName(b), catLabel(b), i.count, new Date(i.last).toLocaleString()]),
       } } as any,
       { heading: lang === "ar" ? "كل الزيارات" : "All visits", kind: "table", table: {
-        columns: ["Date", "Bot", "Type", "Page", "Source", "User-Agent"],
-        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), botName(h.bot_name || "Unknown"), catLabel(h.bot_name), safeDecode(h.path || ""), packLabel(h.brand_slug), h.user_agent || ""]),
+        columns: ["Date", "Bot", "Type", "Verification", "Page", "Source", "User-Agent"],
+        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), botName(h.bot_name || "Unknown"), catLabel(h.bot_name), h.verification_status || "user_agent_only", safeDecode(h.path || ""), packLabel(h.brand_slug), h.user_agent || ""]),
       } } as any,
     ],
   });
@@ -705,8 +707,8 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
   }
 
   const exportCsv = () => {
-    const rows = [["bot_name", "type", "source", "user_agent", "path", "hit_at"]];
-    for (const h of hits) rows.push([h.bot_name || "Unknown", catLabel(h.bot_name), packLabel(h.brand_slug), h.user_agent || "", h.path || "", h.hit_at || ""]);
+    const rows = [["bot_name", "type", "verification_status", "verified_hostname", "verification_method", "source", "user_agent", "path", "hit_at"]];
+    for (const h of hits) rows.push([h.bot_name || "Unknown", catLabel(h.bot_name), h.verification_status || "user_agent_only", h.verified_hostname || "", h.verification_method || "", packLabel(h.brand_slug), h.user_agent || "", h.path || "", h.hit_at || ""]);
     const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     downloadFile(`crawler-hits-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
   };
@@ -762,8 +764,9 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
-            {t("propagation_visible_to").replace("{n}", String(knownCount))}
+          <div className="rounded-lg border border-border bg-background/40 p-2 text-xs">
+            {lang === "ar" ? "تم رصد " + knownCount + " تصنيفاً مختلفاً من User-Agent؛ هذا عدد أسماء مصنّفة وليس عدد هويات مؤكدة." : "Detected " + knownCount + " User-Agent categories; this counts labels, not authenticated identities."}
+            <span className="ms-2 font-semibold text-emerald-700 dark:text-emerald-400">{lang === "ar" ? "طلبات اجتازت DNS: " : "DNS verified: "}{verifiedCount}/{hits.length}</span>
           </div>
           <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "يشمل السجل: زواحف الذكاء الاصطناعي، محركات البحث، أدوات تحليل الويب، معاينات الروابط، والزيارات المباشرة عبر المتصفح. «الملف المعتمد الأساسي» يعني أن الزيارة قرأت رابطك المعتمد مباشرة قبل ربطها بحزمة تعزيز." : "Log includes AI crawlers, search engines, web-analysis tools, link previews and direct browser visits. “Verified main profile” means the visit read your official link directly, not a specific boost pack."}</p>
           <div className="overflow-auto rounded-lg border border-border">
@@ -798,6 +801,7 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
                   <th className="px-2 py-1.5 text-start">{lang === "ar" ? "التاريخ والوقت" : lang === "ku" ? "بەروار و کات" : "Date & time"}</th>
                   <th className="px-2 py-1.5 text-start">{t("propagation_bot")}</th>
                   <th className="px-2 py-1.5 text-start">{lang === "ar" ? "الصفحة" : lang === "ku" ? "پەڕە" : "Page"}</th>
+                  <th className="px-2 py-1.5 text-start">{lang === "ar" ? "حالة التحقق" : "Verification"}</th>
                   <th className="px-2 py-1.5 text-start">User-Agent</th>
                 </tr>
               </thead>
@@ -807,6 +811,18 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
                     <td className="whitespace-nowrap px-2 py-1.5">{new Date(h.hit_at).toLocaleString()}</td>
                     <td className="px-2 py-1.5"><div className="font-semibold">{botName(h.bot_name || "Unknown")}</div><div className="text-[10px] text-muted-foreground">{catLabel(h.bot_name)} · {packLabel(h.brand_slug)}</div></td>
                     <td className="break-all px-2 py-1.5 text-[10px]">{safeDecode(h.path || "")}</td>
+                    <td className="px-2 py-1.5 text-[10px]">
+                      <span className={h.verification_status === "verified" ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
+                        {h.verification_status === "verified"
+                          ? (lang === "ar" ? "موثّق DNS" : "DNS verified")
+                          : h.verification_status === "user_agent_only"
+                          ? (lang === "ar" ? "User-Agent فقط" : "User-Agent only")
+                          : h.verification_status === "source_ip_unavailable"
+                          ? (lang === "ar" ? "IP المصدر غير متاح" : "Source IP unavailable")
+                          : (lang === "ar" ? "غير موثّق" : "Unverified")}
+                      </span>
+                      {h.verified_hostname && <div className="text-[9px] text-muted-foreground">{h.verified_hostname}</div>}
+                    </td>
                     <td className="break-all px-2 py-1.5 text-[10px] text-muted-foreground">{h.user_agent || ""}</td>
                   </tr>
                 ))}
