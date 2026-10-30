@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
 import { recordBrandOperation } from "@/lib/brand-operations.server";
 import { describeMarket } from "@/lib/geo-scope.server";
-import { fcSearch } from "@/lib/firecrawl";
+import { fcScrape, fcSearch } from "@/lib/firecrawl";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { ENGINE_CATALOG, ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
@@ -18,6 +18,24 @@ const PLATFORMS = ENGINE_KEYS;
 type Platform = EngineKey;
 const BRAND_BOOST_COST = 5;
 
+
+function validPublicWebsiteUrl(value: unknown): string | null {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) return null;
+    const host = parsed.hostname.toLowerCase();
+    if (!host.includes(".") || host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return null;
+    if (/^(127\.|10\.|192\.168\.|169\.254\.)/.test(host)) return null;
+    const private172 = host.match(/^172\.(\d+)\./);
+    if (private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31) return null;
+    if (host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
 
 type TokenAcc = { in: number; out: number };
 async function callGateway(apiKey: string, model: string, messages: any[], timeoutMs = 30000, acc?: TokenAcc) {
@@ -133,6 +151,8 @@ export const Route = createFileRoute("/api/brand-boost")({
           // Access is decided by chargeTokens (plan + wallet + per-user overrides); the legacy monthly-subscription gate was removed.
 
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
+          const websiteUrl = body?.website_url ? validPublicWebsiteUrl(body.website_url) : null;
+          if (body?.website_url && !websiteUrl) return Response.json({ error: "invalid_public_website_url" }, { status: 400 });
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
 
           // Admin-controlled overrides via app_settings.brand_boost:
@@ -151,25 +171,52 @@ export const Route = createFileRoute("/api/brand-boost")({
             : "Write all string values inside the JSON in clear English only.";
 
           // ── Step 1: gather real public evidence (the "feeding") via Firecrawl
-          let evidence: { title: string; url: string; snippet: string }[] = [];
+          let evidence: { title: string; url: string; snippet: string; source_type?: string }[] = [];
+          const websiteScan = { requested: Boolean(websiteUrl), url: websiteUrl, status: websiteUrl ? "pending" : "not_provided", characters_read: 0, error: null as string | null };
+          const seenEvidenceUrls = new Set<string>();
+          // Crawl the customer's declared official website first. Search snippets alone are not a website audit.
+          if (websiteUrl) {
+            try {
+              const crawled: any = await fcScrape(websiteUrl, { deep: false });
+              const markdown = String(crawled?.data?.markdown || crawled?.markdown || "");
+              if (markdown.trim()) {
+                evidence.push({
+                  title: String(crawled?.data?.metadata?.title || crawled?.metadata?.title || websiteUrl).slice(0, 160),
+                  url: websiteUrl,
+                  snippet: markdown.slice(0, 1400),
+                  source_type: "direct_website_crawl",
+                });
+                seenEvidenceUrls.add(websiteUrl);
+                websiteScan.status = "completed";
+                websiteScan.characters_read = markdown.length;
+              } else {
+                websiteScan.status = "no_content";
+                websiteScan.error = "empty_crawl_result";
+              }
+            } catch (e: any) {
+              websiteScan.status = "failed";
+              websiteScan.error = String(e?.message || "website_crawl_failed").slice(0, 180);
+              console.warn("[brand-boost] official website scrape failed", websiteScan.error);
+            }
+          }
           try {
             const queries = [
               `${brand_name} ${brand_keywords || ""} ${market.region}`.trim(),
               `"${brand_name}" reviews OR about OR official ${market.region}`.trim(),
             ];
-            const seen = new Set<string>();
             for (const q of queries) {
               try {
                 const sr: any = await fcSearch(q, { limit: 6, lang });
                 const results = sr?.data?.web || sr?.web || sr?.data || [];
                 for (const r of (Array.isArray(results) ? results : [])) {
                   const url = String(r?.url || "");
-                  if (!url || seen.has(url)) continue;
-                  seen.add(url);
+                  if (!/^https?:\/\//i.test(url) || seenEvidenceUrls.has(url)) continue;
+                  seenEvidenceUrls.add(url);
                   evidence.push({
                     title: String(r?.title || url).slice(0, 160),
                     url,
-                    snippet: String(r?.description || r?.markdown || "").slice(0, 400),
+                    snippet: String(r?.description || r?.markdown || "").slice(0, 500),
+                    source_type: "public_search_result",
                   });
                   if (evidence.length >= 10) break;
                 }
@@ -177,7 +224,7 @@ export const Route = createFileRoute("/api/brand-boost")({
               if (evidence.length >= 10) break;
             }
           } catch (e) {
-            console.warn("[brand-boost] firecrawl failed", e);
+            console.warn("[brand-boost] firecrawl search failed", e);
           }
           const evidenceBlock = evidence.length
             ? evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.snippet}`).join("\n\n")
@@ -235,7 +282,7 @@ You are a senior GEO/AI-visibility strategist for ${market.market}.
 LOCALIZATION CONTEXT: ${market.contextHint}
 ${langInstr}
 You receive: (a) the brand info, (b) what each AI engine actually said about it just now, (c) real public evidence retrieved from the open web.
-For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2]; say "no signal" if the engine had nothing), 3-6 recommended actions, 2-4 publishable content pieces, AND a ready-to-publish "injection_pack" tailored to how that engine is fed. The injection_pack must be real copy-paste-ready text — not placeholders. Tailor channel to retrieval style (Perplexity/Copilot=fresh web index; Gemini=Google index → schema.org + GBP; ChatGPT/Claude=training+browse → high-authority articles + Wikipedia-style facts; Grok=X/social → tweet thread; Mistral/DeepSeek=open-web crawl). Never invent facts — only restate what's in the brand info / evidence.
+For EACH platform produce: a short signal read of the engine's answer, what was likely "feeding" it (cite evidence numbers like [1],[2]; say "no signal" if the engine had nothing), 3-6 recommended actions, 2-4 publishable content pieces, AND a ready-to-publish "injection_pack" tailored to how that engine is fed. The injection_pack must be real copy-paste-ready text — not placeholders. Do not assert undocumented or proprietary retrieval/indexing/training mechanisms for any engine. Tailor actions only to observed responses and the evidence supplied. Every company-specific factual recommendation must cite evidence indexes such as [1] or be explicitly labeled as a hypothesis requiring verification. If direct website evidence is absent, state that limitation. Never invent facts.
 Return ONLY valid JSON in this exact shape:
 {
   "summary": "1-2 sentence overall read in REPORT language",
@@ -354,10 +401,28 @@ ${evidenceBlock}`;
             duration_ms: Date.now() - _t0,
           } });
 
+          const answeredEngines = merged.filter((p: any) => Boolean(p.current_answer) && !p.probe_error).length;
+          const analysisStatus = websiteScan.status === "completed"
+            ? "direct_website_crawled"
+            : evidence.length > 0
+              ? "public_search_evidence_only"
+              : answeredEngines > 0
+                ? "engine_observations_only"
+                : "insufficient_evidence";
           return Response.json({
             operation_id: _runId,
             summary: planParsed.summary || "",
+            analysis_status: analysisStatus,
+            analysis_limitations: [
+              websiteScan.status === "not_provided" ? "No official website URL was provided; no direct website crawl was performed." : null,
+              websiteScan.status === "failed" || websiteScan.status === "no_content" ? "The official website crawl did not return usable page content." : null,
+              evidence.length === 0 ? "No public web evidence was retrieved in this run." : null,
+              answeredEngines === 0 ? "No configured engine returned a usable answer." : null,
+              "Configured model responses are observations from Maaroof integrations, not proof of what every public consumer app displays to all users.",
+            ].filter(Boolean),
+            website_scan: websiteScan,
             evidence,
+            plan_source: Array.isArray(planParsed.plan) ? "model_plan" : "deterministic_fallback",
             plan: merged,
             engines: {
               plan: entitlement.plan,
