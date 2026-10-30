@@ -216,11 +216,17 @@ ${evidenceText || "(no source content)"}`;
             html: "", // generated on the fly in the public endpoint
             updated_at: new Date().toISOString(),
           };
-          const saveResult = existing
-            ? await admin.from("brand_authority_packs").update(row)
-                .eq("id", (existing as any).id).eq("user_id", userId!)
-                .eq("workspace_id", workspaceId)
-            : await admin.from("brand_authority_packs").insert(row);
+          let saveResult: any;
+          if (existing) {
+            let saveQuery = admin.from("brand_authority_packs").update(row)
+              .eq("id", (existing as any).id).eq("user_id", userId!);
+            saveQuery = workspaceId
+              ? saveQuery.eq("workspace_id", workspaceId)
+              : saveQuery.is("workspace_id", null);
+            saveResult = await saveQuery;
+          } else {
+            saveResult = await admin.from("brand_authority_packs").insert(row);
+          }
           if (saveResult.error) {
             console.error("[api/brand-authority] pack persistence failed", saveResult.error.message);
             return Response.json({ error: "brand_pack_save_failed" }, { status: 500 });
