@@ -162,6 +162,13 @@
       "when": 1793370600000,
       "tag": "0022_brand_operations_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793373000000,
+      "tag": "0023_brand_boost_automation",
+      "breakpoints": true
     }
   ]
 }
