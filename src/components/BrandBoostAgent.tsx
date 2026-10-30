@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolHistory } from "@/components/ToolHistory";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Rocket } from "lucide-react";
+import { Megaphone, Loader2, Plus, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisibilityPanel } from "@/components/AIVisibility";
