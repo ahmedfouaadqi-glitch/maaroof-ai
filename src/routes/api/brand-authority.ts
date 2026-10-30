@@ -102,8 +102,8 @@ export const Route = createFileRoute("/api/brand-authority")({
           }
 
           const slugBase = slugify(brand_name);
+          if (!slugBase) return Response.json({ error: "invalid_brand_name" }, { status: 400 });
           const slug = workspaceId ? `${slugBase.slice(0, 70)}-${workspaceId.replace(/-/g, "").slice(0, 8)}` : slugBase;
-          if (!slug) return Response.json({ error: "invalid_brand_name" }, { status: 400 });
 
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
