@@ -324,7 +324,19 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "إجراءات التحسين" : lang === "ku" ? "کردارەکانی باشترکردن" : "Improvement actions"}</div>
                   <ul className="mt-1 list-inside list-disc break-words">
-                    {(p.recommended_actions || []).map((a: string, j: number) => <li key={j}>{a}</li>)}
+                    {(p.recommended_actions || []).map((a: string, j: number) => {
+                      const assessment = p.recommendation_assessments?.[j];
+                      const cited = assessment?.confidence === "evidence_referenced";
+                      return (
+                        <li key={j}>
+                          <span>{a}</span>
+                          <span className={cited ? "ms-2 text-[9px] font-semibold text-emerald-700 dark:text-emerald-400" : "ms-2 text-[9px] font-semibold text-amber-700 dark:text-amber-400"}>
+                            {cited ? (lang === "ar" ? "مرتبط بمرجع" : "Evidence-linked") : (lang === "ar" ? "يحتاج تحقق" : "Needs verification")}
+                          </span>
+                          {assessment?.evidence_refs?.length > 0 && <span className="ms-1 text-[9px] text-muted-foreground">[{assessment.evidence_refs.join(", ")}]</span>}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
