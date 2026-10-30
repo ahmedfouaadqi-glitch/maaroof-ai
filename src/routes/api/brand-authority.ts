@@ -1,3 +1,4 @@
+import { workspaceGuard } from "@/lib/workspace-guard.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
@@ -85,6 +86,8 @@ export const Route = createFileRoute("/api/brand-authority")({
           if (err) return err;
 
           const body = await request.json().catch(() => ({} as any));
+          const workspaceDenied = await workspaceGuard(admin, userId, body);
+          if (workspaceDenied) return workspaceDenied;
           const brand_name = asText(body?.brand_name, 200);
           const brand_keywords = asText(body?.brand_keywords, 400);
           const source_url = asText(body?.source_url, 500);
