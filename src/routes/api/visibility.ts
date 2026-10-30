@@ -301,12 +301,12 @@ export const Route = createFileRoute("/api/visibility")({
                     body: JSON.stringify(payload),
                   });
                 }
-                if (!r.ok) return { kind: "error" as const };
+                if (!r.ok) return { kind: "error" as const, provider, model: String(model || "") };
                 const j: any = await r.json();
                 const p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
-                return p ? { kind: "ok" as const, p } : { kind: "empty" as const };
+                return p ? { kind: "ok" as const, p, provider, model: String(j?.model || model || "") } : { kind: "empty" as const, provider, model: String(j?.model || model || "") };
               } catch (err: any) {
-                return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const) };
+                return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "unknown" as const, model: String(model || "") };
               } finally { clearTimeout(t); }
             };
             const questionForPhase = (engine: string, phase: "blind" | "grounded", blindAnswer?: string) => {
@@ -323,7 +323,7 @@ export const Route = createFileRoute("/api/visibility")({
               ].join("\n");
             };
             const groundedQuestionTemplate = () => questionForPhase("[model]", "grounded", "[the model's phase-1 blind answer]");
-            const blindResults = new Map<string, { p: any; startedAt: number; blindMs: number }>();
+            const blindResults = new Map<string, { p: any; startedAt: number; blindMs: number; provider: string; model: string }>();
             const askEngine = async (e: string, phase: "blind" | "grounded") => {
               const previous = blindResults.get(e);
               const startedAt = previous?.startedAt ?? Date.now();
@@ -343,7 +343,7 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 completedUnits++;
-                blindResults.set(e, { p: res.p, startedAt, blindMs: phaseMs });
+                blindResults.set(e, { p: res.p, startedAt, blindMs: phaseMs, provider: res.provider, model: res.model });
                 statuses[e] = {
                   status: "blind_answered", blind_status: "answered", ms: phaseMs, blind_ms: phaseMs,
                   blind_query: exactQuestion,
@@ -360,7 +360,7 @@ export const Route = createFileRoute("/api/visibility")({
                 status: res.kind === "ok" ? "answered" : "partial",
                 blind_status: "answered", grounded_status: res.kind,
                 ms: totalMs, blind_ms: previous.blindMs, grounded_ms: phaseMs,
-                blind_query: q, grounded_query: exactQuestion,
+                blind_query: q, grounded_query: exactQuestion, provider: res.provider, gateway_model: res.model, requested_engine: e,
               };
               answers.push({
                 engine: e,
@@ -378,6 +378,10 @@ export const Route = createFileRoute("/api/visibility")({
                 grounded_ms: phaseMs,
                 sources,
                 cited_urls: p.urls,
+                provider: previous.provider,
+                gateway_model: previous.model,
+                grounded_provider: res.provider,
+                grounded_gateway_model: res.model,
                 ms: totalMs,
               });
             };
