@@ -617,7 +617,26 @@ export const Route = createFileRoute("/api/visibility")({
           }
 
           const _q = pickQualityFields(parsed || {});
-          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); return Response.json(_out); }
+          const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+          await recordBrandOperation(admin, {
+            id: _runId,
+            userId,
+            workspaceId,
+            operationType: "visibility_analysis",
+            brandName: brand,
+            durationMs: Date.now() - _t0,
+            chargedUnits: Number((_chg as any).tokens) || 0,
+            requestMeta: { keywords, market: market.region, score_basis: "arithmetic_mean_of_10_model_estimates" },
+            resultMeta: {
+              visibility_percent: result.visibility_percent,
+              platform_scores: result.platforms,
+              evidence_count: pack.sources.length,
+              evidence_urls: pack.sources.map((source: any) => source.url).filter(Boolean).slice(0, 30),
+              basis: "model_generated_estimates",
+              task_id: taskRow?.id ?? null,
+            },
+          });
+          { const _out = { ok: true, operation_id: _runId, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); return Response.json(_out); }
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);
