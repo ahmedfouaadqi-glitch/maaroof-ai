@@ -29,21 +29,12 @@ LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
 Be conservative. If signals are weak or unknown, return low scores and say so. NEVER fabricate facts, numbers, awards, or partnerships. When you have no evidence, say "no public signals detected" instead of inventing facts.
 
-Each AI platform uses a DIFFERENT citation mechanism — name it explicitly:
-- ChatGPT (OpenAI): hybrid — pretrained corpus + Bing-powered web tool. Favors well-structured pages, Wikipedia presence, news mentions, reputable backlinks, OpenGraph metadata. citation_method = "training_corpus + web_search".
-- Gemini (Google): tightly tied to Google Search index + Knowledge Graph. Favors strong SEO, Google Business Profile, reviews, schema.org markup, recency. citation_method = "google_search_index + knowledge_graph".
-- Claude (Anthropic): conservative; favors well-written long-form content, primary sources, .org/.gov domains, factual density. Web access only via tools. citation_method = "training_corpus + curated_web".
-- Perplexity: live web search + inline citations. Favors freshness, clear sourcing, news coverage, listicles, comparison pages, sites that allow crawlers. citation_method = "live_web_search + ranked_citations".
-- Copilot (Microsoft): Bing index + LinkedIn graph + Microsoft 365 graph. Favors LinkedIn presence, Bing-indexed pages, B2B content. citation_method = "bing_index + linkedin_graph".
-- Grok (xAI): real-time X (Twitter) signal + general web. Favors brand presence on X, recent buzz, viral mentions, news. citation_method = "x_realtime + web_search".
-- Mistral (Le Chat): web search via Brave/SerpAPI partners, training corpus. Favors EU-friendly sources, multilingual content, structured pages. citation_method = "training_corpus + brave_search".
-- DeepSeek: efficient reasoning model with web tool. Favors technical docs, GitHub/Stack Overflow content, structured factual pages, multilingual sources (Chinese + English strong). citation_method = "training_corpus + web_search".
-- Kimi (Moonshot AI): assess this engine from the returned response and citations; do not infer undocumented retrieval behavior.
-- Qwen (Alibaba): assess this engine from the returned response and citations; do not infer undocumented retrieval behavior.
+Assess each engine independently from the response and the evidence available for this run. Do not invent, assume, or generalize undocumented retrieval/indexing mechanisms. Only name a specific retrieval or citation mechanism when it is directly supported by evidence for this run; otherwise use "not established by this probe". Do not describe a proxy route as simulation or as another engine.
+Use the following engine names only as identification labels. Do not infer each engine's proprietary retrieval stack, index source, freshness weighting, or citation policy from its brand name. Derive all findings from the actual output and evidence collected in this run.
 
 Return ONLY valid JSON in this exact shape:
 {
-  "visibility_percent": <0-100, unified weighted score>,
+  "visibility_percent": <0-100, arithmetic mean of the ten engine score estimates>,
   "confidence": "high" | "medium" | "low",
   "sentiment": "positive" | "neutral" | "negative",
   "appearance_summary": "1-2 sentence summary in REPORT language",
