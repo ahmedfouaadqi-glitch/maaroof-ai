@@ -10,6 +10,7 @@ import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngin
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
 import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
+import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
 
 
 type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
@@ -255,7 +256,7 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; ms: number
+              sources: { url: string; title: string }[]; cited_urls: string[]; ms: number
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
@@ -352,6 +353,7 @@ export const Route = createFileRoute("/api/visibility")({
                 blind_ms: previous.blindMs,
                 grounded_ms: phaseMs,
                 sources,
+                cited_urls: p.urls,
                 ms: totalMs,
               });
             };
@@ -395,8 +397,9 @@ export const Route = createFileRoute("/api/visibility")({
                   } catch {}
                   return;
                 }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged: backgroundCharged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
+                const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                   durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
@@ -408,6 +411,7 @@ export const Route = createFileRoute("/api/visibility")({
                     evidence_count: evidence.length,
                     evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                     evidence_source: evidenceSource,
+                    visibility_metrics: metrics,
                     basis: "live_engine_probe",
                   },
                 });
@@ -420,7 +424,7 @@ export const Route = createFileRoute("/api/visibility")({
               });
               // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: backgroundCharged } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: metrics, charged: backgroundCharged } });
             }
             await askAll();
             const charged = await settle();
@@ -451,6 +455,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { withReasons, councilFromProbe } = await import("@/lib/maaroof/model-council");
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
+            const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
             const { recordBrandOperation } = await import("@/lib/brand-operations.server");
             await recordBrandOperation(admin, {
@@ -473,10 +478,11 @@ export const Route = createFileRoute("/api/visibility")({
                 evidence_count: evidence.length,
                 evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                 evidence_source: evidenceSource,
+                visibility_metrics: metrics,
                 basis: "live_engine_probe",
               },
             });
-            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
+            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: metrics, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
