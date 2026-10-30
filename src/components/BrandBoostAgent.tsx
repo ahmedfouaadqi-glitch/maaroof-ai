@@ -60,10 +60,13 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
     const platforms = sel.slice(0, MAX_PLATFORMS_PER_RUN);
-    await supabase.from("brand_boost_jobs").insert({
+    const { error: insertError } = await supabase.from("brand_boost_jobs").insert({
       user_id: user.id, workspace_id: workspaceId, brand_name: brand, brand_keywords: kw,
-      platforms, frequency: freq, approved: true, active: false,
+      platforms, frequency: freq, approved: true, active: true, next_run_at: new Date().toISOString(),
+      config: { lang: outLang, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" },
     });
+    if (insertError) { toast.error(insertError.message); return; }
+    toast.success(lang === "ar" ? "تم تفعيل الجدولة؛ أول تشغيل عند وصول نبضة المجدول." : "Schedule enabled; first run starts on the next scheduler tick.");
     await load();
   };
 
@@ -175,16 +178,16 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
 
       <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-muted-foreground">
         {lang === "ar"
-          ? "تفضيل التكرار يُحفظ في الإعدادات فقط. لا يوجد حالياً عامل خلفي يشغّل مهام تعزيز العلامة تلقائياً؛ استخدم «تشغيل الآن» للتنفيذ اليدوي."
+          ? "الجدولة الخلفية: أسبوعياً مرتان بفاصل 84 ساعة، يومياً كل 24 ساعة، أو شهرياً. كل تشغيل يستهلك 5 وحدات. يبدأ التشغيل التلقائي بعد تطبيق ترحيل قاعدة البيانات وإعداد Supabase Cron وأسرار الخادم."
           : lang === "ku"
-          ? "هەڵبژاردەی دووبارەبوونەوە تەنها وەک ڕێکخستن پاشەکەوت دەکرێت. لە ئێستادا جێبەجێکەری پشتەوە بۆ کارکردنی خۆکاری نییە؛ «ئێستا جێبەجێ بکە» بەکاربهێنە."
-          : "Frequency is saved as a preference only. No background worker currently runs Brand Boost jobs automatically; use Run Now for manual execution."}
+          ? "کارکردنی پشتەوە: هەفتانە دوو جار بە جیاوازی ٨٤ کاتژمێر، ڕۆژانە، یان مانگانە. هەر جار ٥ یەکەی بەکارهێنان دەخوات. پێویستی بە چالاککردنی Supabase Cron و نهێنییەکانی سێرڤەر هەیە."
+          : "Background cadence: twice weekly (84 hours apart), daily, or monthly. Each run costs 5 units. Automatic execution begins after the database migration, Supabase Cron job, and server secrets are configured."}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <select value={freq} onChange={(e) => setFreq(e.target.value as any)}
           className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm">
           <option value="daily">{t("boost_freq_daily")}</option>
-          <option value="weekly">{t("boost_freq_weekly")}</option>
+          <option value="weekly">{lang === "ar" ? "مرتان أسبوعياً" : lang === "ku" ? "هەفتانە دوو جار" : "Twice weekly"}</option>
           <option value="monthly">{t("boost_freq_monthly")}</option>
         </select>
         <label className="flex items-center gap-2 text-xs">
@@ -206,9 +209,22 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                 <strong className="max-w-full break-words">{j.brand_name}</strong>
                 <span className="text-xs text-muted-foreground">· {j.frequency}</span>
                 <span className="max-w-full break-words text-[10px] text-muted-foreground">{j.platforms?.slice(0, MAX_PLATFORMS_PER_RUN).join(", ")}</span>
-                <span className="sm:ms-auto rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-400">
-                  {lang === "ar" ? "يدوي فقط" : lang === "ku" ? "تەنها بە دەستی" : "Manual only"}
+                <span className={j.active ? "sm:ms-auto rounded-md border border-emerald-500/30 bg-emerald-500/5 px-2 py-1 text-[10px] text-emerald-700 dark:text-emerald-400" : "sm:ms-auto rounded-md border border-border bg-background px-2 py-1 text-[10px] text-muted-foreground"}>
+                  {j.active ? (lang === "ar" ? "جدولة نشطة" : "Scheduled") : (lang === "ar" ? "متوقفة" : "Paused")}
                 </span>
+                {j.next_run_at && j.active && <span className="text-[10px] text-muted-foreground">{lang === "ar" ? "التالي: " : "Next: "}{new Date(j.next_run_at).toLocaleString()}</span>}
+                <button onClick={async () => {
+                  const nextActive = !j.active;
+                  let q = supabase.from("brand_boost_jobs").update({
+                    active: nextActive,
+                    next_run_at: nextActive ? new Date().toISOString() : j.next_run_at,
+                  }).eq("id", j.id).eq("user_id", user!.id);
+                  q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
+                  const { error } = await q;
+                  if (error) toast.error(error.message); else await load();
+                }} className="rounded-md border border-border px-2 py-1 text-xs font-semibold">
+                  {j.active ? (lang === "ar" ? "إيقاف" : "Pause") : (lang === "ar" ? "استئناف" : "Resume")}
+                </button>
                 <button disabled={running === j.id} onClick={() => runNow(j)}
                   className="rounded-md bg-primary/15 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50">
                   {running === j.id ? <Loader2 className="inline size-3 animate-spin" /> : t("boost_run_now")}
@@ -808,6 +824,82 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
   );
 }
 
+
+function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: string | null; lang: string }) {
+  const [emailTo, setEmailTo] = useState("");
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const query = workspaceId ? "?workspace_id=" + encodeURIComponent(workspaceId) : "";
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+        const response = await apiFetch("/api/brand-boost-report-settings" + query, { headers });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "settings_load_failed");
+        if (!cancelled) {
+          setEmailTo(String(payload.settings?.email_to || ""));
+          setEnabled(payload.settings?.enabled === true);
+        }
+      } catch (error: any) {
+        if (!cancelled) toast.error(error?.message || "settings_load_failed");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [query]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+      const response = await apiFetch("/api/brand-boost-report-settings" + query, {
+        method: "POST", headers, body: JSON.stringify({ email_to: emailTo.trim(), enabled }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "settings_save_failed");
+      toast.success(lang === "ar" ? "تم حفظ إعداد البريد." : "Email report settings saved.");
+    } catch (error: any) {
+      toast.error(error?.message || "settings_save_failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-background/40 p-3 space-y-2 text-xs">
+      <div className="font-semibold">{lang === "ar" ? "التقرير الشهري عبر البريد" : lang === "ku" ? "ڕاپۆرتی مانگانە بە ئیمەیڵ" : "Monthly report by email"}</div>
+      <p className="text-muted-foreground">
+        {lang === "ar"
+          ? "يرسل معروف ملخص الشهر السابق في اليوم الأول من كل شهر (UTC). لا يُرسل إلا بعد تفعيل الخيار وإدخال بريد صحيح."
+          : "Maaroof sends the previous calendar month's summary on the first UTC day of each month. It is opt-in and requires a valid email."}
+      </p>
+      <input type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)}
+        placeholder="name@example.com" className="w-full rounded-md border border-border bg-background px-3 py-2" />
+      <label className="flex items-center gap-2">
+        <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+        {lang === "ar" ? "أوافق على إرسال التقرير الشهري إلى هذا البريد" : "Send the monthly report to this email"}
+      </label>
+      <button disabled={loading || saving || (enabled && !emailTo.trim())}
+        onClick={save} className="rounded-md bg-primary/15 px-3 py-1.5 font-semibold text-primary disabled:opacity-50">
+        {loading ? (lang === "ar" ? "جار التحميل…" : "Loading…") : saving ? (lang === "ar" ? "جار الحفظ…" : "Saving…") : (lang === "ar" ? "حفظ الإعداد" : "Save settings")}
+      </button>
+      <div className="text-[10px] text-muted-foreground">
+        {lang === "ar" ? "يتطلب إعداد RESEND_API_KEY وBRAND_BOOST_REPORT_FROM على الخادم والتحقق من نطاق الإرسال." : "Server setup requires RESEND_API_KEY, BRAND_BOOST_REPORT_FROM and a verified sender domain."}
+      </div>
+    </div>
+  );
+}
+
 function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
   const { lang } = useI18n();
   const { user } = useAuth();
@@ -901,6 +993,7 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
 
   return (
     <div className="space-y-3">
+      <BrandMonthlyReportSettings workspaceId={workspaceId} lang={lang} />
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
         <div className="flex items-center justify-between gap-2">
           <div>
