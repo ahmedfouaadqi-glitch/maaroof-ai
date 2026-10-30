@@ -16,7 +16,7 @@ import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 type Mode = "email" | "brand";
 
-export function CompanyOutreach() {
+export function CompanyOutreach({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t, lang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(lang);
   let auth: ReturnType<typeof useAuth> | null = null;
@@ -50,7 +50,7 @@ export function CompanyOutreach() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/company-email", {
         method: "POST", headers,
-        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: getEffectiveScope(auth?.profile, "outreach") }),
+        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: getEffectiveScope(auth?.profile, "outreach"), workspace_id: workspaceId }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");
