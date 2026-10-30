@@ -22,9 +22,9 @@ export const Route = createFileRoute("/api/security-scan")({
         const { data } = await admin.auth.getUser(h.slice(7));
         const userId = data.user?.id;
         if (!userId) { console.warn("[security-scan] denied: invalid token"); return Response.json({ error: "unauthorized" }, { status: 401 }); }
+        const body = await request.json().catch(() => ({} as any));
         const workspaceDenied = await workspaceGuard(admin, userId, body);
         if (workspaceDenied) return workspaceDenied;
-        const body = await request.json().catch(() => ({} as any));
         let url = String(body?.url || "").trim().slice(0, 500);
         if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
         if (!isPublicUrl(url)) { console.warn("[security-scan] denied: non-public url", userId); return Response.json({ error: "bad_url" }, { status: 400 }); }
