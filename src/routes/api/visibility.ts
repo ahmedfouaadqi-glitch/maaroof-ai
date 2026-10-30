@@ -257,7 +257,7 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; cited_urls: string[]; ms: number
+              sources: { url: string; title: string }[]; cited_urls: string[]; provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
