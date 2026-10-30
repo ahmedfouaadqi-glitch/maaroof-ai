@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/brand-authority")({
           return Response.json({ error: "brand_packs_unavailable" }, { status: 503 });
         }
 
-        const COLS = "brand_slug, bot_name, user_agent, path, hit_at";
+        const COLS = "brand_slug, bot_name, user_agent, path, hit_at, verification_status, verified_hostname, verification_method, verified_at";
         const CAP = 20000;
         const hits: any[] = [];
         for (let from = 0; from < CAP; from += 1000) {
@@ -70,6 +70,7 @@ export const Route = createFileRoute("/api/brand-authority")({
         const stats = {
           total: allHits.length,
           known: known.length,
+          verified: allHits.filter((h) => h.verification_status === "verified").length,
           first: allHits.length ? allHits[allHits.length - 1].hit_at : null,
           last: allHits.length ? allHits[0].hit_at : null,
         };
