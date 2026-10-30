@@ -222,12 +222,15 @@ ${evidenceText || "(no source content)"}`;
           await admin.from("activity_log").insert({
             user_id: userId,
             action: "brand_authority",
-            metadata: { brand: brand_name, slug, cost: AUTHORITY_COST, pinged: shouldPing },
+            metadata: { operation_id: _runId, brand: brand_name, slug, cost: AUTHORITY_COST, pinged: shouldPing, publication_scope: "maaroof_host" },
           });
 
           return Response.json({
+            operation_id: _runId,
             slug,
             public_url: publicUrl,
+            publication_scope: "maaroof_host",
+            published_on_customer_domain: false,
             summary,
             markdown,
             json_ld,
