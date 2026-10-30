@@ -70,8 +70,8 @@ export function KeywordIntelligence() {
   const [comps, setComps] = useState("");
   const [contentLanguage, setContentLanguage] = useState<ContentLanguage>((["ar", "en", "ku"].includes(p.language) ? p.language : l) as ContentLanguage);
   const [file, setFile] = useState<File | null>(null);
-  const [liveSearch, setLiveSearch] = useState(false);
-  const [liveLimit, setLiveLimit] = useState("10");
+  const [liveSearch, setLiveSearch] = useState(true);
+  const [liveLimit, setLiveLimit] = useState("60");
   const [workspaceId, setWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [busy, setBusy] = useState(false);
