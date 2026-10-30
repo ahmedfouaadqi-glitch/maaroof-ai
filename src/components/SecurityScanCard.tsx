@@ -6,7 +6,7 @@ import { withPreviewAuth } from "@/lib/api-client";
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 
-export function SecurityScanCard({ lang }: { lang: L }) {
+export function SecurityScanCard({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -17,7 +17,7 @@ export function SecurityScanCard({ lang }: { lang: L }) {
     setBusy(true); setErr(""); setRes(null);
     try {
       const { data } = await supabase.auth.getSession();
-      const r = await fetch(withPreviewAuth("/api/security-scan"), { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token || ""}` }, body: JSON.stringify({ url }) });
+      const r = await fetch(withPreviewAuth("/api/security-scan"), { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token || ""}` }, body: JSON.stringify({ url, workspace_id: workspaceId }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) setErr(j.error === "bad_url" ? tr(lang, "أدخل رابط موقع عام صحيح.", "Enter a valid public website.", "لینکێکی گشتی بنووسە.") : j.error === "unreachable" ? tr(lang, "تعذّر الوصول للموقع. لم يُخصم شيء.", "Site unreachable. Nothing charged.", "ماڵپەڕ نەگەیشت.") : r.status === 402 ? tr(lang, "الرصيد غير كافٍ. لم يُخصم شيء.", "Not enough balance.", "باڵانس بەس نییە.") : tr(lang, "تعذّر الفحص. لم يُخصم شيء.", "Scan failed. Nothing charged.", "پشکنین سەرکەوتوو نەبوو."));
       else setRes(j);
