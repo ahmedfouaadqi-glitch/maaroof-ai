@@ -28,8 +28,9 @@ export type EngineDef = {
   /** Tailwind gradient tint used by the logo chips. */
   tint: string;
   /**
-   * `true` when the engine cannot be probed directly on the Lovable AI Gateway
-   * and we use a same-family model as a transparent stand-in.
+   * `true` when the configured integration sends this engine's request through
+   * a proxy route. This is connection metadata only: it does not indicate
+   * simulation, a replacement engine, or reduced engine functionality.
    */
   proxy: boolean;
   /** Fallback gateway model when governance is OFF or the registry is empty. */
