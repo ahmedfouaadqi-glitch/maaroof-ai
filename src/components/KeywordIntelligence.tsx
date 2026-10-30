@@ -238,7 +238,7 @@ export function KeywordIntelligence() {
             <SearchCheck className="size-4 shrink-0 text-muted-foreground" />
           </label>
           {liveSearch && <label className="mt-3 block text-xs text-muted-foreground">{c.liveLimit}
-            <input type="number" min={1} max={50} step={1} value={liveLimit} onChange={(e) => setLiveLimit(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
+            <input type="number" min={1} max={200} step={1} value={liveLimit} onChange={(e) => setLiveLimit(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
           </label>}
           <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{c.liveNote}</p>
         </div>
