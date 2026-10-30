@@ -1092,8 +1092,8 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
       <div className="font-semibold">{lang === "ar" ? "التقرير الشهري عبر البريد" : lang === "ku" ? "ڕاپۆرتی مانگانە بە ئیمەیڵ" : "Monthly report by email"}</div>
       <p className="text-muted-foreground">
         {lang === "ar"
-          ? "يرسل معروف تقرير الشهر الميلادي السابق في اليوم الأول من الشهر (UTC). يجب تأكيد ملكية البريد قبل تفعيل الإرسال."
-          : "Maaroof sends the previous calendar month's report on the first UTC day. Verify the recipient address before enabling delivery."}
+          ? "يرسل معروف تقرير الشهر الميلادي السابق خلال أول 7 أيام من الشهر (UTC)، مع إعادة المحاولة عند تعطل نبضة المجدول. يجب تأكيد ملكية البريد قبل تفعيل الإرسال."
+          : "Maaroof sends the previous calendar month's report during the first seven UTC days, retrying after a missed scheduler heartbeat. Verify the recipient address before enabling delivery."}
       </p>
       <input type="email" value={emailTo} onChange={(event) => {
         const next = event.target.value;

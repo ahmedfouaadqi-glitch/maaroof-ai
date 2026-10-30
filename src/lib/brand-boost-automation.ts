@@ -40,8 +40,9 @@ export function previousCalendarMonth(now: Date): { month: string; start: string
   };
 }
 
+/** Retry report dispatch throughout the first seven UTC days if Cron was briefly unavailable. */
 export function shouldSendMonthlyBrandReport(now: Date): boolean {
-  return now.getUTCDate() === 1;
+  return now.getUTCDate() >= 1 && now.getUTCDate() <= 7;
 }
 
 export function isValidReportEmail(value: string): boolean {

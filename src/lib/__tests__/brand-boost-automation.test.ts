@@ -30,9 +30,10 @@ describe("Brand Boost automation cadence", () => {
     });
   });
 
-  it("sends monthly reports only on the first UTC day of a month", () => {
+  it("retries monthly report dispatch during the first seven UTC days", () => {
     expect(shouldSendMonthlyBrandReport(new Date("2026-10-01T10:00:00.000Z"))).toBe(true);
-    expect(shouldSendMonthlyBrandReport(new Date("2026-10-02T10:00:00.000Z"))).toBe(false);
+    expect(shouldSendMonthlyBrandReport(new Date("2026-10-07T23:59:00.000Z"))).toBe(true);
+    expect(shouldSendMonthlyBrandReport(new Date("2026-10-08T00:00:00.000Z"))).toBe(false);
   });
 
   it("validates report email addresses conservatively", () => {
