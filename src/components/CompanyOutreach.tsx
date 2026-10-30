@@ -16,7 +16,7 @@ import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 type Mode = "email" | "brand";
 
-export function CompanyOutreach({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+export function CompanyOutreach({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(lang);
   let auth: ReturnType<typeof useAuth> | null = null;
@@ -24,8 +24,8 @@ export function CompanyOutreach({ workspaceId = null }: { workspaceId?: string |
   const specialty = (auth?.profile as any)?.specialty || "";
 
   const [mode, setMode] = useState<Mode>("email");
-  const [company, setCompany] = useState("");
-  const [sector, setSector] = useState("");
+  const [company, setCompany] = useState(String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""));
+  const [sector, setSector] = useState(String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || ""));
   const [goal, setGoal] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
