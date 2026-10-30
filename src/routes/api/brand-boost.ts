@@ -106,10 +106,20 @@ export const Route = createFileRoute("/api/brand-boost")({
           // Browser requests use bearer tokens; long-running server dispatch uses a signed, route-bound identity.
           const userId = await resolveAuthenticatedUserId(request, admin);
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const body = await request.json().catch(() => ({} as any));
+          const workspaceRaw = typeof body?.workspace_id === "string" ? body.workspace_id.trim() : "";
+          if (workspaceRaw && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceRaw)) {
+            return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          }
+          const workspaceId = workspaceRaw || null;
+          if (workspaceId) {
+            const { data: ownedWorkspace } = await admin.from("workspaces").select("id").eq("id", workspaceId).eq("owner_id", userId).maybeSingle();
+            if (!ownedWorkspace) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          }
 
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
-          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost" } });
+          const _chg = await chargeTokens({ userId, toolKey: "brand_boost", runId: _runId, meta: { provider: "lovable_ai", model: "openai/gpt-5-mini", endpoint: "/api/brand-boost", workspace_id: workspaceId } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -120,8 +130,6 @@ export const Route = createFileRoute("/api/brand-boost")({
             return Response.json({ error: "tool_disabled_by_admin" }, { status: 403 });
           }
           // Access is decided by chargeTokens (plan + wallet + per-user overrides); the legacy monthly-subscription gate was removed.
-
-          const body = await request.json();
 
           const { brand_name, brand_keywords, platforms = PLATFORMS, lang = "en", scope } = body;
           if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
@@ -312,6 +320,7 @@ ${evidenceBlock}`;
           }).eq("id", userId);
           await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: {
             operation_id: _runId,
+            workspace_id: workspaceId,
             brand: brand_name,
             platforms: targets,
             connection_modes: Object.fromEntries(merged.map((p: any) => [p.platform, p.is_proxy ? "proxy" : "direct"])),
