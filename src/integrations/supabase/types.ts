@@ -1033,6 +1033,10 @@ export type Database = {
           path: string | null
           user_agent: string
           user_id: string | null
+          verification_status: string
+          verified_hostname: string | null
+          verification_method: string | null
+          verified_at: string | null
           workspace_id: string | null
         }
         Insert: {
@@ -1044,6 +1048,10 @@ export type Database = {
           path?: string | null
           user_agent: string
           user_id?: string | null
+          verification_status?: string
+          verified_hostname?: string | null
+          verification_method?: string | null
+          verified_at?: string | null
           workspace_id?: string | null
         }
         Update: {
@@ -1055,6 +1063,10 @@ export type Database = {
           path?: string | null
           user_agent?: string
           user_id?: string | null
+          verification_status?: string
+          verified_hostname?: string | null
+          verification_method?: string | null
+          verified_at?: string | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -1066,6 +1078,120 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      crawler_ip_verifications: {
+        Row: {
+          id: string
+          ip_hash: string
+          bot_name: string
+          verification_status: string
+          verified_hostname: string | null
+          verification_method: string
+          checked_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          ip_hash: string
+          bot_name: string
+          verification_status: string
+          verified_hostname?: string | null
+          verification_method?: string
+          checked_at?: string
+          expires_at: string
+        }
+        Update: {
+          id?: string
+          ip_hash?: string
+          bot_name?: string
+          verification_status?: string
+          verified_hostname?: string | null
+          verification_method?: string
+          checked_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      brand_boost_report_settings: {
+        Row: {
+          id: string
+          user_id: string
+          workspace_id: string | null
+          email_to: string
+          enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          workspace_id?: string | null
+          email_to: string
+          enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          workspace_id?: string | null
+          email_to?: string
+          enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      brand_boost_report_deliveries: {
+        Row: {
+          id: string
+          delivery_key: string
+          user_id: string
+          workspace_id: string | null
+          report_month: string
+          email_to: string
+          status: string
+          provider_message_id: string | null
+          error_message: string | null
+          attempts: number
+          started_at: string | null
+          sent_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          delivery_key: string
+          user_id: string
+          workspace_id?: string | null
+          report_month: string
+          email_to: string
+          status?: string
+          provider_message_id?: string | null
+          error_message?: string | null
+          attempts?: number
+          started_at?: string | null
+          sent_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          delivery_key?: string
+          user_id?: string
+          workspace_id?: string | null
+          report_month?: string
+          email_to?: string
+          status?: string
+          provider_message_id?: string | null
+          error_message?: string | null
+          attempts?: number
+          started_at?: string | null
+          sent_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       brand_operations: {
         Row: {
