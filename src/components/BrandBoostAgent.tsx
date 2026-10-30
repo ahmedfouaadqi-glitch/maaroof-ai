@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolHistory } from "@/components/ToolHistory";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Search, Mail, Rocket } from "lucide-react";
+import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisibilityPanel } from "@/components/AIVisibility";
-import { SmartResearch } from "@/components/SmartResearch";
-import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 
 import { ToolLangSelect } from "@/components/ToolLangSelect";
@@ -48,7 +46,7 @@ export function BrandBoostAgent() {
   const [running, setRunning] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
   const [err, setErr] = useState("");
-  const [tab, setTab] = useState<string>("visibility");
+  const [tab, setTab] = useState<string>("enhance");
 
   const load = async () => {
     if (!user) return;
@@ -142,16 +140,13 @@ export function BrandBoostAgent() {
 
       <Tabs value={tab} onValueChange={setTab} className="mt-4">
         <TabsList className="flex h-auto w-full flex-wrap gap-1">
-          <TabsTrigger value="visibility" className="text-xs"><Eye className="me-1 inline size-3.5" />{t("ag_vis_title")}</TabsTrigger>
-          <TabsTrigger value="research" className="text-xs"><Search className="me-1 inline size-3.5" />{t("research_title")}</TabsTrigger>
-          <TabsTrigger value="outreach" className="text-xs"><Mail className="me-1 inline size-3.5" />{t("outreach_title")}</TabsTrigger>
-          <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
-          <TabsTrigger value="authority" className="text-xs"><Rocket className="me-1 inline size-3.5" />{lang === "ar" ? "بثّ للذكاء" : lang === "ku" ? "بڵاوکردنەوە بۆ AI" : "Broadcast"}</TabsTrigger>
-          <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
+          <TabsTrigger value="enhance" className="text-xs"><Eye className="me-1 inline size-3.5" />{lang === "ar" ? "تعزيز العلامة" : lang === "ku" ? "بەهێزکردنی براند" : "Brand Enhancement"}</TabsTrigger>
+          <TabsTrigger value="broadcast" className="text-xs"><Rocket className="me-1 inline size-3.5" />{lang === "ar" ? "بث للذكاء" : lang === "ku" ? "بڵاوکردنەوە بۆ AI" : "AI Broadcast"}</TabsTrigger>
+          <TabsTrigger value="tracking" className="text-xs"><Radar className="me-1 inline size-3.5" />{lang === "ar" ? "متتبع الانتشار" : lang === "ku" ? "شوێنپێی بڵاوبوونەوە" : "Reach Tracker"}</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visibility" className="mt-4">
+        <TabsContent value="enhance" className="mt-4">
           <div className="rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4 mb-3">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-gradient">
               <Eye className="size-4 text-primary" />
@@ -161,39 +156,14 @@ export function BrandBoostAgent() {
               {lang === "ar"
                 ? "افحص كيف تظهر علامتك التجارية أمام 10 محركات ذكاء اصطناعي (ChatGPT و Gemini و Claude و Perplexity و Copilot و Grok و Mistral و DeepSeek و Kimi و Qwen). يعرض لك: ما يقوله كل محرك الآن، نسبة الظهور لكل منصة، إشارات الثقة، التحيّز السلبي/الإيجابي، وتوصيات عملية مرتبطة مباشرة بخطة \"تعزيز العلامة\" بالأسفل. (يستهلك 1 تحليل — اسم العلامة مطلوب، الكلمات المفتاحية اختيارية)."
                 : lang === "ku"
-                ? "پشکنینی چۆنیەتی دەرکەوتنی براندەکەت لە ٩ بزوێنەری AI. وەڵامی ئێستای هەر بزوێنەرێک، ڕێژەی دەرکەوتن، ئاماژەی متمانە و ڕاسپاردە کارایی پێشکەش دەکات کە ڕاستەوخۆ پەیوەستن بە پلانی بەهێزکردنی براند. (١ شیکاری — ناوی براند پێویستە)."
-                : "Probe how your brand appears across 9 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
+                ? "پشکنینی چۆنیەتی دەرکەوتنی براندەکەت لە ١٠ بزوێنەری AI. وەڵامی ئێستای هەر بزوێنەرێک، ڕێژەی دەرکەوتن، ئاماژەی متمانە و ڕاسپاردە کارایی پێشکەش دەکات کە ڕاستەوخۆ پەیوەستن بە پلانی بەهێزکردنی براند. (١ شیکاری — ناوی براند پێویستە)."
+                : "Probe how your brand appears across 10 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
             </p>
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
-        </TabsContent>
+        
 
-        <TabsContent value="research" className="mt-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-            {lang === "ar"
-              ? t("auto.search_for_companies_brands_markets_and")
-              : lang === "ku"
-              ? "گەڕانی کۆمپانیا/براند/بازاڕ و گۆڕینیان بۆ خواردنی AI."
-              : "Research companies/brands/markets and feed insights back into your boost plan."}
-          </div>
-          <SmartResearch />
-        </TabsContent>
-
-        <TabsContent value="outreach" className="mt-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-            {lang === "ar"
-              ? t("auto.generate_communication_messages_and_company_profiles")
-              : lang === "ku"
-              ? "نامەی پەیوەندی و پرۆفایلی کۆمپانیا دروست بکە."
-              : "Generate outreach emails and company briefs in your brand voice."}
-          </div>
-          <CompanyOutreach />
-        </TabsContent>
-
-
-
-
-        <TabsContent value="run" className="mt-4">
+        
       <div className="grid gap-2 sm:grid-cols-2">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("boost_brand")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
@@ -273,21 +243,21 @@ export function BrandBoostAgent() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">
-                              <Info className="size-2.5" /> proxy
+                            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <Info className="size-2.5" /> {lang === "ar" ? "عبر Proxy" : lang === "ku" ? "لەڕێگەی Proxy" : "Proxy route"}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs text-[11px]">
                             {lang === "ar"
-                              ? t("auto.there_is_no_direct_public_api")
+                              ? "Proxy قناة اتصال ضمن تكامل المحرك، ولا تعني أن الاستجابة محاكاة أو من نموذج بديل."
                               : lang === "ku"
-                              ? "API ڕاستەوخۆی گشتی بۆ ئەم پلاتفۆڕمە نییە، مۆدێلی هاوشێوەمان بەکارهێنا."
-                              : "No direct public API for this platform — we used an equivalent model from the same family to simulate its answer."}
+                              ? "Proxy ڕێگای پەیوەندییە لە ناو یەکخستنی بزوێنەر؛ واتای هاوشێوەسازی یان بەکارهێنانی مۆدێلی جێگرەوە نییە."
+                              : "Proxy is the configured connection route; it does not mean the engine response is simulated or replaced."}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                      <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-600">{lang === "ar" ? "مباشر" : "direct"}</span>
+                      <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">{lang === "ar" ? "اتصال مباشر" : lang === "ku" ? "پەیوەندی ڕاستەوخۆ" : "Direct connection"}</span>
                     )}
                     <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
                   </div>
@@ -411,13 +381,14 @@ export function BrandBoostAgent() {
           />
         </div>
       )}
+        
         </TabsContent>
 
-        <TabsContent value="authority" className="mt-4">
+        <TabsContent value="broadcast" className="mt-4">
           <AuthorityPanel brand={brand} kw={kw} lang={outLang} />
         </TabsContent>
 
-        <TabsContent value="propagation" className="mt-4">
+        <TabsContent value="tracking" className="mt-4">
           <PropagationPanel />
         </TabsContent>
 
