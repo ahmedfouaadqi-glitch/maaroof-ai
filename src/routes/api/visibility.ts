@@ -426,7 +426,7 @@ export const Route = createFileRoute("/api/visibility")({
               });
               // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: metrics, charged: backgroundCharged } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
             }
             await askAll();
             const charged = await settle();
