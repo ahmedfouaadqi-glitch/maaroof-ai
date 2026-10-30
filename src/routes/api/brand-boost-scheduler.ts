@@ -59,6 +59,7 @@ async function runDueJobs(admin: any, origin: string, now: Date) {
           body: JSON.stringify({
             brand_name: job.brand_name,
             brand_keywords: job.brand_keywords || "",
+            website_url: String((job.config as any)?.website_url || ""),
             platforms: Array.isArray(job.platforms) ? job.platforms : [],
             lang: String((job.config as any)?.lang || "ar"),
             scope: (job.config as any)?.scope || undefined,
