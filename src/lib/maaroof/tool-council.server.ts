@@ -26,10 +26,12 @@ export async function runToolCouncil(o: { tool: string; input: string; result: s
   const L = o.lang === "en" ? "English" : o.lang === "ku" ? "Central Kurdish (Sorani)" : "Modern Standard Arabic";
   const prompt = `A GEO tool (${o.tool}) produced this result for the user's content.\nCONTENT:\n${o.input.slice(0, 2500)}\nRESULT:\n${o.result.slice(0, 2000)}\nAs an AI answer engine, would you cite this content? Reply ONLY JSON: {"agree": true|false, "score": 0-100, "note": "one short sentence in ${L}"}. Never invent facts.`;
   const t = o.timeoutMs ?? 30_000;
+  // Safety valve: the primary route gets at most 8s, then the gateway answers with the full budget.
+  const tPrimary = Math.min(8_000, t);
   const engines = await Promise.all(ENGINE_COUNCIL_MODELS.map(({ key: engine, model }) => withFallback(
     engine,
     () => orKey
-      ? ask(engine, OPENROUTER_URL, { Authorization: `Bearer ${orKey}`, "Content-Type": "application/json", "HTTP-Referer": "https://maaroofai.com", "X-Title": "Maaroof AI" }, model, [{ role: "user", content: prompt }], t)
+      ? ask(engine, OPENROUTER_URL, { Authorization: `Bearer ${orKey}`, "Content-Type": "application/json", "HTTP-Referer": "https://maaroofai.com", "X-Title": "Maaroof AI" }, model, [{ role: "user", content: prompt }], tPrimary)
       : Promise.resolve({ engine, status: "no_answer", reason: "no_key" } as EngineVerdict),
     () => gwKey
       ? ask(engine, LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders(gwKey) as any, GATEWAY_MODEL, [{ role: "system", content: (ENGINE_PERSONA as any)[engine] || "" }, { role: "user", content: prompt }], t)

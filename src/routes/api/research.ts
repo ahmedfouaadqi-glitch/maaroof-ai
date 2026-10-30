@@ -33,6 +33,7 @@ export const Route = createFileRoute("/api/research")({
           const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
           const userId = userData?.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          { const _wg = await (await import("@/lib/workspace-guard.server")).workspaceGuard(admin, userId, reqBody); if (_wg) return _wg; }
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.

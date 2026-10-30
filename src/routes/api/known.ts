@@ -168,6 +168,7 @@ export const Route = createFileRoute("/api/known")({
 
         let body: any = {};
         try { body = await request.json(); } catch {}
+          { const _wg = await (await import("@/lib/workspace-guard.server")).workspaceGuard(admin, userId, body); if (_wg) return _wg; }
         const brand = asText(body.brand, 200);
         const website = asText(body.website || body.url, 300);
         const sector = asText(body.sector || body.keywords, 200);

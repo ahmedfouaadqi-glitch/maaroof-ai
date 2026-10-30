@@ -18,7 +18,7 @@ const T = {
     comps: "المنافسون (اختياري، افصل بفاصلة)", market: "الأسواق المستهدفة (افصل بينها بفاصلة)",
     contentLanguage: "لغة المحتوى والكلمات", marketHint: "مثال: العراق، السعودية، الإمارات، لبنان. تُدمج الأسواق المكتوبة مع الأسواق التي يكتشفها النظام من تبويبات الملف.", file: "إرفاق ملف كلمات مفتاحية (XLSX / XLSM / CSV / TSV)",
     liveSearch: "فحص حي لنتائج البحث والروابط (Live Verification)",
-    liveLimit: "عدد الكلمات للفحص الحي لكل سوق (1–50)",
+    liveLimit: "عدد الكلمات للفحص الحي لكل سوق (1–200)",
     run: "ابدأ التحليل", busy: "يجري التحليل…", selectedFile: "الملف المحدد",
     workspace: "مساحة العمل النشطة", noWorkspace: "الحساب الأساسي",
     liveNote: "هذا الخيار يضيف بحث SERP وروابط فعلية وقد يستهلك حصة البحث. بحد 50 كلمة وخمسة أسواق قد يصل الحد الأقصى إلى 250 عملية بحث؛ لا يمكن تثبيت كلفة نقدية أو زمن دقيق من الواجهة لأنهما يعتمدان على تسعير الحساب واستجابة الخدمة. المحاور التي لا تتوفر لها أدلة موثوقة تبقى «لم تُقَس».",
@@ -31,7 +31,7 @@ const T = {
     comps: "Competitors (optional, comma separated)", market: "Target markets (comma separated)",
     contentLanguage: "Content and keyword language", marketHint: "Example: Iraq, Saudi Arabia, UAE, Lebanon. Typed markets are merged with markets detected from workbook tabs.", file: "Attach keyword workbook (XLSX / XLSM / CSV / TSV)",
     liveSearch: "Live search results and link verification (Live Verification)",
-    liveLimit: "Keywords to check live per market (1–50)",
+    liveLimit: "Keywords to check live per market (1–200)",
     run: "Run analysis", busy: "Analyzing…", selectedFile: "Selected file",
     workspace: "Active workspace", noWorkspace: "Main account",
     liveNote: "This adds real SERP searches and URLs and may use search quota. At 50 keywords across five markets, the upper bound is 250 search operations. A precise cash cost or duration cannot be promised in the UI because both depend on account pricing and service latency. Axes without reliable evidence remain Not measured.",
@@ -44,7 +44,7 @@ const T = {
     comps: "ڕکابەران (ئارەزوومەندانە)", market: "بازاڕە ئامانجەکان (بە کۆما جیا بکەوە)",
     contentLanguage: "زمانی ناوەڕۆک و وشەکان", marketHint: "نموونە: عێراق، سعودیە، ئیمارات، لوبنان. بازاڕە نووسراوەکان لەگەڵ بازاڕی ناسراو لە پەڕەکانی فایل تێکەڵ دەکرێن.", file: "هاوپێچکردنی فایل (XLSX / XLSM / CSV / TSV)",
     liveSearch: "پشکنینی ڕاستەوخۆی ئەنجامی گەڕان و بەستەرەکان (Live Verification)",
-    liveLimit: "ژمارەی وشە بۆ پشکنینی ڕاستەوخۆ لە هەر بازاڕێک (1–50)",
+    liveLimit: "ژمارەی وشە بۆ پشکنینی ڕاستەوخۆ لە هەر بازاڕێک (1–200)",
     run: "دەستپێکردن", busy: "شیکردنەوە…", selectedFile: "فایلی هەڵبژێردراو",
     workspace: "شوێنی کاری چالاک", noWorkspace: "هەژماری سەرەکی",
     liveNote: "ئەم هەڵبژاردەیە گەڕانی ڕاستەقینەی SERP و بەستەر زیاد دەکات و ڕەنگە بەشی گەڕان بەکاربهێنێت. لە 50 وشە و پێنج بازاڕدا زۆرترین سنوور 250 کردارە؛ نرخی ورد و کاتی ورد لە پێشەوە ناتوانرێت دڵنیابکرێتەوە. ئەو تەوەرانەی بەڵگەی متمانەپێکراویان نییە «نەپێوراوە» دەمێننەوە.",
@@ -70,8 +70,8 @@ export function KeywordIntelligence() {
   const [comps, setComps] = useState("");
   const [contentLanguage, setContentLanguage] = useState<ContentLanguage>((["ar", "en", "ku"].includes(p.language) ? p.language : l) as ContentLanguage);
   const [file, setFile] = useState<File | null>(null);
-  const [liveSearch, setLiveSearch] = useState(false);
-  const [liveLimit, setLiveLimit] = useState("10");
+  const [liveSearch, setLiveSearch] = useState(true);
+  const [liveLimit, setLiveLimit] = useState("60");
   const [workspaceId, setWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -171,7 +171,7 @@ export function KeywordIntelligence() {
           workspace_id: workspaceId || null,
           attachment_id: attachmentId,
           live_search: liveSearch,
-          live_search_limit: Math.max(1, Math.min(50, Number(liveLimit) || 10)),
+          live_search_limit: Math.max(1, Math.min(200, Number(liveLimit) || 60)),
           competitors: comps.split(/[,،\n]/).map((x) => x.trim()).filter(Boolean),
           lang: l,
           request_text: c.title,
@@ -238,7 +238,7 @@ export function KeywordIntelligence() {
             <SearchCheck className="size-4 shrink-0 text-muted-foreground" />
           </label>
           {liveSearch && <label className="mt-3 block text-xs text-muted-foreground">{c.liveLimit}
-            <input type="number" min={1} max={50} step={1} value={liveLimit} onChange={(e) => setLiveLimit(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
+            <input type="number" min={1} max={200} step={1} value={liveLimit} onChange={(e) => setLiveLimit(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
           </label>}
           <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{c.liveNote}</p>
         </div>
