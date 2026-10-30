@@ -158,7 +158,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                 ? "افحص كيف تظهر علامتك التجارية أمام 10 محركات ذكاء اصطناعي (ChatGPT و Gemini و Claude و Perplexity و Copilot و Grok و Mistral و DeepSeek و Kimi و Qwen). يعرض لك: ما يقوله كل محرك الآن، نسبة الظهور لكل منصة، إشارات الثقة، التحيّز السلبي/الإيجابي، وتوصيات عملية مرتبطة مباشرة بخطة \"تعزيز العلامة\" بالأسفل. (يستهلك 1 تحليل — اسم العلامة مطلوب، الكلمات المفتاحية اختيارية)."
                 : lang === "ku"
                 ? "پشکنینی چۆنیەتی دەرکەوتنی براندەکەت لە ١٠ بزوێنەری AI. وەڵامی ئێستای هەر بزوێنەرێک، ڕێژەی دەرکەوتن، ئاماژەی متمانە و ڕاسپاردە کارایی پێشکەش دەکات کە ڕاستەوخۆ پەیوەستن بە پلانی بەهێزکردنی براند. (١ شیکاری — ناوی براند پێویستە)."
-                : "Probe how your brand appears across 10 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
+                : "Probe how your brand appears across 10 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
             </p>
           </div>
           <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
