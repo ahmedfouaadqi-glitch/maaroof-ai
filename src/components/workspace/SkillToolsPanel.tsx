@@ -88,7 +88,7 @@ export function SkillToolsPanel({ lang, skill, tool, workspaceId = null }: { lan
       )}
       {Tool && tool && visible(tool) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool {...(tool === "brand_boost" ? { workspaceId } : {})} /></Suspense>
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool lang={lang} workspaceId={workspaceId} /></Suspense>
         </section>
       )}
     </div>
