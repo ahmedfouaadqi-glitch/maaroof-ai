@@ -1,6 +1,8 @@
 -- Run once in the Supabase SQL Editor after enabling pg_cron, pg_net and Vault.
 -- Replace both placeholders before running. Never commit real secrets to source control.
 -- This script creates or updates Vault secrets and replaces the named Cron job.
+-- The five-minute heartbeat calls the scheduler endpoint; each invocation claims at most two due jobs.
+
 do $$
 declare app_url_id uuid; scheduler_secret_id uuid;
 begin
@@ -44,7 +46,7 @@ select cron.schedule(
       )
     ),
     body := '{}'::jsonb,
-    timeout_milliseconds := 10000
+    timeout_milliseconds := 300000
   );
   $job$
 );
