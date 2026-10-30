@@ -60,6 +60,8 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   const [err, setErr] = useState<string | null>(null);
   const [council, setCouncil] = useState<Council | null>(null);
   const [metrics, setMetrics] = useState<ProbeMetrics | null>(null);
+  const [previousMetrics, setPreviousMetrics] = useState<ProbeMetrics | null>(null);
+  const [previousRunAt, setPreviousRunAt] = useState<string | null>(null);
 
   useEffect(() => {
     entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 10)); }).catch(() => setAllowed([]));
@@ -81,7 +83,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   async function run() {
     if (!sel.length || busy) return;
     if (!probeTopic) { setErr(topicRequired); return; }
-    setBusy(true); setErr(null); setAnswers(null); setMetrics(null); setCouncil(null); setBgMsg(false);
+    setBusy(true); setErr(null); setAnswers(null); setMetrics(null); setPreviousMetrics(null); setPreviousRunAt(null); setCouncil(null); setBgMsg(false);
     if (!brandProp.trim() && typed.trim() && saveIt) {
       // Only fill an empty account brand; never overwrite the owner's identity with a scanned client name.
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id).is("brand_name", null); } catch {}
@@ -99,7 +101,39 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
-      setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null); setMetrics(j?.probe?.visibility_metrics || null);
+      setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null);
+      const measuredMetrics = j?.probe?.visibility_metrics || null;
+      setMetrics(measuredMetrics);
+      // Compare with the latest prior measured run for the same owner, brand and workspace.
+      // History is read through the user's authenticated Supabase client and existing RLS.
+      if (measuredMetrics && j?.operation_id) {
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          if (authData.user) {
+            let historyQuery = supabase.from("brand_operations")
+              .select("id, created_at, result_meta")
+              .eq("user_id", authData.user.id)
+              .eq("operation_type", "visibility_probe")
+              .eq("brand_name", brand)
+              .neq("id", String(j.operation_id))
+              .order("created_at", { ascending: false })
+              .limit(20);
+            historyQuery = workspaceId
+              ? historyQuery.eq("workspace_id", workspaceId)
+              : historyQuery.is("workspace_id", null);
+            const { data: history } = await historyQuery;
+            const prior = (history || []).find((row: any) =>
+              row?.result_meta && typeof row.result_meta === "object" && row.result_meta.visibility_metrics,
+            ) as any;
+            if (prior) {
+              setPreviousMetrics(prior.result_meta.visibility_metrics as ProbeMetrics);
+              setPreviousRunAt(String(prior.created_at || ""));
+            }
+          }
+        } catch {
+          // History comparison is optional; a failed history read must not discard live results.
+        }
+      }
     } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); }
   }
 
@@ -179,8 +213,40 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
         ? <div className="text-xs text-destructive">{T.signIn} <a href="/auth" className="underline font-semibold">{T.login}</a></div>
         : err && <div className="text-xs text-destructive">{err}</div>}
       {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
+      {metrics && previousMetrics && (
+        <div className="rounded-lg border border-border bg-background/60 p-3">
+          <div className="mb-2 text-xs font-semibold">
+            {L === "en" ? "Change from previous measured run" : L === "ku" ? "گۆڕانکاری بە بەراورد بە پشکنینی پێشوو" : "التغير مقارنة بآخر فحص مقاس"}
+          </div>
+          {previousRunAt && <div className="mb-2 text-[10px] text-muted-foreground">{new Date(previousRunAt).toLocaleString()}</div>}
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {([
+              ["mention_rate", L === "en" ? "Mention rate" : L === "ku" ? "ڕێژەی هێنان" : "معدل الذكر"],
+              ["recommendation_rate", L === "en" ? "Recommendation rate" : L === "ku" ? "ڕێژەی پێشنیار" : "معدل التوصية"],
+              ["share_of_voice", L === "en" ? "Share of voice" : L === "ku" ? "بەشی دەنگ" : "حصة الصوت"],
+              ["citation_rate", L === "en" ? "Evidence-matched citations" : L === "ku" ? "ئاماژەی هاوتای بەڵگە" : "الاستشهادات المطابقة للأدلة"],
+              ["top5_rate", L === "en" ? "Top-5 rate" : L === "ku" ? "ڕێژەی پێنجی یەکەم" : "معدل أول خمسة"],
+            ] as const).map(([key, label]) => {
+              const current = metrics[key].value_pct;
+              const previous = previousMetrics[key].value_pct;
+              const delta = current == null || previous == null ? null : Number((current - previous).toFixed(2));
+              return (
+                <div key={key} className="rounded-md border border-border bg-background/70 p-2">
+                  <div className="text-[10px] text-muted-foreground">{label}</div>
+                  <div className="mt-1 text-sm font-bold tabular-nums">
+                    {delta == null ? "—" : `${delta > 0 ? "+" : ""}${delta.toFixed(2)} pp`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            {L === "en" ? "Percentage-point differences between observed samples; they do not prove that a particular change caused the difference." : L === "ku" ? "جیاوازی خاڵی سەدی لە نێوان نموونە پێوانەکراوەکان؛ نایسەلمێنێت کە گۆڕانکارییەک هۆکاری ئەنجامەکە بووە." : "فروق بالنقاط المئوية بين عينتين مرصودتين؛ لا تثبت أن تغييراً معيناً تسبب في الفرق."}
+          </p>
+        </div>
+      )}
       {metrics && (
-        <div className="space-y-2 rounded-lg border border-primary/25 bg-primary/5 p-3">
+        <div className="space-y-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
           <div className="text-xs font-semibold text-primary">
             {L === "en" ? "Measured results from this run" : L === "ku" ? "ئەنجامی پێوانەکراوی ئەم جارە" : "النتائج المقاسة في هذا التشغيل"}
           </div>
