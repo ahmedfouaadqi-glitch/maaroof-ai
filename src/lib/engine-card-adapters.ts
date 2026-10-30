@@ -60,7 +60,7 @@ export function fromSuggestion(res: any): EngineCard[] {
   if (ce.length) {
     return ce
       .filter((v: any) => v?.status === "answered" && (ALL as readonly string[]).includes(v.engine))
-      .map((v: any) => ({ key: v.engine, score: v.score, items: v.note ? [String(v.note)] : [], basis: "live" as any }));
+      .map((v: any) => ({ key: v.engine, score: v.score, text: v.note ? cleanCouncilText(String(v.note)) : undefined, basis: "measured" as const }));
   }
   const vs = Array.isArray(res?.variants) ? res.variants : [];
   if (vs.length === 0) return [];
