@@ -411,7 +411,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
 function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: string; lang: Lang; workspaceId?: string | null }) {
   const { t } = useI18n();
   const [sourceUrl, setSourceUrl] = useState("");
-  const [ping, setPing] = useState(true);
+  const [ping, setPing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [pack, setPack] = useState<any>(null);
@@ -471,7 +471,11 @@ function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: s
 
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         <input type="checkbox" checked={ping} onChange={(e) => setPing(e.target.checked)} />
-        {t("authority_ping")}
+        {lang === "ar"
+          ? "إرسال إشعار IndexNow للرابط المنشور على نطاق معروف فقط (اختياري؛ لا يثبت الفهرسة ولا يخص موقع العميل)."
+          : lang === "ku"
+          ? "ئاگادارکردنەوەی IndexNow بۆ بەستەری Maaroof (ئارەزوومەندانە؛ بەڵگەی ئیندێکس نییە)."
+          : "Optionally submit an IndexNow notification for the Maaroof-hosted URL only; this does not prove indexing or submit your own domain."}
       </label>
 
       <button disabled={loading || !brand.trim()} onClick={generate}
