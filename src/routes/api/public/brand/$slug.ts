@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/public/brand/$slug")({
         const admin = createClient(SUPABASE_URL, SERVICE);
         const { data: pack } = await admin
           .from("brand_authority_packs")
-          .select("user_id, brand_name, brand_keywords, json_ld, markdown, html, summary, updated_at")
+          .select("user_id, workspace_id, brand_name, brand_keywords, json_ld, markdown, html, summary, updated_at")
           .eq("brand_slug", slug)
           .maybeSingle();
 
@@ -47,6 +47,7 @@ export const Route = createFileRoute("/api/public/brand/$slug")({
         admin.from("crawler_hits").insert({
           brand_slug: slug,
           user_id: (pack as any).user_id,
+          workspace_id: (pack as any).workspace_id || null,
           user_agent: ua.slice(0, 500),
           bot_name: bot,
           path: url.pathname,
@@ -57,7 +58,14 @@ export const Route = createFileRoute("/api/public/brand/$slug")({
         let md = String((pack as any).markdown || "");
         try {
           const { broadcastSection } = await import("@/lib/knowledge-facts");
-          const { data: bf } = await (admin as any).from("knowledge_facts").select("fact, confidence, broadcast, expires_at").eq("user_id", (pack as any).user_id).eq("broadcast", true).limit(20);
+          let factsQuery = (admin as any).from("knowledge_facts")
+            .select("fact, confidence, broadcast, expires_at")
+            .eq("user_id", (pack as any).user_id)
+            .eq("broadcast", true);
+          factsQuery = (pack as any).workspace_id
+            ? factsQuery.eq("workspace_id", (pack as any).workspace_id)
+            : factsQuery.is("workspace_id", null);
+          const { data: bf } = await factsQuery.limit(20);
           md += broadcastSection(bf || []);
         } catch {}
         const summary = String((pack as any).summary || "");
