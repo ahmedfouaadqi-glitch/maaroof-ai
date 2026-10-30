@@ -1,3 +1,4 @@
+import { workspaceGuard } from "@/lib/workspace-guard.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
@@ -163,6 +164,8 @@ export const Route = createFileRoute("/api/bizdev")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+        const workspaceDenied = await workspaceGuard(admin, userId, body);
+        if (workspaceDenied) return workspaceDenied;
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
