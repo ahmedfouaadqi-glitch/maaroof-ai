@@ -36,6 +36,8 @@ export type VisibilityProbeMetrics = {
   recommended_answers: number;
   recommendation_rate: VisibilityMetricValue;
   share_of_voice: VisibilityMetricValue;
+  total_brand_list_mentions: number;
+  competitors: Array<{ brand: string; mentions: number; share_of_voice_pct: number | null; appearance_rate_pct: number | null }>;
   citation_rate: VisibilityMetricValue;
   citation_rate_definition: string;
   ranked_answers: number;
@@ -115,11 +117,28 @@ export function calculateVisibilityProbeMetrics(
 
   let totalBrandListMentions = 0;
   let targetBrandListMentions = 0;
+  const brandCounts = new Map<string, { brand: string; mentions: number }>();
   for (const answer of answers) {
     const brands = uniqueLabels(Array.isArray(answer.brands) ? answer.brands : []);
     totalBrandListMentions += brands.length;
     targetBrandListMentions += brands.filter((candidate) => containsLabel(candidate, brand)).length;
+    for (const candidate of brands) {
+      const key = normalizeLabel(candidate);
+      if (!key) continue;
+      const current = brandCounts.get(key);
+      brandCounts.set(key, { brand: current?.brand || candidate, mentions: (current?.mentions || 0) + 1 });
+    }
   }
+  const competitors = [...brandCounts.entries()]
+    .filter(([, item]) => !containsLabel(item.brand, brand))
+    .map(([, item]) => ({
+      brand: item.brand,
+      mentions: item.mentions,
+      share_of_voice_pct: totalBrandListMentions > 0 ? Number(((item.mentions / totalBrandListMentions) * 100).toFixed(2)) : null,
+      appearance_rate_pct: answers.length > 0 ? Number(((item.mentions / answers.length) * 100).toFixed(2)) : null,
+    }))
+    .sort((a, b) => b.mentions - a.mentions || a.brand.localeCompare(b.brand))
+    .slice(0, 10);
 
   const citationAnswers = answers.filter((answer) => {
     const sources = new Set(
@@ -163,6 +182,8 @@ export function calculateVisibilityProbeMetrics(
     recommended_answers: recommendedAnswers.length,
     recommendation_rate: rate(recommendedAnswers.length, denominator),
     share_of_voice: rate(targetBrandListMentions, totalBrandListMentions),
+    total_brand_list_mentions: totalBrandListMentions,
+    competitors,
     citation_rate: rate(citationAnswers, denominator),
     citation_rate_definition: "Percentage of successful probe answers whose model-returned URL exactly matches a collected evidence URL. This is not native citation telemetry from the consumer product UI.",
     ranked_answers: rankedAnswers.length,
