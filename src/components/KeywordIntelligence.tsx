@@ -171,7 +171,7 @@ export function KeywordIntelligence() {
           workspace_id: workspaceId || null,
           attachment_id: attachmentId,
           live_search: liveSearch,
-          live_search_limit: Math.max(1, Math.min(50, Number(liveLimit) || 10)),
+          live_search_limit: Math.max(1, Math.min(200, Number(liveLimit) || 60)),
           competitors: comps.split(/[,،\n]/).map((x) => x.trim()).filter(Boolean),
           lang: l,
           request_text: c.title,

@@ -41,8 +41,8 @@ export const Route = createFileRoute("/api/dual-result")({
         }
 
         const contentLanguage = requestedContentLanguage || (["ar", "en", "ku"].includes(workspace?.language) ? workspace.language : "en");
-        const liveSerpRequested = b?.live_search === true;
-        const liveSearchLimit = Math.max(1, Math.min(50, Math.floor(Number(b?.live_search_limit) || 10)));
+        const liveSerpRequested = b?.live_search !== false; // live measurement is on unless explicitly turned off
+        const liveSearchLimit = Math.max(1, Math.min(200, Math.floor(Number(b?.live_search_limit) || 60)));
 
         // No file attached: keywords come from scanning the brand site (see below).
         let sheets: any[] = [];
