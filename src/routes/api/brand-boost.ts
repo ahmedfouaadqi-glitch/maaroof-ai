@@ -87,14 +87,15 @@ function fallbackPlan(platforms: Platform[], lang: string, brand: string, eviden
         platform,
         current_signal: probe?.current_answer ? (ar ? "إشارة موجودة" : ku ? "نیشان هەیە" : "signal found") : (ar ? "لم تُقَس" : ku ? "پێوانە نەکراوە" : "not measured"),
         feeding_basis: evidenceText,
-        recommended_actions: ar
-          ? ["انشر صفحة تعريف رسمية مختصرة قابلة للفهرسة.", "أضف FAQ و JSON-LD بنفس الحقائق الموجودة في المصادر.", "اربط المحتوى من الحسابات والقنوات الرسمية."]
+        recommended_actions: evidence.length ? (ar
+          ? ["راجع المعلومات المنشورة على المصدر المرتبط قبل اعتمادها.", "حدّث ملف العلامة بالحقائق التي يدعمها المصدر، وأضف مرجعها داخل الصفحة."]
           : ku
-            ? ["لاپەڕەیەکی فەرمی کورت بڵاو بکەرەوە.", "FAQ و JSON-LD زیاد بکە بە هەمان ڕاستییەکان.", "ناوەڕۆکەکە بە کەناڵە فەرمییەکانەوە ببەستەوە."]
-            : ["Publish a concise official, indexable profile page.", "Add FAQ and JSON-LD using only evidenced facts.", "Link the content from official channels."],
+            ? ["زانیارییە بڵاوکراوەکانی سەرچاوەکە بپشکنە پێش پەسەندکردنیان.", "پرۆفایلی براند بە ڕاستییە پشتگیریکراوەکان نوێ بکەرەوە و سەرچاوەیان بنووسە."]
+            : ["Review the linked source before accepting its claims.", "Update the brand profile only with source-supported facts and cite the source."]
+          ) : [],
         feed_strategy: ar ? "تغذية الويب العام بمحتوى رسمي قصير ومدعوم بروابط." : ku ? "خواردنی وێبی گشتی بە ناوەڕۆکی فەرمی و بە بەستەر." : "Feed the open web with concise official content backed by links.",
-        content_pieces: hasObservations ? [ar ? `صفحة: من هي ${brand}؟` : ku ? `لاپەڕە: ${brand} چییە؟` : `Page: What is ${brand}?`] : [],
-        injection_pack: hasObservations ? {
+        content_pieces: evidence.length ? [ar ? `صفحة موثقة عن ${brand} بالاستناد إلى المصادر المسترجعة` : ku ? `لاپەڕەی پشتبەستوو بە سەرچاوەکان دەربارەی ${brand}` : `Evidence-backed page about ${brand}`] : [],
+        injection_pack: evidence.length ? {
           channel: platform === "grok" ? "X / social thread" : "Official website or public article",
           title: ar ? `نبذة موثقة عن ${brand}` : ku ? `پێناسەی پشتڕاستکراوەی ${brand}` : `Verified overview of ${brand}`,
           article_markdown: ar
