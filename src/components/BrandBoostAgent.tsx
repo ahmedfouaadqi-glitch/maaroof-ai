@@ -895,6 +895,8 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
       ? (lang === "ar" ? "توليد ونشر بطاقة العلامة" : lang === "ku" ? "دروستکردن و بڵاوکردنەوەی کارتی براند" : "Generate/publish brand card")
       : a === "visibility_probe"
       ? (lang === "ar" ? "اختبار المحركات" : lang === "ku" ? "تاقیکردنەوەی بزوێنەرەکان" : "Engine probe")
+      : a === "visibility_analysis"
+      ? (lang === "ar" ? "تحليل الظهور التقديري" : lang === "ku" ? "شیکاری دەرکەوتنی خەمڵێنراو" : "Estimated visibility analysis")
       : a;
 
   return (
@@ -942,6 +944,7 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
                       {m.status ? ` · ${m.status}` : ""}
                       {m.charged_units != null ? ` · ${m.charged_units} units` : m.cost ? ` · ${m.cost} credits` : ""}
                       {m.duration_ms != null ? ` · ${m.duration_ms} ms` : ""}
+                      {m.visibility_percent != null ? ` · visibility ${m.visibility_percent}%` : ""}
                       {m.event_count ? ` · ${m.event_count} events` : ""}
                       {m.operation_id ? <span className="block font-mono">{String(m.operation_id).slice(0, 12)}…</span> : ""}
                       {m.pinged ? " · pinged" : ""}
