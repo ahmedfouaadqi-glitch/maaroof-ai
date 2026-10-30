@@ -324,6 +324,13 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
               {(p.recommended_actions || []).length > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "إجراءات التحسين" : lang === "ku" ? "کردارەکانی باشترکردن" : "Improvement actions"}</div>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {lang === "ar"
+                      ? "إحالة التوصية إلى مصدر لا تثبت وحدها أن نص المصدر يدعم الادعاء؛ راجع المصدر نفسه قبل اعتماد الإجراء."
+                      : lang === "ku"
+                      ? "ئاماژەدان بە سەرچاوە بە تەنها پشتگیری ناوەڕۆکی سەرچاوە بۆ بانگەشەکە ناسەلمێنێت؛ پێش پەسەندکردنی کردارەکە سەرچاوەکە بپشکنە."
+                      : "A source reference alone does not establish that the source supports the claim; inspect the source before acting."}
+                  </p>
                   <ul className="mt-1 list-inside list-disc break-words">
                     {(p.recommended_actions || []).map((a: string, j: number) => {
                       const assessment = p.recommendation_assessments?.[j];
@@ -331,8 +338,8 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                       return (
                         <li key={j}>
                           <span>{a}</span>
-                          <span className={cited ? "ms-2 text-[9px] font-semibold text-emerald-700 dark:text-emerald-400" : "ms-2 text-[9px] font-semibold text-amber-700 dark:text-amber-400"}>
-                            {cited ? (lang === "ar" ? "مرتبط بمرجع" : "Evidence-linked") : (lang === "ar" ? "يحتاج تحقق" : "Needs verification")}
+                          <span className={cited ? "ms-2 text-[9px] font-semibold text-muted-foreground" : "ms-2 text-[9px] font-semibold text-amber-700 dark:text-amber-400"}>
+                            {cited ? (lang === "ar" ? "إحالة إلى مصدر" : lang === "ku" ? "ئاماژە بە سەرچاوە" : "Source referenced (not validated)") : (lang === "ar" ? "يحتاج تحقق" : "Needs verification")}
                           </span>
                           {assessment?.evidence_refs?.length > 0 && <span className="ms-1 text-[9px] text-muted-foreground">[{assessment.evidence_refs.join(", ")}]</span>}
                         </li>
