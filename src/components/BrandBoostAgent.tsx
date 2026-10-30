@@ -161,7 +161,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                 : "Probe how your brand appears across 10 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
             </p>
           </div>
-          <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
+          <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" workspaceId={workspaceId} />
         
 
         
