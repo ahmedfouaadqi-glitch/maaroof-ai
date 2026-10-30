@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { strToU8, zipSync } from "fflate";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolHistory } from "@/components/ToolHistory";
@@ -481,6 +482,84 @@ function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: s
   };
 
   const copy = (s: string) => { navigator.clipboard.writeText(s).catch(() => {}); };
+  const exportWebsitePack = () => {
+    try {
+      const rawSite = sourceUrl.trim() || String(pack?.json_ld?.url || "");
+      const site = new URL(rawSite);
+      if (!["http:", "https:"].includes(site.protocol) || site.username || site.password || !site.hostname.includes(".")) {
+        throw new Error("أدخل رابط الموقع الرسمي بصيغة https://example.com أولاً.");
+      }
+      const pageUrl = site.origin + "/about/brand/";
+      const baseJsonLd = typeof pack.json_ld === "string" ? JSON.parse(pack.json_ld) : pack.json_ld;
+      const jsonLd = {
+        ...(baseJsonLd && typeof baseJsonLd === "object" && !Array.isArray(baseJsonLd) ? baseJsonLd : {}),
+        "@context": baseJsonLd?.["@context"] || "https://schema.org",
+        "@id": pageUrl + "#organization",
+        "url": site.origin,
+        "mainEntityOfPage": { "@type": "WebPage", "@id": pageUrl },
+      };
+      const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[ch]!));
+      const markdownHtml = String(pack.markdown || "").split(/\r?\n/).map((line: string) => {
+        const heading = line.match(/^(#{1,3})\s+(.+)$/);
+        if (heading) return "<h" + heading[1].length + ">" + escapeHtml(heading[2]) + "</h" + heading[1].length + ">";
+        if (/^\s*[-*]\s+/.test(line)) return "<li>" + escapeHtml(line.replace(/^\s*[-*]\s+/, "")) + "</li>";
+        if (!line.trim()) return "";
+        return "<p>" + escapeHtml(line) + "</p>";
+      }).join("\n");
+      const safeJsonLd = JSON.stringify(jsonLd, null, 2).replace(/</g, "\\u003c");
+      const html = [
+        "<!doctype html><html lang=\"ar\" dir=\"rtl\"><head><meta charset=\"utf-8\">",
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+        "<title>" + escapeHtml(brand) + " | الملف الرسمي للعلامة</title>",
+        "<link rel=\"canonical\" href=\"" + pageUrl + "\">",
+        "<script type=\"application/ld+json\">" + safeJsonLd + "</script>",
+        "<style>body{font-family:Arial,sans-serif;max-width:920px;margin:48px auto;padding:0 22px;line-height:1.8;color:#20242b}h1,h2,h3{line-height:1.3}li{margin:6px 0}</style>",
+        "</head><body><main><h1>" + escapeHtml(brand) + "</h1>",
+        "<p>الصفحة الرسمية التعريفية بالعلامة. تُنشر بعد مراجعة المعلومات من مالك الموقع.</p>",
+        "<article>" + markdownHtml + "</article></main></body></html>",
+      ].join("");
+      const sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' +
+        escapeHtml(pageUrl) + "</loc><lastmod>" + new Date().toISOString().slice(0, 10) + "</lastmod></url></urlset>";
+      const readme = [
+        "# حزمة تركيب صفحة العلامة — Maaroof AI",
+        "",
+        "## المسار المقترح",
+        pageUrl,
+        "",
+        "## خطوات التركيب",
+        "1. راجع جميع الحقائق والروابط في HTML وJSON-LD قبل النشر.",
+        "2. أنشئ صفحة مستقلة في الموقع على المسار /about/brand/ أو مسار مكافئ، ثم ضع محتوى brand-profile.html فيها.",
+        "3. أضف رابطاً واضحاً من الصفحة الرئيسية إلى صفحة التعريف؛ لا تضع كامل الصفحة داخل الرئيسية.",
+        "4. أضف عنوان الصفحة إلى ملف sitemap.xml الحالي مع الحفاظ على بقية عناوينه. ملف sitemap-entry.xml هو مدخل إرشادي وليس ملفاً بديلاً.",
+        "5. افحص robots.txt ووسم noindex وcanonical. أضف مقتطف robots عند الحاجة فقط، ولا تستبدل ملف robots.txt الحالي.",
+        "6. بعد النشر تحقق من استجابة HTTP 200 ومن ظهور JSON-LD في مصدر الصفحة.",
+        "",
+        "## ملاحظة",
+        "هذه الحزمة لم تُنشر تلقائياً. مسؤولية تركيبها ومراجعتها ونشرها تبقى لدى مالك الموقع أو مطوّره. لا يوجد ضمان للفهرسة أو لاستشهاد محركات الذكاء الاصطناعي.",
+      ].join("\n");
+      const robots = "# مقتطف اختياري — لا تستبدل ملف robots.txt الحالي\nUser-agent: *\nAllow: /about/brand/\n";
+      const files = {
+        "README-ar.md": strToU8(readme),
+        "brand-profile.html": strToU8(html),
+        "brand-profile.jsonld": strToU8(JSON.stringify(jsonLd, null, 2)),
+        "brand-profile.md": strToU8(String(pack.markdown || "")),
+        "sitemap-entry.xml": strToU8(sitemap),
+        "robots-snippet.txt": strToU8(robots),
+      };
+      const zipped = zipSync(files, { level: 6 });
+      const buffer = zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
+      const blob = new Blob([buffer], { type: "application/zip" });
+      const anchor = document.createElement("a");
+      anchor.href = URL.createObjectURL(blob);
+      anchor.download = (pack.slug || "brand") + "-website-install-pack.zip";
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
+    } catch (error: any) {
+      setErr(error?.message || "تعذر إنشاء حزمة الموقع");
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -584,6 +663,7 @@ function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: s
 
           {/* Export buttons */}
           <div className="flex flex-wrap gap-2">
+            <button onClick={exportWebsitePack} className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400"><Download className="size-3" /> {lang === "ar" ? "حزمة تركيب الموقع ZIP" : "Website install pack ZIP"}</button>
             <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.json`, JSON.stringify({ summary: pack.summary, json_ld: pack.json_ld, markdown: pack.markdown, public_url: pack.public_url }, null, 2), "application/json")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> JSON</button>
             <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.md`, String(pack.markdown || ""), "text/markdown")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> Markdown</button>
           </div>
