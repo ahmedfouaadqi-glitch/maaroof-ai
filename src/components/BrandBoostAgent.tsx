@@ -27,14 +27,14 @@ import { botCategory, type BotCategory } from "@/lib/crawler-bots";
 const PLATFORMS: string[] = [...ENGINE_KEYS];
 const MAX_PLATFORMS_PER_RUN = 10;
 
-export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string | null }) {
+export function BrandBoostAgent({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any }) {
   const { t, lang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
-  const [brand, setBrand] = useState((profile as any)?.brand_name || "");
-  const [kw, setKw] = useState((profile as any)?.brand_keywords || "");
-  const [websiteUrl, setWebsiteUrl] = useState((profile as any)?.website_url || (profile as any)?.website || "");
+  const [brand, setBrand] = useState(String(workspace?.entity_truth_card?.entity_name || workspace?.name || (profile as any)?.brand_name || ""));
+  const [kw, setKw] = useState(Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || (profile as any)?.brand_keywords || ""));
+  const [websiteUrl, setWebsiteUrl] = useState(String(workspace?.brand_url || (profile as any)?.website_url || (profile as any)?.website || ""));
   // Fill once from the saved profile when it arrives; never overwrite what the user typed.
   useEffect(() => {
     const pb = (profile as any)?.brand_name;
