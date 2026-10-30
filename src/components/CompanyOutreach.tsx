@@ -16,7 +16,7 @@ import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 type Mode = "email" | "brand";
 
-export function CompanyOutreach() {
+export function CompanyOutreach({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(lang);
   let auth: ReturnType<typeof useAuth> | null = null;
@@ -24,8 +24,8 @@ export function CompanyOutreach() {
   const specialty = (auth?.profile as any)?.specialty || "";
 
   const [mode, setMode] = useState<Mode>("email");
-  const [company, setCompany] = useState("");
-  const [sector, setSector] = useState("");
+  const [company, setCompany] = useState(String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""));
+  const [sector, setSector] = useState(String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || ""));
   const [goal, setGoal] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export function CompanyOutreach() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/company-email", {
         method: "POST", headers,
-        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: getEffectiveScope(auth?.profile, "outreach") }),
+        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: getEffectiveScope(auth?.profile, "outreach"), workspace_id: workspaceId }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");

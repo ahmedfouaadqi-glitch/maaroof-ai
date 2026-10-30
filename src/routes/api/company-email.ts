@@ -1,3 +1,4 @@
+import { workspaceGuard } from "@/lib/workspace-guard.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { fcSearch } from "@/lib/firecrawl";
@@ -14,7 +15,8 @@ export const Route = createFileRoute("/api/company-email")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { company, sector, notes, lang = "en", goal, mode, scope } = await request.json();
+          const body = await request.json();
+          const { company, sector, notes, lang = "en", goal, mode, scope } = body;
           if (!company) return Response.json({ error: "company required" }, { status: 400 });
           const m: Mode = (mode === "search" || mode === "email" || mode === "brand") ? mode : "email";
 
@@ -29,6 +31,8 @@ export const Route = createFileRoute("/api/company-email")({
           const { data: userData } = await admin.auth.getUser(authHeader.slice(7));
           const userId = userData?.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const workspaceDenied = await workspaceGuard(admin, userId, body);
+          if (workspaceDenied) return workspaceDenied;
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.

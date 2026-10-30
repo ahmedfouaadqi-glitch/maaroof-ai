@@ -18,7 +18,7 @@ import { apiFetch } from "@/lib/api-client";
 import { SourcesList } from "@/components/SourcesList";
 
 
-export function BizDev() {
+export function BizDev({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -27,7 +27,7 @@ export function BizDev() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [form, setForm] = useState({
-    business_name: "", stage: "", sector: "", city: "",
+    business_name: String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""), stage: "", sector: String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || ""), city: String(workspace?.city || ""),
     current_revenue_iqd: "", monthly_customers: "", team_size: "",
     channels: "", goals: "", challenges: "", budget_iqd: "", notes: "",
   });
@@ -50,7 +50,7 @@ export function BizDev() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
-      const r = await apiFetch("/api/bizdev", { method: "POST", headers, body: JSON.stringify({ ...form, lang: outLang, scope: getEffectiveScope(auth?.profile, "bizdev") }) });
+      const r = await apiFetch("/api/bizdev", { method: "POST", headers, body: JSON.stringify({ ...form, lang: outLang, scope: getEffectiveScope(auth?.profile, "bizdev"), workspace_id: workspaceId }) });
       const data = await r.json();
       if (!r.ok) { setError(data?.error || "error"); return; }
       setResult(data.result);

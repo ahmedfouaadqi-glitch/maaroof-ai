@@ -1,3 +1,4 @@
+import { workspaceGuard } from "@/lib/workspace-guard.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
@@ -38,6 +39,8 @@ export const Route = createFileRoute("/api/what-if")({
         }
 
         const body = await request.json();
+        const workspaceDenied = await workspaceGuard(admin, userId, body);
+        if (workspaceDenied) return workspaceDenied;
 
         const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });

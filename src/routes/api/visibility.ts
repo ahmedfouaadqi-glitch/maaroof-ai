@@ -1,4 +1,4 @@
-import { normalizeEngines } from "@/lib/ai-engines";
+import { normalizeEngines, ENGINE_KEYS } from "@/lib/ai-engines";
 import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
@@ -6,7 +6,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
-import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
+import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
 import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
@@ -194,14 +194,15 @@ export const Route = createFileRoute("/api/visibility")({
 
           // Micro-probe (optional): live question to the engines the user selected.
           // Absent `probe_engines` → the original visibility flow below runs unchanged.
-          if (Array.isArray(body.probe_engines) && body.probe_engines.length) {
+          { // The primary visibility action now runs the live ten-engine probe; estimates are not the default result.
             const { resolveProbePolicy } = await import("@/lib/tokens.server");
             const ent = await enginesAllowedForUser(admin, userId);
             const policy = await resolveProbePolicy(userId);
             // All requested engines run (up to ten); account plan no longer shortens the council.
             void ent;
             const picked = normalizeEngines(body.probe_engines);
-            const { engines } = await excludeUnhealthyEngines(picked);
+            // Health telemetry is diagnostic only: historical failures must never silently remove requested engines.
+            const engines = picked.length ? ENGINE_KEYS.filter((e) => picked.includes(e)) : [...ENGINE_KEYS];
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
             let probeTopic = keywords;
             if (!probeTopic && workspace) {
@@ -223,6 +224,24 @@ export const Route = createFileRoute("/api/visibility")({
             const market = describeMarket(body.scope);
             const models = await resolveEngineModels(engines);
             const q = blindProbeQuestion(probeTopic, market.region);
+            const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
+              if (!workspaceId || !workspace) return;
+              const previousCard = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
+              const nextCard = {
+                ...previousCard,
+                entity_name: previousCard.entity_name || brand,
+                keywords: keywords || previousCard.keywords || probeTopic,
+                last_visibility_probe: {
+                  operation_id: pRun,
+                  measured_at: new Date().toISOString(),
+                  market: market.region,
+                  metrics,
+                  answers: resultAnswers.map((answer: any) => ({ engine: answer.engine, mentioned: answer.mentioned, rank: answer.rank, status: answer.status, provider: answer.provider, gateway_model: answer.gateway_model, grounded_provider: answer.grounded_provider, grounded_gateway_model: answer.grounded_gateway_model, sources: (answer.sources || []).slice(0, 5) })),
+                },
+              };
+              const { error } = await admin.from("workspaces").update({ entity_truth_card: nextCard }).eq("id", workspaceId).eq("owner_id", userId);
+              if (error) console.warn("[visibility] workspace truth-card update failed", error.message);
+            };
             const PA = await import("@/lib/maaroof/probe-answer");
             let evidence: { url: string; title: string }[] = [];
             let evidenceText = "";
@@ -256,7 +275,7 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; cited_urls: string[]; ms: number
+              sources: { url: string; title: string }[]; cited_urls: string[]; provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
@@ -270,19 +289,69 @@ export const Route = createFileRoute("/api/visibility")({
                   ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
                   : "PHASE 2 — EVIDENCE-GROUNDED REVIEW: Evaluate whether the target entity is sufficiently supported by the public evidence included in the user's audit question. State exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof.";
                 const actualQuestion = questionForPhase(e, phase, blindAnswer);
-                const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-                  method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
-                  body: JSON.stringify({ model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages: [
-                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence organic recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
-                    { role: "user", content: actualQuestion },
-                  ] }),
-                });
-                if (!r.ok) return { kind: "error" as const };
-                const j: any = await r.json();
-                const p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
-                return p ? { kind: "ok" as const, p } : { kind: "empty" as const };
+                const messages = [
+                  { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer using the configured ${e} model.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
+                  { role: "user", content: actualQuestion },
+                ];
+                const payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
+                let r: Response | null = null;
+                let provider: "openrouter" | "lovable_ai" = "openrouter";
+                const openRouterKey = process.env.OPENROUTER_API_KEY;
+                if (openRouterKey) {
+                  try {
+                    const candidate = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                      method: "POST",
+                      headers: { "Authorization": `Bearer ${openRouterKey}`, "Content-Type": "application/json", "HTTP-Referer": process.env.APP_URL || "https://maaroof.ai", "X-Title": "MAAROOF AI" },
+                      signal: ctl.signal,
+                      body: JSON.stringify(payload),
+                    });
+                    if (candidate.ok) r = candidate;
+                    else console.warn("[visibility.probe] OpenRouter failed; falling back to Lovable", e, candidate.status);
+                  } catch (err) {
+                    if (ctl.signal.aborted) throw err;
+                    console.warn("[visibility.probe] OpenRouter request failed; falling back to Lovable", e);
+                  }
+                }
+                if (!r) {
+                  provider = "lovable_ai";
+                  r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+                    method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
+                    body: JSON.stringify(payload),
+                  });
+                }
+                if (!r.ok) return { kind: "error" as const, provider, model: String(model || "") };
+                let j: any = await r.json();
+                let p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
+                let actualModel = String(j?.model || model || "");
+                if (!p && provider === "openrouter") {
+                  // Empty OpenRouter payloads are failures too: retry once through Lovable.
+                  provider = "lovable_ai";
+                  const fallbackCtl = new AbortController();
+                  const fallbackTimer = setTimeout(() => fallbackCtl.abort(), PA.PROBE_TIMEOUT_MS);
+                  try {
+                    const fallbackResponse = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, { method: "POST", headers: lovableAiHeaders(apiKey), signal: fallbackCtl.signal, body: JSON.stringify(payload) });
+                    if (!fallbackResponse.ok) return { kind: "error" as const, provider, model: String(model || "") };
+                    j = await fallbackResponse.json();
+                    p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
+                    actualModel = String(j?.model || model || "");
+                  } finally { clearTimeout(fallbackTimer); }
+                }
+                return p ? { kind: "ok" as const, p, provider, model: actualModel } : { kind: "empty" as const, provider, model: actualModel };
               } catch (err: any) {
-                return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const) };
+                if (provider === "openrouter") {
+                  // A timed-out or network-failed OpenRouter attempt gets its own bounded Lovable retry.
+                  const fallbackCtl = new AbortController();
+                  const fallbackTimer = setTimeout(() => fallbackCtl.abort(), PA.PROBE_TIMEOUT_MS);
+                  try {
+                    const fallbackResponse = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, { method: "POST", headers: lovableAiHeaders(apiKey), signal: fallbackCtl.signal, body: JSON.stringify(payload) });
+                    if (!fallbackResponse.ok) return { kind: fallbackCtl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "lovable_ai" as const, model: String(model || "") };
+                    const fallbackJson: any = await fallbackResponse.json();
+                    const fallbackParsed = PA.parseProbeContent(fallbackJson?.choices?.[0]?.message?.content);
+                    return fallbackParsed ? { kind: "ok" as const, p: fallbackParsed, provider: "lovable_ai" as const, model: String(fallbackJson?.model || model || "") } : { kind: "empty" as const, provider: "lovable_ai" as const, model: String(fallbackJson?.model || model || "") };
+                  } catch { return { kind: fallbackCtl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "lovable_ai" as const, model: String(model || "") }; }
+                  finally { clearTimeout(fallbackTimer); }
+                }
+                return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "unknown" as const, model: String(model || "") };
               } finally { clearTimeout(t); }
             };
             const questionForPhase = (engine: string, phase: "blind" | "grounded", blindAnswer?: string) => {
@@ -299,7 +368,7 @@ export const Route = createFileRoute("/api/visibility")({
               ].join("\n");
             };
             const groundedQuestionTemplate = () => questionForPhase("[model]", "grounded", "[the model's phase-1 blind answer]");
-            const blindResults = new Map<string, { p: any; startedAt: number; blindMs: number }>();
+            const blindResults = new Map<string, { p: any; startedAt: number; blindMs: number; provider: string; model: string }>();
             const askEngine = async (e: string, phase: "blind" | "grounded") => {
               const previous = blindResults.get(e);
               const startedAt = previous?.startedAt ?? Date.now();
@@ -319,7 +388,7 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 completedUnits++;
-                blindResults.set(e, { p: res.p, startedAt, blindMs: phaseMs });
+                blindResults.set(e, { p: res.p, startedAt, blindMs: phaseMs, provider: res.provider, model: res.model });
                 statuses[e] = {
                   status: "blind_answered", blind_status: "answered", ms: phaseMs, blind_ms: phaseMs,
                   blind_query: exactQuestion,
@@ -336,7 +405,7 @@ export const Route = createFileRoute("/api/visibility")({
                 status: res.kind === "ok" ? "answered" : "partial",
                 blind_status: "answered", grounded_status: res.kind,
                 ms: totalMs, blind_ms: previous.blindMs, grounded_ms: phaseMs,
-                blind_query: q, grounded_query: exactQuestion,
+                blind_query: q, grounded_query: exactQuestion, provider: res.provider, gateway_model: res.model, requested_engine: e,
               };
               answers.push({
                 engine: e,
@@ -354,6 +423,10 @@ export const Route = createFileRoute("/api/visibility")({
                 grounded_ms: phaseMs,
                 sources,
                 cited_urls: p.urls,
+                provider: previous.provider,
+                gateway_model: previous.model,
+                grounded_provider: res.provider,
+                grounded_gateway_model: res.model,
                 ms: totalMs,
               });
             };
@@ -399,6 +472,7 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
+                await persistWorkspaceProbe(metrics, answers);
                 bgMetrics = metrics;
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
@@ -458,6 +532,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
+            await persistWorkspaceProbe(metrics, reasoned);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
             const { recordBrandOperation } = await import("@/lib/brand-operations.server");
             await recordBrandOperation(admin, {

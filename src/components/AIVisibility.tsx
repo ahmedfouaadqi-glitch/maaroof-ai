@@ -13,11 +13,11 @@ import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
 import { ENGINES } from "@/components/engine-logos";
+import { ENGINE_KEYS } from "@/lib/ai-engines";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { SourcesList } from "@/components/SourcesList";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
-import { EngineProbePanel } from "@/components/EngineProbePanel";
 import { engineKeyFromName } from "@/lib/engine-families";
 
 
@@ -33,9 +33,10 @@ type PanelProps = {
   /** Override which tool's geo-scope is used. */
   toolKey?: "research" | "brand";
   workspaceId?: string | null;
+  workspace?: any;
 };
 
-export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null }: PanelProps) {
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null, workspace = null }: PanelProps) {
   const { t, lang: uiLang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
   useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
@@ -44,12 +45,14 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
   try { auth = useAuth(); } catch {}
 
   // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
-  const [brand, setBrand] = useState(brandProp ?? (auth?.profile as any)?.brand_name ?? "");
-  const [keywords, setKeywords] = useState(kwProp ?? (auth?.profile as any)?.brand_keywords ?? "");
+  const workspaceBrand = String(workspace?.entity_truth_card?.entity_name || workspace?.name || "");
+  const workspaceKeywords = Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || "");
+  const [brand, setBrand] = useState(brandProp ?? (workspaceBrand || (auth?.profile as any)?.brand_name || ""));
+  const [keywords, setKeywords] = useState(kwProp ?? (workspaceKeywords || (auth?.profile as any)?.brand_keywords || ""));
 
   // If parent prop changes (e.g. user typed in the Boost "Run" tab), sync once.
-  useEffect(() => { if (brandProp !== undefined) setBrand(brandProp); }, [brandProp]);
-  useEffect(() => { if (kwProp !== undefined) setKeywords(kwProp); }, [kwProp]);
+  useEffect(() => { if (brandProp !== undefined) setBrand(brandProp); else if (workspaceBrand) setBrand(workspaceBrand); }, [brandProp, workspaceBrand]);
+  useEffect(() => { if (kwProp !== undefined) setKeywords(kwProp); else if (workspaceKeywords) setKeywords(workspaceKeywords); }, [kwProp, workspaceKeywords]);
 
   // Fall back to profile defaults when nothing set yet.
   useEffect(() => {
@@ -71,19 +74,47 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId }),
+        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
       });
       const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
-      setOut(j.result);
+      if (!res.ok || !j?.ok) throw new Error(j?.error || "visibility_request_failed");
+      if (!j?.probe || j?.probe?.basis !== "measured") throw new Error("live_probe_result_missing");
+      const probe = j.probe;
+      const metrics = probe.visibility_metrics || {};
+      const answers = Array.isArray(probe.answers) ? probe.answers : [];
+      const engineName = (key: string) => ENGINES.find((engine) => engine.key === key)?.name || key;
+      setOut({
+        basis: "live_engine_probe",
+        operation_id: j.operation_id,
+        visibility_percent: metrics?.mention_rate?.value_pct ?? null,
+        confidence: "measured",
+        sentiment: "not_measured",
+        appearance_summary: `${metrics?.answered_engines ?? answers.length}/${metrics?.requested_engines ?? ENGINE_KEYS.length} ${outLang === "en" ? "engines returned usable answers" : outLang === "ku" ? "بزوێنەر وەڵامی بەکارهێنراویان گەڕاندەوە" : "محركات أعادت إجابات قابلة للاستخدام"}. ${outLang === "en" ? "Brand mention rate" : outLang === "ku" ? "ڕێژەی هێنانی ناو" : "معدل ذكر العلامة"}: ${metrics?.mention_rate?.value_pct ?? "—"}%.`,
+        platforms: answers.map((answer: any) => ({
+          name: engineName(answer.engine),
+          mentioned: Boolean(answer.mentioned),
+          why: answer.answer || "",
+          action: answer.reason || "",
+          status: answer.status,
+          provider: answer.provider,
+          gateway_model: answer.gateway_model,
+          sources: answer.sources || [],
+          answer: answer.answer,
+          grounded_answer: answer.grounded_answer,
+          rank: answer.rank,
+        })),
+        recommendations: [],
+        sources: (probe.evidence || []).map((item: any) => ({ title: item.title, url: item.url, snippet: "" })),
+        sources_used: probe.evidence_source,
+        visibility_metrics: metrics,
+        probe,
+      });
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
     } catch (e: any) { setErr(e?.message || "failed"); }
     finally { setBusy(false); }
   };
-
-  const findEngine = (name: string) => ENGINES.find((e) => e.name.toLowerCase() === String(name || "").toLowerCase());
 
   const kwOptionalLabel =
     outLang === "ar" ? " (اختياري)" :
@@ -126,7 +157,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         <button onClick={run} disabled={busy || !brand.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
-          {busy ? t("ag_running") : t("ag_vis_run")}
+          {busy ? t("ag_running") : (outLang === "ar" ? "فحص حي للمحركات العشرة" : outLang === "ku" ? "پشکنینی زیندووی دە بزوێنەر" : "Run live ten-engine probe")}
         </button>
       </div>
 
@@ -137,18 +168,18 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         <div className="mt-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-              <div className="text-[10px] uppercase tracking-widest text-primary font-bold">{t("ag_vis_score")}</div>
-              <div className="mt-1 text-3xl font-bold text-gradient">{out.visibility_percent}%</div>
+              <div className="text-[10px] uppercase tracking-widest text-primary font-bold">{out.basis === "live_engine_probe" ? (outLang === "ar" ? "معدل ذكر العلامة" : outLang === "ku" ? "ڕێژەی هێنانی ناوی براند" : "Brand mention rate") : t("ag_vis_score")}</div>
+              <div className="mt-1 text-3xl font-bold text-gradient">{out.visibility_percent == null ? "—" : String(out.visibility_percent) + "%"}</div>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                {outLang === "ar" ? "متوسط تقديري لدرجات المحركات العشرة التي ولّدها التحليل؛ ليس قياساً مستقلاً مثبتاً للظهور." : outLang === "ku" ? "ناوەندییەکی خەمڵێنراوە لە نمرەکانی ١٠ بزوێنەر؛ پێوانەیەکی سەربەخۆی پشتڕاستکراو نییە." : "Arithmetic mean of the ten model-generated engine estimates; not an independently verified visibility measurement."}
+                {out.basis === "live_engine_probe" ? (outLang === "ar" ? "معدل ذكر محسوب من الإجابات الحية الناجحة فقط؛ وليس ضماناً لما يظهر لكل مستخدم في واجهة المحرك." : outLang === "ku" ? "ڕێژەی هێنانی ناو لە وەڵامە زیندووە سەرکەوتووەکان هەژمار کراوە." : "Mention rate calculated from successful live API answers; not a guarantee of consumer-facing results.") : "No live measurement available."}
               </p>
             </div>
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
               <div className="text-[10px] uppercase tracking-widest text-accent font-bold">{t("ag_vis_sentiment")}</div>
-              <div className="mt-1 text-lg font-semibold capitalize">{out.sentiment}</div>
+              <div className="mt-1 text-lg font-semibold capitalize">{out.basis === "live_engine_probe" ? (outLang === "ar" ? "غير مقاس" : outLang === "ku" ? "پێوانە نەکراوە" : "Not measured") : out.sentiment}</div>
             </div>
             <div className="rounded-xl border border-border bg-background/40 p-3">
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">confidence</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">{out.basis === "live_engine_probe" ? (outLang === "ar" ? "أساس القياس" : outLang === "ku" ? "بنەمای پێوانە" : "Measurement basis") : "confidence"}</div>
               <div className="mt-1 text-lg font-semibold capitalize">{out.confidence}</div>
             </div>
           </div>
@@ -165,12 +196,10 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
               answers={(out.platforms || []).flatMap((p: any) => {
                 const key = engineKeyFromName(p.name);
                 const meta = [p.trust_signal, p.citation_method].filter(Boolean).join(" · ");
-                return key ? [{ key, score: p.score, verdict: meta, text: p.why, action: p.action, basis: "estimated" as const }] : [];
+                return key ? [{ key, verdict: p.status ? (p.mentioned ? (outLang === "ar" ? "ذُكرت العلامة" : outLang === "ku" ? "ناوی براند هاتووە" : "Brand mentioned") : (outLang === "ar" ? "لم تُذكر العلامة" : outLang === "ku" ? "ناوی براند نەهاتووە" : "Brand not mentioned")) : meta, text: p.answer || p.why, action: p.action, basis: "measured" as const }] : [];
               })}
             />
           </div>
-
-          <EngineProbePanel brand={brand} keywords={keywords} scope={getEffectiveScope(auth?.profile, toolKey)} workspaceId={workspaceId} />
 
           {out.recommendations?.length > 0 && (
             <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
@@ -181,6 +210,19 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </div>
           )}
 
+          {out.visibility_metrics && (
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {(["engine_coverage", "mention_rate", "recommendation_rate", "share_of_voice", "citation_rate", "top5_rate"] as const).map((key) => {
+                const metric = out.visibility_metrics[key];
+                const label = ({ engine_coverage: outLang === "ar" ? "تغطية الإجابات" : "Answer coverage", mention_rate: outLang === "ar" ? "معدل ذكر العلامة" : "Brand mention rate", recommendation_rate: outLang === "ar" ? "معدل التوصية" : "Recommendation rate", share_of_voice: outLang === "ar" ? "حصة الصوت" : "Share of voice", citation_rate: outLang === "ar" ? "مطابقة الاستشهادات للأدلة" : "Evidence-matched citations", top5_rate: outLang === "ar" ? "الظهور ضمن أول 5" : "Top-5 rate" } as const)[key];
+                return <div key={key} className="rounded-lg border border-border bg-background/40 p-3">
+                  <div className="text-[10px] text-muted-foreground">{label}</div>
+                  <div className="mt-1 text-xl font-bold">{metric?.value_pct == null ? "—" : String(metric.value_pct) + "%"}</div>
+                  <div className="text-[10px] text-muted-foreground">{metric?.numerator ?? 0}/{metric?.denominator ?? 0}</div>
+                </div>;
+              })}
+            </div>
+          )}
           <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <ProactiveNextStep
 
@@ -199,6 +241,6 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 }
 
 // Back-compat: keep standalone export used by /agent route.
-export function AIVisibility() {
-  return <VisibilityPanel />;
+export function AIVisibility({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
+  return <VisibilityPanel workspaceId={workspaceId || workspace?.id || null} workspace={workspace} />;
 }

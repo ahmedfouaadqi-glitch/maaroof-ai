@@ -22,7 +22,7 @@ export const TOOL_UI: Record<string, LazyExoticComponent<ComponentType<any>>> = 
   visibility: lazy(() => import("@/components/AIVisibility").then((m) => ({ default: m.AIVisibility }))),
   research: lazy(() => import("@/components/SmartResearch").then((m) => ({ default: m.SmartResearch }))),
   company_email: lazy(() => import("@/components/CompanyOutreach").then((m) => ({ default: m.CompanyOutreach }))),
-  security_scan: lazy(() => import("@/components/SecurityScanCard").then((m) => ({ default: (p: any) => m.SecurityScanCard({ lang: p?.lang || "ar" }) }))),
+  security_scan: lazy(() => import("@/components/SecurityScanCard").then((m) => ({ default: (p: any) => m.SecurityScanCard({ lang: p?.lang || "ar", workspaceId: p?.workspaceId, workspace: p?.workspace }) }))),
   keyword_intelligence: lazy(() => import("@/components/KeywordIntelligence").then((m) => ({ default: m.KeywordIntelligence }))),
   report: lazy(() => import("@/components/ReportBuilder").then((m) => ({ default: m.ReportBuilder }))),
 };
@@ -45,7 +45,7 @@ export function toolName(key: string, l: L): string {
 }
 
 /** Skills tab: each skill opens its real tools inline, same components and logic as before. */
-export function SkillToolsPanel({ lang, skill, tool, workspaceId = null }: { lang: L; skill?: string; tool?: string; workspaceId?: string | null }) {
+export function SkillToolsPanel({ lang, skill, tool, workspaceId = null, workspace = null }: { lang: L; skill?: string; tool?: string; workspaceId?: string | null; workspace?: any }) {
   const c = T[lang];
   const vis = useVisibility();
   const s = MAAROOF_SKILLS.find((x) => x.key === skill);
@@ -88,7 +88,7 @@ export function SkillToolsPanel({ lang, skill, tool, workspaceId = null }: { lan
       )}
       {Tool && tool && visible(tool) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool {...(tool === "brand_boost" ? { workspaceId } : {})} /></Suspense>
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool key={workspaceId || workspace?.id || "account"} lang={lang} workspaceId={workspaceId || workspace?.id || null} workspace={workspace} /></Suspense>
         </section>
       )}
     </div>

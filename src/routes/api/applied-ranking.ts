@@ -6,6 +6,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
+import { workspaceGuard } from "@/lib/workspace-guard.server";
 
 type Body = {
   brand_name: string;
@@ -15,6 +16,8 @@ type Body = {
   app_name?: string;
   sector?: string;
   notes?: string;
+  workspace_id?: string | null;
+  workspaceId?: string | null;
   lang?: "en" | "ar" | "ku";
   scope?: GeoScope;
 };
@@ -129,6 +132,8 @@ export const Route = createFileRoute("/api/applied-ranking")({
           const { data: authData } = await admin.auth.getUser(auth.slice(7));
           const userId = authData.user?.id;
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          const workspaceDenied = await workspaceGuard(admin, userId, body);
+          if (workspaceDenied) return workspaceDenied;
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
