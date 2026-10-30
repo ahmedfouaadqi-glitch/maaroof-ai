@@ -668,6 +668,7 @@ export type Database = {
           summary: string | null
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           brand_keywords?: string | null
@@ -681,6 +682,7 @@ export type Database = {
           summary?: string | null
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           brand_keywords?: string | null
@@ -694,8 +696,17 @@ export type Database = {
           summary?: string | null
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "brand_authority_packs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brand_boost_jobs: {
         Row: {
@@ -711,6 +722,7 @@ export type Database = {
           next_run_at: string | null
           platforms: string[]
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           active?: boolean
@@ -725,6 +737,7 @@ export type Database = {
           next_run_at?: string | null
           platforms?: string[]
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           active?: boolean
@@ -739,8 +752,129 @@ export type Database = {
           next_run_at?: string | null
           platforms?: string[]
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_boost_report_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivery_key: string
+          email_to: string
+          error_message: string | null
+          id: string
+          provider_message_id: string | null
+          report_month: string
+          sent_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivery_key: string
+          email_to: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          report_month: string
+          sent_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivery_key?: string
+          email_to?: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          report_month?: string
+          sent_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_report_deliveries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_boost_report_settings: {
+        Row: {
+          created_at: string
+          email_to: string
+          email_verified_at: string | null
+          enabled: boolean
+          id: string
+          updated_at: string
+          user_id: string
+          verification_attempts: number
+          verification_code_hash: string | null
+          verification_expires_at: string | null
+          verification_sent_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_to: string
+          email_verified_at?: string | null
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+          verification_attempts?: number
+          verification_code_hash?: string | null
+          verification_expires_at?: string | null
+          verification_sent_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_to?: string
+          email_verified_at?: string | null
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+          verification_attempts?: number
+          verification_code_hash?: string | null
+          verification_expires_at?: string | null
+          verification_sent_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_report_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brand_boost_runs: {
         Row: {
@@ -750,6 +884,7 @@ export type Database = {
           report: Json | null
           status: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
@@ -758,6 +893,7 @@ export type Database = {
           report?: Json | null
           status?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
@@ -766,6 +902,7 @@ export type Database = {
           report?: Json | null
           status?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -773,6 +910,120 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "brand_boost_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_boost_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_operation_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          operation_id: string
+          payload: Json
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          operation_id: string
+          payload?: Json
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          operation_id?: string
+          payload?: Json
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_operation_events_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "brand_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_operation_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_operations: {
+        Row: {
+          brand_name: string | null
+          charged_units: number | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string
+          id: string
+          operation_type: string
+          request_meta: Json
+          result_meta: Json
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          charged_units?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string
+          id?: string
+          operation_type: string
+          request_meta?: Json
+          result_meta?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          charged_units?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string
+          id?: string
+          operation_type?: string
+          request_meta?: Json
+          result_meta?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_operations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1001,6 +1252,11 @@ export type Database = {
           path: string | null
           user_agent: string
           user_id: string | null
+          verification_method: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_hostname: string | null
+          workspace_id: string | null
         }
         Insert: {
           bot_name?: string | null
@@ -1011,6 +1267,11 @@ export type Database = {
           path?: string | null
           user_agent: string
           user_id?: string | null
+          verification_method?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_hostname?: string | null
+          workspace_id?: string | null
         }
         Update: {
           bot_name?: string | null
@@ -1021,6 +1282,52 @@ export type Database = {
           path?: string | null
           user_agent?: string
           user_id?: string | null
+          verification_method?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_hostname?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crawler_hits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crawler_ip_verifications: {
+        Row: {
+          bot_name: string
+          checked_at: string
+          expires_at: string
+          id: string
+          ip_hash: string
+          verification_method: string
+          verification_status: string
+          verified_hostname: string | null
+        }
+        Insert: {
+          bot_name: string
+          checked_at?: string
+          expires_at: string
+          id?: string
+          ip_hash: string
+          verification_method?: string
+          verification_status: string
+          verified_hostname?: string | null
+        }
+        Update: {
+          bot_name?: string
+          checked_at?: string
+          expires_at?: string
+          id?: string
+          ip_hash?: string
+          verification_method?: string
+          verification_status?: string
+          verified_hostname?: string | null
         }
         Relationships: []
       }
