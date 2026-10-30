@@ -176,6 +176,13 @@
       "when": 1793373600000,
       "tag": "0024_brand_boost_email_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793396247439,
+      "tag": "0025_brand_operations_grants_and_policies",
+      "breakpoints": true
     }
   ]
 }

@@ -764,6 +764,118 @@ export type Database = {
           },
         ]
       }
+      brand_boost_report_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivery_key: string
+          email_to: string
+          error_message: string | null
+          id: string
+          provider_message_id: string | null
+          report_month: string
+          sent_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivery_key: string
+          email_to: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          report_month: string
+          sent_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivery_key?: string
+          email_to?: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          report_month?: string
+          sent_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_report_deliveries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_boost_report_settings: {
+        Row: {
+          created_at: string
+          email_to: string
+          email_verified_at: string | null
+          enabled: boolean
+          id: string
+          updated_at: string
+          user_id: string
+          verification_attempts: number
+          verification_code_hash: string | null
+          verification_expires_at: string | null
+          verification_sent_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_to: string
+          email_verified_at?: string | null
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+          verification_attempts?: number
+          verification_code_hash?: string | null
+          verification_expires_at?: string | null
+          verification_sent_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_to?: string
+          email_verified_at?: string | null
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+          verification_attempts?: number
+          verification_code_hash?: string | null
+          verification_expires_at?: string | null
+          verification_sent_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_report_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_boost_runs: {
         Row: {
           created_at: string
@@ -802,6 +914,113 @@ export type Database = {
           },
           {
             foreignKeyName: "brand_boost_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_operation_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          operation_id: string
+          payload: Json
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          operation_id: string
+          payload?: Json
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          operation_id?: string
+          payload?: Json
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_operation_events_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "brand_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_operation_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_operations: {
+        Row: {
+          brand_name: string | null
+          charged_units: number | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string
+          id: string
+          operation_type: string
+          request_meta: Json
+          result_meta: Json
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          charged_units?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string
+          id?: string
+          operation_type: string
+          request_meta?: Json
+          result_meta?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          charged_units?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string
+          id?: string
+          operation_type?: string
+          request_meta?: Json
+          result_meta?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_operations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1033,10 +1252,10 @@ export type Database = {
           path: string | null
           user_agent: string
           user_id: string | null
-          verification_status: string
-          verified_hostname: string | null
           verification_method: string | null
+          verification_status: string
           verified_at: string | null
+          verified_hostname: string | null
           workspace_id: string | null
         }
         Insert: {
@@ -1048,10 +1267,10 @@ export type Database = {
           path?: string | null
           user_agent: string
           user_id?: string | null
-          verification_status?: string
-          verified_hostname?: string | null
           verification_method?: string | null
+          verification_status?: string
           verified_at?: string | null
+          verified_hostname?: string | null
           workspace_id?: string | null
         }
         Update: {
@@ -1063,10 +1282,10 @@ export type Database = {
           path?: string | null
           user_agent?: string
           user_id?: string | null
-          verification_status?: string
-          verified_hostname?: string | null
           verification_method?: string | null
+          verification_status?: string
           verified_at?: string | null
+          verified_hostname?: string | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -1081,239 +1300,36 @@ export type Database = {
       }
       crawler_ip_verifications: {
         Row: {
-          id: string
-          ip_hash: string
           bot_name: string
-          verification_status: string
-          verified_hostname: string | null
-          verification_method: string
           checked_at: string
           expires_at: string
+          id: string
+          ip_hash: string
+          verification_method: string
+          verification_status: string
+          verified_hostname: string | null
         }
         Insert: {
-          id?: string
-          ip_hash: string
           bot_name: string
-          verification_status: string
-          verified_hostname?: string | null
-          verification_method?: string
           checked_at?: string
           expires_at: string
+          id?: string
+          ip_hash: string
+          verification_method?: string
+          verification_status: string
+          verified_hostname?: string | null
         }
         Update: {
-          id?: string
-          ip_hash?: string
           bot_name?: string
-          verification_status?: string
-          verified_hostname?: string | null
-          verification_method?: string
           checked_at?: string
           expires_at?: string
+          id?: string
+          ip_hash?: string
+          verification_method?: string
+          verification_status?: string
+          verified_hostname?: string | null
         }
         Relationships: []
-      }
-      brand_boost_report_settings: {
-        Row: {
-          id: string
-          user_id: string
-          workspace_id: string | null
-          email_to: string
-          enabled: boolean
-          email_verified_at: string | null
-          verification_code_hash: string | null
-          verification_expires_at: string | null
-          verification_sent_at: string | null
-          verification_attempts: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          workspace_id?: string | null
-          email_to: string
-          enabled?: boolean
-          email_verified_at?: string | null
-          verification_code_hash?: string | null
-          verification_expires_at?: string | null
-          verification_sent_at?: string | null
-          verification_attempts?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          workspace_id?: string | null
-          email_to?: string
-          enabled?: boolean
-          email_verified_at?: string | null
-          verification_code_hash?: string | null
-          verification_expires_at?: string | null
-          verification_sent_at?: string | null
-          verification_attempts?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      brand_boost_report_deliveries: {
-        Row: {
-          id: string
-          delivery_key: string
-          user_id: string
-          workspace_id: string | null
-          report_month: string
-          email_to: string
-          status: string
-          provider_message_id: string | null
-          error_message: string | null
-          attempts: number
-          started_at: string | null
-          sent_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          delivery_key: string
-          user_id: string
-          workspace_id?: string | null
-          report_month: string
-          email_to: string
-          status?: string
-          provider_message_id?: string | null
-          error_message?: string | null
-          attempts?: number
-          started_at?: string | null
-          sent_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          delivery_key?: string
-          user_id?: string
-          workspace_id?: string | null
-          report_month?: string
-          email_to?: string
-          status?: string
-          provider_message_id?: string | null
-          error_message?: string | null
-          attempts?: number
-          started_at?: string | null
-          sent_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      brand_operations: {
-        Row: {
-          brand_name: string | null
-          charged_units: number | null
-          created_at: string
-          duration_ms: number | null
-          error_message: string | null
-          finished_at: string
-          id: string
-          operation_type: string
-          request_meta: Json
-          result_meta: Json
-          started_at: string
-          status: string
-          updated_at: string
-          user_id: string
-          workspace_id: string | null
-        }
-        Insert: {
-          brand_name?: string | null
-          charged_units?: number | null
-          created_at?: string
-          duration_ms?: number | null
-          error_message?: string | null
-          finished_at?: string
-          id?: string
-          operation_type: string
-          request_meta?: Json
-          result_meta?: Json
-          started_at?: string
-          status?: string
-          updated_at?: string
-          user_id: string
-          workspace_id?: string | null
-        }
-        Update: {
-          brand_name?: string | null
-          charged_units?: number | null
-          created_at?: string
-          duration_ms?: number | null
-          error_message?: string | null
-          finished_at?: string
-          id?: string
-          operation_type?: string
-          request_meta?: Json
-          result_meta?: Json
-          started_at?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "brand_operations_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      brand_operation_events: {
-        Row: {
-          created_at: string
-          event_type: string
-          id: string
-          operation_id: string
-          payload: Json
-          user_id: string
-          workspace_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          event_type: string
-          id?: string
-          operation_id: string
-          payload?: Json
-          user_id: string
-          workspace_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          event_type?: string
-          id?: string
-          operation_id?: string
-          payload?: Json
-          user_id?: string
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "brand_operation_events_operation_id_fkey"
-            columns: ["operation_id"]
-            isOneToOne: false
-            referencedRelation: "brand_operations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "brand_operation_events_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       custom_pages: {
         Row: {

@@ -378,6 +378,7 @@ export const Route = createFileRoute("/api/visibility")({
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
               let backgroundCharged = 0;
+              let bgMetrics: ReturnType<typeof calculateVisibilityProbeMetrics> | null = null;
               const work = (async () => {
                 await askAll();
                 backgroundCharged = await settle();
@@ -397,9 +398,10 @@ export const Route = createFileRoute("/api/visibility")({
                   } catch {}
                   return;
                 }
+                const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
+                bgMetrics = metrics;
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
-                const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                   durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
@@ -424,7 +426,7 @@ export const Route = createFileRoute("/api/visibility")({
               });
               // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: metrics, charged: backgroundCharged } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
             }
             await askAll();
             const charged = await settle();

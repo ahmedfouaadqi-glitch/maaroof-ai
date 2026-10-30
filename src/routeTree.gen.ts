@@ -33,6 +33,8 @@ import { Route as ApiAttachmentAnalyzeRouteImport } from './routes/api/attachmen
 import { Route as ApiBizdevRouteImport } from './routes/api/bizdev'
 import { Route as ApiBrandAuthorityRouteImport } from './routes/api/brand-authority'
 import { Route as ApiBrandBoostRouteImport } from './routes/api/brand-boost'
+import { Route as ApiBrandBoostReportSettingsRouteImport } from './routes/api/brand-boost-report-settings'
+import { Route as ApiBrandBoostSchedulerRouteImport } from './routes/api/brand-boost-scheduler'
 import { Route as ApiCompanyEmailRouteImport } from './routes/api/company-email'
 import { Route as ApiCompareRouteImport } from './routes/api/compare'
 import { Route as ApiCompetitorMonitorRouteImport } from './routes/api/competitor-monitor'
@@ -185,6 +187,17 @@ const ApiBrandAuthorityRoute = ApiBrandAuthorityRouteImport.update({
 const ApiBrandBoostRoute = ApiBrandBoostRouteImport.update({
   id: '/api/brand-boost',
   path: '/api/brand-boost',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandBoostReportSettingsRoute =
+  ApiBrandBoostReportSettingsRouteImport.update({
+    id: '/api/brand-boost-report-settings',
+    path: '/api/brand-boost-report-settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiBrandBoostSchedulerRoute = ApiBrandBoostSchedulerRouteImport.update({
+  id: '/api/brand-boost-scheduler',
+  path: '/api/brand-boost-scheduler',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCompanyEmailRoute = ApiCompanyEmailRouteImport.update({
@@ -381,6 +394,8 @@ export interface FileRoutesByFullPath {
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
+  '/api/brand-boost-report-settings': typeof ApiBrandBoostReportSettingsRoute
+  '/api/brand-boost-scheduler': typeof ApiBrandBoostSchedulerRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
@@ -440,6 +455,8 @@ export interface FileRoutesByTo {
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
+  '/api/brand-boost-report-settings': typeof ApiBrandBoostReportSettingsRoute
+  '/api/brand-boost-scheduler': typeof ApiBrandBoostSchedulerRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
@@ -500,6 +517,8 @@ export interface FileRoutesById {
   '/api/bizdev': typeof ApiBizdevRoute
   '/api/brand-authority': typeof ApiBrandAuthorityRoute
   '/api/brand-boost': typeof ApiBrandBoostRoute
+  '/api/brand-boost-report-settings': typeof ApiBrandBoostReportSettingsRoute
+  '/api/brand-boost-scheduler': typeof ApiBrandBoostSchedulerRoute
   '/api/company-email': typeof ApiCompanyEmailRoute
   '/api/compare': typeof ApiCompareRoute
   '/api/competitor-monitor': typeof ApiCompetitorMonitorRoute
@@ -561,6 +580,8 @@ export interface FileRouteTypes {
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
+    | '/api/brand-boost-report-settings'
+    | '/api/brand-boost-scheduler'
     | '/api/company-email'
     | '/api/compare'
     | '/api/competitor-monitor'
@@ -620,6 +641,8 @@ export interface FileRouteTypes {
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
+    | '/api/brand-boost-report-settings'
+    | '/api/brand-boost-scheduler'
     | '/api/company-email'
     | '/api/compare'
     | '/api/competitor-monitor'
@@ -679,6 +702,8 @@ export interface FileRouteTypes {
     | '/api/bizdev'
     | '/api/brand-authority'
     | '/api/brand-boost'
+    | '/api/brand-boost-report-settings'
+    | '/api/brand-boost-scheduler'
     | '/api/company-email'
     | '/api/compare'
     | '/api/competitor-monitor'
@@ -739,6 +764,8 @@ export interface RootRouteChildren {
   ApiBizdevRoute: typeof ApiBizdevRoute
   ApiBrandAuthorityRoute: typeof ApiBrandAuthorityRoute
   ApiBrandBoostRoute: typeof ApiBrandBoostRoute
+  ApiBrandBoostReportSettingsRoute: typeof ApiBrandBoostReportSettingsRoute
+  ApiBrandBoostSchedulerRoute: typeof ApiBrandBoostSchedulerRoute
   ApiCompanyEmailRoute: typeof ApiCompanyEmailRoute
   ApiCompareRoute: typeof ApiCompareRoute
   ApiCompetitorMonitorRoute: typeof ApiCompetitorMonitorRoute
@@ -938,6 +965,20 @@ declare module '@tanstack/react-router' {
       path: '/api/brand-boost'
       fullPath: '/api/brand-boost'
       preLoaderRoute: typeof ApiBrandBoostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-boost-report-settings': {
+      id: '/api/brand-boost-report-settings'
+      path: '/api/brand-boost-report-settings'
+      fullPath: '/api/brand-boost-report-settings'
+      preLoaderRoute: typeof ApiBrandBoostReportSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-boost-scheduler': {
+      id: '/api/brand-boost-scheduler'
+      path: '/api/brand-boost-scheduler'
+      fullPath: '/api/brand-boost-scheduler'
+      preLoaderRoute: typeof ApiBrandBoostSchedulerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/company-email': {
@@ -1224,6 +1265,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBizdevRoute: ApiBizdevRoute,
   ApiBrandAuthorityRoute: ApiBrandAuthorityRoute,
   ApiBrandBoostRoute: ApiBrandBoostRoute,
+  ApiBrandBoostReportSettingsRoute: ApiBrandBoostReportSettingsRoute,
+  ApiBrandBoostSchedulerRoute: ApiBrandBoostSchedulerRoute,
   ApiCompanyEmailRoute: ApiCompanyEmailRoute,
   ApiCompareRoute: ApiCompareRoute,
   ApiCompetitorMonitorRoute: ApiCompetitorMonitorRoute,
