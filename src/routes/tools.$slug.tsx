@@ -45,14 +45,14 @@ const SLUGS: Record<string, SlugDef> = {
     to: "/dashboard",
     metaAr: { title: "تحليل الظهور — في 10 محركات", desc: "نسأل المحركات العشرة عن استعلاماتك ونعطيك GEO Trust Score وخطة رفع.", when: "كل أسبوع أو بعد كل حملة." },
     metaEn: { title: "AI Visibility — Across 10 engines", desc: "We probe 10 engines on your queries and return a GEO Trust Score with an uplift plan.", when: "Weekly, or after every campaign." },
-    metaKu: { title: "پشکنینی دیارییەتی", desc: "٩ بزوێنەر دەپرسرێت.", when: "هەفتانە یان دوای کەمپەین." },
+    metaKu: { title: "پشکنینی دیارییەتی", desc: "١٠ بزوێنەری AI بە پرسیاری ڕاستەوخۆ تاقی دەکرێنەوە.", when: "دوای کەمپەین یان کاتێک پێویستت بە پێوانەی دەرکەوتن هەیە." },
   },
   brand_boost: {
     key: "brand_boost",
     to: "/agent",
-    metaAr: { title: "تعزيز العلامة — وكيل مستقل لـ 30 يوم", desc: "خطة 30 يوم: محتوى، حزم سلطة، حملات مجدولة، قياس أسبوعي.", when: "حين تريد نموًا تلقائيًا متواصلًا بدون متابعة يدوية." },
-    metaEn: { title: "Brand Boost — 30-day autonomous agent", desc: "30-day plan: content, authority packs, scheduled campaigns, weekly tracking.", when: "When you want continuous, hands-off growth." },
-    metaKu: { title: "بەهێزکردنی براند", desc: "پلانی ٣٠ ڕۆژی خۆکار.", when: "بۆ گەشەی بەردەوام." },
+    metaAr: { title: "تعزيز معروف — تعزيز ظهور العلامة", desc: "حلّل إشارات العلامة عبر المحركات العشرة، أعدّ حزمة معلومات عامة، وراجع نتائج الانتشار وسجل العمليات. الجدولة والنشر على نطاق العميل يحتاجان تكاملاً منفصلاً.", when: "حين تريد خطة منظمة لتحسين الظهور ومتابعة الإشارات الفعلية." },
+    metaEn: { title: "Maaroof Brand Boost — Brand visibility workflow", desc: "Review brand signals across ten engines, prepare a public information pack, and inspect reach signals and operation history. Scheduling and customer-domain publishing require separate integrations.", when: "When you need a structured visibility improvement and tracking workflow." },
+    metaKu: { title: "بەهێزکردنی Maaroof — دەرکەوتنی براند", desc: "ئاماژەکانی براند لە ١٠ بزوێنەر پشکنە، پاکێجی زانیاری گشتی ئامادە بکە و تۆماری کردارەکان ببینە. خشتەی خۆکار و بڵاوکردنەوە لە ماڵپەڕی کڕیار پێویستی بە یەکخستنی جیاواز هەیە.", when: "کاتێک دەتەوێت پلانی ڕێکخراو بۆ باشترکردنی دەرکەوتن دابنێیت." },
   },
 };
 
