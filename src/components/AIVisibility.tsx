@@ -33,9 +33,10 @@ type PanelProps = {
   /** Override which tool's geo-scope is used. */
   toolKey?: "research" | "brand";
   workspaceId?: string | null;
+  workspace?: any;
 };
 
-export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null }: PanelProps) {
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null, workspace = null }: PanelProps) {
   const { t, lang: uiLang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
   useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
@@ -44,12 +45,14 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
   try { auth = useAuth(); } catch {}
 
   // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
-  const [brand, setBrand] = useState(brandProp ?? (auth?.profile as any)?.brand_name ?? "");
-  const [keywords, setKeywords] = useState(kwProp ?? (auth?.profile as any)?.brand_keywords ?? "");
+  const workspaceBrand = String(workspace?.entity_truth_card?.entity_name || workspace?.name || "");
+  const workspaceKeywords = Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || "");
+  const [brand, setBrand] = useState(brandProp ?? workspaceBrand ?? (auth?.profile as any)?.brand_name ?? "");
+  const [keywords, setKeywords] = useState(kwProp ?? workspaceKeywords ?? (auth?.profile as any)?.brand_keywords ?? "");
 
   // If parent prop changes (e.g. user typed in the Boost "Run" tab), sync once.
-  useEffect(() => { if (brandProp !== undefined) setBrand(brandProp); }, [brandProp]);
-  useEffect(() => { if (kwProp !== undefined) setKeywords(kwProp); }, [kwProp]);
+  useEffect(() => { if (brandProp !== undefined) setBrand(brandProp); else if (workspaceBrand) setBrand(workspaceBrand); }, [brandProp, workspaceBrand]);
+  useEffect(() => { if (kwProp !== undefined) setKeywords(kwProp); else if (workspaceKeywords) setKeywords(workspaceKeywords); }, [kwProp, workspaceKeywords]);
 
   // Fall back to profile defaults when nothing set yet.
   useEffect(() => {
@@ -238,6 +241,6 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 }
 
 // Back-compat: keep standalone export used by /agent route.
-export function AIVisibility({ workspaceId = null }: { workspaceId?: string | null } = {}) {
-  return <VisibilityPanel workspaceId={workspaceId} />;
+export function AIVisibility({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
+  return <VisibilityPanel workspaceId={workspaceId || workspace?.id || null} workspace={workspace} />;
 }
