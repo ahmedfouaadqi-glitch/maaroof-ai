@@ -45,7 +45,7 @@ export function toolName(key: string, l: L): string {
 }
 
 /** Skills tab: each skill opens its real tools inline, same components and logic as before. */
-export function SkillToolsPanel({ lang, skill, tool, workspaceId = null }: { lang: L; skill?: string; tool?: string; workspaceId?: string | null }) {
+export function SkillToolsPanel({ lang, skill, tool, workspaceId = null, workspace = null }: { lang: L; skill?: string; tool?: string; workspaceId?: string | null; workspace?: any }) {
   const c = T[lang];
   const vis = useVisibility();
   const s = MAAROOF_SKILLS.find((x) => x.key === skill);
@@ -88,7 +88,7 @@ export function SkillToolsPanel({ lang, skill, tool, workspaceId = null }: { lan
       )}
       {Tool && tool && visible(tool) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool lang={lang} workspaceId={workspaceId} /></Suspense>
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" />}><Tool lang={lang} workspaceId={workspaceId || workspace?.id || null} workspace={workspace} /></Suspense>
         </section>
       )}
     </div>
