@@ -148,6 +148,13 @@
       "when": 1793313470893,
       "tag": "0020_keyword_intelligence_evidence_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793368800000,
+      "tag": "0021_brand_boost_workspace_scope",
+      "breakpoints": true
     }
   ]
 }
