@@ -17,23 +17,59 @@ export function BroadcastPanel({ lang, workspaceId = null }: { lang: L; workspac
   const [workspaceProfile, setWorkspaceProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      if (workspaceId) {
-        const { data } = await (supabase as any).from("workspaces").select("id,name,brand_url,brand_summary,keywords,profile,goals,success_metrics,language,country,city").eq("id", workspaceId).eq("owner_id", user.id).maybeSingle();
-        setWorkspaceProfile(data || null); setPacks([]); setBots([]); return;
-      }
+    if (!user) {
+      setPacks([]);
+      setBots([]);
       setWorkspaceProfile(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
       const since = new Date(Date.now() - 30 * 86400000).toISOString();
-      const [{ data: p }, { data: h }] = await Promise.all([
-        supabase.from("brand_authority_packs").select("brand_slug, brand_name, updated_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(10),
-        supabase.from("crawler_hits").select("bot_name, hit_at").eq("user_id", user.id).gte("hit_at", since).order("hit_at", { ascending: false }).limit(1000),
-      ]);
-      setPacks(p || []);
-      const m = new Map<string, { count: number; last: string }>();
-      for (const r of (h || []) as any[]) { const k = r.bot_name || "?"; const e = m.get(k); if (e) e.count++; else m.set(k, { count: 1, last: r.hit_at }); }
-      setBots([...m.entries()].map(([bot, v]) => ({ bot, ...v })).sort((a, b) => b.count - a.count));
-    })().catch(() => setPacks([]));
+      const scopeRows = async () => {
+        let packsQuery = supabase.from("brand_authority_packs")
+          .select("brand_slug, brand_name, updated_at")
+          .eq("user_id", user.id);
+        let hitsQuery = supabase.from("crawler_hits")
+          .select("bot_name, hit_at")
+          .eq("user_id", user.id)
+          .gte("hit_at", since);
+        packsQuery = workspaceId ? packsQuery.eq("workspace_id", workspaceId) : packsQuery.is("workspace_id", null);
+        hitsQuery = workspaceId ? hitsQuery.eq("workspace_id", workspaceId) : hitsQuery.is("workspace_id", null);
+        const [{ data: p, error: packError }, { data: h, error: hitError }] = await Promise.all([
+          packsQuery.order("updated_at", { ascending: false }).limit(20),
+          hitsQuery.order("hit_at", { ascending: false }).limit(1000),
+        ]);
+        if (packError) throw packError;
+        if (hitError) throw hitError;
+        if (cancelled) return;
+        setPacks(p || []);
+        const map = new Map<string, { count: number; last: string }>();
+        for (const row of (h || []) as any[]) {
+          const key = row.bot_name || "Unknown";
+          const current = map.get(key);
+          if (current) current.count++;
+          else map.set(key, { count: 1, last: row.hit_at });
+        }
+        setBots([...map.entries()].map(([bot, value]) => ({ bot, ...value })).sort((a, b) => b.count - a.count));
+      };
+
+      if (workspaceId) {
+        const { data, error } = await (supabase as any).from("workspaces")
+          .select("id,name,brand_url,brand_summary,keywords,profile,goals,success_metrics,language,country,city")
+          .eq("id", workspaceId).eq("owner_id", user.id).maybeSingle();
+        if (error) throw error;
+        if (cancelled) return;
+        setWorkspaceProfile(data || null);
+      } else {
+        setWorkspaceProfile(null);
+      }
+      await scopeRows();
+    })().catch((error) => {
+      console.error("[BroadcastPanel] scoped load failed", error);
+      if (!cancelled) { setPacks([]); setBots([]); }
+    });
+    return () => { cancelled = true; };
   }, [user?.id, workspaceId]);
 
   return (
