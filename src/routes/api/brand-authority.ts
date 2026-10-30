@@ -8,6 +8,7 @@ import { slugify } from "@/lib/crawler-bots";
 import { pingIndexNow } from "@/lib/indexnow.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
+import { recordBrandOperation } from "@/lib/brand-operations.server";
 
 const AUTHORITY_COST = 3;
 
@@ -231,6 +232,18 @@ ${evidenceText || "(no source content)"}`;
           await admin.from("profiles").update({
             monthly_analyses_used: used + AUTHORITY_COST,
           }).eq("id", userId!);
+          const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+          await recordBrandOperation(admin, {
+            id: _runId,
+            userId: userId!,
+            workspaceId,
+            operationType: "brand_authority",
+            brandName: brand_name,
+            durationMs: Date.now() - _t0,
+            chargedUnits: AUTHORITY_COST,
+            requestMeta: { source_url_provided: Boolean(source_url), indexnow_requested: shouldPing },
+            resultMeta: { slug, public_url: publicUrl, publication_scope: "maaroof_host", published_on_customer_domain: false, indexnow_result: pingResult },
+          });
           await admin.from("activity_log").insert({
             user_id: userId,
             action: "brand_authority",
