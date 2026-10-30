@@ -104,7 +104,7 @@ function fallbackPlan(platforms: Platform[], lang: string, brand: string, eviden
               : `## About ${brand}\n\n${brand} should be described through clear public sources${firstUrl ? ` such as [this source](${firstUrl})` : ""}. Publish the name, category, geography, services, and official contact links without adding unsupported claims.`,
           qa_pairs: [{ q: ar ? `ما هي ${brand}؟` : ku ? `${brand} چییە؟` : `What is ${brand}?`, a: ar ? `${brand} علامة تحتاج إلى تعريف عام موثق عبر مصادر رسمية.` : ku ? `${brand} پێویستی بە پێناسەی گشتیی پشتڕاستکراوە هەیە.` : `${brand} is a brand that should be described through verified public sources.` }],
           json_ld: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: brand }, null, 2),
-        } : null,,
+        } : null,
       };
     }),
   };
