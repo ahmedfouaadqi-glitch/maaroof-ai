@@ -501,13 +501,25 @@ function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: s
       const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
       }[ch]!));
-      const markdownHtml = String(pack.markdown || "").split(/\r?\n/).map((line: string) => {
+      const htmlParts: string[] = [];
+      let insideList = false;
+      for (const line of String(pack.markdown || "").split(/\r?\n/)) {
+        const bullet = line.match(/^\s*[-*]\s+(.+)$/);
         const heading = line.match(/^(#{1,3})\s+(.+)$/);
-        if (heading) return "<h" + heading[1].length + ">" + escapeHtml(heading[2]) + "</h" + heading[1].length + ">";
-        if (/^\s*[-*]\s+/.test(line)) return "<li>" + escapeHtml(line.replace(/^\s*[-*]\s+/, "")) + "</li>";
-        if (!line.trim()) return "";
-        return "<p>" + escapeHtml(line) + "</p>";
-      }).join("\n");
+        if (bullet) {
+          if (!insideList) { htmlParts.push("<ul>"); insideList = true; }
+          htmlParts.push("<li>" + escapeHtml(bullet[1]) + "</li>");
+          continue;
+        }
+        if (insideList) { htmlParts.push("</ul>"); insideList = false; }
+        if (heading) {
+          htmlParts.push("<h" + heading[1].length + ">" + escapeHtml(heading[2]) + "</h" + heading[1].length + ">");
+        } else if (line.trim()) {
+          htmlParts.push("<p>" + escapeHtml(line) + "</p>");
+        }
+      }
+      if (insideList) htmlParts.push("</ul>");
+      const markdownHtml = htmlParts.join("\n");
       const safeJsonLd = JSON.stringify(jsonLd, null, 2).replace(/</g, "\\u003c");
       const html = [
         "<!doctype html><html lang=\"ar\" dir=\"rtl\"><head><meta charset=\"utf-8\">",
@@ -532,19 +544,33 @@ function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: s
         "1. راجع جميع الحقائق والروابط في HTML وJSON-LD قبل النشر.",
         "2. أنشئ صفحة مستقلة في الموقع على المسار /about/brand/ أو مسار مكافئ، ثم ضع محتوى brand-profile.html فيها.",
         "3. أضف رابطاً واضحاً من الصفحة الرئيسية إلى صفحة التعريف؛ لا تضع كامل الصفحة داخل الرئيسية.",
-        "4. أضف عنوان الصفحة إلى ملف sitemap.xml الحالي مع الحفاظ على بقية عناوينه. ملف sitemap-entry.xml هو مدخل إرشادي وليس ملفاً بديلاً.",
-        "5. افحص robots.txt ووسم noindex وcanonical. أضف مقتطف robots عند الحاجة فقط، ولا تستبدل ملف robots.txt الحالي.",
-        "6. بعد النشر تحقق من استجابة HTTP 200 ومن ظهور JSON-LD في مصدر الصفحة.",
+        "4. ضع ملف llms.txt في جذر الموقع ليكون متاحاً على /llms.txt، وراجع محتواه قبل النشر.",
+        "5. أضف عنوان الصفحة إلى ملف sitemap.xml الحالي مع الحفاظ على بقية عناوينه. ملف sitemap-entry.xml مدخل إرشادي وليس ملفاً بديلاً.",
+        "6. افحص robots.txt ووسم noindex وcanonical. أضف مقتطف robots عند الحاجة فقط، ولا تستبدل ملف robots.txt الحالي.",
+        "7. بعد النشر تحقق من استجابة HTTP 200 ومن ظهور JSON-LD في مصدر الصفحة."
         "",
         "## ملاحظة",
         "هذه الحزمة لم تُنشر تلقائياً. مسؤولية تركيبها ومراجعتها ونشرها تبقى لدى مالك الموقع أو مطوّره. لا يوجد ضمان للفهرسة أو لاستشهاد محركات الذكاء الاصطناعي.",
       ].join("\n");
       const robots = "# مقتطف اختياري — لا تستبدل ملف robots.txt الحالي\nUser-agent: *\nAllow: /about/brand/\n";
+      const llmsText = [
+        "# " + brand,
+        "",
+        String(pack.summary || "ملف تعريفي بالعلامة، راجعه قبل النشر."),
+        "",
+        "## Official pages",
+        "- [Brand profile](" + pageUrl + ")",
+        ...(pack.public_url ? ["- [Maaroof public reference](" + String(pack.public_url) + ")"] : []),
+        "",
+        "## Brand profile",
+        String(pack.markdown || ""),
+      ].join("\n");
       const files = {
         "README-ar.md": strToU8(readme),
         "brand-profile.html": strToU8(html),
         "brand-profile.jsonld": strToU8(JSON.stringify(jsonLd, null, 2)),
         "brand-profile.md": strToU8(String(pack.markdown || "")),
+        "llms.txt": strToU8(llmsText),
         "sitemap-entry.xml": strToU8(sitemap),
         "robots-snippet.txt": strToU8(robots),
       };
