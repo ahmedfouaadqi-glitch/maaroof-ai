@@ -274,7 +274,14 @@ Score each variant individually with geo_score (0-100) using the strict rubric i
           }).eq("id", userId);
           await admin.from("activity_log").insert({ user_id: userId, action: "suggest", metadata: { mode: body.sourceText ? "improve" : body.imageBase64 ? "image" : "text" } });
 
-          return Response.json({ post, ...parsed, sources: _evPack.sources });
+          // Ten-engine council reviews the generated post (fail-open: null when unavailable).
+          let council: any = null;
+          try {
+            const { runToolCouncil } = await import("@/lib/maaroof/tool-council.server");
+            const l = body.lang === "en" || body.lang === "ku" ? body.lang : "ar";
+            council = await runToolCouncil({ tool: "suggest", input: String(body.sourceText || body.description || "").slice(0, 1500), result: post.slice(0, 4000), lang: l as any, timeoutMs: 20000 });
+          } catch {}
+          return Response.json({ post, ...parsed, sources: _evPack.sources, council });
         } catch (e) {
           console.error("suggest error", e);
           return Response.json({ error: "internal_error" }, { status: 500 });
