@@ -33,7 +33,7 @@ Because the current probe stores one blind answer per engine, mention coverage a
 
 ## Integration
 
-The metrics are returned as `probe.visibility_metrics`, stored in the Brand Operations ledger for synchronous and background probe runs, and displayed in the Engine Probe panel. Existing model-generated `visibility_percent` from the standard visibility analysis remains explicitly labeled as an estimate and is not overwritten by these measured-sample metrics.
+The metrics are returned as `probe.visibility_metrics`, stored in the Brand Operations ledger for synchronous and background probe runs, and displayed in the Engine Probe panel. The panel can compare selected percentage-point changes against the most recent prior measured run for the same owner, brand, and workspace. This is a descriptive comparison, not proof that a particular optimization caused the change. Existing model-generated `visibility_percent` from the standard visibility analysis remains explicitly labeled as an estimate and is not overwritten by these measured-sample metrics.
 
 ## Tests
 
