@@ -30,6 +30,13 @@ export const Route = createFileRoute("/api/social-analysis")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+        // Validate the request and workspace ownership BEFORE charging: a refused run costs nothing.
+        const body = await request.json().catch(() => ({} as any));
+        const { brand, keywords = "", lang = "ar" } = body || {};
+        if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
+        const { workspaceGuard } = await import("@/lib/workspace-guard.server");
+        const denied = await workspaceGuard(admin, userId, body);
+        if (denied) return denied;
         const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
@@ -45,11 +52,6 @@ export const Route = createFileRoute("/api/social-analysis")({
         if (!(prof as any).is_subscribed && limit - used < COST) {
           /* balance-only: charge already succeeded */ void limit;
         }
-
-        const body = await request.json();
-
-        const { brand, keywords = "", lang = "ar" } = body;
-        if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 
         const platforms: any[] = [];
         for (const p of PLATFORMS) {
