@@ -20,6 +20,19 @@ const TX = {
 
 type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string; status?: string; brands: string[]; reason?: string };
 type Council = { agreement: string; disagreement: string | null; decision: string };
+type ProbeMetricValue = { value_pct: number | null; numerator: number; denominator: number };
+type ProbeMetrics = {
+  engine_coverage: ProbeMetricValue;
+  mention_rate: ProbeMetricValue;
+  recommendation_rate: ProbeMetricValue;
+  share_of_voice: ProbeMetricValue;
+  citation_rate: ProbeMetricValue;
+  top5_rate: ProbeMetricValue;
+  average_rank: number | null;
+  answered_engines: number;
+  requested_engines: number;
+  limitations?: string[];
+};
 
 export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput, workspaceId = null }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean; workspaceId?: string | null }) {
   const [typed, setTyped] = useState("");
@@ -44,6 +57,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   const [answers, setAnswers] = useState<ProbeAnswer[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [council, setCouncil] = useState<Council | null>(null);
+  const [metrics, setMetrics] = useState<ProbeMetrics | null>(null);
 
   useEffect(() => {
     entFn().then((e) => { setAllowed(e.allowed); setSel(e.allowed.slice(0, 10)); }).catch(() => setAllowed([]));
@@ -65,7 +79,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   async function run() {
     if (!sel.length || busy) return;
     if (!probeTopic) { setErr(topicRequired); return; }
-    setBusy(true); setErr(null); setAnswers(null); setBgMsg(false);
+    setBusy(true); setErr(null); setAnswers(null); setMetrics(null); setCouncil(null); setBgMsg(false);
     if (!brandProp.trim() && typed.trim() && saveIt) {
       // Only fill an empty account brand; never overwrite the owner's identity with a scanned client name.
       try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id).is("brand_name", null); } catch {}
@@ -83,7 +97,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }
       if (!r.ok) { setErr(String(j?.[L] || j?.error || r.status)); return; }
       if (j?.background && !(j?.probe?.answers || []).length) { setBgMsg(true); return; }
-      setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null);
+      setAnswers(j?.probe?.answers || []); setCouncil(j?.probe?.council || null); setMetrics(j?.probe?.visibility_metrics || null);
     } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); }
   }
 
@@ -97,6 +111,16 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
     groundedReview: a.grounded_answer || (a.status === "partial" ? (L === "en" ? "Evidence review did not return; only the blind result is available." : L === "ku" ? "هەڵسەنگاندنی بەڵگە نەگەڕایەوە؛ تەنها ئەنجامی کوێرانە بەردەستە." : "لم تُرجع مراجعة الأدلة؛ المتاح هو نتيجة السبر الأعمى فقط.") : undefined),
     items: a.brands.slice(0, 5),
   })), [answers, L]);
+
+  const pct = (metric?: ProbeMetricValue) => metric?.value_pct == null ? "—" : `${metric.value_pct.toFixed(metric.value_pct % 1 ? 2 : 0)}%`;
+  const metricCards = metrics ? [
+    { label: L === "en" ? "Engine response coverage" : L === "ku" ? "ڕێژەی وەڵامدانی بزوێنەر" : "تغطية تنفيذ المحركات", value: pct(metrics.engine_coverage), detail: `${metrics.answered_engines}/${metrics.requested_engines}` },
+    { label: L === "en" ? "Brand mention rate" : L === "ku" ? "ڕێژەی هێنانی ناوی براند" : "معدل ذكر العلامة", value: pct(metrics.mention_rate), detail: `${metrics.mention_rate.numerator}/${metrics.mention_rate.denominator}` },
+    { label: L === "en" ? "Recommendation rate" : L === "ku" ? "ڕێژەی پێشنیارکردن" : "معدل التوصية", value: pct(metrics.recommendation_rate), detail: `${metrics.recommendation_rate.numerator}/${metrics.recommendation_rate.denominator}` },
+    { label: L === "en" ? "Share of voice" : L === "ku" ? "بەشی دەنگ" : "حصة الصوت", value: pct(metrics.share_of_voice), detail: `${metrics.share_of_voice.numerator}/${metrics.share_of_voice.denominator}` },
+    { label: L === "en" ? "Evidence-matched citation rate" : L === "ku" ? "ڕێژەی ئاماژەی هاوتای بەڵگە" : "معدل الاستشهاد المطابق للأدلة", value: pct(metrics.citation_rate), detail: `${metrics.citation_rate.numerator}/${metrics.citation_rate.denominator}` },
+    { label: L === "en" ? "Top-5 rate" : L === "ku" ? "ڕێژەی پلەی پێنجی یەکەم" : "معدل الظهور ضمن أول 5", value: pct(metrics.top5_rate), detail: `${metrics.top5_rate.numerator}/${metrics.top5_rate.denominator}` },
+  ] : [];
 
   if (!brandProp.trim() && !allowBrandInput) return null;
 
@@ -153,6 +177,29 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
         ? <div className="text-xs text-destructive">{T.signIn} <a href="/auth" className="underline font-semibold">{T.login}</a></div>
         : err && <div className="text-xs text-destructive">{err}</div>}
       {bgMsg && <div className="text-xs text-primary">{T.bgOk}</div>}
+      {metrics && (
+        <div className="space-y-2 rounded-lg border border-primary/25 bg-primary/5 p-3">
+          <div className="text-xs font-semibold text-primary">
+            {L === "en" ? "Measured results from this run" : L === "ku" ? "ئەنجامی پێوانەکراوی ئەم جارە" : "النتائج المقاسة في هذا التشغيل"}
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {metricCards.map((metric) => (
+              <div key={metric.label} className="rounded-md border border-border bg-background/70 p-2">
+                <div className="text-[10px] text-muted-foreground">{metric.label}</div>
+                <div className="mt-1 text-xl font-bold tabular-nums">{metric.value}</div>
+                <div className="text-[10px] text-muted-foreground">{metric.detail}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            {L === "en"
+              ? "Metrics describe only successful answers in this probe. Share of voice counts unique brand names returned in ranked brand lists; citation rate requires an answer URL to exactly match collected evidence. This API probe is not necessarily the consumer-facing engine UI."
+              : L === "ku"
+                ? "پێوەرەکان تەنها وەڵامە سەرکەوتووەکانی ئەم پشکنینە دەگرنەوە. بەشی دەنگ لە ناوەڕۆکی لیستی براندەکان هەژمار دەکرێت؛ ئاماژە بە سەرچاوە پێویستی بە هاوتایی URL لەگەڵ بەڵگەی کۆکراوە هەیە. ئەم API ـە بە پێویستی وەک ڕووکاری بەکارهێنەری بزوێنەر نییە."
+                : "المؤشرات تخص الإجابات الناجحة في هذا الفحص فقط. حصة الصوت محسوبة من أسماء العلامات الفريدة في قوائم العلامات المرتبة؛ ومعدل الاستشهاد لا يحتسب إلا رابطاً أعاده النموذج ويطابق رابط دليل جُمع فعلياً. فحص API لا يطابق بالضرورة واجهة المحرك الموجهة للمستهلك."}
+          </p>
+        </div>
+      )}
       {cards.length > 0 && <EngineResponseFlow answers={cards} title={T.res} compact />}
       {council && (
         <div className="rounded-lg border border-border bg-background/60 p-2 text-xs space-y-1">
