@@ -139,7 +139,7 @@ export async function verifyCrawlerIdentity(
   try {
     hostname = await resolvePtr(ip);
     const suffixes = botName === "Googlebot"
-      ? ["googlebot.com", "google.com", "googleusercontent.com"]
+      ? ["googlebot.com"]
       : ["search.msn.com"];
     const suffixAllowed = Boolean(hostname && suffixes.some((suffix) => hostnameMatches(hostname!, suffix)));
     if (!hostname || !suffixAllowed) {
