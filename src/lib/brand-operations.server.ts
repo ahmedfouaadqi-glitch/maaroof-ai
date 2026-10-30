@@ -6,7 +6,7 @@ type BrandOperationRecord = {
   id: string;
   userId: string;
   workspaceId?: string | null;
-  operationType: "brand_boost" | "brand_authority" | "visibility_probe";
+  operationType: "brand_boost" | "brand_authority" | "visibility_probe" | "visibility_analysis";
   brandName?: string | null;
   status?: "completed" | "failed" | "partial";
   requestMeta?: Record<string, unknown>;
