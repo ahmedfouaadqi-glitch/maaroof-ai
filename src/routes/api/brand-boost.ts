@@ -11,8 +11,8 @@ import { applyEntitlement, enginesAllowedForUser, resolveEngineModels, resolveTo
 
 // Engine catalog + engine⇄model mapping now live in the shared source of truth
 // (`src/lib/ai-engines.ts` + `ai-engines.server.ts`) so every tool, the UI and
-// the admin registry stay in sync. `proxy: true` means we cannot probe the
-// engine directly; we use a similar-family model and disclose it to the user.
+// the admin registry stay in sync. The `proxy` flag records the configured
+// connection route only; it does not change the requested engine's identity.
 const PLATFORMS = ENGINE_KEYS;
 type Platform = EngineKey;
 const BRAND_BOOST_COST = 5;
@@ -190,7 +190,7 @@ export const Route = createFileRoute("/api/brand-boost")({
           const healthFilter = await excludeUnhealthyEngines(picked as EngineKey[]);
           const targets = healthFilter.engines as Platform[];
           const engineModels = await resolveEngineModels(targets, "final");
-          const probeSys = String(adminCfg.probe_system || `You are simulating the public-knowledge response of an AI assistant. Answer ONLY from what is plausibly in your training/grounding. ${FACTUAL_SAFETY_PROMPT}
+          const probeSys = String(adminCfg.probe_system || `You are responding through Maaroof's configured integration for the requested engine. Answer only from the knowledge and retrieval context actually available to this runtime. Do not impersonate another engine. ${FACTUAL_SAFETY_PROMPT}
 If you have no reliable public knowledge, say so explicitly. Reply in ${langName}. Keep under 120 words.`);
           const probeUserTpl = String(adminCfg.probe_prompt || `What do you know about the brand "{brand}"{keywords} in the context of {market}? Mention concrete facts only.`);
           const probeUser = probeUserTpl
@@ -310,9 +310,17 @@ ${evidenceBlock}`;
           await admin.from("profiles").update({
             monthly_analyses_used: ((cur as any)?.monthly_analyses_used || 0) + BRAND_BOOST_COST,
           }).eq("id", userId);
-          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: { brand: brand_name, platforms: targets, cost: BRAND_BOOST_COST } });
+          await admin.from("activity_log").insert({ user_id: userId, action: "brand_boost", metadata: {
+            operation_id: _runId,
+            brand: brand_name,
+            platforms: targets,
+            connection_modes: Object.fromEntries(merged.map((p: any) => [p.platform, p.is_proxy ? "proxy" : "direct"])),
+            cost: BRAND_BOOST_COST,
+            duration_ms: Date.now() - _t0,
+          } });
 
           return Response.json({
+            operation_id: _runId,
             summary: planParsed.summary || "",
             evidence,
             plan: merged,
