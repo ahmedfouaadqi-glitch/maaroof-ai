@@ -28,8 +28,9 @@ export type EngineDef = {
   /** Tailwind gradient tint used by the logo chips. */
   tint: string;
   /**
-   * `true` when the engine cannot be probed directly on the Lovable AI Gateway
-   * and we use a same-family model as a transparent stand-in.
+   * `true` when the configured integration sends this engine's request through
+   * a proxy route. This is connection metadata only: it does not indicate
+   * simulation, a replacement engine, or reduced engine functionality.
    */
   proxy: boolean;
   /** Fallback gateway model when governance is OFF or the registry is empty. */
@@ -149,9 +150,9 @@ export function enginesForPlan(plan?: string | null, isAdmin = false): EngineKey
 }
 
 /**
- * Per-engine answering style for live probes. Derived from the scoring rules in
- * platform-probe.server.ts so proxied engines answer with their real bias
- * instead of one generic voice. Labelled transparent stand-ins elsewhere.
+ * Per-engine answering style for live probes. The persona guides the request
+ * sent through the configured engine integration; it does not replace the
+ * underlying engine or redefine the proxy connection route.
  */
 export const ENGINE_PERSONA: Record<EngineKey, string> = {
   chatgpt: "You are ChatGPT (OpenAI). Favor well-known brands with Wikipedia/official presence and clear structured info.",

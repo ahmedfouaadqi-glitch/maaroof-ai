@@ -123,10 +123,14 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
   {
     key: "brand_boost",
     icon: "sparkles",
-    label: { ar: "تعزيز انتشار العلامة", en: "Brand Boost", ku: "بەهێزکردنی براند" },
-    description: { ar: "ننشر إشارات موثوقة عن علامتك ونتابع زيارات زواحف الذكاء الاصطناعي.", en: "We publish trusted signals about your brand and track AI crawler visits.", ku: "ئاماژەی متمانەپێکراو بڵاودەکەینەوە و سەردانی خشۆکەکان دەبینین." },
+    label: { ar: "تعزيز معروف", en: "Maaroof Brand Enhancement", ku: "بەهێزکردنی Maaroof" },
+    description: {
+      ar: "مهارة تنسّق أداة تعزيز معروف القائمة: تحسين الظهور، تجهيز البث، تتبع إشارات الانتشار، ومراجعة سجل العمليات. لا تنفّذ النشر أو القياس بنفسها.",
+      en: "Coordinates the existing Maaroof Brand Boost tool for visibility improvement, broadcast preparation, reach tracking, and operation history. Execution remains in the tool.",
+      ku: "ئامرازەکەی بەهێزکردنی Maaroof ڕێکدەخات بۆ باشترکردنی دەرکەوتن، ئامادەکردنی بڵاوکردنەوە، شوێنپێی بڵاوبوونەوە و تۆماری کردارەکان."
+    },
     tools: ["brand_boost"],
-    keywords: ["تعزيز", "انتشار", "زواحف", "نشر", "بەهێزکردن", "boost", "crawler", "publish"],
+    keywords: ["تعزيز معروف", "تعزيز العلامة", "بث للذكاء", "متتبع الانتشار", "السجل", "انتشار", "ظهور", "brand boost", "brand enhancement", "AI broadcast", "reach tracker", "operation log"],
   },
   {
     key: "outreach",

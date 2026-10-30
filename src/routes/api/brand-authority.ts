@@ -8,6 +8,7 @@ import { slugify } from "@/lib/crawler-bots";
 import { pingIndexNow } from "@/lib/indexnow.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { asText } from "@/lib/input-coerce";
+import { recordBrandOperation } from "@/lib/brand-operations.server";
 
 const AUTHORITY_COST = 3;
 
@@ -29,52 +30,51 @@ export const Route = createFileRoute("/api/brand-authority")({
 
         const url = new URL(request.url);
         const slug = String(url.searchParams.get("slug") || "").toLowerCase().slice(0, 80);
+        const workspaceRaw = String(url.searchParams.get("workspace_id") || "").trim();
+        if (workspaceRaw && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceRaw)) {
+          return Response.json({ error: "invalid_workspace" }, { status: 400 });
+        }
+        const workspaceId = workspaceRaw || null;
+        if (workspaceId) {
+          const { data: owned } = await admin.from("workspaces").select("id")
+            .eq("id", workspaceId).eq("owner_id", userId!).maybeSingle();
+          if (!owned) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+        }
 
         let packQ = admin.from("brand_authority_packs").select("*").eq("user_id", userId!);
+        packQ = workspaceId ? packQ.eq("workspace_id", workspaceId) : packQ.is("workspace_id", null);
         if (slug) packQ = packQ.eq("brand_slug", slug);
-        const { data: packs } = await packQ.order("updated_at", { ascending: false }).limit(50);
-
-        // Full history (no day window): match by owner id, any of the user's brand slugs,
-        // and their public profile path. Paged in 1000-row batches, hard-capped for safety.
-        const { data: allPacks } = await admin.from("brand_authority_packs").select("brand_slug").eq("user_id", userId!).limit(200);
-        const slugs = Array.from(new Set((allPacks || []).map((p: any) => String(p.brand_slug || "")).filter(Boolean)));
-        const username = String((profile as any)?.username || "").trim();
-        const COLS = "brand_slug, bot_name, user_agent, path, hit_at";
-        const CAP = 20000;
-        const fetchAll = async (apply: (q: any) => any) => {
-          const out: any[] = [];
-          for (let from = 0; from < CAP; from += 1000) {
-            const { data, error } = await apply(admin.from("crawler_hits").select(COLS))
-              .order("hit_at", { ascending: false })
-              .range(from, from + 999);
-            if (error || !data?.length) break;
-            out.push(...data);
-            if (data.length < 1000) break;
-          }
-          return out;
-        };
-        const batches = await Promise.all([
-          fetchAll((q) => q.eq("user_id", userId!)),
-          slugs.length ? fetchAll((q) => q.in("brand_slug", slugs)) : Promise.resolve([]),
-          username ? fetchAll((q) => q.like("path", `/u/${username.replace(/[%_]/g, "")}%`)) : Promise.resolve([]),
-        ]);
-        const seen = new Set<string>();
-        const hits: any[] = [];
-        for (const h of batches.flat()) {
-          const k = `${h.hit_at}|${h.path}|${h.user_agent}|${h.bot_name}`;
-          if (seen.has(k)) continue;
-          seen.add(k);
-          hits.push(h);
+        const { data: packs, error: packError } = await packQ.order("updated_at", { ascending: false }).limit(50);
+        if (packError) {
+          console.error("[brand-authority] scoped pack read failed", packError.message);
+          return Response.json({ error: "brand_packs_unavailable" }, { status: 503 });
         }
-        hits.sort((a, b) => String(b.hit_at).localeCompare(String(a.hit_at)));
-        const known = hits.filter((h) => h.bot_name && h.bot_name !== "Unknown" && h.bot_name !== "Browser");
+
+        const COLS = "brand_slug, bot_name, user_agent, path, hit_at, verification_status, verified_hostname, verification_method, verified_at";
+        const CAP = 20000;
+        const hits: any[] = [];
+        for (let from = 0; from < CAP; from += 1000) {
+          let hitsQ = admin.from("crawler_hits").select(COLS).eq("user_id", userId!);
+          hitsQ = workspaceId ? hitsQ.eq("workspace_id", workspaceId) : hitsQ.is("workspace_id", null);
+          const { data, error } = await hitsQ.order("hit_at", { ascending: false }).range(from, from + 999);
+          if (error) {
+            console.error("[brand-authority] scoped crawler read failed", error.message);
+            return Response.json({ error: "crawler_hits_unavailable" }, { status: 503 });
+          }
+          if (!data?.length) break;
+          hits.push(...data);
+          if (data.length < 1000) break;
+        }
+        const allHits = slug ? hits.filter((h) => h.brand_slug === slug) : hits;
+        const known = allHits.filter((h) => h.bot_name && h.bot_name !== "Unknown" && h.bot_name !== "Browser");
         const stats = {
-          total: hits.length,
+          total: allHits.length,
           known: known.length,
-          first: hits.length ? hits[hits.length - 1].hit_at : null,
-          last: hits.length ? hits[0].hit_at : null,
+          verified: allHits.filter((h) => h.verification_status === "verified").length,
+          first: allHits.length ? allHits[allHits.length - 1].hit_at : null,
+          last: allHits.length ? allHits[0].hit_at : null,
         };
-        return Response.json({ packs: packs || [], hits, stats, username });
+        return Response.json({ workspace_id: workspaceId, packs: packs || [], hits: allHits, stats, username: String((profile as any)?.username || "") });
       },
 
       POST: async ({ request }) => {
@@ -84,11 +84,34 @@ export const Route = createFileRoute("/api/brand-authority")({
           const { admin, userId, profile, err } = await authUser(request);
           if (err) return err;
 
+          const body = await request.json().catch(() => ({} as any));
+          const brand_name = asText(body?.brand_name, 200);
+          const brand_keywords = asText(body?.brand_keywords, 400);
+          const source_url = asText(body?.source_url, 500);
+          const shouldPing = Boolean(body?.ping);
+          const lang = String(body?.lang || "en");
+          if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
+
+          const workspaceRaw = typeof body?.workspace_id === "string" ? body.workspace_id.trim() : "";
+          if (workspaceRaw && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceRaw)) {
+            return Response.json({ error: "invalid_workspace" }, { status: 400 });
+          }
+          const workspaceId = workspaceRaw || null;
+          if (workspaceId) {
+            const { data: owned } = await admin.from("workspaces").select("id")
+              .eq("id", workspaceId).eq("owner_id", userId!).maybeSingle();
+            if (!owned) return Response.json({ error: "workspace_not_found" }, { status: 404 });
+          }
+
+          const slugBase = slugify(brand_name);
+          if (!slugBase) return Response.json({ error: "invalid_brand_name" }, { status: 400 });
+          const slug = workspaceId ? `${slugBase.slice(0, 70)}-${workspaceId.replace(/-/g, "").slice(0, 8)}` : slugBase;
+
           const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
-          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/brand-authority" } });
+          const _chg = await chargeTokens({ userId: userId!, toolKey: "brand_authority", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/brand-authority", workspace_id: workspaceId } });
           if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
           // Quota check (same model as brand-boost)
@@ -101,17 +124,7 @@ export const Route = createFileRoute("/api/brand-authority")({
             /* balance-only: charge already succeeded */ void overrideLimit;
           }
 
-          const body = await request.json();
 
-          const brand_name = asText(body?.brand_name, 200);
-          const brand_keywords = asText(body?.brand_keywords, 400);
-          const source_url = asText(body?.source_url, 500);
-          const shouldPing = Boolean(body?.ping);
-          const lang = String(body?.lang || "en");
-          if (!brand_name) return Response.json({ error: "brand_name required" }, { status: 400 });
-
-          const slug = slugify(brand_name);
-          if (!slug) return Response.json({ error: "invalid_brand_name" }, { status: 400 });
 
           // Step 1: optional scrape for grounding
           let evidenceText = "";
@@ -183,17 +196,18 @@ ${evidenceText || "(no source content)"}`;
           } catch {}
 
           // Step 3: upsert
-          const { data: existing } = await admin
-            .from("brand_authority_packs")
+          let existingQuery = admin.from("brand_authority_packs")
             .select("id, user_id")
-            .eq("brand_slug", slug)
-            .maybeSingle();
+            .eq("brand_slug", slug);
+          existingQuery = workspaceId ? existingQuery.eq("workspace_id", workspaceId) : existingQuery.is("workspace_id", null);
+          const { data: existing } = await existingQuery.maybeSingle();
           if (existing && (existing as any).user_id !== userId) {
             return Response.json({ error: "slug_taken" }, { status: 409 });
           }
 
           const row = {
             user_id: userId!,
+            workspace_id: workspaceId,
             brand_slug: slug,
             brand_name,
             brand_keywords,
@@ -203,10 +217,20 @@ ${evidenceText || "(no source content)"}`;
             html: "", // generated on the fly in the public endpoint
             updated_at: new Date().toISOString(),
           };
+          let saveResult: any;
           if (existing) {
-            await admin.from("brand_authority_packs").update(row).eq("id", (existing as any).id);
+            let saveQuery = admin.from("brand_authority_packs").update(row)
+              .eq("id", (existing as any).id).eq("user_id", userId!);
+            saveQuery = workspaceId
+              ? saveQuery.eq("workspace_id", workspaceId)
+              : saveQuery.is("workspace_id", null);
+            saveResult = await saveQuery;
           } else {
-            await admin.from("brand_authority_packs").insert(row);
+            saveResult = await admin.from("brand_authority_packs").insert(row);
+          }
+          if (saveResult.error) {
+            console.error("[api/brand-authority] pack persistence failed", saveResult.error.message);
+            return Response.json({ error: "brand_pack_save_failed" }, { status: 500 });
           }
 
           // Step 4: optional IndexNow ping
@@ -219,15 +243,29 @@ ${evidenceText || "(no source content)"}`;
           await admin.from("profiles").update({
             monthly_analyses_used: used + AUTHORITY_COST,
           }).eq("id", userId!);
+          await recordBrandOperation(admin, {
+            id: _runId,
+            userId: userId!,
+            workspaceId,
+            operationType: "brand_authority",
+            brandName: brand_name,
+            durationMs: Date.now() - _t0,
+            chargedUnits: AUTHORITY_COST,
+            requestMeta: { source_url_provided: Boolean(source_url), indexnow_requested: shouldPing },
+            resultMeta: { slug, public_url: publicUrl, publication_scope: "maaroof_host", published_on_customer_domain: false, indexnow_result: pingResult },
+          });
           await admin.from("activity_log").insert({
             user_id: userId,
             action: "brand_authority",
-            metadata: { brand: brand_name, slug, cost: AUTHORITY_COST, pinged: shouldPing },
+            metadata: { operation_id: _runId, workspace_id: workspaceId, brand: brand_name, slug, cost: AUTHORITY_COST, pinged: shouldPing, publication_scope: "maaroof_host" },
           });
 
           return Response.json({
+            operation_id: _runId,
             slug,
             public_url: publicUrl,
+            publication_scope: "maaroof_host",
+            published_on_customer_domain: false,
             summary,
             markdown,
             json_ld,

@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { strToU8, zipSync } from "fflate";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ToolHistory } from "@/components/ToolHistory";
-import { Megaphone, Loader2, Plus, Power, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Search, Mail, Rocket } from "lucide-react";
+import { Megaphone, Loader2, Plus, Trash2, Sparkles, Radar, Copy, ExternalLink, Share2, History, Download, RefreshCw, Eye, Info, Rocket } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisibilityPanel } from "@/components/AIVisibility";
-import { SmartResearch } from "@/components/SmartResearch";
-import { CompanyOutreach } from "@/components/CompanyOutreach";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 
 import { ToolLangSelect } from "@/components/ToolLangSelect";
@@ -28,53 +27,58 @@ import { botCategory, type BotCategory } from "@/lib/crawler-bots";
 const PLATFORMS: string[] = [...ENGINE_KEYS];
 const MAX_PLATFORMS_PER_RUN = 10;
 
-export function BrandBoostAgent() {
+export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string | null }) {
   const { t, lang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
   const [kw, setKw] = useState((profile as any)?.brand_keywords || "");
+  const [websiteUrl, setWebsiteUrl] = useState((profile as any)?.website_url || (profile as any)?.website || "");
   // Fill once from the saved profile when it arrives; never overwrite what the user typed.
   useEffect(() => {
     const pb = (profile as any)?.brand_name;
     const pk = (profile as any)?.brand_keywords;
+    const pw = (profile as any)?.website_url || (profile as any)?.website;
     if (pb) setBrand((cur: string) => cur || pb);
     if (pk) setKw((cur: string) => cur || pk);
-  }, [(profile as any)?.brand_name, (profile as any)?.brand_keywords]);
+    if (pw) setWebsiteUrl((cur: string) => cur || pw);
+  }, [(profile as any)?.brand_name, (profile as any)?.brand_keywords, (profile as any)?.website_url, (profile as any)?.website]);
   const [freq, setFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [sel, setSel] = useState<string[]>(PLATFORMS.slice(0, MAX_PLATFORMS_PER_RUN));
   const [approved, setApproved] = useState(false);
   const [running, setRunning] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
   const [err, setErr] = useState("");
-  const [tab, setTab] = useState<string>("visibility");
+  const [tab, setTab] = useState<string>("enhance");
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("brand_boost_jobs").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    let query = supabase.from("brand_boost_jobs").select("*").eq("user_id", user.id);
+    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    const { data } = await query.order("created_at", { ascending: false });
     setJobs(data || []);
   };
-  useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => { load(); }, [user?.id, workspaceId]);
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
     const platforms = sel.slice(0, MAX_PLATFORMS_PER_RUN);
-    await supabase.from("brand_boost_jobs").insert({
-      user_id: user.id, brand_name: brand, brand_keywords: kw,
-      platforms, frequency: freq, approved: true, active: true,
+    const { error: insertError } = await supabase.from("brand_boost_jobs").insert({
+      user_id: user.id, workspace_id: workspaceId, brand_name: brand, brand_keywords: kw,
+      platforms, frequency: freq, approved: true, active: true, next_run_at: new Date().toISOString(),
+      config: { lang: outLang, website_url: websiteUrl.trim(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" },
     });
-    await load();
-  };
-
-  const toggle = async (id: string, active: boolean) => {
-    await supabase.from("brand_boost_jobs").update({ active: !active }).eq("id", id);
+    if (insertError) { toast.error(insertError.message); return; }
+    toast.success(lang === "ar" ? "تم تفعيل الجدولة؛ أول تشغيل عند وصول نبضة المجدول." : "Schedule enabled; first run starts on the next scheduler tick.");
     await load();
   };
 
   const remove = async (id: string) => {
     if (!confirm(t("boost_delete_confirm"))) return;
-    await supabase.from("brand_boost_jobs").delete().eq("id", id);
+    let query = supabase.from("brand_boost_jobs").delete().eq("id", id).eq("user_id", user!.id);
+    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    await query;
     setReport(null);
     await load();
   };
@@ -105,10 +109,10 @@ export function BrandBoostAgent() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand") }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, website_url: String((j.config as any)?.website_url || websiteUrl || "").trim(), platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand"), workspace_id: workspaceId }),
       });
       const text = await res.text();
       let data: any = {};
@@ -118,8 +122,10 @@ export function BrandBoostAgent() {
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
-      await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, status: "done", report: data });
-      await supabase.from("brand_boost_jobs").update({ last_run_at: new Date().toISOString() }).eq("id", j.id);
+      await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, workspace_id: workspaceId, status: "done", report: data });
+      let updateJob = supabase.from("brand_boost_jobs").update({ last_run_at: new Date().toISOString() }).eq("id", j.id).eq("user_id", user!.id);
+      updateJob = workspaceId ? updateJob.eq("workspace_id", workspaceId) : updateJob.is("workspace_id", null);
+      await updateJob;
       await load();
     } catch (e: any) { setErr(e?.message || "failed"); }
     finally { setRunning(null); }
@@ -142,16 +148,13 @@ export function BrandBoostAgent() {
 
       <Tabs value={tab} onValueChange={setTab} className="mt-4">
         <TabsList className="flex h-auto w-full flex-wrap gap-1">
-          <TabsTrigger value="visibility" className="text-xs"><Eye className="me-1 inline size-3.5" />{t("ag_vis_title")}</TabsTrigger>
-          <TabsTrigger value="research" className="text-xs"><Search className="me-1 inline size-3.5" />{t("research_title")}</TabsTrigger>
-          <TabsTrigger value="outreach" className="text-xs"><Mail className="me-1 inline size-3.5" />{t("outreach_title")}</TabsTrigger>
-          <TabsTrigger value="run" className="text-xs"><Megaphone className="me-1 inline size-3.5" />{t("boost_tab_run")}</TabsTrigger>
-          <TabsTrigger value="authority" className="text-xs"><Rocket className="me-1 inline size-3.5" />{lang === "ar" ? "بثّ للذكاء" : lang === "ku" ? "بڵاوکردنەوە بۆ AI" : "Broadcast"}</TabsTrigger>
-          <TabsTrigger value="propagation" className="text-xs"><Radar className="me-1 inline size-3.5" />{t("boost_tab_propagation")}</TabsTrigger>
+          <TabsTrigger value="enhance" className="text-xs"><Eye className="me-1 inline size-3.5" />{lang === "ar" ? "تعزيز العلامة" : lang === "ku" ? "بەهێزکردنی براند" : "Brand Enhancement"}</TabsTrigger>
+          <TabsTrigger value="broadcast" className="text-xs"><Rocket className="me-1 inline size-3.5" />{lang === "ar" ? "بث للذكاء" : lang === "ku" ? "بڵاوکردنەوە بۆ AI" : "AI Broadcast"}</TabsTrigger>
+          <TabsTrigger value="tracking" className="text-xs"><Radar className="me-1 inline size-3.5" />{lang === "ar" ? "متتبع الانتشار" : lang === "ku" ? "شوێنپێی بڵاوبوونەوە" : "Reach Tracker"}</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs"><History className="me-1 inline size-3.5" />{lang === "ar" ? "السجل" : lang === "ku" ? "تۆمار" : "Log"}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visibility" className="mt-4">
+        <TabsContent value="enhance" className="mt-4">
           <div className="rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4 mb-3">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-gradient">
               <Eye className="size-4 text-primary" />
@@ -161,52 +164,36 @@ export function BrandBoostAgent() {
               {lang === "ar"
                 ? "افحص كيف تظهر علامتك التجارية أمام 10 محركات ذكاء اصطناعي (ChatGPT و Gemini و Claude و Perplexity و Copilot و Grok و Mistral و DeepSeek و Kimi و Qwen). يعرض لك: ما يقوله كل محرك الآن، نسبة الظهور لكل منصة، إشارات الثقة، التحيّز السلبي/الإيجابي، وتوصيات عملية مرتبطة مباشرة بخطة \"تعزيز العلامة\" بالأسفل. (يستهلك 1 تحليل — اسم العلامة مطلوب، الكلمات المفتاحية اختيارية)."
                 : lang === "ku"
-                ? "پشکنینی چۆنیەتی دەرکەوتنی براندەکەت لە ٩ بزوێنەری AI. وەڵامی ئێستای هەر بزوێنەرێک، ڕێژەی دەرکەوتن، ئاماژەی متمانە و ڕاسپاردە کارایی پێشکەش دەکات کە ڕاستەوخۆ پەیوەستن بە پلانی بەهێزکردنی براند. (١ شیکاری — ناوی براند پێویستە)."
-                : "Probe how your brand appears across 9 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
+                ? "پشکنینی چۆنیەتی دەرکەوتنی براندەکەت لە ١٠ بزوێنەری AI. وەڵامی ئێستای هەر بزوێنەرێک، ڕێژەی دەرکەوتن، ئاماژەی متمانە و ڕاسپاردە کارایی پێشکەش دەکات کە ڕاستەوخۆ پەیوەستن بە پلانی بەهێزکردنی براند. (١ شیکاری — ناوی براند پێویستە)."
+                : "Probe how your brand appears across 10 AI engines (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen). See what each engine says right now, per-platform visibility %, trust signals, sentiment, and actionable recommendations that feed directly into your Brand Boost plan below. (1 analysis — brand required, keywords optional)."}
             </p>
           </div>
-          <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" />
-        </TabsContent>
+          <VisibilityPanel brand={brand} keywords={kw} lang={outLang} embedded toolKey="brand" workspaceId={workspaceId} />
+        
 
-        <TabsContent value="research" className="mt-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-            {lang === "ar"
-              ? t("auto.search_for_companies_brands_markets_and")
-              : lang === "ku"
-              ? "گەڕانی کۆمپانیا/براند/بازاڕ و گۆڕینیان بۆ خواردنی AI."
-              : "Research companies/brands/markets and feed insights back into your boost plan."}
-          </div>
-          <SmartResearch />
-        </TabsContent>
-
-        <TabsContent value="outreach" className="mt-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-            {lang === "ar"
-              ? t("auto.generate_communication_messages_and_company_profiles")
-              : lang === "ku"
-              ? "نامەی پەیوەندی و پرۆفایلی کۆمپانیا دروست بکە."
-              : "Generate outreach emails and company briefs in your brand voice."}
-          </div>
-          <CompanyOutreach />
-        </TabsContent>
-
-
-
-
-        <TabsContent value="run" className="mt-4">
-      <div className="grid gap-2 sm:grid-cols-2">
+        
+      <div className="grid gap-2 sm:grid-cols-3">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("boost_brand")}
+          className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+        <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder={lang === "ar" ? "رابط الموقع الرسمي (https://...)" : "Official website URL (https://...)"}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder={t("boost_keywords")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
       </div>
       <EngineSelector className="mt-3" value={sel} onChange={setSel} maxOverride={MAX_PLATFORMS_PER_RUN} />
 
+      <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-muted-foreground">
+        {lang === "ar"
+          ? "الجدولة الخلفية: أسبوعياً مرتان بفاصل 84 ساعة، يومياً كل 24 ساعة، أو شهرياً. كل تشغيل يستهلك 5 وحدات. يبدأ التشغيل التلقائي بعد تطبيق ترحيل قاعدة البيانات وإعداد Supabase Cron وأسرار الخادم."
+          : lang === "ku"
+          ? "کارکردنی پشتەوە: هەفتانە دوو جار بە جیاوازی ٨٤ کاتژمێر، ڕۆژانە، یان مانگانە. هەر جار ٥ یەکەی بەکارهێنان دەخوات. پێویستی بە چالاککردنی Supabase Cron و نهێنییەکانی سێرڤەر هەیە."
+          : "Background cadence: twice weekly (84 hours apart), daily, or monthly. Each run costs 5 units. Automatic execution begins after the database migration, Supabase Cron job, and server secrets are configured."}
+      </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <select value={freq} onChange={(e) => setFreq(e.target.value as any)}
           className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm">
           <option value="daily">{t("boost_freq_daily")}</option>
-          <option value="weekly">{t("boost_freq_weekly")}</option>
+          <option value="weekly">{lang === "ar" ? "مرتان أسبوعياً" : lang === "ku" ? "هەفتانە دوو جار" : "Twice weekly"}</option>
           <option value="monthly">{t("boost_freq_monthly")}</option>
         </select>
         <label className="flex items-center gap-2 text-xs">
@@ -228,8 +215,21 @@ export function BrandBoostAgent() {
                 <strong className="max-w-full break-words">{j.brand_name}</strong>
                 <span className="text-xs text-muted-foreground">· {j.frequency}</span>
                 <span className="max-w-full break-words text-[10px] text-muted-foreground">{j.platforms?.slice(0, MAX_PLATFORMS_PER_RUN).join(", ")}</span>
-                <button onClick={() => toggle(j.id, j.active)} className="sm:ms-auto inline-flex items-center gap-1 text-xs">
-                  <Power className="size-3" /> {j.active ? t("boost_pause") : t("boost_resume")}
+                <span className={j.active ? "sm:ms-auto rounded-md border border-emerald-500/30 bg-emerald-500/5 px-2 py-1 text-[10px] text-emerald-700 dark:text-emerald-400" : "sm:ms-auto rounded-md border border-border bg-background px-2 py-1 text-[10px] text-muted-foreground"}>
+                  {j.active ? (lang === "ar" ? "جدولة نشطة" : "Scheduled") : (lang === "ar" ? "متوقفة" : "Paused")}
+                </span>
+                {j.next_run_at && j.active && <span className="text-[10px] text-muted-foreground">{lang === "ar" ? "التالي: " : "Next: "}{new Date(j.next_run_at).toLocaleString()}</span>}
+                <button onClick={async () => {
+                  const nextActive = !j.active;
+                  let q = supabase.from("brand_boost_jobs").update({
+                    active: nextActive,
+                    next_run_at: nextActive ? new Date().toISOString() : j.next_run_at,
+                  }).eq("id", j.id).eq("user_id", user!.id);
+                  q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
+                  const { error } = await q;
+                  if (error) toast.error(error.message); else await load();
+                }} className="rounded-md border border-border px-2 py-1 text-xs font-semibold">
+                  {j.active ? (lang === "ar" ? "إيقاف" : "Pause") : (lang === "ar" ? "استئناف" : "Resume")}
                 </button>
                 <button disabled={running === j.id} onClick={() => runNow(j)}
                   className="rounded-md bg-primary/15 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50">
@@ -258,6 +258,19 @@ export function BrandBoostAgent() {
       <ToolHistory toolKey="brand_boost" />
       {report && (
         <div className="mt-4 space-y-2">
+          {report.analysis_status && (
+            <div className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-1">
+              <div className="font-semibold">
+                {report.analysis_status === "direct_website_crawled" ? (lang === "ar" ? "تم فحص محتوى الموقع مباشرة" : "Direct website content crawled")
+                  : report.analysis_status === "public_search_evidence_only" ? (lang === "ar" ? "أدلة من نتائج البحث فقط" : "Public search evidence only")
+                  : report.analysis_status === "engine_observations_only" ? (lang === "ar" ? "ملاحظات من تكاملات النماذج فقط" : "Configured-model observations only")
+                  : (lang === "ar" ? "أدلة غير كافية لتشخيص خاص بالعلامة" : "Insufficient evidence for a brand-specific diagnosis")}
+              </div>
+              {report.website_scan?.url && <div className="text-muted-foreground">{lang === "ar" ? "الموقع: " : "Website: "}{report.website_scan.url} · {report.website_scan.status}</div>}
+              {Array.isArray(report.analysis_limitations) && report.analysis_limitations.map((item: string, i: number) => <div key={i} className="text-muted-foreground">• {item}</div>)}
+              {report.plan_source === "deterministic_fallback" && <div className="font-semibold text-amber-700 dark:text-amber-400">{lang === "ar" ? "الخطة المعروضة إرشادات احتياطية وليست نتيجة تشخيص نموذج مكتمل." : "Fallback guidance, not a completed model diagnosis."}</div>}
+            </div>
+          )}
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">
@@ -273,21 +286,21 @@ export function BrandBoostAgent() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600">
-                              <Info className="size-2.5" /> proxy
+                            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <Info className="size-2.5" /> {lang === "ar" ? "عبر Proxy" : lang === "ku" ? "لەڕێگەی Proxy" : "Proxy route"}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs text-[11px]">
                             {lang === "ar"
-                              ? t("auto.there_is_no_direct_public_api")
+                              ? "Proxy قناة اتصال ضمن تكامل المحرك، ولا تعني أن الاستجابة محاكاة أو من نموذج بديل."
                               : lang === "ku"
-                              ? "API ڕاستەوخۆی گشتی بۆ ئەم پلاتفۆڕمە نییە، مۆدێلی هاوشێوەمان بەکارهێنا."
-                              : "No direct public API for this platform — we used an equivalent model from the same family to simulate its answer."}
+                              ? "Proxy ڕێگای پەیوەندییە لە ناو یەکخستنی بزوێنەر؛ واتای هاوشێوەسازی یان بەکارهێنانی مۆدێلی جێگرەوە نییە."
+                              : "Proxy is the configured connection route; it does not mean the engine response is simulated or replaced."}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                      <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-600">{lang === "ar" ? "مباشر" : "direct"}</span>
+                      <span className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">{lang === "ar" ? "اتصال مباشر" : lang === "ku" ? "پەیوەندی ڕاستەوخۆ" : "Direct connection"}</span>
                     )}
                     <span className="ms-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{p.current_signal}</span>
                   </div>
@@ -311,8 +324,27 @@ export function BrandBoostAgent() {
               {(p.recommended_actions || []).length > 0 && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ar" ? "إجراءات التحسين" : lang === "ku" ? "کردارەکانی باشترکردن" : "Improvement actions"}</div>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {lang === "ar"
+                      ? "إحالة التوصية إلى مصدر لا تثبت وحدها أن نص المصدر يدعم الادعاء؛ راجع المصدر نفسه قبل اعتماد الإجراء."
+                      : lang === "ku"
+                      ? "ئاماژەدان بە سەرچاوە بە تەنها پشتگیری ناوەڕۆکی سەرچاوە بۆ بانگەشەکە ناسەلمێنێت؛ پێش پەسەندکردنی کردارەکە سەرچاوەکە بپشکنە."
+                      : "A source reference alone does not establish that the source supports the claim; inspect the source before acting."}
+                  </p>
                   <ul className="mt-1 list-inside list-disc break-words">
-                    {(p.recommended_actions || []).map((a: string, j: number) => <li key={j}>{a}</li>)}
+                    {(p.recommended_actions || []).map((a: string, j: number) => {
+                      const assessment = p.recommendation_assessments?.[j];
+                      const cited = assessment?.confidence === "evidence_referenced";
+                      return (
+                        <li key={j}>
+                          <span>{a}</span>
+                          <span className={cited ? "ms-2 text-[9px] font-semibold text-muted-foreground" : "ms-2 text-[9px] font-semibold text-amber-700 dark:text-amber-400"}>
+                            {cited ? (lang === "ar" ? "إحالة إلى مصدر" : lang === "ku" ? "ئاماژە بە سەرچاوە" : "Source referenced (not validated)") : (lang === "ar" ? "يحتاج تحقق" : "Needs verification")}
+                          </span>
+                          {assessment?.evidence_refs?.length > 0 && <span className="ms-1 text-[9px] text-muted-foreground">[{assessment.evidence_refs.join(", ")}]</span>}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -396,7 +428,7 @@ export function BrandBoostAgent() {
                 ? "تابی «بڵاوکردنەوە بۆ AI» بکەرەوە: لاپەڕەی گشتی + IndexNow ping + بەستەری هاوبەشی."
                 : "Open the Broadcast tab to publish an indexable public page, ping IndexNow (Bing/Copilot/Perplexity/ChatGPT), and get share-ready links for every platform."}
             </p>
-            <button onClick={() => setTab("authority")}
+            <button onClick={() => setTab("broadcast")}
               className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
               <Rocket className="size-4" />
               {lang === "ar" ? "ابدأ البثّ الآن" : lang === "ku" ? "ئێستا بڵاو بکەرەوە" : "Broadcast now"}
@@ -411,28 +443,29 @@ export function BrandBoostAgent() {
           />
         </div>
       )}
+        
         </TabsContent>
 
-        <TabsContent value="authority" className="mt-4">
-          <AuthorityPanel brand={brand} kw={kw} lang={outLang} />
+        <TabsContent value="broadcast" className="mt-4">
+          <AuthorityPanel brand={brand} kw={kw} lang={outLang} workspaceId={workspaceId} />
         </TabsContent>
 
-        <TabsContent value="propagation" className="mt-4">
-          <PropagationPanel />
+        <TabsContent value="tracking" className="mt-4">
+          <PropagationPanel workspaceId={workspaceId} />
         </TabsContent>
 
         <TabsContent value="logs" className="mt-4">
-          <LogsPanel />
+          <LogsPanel workspaceId={workspaceId} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: Lang }) {
+function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: string; lang: Lang; workspaceId?: string | null }) {
   const { t } = useI18n();
   const [sourceUrl, setSourceUrl] = useState("");
-  const [ping, setPing] = useState(true);
+  const [ping, setPing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [pack, setPack] = useState<any>(null);
@@ -443,10 +476,10 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const res = await apiFetch("/api/brand-authority", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: brand, brand_keywords: kw, source_url: sourceUrl, ping, lang }),
+        body: JSON.stringify({ brand_name: brand, brand_keywords: kw, source_url: sourceUrl, ping, lang, workspace_id: workspaceId || null }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `http_${res.status}`);
@@ -456,23 +489,132 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
   };
 
   const copy = (s: string) => { navigator.clipboard.writeText(s).catch(() => {}); };
+  const exportWebsitePack = () => {
+    try {
+      const rawSite = sourceUrl.trim() || String(pack?.json_ld?.url || "");
+      const site = new URL(rawSite);
+      if (!["http:", "https:"].includes(site.protocol) || site.username || site.password || !site.hostname.includes(".")) {
+        throw new Error("أدخل رابط الموقع الرسمي بصيغة https://example.com أولاً.");
+      }
+      const pageUrl = site.origin + "/about/brand/";
+      const baseJsonLd = typeof pack.json_ld === "string" ? JSON.parse(pack.json_ld) : pack.json_ld;
+      const jsonLd = {
+        ...(baseJsonLd && typeof baseJsonLd === "object" && !Array.isArray(baseJsonLd) ? baseJsonLd : {}),
+        "@context": baseJsonLd?.["@context"] || "https://schema.org",
+        "@id": pageUrl + "#organization",
+        "url": site.origin,
+        "mainEntityOfPage": { "@type": "WebPage", "@id": pageUrl },
+      };
+      const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[ch]!));
+      const htmlParts: string[] = [];
+      let insideList = false;
+      for (const line of String(pack.markdown || "").split(/\r?\n/)) {
+        const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+        const heading = line.match(/^(#{1,3})\s+(.+)$/);
+        if (bullet) {
+          if (!insideList) { htmlParts.push("<ul>"); insideList = true; }
+          htmlParts.push("<li>" + escapeHtml(bullet[1]) + "</li>");
+          continue;
+        }
+        if (insideList) { htmlParts.push("</ul>"); insideList = false; }
+        if (heading) {
+          htmlParts.push("<h" + heading[1].length + ">" + escapeHtml(heading[2]) + "</h" + heading[1].length + ">");
+        } else if (line.trim()) {
+          htmlParts.push("<p>" + escapeHtml(line) + "</p>");
+        }
+      }
+      if (insideList) htmlParts.push("</ul>");
+      const markdownHtml = htmlParts.join("\n");
+      const safeJsonLd = JSON.stringify(jsonLd, null, 2).replace(/</g, "\\u003c");
+      const html = [
+        "<!doctype html><html lang=\"ar\" dir=\"rtl\"><head><meta charset=\"utf-8\">",
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+        "<title>" + escapeHtml(brand) + " | الملف الرسمي للعلامة</title>",
+        "<link rel=\"canonical\" href=\"" + pageUrl + "\">",
+        "<script type=\"application/ld+json\">" + safeJsonLd + "</script>",
+        "<style>body{font-family:Arial,sans-serif;max-width:920px;margin:48px auto;padding:0 22px;line-height:1.8;color:#20242b}h1,h2,h3{line-height:1.3}li{margin:6px 0}</style>",
+        "</head><body><main><h1>" + escapeHtml(brand) + "</h1>",
+        "<p>الصفحة الرسمية التعريفية بالعلامة. تُنشر بعد مراجعة المعلومات من مالك الموقع.</p>",
+        "<article>" + markdownHtml + "</article></main></body></html>",
+      ].join("");
+      const sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' +
+        escapeHtml(pageUrl) + "</loc><lastmod>" + new Date().toISOString().slice(0, 10) + "</lastmod></url></urlset>";
+      const readme = [
+        "# حزمة تركيب صفحة العلامة — Maaroof AI",
+        "",
+        "## المسار المقترح",
+        pageUrl,
+        "",
+        "## خطوات التركيب",
+        "1. راجع جميع الحقائق والروابط في HTML وJSON-LD قبل النشر.",
+        "2. أنشئ صفحة مستقلة في الموقع على المسار /about/brand/ أو مسار مكافئ، ثم ضع محتوى brand-profile.html فيها.",
+        "3. أضف رابطاً واضحاً من الصفحة الرئيسية إلى صفحة التعريف؛ لا تضع كامل الصفحة داخل الرئيسية.",
+        "4. ضع ملف llms.txt في جذر الموقع ليكون متاحاً على /llms.txt، وراجع محتواه قبل النشر.",
+        "5. أضف عنوان الصفحة إلى ملف sitemap.xml الحالي مع الحفاظ على بقية عناوينه. ملف sitemap-entry.xml مدخل إرشادي وليس ملفاً بديلاً.",
+        "6. افحص robots.txt ووسم noindex وcanonical. أضف مقتطف robots عند الحاجة فقط، ولا تستبدل ملف robots.txt الحالي.",
+        "7. بعد النشر تحقق من استجابة HTTP 200 ومن ظهور JSON-LD في مصدر الصفحة.",
+        "",
+        "## ملاحظة",
+        "هذه الحزمة لم تُنشر تلقائياً. مسؤولية تركيبها ومراجعتها ونشرها تبقى لدى مالك الموقع أو مطوّره. لا يوجد ضمان للفهرسة أو لاستشهاد محركات الذكاء الاصطناعي.",
+      ].join("\n");
+      const robots = "# مقتطف اختياري — لا تستبدل ملف robots.txt الحالي\nUser-agent: *\nAllow: /about/brand/\n";
+      const llmsText = [
+        "# " + brand,
+        "",
+        String(pack.summary || "ملف تعريفي بالعلامة، راجعه قبل النشر."),
+        "",
+        "## Official pages",
+        "- [Brand profile](" + pageUrl + ")",
+        ...(pack.public_url ? ["- [Maaroof public reference](" + String(pack.public_url) + ")"] : []),
+        "",
+        "## Brand profile",
+        String(pack.markdown || ""),
+      ].join("\n");
+      const files = {
+        "README-ar.md": strToU8(readme),
+        "brand-profile.html": strToU8(html),
+        "brand-profile.jsonld": strToU8(JSON.stringify(jsonLd, null, 2)),
+        "brand-profile.md": strToU8(String(pack.markdown || "")),
+        "llms.txt": strToU8(llmsText),
+        "sitemap-entry.xml": strToU8(sitemap),
+        "robots-snippet.txt": strToU8(robots),
+      };
+      const zipped = zipSync(files, { level: 6 });
+      const buffer = zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
+      const blob = new Blob([buffer], { type: "application/zip" });
+      const anchor = document.createElement("a");
+      anchor.href = URL.createObjectURL(blob);
+      anchor.download = (pack.slug || "brand") + "-website-install-pack.zip";
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
+    } catch (error: any) {
+      setErr(error?.message || "تعذر إنشاء حزمة الموقع");
+    }
+  };
 
   return (
     <div className="space-y-3">
       <div className="rounded-xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 to-primary/5 p-4 text-xs">
         <div className="flex items-center gap-2 font-semibold text-foreground">
           <Rocket className="size-4 text-accent" />
-          {lang === "ar" ? "بثّ حقيقي لمحركات الذكاء — كيف يعمل؟"
-            : lang === "ku" ? "بڵاوکردنەوەی ڕاستەقینە بۆ AI — چۆن کاردەکات؟"
-            : "Real broadcast to AI engines — how it works"}
+          {lang === "ar" ? "بث المعلومات العامة للعلامة — النطاق الحالي"
+            : lang === "ku" ? "بڵاوکردنەوەی زانیاری براند — مەودای ئێستا"
+            : "Brand information broadcast — current scope"}
         </div>
         <ol className="mt-2 ms-4 list-decimal space-y-1 text-muted-foreground">
-          <li>{lang === "ar" ? "ننشر بطاقة علامتك على رابط عام مفهرَس (HTML + JSON-LD)." : lang === "ku" ? "بەستەرێکی گشتی + JSON-LD دروست دەکەین." : "We publish your brand card to an indexable public URL (HTML + JSON-LD)."}</li>
-          <li>{lang === "ar" ? "نُبلّغ IndexNow → Bing/Yandex فوراً، وهذا هو نفس فهرس Copilot و ChatGPT Search و Perplexity." : lang === "ku" ? "IndexNow → Bing فۆراً، هەمان فهرس بۆ Copilot/ChatGPT/Perplexity." : "We ping IndexNow → Bing/Yandex — the same index Copilot, ChatGPT Search, and Perplexity read."}</li>
-          <li>{lang === "ar" ? "نضيف الرابط لـ sitemap.xml لـ Google/Gemini." : lang === "ku" ? "بەستەرەکە لە sitemap بۆ Google/Gemini." : "We add the URL to sitemap.xml for Google/Gemini."}</li>
-          <li>{lang === "ar" ? "تنسخ وتشارك على X/LinkedIn/Reddit ليصل لـ Grok و Claude و باقي الزواحف." : lang === "ku" ? "بەستەرەکە لە X/LinkedIn هاوبەش بکە بۆ Grok و Claude." : "Share the link on X/LinkedIn/Reddit so Grok, Claude, and other crawlers pick it up."}</li>
-          <li>{lang === "ar" ? "راقب من زارها فعلاً في تبويب «متتبع الانتشار»." : lang === "ku" ? "زیارەتکارەکان لە تابی «شوێنپێ» ببینە." : "Watch which AI crawlers actually visited in the Propagation tab."}</li>
+          <li>{lang === "ar" ? "ينشئ معروف بطاقة HTML وMarkdown وJSON-LD وينشرها على رابط عام ضمن نطاق معروف." : lang === "ku" ? "Maaroof کارتی HTML وMarkdown وJSON-LD دروست دەکات و لەسەر بەستەرێکی گشتی لە مەودای Maaroof بڵاوی دەکاتەوە." : "Maaroof generates an HTML/Markdown/JSON-LD brand pack and publishes it at a public URL on the Maaroof domain."}</li>
+          <li>{lang === "ar" ? "يمكن إرسال إشعار IndexNow لهذا الرابط على نطاق معروف؛ قبول الإشعار لا يثبت الزحف أو الفهرسة." : lang === "ku" ? "دەتوانرێت ئاگادارکردنەوەی IndexNow بۆ ئەم بەستەرە بنێردرێت؛ وەرگرتنی ئاگادارکردنەوە بەڵگەی کرۆڵ یان ئیندێکس نییە." : "An IndexNow notification can be sent for this Maaroof URL; acceptance does not prove crawling or indexing."}</li>
+          <li>{lang === "ar" ? "هذا المسار لا يعدّل موقع العميل ولا ملف sitemap.xml الخاص به." : lang === "ku" ? "ئەم ڕێگایە ماڵپەڕی کڕیار یان sitemap.xml ـی ئەو ناگۆڕێت." : "This flow does not modify the customer's website or its sitemap.xml."}</li>
+          <li>{lang === "ar" ? "يمكن مشاركة الرابط على قنوات العلامة؛ المشاركة لا تضمن أن أي محرك سيزحف إليه أو يستشهد به." : lang === "ku" ? "دەتوانرێت بەستەرەکە لە کەناڵەکانی براند بڵاو بکرێتەوە؛ ئەمە گەرەنتی کرۆڵ یان ئاماژەکردنی هیچ بزوێنەرێک ناکات." : "You can share the URL on brand channels; sharing does not guarantee that an engine will crawl or cite it."}</li>
+          <li>{lang === "ar" ? "يعرض متتبع الانتشار الطلبات التي طابقت قواعد User-Agent؛ وهذا لا يثبت هوية الزاحف." : lang === "ku" ? "شوێنپێکەرەکە داواکارییە هاوتاکانی User-Agent پیشان دەدات؛ ئەمە ناسنامەی کرۆڵەر پشتڕاست ناکاتەوە." : "The reach tracker shows requests matching User-Agent rules; this does not authenticate the crawler."}</li>
         </ol>
+        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-foreground/80">
+          {lang === "ar" ? "النشر المباشر على نطاق العميل يحتاج إلى ربط تقني وتحقق من ملكية النطاق وتفويض نشر؛ هذه الوظائف غير منفذة في هذا المسار حالياً."
+            : lang === "ku" ? "بڵاوکردنەوەی ڕاستەوخۆ لە مەودای کڕیار پێویستی بە بەستەری تەکنیکی، پشتڕاستکردنەوەی خاوەندارێتی و ڕێگەپێدانی بڵاوکردنەوە هەیە؛ لەم ڕێگایەدا هێشتا جێبەجێ نەکراوە."
+            : "Publishing directly to the customer's domain requires a site connector, domain verification, and publishing authorization; those are not implemented in this flow yet."}
+        </p>
       </div>
 
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
@@ -487,7 +629,11 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         <input type="checkbox" checked={ping} onChange={(e) => setPing(e.target.checked)} />
-        {t("authority_ping")}
+        {lang === "ar"
+          ? "إرسال إشعار IndexNow للرابط المنشور على نطاق معروف فقط (اختياري؛ لا يثبت الفهرسة ولا يخص موقع العميل)."
+          : lang === "ku"
+          ? "ئاگادارکردنەوەی IndexNow بۆ بەستەری Maaroof (ئارەزوومەندانە؛ بەڵگەی ئیندێکس نییە)."
+          : "Optionally submit an IndexNow notification for the Maaroof-hosted URL only; this does not prove indexing or submit your own domain."}
       </label>
 
       <button disabled={loading || !brand.trim()} onClick={generate}
@@ -550,6 +696,7 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 
           {/* Export buttons */}
           <div className="flex flex-wrap gap-2">
+            <button onClick={exportWebsitePack} className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400"><Download className="size-3" /> {lang === "ar" ? "حزمة تركيب الموقع ZIP" : "Website install pack ZIP"}</button>
             <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.json`, JSON.stringify({ summary: pack.summary, json_ld: pack.json_ld, markdown: pack.markdown, public_url: pack.public_url }, null, 2), "application/json")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> JSON</button>
             <button onClick={() => downloadFile(`${pack.slug || "brand"}-authority.md`, String(pack.markdown || ""), "text/markdown")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary"><Download className="size-3" /> Markdown</button>
           </div>
@@ -566,10 +713,10 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 function StepGuide({ lang }: { lang: Lang }) {
   const { t } = useI18n();
   const steps = lang === "ar"
-    ? [t("auto.open_the_link_to_ensure_your"), t("auto.copy_it"), t("auto.share_it_on_your_platforms_and"), t("auto.monitor_visits_in_the_spread_tracker")]
+    ? [lang === "ar" ? "افتح رابط معروف العام" : t("auto.open_the_link_to_ensure_your"), t("auto.copy_it"), t("auto.share_it_on_your_platforms_and"), lang === "ar" ? "راجع الطلبات المصنفة حسب User-Agent في متتبع الانتشار" : t("auto.monitor_visits_in_the_spread_tracker")]
     : lang === "ku"
-    ? ["لینکەکە بکەرەوە بۆ پشتڕاستکردنەوە", "کۆپی بکە", "بڵاوی بکەرەوە لە پلاتفۆڕمەکانت", "سەردانەکان ببینە لە تابی «شوێنپێ»"]
-    : ["Open the URL to verify your card renders", "Copy it", "Share it on your sites and trusted platforms", "Watch hits in the Propagation Tracker tab"];
+    ? ["بەستەری گشتیی Maaroof بکەرەوە", "کۆپی بکە", "لە کەناڵە پەسەندکراوەکانی براند بڵاوی بکەرەوە", "داواکارییە هاوتاکانی User-Agent لە شوێنپێکەر ببینە"]
+    : ["Open the public Maaroof URL", "Copy it", "Share it on approved brand channels", "Review requests classified by User-Agent in the Reach Tracker"];
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
       <div className="mb-2 text-[11px] font-semibold text-accent">{lang === "ar" ? "ماذا تفعل بالرابط؟" : lang === "ku" ? "چی بکەی بەو لینکە؟" : "What to do with the link"}</div>
@@ -620,9 +767,9 @@ function safeDecode(s: string): string {
   try { return decodeURIComponent(s); } catch { return s; }
 }
 
-function PropagationPanel() {
+function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null }) {
   const { t, lang } = useI18n();
-  const [data, setData] = useState<{ packs: any[]; hits: any[]; stats?: { total: number; known: number; first: string | null; last: string | null } } | null>(null);
+  const [data, setData] = useState<{ packs: any[]; hits: any[]; stats?: { total: number; known: number; verified: number; first: string | null; last: string | null } } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -633,23 +780,26 @@ function PropagationPanel() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
-        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-        const res = await apiFetch("/api/brand-authority", { headers });
+        if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+        const params = new URLSearchParams();
+        if (workspaceId) params.set("workspace_id", workspaceId);
+        const res = await apiFetch(`/api/brand-authority${params.size ? `?${params.toString()}` : ""}`, { headers });
         const j = await res.json().catch(() => ({ packs: [], hits: [] }));
         if (!cancelled) setData(j);
       } catch { if (!cancelled) setData({ packs: [], hits: [] }); }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [refreshKey, workspaceId]);
 
   const hits = data?.hits || [];
   const byBot = useMemo(() => {
-    const m = new Map<string, { count: number; last: string; paths: Set<string> }>();
+    const m = new Map<string, { count: number; verified: number; last: string; paths: Set<string> }>();
     for (const h of hits) {
       const key = h.bot_name || "Unknown";
-      const cur = m.get(key) || { count: 0, last: h.hit_at, paths: new Set() };
+      const cur = m.get(key) || { count: 0, verified: 0, last: h.hit_at, paths: new Set() };
       cur.count++;
+      if (h.verification_status === "verified") cur.verified++;
       if (h.hit_at > cur.last) cur.last = h.hit_at;
       if (h.path) cur.paths.add(h.path);
       m.set(key, cur);
@@ -657,6 +807,7 @@ function PropagationPanel() {
     return m;
   }, [hits]);
   const knownCount = Array.from(byBot.keys()).filter((k) => k !== "Unknown" && k !== "Browser").length;
+  const verifiedCount = hits.filter((h) => h.verification_status === "verified").length;
   const catLabel = (b: string | null | undefined): string => {
     const c: BotCategory = botCategory(b);
     const L: Record<BotCategory, [string, string, string]> = {
@@ -678,7 +829,7 @@ function PropagationPanel() {
     sections: [
       { heading: lang === "ar" ? "الملخص" : "Summary", kind: "kv", rows: [
         [lang === "ar" ? "إجمالي الزيارات" : "Total visits", String(stats?.total ?? hits.length)],
-        [lang === "ar" ? "زيارات زواحف معروفة" : "Known crawler visits", String(stats?.known ?? 0)],
+        [lang === "ar" ? "طلبات اجتازت DNS" : "DNS-verified crawler requests", String(stats?.verified ?? verifiedCount)],
         [lang === "ar" ? "أول زيارة" : "First visit", stats?.first ? new Date(stats.first).toLocaleString() : "-"],
         [lang === "ar" ? "آخر زيارة" : "Last visit", stats?.last ? new Date(stats.last).toLocaleString() : "-"],
       ] } as any,
@@ -687,8 +838,8 @@ function PropagationPanel() {
         data: Array.from(byBot.entries()).map(([b, i]) => [botName(b), catLabel(b), i.count, new Date(i.last).toLocaleString()]),
       } } as any,
       { heading: lang === "ar" ? "كل الزيارات" : "All visits", kind: "table", table: {
-        columns: ["Date", "Bot", "Type", "Page", "Source", "User-Agent"],
-        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), botName(h.bot_name || "Unknown"), catLabel(h.bot_name), safeDecode(h.path || ""), packLabel(h.brand_slug), h.user_agent || ""]),
+        columns: ["Date", "Bot", "Type", "Verification", "Page", "Source", "User-Agent"],
+        data: hits.map((h) => [new Date(h.hit_at).toLocaleString(), botName(h.bot_name || "Unknown"), catLabel(h.bot_name), h.verification_status || "user_agent_only", safeDecode(h.path || ""), packLabel(h.brand_slug), h.user_agent || ""]),
       } } as any,
     ],
   });
@@ -699,8 +850,8 @@ function PropagationPanel() {
   }
 
   const exportCsv = () => {
-    const rows = [["bot_name", "type", "source", "user_agent", "path", "hit_at"]];
-    for (const h of hits) rows.push([h.bot_name || "Unknown", catLabel(h.bot_name), packLabel(h.brand_slug), h.user_agent || "", h.path || "", h.hit_at || ""]);
+    const rows = [["bot_name", "type", "verification_status", "verified_hostname", "verification_method", "source", "user_agent", "path", "hit_at"]];
+    for (const h of hits) rows.push([h.bot_name || "Unknown", catLabel(h.bot_name), h.verification_status || "user_agent_only", h.verified_hostname || "", h.verification_method || "", packLabel(h.brand_slug), h.user_agent || "", h.path || "", h.hit_at || ""]);
     const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     downloadFile(`crawler-hits-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
   };
@@ -756,8 +907,9 @@ function PropagationPanel() {
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-700 dark:text-green-400">
-            {t("propagation_visible_to").replace("{n}", String(knownCount))}
+          <div className="rounded-lg border border-border bg-background/40 p-2 text-xs">
+            {lang === "ar" ? "تم رصد " + knownCount + " تصنيفاً مختلفاً من User-Agent؛ هذا عدد أسماء مصنّفة وليس عدد هويات مؤكدة." : "Detected " + knownCount + " User-Agent categories; this counts labels, not authenticated identities."}
+            <span className="ms-2 font-semibold text-emerald-700 dark:text-emerald-400">{lang === "ar" ? "طلبات اجتازت DNS: " : "DNS verified: "}{verifiedCount}/{hits.length}</span>
           </div>
           <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "يشمل السجل: زواحف الذكاء الاصطناعي، محركات البحث، أدوات تحليل الويب، معاينات الروابط، والزيارات المباشرة عبر المتصفح. «الملف المعتمد الأساسي» يعني أن الزيارة قرأت رابطك المعتمد مباشرة قبل ربطها بحزمة تعزيز." : "Log includes AI crawlers, search engines, web-analysis tools, link previews and direct browser visits. “Verified main profile” means the visit read your official link directly, not a specific boost pack."}</p>
           <div className="overflow-auto rounded-lg border border-border">
@@ -792,6 +944,7 @@ function PropagationPanel() {
                   <th className="px-2 py-1.5 text-start">{lang === "ar" ? "التاريخ والوقت" : lang === "ku" ? "بەروار و کات" : "Date & time"}</th>
                   <th className="px-2 py-1.5 text-start">{t("propagation_bot")}</th>
                   <th className="px-2 py-1.5 text-start">{lang === "ar" ? "الصفحة" : lang === "ku" ? "پەڕە" : "Page"}</th>
+                  <th className="px-2 py-1.5 text-start">{lang === "ar" ? "حالة التحقق" : "Verification"}</th>
                   <th className="px-2 py-1.5 text-start">User-Agent</th>
                 </tr>
               </thead>
@@ -801,6 +954,18 @@ function PropagationPanel() {
                     <td className="whitespace-nowrap px-2 py-1.5">{new Date(h.hit_at).toLocaleString()}</td>
                     <td className="px-2 py-1.5"><div className="font-semibold">{botName(h.bot_name || "Unknown")}</div><div className="text-[10px] text-muted-foreground">{catLabel(h.bot_name)} · {packLabel(h.brand_slug)}</div></td>
                     <td className="break-all px-2 py-1.5 text-[10px]">{safeDecode(h.path || "")}</td>
+                    <td className="px-2 py-1.5 text-[10px]">
+                      <span className={h.verification_status === "verified" ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
+                        {h.verification_status === "verified"
+                          ? (lang === "ar" ? "موثّق DNS" : "DNS verified")
+                          : h.verification_status === "user_agent_only"
+                          ? (lang === "ar" ? "User-Agent فقط" : "User-Agent only")
+                          : h.verification_status === "source_ip_unavailable"
+                          ? (lang === "ar" ? "IP المصدر غير متاح" : "Source IP unavailable")
+                          : (lang === "ar" ? "غير موثّق" : "Unverified")}
+                      </span>
+                      {h.verified_hostname && <div className="text-[9px] text-muted-foreground">{h.verified_hostname}</div>}
+                    </td>
                     <td className="break-all px-2 py-1.5 text-[10px] text-muted-foreground">{h.user_agent || ""}</td>
                   </tr>
                 ))}
@@ -818,7 +983,161 @@ function PropagationPanel() {
   );
 }
 
-function LogsPanel() {
+
+function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: string | null; lang: string }) {
+  const [emailTo, setEmailTo] = useState("");
+  const [enabled, setEnabled] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const query = workspaceId ? "?workspace_id=" + encodeURIComponent(workspaceId) : "";
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+        const response = await apiFetch("/api/brand-boost-report-settings" + query, { headers });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "settings_load_failed");
+        if (!cancelled) {
+          setEmailTo(String(payload.settings?.email_to || ""));
+          setEnabled(payload.settings?.enabled === true);
+          setEmailVerified(payload.settings?.email_verified === true);
+          setVerificationSent(payload.settings?.verification_pending === true);
+        }
+      } catch (error: any) {
+        if (!cancelled) toast.error(error?.message || "settings_load_failed");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [query]);
+
+  const sendVerification = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+      const response = await apiFetch("/api/brand-boost-report-settings" + query, {
+        method: "POST", headers, body: JSON.stringify({ action: "request_verification", email_to: emailTo.trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "verification_request_failed");
+      if (payload.already_verified) setEmailVerified(true);
+      else setVerificationSent(true);
+      toast.success(lang === "ar" ? "أُرسل رمز التأكيد إلى البريد." : "Verification code sent.");
+    } catch (error: any) {
+      toast.error(error?.message || "verification_request_failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+      const response = await apiFetch("/api/brand-boost-report-settings" + query, {
+        method: "POST", headers, body: JSON.stringify({ action: "verify_code", code: verificationCode.trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "verification_failed");
+      setEmailVerified(true);
+      setVerificationSent(false);
+      setVerificationCode("");
+      toast.success(lang === "ar" ? "تم تأكيد البريد. فعّل الإرسال واحفظ الإعداد." : "Email verified. Enable delivery and save.");
+    } catch (error: any) {
+      toast.error(error?.message || "verification_failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const save = async () => {
+    if (enabled && !emailVerified) {
+      toast.error(lang === "ar" ? "أكد ملكية البريد أولاً." : "Verify the email address first.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+      const response = await apiFetch("/api/brand-boost-report-settings" + query, {
+        method: "POST", headers, body: JSON.stringify({ email_to: emailTo.trim(), enabled }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "settings_save_failed");
+      setEnabled(payload.enabled === true);
+      toast.success(lang === "ar" ? "تم حفظ إعداد البريد." : "Email report settings saved.");
+    } catch (error: any) {
+      toast.error(error?.message || "settings_save_failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-background/40 p-3 space-y-2 text-xs">
+      <div className="font-semibold">{lang === "ar" ? "التقرير الشهري عبر البريد" : lang === "ku" ? "ڕاپۆرتی مانگانە بە ئیمەیڵ" : "Monthly report by email"}</div>
+      <p className="text-muted-foreground">
+        {lang === "ar"
+          ? "يرسل معروف تقرير الشهر الميلادي السابق خلال أول 7 أيام من الشهر (UTC)، مع إعادة المحاولة عند تعطل نبضة المجدول. يجب تأكيد ملكية البريد قبل تفعيل الإرسال."
+          : "Maaroof sends the previous calendar month's report during the first seven UTC days, retrying after a missed scheduler heartbeat. Verify the recipient address before enabling delivery."}
+      </p>
+      <input type="email" value={emailTo} onChange={(event) => {
+        const next = event.target.value;
+        if (next.trim().toLowerCase() !== emailTo.trim().toLowerCase()) {
+          setEmailVerified(false); setVerificationSent(false); setEnabled(false); setVerificationCode("");
+        }
+        setEmailTo(next);
+      }} placeholder="name@example.com" className="w-full rounded-md border border-border bg-background px-3 py-2" />
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={emailVerified ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
+          {emailVerified ? (lang === "ar" ? "البريد مؤكّد" : "Email verified") : (lang === "ar" ? "البريد غير مؤكّد" : "Email not verified")}
+        </span>
+        {!emailVerified && <button disabled={loading || saving || !emailTo.trim()} onClick={sendVerification}
+          className="rounded-md border border-border px-3 py-1.5 font-semibold disabled:opacity-50">
+          {lang === "ar" ? "إرسال رمز التأكيد" : "Send verification code"}
+        </button>}
+      </div>
+      {verificationSent && !emailVerified && (
+        <div className="flex flex-wrap gap-2">
+          <input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="000000" className="w-28 rounded-md border border-border bg-background px-3 py-2 tracking-widest" />
+          <button disabled={saving || verificationCode.length !== 6} onClick={verifyCode}
+            className="rounded-md bg-primary/15 px-3 py-1.5 font-semibold text-primary disabled:opacity-50">
+            {lang === "ar" ? "تأكيد الرمز" : "Verify code"}
+          </button>
+        </div>
+      )}
+      <label className="flex items-center gap-2">
+        <input type="checkbox" checked={enabled} disabled={!emailVerified}
+          onChange={(event) => setEnabled(event.target.checked)} />
+        {lang === "ar" ? "أوافق على إرسال التقرير الشهري إلى هذا البريد" : "Send the monthly report to this email"}
+      </label>
+      <button disabled={loading || saving}
+        onClick={save} className="rounded-md bg-primary/15 px-3 py-1.5 font-semibold text-primary disabled:opacity-50">
+        {loading ? (lang === "ar" ? "جار التحميل…" : "Loading…") : saving ? (lang === "ar" ? "جار الحفظ…" : "Saving…") : (lang === "ar" ? "حفظ الإعداد" : "Save settings")}
+      </button>
+      <div className="text-[10px] text-muted-foreground">
+        {lang === "ar" ? "يتطلب إعداد RESEND_API_KEY وBRAND_BOOST_REPORT_FROM على الخادم والتحقق من نطاق الإرسال، بالإضافة إلى إعداد Supabase Cron." : "Requires RESEND_API_KEY, BRAND_BOOST_REPORT_FROM, a verified sender domain and Supabase Cron."}
+      </div>
+    </div>
+  );
+}
+
+function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
   const { lang } = useI18n();
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
@@ -830,17 +1149,63 @@ function LogsPanel() {
     (async () => {
       if (!user) { setLoading(false); return; }
       setLoading(true);
-      const { data } = await supabase
+      let operationQuery = supabase
+        .from("brand_operations")
+        .select("id, created_at, operation_type, brand_name, status, duration_ms, charged_units, request_meta, result_meta")
+        .eq("user_id", user.id);
+      operationQuery = workspaceId
+        ? operationQuery.eq("workspace_id", workspaceId)
+        : operationQuery.is("workspace_id", null);
+      const { data: operations, error: operationsError } = await operationQuery
+        .order("created_at", { ascending: false }).limit(100);
+
+      if (!operationsError && operations) {
+        const ids = operations.map((operation) => operation.id);
+        let eventCounts = new Map<string, number>();
+        if (ids.length) {
+          let eventQuery = supabase.from("brand_operation_events")
+            .select("operation_id").eq("user_id", user.id).in("operation_id", ids);
+          eventQuery = workspaceId
+            ? eventQuery.eq("workspace_id", workspaceId)
+            : eventQuery.is("workspace_id", null);
+          const { data: events } = await eventQuery;
+          eventCounts = (events || []).reduce((map, event) => {
+            map.set(event.operation_id, (map.get(event.operation_id) || 0) + 1);
+            return map;
+          }, new Map<string, number>());
+        }
+        const unifiedRows = operations.map((operation) => ({
+          created_at: operation.created_at,
+          action: operation.operation_type,
+          operation_id: operation.id,
+          metadata: {
+            brand: operation.brand_name,
+            status: operation.status,
+            duration_ms: operation.duration_ms,
+            charged_units: operation.charged_units,
+            event_count: eventCounts.get(operation.id) || 0,
+            ...(operation.request_meta as any || {}),
+            ...(operation.result_meta as any || {}),
+          },
+        }));
+        if (!cancelled) { setRows(unifiedRows); setLoading(false); }
+        return;
+      }
+
+      // Compatibility fallback for historical rows while the new ledger migration is rolling out.
+      let legacyQuery = supabase
         .from("activity_log")
         .select("created_at, action, metadata")
         .eq("user_id", user.id)
-        .in("action", ["brand_boost", "brand_authority"])
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (!cancelled) { setRows(data || []); setLoading(false); }
+        .in("action", ["brand_boost", "brand_authority"]);
+      legacyQuery = workspaceId
+        ? legacyQuery.eq("metadata->>workspace_id", workspaceId)
+        : legacyQuery.is("metadata->>workspace_id", null);
+      const { data: legacyRows } = await legacyQuery.order("created_at", { ascending: false }).limit(100);
+      if (!cancelled) { setRows(legacyRows || []); setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [user?.id, refreshKey]);
+  }, [user?.id, refreshKey, workspaceId]);
 
   const exportCsv = () => {
     const head = [["created_at", "action", "brand", "details"]];
@@ -856,11 +1221,16 @@ function LogsPanel() {
     a === "brand_boost"
       ? (lang === "ar" ? "تشغيل تعزيز" : lang === "ku" ? "بەهێزکردن" : "Run boost")
       : a === "brand_authority"
-      ? (lang === "ar" ? "محرك السلطة" : lang === "ku" ? "بزوێنەری دەسەڵات" : "Authority")
+      ? (lang === "ar" ? "توليد ونشر بطاقة العلامة" : lang === "ku" ? "دروستکردن و بڵاوکردنەوەی کارتی براند" : "Generate/publish brand card")
+      : a === "visibility_probe"
+      ? (lang === "ar" ? "اختبار المحركات" : lang === "ku" ? "تاقیکردنەوەی بزوێنەرەکان" : "Engine probe")
+      : a === "visibility_analysis"
+      ? (lang === "ar" ? "تحليل الظهور التقديري" : lang === "ku" ? "شیکاری دەرکەوتنی خەمڵێنراو" : "Estimated visibility analysis")
       : a;
 
   return (
     <div className="space-y-3">
+      <BrandMonthlyReportSettings workspaceId={workspaceId} lang={lang} />
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -899,7 +1269,16 @@ function LogsPanel() {
                     <td className="px-2 py-1.5 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
                     <td className="px-2 py-1.5 font-semibold">{actionLabel(r.action)}</td>
                     <td className="px-2 py-1.5">{String(m.brand || "—")}</td>
-                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{m.slug ? `slug: ${m.slug}` : ""}{m.cost ? ` · ${m.cost} credits` : ""}{m.pinged ? " · pinged" : ""}</td>
+                    <td className="px-2 py-1.5 text-[10px] text-muted-foreground">
+                      {m.slug ? `slug: ${m.slug}` : ""}
+                      {m.status ? ` · ${m.status}` : ""}
+                      {m.charged_units != null ? ` · ${m.charged_units} units` : m.cost ? ` · ${m.cost} credits` : ""}
+                      {m.duration_ms != null ? ` · ${m.duration_ms} ms` : ""}
+                      {m.visibility_percent != null ? ` · visibility ${m.visibility_percent}%` : ""}
+                      {m.event_count ? ` · ${m.event_count} events` : ""}
+                      {m.operation_id ? <span className="block font-mono">{String(m.operation_id).slice(0, 12)}…</span> : ""}
+                      {m.pinged ? " · pinged" : ""}
+                    </td>
                   </tr>
                 );
               })}

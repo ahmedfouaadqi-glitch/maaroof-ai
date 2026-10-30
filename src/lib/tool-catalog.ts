@@ -209,13 +209,13 @@ export const TOOL_CATALOG: ToolDef[] = [
   },
   {
     key: "brand_boost", group: "tools", costPerRun: 5,
-    labels: { ar: "تعزيز العلامة", en: "Brand Boost", ku: "بەهێزکردنی براند" },
-    capabilities: ["brand_strategy", "content_generation", "planning"],
-    strengths: ["multi-asset campaign", "consistent voice"],
-    weaknesses: ["expensive"],
+    labels: { ar: "تعزيز معروف", en: "Maaroof Brand Enhancement", ku: "بەهێزکردنی Maaroof" },
+    capabilities: ["brand_strategy", "content_generation", "planning", "visibility", "brand_authority", "monitoring", "validation"],
+    strengths: ["ten-engine visibility workflow", "broadcast asset preparation", "reach tracking", "operation history"],
+    weaknesses: ["customer-domain publishing and scheduled background runs require separate verified integrations"],
     preferredModels: ["google/gemini-2.5-pro"],
     costProfile: "heavy",
-    dna: "Campaign director: produces a coordinated brand push.",
+    dna: "Coordinates the existing Brand Boost, Brand Authority, visibility and crawler-observation flows without duplicating their execution logic.",
   },
   {
     key: "company_email", group: "tools", costPerRun: 1,

@@ -32,9 +32,10 @@ type PanelProps = {
   embedded?: boolean;
   /** Override which tool's geo-scope is used. */
   toolKey?: "research" | "brand";
+  workspaceId?: string | null;
 };
 
-export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research" }: PanelProps) {
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null }: PanelProps) {
   const { t, lang: uiLang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
   useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
@@ -70,7 +71,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey) }),
+        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || `http_${res.status}`);
@@ -138,6 +139,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="text-[10px] uppercase tracking-widest text-primary font-bold">{t("ag_vis_score")}</div>
               <div className="mt-1 text-3xl font-bold text-gradient">{out.visibility_percent}%</div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {outLang === "ar" ? "متوسط تقديري لدرجات المحركات العشرة التي ولّدها التحليل؛ ليس قياساً مستقلاً مثبتاً للظهور." : outLang === "ku" ? "ناوەندییەکی خەمڵێنراوە لە نمرەکانی ١٠ بزوێنەر؛ پێوانەیەکی سەربەخۆی پشتڕاستکراو نییە." : "Arithmetic mean of the ten model-generated engine estimates; not an independently verified visibility measurement."}
+              </p>
             </div>
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
               <div className="text-[10px] uppercase tracking-widest text-accent font-bold">{t("ag_vis_sentiment")}</div>
@@ -166,7 +170,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             />
           </div>
 
-          <EngineProbePanel brand={brand} keywords={keywords} scope={getEffectiveScope(auth?.profile, toolKey)} />
+          <EngineProbePanel brand={brand} keywords={keywords} scope={getEffectiveScope(auth?.profile, toolKey)} workspaceId={workspaceId} />
 
           {out.recommendations?.length > 0 && (
             <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-sm">

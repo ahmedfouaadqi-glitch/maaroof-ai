@@ -148,6 +148,34 @@
       "when": 1793313470893,
       "tag": "0020_keyword_intelligence_evidence_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793368800000,
+      "tag": "0021_brand_boost_workspace_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793370600000,
+      "tag": "0022_brand_operations_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793373000000,
+      "tag": "0023_brand_boost_automation",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793373600000,
+      "tag": "0024_brand_boost_email_verification",
+      "breakpoints": true
     }
   ]
 }

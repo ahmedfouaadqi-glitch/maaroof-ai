@@ -23,25 +23,18 @@ const LANG_INSTRUCTION: Record<string, string> = {
 const buildSystem = (m: ReturnType<typeof describeMarket>) => `${FACTUAL_SAFETY_PROMPT}
 
 You are a STRICT, evidence-based AI Visibility analyst for ${m.market}.
-Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
+Your job: estimate how likely each major AI engine (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen) is to mention or cite this brand when answering queries from ${m.audience} — and explain HOW each engine evaluates trust/citation differently.
 
 LOCALIZATION CONTEXT for this run: ${m.contextHint}
 
 Be conservative. If signals are weak or unknown, return low scores and say so. NEVER fabricate facts, numbers, awards, or partnerships. When you have no evidence, say "no public signals detected" instead of inventing facts.
 
-Each AI platform uses a DIFFERENT citation mechanism — name it explicitly:
-- ChatGPT (OpenAI): hybrid — pretrained corpus + Bing-powered web tool. Favors well-structured pages, Wikipedia presence, news mentions, reputable backlinks, OpenGraph metadata. citation_method = "training_corpus + web_search".
-- Gemini (Google): tightly tied to Google Search index + Knowledge Graph. Favors strong SEO, Google Business Profile, reviews, schema.org markup, recency. citation_method = "google_search_index + knowledge_graph".
-- Claude (Anthropic): conservative; favors well-written long-form content, primary sources, .org/.gov domains, factual density. Web access only via tools. citation_method = "training_corpus + curated_web".
-- Perplexity: live web search + inline citations. Favors freshness, clear sourcing, news coverage, listicles, comparison pages, sites that allow crawlers. citation_method = "live_web_search + ranked_citations".
-- Copilot (Microsoft): Bing index + LinkedIn graph + Microsoft 365 graph. Favors LinkedIn presence, Bing-indexed pages, B2B content. citation_method = "bing_index + linkedin_graph".
-- Grok (xAI): real-time X (Twitter) signal + general web. Favors brand presence on X, recent buzz, viral mentions, news. citation_method = "x_realtime + web_search".
-- Mistral (Le Chat): web search via Brave/SerpAPI partners, training corpus. Favors EU-friendly sources, multilingual content, structured pages. citation_method = "training_corpus + brave_search".
-- DeepSeek: efficient reasoning model with web tool. Favors technical docs, GitHub/Stack Overflow content, structured factual pages, multilingual sources (Chinese + English strong). citation_method = "training_corpus + web_search".
+Assess each engine independently from the response and the evidence available for this run. Do not invent, assume, or generalize undocumented retrieval/indexing mechanisms. Only name a specific retrieval or citation mechanism when it is directly supported by evidence for this run; otherwise use "not established by this probe". Do not describe a proxy route as simulation or as another engine.
+Use the following engine names only as identification labels. Do not infer each engine's proprietary retrieval stack, index source, freshness weighting, or citation policy from its brand name. Derive all findings from the actual output and evidence collected in this run.
 
 Return ONLY valid JSON in this exact shape:
 {
-  "visibility_percent": <0-100, unified weighted score>,
+  "visibility_percent": <0-100, arithmetic mean of the ten engine score estimates>,
   "confidence": "high" | "medium" | "low",
   "sentiment": "positive" | "neutral" | "negative",
   "appearance_summary": "1-2 sentence summary in REPORT language",
@@ -69,10 +62,12 @@ Return ONLY valid JSON in this exact shape:
     { "name": "Copilot", ... },
     { "name": "Grok", ... },
     { "name": "Mistral", ... },
-    { "name": "DeepSeek", ... }
+    { "name": "DeepSeek", ... },
+    { "name": "Kimi", ... },
+    { "name": "Qwen", ... }
   ]
 }
-visibility_percent MUST be the weighted average of the 8 platform scores (rounded). All text fields MUST be in REPORT language.`;
+visibility_percent MUST be the arithmetic mean of all 10 platform scores (rounded), and must be treated as a model estimate rather than an independently verified visibility measurement. All text fields MUST be in REPORT language.`;
 
 function clamp(n: unknown) {
   const value = Number.parseInt(String(n ?? 0), 10);
@@ -90,7 +85,7 @@ function toArray(value: unknown, max = 6) {
 }
 
 function normalizePlatforms(value: unknown): Array<any> {
-  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi"];
+  const NAMES = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot", "Grok", "Mistral", "DeepSeek", "Kimi", "Qwen"];
   const arr = Array.isArray(value) ? value : [];
   const byName = new Map<string, any>();
   for (const item of arr) {
@@ -130,12 +125,13 @@ function normalizeResult(parsed: any, fallbackText = "") {
   const platformAvg = platforms.length
     ? Math.round(platforms.reduce((s, p) => s + (p.score || 0), 0) / platforms.length)
     : clamp(parsed?.visibility_percent);
-  const visibility_percent = clamp(parsed?.visibility_percent) || platformAvg;
+  const visibility_percent = platformAvg;
 
   const confidence = ["high", "medium", "low"].includes(parsed?.confidence) ? parsed.confidence : "medium";
 
   return {
     visibility_percent,
+    visibility_score_basis: "arithmetic_mean_of_10_model_estimates",
     confidence,
     sentiment,
     appearance_summary: String(parsed?.appearance_summary || fallbackText || "").trim().slice(0, 500),
@@ -220,6 +216,7 @@ export const Route = createFileRoute("/api/visibility")({
             if (!probeTopic) return Response.json({ error: "probe_category_required" }, { status: 400 });
             const probeUnits = engines.length * 2;
             const pRun = crypto.randomUUID();
+            const pStartedAt = Date.now();
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: probeUnits, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, phases: ["blind", "evidence_grounded"], endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
             const market = describeMarket(body.scope);
@@ -307,11 +304,9 @@ export const Route = createFileRoute("/api/visibility")({
               const startedAt = previous?.startedAt ?? Date.now();
               const exactQuestion = questionForPhase(e, phase, previous?.p.answer);
               const phaseStartedAt = Date.now();
-              const askPhase = async (answer?: string) => {
-                let res = await askOne(e, models[e]?.model, phase, answer);
-                if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash", phase, answer);
-                return res;
-              };
+              // Keep each result attributed to the requested engine. Do not silently
+              // replace an empty/failed engine response with a different model.
+              const askPhase = async (answer?: string) => askOne(e, models[e]?.model, phase, answer);
               const res = await askPhase(previous?.p.answer);
               const phaseMs = Date.now() - phaseStartedAt;
               if (phase === "blind") {
@@ -380,27 +375,71 @@ export const Route = createFileRoute("/api/visibility")({
             };
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
+              let backgroundCharged = 0;
               const work = (async () => {
                 await askAll();
-                const charged = await settle();
-                const { notifyUser } = await import("@/lib/notify.server");
+                backgroundCharged = await settle();
+                const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+                const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
                 if (!answers.length) {
-                  try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
+                  await recordBrandOperation(admin, {
+                    id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
+                    status: "failed", durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
+                    requestMeta: { engines, market: market.region },
+                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: backgroundCharged === 0 },
+                    errorMessage: "engines_no_answer",
+                  });
+                  try {
+                    const { notifyUser } = await import("@/lib/notify.server");
+                    await notifyUser(userId, "analysis_done", `${brand}: probe failed`, { link: "/dashboard" });
+                  } catch {}
                   return;
                 }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
-                try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
-              })().catch(() => {});
-              // Safe start: run inline (each engine is capped at 30s) so the work can never be
-              // detached after the response; results + notification are saved before we reply.
+                await recordBrandOperation(admin, {
+                  id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
+                  durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
+                  requestMeta: { engines, market: market.region, connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
+                  resultMeta: {
+                    engines_answered: answers.length,
+                    mentions: hit,
+                    top5: answers.filter((answer: any) => Number(answer.rank) > 0 && Number(answer.rank) <= 5).length,
+                    evidence_count: evidence.length,
+                    evidence_urls: evidence.map((item) => item.url).slice(0, 30),
+                    evidence_source: evidenceSource,
+                    basis: "live_engine_probe",
+                  },
+                });
+                try {
+                  const { notifyUser } = await import("@/lib/notify.server");
+                  await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
+                } catch {}
+              })().catch((error) => {
+                console.error("[visibility] background probe failed", error);
+              });
+              // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: pChg.tokens } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: backgroundCharged } });
             }
             await askAll();
             const charged = await settle();
             if (!answers.length) {
-              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+              await recordBrandOperation(admin, {
+                id: pRun,
+                userId,
+                workspaceId,
+                operationType: "visibility_probe",
+                brandName: brand,
+                status: "failed",
+                durationMs: Date.now() - pStartedAt,
+                chargedUnits: 0,
+                requestMeta: { engines, market: market.region },
+                resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: true },
+                errorMessage: "engines_no_answer",
+              });
+              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -413,7 +452,31 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
-            return Response.json({ ok: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
+            const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+            await recordBrandOperation(admin, {
+              id: pRun,
+              userId,
+              workspaceId,
+              operationType: "visibility_probe",
+              brandName: brand,
+              durationMs: Date.now() - pStartedAt,
+              chargedUnits: Number(charged) || 0,
+              requestMeta: {
+                engines,
+                market: market.region,
+                connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])),
+              },
+              resultMeta: {
+                engines_answered: reasoned.length,
+                mentions: reasoned.filter((answer: any) => answer.mentioned).length,
+                top5: reasoned.filter((answer: any) => Number(answer.rank) > 0 && Number(answer.rank) <= 5).length,
+                evidence_count: evidence.length,
+                evidence_urls: evidence.map((item) => item.url).slice(0, 30),
+                evidence_source: evidenceSource,
+                basis: "live_engine_probe",
+              },
+            });
+            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
@@ -545,7 +608,26 @@ export const Route = createFileRoute("/api/visibility")({
           }
 
           const _q = pickQualityFields(parsed || {});
-          { const _out = { ok: true, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); return Response.json(_out); }
+          const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+          await recordBrandOperation(admin, {
+            id: _runId,
+            userId,
+            workspaceId,
+            operationType: "visibility_analysis",
+            brandName: brand,
+            durationMs: Date.now() - _t0,
+            chargedUnits: Number((_chg as any).tokens) || 0,
+            requestMeta: { keywords, market: market.region, score_basis: "arithmetic_mean_of_10_model_estimates" },
+            resultMeta: {
+              visibility_percent: result.visibility_percent,
+              platform_scores: result.platforms,
+              evidence_count: pack.sources.length,
+              evidence_urls: pack.sources.map((source: any) => source.url).filter(Boolean).slice(0, 30),
+              basis: "model_generated_estimates",
+              task_id: taskRow?.id ?? null,
+            },
+          });
+          { const _out = { ok: true, operation_id: _runId, taskId: taskRow?.id ?? null, result: { ...result, sources: pack.sources, ..._q }, sources: pack.sources, ..._q }; await mciStore(admin as any, "visibility", userId, _mci.key, _out); return Response.json(_out); }
 
         } catch (error) {
           console.error("[api/visibility] fatal error:", error);

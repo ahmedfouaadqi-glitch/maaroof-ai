@@ -21,7 +21,7 @@ const TX = {
 type ProbeAnswer = { engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string; status?: string; brands: string[]; reason?: string };
 type Council = { agreement: string; disagreement: string | null; decision: string };
 
-export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean }) {
+export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrandInput, workspaceId = null }: { brand: string; keywords?: string; scope?: unknown; allowBrandInput?: boolean; workspaceId?: string | null }) {
   const [typed, setTyped] = useState("");
   const [topic, setTopic] = useState(keywords || "");
   const [saveIt, setSaveIt] = useState(true);
@@ -50,7 +50,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
   }, []);
   useEffect(() => { if (keywords && !topic) setTopic(keywords); }, [keywords, topic]);
 
-  const maxN = cost?.maxEngines ?? 9;
+  const maxN = cost?.maxEngines ?? 10;
   useEffect(() => {
     if (!sel.length) { setCost(null); return; }
     costFn({ data: { toolKey: "visibility.probe", units: sel.length * 2 } }).then(setCost).catch(() => setCost(null));
@@ -77,7 +77,7 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
       const r = await apiFetch("/api/visibility", {
         method: "POST",
         headers,
-        body: JSON.stringify({ brand, keywords: probeTopic, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background" }),
+        body: JSON.stringify({ brand, keywords: probeTopic, lang: L, scope, probe_engines: sel, notify: mode !== "instant", background: mode === "background", workspace_id: workspaceId }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 401 || j?.error === "auth_required") { setErr("__signin"); return; }

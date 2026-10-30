@@ -1,4 +1,4 @@
-// Client-safe RPC around the nine-engine entitlement + governed model map.
+// Client-safe RPC around the ten-engine entitlement + governed model map.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ENGINE_KEYS, type EngineKey } from "@/lib/ai-engines";
