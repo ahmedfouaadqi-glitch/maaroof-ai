@@ -224,6 +224,24 @@ export const Route = createFileRoute("/api/visibility")({
             const market = describeMarket(body.scope);
             const models = await resolveEngineModels(engines);
             const q = blindProbeQuestion(probeTopic, market.region);
+            const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
+              if (!workspaceId || !workspace) return;
+              const previousCard = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
+              const nextCard = {
+                ...previousCard,
+                entity_name: previousCard.entity_name || brand,
+                keywords: keywords || previousCard.keywords || probeTopic,
+                last_visibility_probe: {
+                  operation_id: pRun,
+                  measured_at: new Date().toISOString(),
+                  market: market.region,
+                  metrics,
+                  answers: resultAnswers.map((answer: any) => ({ engine: answer.engine, mentioned: answer.mentioned, rank: answer.rank, status: answer.status, provider: answer.provider, gateway_model: answer.gateway_model, grounded_provider: answer.grounded_provider, grounded_gateway_model: answer.grounded_gateway_model, sources: (answer.sources || []).slice(0, 5) })),
+                },
+              };
+              const { error } = await admin.from("workspaces").update({ entity_truth_card: nextCard }).eq("id", workspaceId).eq("owner_id", userId);
+              if (error) console.warn("[visibility] workspace truth-card update failed", error.message);
+            };
             const PA = await import("@/lib/maaroof/probe-answer");
             let evidence: { url: string; title: string }[] = [];
             let evidenceText = "";
@@ -427,6 +445,7 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
+                await persistWorkspaceProbe(metrics, answers);
                 bgMetrics = metrics;
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
@@ -486,6 +505,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
+            await persistWorkspaceProbe(metrics, reasoned);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
             const { recordBrandOperation } = await import("@/lib/brand-operations.server");
             await recordBrandOperation(admin, {
