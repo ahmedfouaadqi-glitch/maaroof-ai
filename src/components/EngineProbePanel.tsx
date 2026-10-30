@@ -26,6 +26,8 @@ type ProbeMetrics = {
   mention_rate: ProbeMetricValue;
   recommendation_rate: ProbeMetricValue;
   share_of_voice: ProbeMetricValue;
+  total_brand_list_mentions: number;
+  competitors: Array<{ brand: string; mentions: number; share_of_voice_pct: number | null; appearance_rate_pct: number | null }>;
   citation_rate: ProbeMetricValue;
   top5_rate: ProbeMetricValue;
   average_rank: number | null;
@@ -191,6 +193,22 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
               </div>
             ))}
           </div>
+          {metrics.competitors.length > 0 && (
+            <div className="rounded-md border border-border bg-background/70 p-2">
+              <div className="mb-2 text-[11px] font-semibold">
+                {L === "en" ? "Most-mentioned competitors in returned lists" : L === "ku" ? "ڕکابەرە زۆر هێنراوەکان لە لیستە گەڕاوەکان" : "أكثر المنافسين ذكراً في القوائم المُعادة"}
+              </div>
+              <div className="space-y-1.5">
+                {metrics.competitors.slice(0, 5).map((competitor) => (
+                  <div key={competitor.brand} className="flex items-center gap-2 text-xs">
+                    <span className="min-w-0 flex-1 truncate">{competitor.brand}</span>
+                    <span className="text-muted-foreground">{competitor.mentions} {L === "en" ? "mentions" : L === "ku" ? "جار هێنان" : "ذكر"}</span>
+                    <span className="w-14 text-end font-mono">{competitor.share_of_voice_pct == null ? "—" : `${competitor.share_of_voice_pct}%`}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="text-[10px] leading-relaxed text-muted-foreground">
             {L === "en"
               ? "Metrics describe only successful answers in this probe. Share of voice counts unique brand names returned in ranked brand lists; citation rate requires an answer URL to exactly match collected evidence. This API probe is not necessarily the consumer-facing engine UI."
