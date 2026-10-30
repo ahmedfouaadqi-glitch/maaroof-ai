@@ -378,6 +378,7 @@ export const Route = createFileRoute("/api/visibility")({
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
               let backgroundCharged = 0;
+              let bgMetrics: ReturnType<typeof calculateVisibilityProbeMetrics> | null = null;
               const work = (async () => {
                 await askAll();
                 backgroundCharged = await settle();
