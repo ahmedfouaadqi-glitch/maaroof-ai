@@ -77,14 +77,15 @@ function fallbackPlan(platforms: Platform[], lang: string, brand: string, eviden
   const ar = lang === "ar";
   const ku = lang === "ku";
   const firstUrl = evidence[0]?.url || "";
+  const hasObservations = evidence.length > 0 || probes.some((p: any) => Boolean(p.current_answer));
   const evidenceText = evidence.length ? evidence.slice(0, 3).map((e, i) => `[${i + 1}] ${e.title}`).join("، ") : (ar ? "لا توجد أدلة عامة كافية" : ku ? "بەڵگەی گشتی تەواو نییە" : "not enough public evidence");
   return {
-    summary: ar ? `تم فحص ${brand} بأدلة عامة محدودة وإعداد خطة نشر قابلة للتنفيذ.` : ku ? `${brand} بە بەڵگەی گشتی سنووردار پشکنرا و پلانی بڵاوکردنەوە ئامادەکرا.` : `${brand} was checked against limited public evidence and a practical publishing plan was prepared.`,
+    summary: hasObservations ? (ar ? "تعذّر بناء خطة مكتملة؛ هذه خطوات عامة مبنية على الإشارات المتاحة وليست تدقيقاً شاملاً." : ku ? "پلانی تەواو دروست نەکرا؛ ئەمانە هەنگاوی گشتی لەسەر بنەمای نیشانە بەردەستەکانن." : "A complete model plan could not be built; these are general steps informed by available signals, not a full audit.") : (ar ? "لم تتوفر أدلة ويب أو إجابات محركات قابلة للاستخدام. ما يلي إرشادات عامة لجمع البيانات، وليس تشخيصاً لهذه العلامة." : ku ? "بەڵگەی وێب یان وەڵامی بزوێنەر بەردەست نەبوو؛ ئەمانە ڕێنمایی گشتیی کۆکردنەوەی زانیارییە، نەک دەستنیشانکردنی تایبەت." : "No usable public evidence or engine answers were retrieved. These are generic data-collection steps, not a diagnosis of this brand."),
     plan: platforms.map((platform) => {
       const probe = probes.find((p: any) => p.platform === platform);
       return {
         platform,
-        current_signal: probe?.current_answer ? (ar ? "إشارة موجودة" : ku ? "نیشان هەیە" : "signal found") : (ar ? "إشارة ضعيفة" : ku ? "نیشانی لاواز" : "weak signal"),
+        current_signal: probe?.current_answer ? (ar ? "إشارة موجودة" : ku ? "نیشان هەیە" : "signal found") : (ar ? "لم تُقَس" : ku ? "پێوانە نەکراوە" : "not measured"),
         feeding_basis: evidenceText,
         recommended_actions: ar
           ? ["انشر صفحة تعريف رسمية مختصرة قابلة للفهرسة.", "أضف FAQ و JSON-LD بنفس الحقائق الموجودة في المصادر.", "اربط المحتوى من الحسابات والقنوات الرسمية."]
@@ -339,7 +340,8 @@ ${evidenceBlock}`;
             });
           } catch {}
 
-          if (!Array.isArray(planParsed.plan)) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
+          const usedFallbackPlan = !Array.isArray(planParsed.plan);
+          if (usedFallbackPlan) planParsed = fallbackPlan(targets, lang, brand_name, evidence, probes);
           const planByPlat = new Map<string, any>();
           for (const item of (planParsed.plan || [])) planByPlat.set(String(item.platform), item);
 
@@ -422,7 +424,7 @@ ${evidenceBlock}`;
             ].filter(Boolean),
             website_scan: websiteScan,
             evidence,
-            plan_source: Array.isArray(planParsed.plan) ? "model_plan" : "deterministic_fallback",
+            plan_source: usedFallbackPlan ? "deterministic_fallback" : "model_plan",
             plan: merged,
             engines: {
               plan: entitlement.plan,
