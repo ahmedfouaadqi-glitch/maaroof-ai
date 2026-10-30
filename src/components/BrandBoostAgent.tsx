@@ -433,17 +433,22 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
       <div className="rounded-xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 to-primary/5 p-4 text-xs">
         <div className="flex items-center gap-2 font-semibold text-foreground">
           <Rocket className="size-4 text-accent" />
-          {lang === "ar" ? "بثّ حقيقي لمحركات الذكاء — كيف يعمل؟"
-            : lang === "ku" ? "بڵاوکردنەوەی ڕاستەقینە بۆ AI — چۆن کاردەکات؟"
-            : "Real broadcast to AI engines — how it works"}
+          {lang === "ar" ? "بث المعلومات العامة للعلامة — النطاق الحالي"
+            : lang === "ku" ? "بڵاوکردنەوەی زانیاری براند — مەودای ئێستا"
+            : "Brand information broadcast — current scope"}
         </div>
         <ol className="mt-2 ms-4 list-decimal space-y-1 text-muted-foreground">
-          <li>{lang === "ar" ? "ننشر بطاقة علامتك على رابط عام مفهرَس (HTML + JSON-LD)." : lang === "ku" ? "بەستەرێکی گشتی + JSON-LD دروست دەکەین." : "We publish your brand card to an indexable public URL (HTML + JSON-LD)."}</li>
-          <li>{lang === "ar" ? "نُبلّغ IndexNow → Bing/Yandex فوراً، وهذا هو نفس فهرس Copilot و ChatGPT Search و Perplexity." : lang === "ku" ? "IndexNow → Bing فۆراً، هەمان فهرس بۆ Copilot/ChatGPT/Perplexity." : "We ping IndexNow → Bing/Yandex — the same index Copilot, ChatGPT Search, and Perplexity read."}</li>
-          <li>{lang === "ar" ? "نضيف الرابط لـ sitemap.xml لـ Google/Gemini." : lang === "ku" ? "بەستەرەکە لە sitemap بۆ Google/Gemini." : "We add the URL to sitemap.xml for Google/Gemini."}</li>
-          <li>{lang === "ar" ? "تنسخ وتشارك على X/LinkedIn/Reddit ليصل لـ Grok و Claude و باقي الزواحف." : lang === "ku" ? "بەستەرەکە لە X/LinkedIn هاوبەش بکە بۆ Grok و Claude." : "Share the link on X/LinkedIn/Reddit so Grok, Claude, and other crawlers pick it up."}</li>
-          <li>{lang === "ar" ? "راقب من زارها فعلاً في تبويب «متتبع الانتشار»." : lang === "ku" ? "زیارەتکارەکان لە تابی «شوێنپێ» ببینە." : "Watch which AI crawlers actually visited in the Propagation tab."}</li>
+          <li>{lang === "ar" ? "ينشئ معروف بطاقة HTML وMarkdown وJSON-LD وينشرها على رابط عام ضمن نطاق معروف." : lang === "ku" ? "Maaroof کارتی HTML وMarkdown وJSON-LD دروست دەکات و لەسەر بەستەرێکی گشتی لە مەودای Maaroof بڵاوی دەکاتەوە." : "Maaroof generates an HTML/Markdown/JSON-LD brand pack and publishes it at a public URL on the Maaroof domain."}</li>
+          <li>{lang === "ar" ? "يمكن إرسال إشعار IndexNow لهذا الرابط على نطاق معروف؛ قبول الإشعار لا يثبت الزحف أو الفهرسة." : lang === "ku" ? "دەتوانرێت ئاگادارکردنەوەی IndexNow بۆ ئەم بەستەرە بنێردرێت؛ وەرگرتنی ئاگادارکردنەوە بەڵگەی کرۆڵ یان ئیندێکس نییە." : "An IndexNow notification can be sent for this Maaroof URL; acceptance does not prove crawling or indexing."}</li>
+          <li>{lang === "ar" ? "هذا المسار لا يعدّل موقع العميل ولا ملف sitemap.xml الخاص به." : lang === "ku" ? "ئەم ڕێگایە ماڵپەڕی کڕیار یان sitemap.xml ـی ئەو ناگۆڕێت." : "This flow does not modify the customer's website or its sitemap.xml."}</li>
+          <li>{lang === "ar" ? "يمكن مشاركة الرابط على قنوات العلامة؛ المشاركة لا تضمن أن أي محرك سيزحف إليه أو يستشهد به." : lang === "ku" ? "دەتوانرێت بەستەرەکە لە کەناڵەکانی براند بڵاو بکرێتەوە؛ ئەمە گەرەنتی کرۆڵ یان ئاماژەکردنی هیچ بزوێنەرێک ناکات." : "You can share the URL on brand channels; sharing does not guarantee that an engine will crawl or cite it."}</li>
+          <li>{lang === "ar" ? "يعرض متتبع الانتشار الطلبات التي طابقت قواعد User-Agent؛ وهذا لا يثبت هوية الزاحف." : lang === "ku" ? "شوێنپێکەرەکە داواکارییە هاوتاکانی User-Agent پیشان دەدات؛ ئەمە ناسنامەی کرۆڵەر پشتڕاست ناکاتەوە." : "The reach tracker shows requests matching User-Agent rules; this does not authenticate the crawler."}</li>
         </ol>
+        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-foreground/80">
+          {lang === "ar" ? "النشر المباشر على نطاق العميل يحتاج إلى ربط تقني وتحقق من ملكية النطاق وتفويض نشر؛ هذه الوظائف غير منفذة في هذا المسار حالياً."
+            : lang === "ku" ? "بڵاوکردنەوەی ڕاستەوخۆ لە مەودای کڕیار پێویستی بە بەستەری تەکنیکی، پشتڕاستکردنەوەی خاوەندارێتی و ڕێگەپێدانی بڵاوکردنەوە هەیە؛ لەم ڕێگایەدا هێشتا جێبەجێ نەکراوە."
+            : "Publishing directly to the customer's domain requires a site connector, domain verification, and publishing authorization; those are not implemented in this flow yet."}
+        </p>
       </div>
 
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
@@ -537,10 +542,10 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
 function StepGuide({ lang }: { lang: Lang }) {
   const { t } = useI18n();
   const steps = lang === "ar"
-    ? [t("auto.open_the_link_to_ensure_your"), t("auto.copy_it"), t("auto.share_it_on_your_platforms_and"), t("auto.monitor_visits_in_the_spread_tracker")]
+    ? [lang === "ar" ? "افتح رابط معروف العام" : t("auto.open_the_link_to_ensure_your"), t("auto.copy_it"), t("auto.share_it_on_your_platforms_and"), lang === "ar" ? "راجع الطلبات المصنفة حسب User-Agent في متتبع الانتشار" : t("auto.monitor_visits_in_the_spread_tracker")]
     : lang === "ku"
-    ? ["لینکەکە بکەرەوە بۆ پشتڕاستکردنەوە", "کۆپی بکە", "بڵاوی بکەرەوە لە پلاتفۆڕمەکانت", "سەردانەکان ببینە لە تابی «شوێنپێ»"]
-    : ["Open the URL to verify your card renders", "Copy it", "Share it on your sites and trusted platforms", "Watch hits in the Propagation Tracker tab"];
+    ? ["بەستەری گشتیی Maaroof بکەرەوە", "کۆپی بکە", "لە کەناڵە پەسەندکراوەکانی براند بڵاوی بکەرەوە", "داواکارییە هاوتاکانی User-Agent لە شوێنپێکەر ببینە"]
+    : ["Open the public Maaroof URL", "Copy it", "Share it on approved brand channels", "Review requests classified by User-Agent in the Reach Tracker"];
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
       <div className="mb-2 text-[11px] font-semibold text-accent">{lang === "ar" ? "ماذا تفعل بالرابط؟" : lang === "ku" ? "چی بکەی بەو لینکە؟" : "What to do with the link"}</div>
