@@ -338,6 +338,19 @@ export const Route = createFileRoute("/api/visibility")({
                 }
                 return p ? { kind: "ok" as const, p, provider, model: actualModel } : { kind: "empty" as const, provider, model: actualModel };
               } catch (err: any) {
+                if (provider === "openrouter") {
+                  // A timed-out or network-failed OpenRouter attempt gets its own bounded Lovable retry.
+                  const fallbackCtl = new AbortController();
+                  const fallbackTimer = setTimeout(() => fallbackCtl.abort(), PA.PROBE_TIMEOUT_MS);
+                  try {
+                    const fallbackResponse = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, { method: "POST", headers: lovableAiHeaders(apiKey), signal: fallbackCtl.signal, body: JSON.stringify(payload) });
+                    if (!fallbackResponse.ok) return { kind: fallbackCtl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "lovable_ai" as const, model: String(model || "") };
+                    const fallbackJson: any = await fallbackResponse.json();
+                    const fallbackParsed = PA.parseProbeContent(fallbackJson?.choices?.[0]?.message?.content);
+                    return fallbackParsed ? { kind: "ok" as const, p: fallbackParsed, provider: "lovable_ai" as const, model: String(fallbackJson?.model || model || "") } : { kind: "empty" as const, provider: "lovable_ai" as const, model: String(fallbackJson?.model || model || "") };
+                  } catch { return { kind: fallbackCtl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "lovable_ai" as const, model: String(model || "") }; }
+                  finally { clearTimeout(fallbackTimer); }
+                }
                 return { kind: ctl.signal.aborted ? ("timeout" as const) : ("error" as const), provider: "unknown" as const, model: String(model || "") };
               } finally { clearTimeout(t); }
             };
