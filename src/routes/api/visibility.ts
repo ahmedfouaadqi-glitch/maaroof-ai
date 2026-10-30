@@ -384,22 +384,51 @@ export const Route = createFileRoute("/api/visibility")({
             };
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
+              let backgroundCharged = 0;
               const work = (async () => {
                 await askAll();
-                const charged = await settle();
-                const { notifyUser } = await import("@/lib/notify.server");
+                backgroundCharged = await settle();
+                const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+                const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
                 if (!answers.length) {
-                  try { await notifyUser(userId, "analysis_done", `${brand}: probe failed — refunded`, { link: "/dashboard" }); } catch {}
+                  await recordBrandOperation(admin, {
+                    id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
+                    status: "failed", durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
+                    requestMeta: { engines, market: market.region },
+                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: backgroundCharged === 0 },
+                    errorMessage: "engines_no_answer",
+                  });
+                  try {
+                    const { notifyUser } = await import("@/lib/notify.server");
+                    await notifyUser(userId, "analysis_done", `${brand}: probe failed`, { link: "/dashboard" });
+                  } catch {}
                   return;
                 }
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
-                try { await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" }); } catch {}
-              })().catch(() => {});
-              // Safe start: run inline (each engine is capped at 30s) so the work can never be
-              // detached after the response; results + notification are saved before we reply.
+                await recordBrandOperation(admin, {
+                  id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
+                  durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
+                  requestMeta: { engines, market: market.region, connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
+                  resultMeta: {
+                    engines_answered: answers.length,
+                    mentions: hit,
+                    top5: answers.filter((answer: any) => Number(answer.rank) > 0 && Number(answer.rank) <= 5).length,
+                    evidence_count: evidence.length,
+                    evidence_source: evidenceSource,
+                    basis: "live_engine_probe",
+                  },
+                });
+                try {
+                  const { notifyUser } = await import("@/lib/notify.server");
+                  await notifyUser(userId, "analysis_done", `${brand}: ${hit}/${answers.length}`, { link: "/dashboard" });
+                } catch {}
+              })().catch((error) => {
+                console.error("[visibility] background probe failed", error);
+              });
+              // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: pChg.tokens } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, charged: backgroundCharged } });
             }
             await askAll();
             const charged = await settle();
