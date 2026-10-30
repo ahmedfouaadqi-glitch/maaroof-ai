@@ -207,6 +207,19 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </div>
           )}
 
+          {out.visibility_metrics && (
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {(["engine_coverage", "mention_rate", "recommendation_rate", "share_of_voice", "citation_rate", "top5_rate"] as const).map((key) => {
+                const metric = out.visibility_metrics[key];
+                const label = ({ engine_coverage: outLang === "ar" ? "تغطية الإجابات" : "Answer coverage", mention_rate: outLang === "ar" ? "معدل ذكر العلامة" : "Brand mention rate", recommendation_rate: outLang === "ar" ? "معدل التوصية" : "Recommendation rate", share_of_voice: outLang === "ar" ? "حصة الصوت" : "Share of voice", citation_rate: outLang === "ar" ? "مطابقة الاستشهادات للأدلة" : "Evidence-matched citations", top5_rate: outLang === "ar" ? "الظهور ضمن أول 5" : "Top-5 rate" } as const)[key];
+                return <div key={key} className="rounded-lg border border-border bg-background/40 p-3">
+                  <div className="text-[10px] text-muted-foreground">{label}</div>
+                  <div className="mt-1 text-xl font-bold">{metric?.value_pct == null ? "—" : String(metric.value_pct) + "%"}</div>
+                  <div className="text-[10px] text-muted-foreground">{metric?.numerator ?? 0}/{metric?.denominator ?? 0}</div>
+                </div>;
+              })}
+            </div>
+          )}
           <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <ProactiveNextStep
 
