@@ -20,7 +20,7 @@ import { SourcesList } from "@/components/SourcesList";
 
 type Result = any;
 
-export function FeasibilityStudy({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+export function FeasibilityStudy({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -31,9 +31,9 @@ export function FeasibilityStudy({ workspaceId = null }: { workspaceId?: string 
   const [result, setResult] = useState<Result | null>(null);
 
   const [form, setForm] = useState({
-    project_name: "",
-    sector: "",
-    city: "",
+    project_name: String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""),
+    sector: String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || ""),
+    city: String(workspace?.city || ""),
     target_audience: "",
     problem: "",
     solution: "",
