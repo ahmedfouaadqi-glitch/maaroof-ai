@@ -1067,6 +1067,113 @@ export type Database = {
           },
         ]
       }
+      brand_operations: {
+        Row: {
+          brand_name: string | null
+          charged_units: number | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string
+          id: string
+          operation_type: string
+          request_meta: Json
+          result_meta: Json
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          charged_units?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string
+          id?: string
+          operation_type: string
+          request_meta?: Json
+          result_meta?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          charged_units?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string
+          id?: string
+          operation_type?: string
+          request_meta?: Json
+          result_meta?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_operations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_operation_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          operation_id: string
+          payload: Json
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          operation_id: string
+          payload?: Json
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          operation_id?: string
+          payload?: Json
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_operation_events_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "brand_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_operation_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_pages: {
         Row: {
           body_ar: string | null
