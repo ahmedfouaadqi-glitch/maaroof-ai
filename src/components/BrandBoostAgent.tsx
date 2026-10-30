@@ -397,11 +397,11 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
         </TabsContent>
 
         <TabsContent value="tracking" className="mt-4">
-          <PropagationPanel />
+          <PropagationPanel workspaceId={workspaceId} />
         </TabsContent>
 
         <TabsContent value="logs" className="mt-4">
-          <LogsPanel />
+          <LogsPanel workspaceId={workspaceId} />
         </TabsContent>
       </Tabs>
     </div>
@@ -604,7 +604,7 @@ function safeDecode(s: string): string {
   try { return decodeURIComponent(s); } catch { return s; }
 }
 
-function PropagationPanel() {
+function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null }) {
   const { t, lang } = useI18n();
   const [data, setData] = useState<{ packs: any[]; hits: any[]; stats?: { total: number; known: number; first: string | null; last: string | null } } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -618,14 +618,16 @@ function PropagationPanel() {
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
         if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-        const res = await apiFetch("/api/brand-authority", { headers });
+        const params = new URLSearchParams();
+        if (workspaceId) params.set("workspace_id", workspaceId);
+        const res = await apiFetch(`/api/brand-authority${params.size ? `?${params.toString()}` : ""}`, { headers });
         const j = await res.json().catch(() => ({ packs: [], hits: [] }));
         if (!cancelled) setData(j);
       } catch { if (!cancelled) setData({ packs: [], hits: [] }); }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [refreshKey, workspaceId]);
 
   const hits = data?.hits || [];
   const byBot = useMemo(() => {
@@ -802,7 +804,7 @@ function PropagationPanel() {
   );
 }
 
-function LogsPanel() {
+function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
   const { lang } = useI18n();
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
@@ -814,17 +816,19 @@ function LogsPanel() {
     (async () => {
       if (!user) { setLoading(false); return; }
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from("activity_log")
         .select("created_at, action, metadata")
         .eq("user_id", user.id)
-        .in("action", ["brand_boost", "brand_authority"])
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .in("action", ["brand_boost", "brand_authority"]);
+      query = workspaceId
+        ? query.eq("metadata->>workspace_id", workspaceId)
+        : query.is("metadata->>workspace_id", null);
+      const { data } = await query.order("created_at", { ascending: false }).limit(100);
       if (!cancelled) { setRows(data || []); setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [user?.id, refreshKey]);
+  }, [user?.id, refreshKey, workspaceId]);
 
   const exportCsv = () => {
     const head = [["created_at", "action", "brand", "details"]];
