@@ -26,7 +26,7 @@ import { botCategory, type BotCategory } from "@/lib/crawler-bots";
 const PLATFORMS: string[] = [...ENGINE_KEYS];
 const MAX_PLATFORMS_PER_RUN = 10;
 
-export function BrandBoostAgent() {
+export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string | null }) {
   const { t, lang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
@@ -50,29 +50,35 @@ export function BrandBoostAgent() {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("brand_boost_jobs").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    let query = supabase.from("brand_boost_jobs").select("*").eq("user_id", user.id);
+    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    const { data } = await query.order("created_at", { ascending: false });
     setJobs(data || []);
   };
-  useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => { load(); }, [user?.id, workspaceId]);
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
     const platforms = sel.slice(0, MAX_PLATFORMS_PER_RUN);
     await supabase.from("brand_boost_jobs").insert({
-      user_id: user.id, brand_name: brand, brand_keywords: kw,
+      user_id: user.id, workspace_id: workspaceId, brand_name: brand, brand_keywords: kw,
       platforms, frequency: freq, approved: true, active: true,
     });
     await load();
   };
 
   const toggle = async (id: string, active: boolean) => {
-    await supabase.from("brand_boost_jobs").update({ active: !active }).eq("id", id);
+    let query = supabase.from("brand_boost_jobs").update({ active: !active }).eq("id", id).eq("user_id", user!.id);
+    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    await query;
     await load();
   };
 
   const remove = async (id: string) => {
     if (!confirm(t("boost_delete_confirm"))) return;
-    await supabase.from("brand_boost_jobs").delete().eq("id", id);
+    let query = supabase.from("brand_boost_jobs").delete().eq("id", id).eq("user_id", user!.id);
+    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    await query;
     setReport(null);
     await load();
   };
@@ -106,7 +112,7 @@ export function BrandBoostAgent() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand") }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand"), workspace_id: workspaceId }),
       });
       const text = await res.text();
       let data: any = {};
@@ -116,8 +122,10 @@ export function BrandBoostAgent() {
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
-      await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, status: "done", report: data });
-      await supabase.from("brand_boost_jobs").update({ last_run_at: new Date().toISOString() }).eq("id", j.id);
+      await supabase.from("brand_boost_runs").insert({ job_id: j.id, user_id: user!.id, workspace_id: workspaceId, status: "done", report: data });
+      let updateJob = supabase.from("brand_boost_jobs").update({ last_run_at: new Date().toISOString() }).eq("id", j.id).eq("user_id", user!.id);
+      updateJob = workspaceId ? updateJob.eq("workspace_id", workspaceId) : updateJob.is("workspace_id", null);
+      await updateJob;
       await load();
     } catch (e: any) { setErr(e?.message || "failed"); }
     finally { setRunning(null); }
@@ -385,7 +393,7 @@ export function BrandBoostAgent() {
         </TabsContent>
 
         <TabsContent value="broadcast" className="mt-4">
-          <AuthorityPanel brand={brand} kw={kw} lang={outLang} />
+          <AuthorityPanel brand={brand} kw={kw} lang={outLang} workspaceId={workspaceId} />
         </TabsContent>
 
         <TabsContent value="tracking" className="mt-4">
@@ -400,7 +408,7 @@ export function BrandBoostAgent() {
   );
 }
 
-function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: Lang }) {
+function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: string; lang: Lang; workspaceId?: string | null }) {
   const { t } = useI18n();
   const [sourceUrl, setSourceUrl] = useState("");
   const [ping, setPing] = useState(true);
@@ -417,7 +425,7 @@ function AuthorityPanel({ brand, kw, lang }: { brand: string; kw: string; lang: 
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/brand-authority", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: brand, brand_keywords: kw, source_url: sourceUrl, ping, lang }),
+        body: JSON.stringify({ brand_name: brand, brand_keywords: kw, source_url: sourceUrl, ping, lang, workspace_id: workspaceId || null }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `http_${res.status}`);
