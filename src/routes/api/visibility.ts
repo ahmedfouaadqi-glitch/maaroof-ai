@@ -416,7 +416,7 @@ export const Route = createFileRoute("/api/visibility")({
                 status: "failed",
                 durationMs: Date.now() - pStartedAt,
                 chargedUnits: 0,
-                requestMeta: { engines, market: market.region, connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
+                requestMeta: { engines, market: market.region },
                 resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: true },
                 errorMessage: "engines_no_answer",
               });
