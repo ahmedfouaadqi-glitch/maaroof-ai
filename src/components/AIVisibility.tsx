@@ -138,6 +138,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="text-[10px] uppercase tracking-widest text-primary font-bold">{t("ag_vis_score")}</div>
               <div className="mt-1 text-3xl font-bold text-gradient">{out.visibility_percent}%</div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {outLang === "ar" ? "متوسط تقديري لدرجات المحركات العشرة التي ولّدها التحليل؛ ليس قياساً مستقلاً مثبتاً للظهور." : outLang === "ku" ? "ناوەندییەکی خەمڵێنراوە لە نمرەکانی ١٠ بزوێنەر؛ پێوانەیەکی سەربەخۆی پشتڕاستکراو نییە." : "Arithmetic mean of the ten model-generated engine estimates; not an independently verified visibility measurement."}
+              </p>
             </div>
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
               <div className="text-[10px] uppercase tracking-widest text-accent font-bold">{t("ag_vis_sentiment")}</div>
