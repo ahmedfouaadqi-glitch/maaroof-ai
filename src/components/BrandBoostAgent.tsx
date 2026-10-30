@@ -109,7 +109,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
         body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, website_url: String((j.config as any)?.website_url || websiteUrl || "").trim(), platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand"), workspace_id: workspaceId }),
@@ -469,7 +469,7 @@ function AuthorityPanel({ brand, kw, lang, workspaceId }: { brand: string; kw: s
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const res = await apiFetch("/api/brand-authority", {
         method: "POST", headers,
         body: JSON.stringify({ brand_name: brand, brand_keywords: kw, source_url: sourceUrl, ping, lang, workspace_id: workspaceId || null }),
@@ -747,7 +747,7 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
-        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+        if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
         const params = new URLSearchParams();
         if (workspaceId) params.set("workspace_id", workspaceId);
         const res = await apiFetch(`/api/brand-authority${params.size ? `?${params.toString()}` : ""}`, { headers });
@@ -992,7 +992,7 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = \`Bearer \${session.access_token}\`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const response = await apiFetch("/api/brand-boost-report-settings" + query, {
         method: "POST", headers, body: JSON.stringify({ action: "request_verification", email_to: emailTo.trim() }),
       });
@@ -1013,7 +1013,7 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = \`Bearer \${session.access_token}\`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const response = await apiFetch("/api/brand-boost-report-settings" + query, {
         method: "POST", headers, body: JSON.stringify({ action: "verify_code", code: verificationCode.trim() }),
       });
@@ -1039,7 +1039,7 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = \`Bearer \${session.access_token}\`;
+      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const response = await apiFetch("/api/brand-boost-report-settings" + query, {
         method: "POST", headers, body: JSON.stringify({ email_to: emailTo.trim(), enabled }),
       });
