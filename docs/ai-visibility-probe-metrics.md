@@ -13,6 +13,7 @@ These are observed-sample metrics. They do not represent market share, all users
 - **Mention rate:** successful answers mentioning the target / successful answers.
 - **Recommendation rate:** successful answers whose returned ranked brand list contains the target / successful answers.
 - **Share of voice:** target's unique brand-label appearances / all unique brand-label appearances in returned brand lists, summed across successful answers. This is a sample-level SOV, not market share.
+- **Competitor breakdown:** top ten other unique brand labels, ranked by appearances across successful returned brand lists, with their sample-level SOV and answer appearance rate.
 - **Evidence-matched citation rate:** answers containing a model-returned URL that exactly matches one of the collected evidence URLs / successful answers. It does not establish that the consumer product UI displayed a native citation.
 - **Top-5 rate:** ranked brand lists placing the target in positions 1–5 / successful answers with non-empty ranked brand lists.
 - **Average rank:** mean target position for answers where the target appears in the returned brand list and a positive rank is available.
