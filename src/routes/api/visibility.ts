@@ -1,4 +1,4 @@
-import { normalizeEngines } from "@/lib/ai-engines";
+import { normalizeEngines, ENGINE_KEYS } from "@/lib/ai-engines";
 import { mciReuse, mciStore } from "@/lib/mci/resolver.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
@@ -6,7 +6,7 @@ import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-quality.server";
-import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels, excludeUnhealthyEngines } from "@/lib/ai-engines.server";
+import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
 import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
@@ -194,14 +194,15 @@ export const Route = createFileRoute("/api/visibility")({
 
           // Micro-probe (optional): live question to the engines the user selected.
           // Absent `probe_engines` → the original visibility flow below runs unchanged.
-          if (Array.isArray(body.probe_engines) && body.probe_engines.length) {
+          { // The primary visibility action now runs the live ten-engine probe; estimates are not the default result.
             const { resolveProbePolicy } = await import("@/lib/tokens.server");
             const ent = await enginesAllowedForUser(admin, userId);
             const policy = await resolveProbePolicy(userId);
             // All requested engines run (up to ten); account plan no longer shortens the council.
             void ent;
             const picked = normalizeEngines(body.probe_engines);
-            const { engines } = await excludeUnhealthyEngines(picked);
+            // Health telemetry is diagnostic only: historical failures must never silently remove requested engines.
+            const engines = picked.length ? ENGINE_KEYS.filter((e) => picked.includes(e)) : [...ENGINE_KEYS];
             if (!engines.length) return Response.json({ error: "no_engines" }, { status: 400 });
             let probeTopic = keywords;
             if (!probeTopic && workspace) {
@@ -270,13 +271,36 @@ export const Route = createFileRoute("/api/visibility")({
                   ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
                   : "PHASE 2 — EVIDENCE-GROUNDED REVIEW: Evaluate whether the target entity is sufficiently supported by the public evidence included in the user's audit question. State exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof.";
                 const actualQuestion = questionForPhase(e, phase, blindAnswer);
-                const r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
-                  method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
-                  body: JSON.stringify({ model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages: [
-                    { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer as the ${e} assistant would.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence organic recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
-                    { role: "user", content: actualQuestion },
-                  ] }),
-                });
+                const messages = [
+                  { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer using the configured ${e} model.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
+                  { role: "user", content: actualQuestion },
+                ];
+                const payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
+                let r: Response | null = null;
+                let provider: "openrouter" | "lovable_ai" = "openrouter";
+                const openRouterKey = process.env.OPENROUTER_API_KEY;
+                if (openRouterKey) {
+                  try {
+                    const candidate = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                      method: "POST",
+                      headers: { "Authorization": `Bearer ${openRouterKey}`, "Content-Type": "application/json", "HTTP-Referer": process.env.APP_URL || "https://maaroof.ai", "X-Title": "MAAROOF AI" },
+                      signal: ctl.signal,
+                      body: JSON.stringify(payload),
+                    });
+                    if (candidate.ok) r = candidate;
+                    else console.warn("[visibility.probe] OpenRouter failed; falling back to Lovable", e, candidate.status);
+                  } catch (err) {
+                    if (ctl.signal.aborted) throw err;
+                    console.warn("[visibility.probe] OpenRouter request failed; falling back to Lovable", e);
+                  }
+                }
+                if (!r) {
+                  provider = "lovable_ai";
+                  r = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+                    method: "POST", headers: lovableAiHeaders(apiKey), signal: ctl.signal,
+                    body: JSON.stringify(payload),
+                  });
+                }
                 if (!r.ok) return { kind: "error" as const };
                 const j: any = await r.json();
                 const p = PA.parseProbeContent(j?.choices?.[0]?.message?.content);
