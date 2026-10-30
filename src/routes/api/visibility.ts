@@ -397,9 +397,10 @@ export const Route = createFileRoute("/api/visibility")({
                   } catch {}
                   return;
                 }
+                const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
+                bgMetrics = metrics;
                 try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
-                const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                   durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
