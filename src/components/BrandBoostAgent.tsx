@@ -33,13 +33,16 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
   const [jobs, setJobs] = useState<any[]>([]);
   const [brand, setBrand] = useState((profile as any)?.brand_name || "");
   const [kw, setKw] = useState((profile as any)?.brand_keywords || "");
+  const [websiteUrl, setWebsiteUrl] = useState((profile as any)?.website_url || (profile as any)?.website || "");
   // Fill once from the saved profile when it arrives; never overwrite what the user typed.
   useEffect(() => {
     const pb = (profile as any)?.brand_name;
     const pk = (profile as any)?.brand_keywords;
+    const pw = (profile as any)?.website_url || (profile as any)?.website;
     if (pb) setBrand((cur: string) => cur || pb);
     if (pk) setKw((cur: string) => cur || pk);
-  }, [(profile as any)?.brand_name, (profile as any)?.brand_keywords]);
+    if (pw) setWebsiteUrl((cur: string) => cur || pw);
+  }, [(profile as any)?.brand_name, (profile as any)?.brand_keywords, (profile as any)?.website_url, (profile as any)?.website]);
   const [freq, setFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [sel, setSel] = useState<string[]>(PLATFORMS.slice(0, MAX_PLATFORMS_PER_RUN));
   const [approved, setApproved] = useState(false);
@@ -63,7 +66,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
     const { error: insertError } = await supabase.from("brand_boost_jobs").insert({
       user_id: user.id, workspace_id: workspaceId, brand_name: brand, brand_keywords: kw,
       platforms, frequency: freq, approved: true, active: true, next_run_at: new Date().toISOString(),
-      config: { lang: outLang, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" },
+      config: { lang: outLang, website_url: websiteUrl.trim(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" },
     });
     if (insertError) { toast.error(insertError.message); return; }
     toast.success(lang === "ar" ? "تم تفعيل الجدولة؛ أول تشغيل عند وصول نبضة المجدول." : "Schedule enabled; first run starts on the next scheduler tick.");
@@ -108,7 +111,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand"), workspace_id: workspaceId }),
+        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, website_url: String((j.config as any)?.website_url || websiteUrl || "").trim(), platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand"), workspace_id: workspaceId }),
       });
       const text = await res.text();
       let data: any = {};
@@ -168,8 +171,10 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
         
 
         
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t("boost_brand")}
+          className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+        <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder={lang === "ar" ? "رابط الموقع الرسمي (https://...)" : "Official website URL (https://...)"}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder={t("boost_keywords")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
@@ -252,6 +257,19 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
       <ToolHistory toolKey="brand_boost" />
       {report && (
         <div className="mt-4 space-y-2">
+          {report.analysis_status && (
+            <div className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-1">
+              <div className="font-semibold">
+                {report.analysis_status === "direct_website_crawled" ? (lang === "ar" ? "تم فحص محتوى الموقع مباشرة" : "Direct website content crawled")
+                  : report.analysis_status === "public_search_evidence_only" ? (lang === "ar" ? "أدلة من نتائج البحث فقط" : "Public search evidence only")
+                  : report.analysis_status === "engine_observations_only" ? (lang === "ar" ? "ملاحظات من تكاملات النماذج فقط" : "Configured-model observations only")
+                  : (lang === "ar" ? "أدلة غير كافية لتشخيص خاص بالعلامة" : "Insufficient evidence for a brand-specific diagnosis")}
+              </div>
+              {report.website_scan?.url && <div className="text-muted-foreground">{lang === "ar" ? "الموقع: " : "Website: "}{report.website_scan.url} · {report.website_scan.status}</div>}
+              {Array.isArray(report.analysis_limitations) && report.analysis_limitations.map((item: string, i: number) => <div key={i} className="text-muted-foreground">• {item}</div>)}
+              {report.plan_source === "deterministic_fallback" && <div className="font-semibold text-amber-700 dark:text-amber-400">{lang === "ar" ? "الخطة المعروضة إرشادات احتياطية وليست نتيجة تشخيص نموذج مكتمل." : "Fallback guidance, not a completed model diagnosis."}</div>}
+            </div>
+          )}
           {report.summary && <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{report.summary}</div>}
           {(report.plan || []).map((p: any, i: number) => (
             <div key={i} className="rounded-lg border border-border bg-background/40 p-3 text-xs space-y-2">
