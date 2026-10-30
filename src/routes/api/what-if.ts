@@ -22,8 +22,6 @@ export const Route = createFileRoute("/api/what-if")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-        const workspaceDenied = await workspaceGuard(admin, userId, body);
-        if (workspaceDenied) return workspaceDenied;
         const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
@@ -41,6 +39,8 @@ export const Route = createFileRoute("/api/what-if")({
         }
 
         const body = await request.json();
+        const workspaceDenied = await workspaceGuard(admin, userId, body);
+        if (workspaceDenied) return workspaceDenied;
 
         const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
