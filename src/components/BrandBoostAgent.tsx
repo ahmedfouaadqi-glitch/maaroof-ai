@@ -62,15 +62,8 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
     const platforms = sel.slice(0, MAX_PLATFORMS_PER_RUN);
     await supabase.from("brand_boost_jobs").insert({
       user_id: user.id, workspace_id: workspaceId, brand_name: brand, brand_keywords: kw,
-      platforms, frequency: freq, approved: true, active: true,
+      platforms, frequency: freq, approved: true, active: false,
     });
-    await load();
-  };
-
-  const toggle = async (id: string, active: boolean) => {
-    let query = supabase.from("brand_boost_jobs").update({ active: !active }).eq("id", id).eq("user_id", user!.id);
-    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
-    await query;
     await load();
   };
 
@@ -180,6 +173,13 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
       </div>
       <EngineSelector className="mt-3" value={sel} onChange={setSel} maxOverride={MAX_PLATFORMS_PER_RUN} />
 
+      <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-muted-foreground">
+        {lang === "ar"
+          ? "تفضيل التكرار يُحفظ في الإعدادات فقط. لا يوجد حالياً عامل خلفي يشغّل مهام تعزيز العلامة تلقائياً؛ استخدم «تشغيل الآن» للتنفيذ اليدوي."
+          : lang === "ku"
+          ? "هەڵبژاردەی دووبارەبوونەوە تەنها وەک ڕێکخستن پاشەکەوت دەکرێت. لە ئێستادا جێبەجێکەری پشتەوە بۆ کارکردنی خۆکاری نییە؛ «ئێستا جێبەجێ بکە» بەکاربهێنە."
+          : "Frequency is saved as a preference only. No background worker currently runs Brand Boost jobs automatically; use Run Now for manual execution."}
+      </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <select value={freq} onChange={(e) => setFreq(e.target.value as any)}
           className="rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm">
@@ -206,9 +206,9 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                 <strong className="max-w-full break-words">{j.brand_name}</strong>
                 <span className="text-xs text-muted-foreground">· {j.frequency}</span>
                 <span className="max-w-full break-words text-[10px] text-muted-foreground">{j.platforms?.slice(0, MAX_PLATFORMS_PER_RUN).join(", ")}</span>
-                <button onClick={() => toggle(j.id, j.active)} className="sm:ms-auto inline-flex items-center gap-1 text-xs">
-                  <Power className="size-3" /> {j.active ? t("boost_pause") : t("boost_resume")}
-                </button>
+                <span className="sm:ms-auto rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-400">
+                  {lang === "ar" ? "يدوي فقط" : lang === "ku" ? "تەنها بە دەستی" : "Manual only"}
+                </span>
                 <button disabled={running === j.id} onClick={() => runNow(j)}
                   className="rounded-md bg-primary/15 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50">
                   {running === j.id ? <Loader2 className="inline size-3 animate-spin" /> : t("boost_run_now")}
