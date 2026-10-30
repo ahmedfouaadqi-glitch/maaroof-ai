@@ -135,8 +135,12 @@ export function calculateVisibilityProbeMetrics(
     (Array.isArray(answer.brands) ? uniqueLabels(answer.brands) : []).length > 0,
   );
   const ranked = answers
-    .map((answer) => Number(answer.rank))
-    .filter((rank) => Number.isFinite(rank) && rank > 0);
+    .filter((answer) =>
+      Number.isFinite(Number(answer.rank)) &&
+      Number(answer.rank) > 0 &&
+      (Array.isArray(answer.brands) ? answer.brands.some((candidate) => containsLabel(candidate, brand)) : false),
+    )
+    .map((answer) => Number(answer.rank));
   const top5Answers = answers.filter((answer) => {
     const rank = Number(answer.rank);
     return Number.isFinite(rank) && rank >= 1 && rank <= 5 &&
@@ -169,6 +173,7 @@ export function calculateVisibilityProbeMetrics(
       "Metrics describe only the successful answers in this run and the requested engine set.",
       "The configured API/model route may not be equivalent to the consumer-facing product bearing the same engine name.",
       "Share of voice uses unique brand labels in model-returned ranked brand lists; it is not market share.",
+      "With one answer per engine, mention coverage and mention rate coincide; they diverge when multiple answers per engine are sampled.",
       "Citation rate counts model-returned URLs that exactly match collected evidence URLs; it does not prove a native UI citation.",
       ...(!validBrand ? ["The target brand name was empty; brand-specific metrics may be uninformative."] : []),
     ],
