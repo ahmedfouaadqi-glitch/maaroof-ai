@@ -67,12 +67,12 @@ async function askEngines(brand: string, sector: string, place: string, lang: st
         return { list: [] as string[], truncated: false, failed: true, timeout: err?.name === "AbortError" };
       } finally { clearTimeout(t); }
     };
-    const primaryModel = String(models[e]?.model || "google/gemini-2.5-flash");
+    const primaryModel = String(models[e]?.model || "google/gemini-3.8-flash");
     let res = await call(primaryModel, 2500, 30000);
     if (!res.failed && !res.list.length && res.truncated) res = await call(primaryModel, 4000, 30000);
     // Safety valve: on failure or empty answer, ask the same engine question via the gateway's stable model.
     if (res.failed || !res.list.length) {
-      const fb = await call("google/gemini-2.5-flash", 2500, 20000);
+      const fb = await call("google/gemini-3.8-flash", 2500, 20000);
       if (fb.list.length || !res.failed) res = fb.list.length ? fb : res;
       else res = fb;
     }
