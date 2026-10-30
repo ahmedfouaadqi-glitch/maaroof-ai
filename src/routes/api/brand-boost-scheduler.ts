@@ -18,7 +18,7 @@ async function runDueJobs(admin: any, origin: string, now: Date) {
   const { data: jobs, error } = await admin.from("brand_boost_jobs")
     .select("id, user_id, workspace_id, brand_name, brand_keywords, platforms, frequency, next_run_at, config")
     .eq("active", true).eq("approved", true).not("next_run_at", "is", null)
-    .lte("next_run_at", isoNow).order("next_run_at", { ascending: true }).limit(5);
+    .lte("next_run_at", isoNow).order("next_run_at", { ascending: true }).limit(2);
   if (error) throw new Error("brand_boost_jobs_read_failed: " + error.message);
 
   const results: Array<{ job_id: string; status: string; detail?: string }> = [];
@@ -109,7 +109,7 @@ async function sendMonthlyReports(admin: any, now: Date) {
   const period = previousCalendarMonth(now);
   const { data: settings, error } = await admin.from("brand_boost_report_settings")
     .select("id, user_id, workspace_id, email_to")
-    .eq("enabled", true).limit(100);
+    .eq("enabled", true).not("email_verified_at", "is", null).limit(100);
   if (error) throw new Error("report_settings_read_failed: " + error.message);
 
   const result = { considered: (settings || []).length, sent: 0, failed: 0, skipped: 0 };

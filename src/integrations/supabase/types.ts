@@ -1119,6 +1119,11 @@ export type Database = {
           workspace_id: string | null
           email_to: string
           enabled: boolean
+          email_verified_at: string | null
+          verification_code_hash: string | null
+          verification_expires_at: string | null
+          verification_sent_at: string | null
+          verification_attempts: number
           created_at: string
           updated_at: string
         }
@@ -1128,6 +1133,11 @@ export type Database = {
           workspace_id?: string | null
           email_to: string
           enabled?: boolean
+          email_verified_at?: string | null
+          verification_code_hash?: string | null
+          verification_expires_at?: string | null
+          verification_sent_at?: string | null
+          verification_attempts?: number
           created_at?: string
           updated_at?: string
         }
@@ -1137,6 +1147,11 @@ export type Database = {
           workspace_id?: string | null
           email_to?: string
           enabled?: boolean
+          email_verified_at?: string | null
+          verification_code_hash?: string | null
+          verification_expires_at?: string | null
+          verification_sent_at?: string | null
+          verification_attempts?: number
           created_at?: string
           updated_at?: string
         }

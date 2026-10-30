@@ -70,3 +70,41 @@ export async function sendBrandMonthlyReport(
   }
   return { id: typeof payload?.id === "string" ? payload.id : null };
 }
+
+
+export async function sendBrandReportVerificationCode(
+  emailTo: string,
+  code: string,
+  verificationId: string,
+): Promise<{ id: string | null }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.BRAND_BOOST_REPORT_FROM;
+  if (!apiKey || !from) throw new Error("verification_email_not_configured");
+
+  const html = [
+    '<!doctype html><html lang="ar" dir="rtl"><body style="font-family:Arial,sans-serif;line-height:1.8;color:#171717">',
+    "<h2>تأكيد بريد تقارير معروف</h2>",
+    "<p>أدخل رمز التأكيد التالي داخل إعدادات معروف لتفعيل التقارير الشهرية:</p>",
+    '<p style="font-size:28px;font-weight:700;letter-spacing:8px">' + escapeHtml(code) + "</p>",
+    "<p>ينتهي الرمز خلال 15 دقيقة. إذا لم تطلب هذا الرمز فتجاهل الرسالة.</p>",
+    "</body></html>",
+  ].join("");
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json",
+      "Idempotency-Key": "brandboost-email-verification:" + verificationId,
+    },
+    body: JSON.stringify({
+      from,
+      to: [emailTo],
+      subject: "تأكيد بريد تقارير معروف",
+      html,
+      text: "رمز تأكيد بريد تقارير معروف: " + code + ". ينتهي خلال 15 دقيقة.",
+    }),
+  });
+  const payload: any = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(String(payload?.message || payload?.error || "verification_email_http_" + response.status).slice(0, 250));
+  return { id: typeof payload?.id === "string" ? payload.id : null };
+}

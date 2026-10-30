@@ -169,6 +169,13 @@
       "when": 1793373000000,
       "tag": "0023_brand_boost_automation",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793373600000,
+      "tag": "0024_brand_boost_email_verification",
+      "breakpoints": true
     }
   ]
 }

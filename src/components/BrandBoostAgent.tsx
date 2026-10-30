@@ -421,7 +421,7 @@ export function BrandBoostAgent({ workspaceId = null }: { workspaceId?: string |
                 ? "تابی «بڵاوکردنەوە بۆ AI» بکەرەوە: لاپەڕەی گشتی + IndexNow ping + بەستەری هاوبەشی."
                 : "Open the Broadcast tab to publish an indexable public page, ping IndexNow (Bing/Copilot/Perplexity/ChatGPT), and get share-ready links for every platform."}
             </p>
-            <button onClick={() => setTab("authority")}
+            <button onClick={() => setTab("broadcast")}
               className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]">
               <Rocket className="size-4" />
               {lang === "ar" ? "ابدأ البثّ الآن" : lang === "ku" ? "ئێستا بڵاو بکەرەوە" : "Broadcast now"}
@@ -954,6 +954,9 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
 function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: string | null; lang: string }) {
   const [emailTo, setEmailTo] = useState("");
   const [enabled, setEnabled] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const query = workspaceId ? "?workspace_id=" + encodeURIComponent(workspaceId) : "";
@@ -972,6 +975,8 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
         if (!cancelled) {
           setEmailTo(String(payload.settings?.email_to || ""));
           setEnabled(payload.settings?.enabled === true);
+          setEmailVerified(payload.settings?.email_verified === true);
+          setVerificationSent(payload.settings?.verification_pending === true);
         }
       } catch (error: any) {
         if (!cancelled) toast.error(error?.message || "settings_load_failed");
@@ -982,17 +987,65 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
     return () => { cancelled = true; };
   }, [query]);
 
-  const save = async () => {
+  const sendVerification = async () => {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
+      if (session?.access_token) headers.Authorization = \`Bearer \${session.access_token}\`;
+      const response = await apiFetch("/api/brand-boost-report-settings" + query, {
+        method: "POST", headers, body: JSON.stringify({ action: "request_verification", email_to: emailTo.trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "verification_request_failed");
+      if (payload.already_verified) setEmailVerified(true);
+      else setVerificationSent(true);
+      toast.success(lang === "ar" ? "أُرسل رمز التأكيد إلى البريد." : "Verification code sent.");
+    } catch (error: any) {
+      toast.error(error?.message || "verification_request_failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = \`Bearer \${session.access_token}\`;
+      const response = await apiFetch("/api/brand-boost-report-settings" + query, {
+        method: "POST", headers, body: JSON.stringify({ action: "verify_code", code: verificationCode.trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "verification_failed");
+      setEmailVerified(true);
+      setVerificationSent(false);
+      setVerificationCode("");
+      toast.success(lang === "ar" ? "تم تأكيد البريد. فعّل الإرسال واحفظ الإعداد." : "Email verified. Enable delivery and save.");
+    } catch (error: any) {
+      toast.error(error?.message || "verification_failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const save = async () => {
+    if (enabled && !emailVerified) {
+      toast.error(lang === "ar" ? "أكد ملكية البريد أولاً." : "Verify the email address first.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = \`Bearer \${session.access_token}\`;
       const response = await apiFetch("/api/brand-boost-report-settings" + query, {
         method: "POST", headers, body: JSON.stringify({ email_to: emailTo.trim(), enabled }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "settings_save_failed");
+      setEnabled(payload.enabled === true);
       toast.success(lang === "ar" ? "تم حفظ إعداد البريد." : "Email report settings saved.");
     } catch (error: any) {
       toast.error(error?.message || "settings_save_failed");
@@ -1006,21 +1059,46 @@ function BrandMonthlyReportSettings({ workspaceId, lang }: { workspaceId?: strin
       <div className="font-semibold">{lang === "ar" ? "التقرير الشهري عبر البريد" : lang === "ku" ? "ڕاپۆرتی مانگانە بە ئیمەیڵ" : "Monthly report by email"}</div>
       <p className="text-muted-foreground">
         {lang === "ar"
-          ? "يرسل معروف ملخص الشهر السابق في اليوم الأول من كل شهر (UTC). لا يُرسل إلا بعد تفعيل الخيار وإدخال بريد صحيح."
-          : "Maaroof sends the previous calendar month's summary on the first UTC day of each month. It is opt-in and requires a valid email."}
+          ? "يرسل معروف تقرير الشهر الميلادي السابق في اليوم الأول من الشهر (UTC). يجب تأكيد ملكية البريد قبل تفعيل الإرسال."
+          : "Maaroof sends the previous calendar month's report on the first UTC day. Verify the recipient address before enabling delivery."}
       </p>
-      <input type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)}
-        placeholder="name@example.com" className="w-full rounded-md border border-border bg-background px-3 py-2" />
+      <input type="email" value={emailTo} onChange={(event) => {
+        const next = event.target.value;
+        if (next.trim().toLowerCase() !== emailTo.trim().toLowerCase()) {
+          setEmailVerified(false); setVerificationSent(false); setEnabled(false); setVerificationCode("");
+        }
+        setEmailTo(next);
+      }} placeholder="name@example.com" className="w-full rounded-md border border-border bg-background px-3 py-2" />
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={emailVerified ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
+          {emailVerified ? (lang === "ar" ? "البريد مؤكّد" : "Email verified") : (lang === "ar" ? "البريد غير مؤكّد" : "Email not verified")}
+        </span>
+        {!emailVerified && <button disabled={loading || saving || !emailTo.trim()} onClick={sendVerification}
+          className="rounded-md border border-border px-3 py-1.5 font-semibold disabled:opacity-50">
+          {lang === "ar" ? "إرسال رمز التأكيد" : "Send verification code"}
+        </button>}
+      </div>
+      {verificationSent && !emailVerified && (
+        <div className="flex flex-wrap gap-2">
+          <input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="000000" className="w-28 rounded-md border border-border bg-background px-3 py-2 tracking-widest" />
+          <button disabled={saving || verificationCode.length !== 6} onClick={verifyCode}
+            className="rounded-md bg-primary/15 px-3 py-1.5 font-semibold text-primary disabled:opacity-50">
+            {lang === "ar" ? "تأكيد الرمز" : "Verify code"}
+          </button>
+        </div>
+      )}
       <label className="flex items-center gap-2">
-        <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+        <input type="checkbox" checked={enabled} disabled={!emailVerified}
+          onChange={(event) => setEnabled(event.target.checked)} />
         {lang === "ar" ? "أوافق على إرسال التقرير الشهري إلى هذا البريد" : "Send the monthly report to this email"}
       </label>
-      <button disabled={loading || saving || (enabled && !emailTo.trim())}
+      <button disabled={loading || saving}
         onClick={save} className="rounded-md bg-primary/15 px-3 py-1.5 font-semibold text-primary disabled:opacity-50">
         {loading ? (lang === "ar" ? "جار التحميل…" : "Loading…") : saving ? (lang === "ar" ? "جار الحفظ…" : "Saving…") : (lang === "ar" ? "حفظ الإعداد" : "Save settings")}
       </button>
       <div className="text-[10px] text-muted-foreground">
-        {lang === "ar" ? "يتطلب إعداد RESEND_API_KEY وBRAND_BOOST_REPORT_FROM على الخادم والتحقق من نطاق الإرسال." : "Server setup requires RESEND_API_KEY, BRAND_BOOST_REPORT_FROM and a verified sender domain."}
+        {lang === "ar" ? "يتطلب إعداد RESEND_API_KEY وBRAND_BOOST_REPORT_FROM على الخادم والتحقق من نطاق الإرسال، بالإضافة إلى إعداد Supabase Cron." : "Requires RESEND_API_KEY, BRAND_BOOST_REPORT_FROM, a verified sender domain and Supabase Cron."}
       </div>
     </div>
   );
