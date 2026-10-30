@@ -668,6 +668,7 @@ export type Database = {
           summary: string | null
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           brand_keywords?: string | null
@@ -681,6 +682,7 @@ export type Database = {
           summary?: string | null
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           brand_keywords?: string | null
@@ -694,8 +696,17 @@ export type Database = {
           summary?: string | null
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "brand_authority_packs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brand_boost_jobs: {
         Row: {
@@ -711,6 +722,7 @@ export type Database = {
           next_run_at: string | null
           platforms: string[]
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           active?: boolean
@@ -725,6 +737,7 @@ export type Database = {
           next_run_at?: string | null
           platforms?: string[]
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           active?: boolean
@@ -739,8 +752,17 @@ export type Database = {
           next_run_at?: string | null
           platforms?: string[]
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "brand_boost_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brand_boost_runs: {
         Row: {
@@ -750,6 +772,7 @@ export type Database = {
           report: Json | null
           status: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
@@ -758,6 +781,7 @@ export type Database = {
           report?: Json | null
           status?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
@@ -766,6 +790,7 @@ export type Database = {
           report?: Json | null
           status?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -773,6 +798,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "brand_boost_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_boost_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1001,6 +1033,7 @@ export type Database = {
           path: string | null
           user_agent: string
           user_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           bot_name?: string | null
@@ -1011,6 +1044,7 @@ export type Database = {
           path?: string | null
           user_agent: string
           user_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           bot_name?: string | null
@@ -1021,8 +1055,17 @@ export type Database = {
           path?: string | null
           user_agent?: string
           user_id?: string | null
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crawler_hits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       custom_pages: {
         Row: {
