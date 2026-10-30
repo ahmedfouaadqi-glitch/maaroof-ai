@@ -76,7 +76,38 @@ export function BroadcastPanel({ lang, workspaceId = null }: { lang: L; workspac
     <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:p-5">
       <h2 className="mb-1 flex items-center gap-2 font-semibold"><Radio className="size-5 text-primary" />{tr(lang, "بث الذكاء وتتبع الانتشار", "Intelligence broadcast & reach", "بڵاوکردنەوەی زیرەکی")}</h2>
       <p className="mb-3 text-xs text-muted-foreground">{tr(lang, "ملفات قراءة الآلة المنشورة على رابط معروف، وطلبات الوصول المصنفة من User-Agent خلال آخر 30 يوماً. تصنيف User-Agent لا يثبت هوية الزاحف. لا يُنشر ملف على موقع العميل من هذه الشاشة.", "Machine-readable files hosted on a Maaroof URL and requests classified from User-Agent in the last 30 days. User-Agent matching does not authenticate a crawler. This screen does not publish to the customer's website.", "فایلە بڵاوکراوەکان و سەردانی خشۆکەکان.")}</p>
-      {workspaceId ? <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">{!workspaceProfile ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : <><h3 className="font-semibold">{workspaceProfile.profile?.brand_name || workspaceProfile.name}</h3><p className="mt-1 text-xs text-muted-foreground">{tr(lang, "هوية مستقلة لهذه المساحة. التصدير يتضمن حزم قراءة الآلة المتاحة.", "Independent identity for this workspace. Export includes available machine-readable packs.", "ناسنامەی جیاواز بۆ ئەم شوێنە.")}</p><div className="mt-3"><ExportButtons size="xs" build={() => ({ title: workspaceProfile.profile?.brand_name || workspaceProfile.name, lang, entity: { brand: workspaceProfile.profile?.brand_name || workspaceProfile.name, site: workspaceProfile.brand_url || undefined, summary: workspaceProfile.brand_summary || undefined, facts: Array.isArray(workspaceProfile.keywords) ? workspaceProfile.keywords : [], links: workspaceProfile.brand_url ? [workspaceProfile.brand_url] : [], faqs: Array.isArray(workspaceProfile.profile?.faqs) ? workspaceProfile.profile.faqs : [] }, sections: [{ heading: tr(lang, "هوية مساحة العمل", "Workspace identity", "ناسنامەی شوێن"), kind: "kv", rows: [[tr(lang, "الاسم", "Name", "ناو"), workspaceProfile.profile?.brand_name || workspaceProfile.name], ["Website", workspaceProfile.brand_url || "—"], [tr(lang, "الوصف", "Description", "وەسف"), workspaceProfile.brand_summary || "—"]] }] })} /></div></>}</div> : packs === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : (
+      {workspaceId && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          {!workspaceProfile ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : <>
+            <h3 className="font-semibold">{workspaceProfile.profile?.brand_name || workspaceProfile.name}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{tr(lang, "هوية مستقلة لهذه المساحة. حزم العلامة وسجلات الزيارات أدناه محصورة بهذه المساحة.", "Independent workspace identity. Brand packs and visit records below are scoped to this workspace.", "ناسنامەی سەربەخۆی ئەم شوێنە. پاکێج و تۆماری سەردانەکان لە خوارەوە تایبەتن بە هەمان شوێن.")}</p>
+            <div className="mt-3">
+              <ExportButtons size="xs" build={() => ({
+                title: workspaceProfile.profile?.brand_name || workspaceProfile.name,
+                lang,
+                entity: {
+                  brand: workspaceProfile.profile?.brand_name || workspaceProfile.name,
+                  site: workspaceProfile.brand_url || undefined,
+                  summary: workspaceProfile.brand_summary || undefined,
+                  facts: Array.isArray(workspaceProfile.keywords) ? workspaceProfile.keywords : [],
+                  links: workspaceProfile.brand_url ? [workspaceProfile.brand_url] : [],
+                  faqs: Array.isArray(workspaceProfile.profile?.faqs) ? workspaceProfile.profile.faqs : []
+                },
+                sections: [{
+                  heading: tr(lang, "هوية مساحة العمل", "Workspace identity", "ناسنامەی شوێن"),
+                  kind: "kv",
+                  rows: [
+                    [tr(lang, "الاسم", "Name", "ناو"), workspaceProfile.profile?.brand_name || workspaceProfile.name],
+                    ["Website", workspaceProfile.brand_url || "—"],
+                    [tr(lang, "الوصف", "Description", "وەسف"), workspaceProfile.brand_summary || "—"]
+                  ]
+                }]
+              })} />
+            </div>
+          </>}
+        </div>
+      )}
+      {packs === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border border-border bg-background p-3">
             <p className="mb-2 text-sm font-semibold">{tr(lang, "الملفات المنشورة", "Published files", "فایلەکان")}</p>
@@ -93,8 +124,8 @@ export function BroadcastPanel({ lang, workspaceId = null }: { lang: L; workspac
             <button type="button" onClick={() => setFilesOpen(true)} className="mt-3 inline-block text-xs text-primary hover:underline">{tr(lang, "إدارة الملفات", "Manage files", "بەڕێوەبردن")}</button>
           </div>
           <div className="rounded-xl border border-border bg-background p-3">
-            <p className="mb-2 text-sm font-semibold">{tr(lang, "زيارات زواحف الذكاء الاصطناعي (30 يوماً)", "AI crawler visits (30 days)", "سەردانی خشۆکەکان")}</p>
-            {bots.length === 0 ? <p className="text-xs text-muted-foreground">{tr(lang, "لم تُسجَّل زيارات بعد.", "No visits recorded yet.", "هیچ سەردانێک نییە.")}</p> : (
+            <p className="mb-2 text-sm font-semibold">{tr(lang, "طلبات الوصول المصنفة حسب User-Agent (30 يوماً)", "User-Agent-classified requests (30 days)", "داواکارییەکان بەپێی User-Agent")}</p>
+            {bots.length === 0 ? <p className="text-xs text-muted-foreground">{tr(lang, "لم تُسجَّل طلبات مطابقة بعد.", "No matching requests recorded yet.", "هێشتا هیچ داواکارییەکی هاوتا تۆمار نەکراوە.")}</p> : (
               <ul className="space-y-1.5 text-xs">
                 {bots.map((b) => {
                   const max = bots[0].count;
@@ -107,6 +138,7 @@ export function BroadcastPanel({ lang, workspaceId = null }: { lang: L; workspac
                 })}
               </ul>
             )}
+            <p className="mt-2 text-[10px] text-muted-foreground">{tr(lang, "هذه الطلبات مصنّفة من User-Agent ولا تثبت هوية الزاحف.", "These requests are classified by User-Agent and do not authenticate crawler identity.", "ئەم داواکارییانە بە User-Agent پۆلێنکراون و ناسنامەی کرۆڵەر پشتڕاست ناکەنەوە.")}</p>
           </div>
         </div>
       )}
