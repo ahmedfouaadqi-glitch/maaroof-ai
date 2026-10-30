@@ -313,11 +313,9 @@ export const Route = createFileRoute("/api/visibility")({
               const startedAt = previous?.startedAt ?? Date.now();
               const exactQuestion = questionForPhase(e, phase, previous?.p.answer);
               const phaseStartedAt = Date.now();
-              const askPhase = async (answer?: string) => {
-                let res = await askOne(e, models[e]?.model, phase, answer);
-                if (res.kind === "empty" || res.kind === "error") res = await askOne(e, "google/gemini-3.8-flash", phase, answer);
-                return res;
-              };
+              // Keep each result attributed to the requested engine. Do not silently
+              // replace an empty/failed engine response with a different model.
+              const askPhase = async (answer?: string) => askOne(e, models[e]?.model, phase, answer);
               const res = await askPhase(previous?.p.answer);
               const phaseMs = Date.now() - phaseStartedAt;
               if (phase === "blind") {
