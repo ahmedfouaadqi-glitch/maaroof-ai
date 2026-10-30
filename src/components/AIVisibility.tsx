@@ -47,8 +47,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
   // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
   const workspaceBrand = String(workspace?.entity_truth_card?.entity_name || workspace?.name || "");
   const workspaceKeywords = Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || "");
-  const [brand, setBrand] = useState(brandProp ?? workspaceBrand ?? (auth?.profile as any)?.brand_name ?? "");
-  const [keywords, setKeywords] = useState(kwProp ?? workspaceKeywords ?? (auth?.profile as any)?.brand_keywords ?? "");
+  const [brand, setBrand] = useState(brandProp ?? (workspaceBrand || (auth?.profile as any)?.brand_name || ""));
+  const [keywords, setKeywords] = useState(kwProp ?? (workspaceKeywords || (auth?.profile as any)?.brand_keywords || ""));
 
   // If parent prop changes (e.g. user typed in the Boost "Run" tab), sync once.
   useEffect(() => { if (brandProp !== undefined) setBrand(brandProp); else if (workspaceBrand) setBrand(workspaceBrand); }, [brandProp, workspaceBrand]);
