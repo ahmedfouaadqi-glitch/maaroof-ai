@@ -102,6 +102,7 @@ export const Route = createFileRoute("/api/analyze")({
             userId = data.user?.id || null;
           }
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+          { const _wg = await (await import("@/lib/workspace-guard.server")).workspaceGuard(admin, userId, body); if (_wg) return _wg; }
           const runId = crypto.randomUUID();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
