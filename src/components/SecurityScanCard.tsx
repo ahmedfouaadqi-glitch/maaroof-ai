@@ -6,8 +6,8 @@ import { withPreviewAuth } from "@/lib/api-client";
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 
-export function SecurityScanCard({ lang, workspaceId = null }: { lang: L; workspaceId?: string | null }) {
-  const [url, setUrl] = useState("");
+export function SecurityScanCard({ lang, workspaceId = null, workspace = null }: { lang: L; workspaceId?: string | null; workspace?: any }) {
+  const [url, setUrl] = useState(String(workspace?.brand_url || ""));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<any>(null);
