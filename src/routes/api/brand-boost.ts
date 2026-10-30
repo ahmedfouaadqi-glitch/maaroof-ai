@@ -331,8 +331,17 @@ ${evidenceBlock}`;
             requestMeta: { engines: targets, connection_modes: Object.fromEntries(merged.map((p: any) => [p.platform, p.is_proxy ? "proxy" : "direct"])) },
             resultMeta: {
               evidence_count: evidence.length,
+              evidence_urls: evidence.map((item: any) => String(item.url || "")).filter((url: string) => /^https?:\\/\\//i.test(url)).slice(0, 30),
               engine_responses: merged.filter((p: any) => Boolean(p.current_answer)).length,
               recommended_actions: merged.reduce((n: number, p: any) => n + (p.recommended_actions?.length || 0), 0),
+              content_pieces: merged.reduce((n: number, p: any) => n + (p.content_pieces?.length || 0), 0),
+              platform_results: merged.map((p: any) => ({
+                platform: p.platform,
+                answered: Boolean(p.current_answer),
+                current_signal: p.current_signal,
+                recommended_actions: p.recommended_actions?.length || 0,
+                content_pieces: p.content_pieces?.length || 0,
+              })),
               summary: String(planParsed.summary || "").slice(0, 500),
             },
           });
