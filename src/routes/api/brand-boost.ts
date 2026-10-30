@@ -93,8 +93,8 @@ function fallbackPlan(platforms: Platform[], lang: string, brand: string, eviden
             ? ["لاپەڕەیەکی فەرمی کورت بڵاو بکەرەوە.", "FAQ و JSON-LD زیاد بکە بە هەمان ڕاستییەکان.", "ناوەڕۆکەکە بە کەناڵە فەرمییەکانەوە ببەستەوە."]
             : ["Publish a concise official, indexable profile page.", "Add FAQ and JSON-LD using only evidenced facts.", "Link the content from official channels."],
         feed_strategy: ar ? "تغذية الويب العام بمحتوى رسمي قصير ومدعوم بروابط." : ku ? "خواردنی وێبی گشتی بە ناوەڕۆکی فەرمی و بە بەستەر." : "Feed the open web with concise official content backed by links.",
-        content_pieces: [ar ? `صفحة: من هي ${brand}؟` : ku ? `لاپەڕە: ${brand} چییە؟` : `Page: What is ${brand}?`],
-        injection_pack: {
+        content_pieces: hasObservations ? [ar ? `صفحة: من هي ${brand}؟` : ku ? `لاپەڕە: ${brand} چییە؟` : `Page: What is ${brand}?`] : [],
+        injection_pack: hasObservations ? {
           channel: platform === "grok" ? "X / social thread" : "Official website or public article",
           title: ar ? `نبذة موثقة عن ${brand}` : ku ? `پێناسەی پشتڕاستکراوەی ${brand}` : `Verified overview of ${brand}`,
           article_markdown: ar
@@ -104,7 +104,7 @@ function fallbackPlan(platforms: Platform[], lang: string, brand: string, eviden
               : `## About ${brand}\n\n${brand} should be described through clear public sources${firstUrl ? ` such as [this source](${firstUrl})` : ""}. Publish the name, category, geography, services, and official contact links without adding unsupported claims.`,
           qa_pairs: [{ q: ar ? `ما هي ${brand}؟` : ku ? `${brand} چییە؟` : `What is ${brand}?`, a: ar ? `${brand} علامة تحتاج إلى تعريف عام موثق عبر مصادر رسمية.` : ku ? `${brand} پێویستی بە پێناسەی گشتیی پشتڕاستکراوە هەیە.` : `${brand} is a brand that should be described through verified public sources.` }],
           json_ld: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: brand }, null, 2),
-        },
+        } : null,,
       };
     }),
   };
@@ -357,6 +357,16 @@ ${evidenceBlock}`;
               current_signal: pl.current_signal || (p.current_answer ? "answered" : "no signal"),
               feeding_basis: pl.feeding_basis || "no signal",
               recommended_actions: Array.isArray(pl.recommended_actions) ? pl.recommended_actions : [],
+              recommendation_assessments: (Array.isArray(pl.recommended_actions) ? pl.recommended_actions : []).map((action: unknown) => {
+                const actionText = String(action || "");
+                const cited = Array.from(actionText.matchAll(/\[(\d+)\]/g)).map((match) => Number(match[1]));
+                const validRefs = Array.from(new Set(cited.filter((index) => index >= 1 && index <= evidence.length)));
+                return {
+                  action: actionText,
+                  confidence: validRefs.length ? "evidence_referenced" : "requires_verification",
+                  evidence_refs: validRefs,
+                };
+              }),
               feed_strategy: pl.feed_strategy || "",
               content_pieces: Array.isArray(pl.content_pieces) ? pl.content_pieces : [],
               injection_pack: pl.injection_pack && typeof pl.injection_pack === "object" ? pl.injection_pack : null,
@@ -379,9 +389,13 @@ ${evidenceBlock}`;
             requestMeta: { engines: targets, connection_modes: Object.fromEntries(merged.map((p: any) => [p.platform, p.is_proxy ? "proxy" : "direct"])) },
             resultMeta: {
               evidence_count: evidence.length,
+              website_scan: websiteScan,
+              analysis_status: websiteScan.status === "completed" ? "direct_website_crawled" : evidence.length ? "public_search_evidence_only" : "insufficient_evidence",
+              plan_source: usedFallbackPlan ? "deterministic_fallback" : "model_plan",
               evidence_urls: evidence.map((item: any) => String(item.url || "")).filter((url: string) => /^https?:\/\//i.test(url)).slice(0, 30),
               engine_responses: merged.filter((p: any) => Boolean(p.current_answer)).length,
               recommended_actions: merged.reduce((n: number, p: any) => n + (p.recommended_actions?.length || 0), 0),
+              recommendations_requiring_verification: merged.reduce((n: number, p: any) => n + (p.recommendation_assessments || []).filter((a: any) => a.confidence === "requires_verification").length, 0),
               content_pieces: merged.reduce((n: number, p: any) => n + (p.content_pieces?.length || 0), 0),
               platform_results: merged.map((p: any) => ({
                 platform: p.platform,
