@@ -1,3 +1,4 @@
+import { workspaceGuard } from "@/lib/workspace-guard.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { resolveAuthenticatedUserId } from "@/lib/api-auth.server";
@@ -128,6 +129,8 @@ export const Route = createFileRoute("/api/brand-boost")({
           const userId = await resolveAuthenticatedUserId(request, admin);
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
           const body = await request.json().catch(() => ({} as any));
+          const workspaceDenied = await workspaceGuard(admin, userId, body);
+          if (workspaceDenied) return workspaceDenied;
           const workspaceRaw = typeof body?.workspace_id === "string" ? body.workspace_id.trim() : "";
           if (workspaceRaw && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceRaw)) {
             return Response.json({ error: "invalid_workspace" }, { status: 400 });
