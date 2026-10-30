@@ -92,7 +92,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         appearance_summary: `${metrics?.answered_engines ?? answers.length}/${metrics?.requested_engines ?? ENGINE_KEYS.length} ${outLang === "en" ? "engines returned usable answers" : outLang === "ku" ? "بزوێنەر وەڵامی بەکارهێنراویان گەڕاندەوە" : "محركات أعادت إجابات قابلة للاستخدام"}. ${outLang === "en" ? "Brand mention rate" : outLang === "ku" ? "ڕێژەی هێنانی ناو" : "معدل ذكر العلامة"}: ${metrics?.mention_rate?.value_pct ?? "—"}%.`,
         platforms: answers.map((answer: any) => ({
           name: engineName(answer.engine),
-          score: answer.mentioned ? 100 : 0,
+          mentioned: Boolean(answer.mentioned),
           why: answer.answer || "",
           action: answer.reason || "",
           status: answer.status,
@@ -196,7 +196,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
               answers={(out.platforms || []).flatMap((p: any) => {
                 const key = engineKeyFromName(p.name);
                 const meta = [p.trust_signal, p.citation_method].filter(Boolean).join(" · ");
-                return key ? [{ key, score: p.score, verdict: p.status ? String(p.status) : meta, text: p.answer || p.why, action: p.action, basis: "measured" as const }] : [];
+                return key ? [{ key, verdict: p.status ? (p.mentioned ? (outLang === "ar" ? "ذُكرت العلامة" : outLang === "ku" ? "ناوی براند هاتووە" : "Brand mentioned") : (outLang === "ar" ? "لم تُذكر العلامة" : outLang === "ku" ? "ناوی براند نەهاتووە" : "Brand not mentioned")) : meta, text: p.answer || p.why, action: p.action, basis: "measured" as const }] : [];
               })}
             />
           </div>
