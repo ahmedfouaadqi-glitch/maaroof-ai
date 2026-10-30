@@ -225,6 +225,7 @@ export const Route = createFileRoute("/api/visibility")({
             if (!probeTopic) return Response.json({ error: "probe_category_required" }, { status: 400 });
             const probeUnits = engines.length * 2;
             const pRun = crypto.randomUUID();
+            const pStartedAt = Date.now();
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: probeUnits, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, phases: ["blind", "evidence_grounded"], endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
             const market = describeMarket(body.scope);
@@ -405,7 +406,21 @@ export const Route = createFileRoute("/api/visibility")({
             await askAll();
             const charged = await settle();
             if (!answers.length) {
-              return Response.json({ ok: false, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+              await recordBrandOperation(admin, {
+                id: pRun,
+                userId,
+                workspaceId,
+                operationType: "visibility_probe",
+                brandName: brand,
+                status: "failed",
+                durationMs: Date.now() - pStartedAt,
+                chargedUnits: 0,
+                requestMeta: { engines, market: market.region, connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
+                resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: true },
+                errorMessage: "engines_no_answer",
+              });
+              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -418,6 +433,29 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
+            const { recordBrandOperation } = await import("@/lib/brand-operations.server");
+            await recordBrandOperation(admin, {
+              id: pRun,
+              userId,
+              workspaceId,
+              operationType: "visibility_probe",
+              brandName: brand,
+              durationMs: Date.now() - pStartedAt,
+              chargedUnits: Number(charged) || 0,
+              requestMeta: {
+                engines,
+                market: market.region,
+                connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])),
+              },
+              resultMeta: {
+                engines_answered: reasoned.length,
+                mentions: reasoned.filter((answer: any) => answer.mentioned).length,
+                top5: reasoned.filter((answer: any) => Number(answer.rank) > 0 && Number(answer.rank) <= 5).length,
+                evidence_count: evidence.length,
+                evidence_source: evidenceSource,
+                basis: "live_engine_probe",
+              },
+            });
             return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, council, charged, basis: "measured" } });
           }
 
