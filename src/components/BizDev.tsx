@@ -18,7 +18,7 @@ import { apiFetch } from "@/lib/api-client";
 import { SourcesList } from "@/components/SourcesList";
 
 
-export function BizDev({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+export function BizDev({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
@@ -27,7 +27,7 @@ export function BizDev({ workspaceId = null }: { workspaceId?: string | null } =
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [form, setForm] = useState({
-    business_name: "", stage: "", sector: "", city: "",
+    business_name: String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""), stage: "", sector: String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || ""), city: String(workspace?.city || ""),
     current_revenue_iqd: "", monthly_customers: "", team_size: "",
     channels: "", goals: "", challenges: "", budget_iqd: "", notes: "",
   });
