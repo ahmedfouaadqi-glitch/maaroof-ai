@@ -232,7 +232,6 @@ ${evidenceText || "(no source content)"}`;
           await admin.from("profiles").update({
             monthly_analyses_used: used + AUTHORITY_COST,
           }).eq("id", userId!);
-          const { recordBrandOperation } = await import("@/lib/brand-operations.server");
           await recordBrandOperation(admin, {
             id: _runId,
             userId: userId!,
