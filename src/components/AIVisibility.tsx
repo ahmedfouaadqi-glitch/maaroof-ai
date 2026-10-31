@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
-import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope, type GeoScope } from "@/components/GeoScopeSelector";
 import { ENGINES } from "@/components/engine-logos";
 import { ENGINE_KEYS } from "@/lib/ai-engines";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
@@ -34,9 +34,13 @@ type PanelProps = {
   toolKey?: "research" | "brand";
   workspaceId?: string | null;
   workspace?: any;
+  officialWebsite?: string;
+  scope?: GeoScope;
+  sharedInputs?: boolean;
+  onResult?: (result: any) => void;
 };
 
-export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null, workspace = null }: PanelProps) {
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null, workspace = null, officialWebsite: websiteProp, scope: scopeProp, sharedInputs = false, onResult }: PanelProps) {
   const { t, lang: uiLang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
   useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
@@ -46,8 +50,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
   // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
   const workspaceBrand = String(workspace?.entity_truth_card?.entity_name || workspace?.name || "");
-  const [officialWebsite, setOfficialWebsite] = useState(String(workspace?.brand_url || workspace?.entity_truth_card?.official_website || ""));
-  useEffect(() => { if (workspace?.brand_url) setOfficialWebsite(String(workspace.brand_url)); }, [workspace?.brand_url]);
+  const [officialWebsite, setOfficialWebsite] = useState(String(websiteProp || workspace?.brand_url || workspace?.entity_truth_card?.official_website || ""));
+  useEffect(() => { if (websiteProp !== undefined) setOfficialWebsite(websiteProp); else if (workspace?.brand_url) setOfficialWebsite(String(workspace.brand_url)); }, [websiteProp, workspace?.brand_url]);
   const workspaceKeywords = Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || "");
   const [brand, setBrand] = useState(brandProp ?? (workspaceBrand || (auth?.profile as any)?.brand_name || ""));
   const [keywords, setKeywords] = useState(kwProp ?? (workspaceKeywords || (auth?.profile as any)?.brand_keywords || ""));
@@ -76,7 +80,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, official_website: officialWebsite.trim(), keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
+        body: JSON.stringify({ brand, official_website: officialWebsite.trim(), keywords, lang: outLang, scope: scopeProp || getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || "visibility_request_failed");
@@ -85,7 +89,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       const metrics = probe.visibility_metrics || {};
       const answers = Array.isArray(probe.answers) ? probe.answers : [];
       const engineName = (key: string) => ENGINES.find((engine) => engine.key === key)?.name || key;
-      setOut({
+      const nextOut = {
         basis: "live_engine_probe",
         operation_id: j.operation_id,
         visibility_percent: metrics?.mention_rate?.value_pct ?? null,
@@ -110,7 +114,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         sources_used: probe.evidence_source,
         visibility_metrics: metrics,
         probe,
-      });
+      };
+      setOut(nextOut);
+      onResult?.(nextOut);
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
@@ -138,13 +144,13 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">{t("ag_vis_desc")}</p>
             <ToolHelpBanner toolKey="research" />
-            <div className="mt-3"><GeoScopeSelector compact toolKey="research" /></div>
+            {!sharedInputs && <div className="mt-3"><GeoScopeSelector compact toolKey={toolKey} /></div>}
           </div>
-          {!langProp && <ToolLangSelect value={outLang} onChange={setOutLang} />}
+          {!langProp && !sharedInputs && <ToolLangSelect value={outLang} onChange={setOutLang} />}
         </div>
       )}
 
-      <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
+      {!sharedInputs && <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
         <input value={brand} onChange={(e) => setBrand(e.target.value)}
           placeholder={t("ag_vis_brand_ph")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
@@ -154,8 +160,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
           placeholder={(t("ag_vis_keywords_ph") || "") + kwOptionalLabel}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-      </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">{helperHint}</p>
+      </div>}
+      {!sharedInputs && <p className="mt-1.5 text-[11px] text-muted-foreground">{helperHint}</p>}
 
       <div className="mt-3 flex items-center justify-between gap-2">
         {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || t("auto.monthly_analytics_balance_exhausted") : err}</span>}
