@@ -320,12 +320,14 @@ async function directHttp(url: string) {
 }
 
 /** Scrape with fallback chain (see fetch-order.ts). Result carries `fetch_source`. */
-export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?: boolean } = {}, ctx: FcCtx = {}) {
+export async function fcScrape(url: string, opts: { deep?: boolean; screenshot?: boolean; allowDirectHttp?: boolean } = {}, ctx: FcCtx = {}) {
   const failures: PublicReadFailure[] = [];
   for (const src of scrapeOrder(url, available())) {
+    // Some callers handle user-supplied URLs. They may explicitly prohibit the worker direct-fetch fallback.
+    if (src === "direct_http" && opts.allowDirectHttp === false) continue;
     try {
       let r: any;
-      if (src === "firecrawl") r = await fcScrapeRaw(url, opts, ctx);
+      if (src === "firecrawl") r = await fcScrapeRaw(url, { deep: opts.deep, screenshot: opts.screenshot }, ctx);
       else if (src === "linkedin_direct") { const { adLinkedIn } = await import("./apidirect.server"); r = await adLinkedIn(url, FETCH_TIMEOUT_MS); }
       else r = await directHttp(url);
       if (!hasUsableScrapeEvidence(r)) {
