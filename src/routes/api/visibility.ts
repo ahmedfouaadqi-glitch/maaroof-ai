@@ -11,6 +11,7 @@ import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
 import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
 import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
+import { deriveOfficialSiteCategory } from "@/lib/maaroof/website-category";
 
 
 type Body = { brand?: string; official_website?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
@@ -222,14 +223,13 @@ export const Route = createFileRoute("/api/visibility")({
             if (!probeTopic && workspace) {
               const card = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
               const cardKeywords = Array.isArray(card.keywords) ? card.keywords.join(", ") : String(card.keywords || "");
-              probeTopic = [card.entity_name || workspace.name, cardKeywords, card.sector || workspace.brand_summary]
+              probeTopic = [cardKeywords, card.sector, workspace.brand_summary]
                 .filter(Boolean).join(" ").slice(0, 400);
             }
             if (!probeTopic && !workspace) {
               const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
               probeTopic = String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim().slice(0, 400);
             }
-            if (!probeTopic) return Response.json({ error: "probe_category_required" }, { status: 400 });
             const probeUnits = engines.length * 2;
             const pRun = crypto.randomUUID();
             const pStartedAt = Date.now();
@@ -238,6 +238,49 @@ export const Route = createFileRoute("/api/visibility")({
             const market = describeMarket(body.scope);
             const effectiveOfficialWebsite = officialWebsite || String(workspace?.brand_url || "").trim();
             const officialHost = (() => { try { return effectiveOfficialWebsite ? new URL(effectiveOfficialWebsite).hostname.replace(/^www\./i, "") : ""; } catch { return ""; } })();
+            let categorySource = probeTopic ? (keywords ? "user_keywords" : "workspace_knowledge") : "official_site";
+            let officialSiteCategoryEvidence: { title: string; description: string; fetch_source: string } | null = null;
+            if (!probeTopic) {
+              try {
+                const { fcScrape } = await import("@/lib/firecrawl");
+                const scraped: any = await fcScrape(effectiveOfficialWebsite, { deep: false }, { userId, toolKey: "visibility" });
+                const page = scraped?.data || scraped || {};
+                const metadata = page?.metadata || scraped?.metadata || {};
+                const derived = deriveOfficialSiteCategory({
+                  title: metadata?.title || metadata?.ogTitle,
+                  description: metadata?.description || metadata?.ogDescription,
+                  markdown: page?.markdown || page?.content,
+                  hostname: officialHost,
+                }, brand);
+                if (derived) {
+                  probeTopic = derived.category;
+                  categorySource = derived.basis;
+                  officialSiteCategoryEvidence = {
+                    title: String(metadata?.title || officialHost).slice(0, 160),
+                    description: derived.category,
+                    fetch_source: String(scraped?.fetch_source || "unknown"),
+                  };
+                }
+              } catch (error) {
+                console.warn("[visibility.probe] official-site category extraction failed", error);
+              }
+            }
+            if (!probeTopic) {
+              const refund = Number(pChg.tokens || 0);
+              if (refund > 0) {
+                try {
+                  await admin.rpc("charge_tokens", {
+                    _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun,
+                    _meta: { refund: true, reason: "official_site_category_unresolved", endpoint: "/api/visibility#probe" },
+                  } as any);
+                } catch {}
+              }
+              return Response.json({
+                error: "official_site_category_unresolved",
+                message: "A usable category could not be extracted from the official website. Add category keywords or enrich the workspace knowledge card.",
+                refunded: true,
+              }, { status: 422 });
+            }
             const models = await resolveEngineModels(engines);
             const q = blindProbeQuestion(probeTopic, market.region);
             const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
@@ -251,6 +294,9 @@ export const Route = createFileRoute("/api/visibility")({
                   operation_id: pRun,
                   measured_at: new Date().toISOString(),
                   market: market.region,
+                  category: probeTopic,
+                  category_source: categorySource,
+                  official_website: effectiveOfficialWebsite,
                   metrics,
                   answers: resultAnswers.map((answer: any) => ({ engine: answer.engine, mentioned: answer.mentioned, rank: answer.rank, status: answer.status, provider: answer.provider, gateway_model: answer.gateway_model, grounded_provider: answer.grounded_provider, grounded_gateway_model: answer.grounded_gateway_model, sources: (answer.sources || []).slice(0, 5) })),
                 },
@@ -565,6 +611,8 @@ export const Route = createFileRoute("/api/visibility")({
               requestMeta: {
                 engines,
                 market: market.region,
+                official_website: effectiveOfficialWebsite,
+                category_source: categorySource,
                 connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])),
               },
               resultMeta: {
@@ -574,6 +622,9 @@ export const Route = createFileRoute("/api/visibility")({
                 evidence_count: evidence.length,
                 evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                 evidence_source: evidenceSource,
+                official_site_category_evidence: officialSiteCategoryEvidence,
+                category: probeTopic,
+                category_source: categorySource,
                 visibility_metrics: metrics,
                 basis: "live_engine_probe",
               },
