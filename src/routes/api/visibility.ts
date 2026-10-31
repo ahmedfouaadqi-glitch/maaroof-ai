@@ -163,7 +163,14 @@ export const Route = createFileRoute("/api/visibility")({
           if (rawOfficialWebsite) {
             try {
               const parsedUrl = new URL(/^https?:\/\//i.test(rawOfficialWebsite) ? rawOfficialWebsite : `https://${rawOfficialWebsite}`);
-              if (!["http:", "https:"].includes(parsedUrl.protocol) || !parsedUrl.hostname.includes(".") || parsedUrl.username || parsedUrl.password) throw new Error("invalid");
+              const host = parsedUrl.hostname.toLowerCase().replace(/^www\./i, "");
+              const localOrLiteralHost = host.includes(":") ||
+                /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) ||
+                host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
+                host.endsWith(".internal") || host.endsWith(".test") || host.endsWith(".example") ||
+                host.endsWith(".invalid") || host.endsWith(".onion") ||
+                /(?:^|\.)(?:nip\.io|sslip\.io|localtest\.me|vcap\.me)$/.test(host);
+              if (!["http:", "https:"].includes(parsedUrl.protocol) || !host.includes(".") || localOrLiteralHost || parsedUrl.username || parsedUrl.password) throw new Error("invalid");
               officialWebsite = parsedUrl.origin + parsedUrl.pathname.replace(/\/$/, "");
             } catch {
               return Response.json({ error: "invalid_official_website" }, { status: 400 });
@@ -248,7 +255,7 @@ export const Route = createFileRoute("/api/visibility")({
             if (!probeTopic) {
               try {
                 const { fcScrape } = await import("@/lib/firecrawl");
-                const scraped: any = await fcScrape(effectiveOfficialWebsite, { deep: false }, { userId, toolKey: "visibility" });
+                const scraped: any = await fcScrape(effectiveOfficialWebsite, { deep: false, allowDirectHttp: false }, { userId, toolKey: "visibility" });
                 const page = scraped?.data || scraped || {};
                 const metadata = page?.metadata || scraped?.metadata || {};
                 const derived = deriveOfficialSiteCategory({
