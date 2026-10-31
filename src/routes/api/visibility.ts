@@ -226,7 +226,7 @@ export const Route = createFileRoute("/api/visibility")({
               probeTopic = [cardKeywords, card.sector, workspace.brand_summary]
                 .filter(Boolean).join(" ").slice(0, 400);
             }
-            if (!probeTopic && !workspace) {
+            if (!probeTopic) {
               const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
               probeTopic = String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim().slice(0, 400);
             }
