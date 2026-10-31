@@ -14,6 +14,7 @@ import { calculateVisibilityQueryPackMetrics } from "@/lib/maaroof/visibility-qu
 import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
 import { deriveOfficialSiteCategory } from "@/lib/maaroof/website-category";
 import { normalizeOfficialWebsite } from "@/lib/maaroof/official-website";
+import { settleTokenRefund } from "@/lib/maaroof/token-refund";
 
 
 type Body = { brand?: string; official_website?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
@@ -265,22 +266,19 @@ export const Route = createFileRoute("/api/visibility")({
               }
             }
             if (!probeTopic) {
-              const refund = Number(pChg.tokens || 0);
-              let refundConfirmed = refund <= 0;
-              if (refund > 0) {
-                try {
-                  const { error: refundError } = await admin.rpc("charge_tokens", {
-                    _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun,
-                    _meta: { refund: true, reason: "official_site_category_unresolved", endpoint: "/api/visibility#probe" },
-                  } as any);
-                  refundConfirmed = !refundError;
-                } catch {}
-              }
+              const chargedTokens = Number(pChg.tokens || 0);
+              const billingSettlement = await settleTokenRefund(chargedTokens, chargedTokens, async (refundTokens) =>
+                admin.rpc("charge_tokens", {
+                  _user_id: userId, _tool_key: "visibility.probe", _tokens: -refundTokens, _usd: 0, _run_id: pRun,
+                  _meta: { refund: true, reason: "official_site_category_unresolved", endpoint: "/api/visibility#probe" },
+                } as any)
+              );
               return Response.json({
                 error: "official_site_category_unresolved",
                 message: "A usable category could not be extracted from the official website. Add category keywords or enrich the workspace knowledge card.",
-                refund_attempted: refund > 0,
-                refunded: refundConfirmed,
+                refund_attempted: billingSettlement.refund_requested_tokens > 0,
+                refunded: billingSettlement.refund_confirmed === true || billingSettlement.refund_requested_tokens === 0,
+                billing_settlement: billingSettlement,
               }, { status: 422 });
             }
             const models = await resolveEngineModels(engines);
@@ -534,9 +532,13 @@ export const Route = createFileRoute("/api/visibility")({
               }
             };
             const settle = async () => {
-              const refund = PA.probePhaseRefund(Number(pChg.tokens || 0), probeUnits, completedUnits);
-              if (refund > 0) { try { await admin.rpc("charge_tokens", { _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun, _meta: { refund: true, partial: true, completed_units: completedUnits, asked_units: probeUnits, endpoint: "/api/visibility#probe" } } as any); } catch {} }
-              return Number(pChg.tokens || 0) - refund;
+              const requestedRefund = PA.probePhaseRefund(Number(pChg.tokens || 0), probeUnits, completedUnits);
+              return settleTokenRefund(Number(pChg.tokens || 0), requestedRefund, async (refundTokens) =>
+                admin.rpc("charge_tokens", {
+                  _user_id: userId, _tool_key: "visibility.probe", _tokens: -refundTokens, _usd: 0, _run_id: pRun,
+                  _meta: { refund: true, partial: true, completed_units: completedUnits, asked_units: probeUnits, endpoint: "/api/visibility#probe" },
+                } as any)
+              );
             };
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
@@ -546,7 +548,8 @@ export const Route = createFileRoute("/api/visibility")({
               const work = (async () => {
                 await askAll();
                 bgQueryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
-                backgroundCharged = await settle();
+                const backgroundSettlement = await settle();
+                backgroundCharged = backgroundSettlement.charged_tokens;
                 const { recordBrandOperation } = await import("@/lib/brand-operations.server");
                 const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
                 if (!answers.length) {
@@ -554,7 +557,7 @@ export const Route = createFileRoute("/api/visibility")({
                     id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                     status: "failed", durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
                     requestMeta: { engines, market: market.region },
-                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: bgQueryPackMetrics, refunded: backgroundCharged === 0 },
+                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: bgQueryPackMetrics, billing_settlement: backgroundSettlement, refunded: backgroundSettlement.refund_confirmed === true || backgroundSettlement.refund_requested_tokens === 0 },
                     errorMessage: "engines_no_answer",
                   });
                   try {
@@ -593,11 +596,12 @@ export const Route = createFileRoute("/api/visibility")({
               });
               // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged, billing_settlement: backgroundSettlement } });
             }
             await askAll();
             const queryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
-            const charged = await settle();
+            const billingSettlement = await settle();
+            const charged = billingSettlement.charged_tokens;
             if (!answers.length) {
               const { recordBrandOperation } = await import("@/lib/brand-operations.server");
               await recordBrandOperation(admin, {
@@ -613,7 +617,7 @@ export const Route = createFileRoute("/api/visibility")({
                 resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: queryPackMetrics, refunded: true },
                 errorMessage: "engines_no_answer",
               });
-              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged, refunded: billingSettlement.refund_confirmed === true || billingSettlement.refund_requested_tokens === 0, billing_settlement: billingSettlement } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -655,6 +659,7 @@ export const Route = createFileRoute("/api/visibility")({
                 evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                 evidence_source: evidenceSource,
                 query_pack_metrics: queryPackMetrics,
+                billing_settlement: billingSettlement,
                 official_site_category_evidence: officialSiteCategoryEvidence,
                 category: probeTopic,
                 category_source: categorySource,
@@ -662,7 +667,7 @@ export const Route = createFileRoute("/api/visibility")({
                 basis: "live_engine_probe",
               },
             });
-            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, official_site_category_evidence: officialSiteCategoryEvidence, visibility_metrics: metrics, council, charged, basis: "measured" } });
+            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, official_site_category_evidence: officialSiteCategoryEvidence, visibility_metrics: metrics, council, charged, billing_settlement: billingSettlement, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
