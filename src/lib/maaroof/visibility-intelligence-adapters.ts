@@ -78,7 +78,8 @@ export function buildVisibilityQueries(scopeInput: VisibilityScope, categoryInpu
   const category = normalize(categoryInput);
   if (!brand || !site || !market || !language) throw new Error("A normalized visibility scope is required.");
   if (!category) throw new Error("A verified or user-provided category is required; do not guess it.");
-  const lang = ["ar","en","ku"].includes(language) ? language : "en";
+  if (!["ar", "en", "ku"].includes(language)) throw new Error("Visibility query templates are currently supported only for ar, en, and ku; refusing to silently run English prompts for another audience language.");
+  const lang = language;
   const kinds: VisibilityQueryKind[] = ["blind_discovery","brand_recognition","recommendation","comparison","fact_verification","purchase_intent"];
   return kinds.map((kind) => ({
     id: `visibility:${kind}:v1:${lang}`,
@@ -119,7 +120,7 @@ export function adaptRecordedEngineAnswers(
       recommended: null,
       rankPosition: null,
       brands: [],
-      observedAt: new Date(0).toISOString(),
+      observedAt: "not-recorded",
       provider: answer.provider_path === "primary" ? "primary-route" : null,
       model: answer.model_used ?? null,
     });
