@@ -543,13 +543,15 @@ export const Route = createFileRoute("/api/visibility")({
             // Background mode (only when a person asks for it from the tool page): finish after the response.
             if (body.background === true && policy.backgroundAllowed) {
               let backgroundCharged = 0;
+              let backgroundSettlement: Awaited<ReturnType<typeof settle>> | null = null;
               let bgMetrics: ReturnType<typeof calculateVisibilityProbeMetrics> | null = null;
               let bgQueryPackMetrics: ReturnType<typeof calculateVisibilityQueryPackMetrics> | null = null;
               const work = (async () => {
                 await askAll();
                 bgQueryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
-                const backgroundSettlement = await settle();
-                backgroundCharged = backgroundSettlement.charged_tokens;
+                const settlement = await settle();
+                backgroundSettlement = settlement;
+                backgroundCharged = settlement.charged_tokens;
                 const { recordBrandOperation } = await import("@/lib/brand-operations.server");
                 const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
                 if (!answers.length) {
@@ -557,7 +559,7 @@ export const Route = createFileRoute("/api/visibility")({
                     id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                     status: "failed", durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
                     requestMeta: { engines, market: market.region },
-                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: bgQueryPackMetrics, billing_settlement: backgroundSettlement, refunded: backgroundSettlement.refund_confirmed === true || backgroundSettlement.refund_requested_tokens === 0 },
+                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: bgQueryPackMetrics, billing_settlement: settlement, refunded: settlement.refund_confirmed === true || settlement.refund_requested_tokens === 0 },
                     errorMessage: "engines_no_answer",
                   });
                   try {
@@ -584,6 +586,7 @@ export const Route = createFileRoute("/api/visibility")({
                     evidence_source: evidenceSource,
                     query_pack_metrics: bgQueryPackMetrics,
                     visibility_metrics: metrics,
+                    billing_settlement: settlement,
                     basis: "live_engine_probe",
                   },
                 });
@@ -612,9 +615,9 @@ export const Route = createFileRoute("/api/visibility")({
                 brandName: brand,
                 status: "failed",
                 durationMs: Date.now() - pStartedAt,
-                chargedUnits: 0,
+                chargedUnits: charged,
                 requestMeta: { engines, market: market.region },
-                resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: queryPackMetrics, refunded: true },
+                resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: queryPackMetrics, billing_settlement: billingSettlement, refunded: billingSettlement.refund_confirmed === true || billingSettlement.refund_requested_tokens === 0 },
                 errorMessage: "engines_no_answer",
               });
               return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged, refunded: billingSettlement.refund_confirmed === true || billingSettlement.refund_requested_tokens === 0, billing_settlement: billingSettlement } }, { status: 502 });
