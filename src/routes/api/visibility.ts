@@ -155,6 +155,10 @@ export const Route = createFileRoute("/api/visibility")({
           const brand = asText(body.brand, 200);
           const keywords = asText(body.keywords, 400);
           const rawOfficialWebsite = asText(body.official_website, 500);
+          const requestedLanguage = (body as any).lang;
+          if (requestedLanguage != null && !["ar", "en", "ku"].includes(requestedLanguage)) {
+            return Response.json({ error: "unsupported_audience_language", supported: ["ar", "en", "ku"] }, { status: 400 });
+          }
           let officialWebsite = "";
           if (rawOfficialWebsite) {
             try {
@@ -165,7 +169,7 @@ export const Route = createFileRoute("/api/visibility")({
               return Response.json({ error: "invalid_official_website" }, { status: 400 });
             }
           }
-          const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
+          const lang = requestedLanguage === "ar" || requestedLanguage === "ku" ? requestedLanguage : "en";
 
           if (brand.length < 2) {
             return Response.json({ error: "brand_required" }, { status: 400 });
