@@ -823,8 +823,8 @@ export const ar: Dict = {
   orbit_cta_guide: "اكتشف كيف تعمل كل أداة",
   orbit_cta_pricing: "ابدأ الآن",
   // Dashboard — new tool cards
-  dash_tool_social_t: "تحليل الظهور الاجتماعي",
-  dash_tool_social_d: "إشارات علامتك على شبكات التواصل + تحليل المشاعر.",
+  dash_tool_social_t: "ذكاء الظهور الموحد",
+  dash_tool_social_d: "قياس مستقل لظهور العلامة في محركات الذكاء الاصطناعي ونتائج البحث الاجتماعي.",
   dash_tool_monitor_t: "مراقبة المنافسين",
   dash_tool_known_t: "من المعروفين؟",
   dash_tool_known_d: "اكتشف منافسيك الحقيقيين — حتى من لم تسمّهم — مع الدليل وسبب كل علاقة.",
