@@ -149,6 +149,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
         <button type="button" className={tabClass(view === "ai")} onClick={() => setView("ai")}><Eye className="size-3.5" />{label("ظهور محركات الذكاء الاصطناعي", "AI-engine visibility", "دەرکەوتنی بزوێنەرەکانی AI")}</button>
         <button type="button" className={tabClass(view === "social")} onClick={() => setView("social")}><Share2 className="size-3.5" />{label("الظهور الاجتماعي", "Social visibility", "دەرکەوتنی کۆمەڵایەتی")}</button>
         <button type="button" className={tabClass(view === "summary")} onClick={() => setView("summary")}><Layers3 className="size-3.5" />{label("ملخص موحد", "Unified summary", "پوختەی یەکگرتوو")}</button>
+        <button type="button" className={tabClass(view === "history")} onClick={() => setView("history")}><History className="size-3.5" />{label("السجل والمقارنة", "History & comparison", "مێژوو و بەراورد")}</button>
       </div>
 
       {view === "ai" && (
@@ -191,6 +192,68 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
             </div>
           </div>
           {!aiResult && !socialResult && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">{label("شغّل أحد الفحصين أو كليهما لعرض الملخص. لا توجد درجة موحدة زائفة.", "Run either or both measurements to populate this view. No synthetic combined score is produced.", "یەکێک یان هەردوو پێوانەکە جێبەجێ بکە. نمرەی دەستکردی یەکگرتوو دروست ناکرێت.")}</p>}
+        </div>
+      )}
+      {view === "history" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">{label("سجل قياسات الظهور", "Visibility measurement history", "مێژووی پێوانەی دەرکەوتن")}</h3>
+            <p className="mt-1 text-[10px] text-muted-foreground">{label("لا تظهر المقارنة إلا عند تطابق العلامة والسوق واللغة والموقع وفئة القياس والمحركات ونماذجها، أو إعدادات البحث ومصادره.", "Comparisons are shown only when brand, market, language, website, category, engines and models match; social comparisons also require matching search settings and retrieval sources.", "بەراورد تەنها کاتێک پیشان دەدرێت کە براند و بازاڕ و زمان و ماڵپەڕ و پۆل و بزوێنەر و مۆدێلەکان هاوتا بن.")}</p>
+          </div>
+          {historyLoading && <p className="text-xs text-muted-foreground">{label("جارٍ تحميل السجل…", "Loading history…", "بارکردنی مێژوو…")}</p>}
+          {historyError && <p className="text-xs text-destructive">{historyError}</p>}
+          {!historyLoading && !historyRows.length && !historyError && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">{label("لا توجد قياسات محفوظة ضمن نطاق مساحة العمل الحالية.", "No saved measurements in the current workspace scope.", "هیچ پێوانەیەکی پاشەکەوتکراو لە سنووری ئەم شوێنی کارەدا نییە.")}</p>}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-border bg-card/50 p-4">
+              <div className="text-sm font-semibold">{label("الظهور العضوي في المحركات", "Organic AI-engine visibility", "دەرکەوتنی سروشتی لە بزوێنەرەکان")}</div>
+              {aiComparison ? (
+                <>
+                  <div className="mt-2 text-xs text-muted-foreground">{label("أحدث قياس", "Latest run", "دوا پێوانە")}: {metricLabel(aiLatestMetric, audienceLanguage)}</div>
+                  {aiComparison.previous ? <div className="mt-1 text-xs text-muted-foreground">{label("القياس السابق المطابق", "Previous matching run", "پێوانەی پێشووی هاوتا")}: {metricLabel(aiPreviousMetric, audienceLanguage)}</div> : <div className="mt-1 text-[10px] text-muted-foreground">{label("لا توجد عينة سابقة مطابقة للمقارنة.", "No previous run with matching measurement settings.", "نموونەیەکی پێشووی هاوتا نییە.")}</div>}
+                  {delta(aiLatestMetric, aiPreviousMetric) != null && <div className="mt-2 text-sm font-semibold">{label("التغير", "Change", "گۆڕان")}: {delta(aiLatestMetric, aiPreviousMetric)! > 0 ? "+" : ""}{delta(aiLatestMetric, aiPreviousMetric)} {label("نقطة مئوية", "percentage points", "خاڵی سەدی")}</div>}
+                  <div className="mt-1 text-[10px] text-muted-foreground">{formatDate(aiComparison.latest.created_at)}</div>
+                </>
+              ) : <p className="mt-2 text-xs text-muted-foreground">{label("لا يوجد سجل للمحركات بعد.", "No AI-engine run history yet.", "هێشتا مێژووی بزوێنەر نییە.")}</p>}
+            </div>
+            <div className="rounded-xl border border-border bg-card/50 p-4">
+              <div className="text-sm font-semibold">{label("تغطية البحث الاجتماعي", "Social search coverage", "پۆششی گەڕانی کۆمەڵایەتی")}</div>
+              {socialComparison ? (
+                <>
+                  <div className="mt-2 text-xs text-muted-foreground">{label("أحدث قياس", "Latest run", "دوا پێوانە")}: {metricLabel(socialLatestMetric, audienceLanguage)}</div>
+                  {socialComparison.previous ? <div className="mt-1 text-xs text-muted-foreground">{label("القياس السابق المطابق", "Previous matching run", "پێوانەی پێشووی هاوتا")}: {metricLabel(socialPreviousMetric, audienceLanguage)}</div> : <div className="mt-1 text-[10px] text-muted-foreground">{label("لا توجد عينة سابقة مطابقة للمقارنة.", "No previous run with matching search settings and retrieval sources.", "نموونەیەکی پێشووی هاوتای گەڕان و سەرچاوە نییە.")}</div>}
+                  {delta(socialLatestMetric, socialPreviousMetric) != null && <div className="mt-2 text-sm font-semibold">{label("التغير", "Change", "گۆڕان")}: {delta(socialLatestMetric, socialPreviousMetric)! > 0 ? "+" : ""}{delta(socialLatestMetric, socialPreviousMetric)} {label("نقطة مئوية", "percentage points", "خاڵی سەدی")}</div>}
+                  <div className="mt-1 text-[10px] text-muted-foreground">{formatDate(socialComparison.latest.created_at)}</div>
+                </>
+              ) : <p className="mt-2 text-xs text-muted-foreground">{label("لا يوجد سجل اجتماعي بعد.", "No social search history yet.", "هێشتا مێژووی گەڕانی کۆمەڵایەتی نییە.")}</p>}
+            </div>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead className="bg-muted/40 text-muted-foreground"><tr>
+                <th className="p-2">{label("نوع القياس", "Measurement", "جۆری پێوانە")}</th>
+                <th className="p-2">{label("العلامة", "Brand", "براند")}</th>
+                <th className="p-2">{label("السوق", "Market", "بازاڕ")}</th>
+                <th className="p-2">{label("الحالة", "Status", "دۆخ")}</th>
+                <th className="p-2">{label("النتيجة", "Result", "ئەنجام")}</th>
+                <th className="p-2">{label("التاريخ", "Date", "بەروار")}</th>
+              </tr></thead>
+              <tbody>
+                {historyRows.map((row) => {
+                  const isAi = row.operation_type === "visibility_probe";
+                  const metric = isAi ? row.result_meta?.query_pack_metrics?.organic_mention_rate : row.result_meta?.query_coverage;
+                  const resultText = metric?.value_pct == null ? "—" : metric.value_pct + "% (" + metric.numerator + "/" + metric.denominator + ")";
+                  return <tr key={row.id} className="border-t border-border">
+                    <td className="p-2">{isAi ? label("محركات AI", "AI engines", "بزوێنەرەکانی AI") : label("بحث اجتماعي", "Social search", "گەڕانی کۆمەڵایەتی")}</td>
+                    <td className="p-2">{row.brand_name || "—"}</td>
+                    <td className="p-2">{row.request_meta?.market || "—"}</td>
+                    <td className="p-2">{row.status}</td>
+                    <td className="p-2 tabular-nums">{resultText}</td>
+                    <td className="p-2">{formatDate(row.created_at)}</td>
+                  </tr>;
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>
