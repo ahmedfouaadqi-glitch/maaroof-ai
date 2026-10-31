@@ -11,7 +11,7 @@ export function normalizeOfficialWebsite(input: unknown): string | null {
 
   let url: URL;
   try {
-    url = new URL(/^https?:\\/\\//i.test(raw) ? raw : `https://${raw}`);
+    url = new URL(/^https?:\/\//i.test(raw) ? raw : \`https://\${raw}\`);
   } catch {
     return null;
   }
@@ -19,9 +19,9 @@ export function normalizeOfficialWebsite(input: unknown): string | null {
   if (url.protocol !== "http:" && url.protocol !== "https:") return null;
   if (url.username || url.password || url.port) return null;
 
-  const host = url.hostname.toLowerCase().replace(/^www\\./i, "").replace(/\\.$/, "");
+  const host = url.hostname.toLowerCase().replace(/^www\./i, "").replace(/\.$/, "");
   if (!host || !host.includes(".") || host.includes(":") || host.includes("[") || host.includes("]")) return null;
-  if (/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host)) return null;
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) return null;
 
   const labels = host.split(".");
   if (labels.some((label) => !label || label.length > 63 || label.startsWith("-") || label.endsWith("-"))) return null;
@@ -31,10 +31,10 @@ export function normalizeOfficialWebsite(input: unknown): string | null {
     "home.arpa", "lan", "intranet", "private",
     "nip.io", "sslip.io", "localtest.me", "vcap.me", "xip.io", "lvh.me", "traefik.me", "local.gd",
   ];
-  if (blockedSuffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`))) return null;
+  if (blockedSuffixes.some((suffix) => host === suffix || host.endsWith(\`.\${suffix}\`))) return null;
 
   const tld = labels[labels.length - 1];
   if (!/^[a-z]{2,63}$/.test(tld) && !/^xn--[a-z0-9-]{2,59}$/.test(tld)) return null;
 
-  return url.origin + url.pathname.replace(/\\/$/, "");
+  return url.origin + url.pathname.replace(/\/$/, "");
 }
