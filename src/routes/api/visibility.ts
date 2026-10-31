@@ -344,7 +344,7 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; cited_urls: string[]; query_observations?: Array<{ kind: string; answer: string; brands: string[]; urls: string[] }>;
+              sources: { url: string; title: string }[]; cited_urls: string[]; query_observations?: Array<{ kind: string; answer: string; brands: string[]; urls: string[]; outcome?: string | null; evidence_level?: string | null; ranked?: boolean }>;
               provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
             }[] = [];
             const statuses: Record<string, {
@@ -364,11 +364,11 @@ export const Route = createFileRoute("/api/visibility")({
                 const responseSchema = phase === "blind"
                   ? JSON.stringify({ answer: "2-4 sentence unbiased discovery answer", brands: ["ranked brands actually recommended"], urls: ["source URLs actually relied on"] })
                   : JSON.stringify({ answer: "concise evidence audit verdict and specific knowledge gaps", brands: [], urls: ["source URLs actually relied on"], query_observations: [
-                      { kind: "brand_recognition", answer: "...", brands: [], urls: [] },
-                      { kind: "recommendation", answer: "...", brands: ["ranked brands only if ranked"], urls: [] },
-                      { kind: "comparison", answer: "...", brands: [], urls: [] },
-                      { kind: "fact_verification", answer: "...", brands: [], urls: [] },
-                      { kind: "purchase_intent", answer: "...", brands: [], urls: [] },
+                      { kind: "brand_recognition", answer: "...", outcome: "recognized|not_recognized|ambiguous|unknown", brands: [], urls: [] },
+                      { kind: "recommendation", answer: "...", outcome: "recommended|not_recommended|conditional|unknown", brands: ["ranked brands only if ranked"], ranked: false, urls: [] },
+                      { kind: "comparison", answer: "...", outcome: "comparison_available|comparison_not_available|unknown", brands: ["alternatives only"], ranked: false, urls: [] },
+                      { kind: "fact_verification", answer: "...", evidence_level: "verified|partially_verified|unverified|contradictory|unknown", brands: [], urls: [] },
+                      { kind: "purchase_intent", answer: "...", outcome: "good_fit|limited_fit|not_available|unknown", brands: [], urls: [] },
                     ] });
                 const messages = [
                   { role: "system", content: String((ENGINE_PERSONA as any)[e] || ("Answer using the configured " + e + " model.")) + " The user is in " + market.region + ". " + phaseRules + " Answer in the requested language. " + (LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en) + "\nReturn ONLY valid JSON matching this schema: " + responseSchema + ". Do not omit query_observations in phase 2." },
@@ -452,7 +452,7 @@ export const Route = createFileRoute("/api/visibility")({
                 "First, assess evidence sufficiency and state evidence gaps, weak claims, contradictions and unknowns. Do not treat the blind answer as proof.",
                 "Then answer the following five fixed branded scenarios separately. Do not merge them into one general answer. Do not invent facts, sources, shipping availability or market coverage.",
                 scenarioQuestions,
-                "Return one query_observations item for EACH exact kind: brand_recognition, recommendation, comparison, fact_verification, purchase_intent. Each item must contain kind, a concise answer, brands (ranked only when actually ranked), and urls actually relied on."
+                "Return one query_observations item for EACH exact kind: brand_recognition, recommendation, comparison, fact_verification, purchase_intent. Each item must contain kind, concise answer, brands and URLs; include the prescribed outcome for each relevant scenario, evidence_level for fact_verification, and ranked=true only when the brand list is actually ranked."
               ].join("\n");
             };
             const groundedQuestionTemplate = () => questionForPhase("[model]", "grounded", "[the model's phase-1 blind answer]");
