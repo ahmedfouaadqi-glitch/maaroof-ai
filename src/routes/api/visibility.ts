@@ -268,18 +268,21 @@ export const Route = createFileRoute("/api/visibility")({
             }
             if (!probeTopic) {
               const refund = Number(pChg.tokens || 0);
+              let refundConfirmed = refund <= 0;
               if (refund > 0) {
                 try {
-                  await admin.rpc("charge_tokens", {
+                  const { error: refundError } = await admin.rpc("charge_tokens", {
                     _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun,
                     _meta: { refund: true, reason: "official_site_category_unresolved", endpoint: "/api/visibility#probe" },
                   } as any);
+                  refundConfirmed = !refundError;
                 } catch {}
               }
               return Response.json({
                 error: "official_site_category_unresolved",
                 message: "A usable category could not be extracted from the official website. Add category keywords or enrich the workspace knowledge card.",
-                refunded: true,
+                refund_attempted: refund > 0,
+                refunded: refundConfirmed,
               }, { status: 422 });
             }
             const models = await resolveEngineModels(engines);
