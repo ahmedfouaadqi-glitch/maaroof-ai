@@ -13,6 +13,7 @@ import { buildVisibilityQueries } from "@/lib/maaroof/visibility-intelligence-ad
 import { calculateVisibilityQueryPackMetrics } from "@/lib/maaroof/visibility-query-pack-metrics";
 import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
 import { deriveOfficialSiteCategory } from "@/lib/maaroof/website-category";
+import { normalizeOfficialWebsite } from "@/lib/maaroof/official-website";
 
 
 type Body = { brand?: string; official_website?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
@@ -154,27 +155,10 @@ export const Route = createFileRoute("/api/visibility")({
           const body = (await request.json()) as Body;
           const brand = asText(body.brand, 200);
           const keywords = asText(body.keywords, 400);
-          const rawOfficialWebsite = asText(body.official_website, 500);
+          let officialWebsite = asText(body.official_website, 500);
           const requestedLanguage = (body as any).lang;
           if (requestedLanguage != null && !["ar", "en", "ku"].includes(requestedLanguage)) {
             return Response.json({ error: "unsupported_audience_language", supported: ["ar", "en", "ku"] }, { status: 400 });
-          }
-          let officialWebsite = "";
-          if (rawOfficialWebsite) {
-            try {
-              const parsedUrl = new URL(/^https?:\/\//i.test(rawOfficialWebsite) ? rawOfficialWebsite : `https://${rawOfficialWebsite}`);
-              const host = parsedUrl.hostname.toLowerCase().replace(/^www\./i, "");
-              const localOrLiteralHost = host.includes(":") ||
-                /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) ||
-                host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
-                host.endsWith(".internal") || host.endsWith(".test") || host.endsWith(".example") ||
-                host.endsWith(".invalid") || host.endsWith(".onion") ||
-                /(?:^|\.)(?:nip\.io|sslip\.io|localtest\.me|vcap\.me)$/.test(host);
-              if (!["http:", "https:"].includes(parsedUrl.protocol) || !host.includes(".") || localOrLiteralHost || parsedUrl.username || parsedUrl.password) throw new Error("invalid");
-              officialWebsite = parsedUrl.origin + parsedUrl.pathname.replace(/\/$/, "");
-            } catch {
-              return Response.json({ error: "invalid_official_website" }, { status: 400 });
-            }
           }
           const lang = requestedLanguage === "ar" || requestedLanguage === "ku" ? requestedLanguage : "en";
 
@@ -202,7 +186,6 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
 
-          if (!officialWebsite) officialWebsite = String((body as any)?.official_website || "").trim();
           const workspaceRaw = body.workspace_id;
           if (workspaceRaw != null && workspaceRaw !== "" && (typeof workspaceRaw !== "string" || !/^[0-9a-f-]{36}$/i.test(workspaceRaw))) {
             return Response.json({ error: "invalid_workspace" }, { status: 400 });
@@ -217,7 +200,11 @@ export const Route = createFileRoute("/api/visibility")({
             workspace = ws;
           }
           if (!officialWebsite && workspace?.brand_url) officialWebsite = String(workspace.brand_url).trim();
-          if (!officialWebsite) return Response.json({ error: "official_website_required" }, { status: 400 });
+          const normalizedOfficialWebsite = normalizeOfficialWebsite(officialWebsite);
+          if (!normalizedOfficialWebsite) {
+            return Response.json({ error: officialWebsite ? "invalid_official_website" : "official_website_required" }, { status: 400 });
+          }
+          officialWebsite = normalizedOfficialWebsite;
 
           // Micro-probe (optional): live question to the engines the user selected.
           // Absent `probe_engines` → the original visibility flow below runs unchanged.
