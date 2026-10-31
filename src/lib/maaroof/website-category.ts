@@ -7,7 +7,7 @@ export type OfficialSiteCategory = { category: string; basis: "official_site_des
 
 const clean = (value: unknown) => String(value ?? "")
   .replace(/\[[^\]]*\]\([^)]*\)/g, " ")
-  .replace(/https?:[/][/ ]?\S+/gi, " ")
+  .replace(/https?:[/][/ ]\S+/gi, " ")
   .replace(/<[^>]*>/g, " ")
   .replace(/^#{1,6}\s*/gm, "")
   .replace(/[|*_>#]/g, " ")
