@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, Share2, Layers3, History, RefreshCw } from "lucide-react";
+import { Eye, Share2, Layers3, History } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
