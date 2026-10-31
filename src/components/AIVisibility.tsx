@@ -46,6 +46,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
   // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
   const workspaceBrand = String(workspace?.entity_truth_card?.entity_name || workspace?.name || "");
+  const [officialWebsite, setOfficialWebsite] = useState(String(workspace?.brand_url || workspace?.entity_truth_card?.official_website || ""));
+  useEffect(() => { if (workspace?.brand_url) setOfficialWebsite(String(workspace.brand_url)); }, [workspace?.brand_url]);
   const workspaceKeywords = Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || "");
   const [brand, setBrand] = useState(brandProp ?? (workspaceBrand || (auth?.profile as any)?.brand_name || ""));
   const [keywords, setKeywords] = useState(kwProp ?? (workspaceKeywords || (auth?.profile as any)?.brand_keywords || ""));
@@ -74,7 +76,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
+        body: JSON.stringify({ brand, official_website: officialWebsite.trim(), keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || "visibility_request_failed");
@@ -146,6 +148,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         <input value={brand} onChange={(e) => setBrand(e.target.value)}
           placeholder={t("ag_vis_brand_ph")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+        <input value={officialWebsite} onChange={(e) => setOfficialWebsite(e.target.value)}
+          placeholder={outLang === "ar" ? "رابط الموقع الرسمي (مثال: https://example.com)" : outLang === "ku" ? "بەستەری ماڵپەڕی فەرمی" : "Official website URL (https://example.com)"}
+          type="url" className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
           placeholder={(t("ag_vis_keywords_ph") || "") + kwOptionalLabel}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
