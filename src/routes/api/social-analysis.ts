@@ -133,6 +133,8 @@ export const Route = createFileRoute("/api/social-analysis")({
         let parsed: any = {};
         let analysisStatus: "completed" | "failed" | "not_run" = "not_run";
         let analysisError: string | null = null;
+        let analysisModel: string | null = null;
+        const analysisProvider = "lovable_ai";
         if (completedPlatforms > 0 && allResults.length > 0) {
           const system = `${FACTUAL_SAFETY_PROMPT}
 You are a social visibility evidence analyst. Reply in ${langName}.
@@ -168,6 +170,7 @@ ${evidence}`;
               analysisStatus = "failed";
             } else {
               const json: any = await response.json();
+              analysisModel = String(json?.model || model);
               const usage = json?.usage || {};
               try {
                 const { enrichLedger } = await import("@/lib/spend.server");
@@ -204,6 +207,8 @@ ${evidence}`;
           share_of_voice: socialMetrics.share_of_voice,
           share_of_voice_basis: socialMetrics.share_of_voice_basis,
           analysis_status: analysisStatus,
+          analysis_provider: analysisStatus === "completed" ? analysisProvider : null,
+          analysis_model: analysisStatus === "completed" ? analysisModel : null,
           ...(analysisError ? { analysis_error: analysisError } : {}),
           best_platforms: Array.isArray(parsed?.best_platforms) ? parsed.best_platforms.slice(0, 6) : [],
           content_gaps: Array.isArray(parsed?.content_gaps) ? parsed.content_gaps.slice(0, 8) : [],
@@ -253,6 +258,8 @@ ${evidence}`;
             share_of_voice: socialMetrics.share_of_voice,
             share_of_voice_basis: socialMetrics.share_of_voice_basis,
             analysis_status: analysisStatus,
+            analysis_provider: analysisStatus === "completed" ? analysisProvider : null,
+            analysis_model: analysisStatus === "completed" ? analysisModel : null,
             platform_results: platforms.map((item) => ({ key: item.key, status: item.status, results_returned: item.results_returned, retrieval_source: item.retrieval_source })),
             evidence_urls: uniqueUrls.slice(0, 30),
             platform_evidence: platforms.map((item) => ({ key: item.key, status: item.status, results: item.results.slice(0, 3) })),
