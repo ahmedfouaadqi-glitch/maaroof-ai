@@ -20,9 +20,9 @@ function normalizeOfficialWebsite(input: unknown): string | null {
   const raw = String(input ?? "").trim();
   if (!raw) return null;
   try {
-    const url = new URL(/^https?:\\/\\//i.test(raw) ? raw : `https://${raw}`);
+    const url = new URL((raw.toLowerCase().startsWith("https://") || raw.toLowerCase().startsWith("http://")) ? raw : `https://${raw}`);
     if (!["http:", "https:"].includes(url.protocol) || !url.hostname.includes(".") || url.username || url.password) return null;
-    return url.origin + url.pathname.replace(/\\/$/, "");
+    return url.origin + (url.pathname.endsWith("/") ? url.pathname.slice(0, -1) : url.pathname);
   } catch {
     return null;
   }
@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/social-analysis")({
 
         const scope = (body.scope || { scope: "world" }) as GeoScope;
         const market = describeMarket(scope);
-        const officialHost = new URL(officialWebsite).hostname.replace(/^www\\./i, "");
+        const officialHost = new URL(officialWebsite).hostname.toLowerCase().replace(/^www[.]/, "");
         const runId = crypto.randomUUID();
         const model = await resolveToolModel("google/gemini-2.5-flash");
         const charge = await chargeTokens({
@@ -102,7 +102,7 @@ export const Route = createFileRoute("/api/social-analysis")({
               title: safeText(item?.title || item?.metadata?.title, 140),
               url: safeText(item?.url, 1000),
               snippet: safeText(item?.description || item?.markdown, 280),
-            })).filter((item: any) => /^https?:\\/\\//i.test(item.url));
+            })).filter((item: any) => item.url.toLowerCase().startsWith("https://") || item.url.toLowerCase().startsWith("http://"));
             platforms.push({
               key: platform.key, label: platform.label, status: "measured",
               results_returned: results.length, result_limit: 5,
@@ -125,7 +125,7 @@ export const Route = createFileRoute("/api/social-analysis")({
         const totalResultsReturned = allResults.length;
         const evidence = platforms.flatMap((platform) =>
           platform.results.slice(0, 3).map((item: any) => `[${platform.label}] ${item.title} — ${item.snippet} — ${item.url}`)
-        ).join("\\n");
+        ).join("\n");
 
         const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish Sorani" : "English";
         let parsed: any = {};
