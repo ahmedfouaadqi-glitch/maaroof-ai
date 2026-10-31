@@ -571,7 +571,7 @@ export const Route = createFileRoute("/api/visibility")({
                 const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
                 await persistWorkspaceProbe(metrics, answers, bgQueryPackMetrics);
                 bgMetrics = metrics;
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged, billing_settlement: settlement } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
