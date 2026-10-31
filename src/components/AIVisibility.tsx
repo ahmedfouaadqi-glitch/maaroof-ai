@@ -113,6 +113,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         sources: (probe.evidence || []).map((item: any) => ({ title: item.title, url: item.url, snippet: "" })),
         sources_used: probe.evidence_source,
         visibility_metrics: metrics,
+        query_pack_metrics: probe.query_pack_metrics || null,
+        query_pack: probe.query_pack || [],
         probe,
       };
       setOut(nextOut);
@@ -233,6 +235,53 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
                 </div>;
               })}
             </div>
+          )}
+          {out.query_pack_metrics && (
+            <section className="rounded-xl border border-border bg-background/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">{outLang === "ar" ? "نتائج الاستعلامات الستة" : outLang === "ku" ? "ئەنجامی شەش پرسیارەکە" : "Six-query scenario results"}</h3>
+                <span className="text-[10px] text-muted-foreground">
+                  {out.query_pack_metrics.answered}/{out.query_pack_metrics.planned} {outLang === "ar" ? "إجابة مكتملة" : outLang === "ku" ? "وەڵامی تەواو" : "answered"}
+                </span>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {(out.query_pack_metrics.by_query || []).map((item: any) => {
+                  const labels: Record<string, Record<string, string>> = {
+                    blind_discovery: { ar: "اكتشاف أعمى", en: "Blind discovery", ku: "دۆزینەوەی بێ‌ناو" },
+                    brand_recognition: { ar: "التعرّف على العلامة", en: "Brand recognition", ku: "ناسینەوەی براند" },
+                    recommendation: { ar: "التوصية", en: "Recommendation", ku: "پێشنیار" },
+                    comparison: { ar: "المقارنة", en: "Comparison", ku: "بەراورد" },
+                    fact_verification: { ar: "التحقق من الحقائق", en: "Fact verification", ku: "پشتڕاستکردنەوەی زانیاری" },
+                    purchase_intent: { ar: "نية الشراء", en: "Purchase intent", ku: "مەبەستی کڕین" },
+                  };
+                  const title = labels[item.kind]?.[outLang] || item.kind;
+                  const rate = item.mention_rate;
+                  const value = rate?.value_pct == null ? "—" : String(rate.value_pct) + "%";
+                  return (
+                    <div key={item.kind} className="rounded-lg border border-border bg-card/40 p-2.5">
+                      <div className="text-xs font-semibold">{title}</div>
+                      <div className="mt-1 text-lg font-bold">{value}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {item.answered}/{item.planned} {outLang === "ar" ? "إجابات" : outLang === "ku" ? "وەڵام" : "answers"}
+                        {item.failed > 0 ? " · " + item.failed + " " + (outLang === "ar" ? "فشل" : outLang === "ku" ? "سەرنەکەوتوو" : "failed") : ""}
+                      </div>
+                      {item.recommendation_rate && (
+                        <div className="mt-1 text-[10px] text-muted-foreground">
+                          {outLang === "ar" ? "التوصية" : outLang === "ku" ? "پێشنیار" : "Recommended"}: {item.recommendation_rate.value_pct == null ? "—" : item.recommendation_rate.value_pct + "%"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                {outLang === "ar"
+                  ? "اكتشاف العلامة الأعمى استعلام مستقل. السيناريوهات الخمسة الأخرى جُمعت في طلب واحد لكل محرك لتقليل التكلفة؛ لذلك ليست خمس جلسات مستقلة."
+                  : outLang === "ku"
+                    ? "دۆزینەوەی بێ‌ناوی براند پرسیارێکی سەربەخۆیە. پێنج دۆخی تری براند لە یەک داواکاری بۆ هەر بزوێنەرێکدا کۆکراونەتەوە بۆ کەمکردنەوەی تێچوو."
+                    : "Blind discovery is a separate query. The other five branded scenarios are co-batched into one request per engine to control cost; they are not five independent sessions."}
+              </p>
+            </section>
           )}
           <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <ProactiveNextStep
