@@ -84,10 +84,8 @@ export function EngineProbePanel({ brand: brandProp, keywords, scope, allowBrand
     if (!sel.length || busy) return;
     if (!probeTopic) { setErr(topicRequired); return; }
     setBusy(true); setErr(null); setAnswers(null); setMetrics(null); setPreviousMetrics(null); setPreviousRunAt(null); setCouncil(null); setBgMsg(false);
-    if (!brandProp.trim() && typed.trim() && saveIt) {
-      // Only fill an empty account brand; never overwrite the owner's identity with a scanned client name.
-      try { const { data: u } = await supabase.auth.getUser(); if (u.user) await supabase.from("profiles").update({ brand_name: typed.trim().slice(0, 120) } as any).eq("id", u.user.id).is("brand_name", null); } catch {}
-    }
+    // Workspace isolation: a scanned brand name is never saved onto the main account.
+    void saveIt;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
