@@ -638,7 +638,7 @@ export const Route = createFileRoute("/api/visibility")({
           const pack = await buildEvidencePack(`${brand} ${keywords || ""} ${market.region} AI visibility`.trim(), { limit: 4, lang });
           const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
-            headers: lovableAiHeaders(apiKey),
+            headers: lovableAiHeaders(apiKey as string),
             body: JSON.stringify({
               model: _MODEL,
               messages: [
