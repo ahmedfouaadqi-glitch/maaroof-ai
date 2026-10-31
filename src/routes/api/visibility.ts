@@ -9,7 +9,8 @@ import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-q
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
-import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
+import { buildVisibilityQueries } from "@/lib/maaroof/visibility-intelligence-adapters";
+import { calculateVisibilityQueryPackMetrics } from "@/lib/maaroof/visibility-query-pack-metrics";
 import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
 import { deriveOfficialSiteCategory } from "@/lib/maaroof/website-category";
 
@@ -282,7 +283,11 @@ export const Route = createFileRoute("/api/visibility")({
               }, { status: 422 });
             }
             const models = await resolveEngineModels(engines);
-            const q = blindProbeQuestion(probeTopic, market.region);
+            const queryPack = buildVisibilityQueries({
+              brandName: brand, officialWebsite: effectiveOfficialWebsite,
+              geography: market.region, audienceLanguage: lang,
+            }, probeTopic);
+            const q = queryPack.find((item) => item.kind === "blind_discovery")!.prompt;
             const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
               if (!workspaceId || !workspace) return;
               const previousCard = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
@@ -338,7 +343,8 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; cited_urls: string[]; provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
+              sources: { url: string; title: string }[]; cited_urls: string[]; query_observations?: Array<{ kind: string; answer: string; brands: string[]; urls: string[] }>;
+              provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
@@ -351,11 +357,20 @@ export const Route = createFileRoute("/api/visibility")({
               let payload: any = null;
               try {
                 const phaseRules = phase === "blind"
-                  ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
-                  : "PHASE 2 — EVIDENCE-GROUNDED REVIEW: Evaluate whether the target entity is sufficiently supported by the public evidence included in the user's audit question. State exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof.";
+                  ? "PHASE 1 — BLIND DISCOVERY: The prompt contains no target brand. Recommend naturally for the category and market without brand priming."
+                  : "PHASE 2 — FIVE BRANDED SCENARIOS PLUS EVIDENCE AUDIT: Answer each requested scenario separately and return one structured observation per scenario. Distinguish verified evidence, model knowledge and unknowns. Do not fabricate facts or citations. The five scenarios share one request context and are not independent sessions.";
                 const actualQuestion = questionForPhase(e, phase, blindAnswer);
+                const responseSchema = phase === "blind"
+                  ? JSON.stringify({ answer: "2-4 sentence unbiased discovery answer", brands: ["ranked brands actually recommended"], urls: ["source URLs actually relied on"] })
+                  : JSON.stringify({ answer: "concise evidence audit verdict and specific knowledge gaps", brands: [], urls: ["source URLs actually relied on"], query_observations: [
+                      { kind: "brand_recognition", answer: "...", brands: [], urls: [] },
+                      { kind: "recommendation", answer: "...", brands: ["ranked brands only if ranked"], urls: [] },
+                      { kind: "comparison", answer: "...", brands: [], urls: [] },
+                      { kind: "fact_verification", answer: "...", brands: [], urls: [] },
+                      { kind: "purchase_intent", answer: "...", brands: [], urls: [] },
+                    ] });
                 const messages = [
-                  { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer using the configured ${e} model.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
+                  { role: "system", content: String((ENGINE_PERSONA as any)[e] || ("Answer using the configured " + e + " model.")) + " The user is in " + market.region + ". " + phaseRules + " Answer in the requested language. " + (LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en) + "\nReturn ONLY valid JSON matching this schema: " + responseSchema + ". Do not omit query_observations in phase 2." },
                   { role: "user", content: actualQuestion },
                 ];
                 payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
@@ -420,6 +435,10 @@ export const Route = createFileRoute("/api/visibility")({
             };
             const questionForPhase = (engine: string, phase: "blind" | "grounded", blindAnswer?: string) => {
               if (phase === "blind") return q;
+              const scenarioQuestions = queryPack
+                .filter((item) => item.kind !== "blind_discovery")
+                .map((item) => "[" + item.kind + "] " + item.prompt)
+                .join("\n\n");
               return [
                 "Evidence audit for target entity: " + brand,
                 "Official website supplied for this audit: " + (effectiveOfficialWebsite || "not supplied"),
@@ -429,7 +448,10 @@ export const Route = createFileRoute("/api/visibility")({
                 evidenceText || "No public evidence was retrieved.",
                 "Blind answer from " + engine + " (for comparison only):",
                 blindAnswer || "Unavailable.",
-                "Audit question: Based only on the supplied public evidence, is this entity sufficiently supported to cite as a reliable source in future answers? State specific evidence gaps, weak claims, contradictions, and what remains unverified. Do not treat the blind answer as proof."
+                "First, assess evidence sufficiency and state evidence gaps, weak claims, contradictions and unknowns. Do not treat the blind answer as proof.",
+                "Then answer the following five fixed branded scenarios separately. Do not merge them into one general answer. Do not invent facts, sources, shipping availability or market coverage.",
+                scenarioQuestions,
+                "Return one query_observations item for EACH exact kind: brand_recognition, recommendation, comparison, fact_verification, purchase_intent. Each item must contain kind, a concise answer, brands (ranked only when actually ranked), and urls actually relied on."
               ].join("\n");
             };
             const groundedQuestionTemplate = () => questionForPhase("[model]", "grounded", "[the model's phase-1 blind answer]");
@@ -488,6 +510,7 @@ export const Route = createFileRoute("/api/visibility")({
                 grounded_ms: phaseMs,
                 sources,
                 cited_urls: p.urls,
+                query_observations: res.kind === "ok" ? (res.p.query_observations || []) : [],
                 provider: previous.provider,
                 gateway_model: previous.model,
                 grounded_provider: res.provider,
