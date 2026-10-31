@@ -11,7 +11,7 @@ import type { Lang } from "@/lib/i18n";
 import { buildVisibilityWorkbook, downloadVisibilityWorkbook } from "@/lib/visibility-workbook";
 import { compareToBaseline, snapFromResultMeta } from "@/lib/visibility-baseline";
 import type { DiscoveryItem } from "@/lib/site-discovery";
-import { ENGINES } from "@/lib/ai-engines";
+import { ENGINES } from "@/components/engine-logos";
 
 function workspacePrefill(ws: any) {
   const card = ws?.entity_truth_card && typeof ws.entity_truth_card === "object" ? ws.entity_truth_card : {};
