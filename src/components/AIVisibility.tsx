@@ -159,7 +159,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
       <div className="mt-3 flex items-center justify-between gap-2">
         {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || t("auto.monthly_analytics_balance_exhausted") : err}</span>}
-        <button onClick={run} disabled={busy || !brand.trim()}
+        <button onClick={run} disabled={busy || !brand.trim() || !officialWebsite.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
           {busy ? t("ag_running") : (outLang === "ar" ? "فحص حي للمحركات العشرة" : outLang === "ku" ? "پشکنینی زیندووی دە بزوێنەر" : "Run live ten-engine probe")}
