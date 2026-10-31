@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { Eye, Share2, Layers3 } from "lucide-react";
+import { Eye, Share2, Layers3, History, RefreshCw } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { VisibilityPanel } from "@/components/AIVisibility";
 import { SocialAnalysis } from "@/components/SocialAnalysis";
 import { GeoScopeSelector, getEffectiveScope, type GeoScope } from "@/components/GeoScopeSelector";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import type { Lang } from "@/lib/i18n";
 
-type View = "ai" | "social" | "summary";
+type View = "ai" | "social" | "summary" | "history";
+type OperationRow = { id: string; operation_type: string; brand_name: string | null; status: string; created_at: string; request_meta: Record<string, any>; result_meta: Record<string, any> };
 
 function metricLabel(value: any, lang: Lang): string {
   if (!value || value.value_pct == null) return lang === "ar" ? "غير متاح" : lang === "ku" ? "بەردەست نییە" : "Not available";
@@ -19,7 +21,7 @@ function metricLabel(value: any, lang: Lang): string {
  * Shared configuration for AI-engine and social-search visibility.
  * The two evidence systems intentionally retain separate denominators and metrics.
  */
-export function VisibilityIntelligence() {
+export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: string | null } = {}) {
   const { t, lang: uiLang } = useI18n();
   const auth = useAuth();
   const [brand, setBrand] = useState(String((auth.profile as any)?.brand_name || ""));
@@ -30,6 +32,9 @@ export function VisibilityIntelligence() {
   const [view, setView] = useState<View>("ai");
   const [aiResult, setAiResult] = useState<any>(null);
   const [socialResult, setSocialResult] = useState<any>(null);
+  const [historyRows, setHistoryRows] = useState<OperationRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
 
   useEffect(() => {
     if (!brand && (auth.profile as any)?.brand_name) setBrand(String((auth.profile as any).brand_name));
@@ -40,6 +45,62 @@ export function VisibilityIntelligence() {
     setScope(getEffectiveScope(auth.profile, "research"));
   }, [auth.profile]);
 
+  useEffect(() => {
+    if (view !== "history" || !auth.user?.id) return;
+    let active = true;
+    setHistoryLoading(true);
+    setHistoryError("");
+    const loadHistory = async () => {
+      let query = supabase.from("brand_operations")
+        .select("id, operation_type, brand_name, status, created_at, request_meta, result_meta")
+        .eq("user_id", auth.user!.id)
+        .in("operation_type", ["visibility_probe", "social_analysis"])
+        .order("created_at", { ascending: false })
+        .limit(30);
+      query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+      const { data, error } = await query;
+      if (!active) return;
+      if (error) setHistoryError(error.message);
+      setHistoryRows((data || []) as OperationRow[]);
+      setHistoryLoading(false);
+    };
+    loadHistory().catch((error: any) => {
+      if (!active) return;
+      setHistoryError(error?.message || "history_load_failed");
+      setHistoryLoading(false);
+    });
+    return () => { active = false; };
+  }, [view, auth.user?.id, workspaceId]);
+
+  const formatDate = (value: string) => {
+    try { return new Date(value).toLocaleString(audienceLanguage === "ar" ? "ar" : audienceLanguage === "ku" ? "ckb" : "en"); }
+    catch { return value; }
+  };
+  const latestComparable = (type: "visibility_probe" | "social_analysis") => {
+    const rows = historyRows.filter((row) => row.operation_type === type && row.status !== "failed");
+    if (!rows.length) return null;
+    const latest = rows[0];
+    const previous = rows.slice(1).find((row) => {
+      if (String(row.brand_name || "").trim().toLowerCase() !== String(latest.brand_name || "").trim().toLowerCase()) return false;
+      const a = latest.request_meta || {};
+      const b = row.request_meta || {};
+      if (a.market !== b.market || a.audience_language !== b.audience_language || a.official_website !== b.official_website) return false;
+      if (type === "visibility_probe") {
+        return a.category === b.category && JSON.stringify(a.engines || []) === JSON.stringify(b.engines || []) && JSON.stringify(a.engine_models || {}) === JSON.stringify(b.engine_models || {});
+      }
+      const latestSources = (latest.result_meta?.platform_results || []).map((x: any) => [x.key, x.retrieval_source]);
+      const previousSources = (row.result_meta?.platform_results || []).map((x: any) => [x.key, x.retrieval_source]);
+      return a.keywords === b.keywords && JSON.stringify(latestSources) === JSON.stringify(previousSources);
+    });
+    return { latest, previous: previous || null };
+  };
+  const aiComparison = latestComparable("visibility_probe");
+  const socialComparison = latestComparable("social_analysis");
+  const aiLatestMetric = aiComparison?.latest.result_meta?.query_pack_metrics?.organic_mention_rate;
+  const aiPreviousMetric = aiComparison?.previous?.result_meta?.query_pack_metrics?.organic_mention_rate;
+  const socialLatestMetric = socialComparison?.latest.result_meta?.query_coverage;
+  const socialPreviousMetric = socialComparison?.previous?.result_meta?.query_coverage;
+  const delta = (latest: any, previous: any) => latest?.value_pct != null && previous?.value_pct != null ? Number((latest.value_pct - previous.value_pct).toFixed(2)) : null;
   const isArabic = audienceLanguage === "ar";
   const isKurdish = audienceLanguage === "ku";
   const label = (ar: string, en: string, ku: string) => isArabic ? ar : isKurdish ? ku : en;
