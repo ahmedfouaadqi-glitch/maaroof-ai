@@ -22,6 +22,13 @@ export const Route = createFileRoute("/api/what-if")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+        // Validate input and workspace ownership before any charge.
+        const body = await request.json().catch(() => ({}));
+        const workspaceDenied = await workspaceGuard(admin, userId, body);
+        if (workspaceDenied) return workspaceDenied;
+        const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
+        if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
+
         const _runId = crypto.randomUUID();
           const _t0 = Date.now();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
@@ -37,13 +44,6 @@ export const Route = createFileRoute("/api/what-if")({
         if (!(prof as any).is_subscribed && limit - used < COST) {
           /* balance-only: charge already succeeded */ void limit;
         }
-
-        const body = await request.json();
-        const workspaceDenied = await workspaceGuard(admin, userId, body);
-        if (workspaceDenied) return workspaceDenied;
-
-        const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
-        if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 
         // Use last analysis or brand-boost report as baseline
         const { data: lastAnalysis } = await admin.from("analyses").select("score,details").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
