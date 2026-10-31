@@ -156,7 +156,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
         <div className="rounded-xl border border-border bg-card/30 p-3">
           <VisibilityPanel
             brand={brand} keywords={keywords} officialWebsite={officialWebsite}
-            lang={audienceLanguage} scope={scope} sharedInputs embedded
+            lang={audienceLanguage} scope={scope} workspaceId={workspaceId} sharedInputs embedded
             toolKey="research" onResult={setAiResult}
           />
         </div>
@@ -165,7 +165,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
         <div className="rounded-xl border border-border bg-card/30 p-3">
           <SocialAnalysis
             brand={brand} keywords={keywords} officialWebsite={officialWebsite}
-            lang={audienceLanguage} scope={scope} sharedInputs embedded
+            lang={audienceLanguage} scope={scope} workspaceId={workspaceId} sharedInputs embedded
             onResult={setSocialResult}
           />
         </div>
