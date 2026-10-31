@@ -279,7 +279,7 @@ export const Route = createFileRoute("/api/visibility")({
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
-              blind_ms?: number; grounded_ms?: number; blind_query?: string; grounded_query?: string
+              blind_ms?: number; grounded_ms?: number; blind_query?: string; grounded_query?: string; [k: string]: any
             }> = {};
             let completedUnits = 0;
             const askOne = async (e: string, model: string | undefined, phase: "blind" | "grounded", blindAnswer?: string) => {
