@@ -284,6 +284,8 @@ export const Route = createFileRoute("/api/visibility")({
             let completedUnits = 0;
             const askOne = async (e: string, model: string | undefined, phase: "blind" | "grounded", blindAnswer?: string) => {
               const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), PA.PROBE_TIMEOUT_MS);
+              let provider: "openrouter" | "lovable_ai" = "openrouter";
+              let payload: any = null;
               try {
                 const phaseRules = phase === "blind"
                   ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
@@ -293,9 +295,8 @@ export const Route = createFileRoute("/api/visibility")({
                   { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer using the configured ${e} model.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
                   { role: "user", content: actualQuestion },
                 ];
-                const payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
+                payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
                 let r: Response | null = null;
-                let provider: "openrouter" | "lovable_ai" = "openrouter";
                 const openRouterKey = process.env.OPENROUTER_API_KEY;
                 if (openRouterKey) {
                   try {
