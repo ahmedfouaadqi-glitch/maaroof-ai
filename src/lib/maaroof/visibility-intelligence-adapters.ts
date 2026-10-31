@@ -39,9 +39,9 @@ const normalize = (s: string) => String(s ?? "").trim().replace(/\s+/g, " ");
 
 const templates: Record<VisibilityQueryKind, Record<string, (brand: string, category: string, market: string, site: string) => string>> = {
   blind_discovery: {
-    en: (_b,c,m) => `In ${m}, what brands or providers would you naturally recommend for ${c}? Do not assume any brand; explain the basis and do not invent sources.`,
-    ar: (_b,c,m) => `في سوق ${m}، ما العلامات أو الجهات التي توصي بها طبيعيًا ضمن فئة ${c}؟ لا تفترض علامة مسبقًا، ووضح أساس التوصية ولا تختلق مصادر.`,
-    ku: (_b,c,m) => `لە بازاڕی ${m}، بۆ بواری ${c} کام براند یان دابینکەر بە شێوەیەکی سروشتی پێشنیار دەکەیت؟ سەرچاوە دروست مەکە.`,
+    en: (_b,c,m) => `In ${m}, which brands or providers would you recommend for ${c}? Return up to five in explicit rank order (1 = strongest recommendation). Do not assume any brand; explain the basis and do not invent sources.`,
+    ar: (_b,c,m) => `في سوق ${m}، ما العلامات أو الجهات التي توصي بها ضمن فئة ${c}؟ رتّب حتى خمس علامات ترتيبًا صريحًا (1 = الأقوى توصية). لا تفترض علامة مسبقًا، ووضح أساس التوصية ولا تختلق مصادر.`,
+    ku: (_b,c,m) => `لە بازاڕی ${m}، بۆ بواری ${c} کام براند یان دابینکەر پێشنیار دەکەیت؟ تا پێنج براند بە ڕیزبەندیی ئاشکرا ڕیز بکە (١ = بەهێزترین پێشنیار). سەرچاوە دروست مەکە.`,
   },
   brand_recognition: {
     en: (b,_c,m,s) => `What can you verify about ${b} (official website: ${s}) for the ${m} market? Separate verified facts from unknowns and do not infer availability.`,
