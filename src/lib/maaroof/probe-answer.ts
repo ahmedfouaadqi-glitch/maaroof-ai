@@ -64,7 +64,8 @@ export function parseProbeContent(content: unknown): ParsedProbe | null {
   const answer = String(obj && typeof obj === "object" ? obj.answer ?? "" : fenced).replace(/\s+/g, " ").trim().slice(0, 900);
   if (!answer) return null;
   const brands: string[] = Array.isArray(obj?.brands) ? obj.brands.map((x: any) => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 8) : [];
-  const query_observations: ParsedQueryObservation[] = Array.isArray(obj?.query_observations)
+  const hasQueryObservations = Array.isArray(obj?.query_observations);
+  const query_observations: ParsedQueryObservation[] | undefined = hasQueryObservations
     ? obj.query_observations.slice(0, 5).map((item: any) => ({
         kind: String(item?.kind || "").trim().slice(0, 40),
         answer: String(item?.answer || "").replace(/\s+/g, " ").trim().slice(0, 600),
@@ -74,12 +75,12 @@ export function parseProbeContent(content: unknown): ParsedProbe | null {
         evidence_level: String(item?.evidence_level || "").trim() || null,
         ranked: item?.ranked === true,
       })).filter((item: ParsedQueryObservation) => item.kind && item.answer)
-    : [];
+    : undefined;
   const fromField: string[] = Array.isArray(obj?.urls) ? obj.urls.map((x: any) => String(x)) : [];
   const fromText = answer.match(/https?:\/\/[^\s)"'< >\]]+/g) || [];
-  const nestedUrls = query_observations.flatMap((item) => item.urls);
+  const nestedUrls = (query_observations || []).flatMap((item) => item.urls);
   const urls = Array.from(new Set([...fromField, ...fromText, ...nestedUrls].map((u) => u.trim()).filter((u) => /^https?:\/\//i.test(u)))).slice(0, 8);
-  return { answer, brands, urls, query_observations };
+  return { answer, brands, urls, ...(hasQueryObservations ? { query_observations: query_observations || [] } : {}) };
 }
 
 export function hostOf(u: string): string {
