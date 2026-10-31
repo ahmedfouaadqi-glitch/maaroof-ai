@@ -180,6 +180,9 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
               <div className="mt-2 text-xs text-muted-foreground">
                 {label("تغطية الإجابات", "Answer coverage", "پۆششی وەڵام")}: {metricLabel(aiResult?.visibility_metrics?.engine_coverage, audienceLanguage)}
               </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                {label("معدل التوصية المعلن من المحركات", "Model-stated recommendation rate", "ڕێژەی پێشنیاری ڕاگەیەنراوی بزوێنەر")}: {metricLabel(aiResult?.query_pack_metrics?.recommendation_rate, audienceLanguage)}
+              </div>
               <p className="mt-2 text-[10px] text-muted-foreground">{label("المقام هنا هو عدد إجابات المحركات الناجحة، وليس نتائج البحث الاجتماعي.", "Denominator: successful engine answers, not social search results.", "بنەما: وەڵامە سەرکەوتووەکانی بزوێنەرەکانە، نەک ئەنجامی گەڕانی کۆمەڵایەتی.")}</p>
             </div>
             <div className="rounded-xl border border-border bg-card/50 p-4">
