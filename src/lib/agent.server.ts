@@ -114,14 +114,7 @@ export async function runVisibilityAnalysis(params: {
     recommendations: normalizeTextArray(parsed?.recommendations, 6),
   };
 
-  try {
-    await supabaseAdmin
-      .from("profiles")
-      .update({ brand_name: params.brand, brand_keywords: params.keywords || null })
-      .eq("id", params.userId);
-  } catch (e: any) {
-    console.error("[runVisibilityAnalysis] profile update error:", e?.message || e);
-  }
+  // Workspace isolation: an analysed brand never writes onto the main account identity.
 
   const { data: row, error } = await supabaseAdmin
     .from("agent_tasks")
