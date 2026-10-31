@@ -13,7 +13,7 @@ import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
 import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
 
 
-type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
+type Body = { brand?: string; official_website?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -152,6 +152,17 @@ export const Route = createFileRoute("/api/visibility")({
           const body = (await request.json()) as Body;
           const brand = asText(body.brand, 200);
           const keywords = asText(body.keywords, 400);
+          const rawOfficialWebsite = asText(body.official_website, 500);
+          let officialWebsite = "";
+          if (rawOfficialWebsite) {
+            try {
+              const parsedUrl = new URL(/^https?:\/\//i.test(rawOfficialWebsite) ? rawOfficialWebsite : `https://${rawOfficialWebsite}`);
+              if (!["http:", "https:"].includes(parsedUrl.protocol) || !parsedUrl.hostname.includes(".") || parsedUrl.username || parsedUrl.password) throw new Error("invalid");
+              officialWebsite = parsedUrl.origin + parsedUrl.pathname.replace(/\/$/, "");
+            } catch {
+              return Response.json({ error: "invalid_official_website" }, { status: 400 });
+            }
+          }
           const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
 
           if (brand.length < 2) {
@@ -178,6 +189,7 @@ export const Route = createFileRoute("/api/visibility")({
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
 
+          if (!officialWebsite) officialWebsite = String((body as any)?.official_website || "").trim();
           const workspaceRaw = body.workspace_id;
           if (workspaceRaw != null && workspaceRaw !== "" && (typeof workspaceRaw !== "string" || !/^[0-9a-f-]{36}$/i.test(workspaceRaw))) {
             return Response.json({ error: "invalid_workspace" }, { status: 400 });
@@ -222,6 +234,8 @@ export const Route = createFileRoute("/api/visibility")({
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: probeUnits, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, phases: ["blind", "evidence_grounded"], endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
             const market = describeMarket(body.scope);
+            const effectiveOfficialWebsite = officialWebsite || String(workspace?.brand_url || "").trim();
+            const officialHost = (() => { try { return effectiveOfficialWebsite ? new URL(effectiveOfficialWebsite).hostname.replace(/^www\./i, "") : ""; } catch { return ""; } })();
             const models = await resolveEngineModels(engines);
             const q = blindProbeQuestion(probeTopic, market.region);
             const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
@@ -239,7 +253,7 @@ export const Route = createFileRoute("/api/visibility")({
                   answers: resultAnswers.map((answer: any) => ({ engine: answer.engine, mentioned: answer.mentioned, rank: answer.rank, status: answer.status, provider: answer.provider, gateway_model: answer.gateway_model, grounded_provider: answer.grounded_provider, grounded_gateway_model: answer.grounded_gateway_model, sources: (answer.sources || []).slice(0, 5) })),
                 },
               };
-              const { error } = await admin.from("workspaces").update({ entity_truth_card: nextCard }).eq("id", workspaceId).eq("owner_id", userId);
+              const { error } = await admin.from("workspaces").update({ entity_truth_card: nextCard, ...(effectiveOfficialWebsite ? { brand_url: effectiveOfficialWebsite } : {}) }).eq("id", workspaceId).eq("owner_id", userId);
               if (error) console.warn("[visibility] workspace truth-card update failed", error.message);
             };
             const PA = await import("@/lib/maaroof/probe-answer");
@@ -263,7 +277,8 @@ export const Route = createFileRoute("/api/visibility")({
                 }
                 if (gate.needWeb && process.env.FIRECRAWL_API_KEY) {
                   const { fcSearch } = await import("@/lib/firecrawl");
-                  const sr: any = await fcSearch(`${probeTopic} ${market.region}`, { limit: 6 }, { userId, toolKey: "visibility" } as any);
+                  const evidenceQuery = [probeTopic, brand, market.region, officialHost ? `site:${officialHost}` : ""].filter(Boolean).join(" ");
+                  const sr: any = await fcSearch(evidenceQuery, { limit: 6, lang }, { userId, toolKey: "visibility" } as any);
                   const raw: any[] = sr?.data?.web || sr?.web || (Array.isArray(sr?.data) ? sr.data : []);
                   evidence = raw.map((it: any) => ({ url: String(it?.url || ""), title: String(it?.title || it?.metadata?.title || "").slice(0, 160) })).filter((x: any) => /^https?:\/\//.test(x.url)).slice(0, 6);
                   evidenceText = raw.slice(0, 6).map((it: any) => `- ${String(it?.title || "").slice(0, 120)}: ${String(it?.description || it?.markdown || "").replace(/\s+/g, " ").slice(0, 200)} (${it?.url || ""})`).join("\n");
@@ -359,6 +374,7 @@ export const Route = createFileRoute("/api/visibility")({
               if (phase === "blind") return q;
               return [
                 "Evidence audit for target entity: " + brand,
+                "Official website supplied for this audit: " + (effectiveOfficialWebsite || "not supplied"),
                 "Market: " + market.region,
                 "Original unbiased question (phase 1): " + q,
                 "Public evidence retrieved (may be empty):",
