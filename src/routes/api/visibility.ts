@@ -173,7 +173,7 @@ export const Route = createFileRoute("/api/visibility")({
 
           const token = auth.slice(7);
           const { data: authData } = await admin.auth.getUser(token);
-          const userId = authData.user?.id;
+          const userId = authData.user?.id as string;
           if (!userId) {
             return Response.json({ error: "auth_required" }, { status: 401 });
           }
@@ -279,11 +279,13 @@ export const Route = createFileRoute("/api/visibility")({
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
-              blind_ms?: number; grounded_ms?: number; blind_query?: string; grounded_query?: string
+              blind_ms?: number; grounded_ms?: number; blind_query?: string; grounded_query?: string; [k: string]: any
             }> = {};
             let completedUnits = 0;
             const askOne = async (e: string, model: string | undefined, phase: "blind" | "grounded", blindAnswer?: string) => {
               const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), PA.PROBE_TIMEOUT_MS);
+              let provider: "openrouter" | "lovable_ai" = "openrouter";
+              let payload: any = null;
               try {
                 const phaseRules = phase === "blind"
                   ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
@@ -293,9 +295,8 @@ export const Route = createFileRoute("/api/visibility")({
                   { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer using the configured ${e} model.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
                   { role: "user", content: actualQuestion },
                 ];
-                const payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
+                payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
                 let r: Response | null = null;
-                let provider: "openrouter" | "lovable_ai" = "openrouter";
                 const openRouterKey = process.env.OPENROUTER_API_KEY;
                 if (openRouterKey) {
                   try {
@@ -570,7 +571,7 @@ export const Route = createFileRoute("/api/visibility")({
           const _mci = await mciReuse(admin as any, "visibility", userId, [brand, keywords, lang, body.scope, workspaceId], !!(body as any)?.force);
           if (_mci.hit) return Response.json({ ..._mci.hit, mci: { reused: true, at: _mci.at } });
           const _chg = await chargeTokens({ userId, toolKey: "visibility", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/visibility" } });
-          if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
+          if (!_chg.ok) return Response.json(chargeFailureBody((_chg as any).reason, (_chg as any).left), { status: 402 });
 
           const { data: roleRow } = await admin
             .from("user_roles")
@@ -582,7 +583,7 @@ export const Route = createFileRoute("/api/visibility")({
           if (!roleRow) {
             // Allow active plan subscribers (counts against monthly_analyses)
             const { data: prof } = await admin.from("profiles").select("is_subscribed, subscription_tier, subscription_expires_at, monthly_analyses_used, quota_overrides").eq("id", userId).maybeSingle();
-            const planActive = !!prof?.is_subscribed && (!prof.subscription_expires_at || new Date(prof.subscription_expires_at) >= new Date());
+            const planActive = !!prof?.is_subscribed && (!prof!.subscription_expires_at || new Date(prof!.subscription_expires_at) >= new Date());
             if (planActive) {
               const { data: plan } = await admin.from("subscription_plans").select("monthly_analyses").eq("name", prof!.subscription_tier).maybeSingle();
               const override = Number((prof as any)?.quota_overrides?.monthly_analyses || 0);
@@ -625,7 +626,7 @@ export const Route = createFileRoute("/api/visibility")({
                 .eq("id", sub.id);
 
               if (usageErr) {
-                console.error("[api/visibility] usage update failed:", usageErr.message);
+                console.error("[api/visibility] usage update failed:", usageErr!.message);
                 return Response.json({ error: "usage_update_failed" }, { status: 500 });
               }
             }
@@ -637,7 +638,7 @@ export const Route = createFileRoute("/api/visibility")({
           const pack = await buildEvidencePack(`${brand} ${keywords || ""} ${market.region} AI visibility`.trim(), { limit: 4, lang });
           const resp = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
             method: "POST",
-            headers: lovableAiHeaders(apiKey),
+            headers: lovableAiHeaders(apiKey as string),
             body: JSON.stringify({
               model: _MODEL,
               messages: [
@@ -687,7 +688,7 @@ export const Route = createFileRoute("/api/visibility")({
             .single();
 
           if (taskErr) {
-            console.error("[api/visibility] task insert failed:", taskErr.message);
+            console.error("[api/visibility] task insert failed:", taskErr!.message);
           }
 
           const _q = pickQualityFields(parsed || {});
