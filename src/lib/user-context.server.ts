@@ -11,8 +11,28 @@ export type UserContext = {
   intent: IntentProfile;
 };
 
-export async function getUserContext(admin: SupabaseClient, userId: string | null | undefined): Promise<UserContext> {
+export async function getUserContext(admin: SupabaseClient, userId: string | null | undefined, workspaceId?: string | null): Promise<UserContext> {
   if (!userId) return { specialty: null, brand_name: null, brand_keywords: null, intent: EMPTY_PROFILE };
+  const ws = workspaceId === undefined ? (await import("@/lib/request-ctx.server")).activeWorkspaceId() : workspaceId;
+  if (ws) {
+    // Workspace isolation: brand context comes only from the selected space, never the main account.
+    try {
+      const [{ data }, intent] = await Promise.all([
+        admin.from("workspaces").select("name, brand_summary, keywords, entity_truth_card").eq("id", ws).eq("owner_id", userId).maybeSingle(),
+        loadIntentProfile(admin, userId),
+      ]);
+      const card: any = (data as any)?.entity_truth_card || {};
+      const kw = Array.isArray(card.keywords) ? card.keywords : (data as any)?.keywords;
+      return {
+        specialty: card.sector || (data as any)?.brand_summary || null,
+        brand_name: card.entity_name || (data as any)?.name || null,
+        brand_keywords: Array.isArray(kw) ? kw.join(", ") || null : (kw || null),
+        intent,
+      };
+    } catch {
+      return { specialty: null, brand_name: null, brand_keywords: null, intent: EMPTY_PROFILE };
+    }
+  }
   try {
     const [{ data }, intent] = await Promise.all([
       admin.from("profiles").select("specialty, brand_name, brand_keywords").eq("id", userId).maybeSingle(),

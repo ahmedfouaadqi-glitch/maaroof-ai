@@ -13,3 +13,15 @@ export function runAfterResponse(p: Promise<unknown>): boolean {
   p.catch((e) => console.error("[runAfterResponse] background work failed", e));
   return true;
 }
+
+/** Records the verified workspace for this request so shared helpers (cache, brand context) stay scoped to it. */
+export function setActiveWorkspace(id: string | null): void {
+  const ctx = requestCtx.getStore() as any;
+  if (ctx && typeof ctx === "object") { try { ctx.__maaroofWorkspaceId = id; } catch {} }
+}
+/** The workspace verified by workspaceGuard for this request, or null for the main account. */
+export function activeWorkspaceId(): string | null {
+  const ctx = requestCtx.getStore() as any;
+  const v = ctx && typeof ctx === "object" ? ctx.__maaroofWorkspaceId : null;
+  return typeof v === "string" && v ? v : null;
+}

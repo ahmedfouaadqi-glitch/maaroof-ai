@@ -72,8 +72,10 @@ async function sha(s: string): Promise<string> {
   return Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, "0")).join("").slice(0, 40);
 }
 
-export async function toolCacheKey(toolKey: string, userId: string, parts: unknown[]): Promise<string> {
-  const fp = requestFingerprint(parts.map((p) => (typeof p === "string" ? p : JSON.stringify(p ?? ""))));
+export async function toolCacheKey(toolKey: string, userId: string, parts: unknown[], workspaceId?: string | null): Promise<string> {
+  // Workspace isolation: the scope is part of the fingerprint, so a result is never reused in another space.
+  const ws = workspaceId === undefined ? (await import("@/lib/request-ctx.server")).activeWorkspaceId() : workspaceId;
+  const fp = requestFingerprint([`ws:${ws || "main"}`, ...parts].map((p) => (typeof p === "string" ? p : JSON.stringify(p ?? ""))));
   return `tool:${toolKey}:${userId}:${await sha(fp)}`;
 }
 
