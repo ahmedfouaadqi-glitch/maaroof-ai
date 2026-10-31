@@ -24,7 +24,7 @@ const FeasibilityStudy = lazy(() => import("@/components/FeasibilityStudy").then
 const BizDev = lazy(() => import("@/components/BizDev").then((m) => ({ default: m.BizDev })));
 const BrandBoostAgent = lazy(() => import("@/components/BrandBoostAgent").then((m) => ({ default: m.BrandBoostAgent })));
 const AppliedRanking = lazy(() => import("@/components/AppliedRanking").then((m) => ({ default: m.AppliedRanking })));
-const SocialAnalysis = lazy(() => import("@/components/SocialAnalysis").then((m) => ({ default: m.SocialAnalysis })));
+const VisibilityIntelligence = lazy(() => import("@/components/VisibilityIntelligence").then((m) => ({ default: m.VisibilityIntelligence })));
 const CompetitorMonitor = lazy(() => import("@/components/CompetitorMonitor").then((m) => ({ default: m.CompetitorMonitor })));
 const KnownDiscovery = lazy(() => import("@/components/KnownDiscovery").then((m) => ({ default: m.KnownDiscovery })));
 const GeoStrategist = lazy(() => import("@/components/GeoStrategist").then((m) => ({ default: m.GeoStrategist })));
@@ -52,7 +52,7 @@ const TOOLS: ToolDef[] = [
   { key: "bizdev", icon: <TrendingUp className="size-5" />, catalog: "bizdev", titleKey: "dash_tool_biz_t", descKey: "dash_tool_biz_d", render: () => <BizDev /> },
   { key: "boost", icon: <Megaphone className="size-5" />, catalog: "brand_boost", titleKey: "boost_title", descKey: "boost_desc", render: () => <BrandBoostAgent /> },
   { key: "applied", icon: <Trophy className="size-5" />, catalog: "applied_ranking", titleKey: "dash_tool_applied_t", render: () => <AppliedRanking /> },
-  { key: "social", icon: <Share2 className="size-5" />, catalog: "social_analysis", titleKey: "dash_tool_social_t", descKey: "dash_tool_social_d", render: () => <SocialAnalysis /> },
+  { key: "social", icon: <Share2 className="size-5" />, catalog: "social_analysis", titleKey: "dash_tool_social_t", descKey: "dash_tool_social_d", render: () => <VisibilityIntelligence /> },
   { key: "monitor", icon: <Bell className="size-5" />, catalog: "competitor_monitor", titleKey: "dash_tool_monitor_t", descKey: "dash_tool_monitor_d", render: () => <CompetitorMonitor /> },
   { key: "strategist", icon: <Target className="size-5" />, catalog: "geo_strategist", titleKey: "dash_tool_strat_t", descKey: "dash_tool_strat_d", render: () => <GeoStrategist /> },
   { key: "whatif", icon: <FlaskConical className="size-5" />, catalog: "what_if", titleKey: "dash_tool_whatif_t", descKey: "dash_tool_whatif_d", render: () => <WhatIfSimulator /> },
