@@ -782,8 +782,7 @@ export const Route = createFileRoute("/api/visibility")({
 
           const result = normalizeResult(parsed || {}, content);
 
-          // Never overwrite the main account identity with a checked brand; only fill it when empty.
-          await admin.from("profiles").update({ brand_name: brand, brand_keywords: keywords || null }).eq("id", userId).is("brand_name", null);
+          // Workspace isolation: a checked brand never writes onto the main account identity.
 
           const taskPayload = {
             user_id: userId,

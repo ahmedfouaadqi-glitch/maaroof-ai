@@ -97,14 +97,13 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         }
         const { chatQuota } = await import("@/lib/maaroof/chat-policy");
         const quota = chatQuota({ metered, subscribed: !!p.is_subscribed, todayUserMessages: (count || 0) + 1, unlimited });
-        // Optional context from any earlier task owned by this user, including tasks in
-        // another workspace. The selected task ID is supplied explicitly by the UI.
+        // Optional context from an earlier task in the SAME workspace only (full isolation).
         let taskCtx: string[] = [];
         const taskId = typeof body?.task_id === "string" ? body.task_id : "";
         if (taskId && /^[0-9a-f-]{36}$/i.test(taskId)) {
-          const { data: job } = await admin.from("maaroof_jobs")
+          const { data: job } = await scopeWorkspace(admin.from("maaroof_jobs")
             .select("goal, status")
-            .eq("id", taskId).eq("user_id", userId).maybeSingle();
+            .eq("id", taskId).eq("user_id", userId), workspaceId).maybeSingle();
           if (job) {
             const { data: recorded } = await admin.from("maaroof_job_events")
               .select("event_type, payload, seq").eq("job_id", taskId).eq("user_id", userId)
