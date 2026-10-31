@@ -255,8 +255,26 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
                     purchase_intent: { ar: "نية الشراء", en: "Purchase intent", ku: "مەبەستی کڕین" },
                   };
                   const title = labels[item.kind]?.[outLang] || item.kind;
-                  const rate = item.mention_rate;
+                  const rate = item.organic_mention_rate || item.recommendation_rate || item.verified_evidence_rate;
                   const value = rate?.value_pct == null ? "—" : String(rate.value_pct) + "%";
+                  const verdictLabels: Record<string, Record<string, string>> = {
+                    recognized: { ar: "تم التعرف على العلامة", en: "Recognized", ku: "براند ناسرایەوە" },
+                    not_recognized: { ar: "لم يتم التعرف على العلامة", en: "Not recognized", ku: "براند نەناسراوە" },
+                    ambiguous: { ar: "التعرّف ملتبس", en: "Ambiguous recognition", ku: "ناسینەوە ناڕوونە" },
+                    recommended: { ar: "موصى بها", en: "Recommended", ku: "پێشنیارکراوە" },
+                    not_recommended: { ar: "غير موصى بها", en: "Not recommended", ku: "پێشنیار نەکراوە" },
+                    conditional: { ar: "توصية مشروطة", en: "Conditional", ku: "پێشنیاری مەرجدار" },
+                    comparison_available: { ar: "توفر تقييم مقارن", en: "Comparison available", ku: "بەراورد بەردەستە" },
+                    comparison_not_available: { ar: "لم يتوفر تقييم مقارن", en: "No comparison available", ku: "بەراورد بەردەست نییە" },
+                    good_fit: { ar: "ملاءمة جيدة", en: "Good fit", ku: "گونجاوی باش" },
+                    limited_fit: { ar: "ملاءمة محدودة", en: "Limited fit", ku: "گونجاوی سنووردار" },
+                    not_available: { ar: "غير متاحة في السوق", en: "Not available", ku: "لە بازاڕدا بەردەست نییە" },
+                    unknown: { ar: "غير محسوم", en: "Unknown", ku: "نادیار" },
+                    verified: { ar: "متحقق منه", en: "Verified", ku: "پشتڕاستکراوە" },
+                    partially_verified: { ar: "متحقق جزئيًا", en: "Partially verified", ku: "بەشێکی پشتڕاستکراوە" },
+                    unverified: { ar: "غير متحقق منه", en: "Unverified", ku: "پشتڕاست نەکراوە" },
+                    contradictory: { ar: "أدلة متعارضة", en: "Contradictory evidence", ku: "بەڵگەکان ناکۆکن" },
+                  };
                   return (
                     <div key={item.kind} className="rounded-lg border border-border bg-card/40 p-2.5">
                       <div className="text-xs font-semibold">{title}</div>
@@ -265,9 +283,9 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
                         {item.answered}/{item.planned} {outLang === "ar" ? "إجابات" : outLang === "ku" ? "وەڵام" : "answers"}
                         {item.failed > 0 ? " · " + item.failed + " " + (outLang === "ar" ? "فشل" : outLang === "ku" ? "سەرنەکەوتوو" : "failed") : ""}
                       </div>
-                      {item.recommendation_rate && (
+                      {(item.outcomes?.length > 0 || item.evidence_levels?.length > 0) && (
                         <div className="mt-1 text-[10px] text-muted-foreground">
-                          {outLang === "ar" ? "التوصية" : outLang === "ku" ? "پێشنیار" : "Recommended"}: {item.recommendation_rate.value_pct == null ? "—" : item.recommendation_rate.value_pct + "%"}
+                          {[...(item.outcomes || []), ...(item.evidence_levels || [])].map((outcome: string) => verdictLabels[outcome]?.[outLang] || outcome).join(" · ")}
                         </div>
                       )}
                     </div>
