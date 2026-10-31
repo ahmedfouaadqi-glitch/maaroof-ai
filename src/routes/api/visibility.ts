@@ -385,7 +385,7 @@ export const Route = createFileRoute("/api/visibility")({
                       { kind: "purchase_intent", answer: "...", outcome: "good_fit|limited_fit|not_available|unknown", brands: [], urls: [] },
                     ] });
                 const messages = [
-                  { role: "system", content: String((ENGINE_PERSONA as any)[e] || ("Answer using the configured " + e + " model.")) + " The user is in " + market.region + ". " + phaseRules + " Answer in the requested language. " + (LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en) + "\nReturn ONLY valid JSON matching this schema: " + responseSchema + ". Do not omit query_observations in phase 2." },
+                  { role: "system", content: String((ENGINE_PERSONA as any)[e] || ("Answer using the configured " + e + " model.")) + " The user is in " + market.region + ". " + phaseRules + " Answer in the requested language. " + (LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en) + "\nReturn ONLY valid JSON matching this schema: " + responseSchema + ". Do not omit query_observations in phase 2. For each outcome and evidence_level, choose exactly ONE token from the listed choices; never return the pipe-separated list itself." },
                   { role: "user", content: actualQuestion },
                 ];
                 payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
