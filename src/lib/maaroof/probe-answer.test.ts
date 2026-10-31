@@ -42,9 +42,9 @@ describe("parseProbeContent query observations", () => {
       urls: ["https://official.example"],
       query_observations: [
         { kind: "brand_recognition", answer: "The brand has an official website.", brands: [], urls: ["https://official.example"] },
-        { kind: "recommendation", answer: "Could be considered for couture.", brands: ["Acme Couture"], urls: [] },
+        { kind: "recommendation", answer: "Could be considered for couture.", outcome: "conditional", brands: ["Acme Couture"], ranked: true, urls: [] },
         { kind: "comparison", answer: "Compare quality and delivery.", brands: ["Acme Couture", "Other Couture"], urls: [] },
-        { kind: "fact_verification", answer: "Shipping terms are not verified.", brands: [], urls: [] },
+        { kind: "fact_verification", answer: "Shipping terms are not verified.", evidence_level: "unverified", brands: [], urls: [] },
         { kind: "purchase_intent", answer: "Availability in the market is unknown.", brands: [], urls: [] },
       ],
     }));
@@ -54,6 +54,9 @@ describe("parseProbeContent query observations", () => {
     ]);
     expect(parsed?.urls).toContain("https://official.example");
     expect(parsed?.query_observations?.[0].urls).toContain("https://official.example");
+    expect(parsed?.query_observations?.[1].outcome).toBe("conditional");
+    expect(parsed?.query_observations?.[1].ranked).toBe(true);
+    expect(parsed?.query_observations?.[3].evidence_level).toBe("unverified");
   });
 
   it("rejects empty scenario observations and unsafe non-http URLs", async () => {
