@@ -203,6 +203,8 @@ export const Route = createFileRoute("/api/visibility")({
             if (wsError || !ws) return Response.json({ error: "workspace_not_found" }, { status: 404 });
             workspace = ws;
           }
+          if (!officialWebsite && workspace?.brand_url) officialWebsite = String(workspace.brand_url).trim();
+          if (!officialWebsite) return Response.json({ error: "official_website_required" }, { status: 400 });
 
           // Micro-probe (optional): live question to the engines the user selected.
           // Absent `probe_engines` → the original visibility flow below runs unchanged.
