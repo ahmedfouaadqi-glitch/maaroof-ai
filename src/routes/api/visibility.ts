@@ -570,7 +570,7 @@ export const Route = createFileRoute("/api/visibility")({
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                   durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
-                  requestMeta: { engines, market: market.region, connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
+                  requestMeta: { engines, market: market.region, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, audience_language: lang, engine_models: Object.fromEntries(engines.map((key) => [key, models[key]?.model || null])), connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
                   resultMeta: {
                     engines_answered: answers.length,
                     mentions: hit,
@@ -640,7 +640,10 @@ export const Route = createFileRoute("/api/visibility")({
                 engines,
                 market: market.region,
                 official_website: effectiveOfficialWebsite,
+                category: probeTopic,
                 category_source: categorySource,
+                audience_language: lang,
+                engine_models: Object.fromEntries(engines.map((key) => [key, models[key]?.model || null])),
                 connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])),
               },
               resultMeta: {
