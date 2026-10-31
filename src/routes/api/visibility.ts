@@ -288,7 +288,7 @@ export const Route = createFileRoute("/api/visibility")({
               geography: market.region, audienceLanguage: lang,
             }, probeTopic);
             const q = queryPack.find((item) => item.kind === "blind_discovery")!.prompt;
-            const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
+            const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[], queryPackMetrics: any) => {
               if (!workspaceId || !workspace) return;
               const previousCard = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
               const nextCard = {
@@ -303,6 +303,7 @@ export const Route = createFileRoute("/api/visibility")({
                   category_source: categorySource,
                   official_website: effectiveOfficialWebsite,
                   metrics,
+                  query_pack_metrics: queryPackMetrics,
                   answers: resultAnswers.map((answer: any) => ({ engine: answer.engine, mentioned: answer.mentioned, rank: answer.rank, status: answer.status, provider: answer.provider, gateway_model: answer.gateway_model, grounded_provider: answer.grounded_provider, grounded_gateway_model: answer.grounded_gateway_model, sources: (answer.sources || []).slice(0, 5) })),
                 },
               };
@@ -540,8 +541,10 @@ export const Route = createFileRoute("/api/visibility")({
             if (body.background === true && policy.backgroundAllowed) {
               let backgroundCharged = 0;
               let bgMetrics: ReturnType<typeof calculateVisibilityProbeMetrics> | null = null;
+              let bgQueryPackMetrics: ReturnType<typeof calculateVisibilityQueryPackMetrics> | null = null;
               const work = (async () => {
                 await askAll();
+                bgQueryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
                 backgroundCharged = await settle();
                 const { recordBrandOperation } = await import("@/lib/brand-operations.server");
                 const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
@@ -550,7 +553,7 @@ export const Route = createFileRoute("/api/visibility")({
                     id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                     status: "failed", durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
                     requestMeta: { engines, market: market.region },
-                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: backgroundCharged === 0 },
+                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: bgQueryPackMetrics, refunded: backgroundCharged === 0 },
                     errorMessage: "engines_no_answer",
                   });
                   try {
@@ -560,9 +563,9 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
-                await persistWorkspaceProbe(metrics, answers);
+                await persistWorkspaceProbe(metrics, answers, bgQueryPackMetrics);
                 bgMetrics = metrics;
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
@@ -575,6 +578,7 @@ export const Route = createFileRoute("/api/visibility")({
                     evidence_count: evidence.length,
                     evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                     evidence_source: evidenceSource,
+                    query_pack_metrics: bgQueryPackMetrics,
                     visibility_metrics: metrics,
                     basis: "live_engine_probe",
                   },
@@ -588,9 +592,10 @@ export const Route = createFileRoute("/api/visibility")({
               });
               // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
             }
             await askAll();
+            const queryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
             const charged = await settle();
             if (!answers.length) {
               const { recordBrandOperation } = await import("@/lib/brand-operations.server");
@@ -604,10 +609,10 @@ export const Route = createFileRoute("/api/visibility")({
                 durationMs: Date.now() - pStartedAt,
                 chargedUnits: 0,
                 requestMeta: { engines, market: market.region },
-                resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: true },
+                resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: queryPackMetrics, refunded: true },
                 errorMessage: "engines_no_answer",
               });
-              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -620,7 +625,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
-            await persistWorkspaceProbe(metrics, reasoned);
+            await persistWorkspaceProbe(metrics, answers, queryPackMetrics);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
             const { recordBrandOperation } = await import("@/lib/brand-operations.server");
             await recordBrandOperation(admin, {
@@ -645,6 +650,7 @@ export const Route = createFileRoute("/api/visibility")({
                 evidence_count: evidence.length,
                 evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                 evidence_source: evidenceSource,
+                query_pack_metrics: queryPackMetrics,
                 official_site_category_evidence: officialSiteCategoryEvidence,
                 category: probeTopic,
                 category_source: categorySource,
@@ -652,7 +658,7 @@ export const Route = createFileRoute("/api/visibility")({
                 basis: "live_engine_probe",
               },
             });
-            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, official_site_category_evidence: officialSiteCategoryEvidence, visibility_metrics: metrics, council, charged, basis: "measured" } });
+            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, official_site_category_evidence: officialSiteCategoryEvidence, visibility_metrics: metrics, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
