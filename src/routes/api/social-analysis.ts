@@ -5,6 +5,7 @@ import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObje
 import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
+import { calculateSocialVisibilityMetrics } from "@/lib/maaroof/social-visibility-metrics";
 
 const COST = 1;
 const PLATFORMS = [
@@ -118,11 +119,12 @@ export const Route = createFileRoute("/api/social-analysis")({
           }
         }
 
-        const completedPlatforms = platforms.filter((item) => item.status === "measured").length;
-        const failedPlatforms = platforms.length - completedPlatforms;
+        const socialMetrics = calculateSocialVisibilityMetrics(platforms);
+        const completedPlatforms = socialMetrics.completed_queries;
+        const failedPlatforms = socialMetrics.failed_queries;
         const allResults = platforms.flatMap((item) => item.results);
         const uniqueUrls = [...new Set(allResults.map((item: any) => item.url).filter(Boolean))];
-        const totalResultsReturned = allResults.length;
+        const totalResultsReturned = socialMetrics.total_results_returned;
         const evidence = platforms.flatMap((platform) =>
           platform.results.slice(0, 3).map((item: any) => `[${platform.label}] ${item.title} — ${item.snippet} — ${item.url}`)
         ).join("\n");
@@ -194,13 +196,13 @@ ${evidence}`;
           market: market.region, audience_language: lang,
           platforms, queries_planned: platforms.length,
           queries_completed: completedPlatforms, queries_failed: failedPlatforms,
-          query_coverage: { numerator: completedPlatforms, denominator: platforms.length, value_pct: Number(((completedPlatforms / platforms.length) * 100).toFixed(2)) },
+          query_coverage: socialMetrics.query_coverage,
           total_results_returned: totalResultsReturned,
-          unique_result_urls: uniqueUrls.length,
+          unique_result_urls: socialMetrics.unique_result_urls,
           sentiment,
           sentiment_basis: analysisStatus === "completed" ? "AI analysis of returned snippets; not consumer sentiment telemetry" : "not_assessed",
-          share_of_voice: null,
-          share_of_voice_basis: "not_measured: no comparable competitor denominator or platform-wide total",
+          share_of_voice: socialMetrics.share_of_voice,
+          share_of_voice_basis: socialMetrics.share_of_voice_basis,
           analysis_status: analysisStatus,
           ...(analysisError ? { analysis_error: analysisError } : {}),
           best_platforms: Array.isArray(parsed?.best_platforms) ? parsed.best_platforms.slice(0, 6) : [],
@@ -229,6 +231,13 @@ ${evidence}`;
           if (error) console.warn("[social-analysis] workspace update failed", error.message);
         }
 
+        const { data: usageProfile } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).maybeSingle();
+        if (usageProfile) {
+          await admin.from("profiles").update({
+            monthly_analyses_used: (Number((usageProfile as any).monthly_analyses_used) || 0) + COST,
+          }).eq("id", userId);
+        }
+
         const { recordBrandOperation } = await import("@/lib/brand-operations.server");
         await recordBrandOperation(admin, {
           id: runId, userId, workspaceId,
@@ -241,10 +250,12 @@ ${evidence}`;
             query_coverage: result.query_coverage,
             total_results_returned: totalResultsReturned,
             unique_result_urls: uniqueUrls.length,
-            share_of_voice: null,
+            share_of_voice: socialMetrics.share_of_voice,
+            share_of_voice_basis: socialMetrics.share_of_voice_basis,
             analysis_status: analysisStatus,
             platform_results: platforms.map((item) => ({ key: item.key, status: item.status, results_returned: item.results_returned, retrieval_source: item.retrieval_source })),
             evidence_urls: uniqueUrls.slice(0, 30),
+            platform_evidence: platforms.map((item) => ({ key: item.key, status: item.status, results: item.results.slice(0, 3) })),
           },
           errorMessage: completedPlatforms === 0 ? "all_platform_searches_failed" : analysisError,
         });
