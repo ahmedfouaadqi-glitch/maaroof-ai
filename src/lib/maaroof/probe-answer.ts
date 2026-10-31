@@ -4,7 +4,7 @@
 
 export type ProbeStatus = "answered" | "empty" | "timeout" | "error";
 export type ProbeSource = { url: string; title: string };
-export type ParsedQueryObservation = { kind: string; answer: string; brands: string[]; urls: string[] };
+export type ParsedQueryObservation = { kind: string; answer: string; brands: string[]; urls: string[]; outcome?: string | null; evidence_level?: string | null; ranked?: boolean };
 export type ParsedProbe = { answer: string; brands: string[]; urls: string[]; query_observations?: ParsedQueryObservation[] };
 
 /** Output budget for probe calls. Thinking models used up 500 before writing any answer. */
@@ -70,6 +70,9 @@ export function parseProbeContent(content: unknown): ParsedProbe | null {
         answer: String(item?.answer || "").replace(/\s+/g, " ").trim().slice(0, 600),
         brands: Array.isArray(item?.brands) ? item.brands.map((x: any) => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 8) : [],
         urls: Array.isArray(item?.urls) ? item.urls.map((x: any) => String(x).trim()).filter((url: string) => /^https?:\/\//i.test(url)).slice(0, 6) : [],
+        outcome: String(item?.outcome || "").trim() || null,
+        evidence_level: String(item?.evidence_level || "").trim() || null,
+        ranked: item?.ranked === true,
       })).filter((item: ParsedQueryObservation) => item.kind && item.answer)
     : [];
   const fromField: string[] = Array.isArray(obj?.urls) ? obj.urls.map((x: any) => String(x)) : [];
