@@ -44,3 +44,45 @@ pnpm vitest run src/lib/maaroof/visibility-metrics.test.ts
 ```
 
 A live-provider test is deliberately not part of the unit suite because it can consume paid usage. Test live integrations separately with an authorized, controlled test workspace.
+
+## Unified six-scenario query pack
+
+The live probe now constructs six fixed scenario prompts in the selected audience language and market:
+
+1. **Blind discovery:** does not name the target brand and requests up to five brands in explicit rank order. This is the only scenario used for organic mention rate, blind-list share of voice, and top-five rate.
+2. **Brand recognition:** asks what the engine can verify about the brand and requires a structured recognition verdict.
+3. **Recommendation:** asks whether the engine recommends the brand and requires one of `recommended`, `not_recommended`, `conditional`, or `unknown`.
+4. **Comparison:** asks for relevant alternatives and a comparison verdict.
+5. **Fact verification:** asks what is supported by evidence and requests an evidence level.
+6. **Purchase intent:** assesses fit for a buyer in the selected market, without assuming that the brand serves that market.
+
+The first blind question is sent in phase one. The five branded scenarios are batched into the existing phase-two request per engine to keep the existing two-call-per-engine charging model. Consequently, the five branded scenario answers share one model request and are **not five independent sessions**. `probe.query_pack_metrics` records this mode explicitly.
+
+### Query-pack metric rules
+
+- **Query coverage:** answered scenario observations / planned scenario observations.
+- **Organic mention rate:** target mentions / successful blind-discovery answers only. Branded scenarios are excluded because their prompts explicitly name the brand.
+- **Recommendation rate:** model-stated `recommended` verdicts / recommendation observations with an explicit decision verdict. Missing or unknown verdicts do not enter this decision denominator.
+- **Verified evidence rate:** fact-verification observations labeled `verified` / fact-verification observations with a recognized evidence-level label. This is the engine's classification of supplied evidence, not an independent legal or factual audit.
+- **Top-five rate:** target brand positions 1–5 / non-empty ranked blind-discovery lists only.
+- **Blind-list share of voice:** target brand occurrences / all returned brand-list occurrences in blind-discovery answers only. It is not market share or the brand's share of all web/social mentions.
+- Every ratio carries a numerator and denominator. A missing/failed observation is not converted into a negative mention.
+
+### Social search sample
+
+The social analysis runs a search query for each of six configured platforms (X, LinkedIn, Reddit, YouTube, Facebook, Instagram), with at most five returned search results per platform. It records each platform as either `measured` or `error`; a successful empty result is measured zero for that query, while a failed request is not interpreted as zero mentions.
+
+The values `total_results_returned` and `unique_result_urls` are counts of records returned by the search provider. They are not total posts, audience reach, engagement, impressions, or complete platform mention counts. Sentiment is an AI assessment of the retrieved text snippets, not consumer survey or platform sentiment telemetry. Social share of voice remains `null` until comparable competitor results and a defensible denominator are collected.
+
+### Shared UI, history, and exports
+
+The dashboard's unified visibility interface shares brand, official website, geographic scope, and audience language between the AI-engine and social-search panels. Audience language also sets report language; geographic scope remains independent.
+
+The history panel reads only the authenticated user's Brand Operations rows and applies the selected workspace filter. It shows a percentage-point comparison only when the brand, market, audience language, official website, and the relevant category/engine-model set or search-source set match. This is descriptive comparison, not causal attribution.
+
+The existing result export bus receives the complete result object, including raw engine answers, per-scenario observations, query-pack metrics, social platform evidence, and metric denominators. No new scoring path is introduced for export.
+
+### Official website fetch guard
+
+When no category can be obtained from supplied keywords, profile or workspace knowledge, the probe may scrape the official website supplied in the request or saved in the selected workspace to extract a category from its title, description, or page text. Both sources pass through the same URL normalizer before retrieval. It rejects local/private-looking hostnames, literal IP hosts, URL credentials, non-HTTP schemes, non-standard ports, and common DNS-rebinding hostname services; this code path also disables the worker's direct-HTTP scrape fallback. This is input validation, not a DNS-resolution or redirect-chain firewall. The external retrieval provider must independently enforce public-address and redirect restrictions.
+

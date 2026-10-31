@@ -829,8 +829,8 @@ export const en: Dict = {
   orbit_cta_guide: "See how each tool works",
   orbit_cta_pricing: "Start now",
   // Dashboard — new tool cards
-  dash_tool_social_t: "Social Visibility Analysis",
-  dash_tool_social_d: "Brand signals across social networks + sentiment analysis.",
+  dash_tool_social_t: "Unified Visibility Intelligence",
+  dash_tool_social_d: "Separate measurement of brand visibility in AI engines and social search results.",
   dash_tool_monitor_t: "Competitor Monitor",
   dash_tool_known_t: "Who's Known?",
   dash_tool_known_d: "Discover real competitors — even unnamed ones — with evidence and a reason for each.",

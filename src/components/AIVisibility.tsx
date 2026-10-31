@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import { ToolHelpBanner } from "@/components/ToolHelpBanner";
-import { GeoScopeSelector, getEffectiveScope } from "@/components/GeoScopeSelector";
+import { GeoScopeSelector, getEffectiveScope, type GeoScope } from "@/components/GeoScopeSelector";
 import { ENGINES } from "@/components/engine-logos";
 import { ENGINE_KEYS } from "@/lib/ai-engines";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
@@ -34,9 +34,13 @@ type PanelProps = {
   toolKey?: "research" | "brand";
   workspaceId?: string | null;
   workspace?: any;
+  officialWebsite?: string;
+  scope?: GeoScope;
+  sharedInputs?: boolean;
+  onResult?: (result: any) => void;
 };
 
-export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null, workspace = null }: PanelProps) {
+export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: langProp, embedded = false, toolKey = "research", workspaceId = null, workspace = null, officialWebsite: websiteProp, scope: scopeProp, sharedInputs = false, onResult }: PanelProps) {
   const { t, lang: uiLang } = useI18n();
   const [outLang, setOutLang] = useState<Lang>(langProp || uiLang);
   useEffect(() => { if (langProp) setOutLang(langProp); }, [langProp]);
@@ -46,6 +50,8 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
 
   // Always-editable fields. Props only set the INITIAL value, then user can edit freely.
   const workspaceBrand = String(workspace?.entity_truth_card?.entity_name || workspace?.name || "");
+  const [officialWebsite, setOfficialWebsite] = useState(String(websiteProp || workspace?.brand_url || workspace?.entity_truth_card?.official_website || ""));
+  useEffect(() => { if (websiteProp !== undefined) setOfficialWebsite(websiteProp); else if (workspace?.brand_url) setOfficialWebsite(String(workspace.brand_url)); }, [websiteProp, workspace?.brand_url]);
   const workspaceKeywords = Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || "");
   const [brand, setBrand] = useState(brandProp ?? (workspaceBrand || (auth?.profile as any)?.brand_name || ""));
   const [keywords, setKeywords] = useState(kwProp ?? (workspaceKeywords || (auth?.profile as any)?.brand_keywords || ""));
@@ -74,7 +80,7 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/visibility", {
         method: "POST", headers,
-        body: JSON.stringify({ brand, keywords, lang: outLang, scope: getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
+        body: JSON.stringify({ brand, official_website: officialWebsite.trim(), keywords, lang: outLang, scope: scopeProp || getEffectiveScope(auth?.profile, toolKey), workspace_id: workspaceId, probe_engines: [...ENGINE_KEYS], background: false }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) throw new Error(j?.error || "visibility_request_failed");
@@ -83,32 +89,54 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
       const metrics = probe.visibility_metrics || {};
       const answers = Array.isArray(probe.answers) ? probe.answers : [];
       const engineName = (key: string) => ENGINES.find((engine) => engine.key === key)?.name || key;
-      setOut({
+      const nextOut = {
         basis: "live_engine_probe",
         operation_id: j.operation_id,
         visibility_percent: metrics?.mention_rate?.value_pct ?? null,
         confidence: "measured",
         sentiment: "not_measured",
         appearance_summary: `${metrics?.answered_engines ?? answers.length}/${metrics?.requested_engines ?? ENGINE_KEYS.length} ${outLang === "en" ? "engines returned usable answers" : outLang === "ku" ? "بزوێنەر وەڵامی بەکارهێنراویان گەڕاندەوە" : "محركات أعادت إجابات قابلة للاستخدام"}. ${outLang === "en" ? "Brand mention rate" : outLang === "ku" ? "ڕێژەی هێنانی ناو" : "معدل ذكر العلامة"}: ${metrics?.mention_rate?.value_pct ?? "—"}%.`,
-        platforms: answers.map((answer: any) => ({
-          name: engineName(answer.engine),
-          mentioned: Boolean(answer.mentioned),
-          why: answer.answer || "",
-          action: answer.reason || "",
-          status: answer.status,
-          provider: answer.provider,
-          gateway_model: answer.gateway_model,
-          sources: answer.sources || [],
-          answer: answer.answer,
-          grounded_answer: answer.grounded_answer,
-          rank: answer.rank,
-        })),
+        platforms: answers.map((answer: any) => {
+          const scenarioLabels: Record<string, string> = {
+            brand_recognition: outLang === "ar" ? "التعرّف على العلامة" : outLang === "ku" ? "ناسینەوەی براند" : "Brand recognition",
+            recommendation: outLang === "ar" ? "التوصية" : outLang === "ku" ? "پێشنیار" : "Recommendation",
+            comparison: outLang === "ar" ? "المقارنة" : outLang === "ku" ? "بەراورد" : "Comparison",
+            fact_verification: outLang === "ar" ? "التحقق من الحقائق" : outLang === "ku" ? "پشتڕاستکردنەوەی زانیاری" : "Fact verification",
+            purchase_intent: outLang === "ar" ? "نية الشراء" : outLang === "ku" ? "مەبەستی کڕین" : "Purchase intent",
+          };
+          const scenarioText = (answer.query_observations || []).map((item: any) => {
+            const verdict = item.outcome || item.evidence_level;
+            return (scenarioLabels[item.kind] || item.kind) + ": " + item.answer + (verdict ? " [" + verdict + "]" : "");
+          }).join("\n\n");
+          const blindLabel = outLang === "ar" ? "الاكتشاف الأعمى" : outLang === "ku" ? "دۆزینەوەی بێ‌ناو" : "Blind discovery";
+          const groundedFallback = scenarioText ? "" : (answer.grounded_answer || "");
+          const fullAnswer = [answer.answer ? blindLabel + ": " + answer.answer : "", groundedFallback, scenarioText].filter(Boolean).join("\n\n");
+          return {
+            name: engineName(answer.engine),
+            mentioned: Boolean(answer.mentioned),
+            why: fullAnswer,
+            action: answer.reason || "",
+            status: answer.status,
+            provider: answer.provider,
+            gateway_model: answer.gateway_model,
+            sources: answer.sources || [],
+            answer: fullAnswer,
+            blind_answer: answer.answer,
+            grounded_answer: answer.grounded_answer,
+            query_observations: answer.query_observations || [],
+            rank: answer.rank,
+          };
+        }),
         recommendations: [],
         sources: (probe.evidence || []).map((item: any) => ({ title: item.title, url: item.url, snippet: "" })),
         sources_used: probe.evidence_source,
         visibility_metrics: metrics,
+        query_pack_metrics: probe.query_pack_metrics || null,
+        query_pack: probe.query_pack || [],
         probe,
-      });
+      };
+      setOut(nextOut);
+      onResult?.(nextOut);
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
@@ -136,25 +164,28 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">{t("ag_vis_desc")}</p>
             <ToolHelpBanner toolKey="research" />
-            <div className="mt-3"><GeoScopeSelector compact toolKey="research" /></div>
+            {!sharedInputs && <div className="mt-3"><GeoScopeSelector compact toolKey={toolKey} /></div>}
           </div>
-          {!langProp && <ToolLangSelect value={outLang} onChange={setOutLang} />}
+          {!langProp && !sharedInputs && <ToolLangSelect value={outLang} onChange={setOutLang} />}
         </div>
       )}
 
-      <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
+      {!sharedInputs && <div className={`${embedded ? "" : "mt-3"} grid gap-2 md:grid-cols-2`}>
         <input value={brand} onChange={(e) => setBrand(e.target.value)}
           placeholder={t("ag_vis_brand_ph")}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
+        <input value={officialWebsite} onChange={(e) => setOfficialWebsite(e.target.value)}
+          placeholder={outLang === "ar" ? "رابط الموقع الرسمي (مثال: https://example.com)" : outLang === "ku" ? "بەستەری ماڵپەڕی فەرمی" : "Official website URL (https://example.com)"}
+          type="url" className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
         <input value={keywords} onChange={(e) => setKeywords(e.target.value)}
           placeholder={(t("ag_vis_keywords_ph") || "") + kwOptionalLabel}
           className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm" />
-      </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">{helperHint}</p>
+      </div>}
+      {!sharedInputs && <p className="mt-1.5 text-[11px] text-muted-foreground">{helperHint}</p>}
 
       <div className="mt-3 flex items-center justify-between gap-2">
         {err && <span className="text-xs text-destructive">{err === "limit" || err === "credits_exhausted" || err === "no_active_subscription" ? t("ag_vis_quota_err") || t("auto.monthly_analytics_balance_exhausted") : err}</span>}
-        <button onClick={run} disabled={busy || !brand.trim()}
+        <button onClick={run} disabled={busy || !brand.trim() || !officialWebsite.trim()}
           className="ms-auto inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
           {busy ? t("ag_running") : (outLang === "ar" ? "فحص حي للمحركات العشرة" : outLang === "ku" ? "پشکنینی زیندووی دە بزوێنەر" : "Run live ten-engine probe")}
@@ -222,6 +253,71 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
                 </div>;
               })}
             </div>
+          )}
+          {out.query_pack_metrics && (
+            <section className="rounded-xl border border-border bg-background/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">{outLang === "ar" ? "نتائج الاستعلامات الستة" : outLang === "ku" ? "ئەنجامی شەش پرسیارەکە" : "Six-query scenario results"}</h3>
+                <span className="text-[10px] text-muted-foreground">
+                  {out.query_pack_metrics.answered}/{out.query_pack_metrics.planned} {outLang === "ar" ? "إجابة مكتملة" : outLang === "ku" ? "وەڵامی تەواو" : "answered"}
+                </span>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {(out.query_pack_metrics.by_query || []).map((item: any) => {
+                  const labels: Record<string, Record<string, string>> = {
+                    blind_discovery: { ar: "اكتشاف أعمى", en: "Blind discovery", ku: "دۆزینەوەی بێ‌ناو" },
+                    brand_recognition: { ar: "التعرّف على العلامة", en: "Brand recognition", ku: "ناسینەوەی براند" },
+                    recommendation: { ar: "التوصية", en: "Recommendation", ku: "پێشنیار" },
+                    comparison: { ar: "المقارنة", en: "Comparison", ku: "بەراورد" },
+                    fact_verification: { ar: "التحقق من الحقائق", en: "Fact verification", ku: "پشتڕاستکردنەوەی زانیاری" },
+                    purchase_intent: { ar: "نية الشراء", en: "Purchase intent", ku: "مەبەستی کڕین" },
+                  };
+                  const title = labels[item.kind]?.[outLang] || item.kind;
+                  const rate = item.organic_mention_rate || item.recommendation_rate || item.verified_evidence_rate;
+                  const value = rate?.value_pct == null ? "—" : String(rate.value_pct) + "%";
+                  const verdictLabels: Record<string, Record<string, string>> = {
+                    recognized: { ar: "تم التعرف على العلامة", en: "Recognized", ku: "براند ناسرایەوە" },
+                    not_recognized: { ar: "لم يتم التعرف على العلامة", en: "Not recognized", ku: "براند نەناسراوە" },
+                    ambiguous: { ar: "التعرّف ملتبس", en: "Ambiguous recognition", ku: "ناسینەوە ناڕوونە" },
+                    recommended: { ar: "موصى بها", en: "Recommended", ku: "پێشنیارکراوە" },
+                    not_recommended: { ar: "غير موصى بها", en: "Not recommended", ku: "پێشنیار نەکراوە" },
+                    conditional: { ar: "توصية مشروطة", en: "Conditional", ku: "پێشنیاری مەرجدار" },
+                    comparison_available: { ar: "توفر تقييم مقارن", en: "Comparison available", ku: "بەراورد بەردەستە" },
+                    comparison_not_available: { ar: "لم يتوفر تقييم مقارن", en: "No comparison available", ku: "بەراورد بەردەست نییە" },
+                    good_fit: { ar: "ملاءمة جيدة", en: "Good fit", ku: "گونجاوی باش" },
+                    limited_fit: { ar: "ملاءمة محدودة", en: "Limited fit", ku: "گونجاوی سنووردار" },
+                    not_available: { ar: "غير متاحة في السوق", en: "Not available", ku: "لە بازاڕدا بەردەست نییە" },
+                    unknown: { ar: "غير محسوم", en: "Unknown", ku: "نادیار" },
+                    verified: { ar: "متحقق منه", en: "Verified", ku: "پشتڕاستکراوە" },
+                    partially_verified: { ar: "متحقق جزئيًا", en: "Partially verified", ku: "بەشێکی پشتڕاستکراوە" },
+                    unverified: { ar: "غير متحقق منه", en: "Unverified", ku: "پشتڕاست نەکراوە" },
+                    contradictory: { ar: "أدلة متعارضة", en: "Contradictory evidence", ku: "بەڵگەکان ناکۆکن" },
+                  };
+                  return (
+                    <div key={item.kind} className="rounded-lg border border-border bg-card/40 p-2.5">
+                      <div className="text-xs font-semibold">{title}</div>
+                      <div className="mt-1 text-lg font-bold">{value}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {item.answered}/{item.planned} {outLang === "ar" ? "إجابات" : outLang === "ku" ? "وەڵام" : "answers"}
+                        {item.failed > 0 ? " · " + item.failed + " " + (outLang === "ar" ? "فشل" : outLang === "ku" ? "سەرنەکەوتوو" : "failed") : ""}
+                      </div>
+                      {(item.outcomes?.length > 0 || item.evidence_levels?.length > 0) && (
+                        <div className="mt-1 text-[10px] text-muted-foreground">
+                          {[...(item.outcomes || []), ...(item.evidence_levels || [])].map((outcome: string) => verdictLabels[outcome]?.[outLang] || outcome).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                {outLang === "ar"
+                  ? "اكتشاف العلامة الأعمى استعلام مستقل. السيناريوهات الخمسة الأخرى جُمعت في طلب واحد لكل محرك لتقليل التكلفة؛ لذلك ليست خمس جلسات مستقلة."
+                  : outLang === "ku"
+                    ? "دۆزینەوەی بێ‌ناوی براند پرسیارێکی سەربەخۆیە. پێنج دۆخی تری براند لە یەک داواکاری بۆ هەر بزوێنەرێکدا کۆکراونەتەوە بۆ کەمکردنەوەی تێچوو."
+                    : "Blind discovery is a separate query. The other five branded scenarios are co-batched into one request per engine to control cost; they are not five independent sessions."}
+              </p>
+            </section>
           )}
           <SourcesList sources={out.sources} sourcesUsed={out.sources_used} rarityScore={out.rarity_score} uniquenessNotes={out.uniqueness_notes} evidenceMissing={out.evidence_missing} />
           <ProactiveNextStep

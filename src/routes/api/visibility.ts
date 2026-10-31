@@ -9,11 +9,14 @@ import { qualityShell, buildEvidencePack, pickQualityFields } from "@/lib/tool-q
 import { resolveToolModel, enginesAllowedForUser, applyEntitlement, resolveEngineModels } from "@/lib/ai-engines.server";
 import { ENGINE_PERSONA } from "@/lib/ai-engines";
 import { asText } from "@/lib/input-coerce";
-import { blindProbeQuestion } from "@/lib/maaroof/probe-answer";
+import { buildVisibilityQueries } from "@/lib/maaroof/visibility-intelligence-adapters";
+import { calculateVisibilityQueryPackMetrics } from "@/lib/maaroof/visibility-query-pack-metrics";
 import { calculateVisibilityProbeMetrics } from "@/lib/maaroof/visibility-metrics";
+import { deriveOfficialSiteCategory } from "@/lib/maaroof/website-category";
+import { normalizeOfficialWebsite } from "@/lib/maaroof/official-website";
 
 
-type Body = { brand?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
+type Body = { brand?: string; official_website?: string; keywords?: string; lang?: "en" | "ar" | "ku"; scope?: GeoScope; probe_engines?: string[]; notify?: boolean; background?: boolean; workspace_id?: string | null };
 
 const LANG_INSTRUCTION: Record<string, string> = {
   ar: "اكتب جميع القيم النصية داخل JSON باللغة العربية الفصحى.",
@@ -152,7 +155,12 @@ export const Route = createFileRoute("/api/visibility")({
           const body = (await request.json()) as Body;
           const brand = asText(body.brand, 200);
           const keywords = asText(body.keywords, 400);
-          const lang = body.lang === "ar" || body.lang === "ku" ? body.lang : "en";
+          let officialWebsite = asText(body.official_website, 500);
+          const requestedLanguage = (body as any).lang;
+          if (requestedLanguage != null && !["ar", "en", "ku"].includes(requestedLanguage)) {
+            return Response.json({ error: "unsupported_audience_language", supported: ["ar", "en", "ku"] }, { status: 400 });
+          }
+          const lang = requestedLanguage === "ar" || requestedLanguage === "ku" ? requestedLanguage : "en";
 
           if (brand.length < 2) {
             return Response.json({ error: "brand_required" }, { status: 400 });
@@ -191,6 +199,12 @@ export const Route = createFileRoute("/api/visibility")({
             if (wsError || !ws) return Response.json({ error: "workspace_not_found" }, { status: 404 });
             workspace = ws;
           }
+          if (!officialWebsite && workspace?.brand_url) officialWebsite = String(workspace.brand_url).trim();
+          const normalizedOfficialWebsite = normalizeOfficialWebsite(officialWebsite);
+          if (!normalizedOfficialWebsite) {
+            return Response.json({ error: officialWebsite ? "invalid_official_website" : "official_website_required" }, { status: 400 });
+          }
+          officialWebsite = normalizedOfficialWebsite;
 
           // Micro-probe (optional): live question to the engines the user selected.
           // Absent `probe_engines` → the original visibility flow below runs unchanged.
@@ -208,23 +222,74 @@ export const Route = createFileRoute("/api/visibility")({
             if (!probeTopic && workspace) {
               const card = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
               const cardKeywords = Array.isArray(card.keywords) ? card.keywords.join(", ") : String(card.keywords || "");
-              probeTopic = [card.entity_name || workspace.name, cardKeywords, card.sector || workspace.brand_summary]
+              probeTopic = [cardKeywords, card.sector, workspace.brand_summary]
                 .filter(Boolean).join(" ").slice(0, 400);
             }
-            if (!probeTopic && !workspace) {
+            if (!probeTopic) {
               const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
               probeTopic = String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim().slice(0, 400);
             }
-            if (!probeTopic) return Response.json({ error: "probe_category_required" }, { status: 400 });
             const probeUnits = engines.length * 2;
             const pRun = crypto.randomUUID();
             const pStartedAt = Date.now();
             const pChg = await chargeTokens({ userId, toolKey: "visibility.probe", runId: pRun, units: probeUnits, unitTokens: policy.tokensPerEngine ?? undefined, meta: { engines, phases: ["blind", "evidence_grounded"], endpoint: "/api/visibility#probe" } });
             if (!pChg.ok) return Response.json(chargeFailureBody(pChg.reason as any, pChg.left), { status: 402 });
             const market = describeMarket(body.scope);
+            const effectiveOfficialWebsite = officialWebsite || String(workspace?.brand_url || "").trim();
+            const officialHost = (() => { try { return effectiveOfficialWebsite ? new URL(effectiveOfficialWebsite).hostname.replace(/^www\./i, "") : ""; } catch { return ""; } })();
+            let categorySource = probeTopic ? (keywords ? "user_keywords" : "workspace_knowledge") : "official_site";
+            let officialSiteCategoryEvidence: { title: string; description: string; fetch_source: string } | null = null;
+            if (!probeTopic) {
+              try {
+                const { fcScrape } = await import("@/lib/firecrawl");
+                const scraped: any = await fcScrape(effectiveOfficialWebsite, { deep: false, allowDirectHttp: false }, { userId, toolKey: "visibility" });
+                const page = scraped?.data || scraped || {};
+                const metadata = page?.metadata || scraped?.metadata || {};
+                const derived = deriveOfficialSiteCategory({
+                  title: metadata?.title || metadata?.ogTitle,
+                  description: metadata?.description || metadata?.ogDescription,
+                  markdown: page?.markdown || page?.content,
+                  hostname: officialHost,
+                }, brand);
+                if (derived) {
+                  probeTopic = derived.category;
+                  categorySource = derived.basis;
+                  officialSiteCategoryEvidence = {
+                    title: String(metadata?.title || officialHost).slice(0, 160),
+                    description: derived.category,
+                    fetch_source: String(scraped?.fetch_source || "unknown"),
+                  };
+                }
+              } catch (error) {
+                console.warn("[visibility.probe] official-site category extraction failed", error);
+              }
+            }
+            if (!probeTopic) {
+              const refund = Number(pChg.tokens || 0);
+              let refundConfirmed = refund <= 0;
+              if (refund > 0) {
+                try {
+                  const { error: refundError } = await admin.rpc("charge_tokens", {
+                    _user_id: userId, _tool_key: "visibility.probe", _tokens: -refund, _usd: 0, _run_id: pRun,
+                    _meta: { refund: true, reason: "official_site_category_unresolved", endpoint: "/api/visibility#probe" },
+                  } as any);
+                  refundConfirmed = !refundError;
+                } catch {}
+              }
+              return Response.json({
+                error: "official_site_category_unresolved",
+                message: "A usable category could not be extracted from the official website. Add category keywords or enrich the workspace knowledge card.",
+                refund_attempted: refund > 0,
+                refunded: refundConfirmed,
+              }, { status: 422 });
+            }
             const models = await resolveEngineModels(engines);
-            const q = blindProbeQuestion(probeTopic, market.region);
-            const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[]) => {
+            const queryPack = buildVisibilityQueries({
+              brandName: brand, officialWebsite: effectiveOfficialWebsite,
+              geography: market.region, audienceLanguage: lang,
+            }, probeTopic);
+            const q = queryPack.find((item) => item.kind === "blind_discovery")!.prompt;
+            const persistWorkspaceProbe = async (metrics: any, resultAnswers: any[], queryPackMetrics: any) => {
               if (!workspaceId || !workspace) return;
               const previousCard = workspace.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
               const nextCard = {
@@ -235,11 +300,15 @@ export const Route = createFileRoute("/api/visibility")({
                   operation_id: pRun,
                   measured_at: new Date().toISOString(),
                   market: market.region,
+                  category: probeTopic,
+                  category_source: categorySource,
+                  official_website: effectiveOfficialWebsite,
                   metrics,
+                  query_pack_metrics: queryPackMetrics,
                   answers: resultAnswers.map((answer: any) => ({ engine: answer.engine, mentioned: answer.mentioned, rank: answer.rank, status: answer.status, provider: answer.provider, gateway_model: answer.gateway_model, grounded_provider: answer.grounded_provider, grounded_gateway_model: answer.grounded_gateway_model, sources: (answer.sources || []).slice(0, 5) })),
                 },
               };
-              const { error } = await admin.from("workspaces").update({ entity_truth_card: nextCard }).eq("id", workspaceId).eq("owner_id", userId);
+              const { error } = await admin.from("workspaces").update({ entity_truth_card: nextCard, ...(effectiveOfficialWebsite ? { brand_url: effectiveOfficialWebsite } : {}) }).eq("id", workspaceId).eq("owner_id", userId);
               if (error) console.warn("[visibility] workspace truth-card update failed", error.message);
             };
             const PA = await import("@/lib/maaroof/probe-answer");
@@ -263,7 +332,8 @@ export const Route = createFileRoute("/api/visibility")({
                 }
                 if (gate.needWeb && process.env.FIRECRAWL_API_KEY) {
                   const { fcSearch } = await import("@/lib/firecrawl");
-                  const sr: any = await fcSearch(`${probeTopic} ${market.region}`, { limit: 6 }, { userId, toolKey: "visibility" } as any);
+                  const evidenceQuery = [probeTopic, brand, market.region, officialHost ? `site:${officialHost}` : ""].filter(Boolean).join(" ");
+                  const sr: any = await fcSearch(evidenceQuery, { limit: 6, lang }, { userId, toolKey: "visibility" } as any);
                   const raw: any[] = sr?.data?.web || sr?.web || (Array.isArray(sr?.data) ? sr.data : []);
                   evidence = raw.map((it: any) => ({ url: String(it?.url || ""), title: String(it?.title || it?.metadata?.title || "").slice(0, 160) })).filter((x: any) => /^https?:\/\//.test(x.url)).slice(0, 6);
                   evidenceText = raw.slice(0, 6).map((it: any) => `- ${String(it?.title || "").slice(0, 120)}: ${String(it?.description || it?.markdown || "").replace(/\s+/g, " ").slice(0, 200)} (${it?.url || ""})`).join("\n");
@@ -275,7 +345,8 @@ export const Route = createFileRoute("/api/visibility")({
               engine: string; mentioned: boolean; rank: number | null; answer: string; grounded_answer?: string;
               brands: string[]; status: string; blind_status: string; grounded_status: string;
               blind_query: string; grounded_query: string; blind_ms: number; grounded_ms: number;
-              sources: { url: string; title: string }[]; cited_urls: string[]; provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
+              sources: { url: string; title: string }[]; cited_urls: string[]; query_observations?: Array<{ kind: string; answer: string; brands: string[]; urls: string[]; outcome?: string | null; evidence_level?: string | null; ranked?: boolean }>;
+              provider?: string; gateway_model?: string; grounded_provider?: string; grounded_gateway_model?: string; ms: number
             }[] = [];
             const statuses: Record<string, {
               status: string; ms: number; blind_status?: string; grounded_status?: string;
@@ -288,11 +359,20 @@ export const Route = createFileRoute("/api/visibility")({
               let payload: any = null;
               try {
                 const phaseRules = phase === "blind"
-                  ? "PHASE 1 — BLIND RETRIEVAL: The question is unbranded. Do not infer or assume a target brand, and do not favor any company. Answer it as you normally would based only on your available knowledge."
-                  : "PHASE 2 — EVIDENCE-GROUNDED REVIEW: Evaluate whether the target entity is sufficiently supported by the public evidence included in the user's audit question. State exact gaps, weak claims, or contradictions. Do not invent facts or treat the blind answer as proof.";
+                  ? "PHASE 1 — BLIND DISCOVERY: The prompt contains no target brand. Recommend naturally for the category and market without brand priming."
+                  : "PHASE 2 — FIVE BRANDED SCENARIOS PLUS EVIDENCE AUDIT: Answer each requested scenario separately and return one structured observation per scenario. Distinguish verified evidence, model knowledge and unknowns. Do not fabricate facts or citations. The five scenarios share one request context and are not independent sessions.";
                 const actualQuestion = questionForPhase(e, phase, blindAnswer);
+                const responseSchema = phase === "blind"
+                  ? JSON.stringify({ answer: "2-4 sentence unbiased discovery answer", brands: ["ranked brands actually recommended"], urls: ["source URLs actually relied on"] })
+                  : JSON.stringify({ answer: "concise evidence audit verdict and specific knowledge gaps", brands: [], urls: ["source URLs actually relied on"], query_observations: [
+                      { kind: "brand_recognition", answer: "...", outcome: "recognized|not_recognized|ambiguous|unknown", brands: [], urls: [] },
+                      { kind: "recommendation", answer: "...", outcome: "recommended|not_recommended|conditional|unknown", brands: ["ranked brands only if ranked"], ranked: false, urls: [] },
+                      { kind: "comparison", answer: "...", outcome: "comparison_available|comparison_not_available|unknown", brands: ["alternatives only"], ranked: false, urls: [] },
+                      { kind: "fact_verification", answer: "...", evidence_level: "verified|partially_verified|unverified|contradictory|unknown", brands: [], urls: [] },
+                      { kind: "purchase_intent", answer: "...", outcome: "good_fit|limited_fit|not_available|unknown", brands: [], urls: [] },
+                    ] });
                 const messages = [
-                  { role: "system", content: `${(ENGINE_PERSONA as any)[e] || `Answer using the configured ${e} model.`} The user is in ${market.region}. ${phaseRules} Answer in the requested language. ${LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en}\nReturn JSON only: {"answer":"${phase === "blind" ? "2-4 sentence recommendation answer" : "sufficiency verdict and specific knowledge gaps"}","brands":["${phase === "blind" ? "brand names recommended, in ranked order" : "leave empty for this grounded review"}"],"urls":["source URLs actually relied on"]}` },
+                  { role: "system", content: String((ENGINE_PERSONA as any)[e] || ("Answer using the configured " + e + " model.")) + " The user is in " + market.region + ". " + phaseRules + " Answer in the requested language. " + (LANG_INSTRUCTION[lang] || LANG_INSTRUCTION.en) + "\nReturn ONLY valid JSON matching this schema: " + responseSchema + ". Do not omit query_observations in phase 2. For each outcome and evidence_level, choose exactly ONE token from the listed choices; never return the pipe-separated list itself." },
                   { role: "user", content: actualQuestion },
                 ];
                 payload = { model, max_tokens: PA.PROBE_MAX_TOKENS, reasoning_effort: "low", messages };
@@ -357,15 +437,23 @@ export const Route = createFileRoute("/api/visibility")({
             };
             const questionForPhase = (engine: string, phase: "blind" | "grounded", blindAnswer?: string) => {
               if (phase === "blind") return q;
+              const scenarioQuestions = queryPack
+                .filter((item) => item.kind !== "blind_discovery")
+                .map((item) => "[" + item.kind + "] " + item.prompt)
+                .join("\n\n");
               return [
                 "Evidence audit for target entity: " + brand,
+                "Official website supplied for this audit: " + (effectiveOfficialWebsite || "not supplied"),
                 "Market: " + market.region,
                 "Original unbiased question (phase 1): " + q,
                 "Public evidence retrieved (may be empty):",
                 evidenceText || "No public evidence was retrieved.",
                 "Blind answer from " + engine + " (for comparison only):",
                 blindAnswer || "Unavailable.",
-                "Audit question: Based only on the supplied public evidence, is this entity sufficiently supported to cite as a reliable source in future answers? State specific evidence gaps, weak claims, contradictions, and what remains unverified. Do not treat the blind answer as proof."
+                "First, assess evidence sufficiency and state evidence gaps, weak claims, contradictions and unknowns. Do not treat the blind answer as proof.",
+                "Then answer the following five fixed branded scenarios separately. Do not merge them into one general answer. Do not invent facts, sources, shipping availability or market coverage.",
+                scenarioQuestions,
+                "Return one query_observations item for EACH exact kind: brand_recognition, recommendation, comparison, fact_verification, purchase_intent. Each item must contain kind, concise answer, brands and URLs; include the prescribed outcome for each relevant scenario, evidence_level for fact_verification, and ranked=true only when the brand list is actually ranked."
               ].join("\n");
             };
             const groundedQuestionTemplate = () => questionForPhase("[model]", "grounded", "[the model's phase-1 blind answer]");
@@ -424,6 +512,7 @@ export const Route = createFileRoute("/api/visibility")({
                 grounded_ms: phaseMs,
                 sources,
                 cited_urls: p.urls,
+                query_observations: res.kind === "ok" ? (res.p.query_observations || []) : [],
                 provider: previous.provider,
                 gateway_model: previous.model,
                 grounded_provider: res.provider,
@@ -453,8 +542,10 @@ export const Route = createFileRoute("/api/visibility")({
             if (body.background === true && policy.backgroundAllowed) {
               let backgroundCharged = 0;
               let bgMetrics: ReturnType<typeof calculateVisibilityProbeMetrics> | null = null;
+              let bgQueryPackMetrics: ReturnType<typeof calculateVisibilityQueryPackMetrics> | null = null;
               const work = (async () => {
                 await askAll();
+                bgQueryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
                 backgroundCharged = await settle();
                 const { recordBrandOperation } = await import("@/lib/brand-operations.server");
                 const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
@@ -463,7 +554,7 @@ export const Route = createFileRoute("/api/visibility")({
                     id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                     status: "failed", durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
                     requestMeta: { engines, market: market.region },
-                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: backgroundCharged === 0 },
+                    resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: bgQueryPackMetrics, refunded: backgroundCharged === 0 },
                     errorMessage: "engines_no_answer",
                   });
                   try {
@@ -473,14 +564,14 @@ export const Route = createFileRoute("/api/visibility")({
                   return;
                 }
                 const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
-                await persistWorkspaceProbe(metrics, answers);
+                await persistWorkspaceProbe(metrics, answers, bgQueryPackMetrics);
                 bgMetrics = metrics;
-                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
+                try { await admin.from("report_drafts").insert({ user_id: userId, tool_key: "visibility", title: `${brand} — live probe`, payload: { probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, visibility_metrics: metrics, charged: backgroundCharged } } as any, lang } as any); } catch {}
                 const hit = answers.filter((a) => a.mentioned).length;
                 await recordBrandOperation(admin, {
                   id: pRun, userId, workspaceId, operationType: "visibility_probe", brandName: brand,
                   durationMs: Date.now() - pStartedAt, chargedUnits: backgroundCharged,
-                  requestMeta: { engines, market: market.region, connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
+                  requestMeta: { engines, market: market.region, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, audience_language: lang, engine_models: Object.fromEntries(engines.map((key) => [key, models[key]?.model || null])), connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])) },
                   resultMeta: {
                     engines_answered: answers.length,
                     mentions: hit,
@@ -488,6 +579,7 @@ export const Route = createFileRoute("/api/visibility")({
                     evidence_count: evidence.length,
                     evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                     evidence_source: evidenceSource,
+                    query_pack_metrics: bgQueryPackMetrics,
                     visibility_metrics: metrics,
                     basis: "live_engine_probe",
                   },
@@ -501,9 +593,10 @@ export const Route = createFileRoute("/api/visibility")({
               });
               // This path is awaited inline; no detached work continues after the response.
               await work;
-              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
+              return Response.json({ ok: true, operation_id: pRun, background: true, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: bgQueryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: bgMetrics, charged: backgroundCharged } });
             }
             await askAll();
+            const queryPackMetrics = calculateVisibilityQueryPackMetrics(brand, engines, queryPack.map((item) => item.kind), answers, statuses);
             const charged = await settle();
             if (!answers.length) {
               const { recordBrandOperation } = await import("@/lib/brand-operations.server");
@@ -517,10 +610,10 @@ export const Route = createFileRoute("/api/visibility")({
                 durationMs: Date.now() - pStartedAt,
                 chargedUnits: 0,
                 requestMeta: { engines, market: market.region },
-                resultMeta: { engines_answered: 0, evidence_count: evidence.length, refunded: true },
+                resultMeta: { engines_answered: 0, evidence_count: evidence.length, query_pack_metrics: queryPackMetrics, refunded: true },
                 errorMessage: "engines_no_answer",
               });
-              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
+              return Response.json({ ok: false, operation_id: pRun, error: "engines_no_answer", probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: [], statuses, evidence, evidence_source: evidenceSource, charged: 0, refunded: true } }, { status: 502 });
             }
             if (body.notify) {
               try {
@@ -533,7 +626,7 @@ export const Route = createFileRoute("/api/visibility")({
             const { ENGINE_CATALOG } = await import("@/lib/ai-engines");
             const reasoned = withReasons(answers as any, brand, lang as any);
             const metrics = calculateVisibilityProbeMetrics(brand, engines, answers);
-            await persistWorkspaceProbe(metrics, reasoned);
+            await persistWorkspaceProbe(metrics, answers, queryPackMetrics);
             const council = councilFromProbe(reasoned, engines, brand, lang as any, (k) => (ENGINE_CATALOG as any)[k]?.name || k);
             const { recordBrandOperation } = await import("@/lib/brand-operations.server");
             await recordBrandOperation(admin, {
@@ -547,6 +640,11 @@ export const Route = createFileRoute("/api/visibility")({
               requestMeta: {
                 engines,
                 market: market.region,
+                official_website: effectiveOfficialWebsite,
+                category: probeTopic,
+                category_source: categorySource,
+                audience_language: lang,
+                engine_models: Object.fromEntries(engines.map((key) => [key, models[key]?.model || null])),
                 connection_modes: Object.fromEntries(engines.map((key) => [key, (ENGINE_CATALOG as any)?.[key]?.proxy ? "proxy" : "direct"])),
               },
               resultMeta: {
@@ -556,11 +654,15 @@ export const Route = createFileRoute("/api/visibility")({
                 evidence_count: evidence.length,
                 evidence_urls: evidence.map((item) => item.url).slice(0, 30),
                 evidence_source: evidenceSource,
+                query_pack_metrics: queryPackMetrics,
+                official_site_category_evidence: officialSiteCategoryEvidence,
+                category: probeTopic,
+                category_source: categorySource,
                 visibility_metrics: metrics,
                 basis: "live_engine_probe",
               },
             });
-            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, visibility_metrics: metrics, council, charged, basis: "measured" } });
+            return Response.json({ ok: true, operation_id: pRun, probe: { query: q, blind_query: q, category: probeTopic, category_source: categorySource, official_website: effectiveOfficialWebsite, query_pack: queryPack, query_pack_metrics: queryPackMetrics, grounded_question_template: groundedQuestionTemplate(), asked: engines, answers: reasoned, statuses, evidence, evidence_source: evidenceSource, official_site_category_evidence: officialSiteCategoryEvidence, visibility_metrics: metrics, council, charged, basis: "measured" } });
           }
 
           const _runId = crypto.randomUUID();
