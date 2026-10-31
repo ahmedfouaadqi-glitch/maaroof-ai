@@ -6,6 +6,8 @@ import { chargeTokens, chargeFailureBody } from "@/lib/tokens.server";
 import { resolveToolModel } from "@/lib/ai-engines.server";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
 import { calculateSocialVisibilityMetrics } from "@/lib/maaroof/social-visibility-metrics";
+import { normalizeOfficialWebsite } from "@/lib/maaroof/official-website";
+import { settleTokenRefund } from "@/lib/maaroof/token-refund";
 
 const COST = 1;
 const PLATFORMS = [
@@ -16,18 +18,6 @@ const PLATFORMS = [
   { key: "facebook", domain: "facebook.com", label: "Facebook" },
   { key: "instagram", domain: "instagram.com", label: "Instagram" },
 ] as const;
-
-function normalizeOfficialWebsite(input: unknown): string | null {
-  const raw = String(input ?? "").trim();
-  if (!raw) return null;
-  try {
-    const url = new URL((raw.toLowerCase().startsWith("https://") || raw.toLowerCase().startsWith("http://")) ? raw : `https://${raw}`);
-    if (!["http:", "https:"].includes(url.protocol) || !url.hostname.includes(".") || url.username || url.password) return null;
-    return url.origin + (url.pathname.endsWith("/") ? url.pathname.slice(0, -1) : url.pathname);
-  } catch {
-    return null;
-  }
-}
 
 function safeText(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
@@ -122,6 +112,21 @@ export const Route = createFileRoute("/api/social-analysis")({
         const socialMetrics = calculateSocialVisibilityMetrics(platforms);
         const completedPlatforms = socialMetrics.completed_queries;
         const failedPlatforms = socialMetrics.failed_queries;
+        // Refund the tool charge only when every platform query failed. Successful
+        // empty queries are still completed work; Firecrawl provider credits are
+        // recorded separately by the existing adapter.
+        const billingSettlement = await settleTokenRefund(
+          Number(charge.tokens) || 0,
+          completedPlatforms === 0 ? Number(charge.tokens) || 0 : 0,
+          async (refundTokens) => admin.rpc("charge_tokens", {
+            _user_id: userId,
+            _tool_key: "social_analysis",
+            _tokens: -refundTokens,
+            _usd: 0,
+            _run_id: runId,
+            _meta: { refund: true, reason: "all_platform_searches_failed", endpoint: "/api/social-analysis" },
+          }),
+        );
         const allResults = platforms.flatMap((item) => item.results);
         const uniqueUrls = [...new Set(allResults.map((item: any) => item.url).filter(Boolean))];
         const totalResultsReturned = socialMetrics.total_results_returned;
@@ -206,6 +211,7 @@ ${evidence}`;
           sentiment_basis: analysisStatus === "completed" ? "AI analysis of returned snippets; not consumer sentiment telemetry" : "not_assessed",
           share_of_voice: socialMetrics.share_of_voice,
           share_of_voice_basis: socialMetrics.share_of_voice_basis,
+          billing_settlement: billingSettlement,
           analysis_status: analysisStatus,
           analysis_provider: analysisStatus === "completed" ? analysisProvider : null,
           analysis_model: analysisStatus === "completed" ? analysisModel : null,
@@ -237,7 +243,8 @@ ${evidence}`;
         }
 
         const { data: usageProfile } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).maybeSingle();
-        if (usageProfile) {
+        // Failed-all searches are refunded and must not consume a monthly analysis.
+        if (usageProfile && completedPlatforms > 0) {
           await admin.from("profiles").update({
             monthly_analyses_used: (Number((usageProfile as any).monthly_analyses_used) || 0) + COST,
           }).eq("id", userId);
@@ -250,8 +257,10 @@ ${evidence}`;
           brandName: brand,
           status: completedPlatforms === 0 ? "failed" : completedPlatforms === platforms.length && analysisStatus === "completed" ? "completed" : "partial",
           durationMs: Date.now() - startedAt,
+          chargedUnits: billingSettlement.charged_tokens,
           requestMeta: { official_website: officialWebsite, market: market.region, audience_language: lang, keywords, platforms: PLATFORMS.map((item) => item.key) },
           resultMeta: {
+            billing_settlement: billingSettlement,
             query_coverage: result.query_coverage,
             total_results_returned: totalResultsReturned,
             unique_result_urls: uniqueUrls.length,
