@@ -32,3 +32,39 @@ describe("keywordVisibilityProbeQuestion", () => {
     expect(q).toContain("Australia");
   });
 });
+
+describe("parseProbeContent query observations", () => {
+  it("preserves the five structured branded scenarios and their evidence URLs", async () => {
+    const { parseProbeContent } = await import("./probe-answer");
+    const parsed = parseProbeContent(JSON.stringify({
+      answer: "Evidence audit: public evidence is limited.",
+      brands: [],
+      urls: ["https://official.example"],
+      query_observations: [
+        { kind: "brand_recognition", answer: "The brand has an official website.", brands: [], urls: ["https://official.example"] },
+        { kind: "recommendation", answer: "Could be considered for couture.", brands: ["Acme Couture"], urls: [] },
+        { kind: "comparison", answer: "Compare quality and delivery.", brands: ["Acme Couture", "Other Couture"], urls: [] },
+        { kind: "fact_verification", answer: "Shipping terms are not verified.", brands: [], urls: [] },
+        { kind: "purchase_intent", answer: "Availability in the market is unknown.", brands: [], urls: [] },
+      ],
+    }));
+    expect(parsed?.query_observations).toHaveLength(5);
+    expect(parsed?.query_observations?.map((item) => item.kind)).toEqual([
+      "brand_recognition", "recommendation", "comparison", "fact_verification", "purchase_intent",
+    ]);
+    expect(parsed?.urls).toContain("https://official.example");
+    expect(parsed?.query_observations?.[0].urls).toContain("https://official.example");
+  });
+
+  it("rejects empty scenario observations and unsafe non-http URLs", async () => {
+    const { parseProbeContent } = await import("./probe-answer");
+    const parsed = parseProbeContent(JSON.stringify({
+      answer: "Audit completed.",
+      query_observations: [
+        { kind: "recommendation", answer: "", brands: [], urls: ["javascript:alert(1)"] },
+      ],
+    }));
+    expect(parsed?.query_observations).toEqual([]);
+    expect(parsed?.urls).toEqual([]);
+  });
+});
