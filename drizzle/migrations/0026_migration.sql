@@ -1,0 +1,1 @@
+ALTER TABLE public.brand_operations ADD COLUMN IF NOT EXISTS is_baseline boolean NOT NULL DEFAULT false;

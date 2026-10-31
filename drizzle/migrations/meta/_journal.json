@@ -183,6 +183,13 @@
       "when": 1793396247439,
       "tag": "0025_brand_operations_grants_and_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793420508170,
+      "tag": "0026_migration",
+      "breakpoints": true
     }
   ]
 }

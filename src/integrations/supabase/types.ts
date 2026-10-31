@@ -975,6 +975,7 @@ export type Database = {
           error_message: string | null
           finished_at: string
           id: string
+          is_baseline: boolean
           operation_type: string
           request_meta: Json
           result_meta: Json
@@ -992,6 +993,7 @@ export type Database = {
           error_message?: string | null
           finished_at?: string
           id?: string
+          is_baseline?: boolean
           operation_type: string
           request_meta?: Json
           result_meta?: Json
@@ -1009,6 +1011,7 @@ export type Database = {
           error_message?: string | null
           finished_at?: string
           id?: string
+          is_baseline?: boolean
           operation_type?: string
           request_meta?: Json
           result_meta?: Json

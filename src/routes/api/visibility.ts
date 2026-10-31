@@ -580,6 +580,7 @@ export const Route = createFileRoute("/api/visibility")({
                   resultMeta: {
                     engines_answered: answers.length,
                     mentions: hit,
+                    engine_mentions: answers.map((answer) => ({ engine: String(answer.engine), mentioned: Boolean(answer.mentioned) })),
                     top5: answers.filter((answer: any) => Number(answer.rank) > 0 && Number(answer.rank) <= 5).length,
                     evidence_count: evidence.length,
                     evidence_urls: evidence.map((item) => item.url).slice(0, 30),
@@ -657,6 +658,7 @@ export const Route = createFileRoute("/api/visibility")({
               resultMeta: {
                 engines_answered: reasoned.length,
                 mentions: reasoned.filter((answer: any) => answer.mentioned).length,
+                engine_mentions: reasoned.map((answer: any) => ({ engine: String(answer.engine), mentioned: Boolean(answer.mentioned) })),
                 top5: reasoned.filter((answer: any) => Number(answer.rank) > 0 && Number(answer.rank) <= 5).length,
                 evidence_count: evidence.length,
                 evidence_urls: evidence.map((item) => item.url).slice(0, 30),
