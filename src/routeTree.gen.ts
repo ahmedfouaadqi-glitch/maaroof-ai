@@ -51,9 +51,11 @@ import { Route as ApiMaaroofChatRouteImport } from './routes/api/maaroof-chat'
 import { Route as ApiMaaroofJobsRouteImport } from './routes/api/maaroof-jobs'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
 import { Route as ApiSecurityScanRouteImport } from './routes/api/security-scan'
+import { Route as ApiSiteDiscoveryRouteImport } from './routes/api/site-discovery'
 import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analysis'
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
+import { Route as ApiVisibilityBaselineRouteImport } from './routes/api/visibility-baseline'
 import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
 import { Route as GuideArabicKurdishGeoRouteImport } from './routes/guide.arabic-kurdish-geo'
 import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
@@ -280,6 +282,11 @@ const ApiSecurityScanRoute = ApiSecurityScanRouteImport.update({
   path: '/api/security-scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSiteDiscoveryRoute = ApiSiteDiscoveryRouteImport.update({
+  id: '/api/site-discovery',
+  path: '/api/site-discovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSocialAnalysisRoute = ApiSocialAnalysisRouteImport.update({
   id: '/api/social-analysis',
   path: '/api/social-analysis',
@@ -293,6 +300,11 @@ const ApiSuggestRoute = ApiSuggestRouteImport.update({
 const ApiVisibilityRoute = ApiVisibilityRouteImport.update({
   id: '/api/visibility',
   path: '/api/visibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVisibilityBaselineRoute = ApiVisibilityBaselineRouteImport.update({
+  id: '/api/visibility-baseline',
+  path: '/api/visibility-baseline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWhatIfRoute = ApiWhatIfRouteImport.update({
@@ -412,9 +424,11 @@ export interface FileRoutesByFullPath {
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/security-scan': typeof ApiSecurityScanRoute
+  '/api/site-discovery': typeof ApiSiteDiscoveryRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/visibility-baseline': typeof ApiVisibilityBaselineRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
@@ -473,9 +487,11 @@ export interface FileRoutesByTo {
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/security-scan': typeof ApiSecurityScanRoute
+  '/api/site-discovery': typeof ApiSiteDiscoveryRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/visibility-baseline': typeof ApiVisibilityBaselineRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
@@ -535,9 +551,11 @@ export interface FileRoutesById {
   '/api/maaroof-jobs': typeof ApiMaaroofJobsRoute
   '/api/research': typeof ApiResearchRoute
   '/api/security-scan': typeof ApiSecurityScanRoute
+  '/api/site-discovery': typeof ApiSiteDiscoveryRoute
   '/api/social-analysis': typeof ApiSocialAnalysisRoute
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
+  '/api/visibility-baseline': typeof ApiVisibilityBaselineRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
@@ -598,9 +616,11 @@ export interface FileRouteTypes {
     | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/security-scan'
+    | '/api/site-discovery'
     | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/visibility-baseline'
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
@@ -659,9 +679,11 @@ export interface FileRouteTypes {
     | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/security-scan'
+    | '/api/site-discovery'
     | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/visibility-baseline'
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
@@ -720,9 +742,11 @@ export interface FileRouteTypes {
     | '/api/maaroof-jobs'
     | '/api/research'
     | '/api/security-scan'
+    | '/api/site-discovery'
     | '/api/social-analysis'
     | '/api/suggest'
     | '/api/visibility'
+    | '/api/visibility-baseline'
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
@@ -782,9 +806,11 @@ export interface RootRouteChildren {
   ApiMaaroofJobsRoute: typeof ApiMaaroofJobsRoute
   ApiResearchRoute: typeof ApiResearchRoute
   ApiSecurityScanRoute: typeof ApiSecurityScanRoute
+  ApiSiteDiscoveryRoute: typeof ApiSiteDiscoveryRoute
   ApiSocialAnalysisRoute: typeof ApiSocialAnalysisRoute
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
+  ApiVisibilityBaselineRoute: typeof ApiVisibilityBaselineRoute
   ApiWhatIfRoute: typeof ApiWhatIfRoute
   PSlugRoute: typeof PSlugRoute
   ToolsSlugRoute: typeof ToolsSlugRoute
@@ -1093,6 +1119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSecurityScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/site-discovery': {
+      id: '/api/site-discovery'
+      path: '/api/site-discovery'
+      fullPath: '/api/site-discovery'
+      preLoaderRoute: typeof ApiSiteDiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/social-analysis': {
       id: '/api/social-analysis'
       path: '/api/social-analysis'
@@ -1112,6 +1145,13 @@ declare module '@tanstack/react-router' {
       path: '/api/visibility'
       fullPath: '/api/visibility'
       preLoaderRoute: typeof ApiVisibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/visibility-baseline': {
+      id: '/api/visibility-baseline'
+      path: '/api/visibility-baseline'
+      fullPath: '/api/visibility-baseline'
+      preLoaderRoute: typeof ApiVisibilityBaselineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/what-if': {
@@ -1283,9 +1323,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMaaroofJobsRoute: ApiMaaroofJobsRoute,
   ApiResearchRoute: ApiResearchRoute,
   ApiSecurityScanRoute: ApiSecurityScanRoute,
+  ApiSiteDiscoveryRoute: ApiSiteDiscoveryRoute,
   ApiSocialAnalysisRoute: ApiSocialAnalysisRoute,
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
+  ApiVisibilityBaselineRoute: ApiVisibilityBaselineRoute,
   ApiWhatIfRoute: ApiWhatIfRoute,
   PSlugRoute: PSlugRoute,
   ToolsSlugRoute: ToolsSlugRoute,

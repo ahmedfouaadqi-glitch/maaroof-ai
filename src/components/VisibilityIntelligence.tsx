@@ -8,9 +8,21 @@ import { SocialAnalysis } from "@/components/SocialAnalysis";
 import { GeoScopeSelector, getEffectiveScope, type GeoScope } from "@/components/GeoScopeSelector";
 import { ToolLangSelect } from "@/components/ToolLangSelect";
 import type { Lang } from "@/lib/i18n";
+import { buildVisibilityWorkbook, downloadVisibilityWorkbook } from "@/lib/visibility-workbook";
+import { compareToBaseline, snapFromResultMeta } from "@/lib/visibility-baseline";
+import type { DiscoveryItem } from "@/lib/site-discovery";
+import { ENGINES } from "@/components/engine-logos";
+
+function workspacePrefill(ws: any) {
+  const card = ws?.entity_truth_card && typeof ws.entity_truth_card === "object" ? ws.entity_truth_card : {};
+  const pick = (...k: string[]) => { for (const x of k) { const v = card[x]; if (typeof v === "string" && v.trim()) return v.trim(); } return ""; };
+  const kw = Array.isArray(ws?.keywords) ? ws.keywords.join(", ") : String(ws?.keywords || "");
+  const socials = Object.values(card.social_links || card.socials || {}).concat(Array.isArray(card.social_urls) ? card.social_urls : []).filter((x: any) => typeof x === "string") as string[];
+  return { brand: pick("entity_name", "brand_name") || String(ws?.name || ""), site: String(ws?.brand_url || "") || pick("website_url", "official_url"), keywords: kw || pick("keywords"), socials };
+}
 
 type View = "ai" | "social" | "summary" | "history";
-type OperationRow = { id: string; operation_type: string; brand_name: string | null; status: string; created_at: string; request_meta: Record<string, any>; result_meta: Record<string, any> };
+type OperationRow = { is_baseline?: boolean; id: string; operation_type: string; brand_name: string | null; status: string; created_at: string; request_meta: Record<string, any>; result_meta: Record<string, any> };
 
 function metricLabel(value: any, lang: Lang): string {
   if (!value || value.value_pct == null) return lang === "ar" ? "غير متاح" : lang === "ku" ? "بەردەست نییە" : "Not available";
@@ -21,15 +33,20 @@ function metricLabel(value: any, lang: Lang): string {
  * Shared configuration for AI-engine and social-search visibility.
  * The two evidence systems intentionally retain separate denominators and metrics.
  */
-export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: string | null } = {}) {
+export function VisibilityIntelligence({ workspaceId = null, workspace = null, initialView = "ai" }: { workspaceId?: string | null; workspace?: any; initialView?: View } = {}) {
   const { t, lang: uiLang } = useI18n();
   const auth = useAuth();
-  const [brand, setBrand] = useState(String((auth.profile as any)?.brand_name || ""));
-  const [officialWebsite, setOfficialWebsite] = useState("");
-  const [keywords, setKeywords] = useState(String((auth.profile as any)?.brand_keywords || ""));
+  const pre = workspace ? workspacePrefill(workspace) : null;
+  const [brand, setBrand] = useState(pre?.brand || (workspace ? "" : String((auth.profile as any)?.brand_name || "")));
+  const [officialWebsite, setOfficialWebsite] = useState(pre?.site || "");
+  const [keywords, setKeywords] = useState(pre?.keywords || (workspace ? "" : String((auth.profile as any)?.brand_keywords || "")));
+  const [discovery, setDiscovery] = useState<DiscoveryItem[] | null>(null);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState("");
+  const [historyTick, setHistoryTick] = useState(0);
   const [audienceLanguage, setAudienceLanguage] = useState<Lang>(uiLang);
   const [scope, setScope] = useState<GeoScope>(() => getEffectiveScope(auth.profile, "research"));
-  const [view, setView] = useState<View>("ai");
+  const [view, setView] = useState<View>(initialView);
   const [aiResult, setAiResult] = useState<any>(null);
   const [socialResult, setSocialResult] = useState<any>(null);
   const [historyRows, setHistoryRows] = useState<OperationRow[]>([]);
@@ -37,9 +54,10 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
   const [historyError, setHistoryError] = useState("");
 
   useEffect(() => {
+    if (workspace) return;
     if (!brand && (auth.profile as any)?.brand_name) setBrand(String((auth.profile as any).brand_name));
     if (!keywords && (auth.profile as any)?.brand_keywords) setKeywords(String((auth.profile as any).brand_keywords));
-  }, [auth.profile, brand, keywords]);
+  }, [auth.profile, brand, keywords, workspace]);
 
   useEffect(() => {
     setScope(getEffectiveScope(auth.profile, "research"));
@@ -52,7 +70,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
     setHistoryError("");
     const loadHistory = async () => {
       let query = supabase.from("brand_operations")
-        .select("id, operation_type, brand_name, status, created_at, request_meta, result_meta")
+        .select("id, operation_type, brand_name, status, created_at, request_meta, result_meta, is_baseline")
         .eq("user_id", auth.user!.id)
         .in("operation_type", ["visibility_probe", "social_analysis"])
         .order("created_at", { ascending: false })
@@ -70,7 +88,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
       setHistoryLoading(false);
     });
     return () => { active = false; };
-  }, [view, auth.user?.id, workspaceId]);
+  }, [view, auth.user?.id, workspaceId, historyTick]);
 
   const formatDate = (value: string) => {
     try { return new Date(value).toLocaleString(audienceLanguage === "ar" ? "ar" : audienceLanguage === "ku" ? "ckb" : "en"); }
@@ -105,6 +123,31 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
   const isKurdish = audienceLanguage === "ku";
   const label = (ar: string, en: string, ku: string) => isArabic ? ar : isKurdish ? ku : en;
 
+  const authFetch = async (path: string, body: any) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` }, body: JSON.stringify(body) });
+    return { ok: res.ok, data: await res.json().catch(() => ({})) };
+  };
+  const runDiscovery = async () => {
+    setDiscovering(true); setDiscoveryError("");
+    try {
+      const r = await authFetch("/api/site-discovery", { url: officialWebsite, workspace_id: workspaceId, known_socials: pre?.socials || [] });
+      setDiscovery(r.data.items || []);
+      if (!r.ok) setDiscoveryError(label("تعذّرت قراءة الموقع؛ لم يُخصم أي رصيد.", "Could not read the site; nothing was charged.", "ماڵپەڕ نەخوێندرایەوە؛ هیچ نەبڕدرا."));
+    } finally { setDiscovering(false); }
+  };
+  const exportWorkbook = () => {
+    if (!aiResult?.probe) return;
+    const sheets = buildVisibilityWorkbook(brand, aiResult.probe, audienceLanguage, (k) => ENGINES.find((e: any) => e.key === k)?.name || k);
+    downloadVisibilityWorkbook(`${brand || "Maaroof AI"} — visibility`, sheets, audienceLanguage !== "en");
+  };
+  const setBaseline = async (id: string, on: boolean) => { await authFetch("/api/visibility-baseline", { operation_id: id, baseline: on }); setHistoryTick((x) => x + 1); };
+  const baselineRow = historyRows.find((r) => r.is_baseline && r.operation_type === "visibility_probe");
+  const latestAfterBaseline = baselineRow ? historyRows.find((r) => r.operation_type === "visibility_probe" && r.status !== "failed" && r.id !== baselineRow.id && r.brand_name === baselineRow.brand_name && r.created_at > baselineRow.created_at) : null;
+  const baselineCmp = baselineRow && latestAfterBaseline ? compareToBaseline(snapFromResultMeta(baselineRow.result_meta), snapFromResultMeta(latestAfterBaseline.result_meta)) : null;
+  const statusLabel = (st: string) => st === "verified" ? label("متحققة", "Verified", "پشتڕاستکراوە") : st === "inferred" ? label("مستنتجة", "Inferred", "دەرهێنراو") : label("غير متحققة", "Unverified", "پشتڕاستنەکراوە");
+  const changeLabel = (c: string) => c === "gained" ? label("ظهرت العلامة", "Brand appeared", "دەرکەوت") : c === "lost" ? label("اختفت العلامة", "Brand dropped", "نەما") : c === "same" ? label("بلا تغيير", "No change", "بێ گۆڕان") : label("غير قابل للمقارنة", "Not comparable", "بەراورد ناکرێت");
+
   const tabClass = (active: boolean) =>
     `inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`;
 
@@ -136,6 +179,25 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
         <div className="mt-3">
           <GeoScopeSelector compact toolKey="research" value={scope} onChange={setScope} />
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button type="button" disabled={!/^https?:\/\//.test(officialWebsite) || discovering} onClick={runDiscovery} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted disabled:opacity-50">
+            {discovering ? label("جارٍ قراءة الموقع…", "Reading site…", "خوێندنەوە…") : label("اكتشاف من الموقع الرسمي (مجاني)", "Discover from official site (free)", "دۆزینەوە لە ماڵپەڕ (بێبەرامبەر)")}
+          </button>
+          {aiResult?.probe && <button type="button" onClick={exportWorkbook} className="rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10">{label("تصدير Excel (3 تبويبات)", "Export Excel (3 sheets)", "هەناردەی Excel")}</button>}
+        </div>
+        {discoveryError && <p className="mt-2 text-xs text-destructive">{discoveryError}</p>}
+        {discovery && (
+          <ul className="mt-2 space-y-1 text-xs">
+            {!discovery.length && <li className="text-muted-foreground">{label("لم يُعثر على دليل رسمي في الصفحة الرئيسية.", "No official evidence found on the home page.", "هیچ بەڵگەیەک نەدۆزرایەوە.")}</li>}
+            {discovery.map((d, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] ${d.status === "verified" ? "border-primary/50 text-primary" : "border-border text-muted-foreground"}`}>{statusLabel(d.status)}</span>
+                <span className="text-muted-foreground">{d.kind === "social" ? (d.platform || label("رابط", "Link", "بەستەر")) : label("فئة", "Category", "پۆل")}</span>
+                {d.kind === "social" ? <a href={d.value} target="_blank" rel="noreferrer" className="break-all text-primary hover:underline">{d.value}</a> : <span>{d.value}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="mt-2 text-[10px] text-muted-foreground">
           {label(
             "لغة الجمهور هي نفسها لغة مخرجات التقرير في هذا الإعداد. النطاق الجغرافي مستقل عنها، ولا تُستنتج دولة من اللغة.",
@@ -230,6 +292,14 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
               ) : <p className="mt-2 text-xs text-muted-foreground">{label("لا يوجد سجل اجتماعي بعد.", "No social search history yet.", "هێشتا مێژووی گەڕانی کۆمەڵایەتی نییە.")}</p>}
             </div>
           </div>
+          {baselineCmp && (
+            <div className="rounded-xl border border-primary/30 bg-card/50 p-4 text-xs">
+              <div className="text-sm font-semibold">{label("مقارنة بخط الأساس", "Compared with baseline", "بەراورد لەگەڵ هێڵی بنەڕەت")}</div>
+              {baselineCmp.delta != null && <div className="mt-1">{label("تغير معدل الذكر", "Mention rate change", "گۆڕانی ڕێژە")}: {baselineCmp.delta > 0 ? "+" : ""}{baselineCmp.delta}%</div>}
+              <ul className="mt-2 grid gap-1 sm:grid-cols-2">{baselineCmp.engines.map((e) => <li key={e.engine}>{ENGINES.find((x: any) => x.key === e.engine)?.name || e.engine}: {changeLabel(e.change)}</li>)}</ul>
+              <div className="mt-2 text-muted-foreground">{baselineCmp.supportedByNewEvidence ? label(`أدلة جديدة: ${baselineCmp.newEvidence.length} رابط`, `New evidence: ${baselineCmp.newEvidence.length} links`, `بەڵگەی نوێ: ${baselineCmp.newEvidence.length}`) : label("لا توجد أدلة استشهاد جديدة تدعم التغير.", "No new citation evidence supports the change.", "بەڵگەی نوێ نییە.")}</div>
+            </div>
+          )}
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full min-w-[640px] text-left text-xs">
               <thead className="bg-muted/40 text-muted-foreground"><tr>
@@ -239,6 +309,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
                 <th className="p-2">{label("الحالة", "Status", "دۆخ")}</th>
                 <th className="p-2">{label("النتيجة", "Result", "ئەنجام")}</th>
                 <th className="p-2">{label("التاريخ", "Date", "بەروار")}</th>
+                <th className="p-2">{label("خط الأساس (اختياري)", "Baseline (optional)", "هێڵی بنەڕەت")}</th>
               </tr></thead>
               <tbody>
                 {historyRows.map((row) => {
@@ -252,6 +323,7 @@ export function VisibilityIntelligence({ workspaceId = null }: { workspaceId?: s
                     <td className="p-2">{row.status}</td>
                     <td className="p-2 tabular-nums">{resultText}</td>
                     <td className="p-2">{formatDate(row.created_at)}</td>
+                    <td className="p-2">{isAi && row.status !== "failed" ? <button type="button" onClick={() => setBaseline(row.id, !row.is_baseline)} className={`rounded border px-2 py-0.5 text-[10px] ${row.is_baseline ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>{row.is_baseline ? label("خط الأساس ✓", "Baseline ✓", "بنەڕەت ✓") : label("اعتماد كخط أساس", "Set as baseline", "دیاریکردن")}</button> : "—"}</td>
                   </tr>;
                 })}
               </tbody>

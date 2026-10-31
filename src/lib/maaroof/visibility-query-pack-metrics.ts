@@ -22,8 +22,8 @@ export type QueryPackObservation = {
   answer?: string;
   brands?: string[];
   urls?: string[];
-  outcome?: QueryPackOutcome | string;
-  evidence_level?: "verified" | "partially_verified" | "unverified" | "contradictory" | "unknown" | string;
+  outcome?: QueryPackOutcome | string | null;
+  evidence_level?: "verified" | "partially_verified" | "unverified" | "contradictory" | "unknown" | string | null;
   ranked?: boolean;
 };
 
