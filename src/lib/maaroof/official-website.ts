@@ -11,7 +11,7 @@ export function normalizeOfficialWebsite(input: unknown): string | null {
 
   let url: URL;
   try {
-    url = new URL(/^https?:\/\//i.test(raw) ? raw : \`https://\${raw}\`);
+    url = new URL(/^https?:\/\//i.test(raw) ? raw : "https://" + raw);
   } catch {
     return null;
   }
@@ -31,7 +31,7 @@ export function normalizeOfficialWebsite(input: unknown): string | null {
     "home.arpa", "lan", "intranet", "private",
     "nip.io", "sslip.io", "localtest.me", "vcap.me", "xip.io", "lvh.me", "traefik.me", "local.gd",
   ];
-  if (blockedSuffixes.some((suffix) => host === suffix || host.endsWith(\`.\${suffix}\`))) return null;
+  if (blockedSuffixes.some((suffix) => host === suffix || host.endsWith("." + suffix))) return null;
 
   const tld = labels[labels.length - 1];
   if (!/^[a-z]{2,63}$/.test(tld) && !/^xn--[a-z0-9-]{2,59}$/.test(tld)) return null;
