@@ -96,19 +96,37 @@ export function VisibilityPanel({ brand: brandProp, keywords: kwProp, lang: lang
         confidence: "measured",
         sentiment: "not_measured",
         appearance_summary: `${metrics?.answered_engines ?? answers.length}/${metrics?.requested_engines ?? ENGINE_KEYS.length} ${outLang === "en" ? "engines returned usable answers" : outLang === "ku" ? "بزوێنەر وەڵامی بەکارهێنراویان گەڕاندەوە" : "محركات أعادت إجابات قابلة للاستخدام"}. ${outLang === "en" ? "Brand mention rate" : outLang === "ku" ? "ڕێژەی هێنانی ناو" : "معدل ذكر العلامة"}: ${metrics?.mention_rate?.value_pct ?? "—"}%.`,
-        platforms: answers.map((answer: any) => ({
-          name: engineName(answer.engine),
-          mentioned: Boolean(answer.mentioned),
-          why: answer.answer || "",
-          action: answer.reason || "",
-          status: answer.status,
-          provider: answer.provider,
-          gateway_model: answer.gateway_model,
-          sources: answer.sources || [],
-          answer: answer.answer,
-          grounded_answer: answer.grounded_answer,
-          rank: answer.rank,
-        })),
+        platforms: answers.map((answer: any) => {
+          const scenarioLabels: Record<string, string> = {
+            brand_recognition: outLang === "ar" ? "التعرّف على العلامة" : outLang === "ku" ? "ناسینەوەی براند" : "Brand recognition",
+            recommendation: outLang === "ar" ? "التوصية" : outLang === "ku" ? "پێشنیار" : "Recommendation",
+            comparison: outLang === "ar" ? "المقارنة" : outLang === "ku" ? "بەراورد" : "Comparison",
+            fact_verification: outLang === "ar" ? "التحقق من الحقائق" : outLang === "ku" ? "پشتڕاستکردنەوەی زانیاری" : "Fact verification",
+            purchase_intent: outLang === "ar" ? "نية الشراء" : outLang === "ku" ? "مەبەستی کڕین" : "Purchase intent",
+          };
+          const scenarioText = (answer.query_observations || []).map((item: any) => {
+            const verdict = item.outcome || item.evidence_level;
+            return (scenarioLabels[item.kind] || item.kind) + ": " + item.answer + (verdict ? " [" + verdict + "]" : "");
+          }).join("\n\n");
+          const blindLabel = outLang === "ar" ? "الاكتشاف الأعمى" : outLang === "ku" ? "دۆزینەوەی بێ‌ناو" : "Blind discovery";
+          const groundedFallback = scenarioText ? "" : (answer.grounded_answer || "");
+          const fullAnswer = [answer.answer ? blindLabel + ": " + answer.answer : "", groundedFallback, scenarioText].filter(Boolean).join("\n\n");
+          return {
+            name: engineName(answer.engine),
+            mentioned: Boolean(answer.mentioned),
+            why: fullAnswer,
+            action: answer.reason || "",
+            status: answer.status,
+            provider: answer.provider,
+            gateway_model: answer.gateway_model,
+            sources: answer.sources || [],
+            answer: fullAnswer,
+            blind_answer: answer.answer,
+            grounded_answer: answer.grounded_answer,
+            query_observations: answer.query_observations || [],
+            rank: answer.rank,
+          };
+        }),
         recommendations: [],
         sources: (probe.evidence || []).map((item: any) => ({ title: item.title, url: item.url, snippet: "" })),
         sources_used: probe.evidence_source,
