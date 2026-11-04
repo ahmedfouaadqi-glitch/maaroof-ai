@@ -10,7 +10,7 @@
 - Recorded 70 unique package variants representing 69 unique skill names.
 - Removed 10 exact duplicate archive copies from the registry inventory.
 - Preserved both distinct Humanizer variants (3.1.0 and 2.1.1) with separate SHA-256 digests and stable package IDs.
-- Captured original archive name, SHA-256 digest, archive size, file count, reference count, eval-file count and bundled script count.
+- Captured original archive name, SHA-256 digest, uncompressed package bytes, file count, reference count, eval-file count and bundled script count.
 - Added compatibility bindings only to existing `ToolKey` identifiers. No new tools or engines were introduced.
 - Added registry validation for duplicate IDs/digests, digest shape, expected corpus counts, candidate lifecycle, reference-only loading and Humanizer variant preservation.
 - Added unit tests for corpus integrity, variant identity, disabled execution, existing-tool binding and unknown-skill lookup.
