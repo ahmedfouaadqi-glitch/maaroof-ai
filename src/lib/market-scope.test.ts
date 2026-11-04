@@ -33,6 +33,8 @@ describe("sheetsForMarket", () => {
 
 describe("explicit global market", () => {
   it("resolves the global scope without inventing a country", () => {
+    expect(detectMarkets(["Global"]).map((market) => market.code)).toContain("global");
+    expect(detectMarkets(["عالمي"]).map((market) => market.code)).toContain("global");
     expect(marketByCode("global")).toEqual({ code: "global", en: "Global", ar: "عالمي", gl: "world" });
     expect(marketByCode("world")?.code).toBe("global");
     const unlabelled = [{ name: "Master Keywords" }, { name: "Products" }];
