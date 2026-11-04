@@ -86,7 +86,7 @@ export function KeywordIntelligence() {
       const id = typeof window !== "undefined" ? localStorage.getItem(WORKSPACE_KEY) || "" : "";
       if (cancelled || currentRequest !== requestNo) return;
       setWorkspaceId(id);
-      if (!id || !auth.user?.id) {
+      if (!id) {
         setWorkspaceName(c.noWorkspace);
         setBrand(String(p.brand_name || p.entity_name || ""));
         setSite(String(p.website || p.entity_website || ""));
@@ -95,17 +95,29 @@ export function KeywordIntelligence() {
         setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(p.language) ? p.language : l) as ContentLanguage);
         return;
       }
+      if (!auth.user?.id) {
+        setWorkspaceName(c.noWorkspace);
+        setBrand("");
+        setSite("");
+        setCategory("");
+        setMarket("");
+        setComps("");
+        setContentLanguage(l);
+        return;
+      }
       const { data, error } = await supabase.from("workspaces")
         .select("id,name,brand_url,brand_summary,country,city,language,profile,entity_truth_card,keywords")
         .eq("id", id).eq("owner_id", auth.user.id).maybeSingle();
       if (cancelled || currentRequest !== requestNo) return;
       if (error || !data) {
+        // A selected workspace must never silently inherit the account's older profile values.
         setWorkspaceName(c.noWorkspace);
-        setBrand(String(p.brand_name || p.entity_name || ""));
-        setSite(String(p.website || p.entity_website || ""));
-        setCategory(String(p.specialty || p.sector || ""));
-        setMarket(String(p.hq_country || ""));
-        setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(p.language) ? p.language : l) as ContentLanguage);
+        setBrand("");
+        setSite("");
+        setCategory("");
+        setMarket("");
+        setComps("");
+        setContentLanguage(l);
         return;
       }
       setWorkspaceName(data.name);
@@ -118,8 +130,9 @@ export function KeywordIntelligence() {
       setBrand(String(truth.entity_name || profile.brand_name || data.name || ""));
       setSite(String(data.brand_url || truth.website_url || profile.website || ""));
       setCategory(String(truth.sector || data.brand_summary || profile.sector || ""));
+      // The active workspace is the source of truth for its market; never fall back to profile.hq_country.
       setMarket([data.city, data.country].filter(Boolean).join(", "));
-      setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(data.language) ? data.language : (["ar", "en", "ku", "fr", "de", "es"].includes(p.language) ? p.language : l)) as ContentLanguage);
+      setContentLanguage((["ar", "en", "ku", "fr", "de", "es"].includes(data.language) ? data.language : l) as ContentLanguage);
     }
     void loadWorkspace();
     const onStorage = (event: StorageEvent) => {
