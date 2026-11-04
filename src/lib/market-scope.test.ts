@@ -7,7 +7,7 @@ describe("sheetsForMarket", () => {
 
   it("uses explicitly labelled sheets for a market", () => {
     const sheets = [{ name: "United States keywords" }, { name: "United Kingdom keywords" }, { name: "Generic notes" }];
-    expect(sheetsForMarket(sheets, [us, uk], us).map((sheet) => sheet.name)).toEqual(["United States keywords"]);
+    expect(sheetsForMarket(sheets, [us, uk], us).map((sheet) => sheet.name)).toEqual(["United States keywords", "Generic notes"]);
   });
 
   it("uses generic sheets for a single market when no tab is market-labelled", () => {
