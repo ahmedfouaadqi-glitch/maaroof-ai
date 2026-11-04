@@ -13,7 +13,7 @@ export interface ExternalSkillPackage {
   source: {
     archiveName: string;
     sha256: string;
-    archiveBytes: number;
+    uncompressedBytes: number;
     fileCount: number;
     importedAt: "2026-11-04";
     licenseFiles: string[];
@@ -158,7 +158,6 @@ const TOOL_BINDINGS = {
   "humanizer": ["suggest", "geo_rewrite"],
   "keyword-research": ["keyword_intelligence", "research"],
   "knowledge-synthesis": ["research", "known"],
-  "kpi-dashboard-design": ["analyze"],
   "legal-risk-assessment": ["analyze", "research", "feasibility"],
   "listicle-blog-writer": ["suggest", "research", "keyword_intelligence", "compare"],
   "market-research-reports": ["research", "known", "compare", "feasibility", "bizdev"],
@@ -184,7 +183,7 @@ const TOOL_BINDINGS = {
   "war-council": ["maaroof"],
   "writing-prds": ["maaroof"],
   "youtube-video-research": ["research"]
-} satisfies Record<string, ToolKey[]>;
+} as const satisfies Record<string, readonly ToolKey[]>;
 
 const HIGH_RISK = new Set(["legal-risk-assessment","secops-hunt","risk-metrics-calculation","backtesting-frameworks","market-sizing-analysis","pricing-strategy"]);
 const MODERATE_RISK = new Set(["account-research","competitive-intelligence","churn-prevention","market-research-reports","seo-audit","seo-competitor-analysis","seo-content-audit","scrapling","agent-reach"]);
@@ -207,7 +206,7 @@ export const EXTERNAL_SKILL_PACKAGES: ExternalSkillPackage[] = RAW_PACKAGES.map(
     source: {
       archiveName: raw.archive,
       sha256: raw.sha,
-      archiveBytes: raw.bytes,
+      uncompressedBytes: raw.bytes,
       fileCount: raw.files,
       importedAt: "2026-11-04",
       licenseFiles: raw.licenses,
