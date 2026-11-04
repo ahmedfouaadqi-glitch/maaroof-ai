@@ -40,4 +40,4 @@ Bundled scripts were counted but not executed. External providers, credentials, 
 
 ## Verification
 
-Automated test cases were added but have not been run in this GitHub-only editing session. A local CI/test run is required before merge. Static registry checks should pass only after the test suite is executed in the repository environment.
+GitHub Actions workflow run #1347 (Validate Maaroof) completed successfully. The unit-test step and production-build step both passed for the pull-request head commit. No live-provider, paid API, database-isolation or production integration tests were run.
