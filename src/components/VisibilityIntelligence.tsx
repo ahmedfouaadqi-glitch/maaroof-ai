@@ -17,8 +17,9 @@ function workspacePrefill(ws: any) {
   const card = ws?.entity_truth_card && typeof ws.entity_truth_card === "object" ? ws.entity_truth_card : {};
   const pick = (...k: string[]) => { for (const x of k) { const v = card[x]; if (typeof v === "string" && v.trim()) return v.trim(); } return ""; };
   const kw = Array.isArray(ws?.keywords) ? ws.keywords.join(", ") : String(ws?.keywords || "");
+  const cardKeywords = Array.isArray(card.keywords) ? card.keywords.join(", ") : String(card.keywords || "");
   const socials = Object.values(card.social_links || card.socials || {}).concat(Array.isArray(card.social_urls) ? card.social_urls : []).filter((x: any) => typeof x === "string") as string[];
-  return { brand: pick("entity_name", "brand_name") || String(ws?.name || ""), site: String(ws?.brand_url || "") || pick("website_url", "official_url"), keywords: kw || pick("keywords"), socials };
+  return { brand: pick("entity_name", "brand_name") || String(ws?.name || ""), site: String(ws?.brand_url || "") || pick("website_url", "official_url"), keywords: kw || cardKeywords || pick("keywords"), socials };
 }
 
 type View = "ai" | "social" | "summary" | "history";
@@ -53,35 +54,37 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
-  // Keep all visibility inputs synchronized with the active workspace, including
-  // when its data arrives after the tool has mounted or the user switches workspaces.
+  // Keep visibility inputs synchronized with the active workspace, including when
+  // its data arrives after mount or the user switches workspaces. Do not depend on
+  // editable input state here: manual edits must not be overwritten on every keystroke.
   useEffect(() => {
-    if (workspace) {
-      const next = workspacePrefill(workspace);
-      setBrand(next.brand);
-      setOfficialWebsite(next.site);
-      setKeywords(next.keywords);
+    if (!workspace) return;
+    const next = workspacePrefill(workspace);
+    setBrand(next.brand);
+    setOfficialWebsite(next.site);
+    setKeywords(next.keywords);
 
-      const card = workspace?.entity_truth_card && typeof workspace.entity_truth_card === "object"
-        ? workspace.entity_truth_card
-        : {};
-      const rawCountry = [
-        workspace?.country,
-        card.country,
-        card.country_name,
-        card.hq_country,
-      ].find((value) => typeof value === "string" && value.trim());
-      const country = String(rawCountry || "").trim();
-      const isGlobal = /^(global|world|worldwide|عالمي|العالم)$/i.test(country);
-      // An unspecified or explicitly global workspace is worldwide; never inherit
-      // the account profile's geo_scope while a workspace is active.
-      setScope(!country || isGlobal ? { scope: "world" } : { scope: "country", country });
-      return;
-    }
+    const card = workspace?.entity_truth_card && typeof workspace.entity_truth_card === "object"
+      ? workspace.entity_truth_card
+      : {};
+    const rawCountry = [
+      workspace?.country,
+      card.country,
+      card.country_name,
+      card.hq_country,
+    ].find((value) => typeof value === "string" && value.trim());
+    const country = String(rawCountry || "").trim();
+    const isGlobal = /\b(global|world|worldwide)\b|عالمي|العالم/i.test(country);
+    // An unspecified or explicitly global workspace is worldwide; never inherit
+    // the account profile's geo_scope while a workspace is active.
+    setScope(!country || isGlobal ? { scope: "world" } : { scope: "country", country });
+  }, [workspace, workspaceId]);
 
+  useEffect(() => {
+    if (workspace) return;
     if (!brand && (auth.profile as any)?.brand_name) setBrand(String((auth.profile as any).brand_name));
     if (!keywords && (auth.profile as any)?.brand_keywords) setKeywords(String((auth.profile as any).brand_keywords));
-  }, [workspace, workspaceId, auth.profile, brand, keywords]);
+  }, [auth.profile, brand, keywords, workspace]);
 
   useEffect(() => {
     if (workspace) return;
