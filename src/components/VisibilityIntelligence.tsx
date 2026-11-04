@@ -53,15 +53,40 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
+  // Keep all visibility inputs synchronized with the active workspace, including
+  // when its data arrives after the tool has mounted or the user switches workspaces.
   useEffect(() => {
-    if (workspace) return;
+    if (workspace) {
+      const next = workspacePrefill(workspace);
+      setBrand(next.brand);
+      setOfficialWebsite(next.site);
+      setKeywords(next.keywords);
+
+      const card = workspace?.entity_truth_card && typeof workspace.entity_truth_card === "object"
+        ? workspace.entity_truth_card
+        : {};
+      const rawCountry = [
+        workspace?.country,
+        card.country,
+        card.country_name,
+        card.hq_country,
+      ].find((value) => typeof value === "string" && value.trim());
+      const country = String(rawCountry || "").trim();
+      const isGlobal = /^(global|world|worldwide|عالمي|العالم)$/i.test(country);
+      // An unspecified or explicitly global workspace is worldwide; never inherit
+      // the account profile's geo_scope while a workspace is active.
+      setScope(!country || isGlobal ? { scope: "world" } : { scope: "country", country });
+      return;
+    }
+
     if (!brand && (auth.profile as any)?.brand_name) setBrand(String((auth.profile as any).brand_name));
     if (!keywords && (auth.profile as any)?.brand_keywords) setKeywords(String((auth.profile as any).brand_keywords));
-  }, [auth.profile, brand, keywords, workspace]);
+  }, [workspace, workspaceId, auth.profile, brand, keywords]);
 
   useEffect(() => {
+    if (workspace) return;
     setScope(getEffectiveScope(auth.profile, "research"));
-  }, [auth.profile]);
+  }, [auth.profile, workspace]);
 
   useEffect(() => {
     if (view !== "history" || !auth.user?.id) return;
