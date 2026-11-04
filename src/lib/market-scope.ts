@@ -36,6 +36,7 @@ const MARKET_LOOKUP: Array<Market & { rx: RegExp }> = [
 /** Markets found in the given texts, in first-seen order. Empty when none is named. */
 export function detectMarkets(texts: string[]): Market[] {
   const out: Market[] = [];
+  if (texts.some((text) => /\\b(global|worldwide|world)\\b|عالمي|العالم/i.test(String(text || "")))) out.push(GLOBAL_MARKET);
   for (const t of texts) for (const m of MARKET_LOOKUP) if (m.rx.test(String(t || "")) && !out.some((o) => o.code === m.code)) out.push({ code: m.code, en: m.en, ar: m.ar, gl: m.gl });
   return out;
 }
