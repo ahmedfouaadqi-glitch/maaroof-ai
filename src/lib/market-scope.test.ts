@@ -15,10 +15,19 @@ describe("sheetsForMarket", () => {
     expect(sheetsForMarket(sheets, [us], us)).toEqual(sheets);
   });
 
-  it("does not duplicate generic sheets across multiple markets", () => {
-    const sheets = [{ name: "Keyword research" }];
-    expect(sheetsForMarket(sheets, [us, uk], us)).toEqual([]);
-    expect(sheetsForMarket(sheets, [us, uk], uk)).toEqual([]);
+  it("shares generic sheets across multiple markets without leaking explicitly labelled sheets", () => {
+    const generic = { name: "Keyword research" };
+    const usSheet = { name: "United States keywords" };
+    const ukSheet = { name: "United Kingdom keywords" };
+    const sheets = [generic, usSheet, ukSheet];
+    expect(sheetsForMarket(sheets, [us, uk], us)).toEqual([generic, usSheet]);
+    expect(sheetsForMarket(sheets, [us, uk], uk)).toEqual([generic, ukSheet]);
+  });
+
+  it("uses a generic site-keyword sheet for each market", () => {
+    const siteKeywords = { name: "كلمات الموقع" };
+    expect(sheetsForMarket([siteKeywords], [us, uk], us)).toEqual([siteKeywords]);
+    expect(sheetsForMarket([siteKeywords], [us, uk], uk)).toEqual([siteKeywords]);
   });
 });
 
