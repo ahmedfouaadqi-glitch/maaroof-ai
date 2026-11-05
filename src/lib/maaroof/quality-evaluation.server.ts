@@ -74,6 +74,66 @@ export const TOOL_QUALITY_RUBRICS: Record<string, QualityCriterion[]> = {
     { id: "terminology_consistency", label: "Terminology consistency", evidenceNeeded: "Approved glossary and terminology checks" },
     { id: "locale_fit", label: "Locale fit", evidenceNeeded: "Locale-specific linguistic review" },
   ],
+  bizdev: [
+    { id: "opportunity_evidence", label: "Opportunity evidence", evidenceNeeded: "Traceable market and partner evidence" },
+    { id: "strategic_fit", label: "Strategic fit", evidenceNeeded: "Declared business goals and fit criteria" },
+    { id: "actionability", label: "Actionability", evidenceNeeded: "Owners, prerequisites, costs and measurable next steps" },
+  ],
+  brand_boost: [
+    { id: "brand_consistency", label: "Brand consistency", evidenceNeeded: "Approved brand identity and content constraints" },
+    { id: "evidence_traceability", label: "Evidence traceability", evidenceNeeded: "Traceable sources for claims and observed outcomes" },
+    { id: "execution_readiness", label: "Execution readiness", evidenceNeeded: "Validated deliverables, permissions and approval status" },
+  ],
+  company_email: [
+    { id: "recipient_relevance", label: "Recipient relevance", evidenceNeeded: "Verified recipient role and company context" },
+    { id: "claim_accuracy", label: "Claim accuracy", evidenceNeeded: "Verified facts and claims about sender and recipient" },
+    { id: "message_quality", label: "Message quality", evidenceNeeded: "Message rubric and human review" },
+  ],
+  applied_ranking: [
+    { id: "priority_validity", label: "Priority validity", evidenceNeeded: "Impact/effort inputs and explicit prioritisation method" },
+    { id: "recommendation_traceability", label: "Recommendation traceability", evidenceNeeded: "Links from recommendations to validated findings" },
+    { id: "expected_impact", label: "Expected impact", evidenceNeeded: "Measured baseline and post-change outcomes" },
+  ],
+  geo_strategist: [
+    { id: "strategy_evidence", label: "Strategy evidence", evidenceNeeded: "Current observations and cited market evidence" },
+    { id: "roadmap_feasibility", label: "Roadmap feasibility", evidenceNeeded: "Owners, resources, dependencies and timeline" },
+    { id: "geo_alignment", label: "GEO alignment", evidenceNeeded: "Versioned GEO criteria and observed engine evidence" },
+  ],
+  competitor_monitor: [
+    { id: "change_detection", label: "Change detection", evidenceNeeded: "Timestamped before/after source snapshots" },
+    { id: "alert_precision", label: "Alert precision", evidenceNeeded: "Reviewed true-positive and false-positive alert labels" },
+    { id: "coverage", label: "Monitoring coverage", evidenceNeeded: "Declared watchlist and successful observation log" },
+  ],
+  geo_rewrite: [
+    { id: "meaning_preservation", label: "Meaning preservation", evidenceNeeded: "Source-to-rewrite claim and meaning comparison" },
+    { id: "geo_structure", label: "GEO structure", evidenceNeeded: "Versioned content structure checks" },
+    { id: "factual_integrity", label: "Factual integrity", evidenceNeeded: "Claim-level verification against source content" },
+  ],
+  maaroof: [
+    { id: "plan_coverage", label: "Plan coverage", evidenceNeeded: "Requested outcomes mapped to accepted execution steps" },
+    { id: "tool_selection", label: "Tool selection", evidenceNeeded: "Existing capability-to-tool mapping and task fit" },
+    { id: "end_to_end_completion", label: "End-to-end completion", evidenceNeeded: "Explicit completion checks for requested deliverables" },
+  ],
+  "agent.command": [
+    { id: "command_alignment", label: "Command alignment", evidenceNeeded: "Command-to-user-intent validation" },
+    { id: "permission_safety", label: "Permission safety", evidenceNeeded: "Workspace permissions and approval audit" },
+    { id: "result_verification", label: "Result verification", evidenceNeeded: "Observed result and expected-state comparison" },
+  ],
+  "agent.run_targets": [
+    { id: "target_coverage", label: "Target coverage", evidenceNeeded: "Declared target list and completion states" },
+    { id: "execution_safety", label: "Execution safety", evidenceNeeded: "Approval and side-effect audit" },
+    { id: "outcome_validity", label: "Outcome validity", evidenceNeeded: "Expected-versus-observed target outcomes" },
+  ],
+  "agent.visibility": [
+    { id: "measurement_validity", label: "Measurement validity", evidenceNeeded: "Raw engine observations and reproducible query scope" },
+    { id: "engine_coverage", label: "Engine coverage", evidenceNeeded: "Expected-versus-observed engine matrix" },
+    { id: "citation_readiness", label: "Citation readiness", evidenceNeeded: "Captured citations with source metadata" },
+  ],
+  teach_space: [
+    { id: "extraction_fidelity", label: "Knowledge extraction fidelity", evidenceNeeded: "Source-to-extracted-fact traceability" },
+    { id: "scope_isolation", label: "Knowledge scope isolation", evidenceNeeded: "Workspace and permission isolation tests" },
+    { id: "retrieval_relevance", label: "Knowledge retrieval relevance", evidenceNeeded: "Validated retrieval test set and relevance labels" },
+  ],
 };
 
 const DEFAULT_RUBRIC: QualityCriterion[] = [
