@@ -117,8 +117,8 @@ export function validateReasoningPlan(
     const dependencies = Array.isArray(raw.depends_on) ? raw.depends_on : [];
     const validDependencies: string[] = [];
     for (const dependency of dependencies) {
-      if (typeof dependency === "string" && availablePriorTools.has(dependency) && !validDependencies.includes(dependency)) {
-        validDependencies.push(dependency);
+      if (typeof dependency === "string" && availablePriorTools.has(dependency)) {
+        if (!validDependencies.includes(dependency)) validDependencies.push(dependency);
       } else if (typeof dependency === "string") {
         rejectedDependencies.push(dependency);
       }
