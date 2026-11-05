@@ -99,7 +99,7 @@ function pairedQuality(
 ) {
   const values = pairs
     .map(({ baseline, enhanced }) => ({ before: baseline.quality?.[key], after: enhanced.quality?.[key] }))
-    .filter((x) => validQuality(x.before) && validQuality(x.after));
+    .filter((x): x is { before: ComparativeQuality; after: ComparativeQuality } => validQuality(x.before) && validQuality(x.after));
   if (!values.length) return { sampleSize: 0, baselineMean: null, enhancedMean: null, absoluteDelta: null, sources: [] as string[] };
   const before = values.reduce((sum, x) => sum + x.before.value, 0) / values.length;
   const after = values.reduce((sum, x) => sum + x.after.value, 0) / values.length;
