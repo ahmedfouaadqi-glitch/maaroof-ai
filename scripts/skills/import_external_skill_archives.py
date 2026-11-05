@@ -37,13 +37,13 @@ def sha256_file(path: Path) -> str:
 
 
 def safe_member_name(raw: str) -> str:
-    normalized = raw.replace("\\\\", "/")
+    normalized = raw.replace("\\", "/")
     path = PurePosixPath(normalized)
     if not normalized or normalized.startswith("/") or re.match(r"^[A-Za-z]:", normalized):
         raise ImportRejected(f"absolute_or_empty_path:{raw}")
     if any(part in ("", ".", "..") for part in normalized.split("/")):
         raise ImportRejected(f"path_traversal_or_ambiguous_path:{raw}")
-    if "\\x00" in normalized:
+    if "\x00" in normalized:
         raise ImportRejected(f"nul_in_path:{raw}")
     return path.as_posix()
 
