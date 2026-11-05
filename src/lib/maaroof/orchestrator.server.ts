@@ -35,6 +35,7 @@ import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
+import { buildExecutionEvidencePack } from "./execution-evidence-pack";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -1419,7 +1420,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         try {
           const ref = await call("reflection", [
             { role: "system", content: effectivePrompt },
-            { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
+            { role: "user", content: `Progress so far:\n${buildExecutionEvidencePack(ctx.goal, results, { maxChars: 4200, maxItems: 8, perItemChars: 700 }).text}\n\nShould we continue, adjust, or stop? Reply briefly.` },
           ]);
           totalUsd += ref.usd; totalTokens += ref.tokens;
           await ctx.emit("reflection", { text: sanitizeReflection(ref.text) });
@@ -1447,11 +1448,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const trustInstruction = trustEnabled
       ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
       : "";
+    const finalEvidencePack = buildExecutionEvidencePack(ctx.goal, results, { maxChars: 8500, maxItems: 14, perItemChars: 1500 });
+    await ctx.emit("evidence_pack", { included: finalEvidencePack.included, omitted: finalEvidencePack.omitted, duplicateCount: finalEvidencePack.duplicateCount, successful: finalEvidencePack.successful, failed: finalEvidencePack.failed });
     let finalResp: { text: string; tokens: number; usd: number };
     try {
       finalResp = await call("final", [
       { role: "system", content: effectivePrompt },
-      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
+      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${finalEvidencePack.text}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown. Distinguish tool outputs, external sources, assumptions and limitations. Do not describe a tool result as independently verified unless its output contains independent source evidence.${trustInstruction}` },
     ]);
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
     } catch {
