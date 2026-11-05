@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { evaluateRunQuality } from "./quality-evaluation.server";
+import { evaluateRunQuality, TOOL_QUALITY_RUBRICS } from "./quality-evaluation.server";
+import { TOOL_CATALOG } from "@/lib/tool-catalog";
 
 describe("phase 8 quality evaluation", () => {
+  it("defines a dedicated rubric for every existing catalogue entry without changing the catalogue", () => {
+    for (const tool of TOOL_CATALOG) {
+      expect(TOOL_QUALITY_RUBRICS[tool.key], tool.key).toBeDefined();
+    }
+  });
+
   it("separates observed tool execution from model-estimated and historical quality", () => {
     const report = evaluateRunQuality("Research a brand", [
       { tool: "research", ok: true, output: { sources: ["https://example.com/a"] } },
