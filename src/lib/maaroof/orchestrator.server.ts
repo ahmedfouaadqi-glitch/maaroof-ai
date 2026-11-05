@@ -34,6 +34,7 @@ import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 import { buildExecutionBatches } from "./execution-scheduler";
+import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -550,7 +551,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await ctx.emit("user_history", { tools: Array.from(seen).slice(0, 8) });
       }
     } catch {}
-    const planUserMsg = mciHintLine + historyLine +
+    const reasoningContext = classifyReasoningIntent(ctx.goal);
+    const reasoningGuidance = buildReasoningGuidance(reasoningContext);
+    await ctx.emit("reasoning_context", {
+      primaryIntent: reasoningContext.primaryIntent,
+      intents: reasoningContext.intents,
+      risk: reasoningContext.risk,
+      evidenceRequired: reasoningContext.evidenceRequired,
+      externalActionRequested: reasoningContext.externalActionRequested,
+      signals: reasoningContext.signals,
+    });
+    const planUserMsg = reasoningGuidance + "\\n\\n" + mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "...", "depends_on": ["<prior tool key whose output is required>"] } ], "final_answer_hint": "..." }. Set depends_on only when the step consumes output from an earlier step; use only tool keys that already appear earlier in the plan. Independent steps may omit it.\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     let planResp: { text: string; tokens: number; usd: number };
@@ -568,15 +579,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    let steps: PlanStep[] = Array.isArray(planObj.steps)
-      ? planObj.steps.slice(0, MAX_STEPS).map((step) => ({
-          ...step,
-          // Treat planner output as untrusted: dependencies must be simple tool keys.
-          depends_on: Array.isArray((step as any)?.depends_on)
-            ? (step as any).depends_on.filter((dep: unknown): dep is string => typeof dep === "string").slice(0, 12)
-            : [],
-        }))
-      : [];
+    // Planner output is untrusted: admit only existing callable tools and dependencies on earlier valid steps.
+    const initialPlanValidation = validateReasoningPlan(
+      Array.isArray(planObj.steps) ? planObj.steps : [],
+      reasoningContext.intents,
+      MAX_STEPS,
+    );
+    let steps: PlanStep[] = initialPlanValidation.steps.map((step) => ({ ...step }));
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
     if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
@@ -615,6 +624,19 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         if (replaceIndex >= 0) steps[replaceIndex] = requiredStep;
       }
     }
+    // Final validation also checks steps added by deterministic guarantees and user selections.
+    const finalPlanValidation = validateReasoningPlan(
+      steps,
+      reasoningContext.intents,
+      Math.max(MAX_STEPS, steps.length),
+    );
+    steps = finalPlanValidation.steps.map((step) => ({ ...step }));
+    await ctx.emit("reasoning_review", {
+      rejectedTools: [...new Set([...initialPlanValidation.rejectedTools, ...finalPlanValidation.rejectedTools])],
+      rejectedDependencies: [...new Set([...initialPlanValidation.rejectedDependencies, ...finalPlanValidation.rejectedDependencies])],
+      coverageWarnings: finalPlanValidation.coverageWarnings,
+      acceptedSteps: steps.length,
+    });
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
