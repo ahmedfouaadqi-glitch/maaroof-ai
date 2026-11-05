@@ -93,7 +93,7 @@ function hasUsableOutput(output: unknown): boolean {
 function collectUrls(value: unknown, found = new Set<string>(), depth = 0): Set<string> {
   if (depth > 6 || value == null) return found;
   if (typeof value === "string") {
-    for (const match of value.matchAll(/https?:\/\/[^\s"'<>\\])}]+/g)) found.add(match[0].replace(/[.,;]+$/, ""));
+    for (const match of value.matchAll(/https?:\/\/[^\s"'<>]+/g)) found.add(match[0].replace(/[.,;)}\]]+$/, ""));
   } else if (Array.isArray(value)) {
     for (const item of value.slice(0, 200)) collectUrls(item, found, depth + 1);
   } else if (typeof value === "object") {
