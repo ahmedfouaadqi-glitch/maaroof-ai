@@ -71,11 +71,12 @@ export function classifyReasoningIntent(goal: string): ReasoningContext {
   const text = String(goal || "").trim();
   const intents = INTENT_RULES.filter((rule) => matchesAny(text, rule.patterns)).map((rule) => rule.intent);
   const resolved = intents.length ? intents : ["general" as const];
-  const highRisk = /\b(?:legal advice|lawsuit|medical diagnosis|treatment|security scan|penetration test|invest money|send email|publish|delete account|transfer funds)\b/i.test(text)
-    || /استشارة قانونية|تشخيص طبي|علاج|فحص أمني|اختبار اختراق|استثمر|أرسل البريد|انشر|احذف الحساب|حوّل الأموال/i.test(text);
-  const moderateRisk = resolved.some((intent) => ["brand_visibility", "research", "competitive_intelligence", "business_strategy", "social_analysis"].includes(intent));
   const externalActionRequested = /\b(?:publish|send|submit|delete|update|create account|post publicly|launch campaign)\b/i.test(text)
     || /انشر|أرسل|ارسِل|إرسال|احذف|حدّث|تحديث|أطلق الحملة|نشر علني/i.test(text);
+  const highRisk = externalActionRequested
+    || /\b(?:legal advice|lawsuit|medical diagnosis|treatment|security scan|penetration test|invest money|transfer funds)\b/i.test(text)
+    || /استشارة قانونية|تشخيص طبي|علاج|فحص أمني|اختبار اختراق|استثمر|احذف الحساب|حوّل الأموال/i.test(text);
+  const moderateRisk = resolved.some((intent) => ["brand_visibility", "research", "competitive_intelligence", "business_strategy", "social_analysis"].includes(intent));
   const evidenceRequired = resolved.some((intent) => ["research", "competitive_intelligence", "business_strategy", "brand_visibility", "social_analysis"].includes(intent))
     || highRisk;
   const signalText = text.toLowerCase();
