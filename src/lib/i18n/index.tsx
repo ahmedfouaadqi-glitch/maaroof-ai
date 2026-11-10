@@ -18,7 +18,7 @@ export const ADDON_KEY_BY_NAME: Record<string, string> = {
 };
 
 export function normalizeLang(v: unknown): Lang {
-  return v === "en" || v === "ku" ? v : "ar";
+  return v === "ar" || v === "ku" ? v : "en";
 }
 
 /** Framework-free lookup usable on the server (API routes, exports, notifications). */
