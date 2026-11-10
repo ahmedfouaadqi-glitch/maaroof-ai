@@ -36,6 +36,7 @@ const MARKET_LOOKUP: Array<Market & { rx: RegExp }> = [
 /** Markets found in the given texts, in first-seen order. Empty when none is named. */
 export function detectMarkets(texts: string[]): Market[] {
   const out: Market[] = [];
+  if (texts.some((text) => /\b(global|worldwide|world)\b|عالمي|العالم/i.test(String(text || "")))) out.push(GLOBAL_MARKET);
   for (const t of texts) for (const m of MARKET_LOOKUP) if (m.rx.test(String(t || "")) && !out.some((o) => o.code === m.code)) out.push({ code: m.code, en: m.en, ar: m.ar, gl: m.gl });
   return out;
 }
@@ -52,12 +53,13 @@ export function sheetMatchesMarket(sheetName: string, m: Market): boolean {
 }
 
 /**
- * Assign generic workbook tabs to a single target market only when no tab is
- * explicitly market-labelled. With multiple markets, never duplicate one tab
- * across markets without evidence.
+ * Keep sheets explicitly assigned to the requested market and share genuinely
+ * generic sheets with every requested market. A sheet labelled for another
+ * market is never treated as generic or leaked across market boundaries.
  */
 export function sheetsForMarket<T extends { name: string }>(sheets: T[], markets: Market[], market: Market): T[] {
-  const matched = sheets.filter((sheet) => sheetMatchesMarket(sheet.name, market));
-  if (matched.length > 0 || markets.length !== 1) return matched;
-  return sheets;
+  return sheets.filter((sheet) =>
+    sheetMatchesMarket(sheet.name, market) ||
+    !markets.some((candidate) => sheetMatchesMarket(sheet.name, candidate)),
+  );
 }

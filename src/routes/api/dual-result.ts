@@ -209,6 +209,8 @@ export const Route = createFileRoute("/api/dual-result")({
         const { sheetsForMarket: sheetsForTargetMarket } = await import("@/lib/market-scope");
         const keywordSamplesByMarket: Record<string, string[]> = {};
         for (const market of markets.slice(0, 5)) {
+          // The same market resolver is used by engine samples, clusters, and live SERP below:
+          // generic tabs (including site-extracted keywords) are shared; market-labelled tabs stay scoped.
           const targetSheets = sheetsForTargetMarket(sheets, markets, market).filter((sheet: any) => !/negative|سلبي/i.test(sheet.name));
           const orderedSheets = [
             ...targetSheets.filter((sheet: any) => /winner|winning|رابح|رابحة/i.test(sheet.name)),
