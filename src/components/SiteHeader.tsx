@@ -53,7 +53,7 @@ export function SiteHeader() {
           <div className="leading-tight min-w-0">
             <div className="truncate font-display text-sm font-bold sm:text-base">{t("brand")}</div>
             <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-              formerly GEO-Iraq
+              GEO AGENCY
             </div>
             <div className="hidden truncate text-[10px] uppercase tracking-widest text-muted-foreground sm:block">{t("ecosystem")}</div>
           </div>

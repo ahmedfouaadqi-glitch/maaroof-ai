@@ -51,7 +51,7 @@ export type ExportPayload = {
 };
 
 const BRAND = "MAAROOF Ai";
-const PREVIOUS_BRAND = "formerly GEO-Iraq";
+const PREVIOUS_BRAND = "GEO AGENCY";
 const SITE = "maaroofai.com";
 const SITE_URL = "https://maaroofai.com";
 const LOGO_URL = "https://maaroofai.com/icon-512.png";
@@ -410,9 +410,9 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
   * { box-sizing: border-box; }
   p, li, td, th, h1, h2, h3, .subtitle { unicode-bidi: plaintext; }
   body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#0f172a; margin:0; padding: 0 8px; line-height: 1.6; }
-  header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #1e40af; margin-bottom: 18px; }
+  header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #F5B800; margin-bottom: 18px; }
   .brand-text { flex:1; }
-  .brand-name { font-size: 22px; font-weight: 800; color:#0f2454; letter-spacing: .3px; }
+  .brand-name { font-size: 22px; font-weight: 800; color:#0A0A0C; letter-spacing: .3px; }
   .brand-prev { font-size: 10px; font-weight: 600; color:#94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-top: 2px; }
   .brand-sub { font-size: 11px; color:#64748b; margin-top: 2px; }
   .meta { font-size: 11px; color:#64748b; }
@@ -432,7 +432,7 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
   .summary-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:8px 0 14px; }
   .summary-metric { border:1px solid #dbe4f0; border-radius:8px; padding:8px; background:#fff; min-width:0; }
   .summary-metric span { display:block; font-size:9px; color:#64748b; }
-  .summary-metric strong { display:block; font-size:19px; color:#0f2454; overflow-wrap:anywhere; }
+  .summary-metric strong { display:block; font-size:19px; color:#0A0A0C; overflow-wrap:anywhere; }
   .executive-summary h3 { margin:12px 0 5px; font-size:11px; color:#334155; }
   table.summary-table { font-size:9px; margin-bottom:8px; }
   table.summary-table th { background:#eef2ff; color:#312e81; text-align:${dir === "rtl" ? "right" : "left"}; padding:5px; border:1px solid #dbe4f0; }
@@ -444,7 +444,7 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
   .audit-card { border:1px solid #dbe4f0; border-radius:11px; padding:10px; break-inside:avoid; page-break-inside:avoid; background:#fff; }
   .audit-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .audit-card-identity { min-width:0; flex:1; }
-  .audit-card-title { font-size:11px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; color:#0f2454; }
+  .audit-card-title { font-size:11px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; color:#0A0A0C; }
   .audit-card-subtitle { color:#64748b; font-size:9px; margin-top:3px; }
   .audit-status { display:inline-block; margin-top:5px; padding:2px 6px; border-radius:999px; font-size:8px; background:#eef2ff; color:#3730a3; }
   .audit-score { flex-shrink:0; font-weight:800; font-size:17px; text-align:center; min-width:52px; border-radius:8px; padding:5px; background:#f1f5f9; color:#334155; }
@@ -552,7 +552,7 @@ export async function exportToExcel(payload: ExportPayload) {
       ws.mergeCells(1, 1, 1, Math.max(1, columns.length));
       ws.getRow(1).height = 28;
       ws.getRow(1).font = { name: "Arial", size: 16, bold: true, color: { argb: "FFFFFFFF" } };
-      ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F2454" } };
+      ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0A0A0C" } };
       ws.getRow(2).font = { name: "Arial", size: 11, bold: true, color: { argb: "FF4338CA" } };
       ws.getRow(4).font = { name: "Arial", bold: true, color: { argb: "FFFFFFFF" } };
       ws.getRow(4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4338CA" } };
@@ -588,7 +588,7 @@ export async function exportToExcel(payload: ExportPayload) {
   summarySheet.columns = [{ width: 34 }, { width: 24 }, { width: 34 }, { width: 20 }];
   summarySheet.mergeCells("A1:D1");
   summarySheet.getCell("A1").value = summary.heading;
-  summarySheet.getCell("A1").font = { name: "Arial", size: 20, bold: true, color: { argb: "FF0F2454" } };
+  summarySheet.getCell("A1").font = { name: "Arial", size: 20, bold: true, color: { argb: "FF0A0A0C" } };
   summarySheet.addRow([payload.title]);
   if (payload.subtitle) summarySheet.addRow([payload.subtitle]);
   summarySheet.addRow([UI[lang].generated, new Date().toLocaleString()]);
@@ -625,7 +625,7 @@ export async function exportToExcel(payload: ExportPayload) {
     sheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 72, height: 72 } });
   }
   sheet.mergeCells("B1:D1"); sheet.getCell("B1").value = BRAND;
-  sheet.getCell("B1").font = { name: "Arial", size: 22, bold: true, color: { argb: "FF0F2454" } };
+  sheet.getCell("B1").font = { name: "Arial", size: 22, bold: true, color: { argb: "FF0A0A0C" } };
   sheet.mergeCells("B2:D2"); sheet.getCell("B2").value = PREVIOUS_BRAND;
   sheet.mergeCells("B3:D3"); sheet.getCell("B3").value = `${SITE} · ${ECOSYSTEM}`;
   sheet.mergeCells("B4:D4"); sheet.getCell("B4").value = `${UI[lang].generated}: ${new Date().toLocaleString()}`;
@@ -861,7 +861,7 @@ export async function exportToWord(payload: ExportPayload) {
     const summaryHeader = lang === "en" ? ["Indicator", "Value"] : lang === "ku" ? ["پێوەر", "بەها"] : ["المؤشر", "القيمة"];
     content.push(makeTable(summaryHeader, summary.metrics.map((metric) => [metric.label, metric.value])));
     if (summary.measuredItems.length) {
-      content.push(paragraph(summary.measuredHeading, { bold: true, size: 22, color: "0F2454" }));
+      content.push(paragraph(summary.measuredHeading, { bold: true, size: 22, color: "0A0A0C" }));
       content.push(makeTable(
         [summary.sectionLabel, summary.itemLabel, summary.scoreLabel, summary.statusLabel],
         summary.measuredItems.map((item) => [item.section, item.title, item.score, item.status]),
@@ -872,7 +872,7 @@ export async function exportToWord(payload: ExportPayload) {
       ));
     }
     if (summary.unmeasuredItems.length) {
-      content.push(paragraph(summary.unmeasuredHeading, { bold: true, size: 22, color: "0F2454" }));
+      content.push(paragraph(summary.unmeasuredHeading, { bold: true, size: 22, color: "0A0A0C" }));
       content.push(makeTable(
         [summary.sectionLabel, summary.itemLabel, summary.statusLabel],
         summary.unmeasuredItems.map((item) => [item.section, item.title, item.status]),
@@ -890,7 +890,7 @@ export async function exportToWord(payload: ExportPayload) {
       section.cards.forEach((card) => {
         const scoreText = card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100";
         const cardChildren: Array<InstanceType<typeof Paragraph> | InstanceType<typeof Table>> = [
-          paragraph(card.title, { bold: true, size: 24, color: "0F2454" }),
+          paragraph(card.title, { bold: true, size: 24, color: "0A0A0C" }),
           ...(card.subtitle ? [paragraph(card.subtitle, { size: 18, color: "64748B" })] : []),
           paragraph(cardLabels.score + ": " + scoreText + (card.status ? " · " + card.status : ""), { bold: true, size: 18, color: "4338CA" }),
           ...(card.fields || []).map(([key, value]) => paragraph(String(key) + ": " + String(value), { size: 18, color: "334155" })),
@@ -916,10 +916,10 @@ export async function exportToWord(payload: ExportPayload) {
   const headerChildren = [new Paragraph({
     bidirectional: rtl,
     alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-    border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: "1E40AF", space: 8 } },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: "F5B800", space: 8 } },
     children: [
       ...(logoData ? [new ImageRun({ type: "png", data: dataUrlBytes(logoData), transformation: { width: 52, height: 52 }, altText: { title: BRAND, description: `${BRAND} logo`, name: BRAND } }), new TextRun("  ")] : []),
-      new TextRun({ text: `${BRAND}\n${SITE}`, font: "Arial", bold: true, size: 24, color: "0F2454", break: 1 }),
+      new TextRun({ text: `${BRAND}\n${SITE}`, font: "Arial", bold: true, size: 24, color: "0A0A0C", break: 1 }),
     ],
   })];
   const document = new Document({
@@ -948,7 +948,7 @@ export async function exportToPowerPoint(payload: ExportPayload) {
   const logoData = await optionalLogo(payload);
   const decorate = (slide: ReturnType<typeof pptx.addSlide>) => {
     if (logoData) slide.addImage({ data: logoData, x: 0.28, y: 0.18, w: 0.45, h: 0.45 });
-    slide.addText(`${BRAND} · ${SITE}`, { x: 0.8, y: 0.2, w: 3.2, h: 0.28, fontSize: 9, bold: true, color: "0F2454" });
+    slide.addText(`${BRAND} · ${SITE}`, { x: 0.8, y: 0.2, w: 3.2, h: 0.28, fontSize: 9, bold: true, color: "0A0A0C" });
     slide.addText(identityLine(payload, lang), { x: 5.8, y: 5.3, w: 3.8, h: 0.22, fontSize: 7, align: "right", color: "64748B" });
   };
 
@@ -987,7 +987,7 @@ export async function exportToPowerPoint(payload: ExportPayload) {
         summary.metrics.forEach((metric, index) => {
           const x = 0.4 + index * 2.35;
           slide.addShape(pptx.ShapeType.rect, { x, y: 0.95, w: 2.15, h: 0.83, fill: { color: "F8FAFC" }, line: { color: "D8E1EF", width: 1 } });
-          slide.addText(String(metric.value), { x: x + 0.08, y: 1.05, w: 1.99, h: 0.32, fontSize: 20, bold: true, align: "center", color: "0F2454", fit: "shrink" });
+          slide.addText(String(metric.value), { x: x + 0.08, y: 1.05, w: 1.99, h: 0.32, fontSize: 20, bold: true, align: "center", color: "0A0A0C", fit: "shrink" });
           slide.addText(metric.label, { x: x + 0.08, y: 1.4, w: 1.99, h: 0.25, fontSize: 8, align: "center", color: "64748B", fit: "shrink" });
         });
       }
@@ -1014,7 +1014,7 @@ export async function exportToPowerPoint(payload: ExportPayload) {
           decorate(slide);
           slide.addText(s.heading + (pages.length > 1 ? " (" + (pageIndex + 1) + "/" + pages.length + ")" : ""), { x: 0.4, y: 0.3, w: 9.2, h: 0.55, fontSize: 21, bold: true, color: "4338CA", fit: "shrink" });
           slide.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.0, w: 9.1, h: 4.0, fill: { color: "FFFFFF" }, line: { color: "D8E1EF", width: 1 } });
-          slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0F2454", breakLine: false, valign: "middle", fit: "shrink" });
+          slide.addText(card.title, { x: 0.7, y: 1.2, w: 7.0, h: 0.65, fontSize: 16, bold: true, color: "0A0A0C", breakLine: false, valign: "middle", fit: "shrink" });
           if (card.subtitle) slide.addText(card.subtitle, { x: 0.7, y: 1.82, w: 7.0, h: 0.3, fontSize: 10, color: "64748B", fit: "shrink" });
           slide.addText(card.score == null ? (card.status || "unmeasured") : String(card.score) + "/100", { x: 7.8, y: 1.2, w: 1.35, h: 0.55, fontSize: 18, bold: true, align: "center", color: card.score == null ? "64748B" : card.score >= 70 ? "166534" : card.score >= 40 ? "92400E" : "991B1B", fill: { color: card.score == null ? "F1F5F9" : card.score >= 70 ? "DCFCE7" : card.score >= 40 ? "FEF3C7" : "FEE2E2" }, margin: 0.06, fit: "shrink" });
           slide.addText(page, { x: 0.7, y: 2.25, w: 8.55, h: 2.5, fontSize: 10, color: "334155", valign: "top", breakLine: false, fit: "shrink" });

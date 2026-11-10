@@ -57,7 +57,7 @@ export const en: Dict = {
   cta_title: "Ready to be cited by AI?",
   cta_sub: "Sign up and start optimizing today.",
   cta_button: "Get started",
-  footer: "© 2026 MAAROOF Ai (formerly GEO-Iraq) · Part of the Marouf system. All rights reserved.",
+  footer: "© 2026 MAAROOF Ai · GEO AGENCY · Part of the Marouf system. All rights reserved.",
   footer_privacy: "Privacy Policy",
   footer_terms: "Terms of Use",
   footer_pricing: "Pricing",

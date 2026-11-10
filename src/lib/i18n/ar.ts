@@ -57,7 +57,7 @@ export const ar: Dict = {
   cta_title: "جاهز ليستشهد بك الذكاء الاصطناعي؟",
   cta_sub: "سجّل الآن وابدأ بتحسين محتواك اليوم.",
   cta_button: "ابدأ الآن",
-  footer: "© 2026 MAAROOF Ai (سابقاً: جيو-العراق) · جزء من نظام معروف. جميع الحقوق محفوظة.",
+  footer: "© 2026 MAAROOF Ai · GEO AGENCY · جزء من نظام معروف. جميع الحقوق محفوظة.",
   footer_privacy: "سياسة الخصوصية",
   footer_terms: "سياسة الاستخدام",
   footer_pricing: "الأسعار",
