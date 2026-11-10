@@ -148,7 +148,7 @@
     radial-gradient(ellipse 80% 60% at 15% 0%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 60%),
     radial-gradient(ellipse 70% 55% at 85% 100%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%),
     linear-gradient(180deg, oklch(0.13 0.03 262), var(--background));
-  --gradient-text: linear-gradient(135deg, oklch(0.96 0.02 250) 0%, oklch(0.82 0.10 245) 45%, var(--primary) 100%);
+  --gradient-text: linear-gradient(135deg, oklch(0.97 0.01 90) 0%, oklch(0.88 0.12 88) 45%, var(--primary) 100%);
   --shadow-soft: 0 1px 2px oklch(0 0 0 / 0.3), 0 6px 20px -8px oklch(0.05 0.02 262 / 0.55);
   --shadow-glow: 0 0 30px color-mix(in oklab, var(--primary) 38%, transparent), 0 0 60px color-mix(in oklab, var(--primary) 16%, transparent);
   --shadow-glow-strong: 0 0 40px color-mix(in oklab, var(--primary) 52%, transparent), 0 0 90px color-mix(in oklab, var(--accent) 24%, transparent);
