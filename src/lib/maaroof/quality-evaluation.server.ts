@@ -109,6 +109,31 @@ export const TOOL_QUALITY_RUBRICS: Record<string, QualityCriterion[]> = {
     { id: "geo_structure", label: "GEO structure", evidenceNeeded: "Versioned content structure checks" },
     { id: "factual_integrity", label: "Factual integrity", evidenceNeeded: "Claim-level verification against source content" },
   ],
+  maaroof: [
+    { id: "plan_coverage", label: "Plan coverage", evidenceNeeded: "Requested outcomes mapped to accepted execution steps" },
+    { id: "tool_selection", label: "Tool selection", evidenceNeeded: "Existing capability-to-tool mapping and task fit" },
+    { id: "end_to_end_completion", label: "End-to-end completion", evidenceNeeded: "Explicit completion checks for requested deliverables" },
+  ],
+  "agent.command": [
+    { id: "command_alignment", label: "Command alignment", evidenceNeeded: "Command-to-user-intent validation" },
+    { id: "permission_safety", label: "Permission safety", evidenceNeeded: "Workspace permissions and approval audit" },
+    { id: "result_verification", label: "Result verification", evidenceNeeded: "Observed result and expected-state comparison" },
+  ],
+  "agent.run_targets": [
+    { id: "target_coverage", label: "Target coverage", evidenceNeeded: "Declared target list and completion states" },
+    { id: "execution_safety", label: "Execution safety", evidenceNeeded: "Approval and side-effect audit" },
+    { id: "outcome_validity", label: "Outcome validity", evidenceNeeded: "Expected-versus-observed target outcomes" },
+  ],
+  "agent.visibility": [
+    { id: "measurement_validity", label: "Measurement validity", evidenceNeeded: "Raw engine observations and reproducible query scope" },
+    { id: "engine_coverage", label: "Engine coverage", evidenceNeeded: "Expected-versus-observed engine matrix" },
+    { id: "citation_readiness", label: "Citation readiness", evidenceNeeded: "Captured citations with source metadata" },
+  ],
+  teach_space: [
+    { id: "extraction_fidelity", label: "Knowledge extraction fidelity", evidenceNeeded: "Source-to-extracted-fact traceability" },
+    { id: "scope_isolation", label: "Knowledge scope isolation", evidenceNeeded: "Workspace and permission isolation tests" },
+    { id: "retrieval_relevance", label: "Knowledge retrieval relevance", evidenceNeeded: "Validated retrieval test set and relevance labels" },
+  ],
 };
 
 const DEFAULT_RUBRIC: QualityCriterion[] = [

@@ -34,6 +34,9 @@ import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 import { buildExecutionBatches } from "./execution-scheduler";
+import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
+import { buildExecutionEvidencePack } from "./execution-evidence-pack";
+import { evaluateRunQuality } from "./quality-evaluation.server";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -550,7 +553,17 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         await ctx.emit("user_history", { tools: Array.from(seen).slice(0, 8) });
       }
     } catch {}
-    const planUserMsg = mciHintLine + historyLine +
+    const reasoningContext = classifyReasoningIntent(ctx.goal);
+    const reasoningGuidance = buildReasoningGuidance(reasoningContext);
+    await ctx.emit("reasoning_context", {
+      primaryIntent: reasoningContext.primaryIntent,
+      intents: reasoningContext.intents,
+      risk: reasoningContext.risk,
+      evidenceRequired: reasoningContext.evidenceRequired,
+      externalActionRequested: reasoningContext.externalActionRequested,
+      signals: reasoningContext.signals,
+    });
+    const planUserMsg = reasoningGuidance + "\\n\\n" + mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "...", "depends_on": ["<prior tool key whose output is required>"] } ], "final_answer_hint": "..." }. Set depends_on only when the step consumes output from an earlier step; use only tool keys that already appear earlier in the plan. Independent steps may omit it.\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     let planResp: { text: string; tokens: number; usd: number };
@@ -568,15 +581,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
     totalUsd += planResp.usd; totalTokens += planResp.tokens;
     const planObj = extractJsonObject<{ steps: PlanStep[]; final_answer_hint?: string }>(planResp.text) || { steps: [] };
-    let steps: PlanStep[] = Array.isArray(planObj.steps)
-      ? planObj.steps.slice(0, MAX_STEPS).map((step) => ({
-          ...step,
-          // Treat planner output as untrusted: dependencies must be simple tool keys.
-          depends_on: Array.isArray((step as any)?.depends_on)
-            ? (step as any).depends_on.filter((dep: unknown): dep is string => typeof dep === "string").slice(0, 12)
-            : [],
-        }))
-      : [];
+    // Planner output is untrusted: admit only existing callable tools and dependencies on earlier valid steps.
+    const initialPlanValidation = validateReasoningPlan(
+      Array.isArray(planObj.steps) ? planObj.steps : [],
+      reasoningContext.intents,
+      MAX_STEPS,
+    );
+    let steps: PlanStep[] = initialPlanValidation.steps.map((step) => ({ ...step }));
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
     if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
@@ -615,6 +626,19 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         if (replaceIndex >= 0) steps[replaceIndex] = requiredStep;
       }
     }
+    // Final validation also checks steps added by deterministic guarantees and user selections.
+    const finalPlanValidation = validateReasoningPlan(
+      steps,
+      reasoningContext.intents,
+      Math.max(MAX_STEPS, steps.length),
+    );
+    steps = finalPlanValidation.steps.map((step) => ({ ...step }));
+    await ctx.emit("reasoning_review", {
+      rejectedTools: [...new Set([...initialPlanValidation.rejectedTools, ...finalPlanValidation.rejectedTools])],
+      rejectedDependencies: [...new Set([...initialPlanValidation.rejectedDependencies, ...finalPlanValidation.rejectedDependencies])],
+      coverageWarnings: finalPlanValidation.coverageWarnings,
+      acceptedSteps: steps.length,
+    });
     planObj.steps = steps;
     await db().from("maaroof_runs").update({ plan: planObj }).eq("id", runId);
     await logMsg("plan", planObj, planResp.tokens, planResp.usd);
@@ -1397,7 +1421,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         try {
           const ref = await call("reflection", [
             { role: "system", content: effectivePrompt },
-            { role: "user", content: `Progress so far:\n${JSON.stringify(results).slice(0, 4000)}\n\nShould we continue, adjust, or stop? Reply briefly.` },
+            { role: "user", content: `Progress so far:\n${buildExecutionEvidencePack(ctx.goal, results, { maxChars: 4200, maxItems: 8, perItemChars: 700 }).text}\n\nShould we continue, adjust, or stop? Reply briefly.` },
           ]);
           totalUsd += ref.usd; totalTokens += ref.tokens;
           await ctx.emit("reflection", { text: sanitizeReflection(ref.text) });
@@ -1425,11 +1449,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const trustInstruction = trustEnabled
       ? `\n\nAfter the answer, output a line containing exactly ---TRUST--- and then a JSON object only:\n{ "confidence": 0-100, "evidence": ["..."], "assumptions": ["..."], "limitations": ["..."], "alternatives": ["..."], "risks": ["..."], "expected_outcome": "..." }`
       : "";
+    const finalEvidencePack = buildExecutionEvidencePack(ctx.goal, results, { maxChars: 8500, maxItems: 14, perItemChars: 1500 });
+    await ctx.emit("evidence_pack", { included: finalEvidencePack.included, omitted: finalEvidencePack.omitted, duplicateCount: finalEvidencePack.duplicateCount, successful: finalEvidencePack.successful, failed: finalEvidencePack.failed });
     let finalResp: { text: string; tokens: number; usd: number };
     try {
       finalResp = await call("final", [
       { role: "system", content: effectivePrompt },
-      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${JSON.stringify(results).slice(0, 8000)}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown.${trustInstruction}` },
+      { role: "user", content: `Goal: ${ctx.goal}\n\nTool results:\n${finalEvidencePack.text}\n\nWrite the final answer for the user in ${ctx.language === "ar" ? "Arabic" : ctx.language === "ku" ? "Kurdish" : "English"}. Be specific, actionable, tailored to ${geo.label}. Use Markdown. Distinguish tool outputs, external sources, assumptions and limitations. Do not describe a tool result as independently verified unless its output contains independent source evidence.${trustInstruction}` },
     ]);
     totalUsd += finalResp.usd; totalTokens += finalResp.tokens;
     } catch {
@@ -1646,36 +1672,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       }
     }
 
-    await ctx.emit("final", { text: finalText });
-    await logMsg("assistant", { text: finalText, trust, compliance, reality }, finalResp.tokens, finalResp.usd);
-
-
-    // Part 6 — Executive Quality Score (11 dims). Computed heuristically from
-    // observed signals to avoid additional LLM cost. Flag-gated.
+    // Phase 8 — distinguish observed run facts from unmeasured quality dimensions.
+    // Retire the previous synthetic 11-dimension score; it mixed hard-coded estimates
+    // with observed execution outcomes and could be mistaken for measured quality.
     let qualityScore: Record<string, number> | null = null;
+    let qualityEvaluation: ReturnType<typeof evaluateRunQuality> | null = null;
     if (settings.platform_evolution?.quality_score_enabled) {
-      const okCount = results.filter((r) => r.ok).length;
-      const okRatio = results.length ? okCount / results.length : 1;
-      const councilConfs = decisionLog
-        .filter((d: any) => d.phase === "council" && typeof d.confidence === "number")
-        .map((d: any) => d.confidence as number / 100);
-      const avgConf = councilConfs.length ? councilConfs.reduce((a, b) => a + b, 0) / councilConfs.length : 0.7;
-      const clamp = (v: number) => Math.max(0, Math.min(1, Number(v.toFixed(3))));
-      qualityScore = {
-        decision: clamp(avgConf),
-        planning: clamp(steps.length > 0 && steps.length <= 6 ? 0.85 : 0.6),
-        expert: clamp(avgConf),
-        capability: clamp(okRatio),
-        memory: clamp(memories.length > 0 ? 0.8 : 0.5),
-        simulation: clamp(envision ? 0.85 : 0.5),
-        execution: clamp(okRatio),
-        reflection: clamp(0.75),
-        learning: clamp(settings.cognitive?.dna_enabled ? 0.8 : 0.5),
-        cost_efficiency: clamp(totalUsd < 0.05 ? 0.9 : totalUsd < 0.2 ? 0.75 : 0.55),
-        user_satisfaction: clamp(okRatio * 0.9 + 0.1),
-      };
-      await ctx.emit("quality_score", qualityScore);
+      qualityEvaluation = evaluateRunQuality(ctx.goal, results, { tokens: totalTokens, costUsd: totalUsd });
+      await ctx.emit("quality_evaluation", qualityEvaluation);
     }
+
+    await ctx.emit("final", { text: finalText });
+    await logMsg("assistant", { text: finalText, trust, compliance, reality, quality_evaluation: qualityEvaluation }, finalResp.tokens, finalResp.usd);
 
     // Part 13 — closing pipeline stages + Decision Score.
     let decisionScore: any = null;
@@ -1787,7 +1795,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {
       try {
         const { upsertKnowledgeNode } = await import("./knowledge.server");
-        const conf = Math.round(((qualityScore?.overall ?? 0.7) as number) * 100) || 70;
+        const conf = Math.round((((qualityScore as any)?.overall ?? 0.7) as number) * 100) || 70;
         await upsertKnowledgeNode(
           {
             layer: ctx.workspaceId ? "workspace" : "user",
