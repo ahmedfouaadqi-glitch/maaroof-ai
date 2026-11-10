@@ -51,7 +51,7 @@ export type ExportPayload = {
 };
 
 const BRAND = "MAAROOF Ai";
-const PREVIOUS_BRAND = "formerly GEO-Iraq";
+const PREVIOUS_BRAND = "GEO AGENCY";
 const SITE = "maaroofai.com";
 const SITE_URL = "https://maaroofai.com";
 const LOGO_URL = "https://maaroofai.com/icon-512.png";
@@ -410,9 +410,9 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
   * { box-sizing: border-box; }
   p, li, td, th, h1, h2, h3, .subtitle { unicode-bidi: plaintext; }
   body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#0f172a; margin:0; padding: 0 8px; line-height: 1.6; }
-  header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #1e40af; margin-bottom: 18px; }
+  header.brand { display:flex; align-items:center; gap:14px; padding: 10px 0 14px; border-bottom: 2px solid #F5B800; margin-bottom: 18px; }
   .brand-text { flex:1; }
-  .brand-name { font-size: 22px; font-weight: 800; color:#0f2454; letter-spacing: .3px; }
+  .brand-name { font-size: 22px; font-weight: 800; color:#0A0A0C; letter-spacing: .3px; }
   .brand-prev { font-size: 10px; font-weight: 600; color:#94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-top: 2px; }
   .brand-sub { font-size: 11px; color:#64748b; margin-top: 2px; }
   .meta { font-size: 11px; color:#64748b; }
@@ -432,7 +432,7 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
   .summary-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:8px 0 14px; }
   .summary-metric { border:1px solid #dbe4f0; border-radius:8px; padding:8px; background:#fff; min-width:0; }
   .summary-metric span { display:block; font-size:9px; color:#64748b; }
-  .summary-metric strong { display:block; font-size:19px; color:#0f2454; overflow-wrap:anywhere; }
+  .summary-metric strong { display:block; font-size:19px; color:#0A0A0C; overflow-wrap:anywhere; }
   .executive-summary h3 { margin:12px 0 5px; font-size:11px; color:#334155; }
   table.summary-table { font-size:9px; margin-bottom:8px; }
   table.summary-table th { background:#eef2ff; color:#312e81; text-align:${dir === "rtl" ? "right" : "left"}; padding:5px; border:1px solid #dbe4f0; }
@@ -444,7 +444,7 @@ export async function exportToPDF(payload: ExportPayload, preopenedPopup?: Windo
   .audit-card { border:1px solid #dbe4f0; border-radius:11px; padding:10px; break-inside:avoid; page-break-inside:avoid; background:#fff; }
   .audit-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .audit-card-identity { min-width:0; flex:1; }
-  .audit-card-title { font-size:11px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; color:#0f2454; }
+  .audit-card-title { font-size:11px; font-weight:700; line-height:1.45; overflow-wrap:anywhere; color:#0A0A0C; }
   .audit-card-subtitle { color:#64748b; font-size:9px; margin-top:3px; }
   .audit-status { display:inline-block; margin-top:5px; padding:2px 6px; border-radius:999px; font-size:8px; background:#eef2ff; color:#3730a3; }
   .audit-score { flex-shrink:0; font-weight:800; font-size:17px; text-align:center; min-width:52px; border-radius:8px; padding:5px; background:#f1f5f9; color:#334155; }

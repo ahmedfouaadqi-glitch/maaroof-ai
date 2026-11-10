@@ -20,7 +20,7 @@ export function PrintAnalysisButton({ targetId, label }: { targetId: string; lab
       .footer{margin-top:24px;border-top:1px solid #eee;padding-top:12px;font-size:11px;color:#666}
     `;
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${t("print_title")}</title><style>${styles}</style></head><body>`);
-    w.document.write(`<div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #1e40af;padding-bottom:8px;margin-bottom:14px">${logo ? `<img src="${logo}" width="48" height="48" alt="MAAROOF Ai" style="object-fit:contain"/>` : ""}<div><div style="font-size:18px;font-weight:800;color:#0f2454">MAAROOF Ai</div><div style="font-size:10px;color:#94a3b8;letter-spacing:1.2px;text-transform:uppercase">formerly GEO-Iraq</div></div></div>`);
+    w.document.write(`<div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #F5B800;padding-bottom:8px;margin-bottom:14px">${logo ? `<img src="${logo}" width="48" height="48" alt="MAAROOF Ai" style="object-fit:contain"/>` : ""}<div><div style="font-size:18px;font-weight:800;color:#0A0A0C">MAAROOF Ai</div><div style="font-size:10px;color:#94a3b8;letter-spacing:1.2px;text-transform:uppercase">GEO AGENCY</div></div></div>`);
     w.document.write(`<h1>${t("print_title")}</h1>`);
     w.document.write(el.innerHTML);
     w.document.write(`<div class="footer">MAAROOF Ai · maaroofai.com · ${new Date().toLocaleString()} · ${t("export_disclaimer")}</div>`);
