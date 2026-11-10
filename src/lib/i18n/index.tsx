@@ -54,7 +54,7 @@ type Overrides = Partial<Record<Lang, Record<string, string>>>;
 export function I18nProvider({ children }: { children: ReactNode }) {
   // SSR and the first client render MUST agree, so always start from the
   // default language and adopt the stored preference after hydration.
-  const [lang, setLangState] = useState<Lang>("ar");
+  const [lang, setLangState] = useState<Lang>("en");
   const [overrides, setOverrides] = useState<Overrides>({});
 
   useEffect(() => {
