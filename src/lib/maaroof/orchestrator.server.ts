@@ -1795,7 +1795,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {
       try {
         const { upsertKnowledgeNode } = await import("./knowledge.server");
-        const conf = Math.round(((qualityScore?.overall ?? 0.7) as number) * 100) || 70;
+        const conf = Math.round((((qualityScore as any)?.overall ?? 0.7) as number) * 100) || 70;
         await upsertKnowledgeNode(
           {
             layer: ctx.workspaceId ? "workspace" : "user",
