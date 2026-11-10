@@ -54,7 +54,7 @@
   --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --radius: 0.875rem;
   /* MAAROOF Ai — Light (day): cool blue-white canvas, white cards, royal blue */
-  --background: oklch(0.975 0.008 250);
+  --background: oklch(0.98 0.006 90);
   --foreground: oklch(0.22 0.05 262);
   --surface-1: oklch(1 0 0);
   --surface-2: oklch(0.955 0.015 252);
