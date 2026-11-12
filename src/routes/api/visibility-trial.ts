@@ -7,6 +7,7 @@ import {
   getTrustedClientIp,
   hashTrialSignal,
   trialEntityFingerprint,
+  normalizeTrialEntityName,
   verifyTrialIpRisk,
   type TrialEntityType,
 } from "@/lib/visibility-trial.server";
