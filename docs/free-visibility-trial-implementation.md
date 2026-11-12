@@ -31,7 +31,7 @@ These values must be configured in the target deployment environment; do not com
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENROUTER_API_KEY`
-- `TRIAL_IDENTITY_SECRET` — random secret of at least 32 characters used for HMAC hashes of entity/device/session/IP signals.
+- `TRIAL_IDENTITY_SECRET` — random secret of at least 32 characters used for HMAC hashes of entity/device/session/IP signals. Keep it stable across deployments; rotating it invalidates existing lock fingerprints.
 - `IP_RISK_CHECK_URL` — HTTPS endpoint for the organization's chosen IP intelligence provider.
 - `IP_RISK_CHECK_TOKEN` — secret token for that provider.
 - `APP_URL` — optional application URL sent as OpenRouter referer.
