@@ -47,7 +47,7 @@ const COPY = {
     security: "يتم التحقق من الاتصال وأهلية التجربة قبل بدء الفحص. لا نستخدم إجابات فحوصات سابقة.",
     unavailable: "التجربة غير متاحة حالياً", unavailableText: "لم يتم التحقق من ثلاثة مسارات مستقلة أو من إعدادات الحماية. لم يبدأ الفحص ولم يُحتسب كاستخدام.", expiredText: "انتهت صلاحية هذا التقرير وحُذفت بياناته المؤقتة.",
     failed: "تعذر إكمال الفحص", retry: "أعد المحاولة بعد التحقق من الاتصال والإعدادات.",
-    report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت",
+    report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت", mentionStatus: "ذكر الكيان", recommendationStatus: "التوصية", confidenceStatus: "الثقة", yes: "نعم", no: "لا", conditional: "مشروطة", unknown: "غير محسوم",
     sample: "هذه عينة من ثلاث استجابات حية وليست قياساً شاملاً للسوق أو ترتيباً عاماً.",
     known: "ملخص الاستجابة", basis: "أساس الأدلة", strengths: "إشارات إيجابية", gaps: "المعلومات غير المحسومة", actions: "تحسينات مقترحة", sources: "روابط ذكرتها الاستجابة (غير متحققة مستقلاً)",
     retrieval: "استرجاع التقرير مرة واحدة", retrievalDone: "تم استخدام الاسترجاع الإضافي", expires: "تنتهي صلاحية التقرير", contact: "التواصل مع معروف",
@@ -68,7 +68,7 @@ const COPY = {
     security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
     unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.", expiredText: "This report has expired. Its temporary report data is no longer available.",
     failed: "The probe could not be completed", retry: "Retry after checking connection and configuration.",
-    report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered",
+    report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered", mentionStatus: "Entity mention", recommendationStatus: "Recommendation", confidenceStatus: "Confidence", yes: "Yes", no: "No", conditional: "Conditional", unknown: "Unknown",
     sample: "This is a three-response live sample, not a market-wide measurement or general ranking.",
     known: "Response summary", basis: "Evidence basis", strengths: "Positive signals", gaps: "Unresolved information", actions: "Suggested improvements", sources: "URLs named in the response (not independently verified)",
     retrieval: "Retrieve report once", retrievalDone: "Additional retrieval used", expires: "Report expires", contact: "Contact MAAROOF",
@@ -89,7 +89,7 @@ const COPY = {
     security: "پێش پشکنین پەیوەندی و شایستەیی پشتڕاست دەکرێتەوە. وەڵامی پشکنینی پێشووتر بەکارناهێنین.",
     unavailable: "تاقیکردنەوە ئێستا بەردەست نییە", unavailableText: "سێ ڕێڕەوی جیاواز یان خزمەتگوزاری پاراستن پشتڕاست نەکرایەوە. پشکنین دەستی پێنەکرد و حساب نەکرا.", expiredText: "ماوەی ئەم ڕاپۆرتە تەواو بووە و داتاکانی کاتی سڕاونەتەوە.",
     failed: "پشکنین تەواو نەبوو", retry: "دوای پشتڕاستکردنەوەی پەیوەندی و ڕێکخستنەکان دووبارە هەوڵ بدە.",
-    report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان",
+    report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان", mentionStatus: "باسکردنی قەوارە", recommendationStatus: "پێشنیار", confidenceStatus: "متمانە", yes: "بەڵێ", no: "نەخێر", conditional: "بە مەرج", unknown: "نادیار",
     sample: "ئەمە نموونەیەکی سێ وەڵامی ڕاستەوخۆیە، نەک پێوانەی گشتی بازاڕ.",
     known: "پوختەی وەڵام", basis: "بنەمای بەڵگە", strengths: "نیشانە ئەرێنییەکان", gaps: "زانیاریی نادیار", actions: "باشترکردنی پێشنیارکراو", sources: "بەستەرە باسکراوەکان (بە سەربەخۆیی پشتڕاست نەکراونەتەوە)",
     retrieval: "وەرگرتنەوەی ڕاپۆرت یەک جار", retrievalDone: "وەرگرتنەوەی زیادە بەکارهاتووە", expires: "کۆتایی هاتنی ڕاپۆرت", contact: "پەیوەندی بە مەعروف",
@@ -176,7 +176,7 @@ function VisibilityTrialPage() {
         if (data.retry_at) setRetryAt(data.retry_at);
         const errorText = data.error === "three_verified_engine_routes_unavailable" || data.error === "ip_verification_unavailable" || data.error === "trial_security_not_configured"
           ? c.unavailableText
-          : data.error === "account_cooldown" || data.error === "entity_cooldown" || data.error === "device_cooldown" || data.error === "session_cooldown" || data.error === "ip_risk_review"
+          : data.error === "account_cooldown" || data.error === "entity_cooldown" || data.error === "device_cooldown" || data.error === "session_cooldown" || data.error === "ip_risk_review" || data.error === "connection_not_eligible"
             ? c.contactDesc : c.retry;
         setMessage({ kind: "error", text: errorText });
         return;
@@ -236,7 +236,7 @@ function VisibilityTrialPage() {
         {contact.channels?.map((channel) => channel.url ? <a key={channel.url} href={channel.url} target="_blank" rel="noreferrer" className="text-primary underline">{channel.label || c.contact} <ExternalLink className="inline size-3" /></a> : null)}
         <Link to="/contact" className="text-primary underline">{c.contact}</Link>
       </div>
-      {!contact.phone && !contact.email && !contact.whatsapp && !contact.website && <p className="mt-3 text-xs text-muted-foreground">{c.noContact}</p>}
+      {!contact.phone && !contact.email && !contact.whatsapp && !contact.website && !contact.channels?.length && <p className="mt-3 text-xs text-muted-foreground">{c.noContact}</p>}
     </section>
   );
 
@@ -327,6 +327,11 @@ function VisibilityTrialPage() {
               {result.engines.map((engine) => (
                 <article key={engine.engine} className="rounded-xl border border-border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{engine.name}</h3><span className="text-xs text-muted-foreground">{engine.status === "answered" ? c.answered : c.error}</span></div>
+                  {engine.status === "answered" && <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                    <span className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned ? c.yes : c.no}</span>
+                    <span className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
+                    <span className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence || c.unknown}</span>
+                  </div>}
                   {engine.summary && <p className="mt-3 text-sm leading-7">{engine.summary}</p>}
                   {engine.evidence_basis && <div className="mt-3 text-xs leading-6 text-muted-foreground"><strong>{c.basis}: </strong>{engine.evidence_basis}</div>}
                   {engine.strengths?.length ? <div className="mt-3 text-xs leading-6"><strong>{c.strengths}</strong><ul className="ms-5 list-disc">{engine.strengths.map((x, i) => <li key={i}>{x}</li>)}</ul></div> : null}
