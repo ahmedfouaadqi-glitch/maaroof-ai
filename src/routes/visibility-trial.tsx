@@ -45,7 +45,7 @@ const COPY = {
     assets: "روابط رقمية (اختياري)", assetsHint: "يمكن تركها فارغة. ضع كل رابط في سطر منفصل.",
     start: "ابدأ التجربة المجانية", working: "جارٍ تنفيذ الفحص المباشر", auth: "سجّل الدخول للمتابعة",
     security: "يتم التحقق من الاتصال وأهلية التجربة قبل بدء الفحص. لا نستخدم إجابات فحوصات سابقة.",
-    unavailable: "التجربة غير متاحة حالياً", unavailableText: "لم يتم التحقق من ثلاثة مسارات مستقلة أو من إعدادات الحماية. لم يبدأ الفحص ولم يُحتسب كاستخدام.",
+    unavailable: "التجربة غير متاحة حالياً", unavailableText: "لم يتم التحقق من ثلاثة مسارات مستقلة أو من إعدادات الحماية. لم يبدأ الفحص ولم يُحتسب كاستخدام.", expiredText: "انتهت صلاحية هذا التقرير وحُذفت بياناته المؤقتة.",
     failed: "تعذر إكمال الفحص", retry: "أعد المحاولة بعد التحقق من الاتصال والإعدادات.",
     report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت",
     sample: "هذه عينة من ثلاث استجابات حية وليست قياساً شاملاً للسوق أو ترتيباً عاماً.",
@@ -66,7 +66,7 @@ const COPY = {
     assets: "Digital links (optional)", assetsHint: "Leave empty if none. Enter one URL per line.",
     start: "Start free trial", working: "Running the live probe", auth: "Sign in to continue",
     security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
-    unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.",
+    unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.", expiredText: "This report has expired. Its temporary report data is no longer available.",
     failed: "The probe could not be completed", retry: "Retry after checking connection and configuration.",
     report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered",
     sample: "This is a three-response live sample, not a market-wide measurement or general ranking.",
@@ -87,7 +87,7 @@ const COPY = {
     assets: "بەستەری دیجیتاڵ (ئارەزوومەندانە)", assetsHint: "ئەگەر نییە بەتاڵی بهێڵەوە. هەر بەستەرێک لە دێڕێکی جیاواز.",
     start: "دەستپێکردنی تاقیکردنەوە", working: "پشکنینی ڕاستەوخۆ ئەنجام دەدرێت", auth: "بچۆ ژوورەوە بۆ بەردەوامبوون",
     security: "پێش پشکنین پەیوەندی و شایستەیی پشتڕاست دەکرێتەوە. وەڵامی پشکنینی پێشووتر بەکارناهێنین.",
-    unavailable: "تاقیکردنەوە ئێستا بەردەست نییە", unavailableText: "سێ ڕێڕەوی جیاواز یان خزمەتگوزاری پاراستن پشتڕاست نەکرایەوە. پشکنین دەستی پێنەکرد و حساب نەکرا.",
+    unavailable: "تاقیکردنەوە ئێستا بەردەست نییە", unavailableText: "سێ ڕێڕەوی جیاواز یان خزمەتگوزاری پاراستن پشتڕاست نەکرایەوە. پشکنین دەستی پێنەکرد و حساب نەکرا.", expiredText: "ماوەی ئەم ڕاپۆرتە تەواو بووە و داتاکانی کاتی سڕاونەتەوە.",
     failed: "پشکنین تەواو نەبوو", retry: "دوای پشتڕاستکردنەوەی پەیوەندی و ڕێکخستنەکان دووبارە هەوڵ بدە.",
     report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان",
     sample: "ئەمە نموونەیەکی سێ وەڵامی ڕاستەوخۆیە، نەک پێوانەی گشتی بازاڕ.",
@@ -142,7 +142,7 @@ function VisibilityTrialPage() {
         setResult(null);
         setAttemptId(null);
         try { localStorage.removeItem("maaroof_trial_last_attempt"); } catch {}
-        setMessage({ kind: "info", text: c.unavailableText });
+        setMessage({ kind: "info", text: c.expiredText });
       }
     };
     check();
