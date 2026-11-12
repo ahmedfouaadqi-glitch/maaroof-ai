@@ -370,7 +370,7 @@ export const Route = createFileRoute("/api/visibility-trial")({
               engine: model.key, name: ENGINE_LABELS[model.key], status: "error",
               blind_status: blindPrompt ? "error" : "not_run",
               mentioned: null, recommendation: "unknown", confidence: "low",
-              summary: "تعذر الحصول على إجابة من هذا المسار في هذه المحاولة.",
+              summary: lang === "ar" ? "تعذر الحصول على إجابة من هذا المسار في هذه المحاولة." : lang === "ku" ? "لە ئەم هەوڵەدا وەڵامێک لەم ڕێڕەوە نەگەیشت." : "This engine route did not return a usable answer in this attempt.",
               evidence_basis: "No usable response was returned.",
               strengths: [], gaps: ["No answer returned"], recommendations: [], sources: [],
             };
