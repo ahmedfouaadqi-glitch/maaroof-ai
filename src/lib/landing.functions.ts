@@ -31,3 +31,21 @@ export const getLandingData = createServerFn({ method: "GET" }).handler(async ()
   } catch { card = null; }
   return { skills, card };
 });
+
+
+/** Public-safe aggregate only; no user, entity, device or network identifiers are exposed. */
+export const getFreeVisibilityTrialUsage = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("visibility_trial_stats")
+      .select("total_started")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error) throw error;
+    return { totalStarted: Number(data?.total_started ?? 0), available: true };
+  } catch (error) {
+    console.warn("[landing] free trial aggregate unavailable", error);
+    return { totalStarted: null as number | null, available: false };
+  }
+});
