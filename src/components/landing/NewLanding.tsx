@@ -275,7 +275,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 2. Engines loop */}
+        {/* 3. Engines loop */}
         <section className="mx-auto max-w-5xl px-4 pb-14">
           <p className="mb-3 text-center text-xs text-muted-foreground">{c.engines}</p>
           <LogoLoop>
@@ -287,7 +287,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </LogoLoop>
         </section>
 
-        {/* 3. How it works */}
+        {/* 4. How it works */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.how}</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -303,7 +303,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 4. Five pillars */}
+        {/* 5. Five pillars */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -319,7 +319,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 5. Comparison */}
+        {/* 6. Comparison */}
         <section className="mx-auto max-w-4xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.vsTitle}</h2>
           <Reveal>
@@ -337,7 +337,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </Reveal>
         </section>
 
-        {/* 6. Truth card */}
+        {/* 7. Truth card */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <div className="grid items-center gap-8 md:grid-cols-2">
             <div>
@@ -364,7 +364,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 7. Account types */}
+        {/* 8. Account types */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.types}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -379,7 +379,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 8. Skills */}
+        {/* 9. Skills */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
