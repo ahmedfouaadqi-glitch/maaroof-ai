@@ -204,8 +204,12 @@ function VisibilityTrialPage() {
       const data = await response.json();
       if (!response.ok || !data.ok) {
         if (data.contact) setContact(data.contact);
-        setMessage({ kind: "error", text: data.error === "retrieval_exhausted" ? c.contactDesc : c.unavailableText });
+        setMessage({ kind: "error", text: data.error === "retrieval_exhausted" ? c.contactDesc : data.error === "expired" ? c.expiredText : c.unavailableText });
         if (data.error === "retrieval_exhausted") setRetrievalUsed(true);
+        if (data.error === "expired") {
+          setAttemptId(null);
+          try { localStorage.removeItem("maaroof_trial_last_attempt"); } catch {}
+        }
         return;
       }
       setResult(data.result as TrialResult);
