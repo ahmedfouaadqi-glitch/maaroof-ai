@@ -154,7 +154,7 @@ function VisibilityTrialPage() {
     check();
     const id = window.setInterval(check, 15000);
     return () => window.clearInterval(id);
-  }, [expiresAt, c.unavailableText]);
+  }, [expiresAt, c.expiredText]);
 
   useEffect(() => {
     if (!session?.access_token) return;
