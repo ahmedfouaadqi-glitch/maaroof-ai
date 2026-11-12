@@ -36,6 +36,38 @@ function HeroPulses() {
   );
 }
 
+function VisibilityVector() {
+  return (
+    <div aria-hidden className="mx-auto mt-8 w-full max-w-[34rem]">
+      <svg viewBox="0 0 544 132" fill="none" className="h-auto w-full overflow-visible">
+        <defs>
+          <linearGradient id="visibility-line" x1="28" y1="66" x2="516" y2="66" gradientUnits="userSpaceOnUse">
+            <stop stopColor="currentColor" stopOpacity=".08" />
+            <stop offset=".5" stopColor="currentColor" stopOpacity=".42" />
+            <stop offset="1" stopColor="currentColor" stopOpacity=".08" />
+          </linearGradient>
+        </defs>
+        <path d="M42 66H502M132 66V34H204M132 66V98H204M412 34H458V66M412 98H458V66" stroke="url(#visibility-line)" strokeWidth="1.2" />
+        <path d="M204 34H238M204 98H238M306 34H340M306 98H340" stroke="currentColor" strokeOpacity=".18" strokeWidth="1.2" strokeDasharray="3 5" />
+        <rect x="238.5" y="39.5" width="67" height="53" rx="14" fill="currentColor" fillOpacity=".035" stroke="currentColor" strokeOpacity=".22" />
+        <circle cx="272" cy="66" r="13" stroke="var(--primary)" strokeWidth="1.5" />
+        <circle cx="272" cy="66" r="4" fill="var(--primary)" />
+        <circle cx="132" cy="66" r="5" fill="var(--background)" stroke="currentColor" strokeOpacity=".42" strokeWidth="1.4" />
+        <circle cx="204" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="204" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="340" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="340" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="412" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="412" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="458" cy="66" r="5" fill="var(--background)" stroke="var(--primary)" strokeOpacity=".7" strokeWidth="1.4" />
+        <circle cx="42" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
+        <circle cx="502" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
+        <circle cx="272" cy="66" r="24" stroke="var(--primary)" strokeOpacity=".12" strokeWidth="1" className="motion-safe:animate-pulse" />
+      </svg>
+    </div>
+  );
+}
+
 const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
@@ -219,6 +251,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
             </p>
             <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong className="font-display text-xl font-extrabold text-primary md:text-2xl">{c.brandName}</strong> — {c.sub}</p>
+            <VisibilityVector />
             <div className="mt-8">
               <ModelInsights lang={l} />
             </div>
