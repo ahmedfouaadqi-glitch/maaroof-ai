@@ -33,7 +33,7 @@ type TrialResult = {
   generated_at: string;
   result_expires_at: string;
 };
-type Contact = { title?: string; message?: string; email?: string; phone?: string; whatsapp?: string; website?: string; fallbackPath?: string };
+type Contact = { title?: string; message?: string; email?: string; phone?: string; whatsapp?: string; website?: string; channels?: Array<{ label?: string; url?: string }>; fallbackPath?: string };
 
 const COPY = {
   ar: {
@@ -211,6 +211,7 @@ function VisibilityTrialPage() {
       setResult(data.result as TrialResult);
       setExpiresAt(data.result_expires_at);
       setRetrievalUsed(true);
+      if (data.retrieval_exhausted) setContact(data.contact || null);
     } catch {
       setMessage({ kind: "error", text: c.retry });
     } finally { setBusy(false); }
@@ -228,6 +229,7 @@ function VisibilityTrialPage() {
         {contact.email && <a href={`mailto:${contact.email}`} className="text-primary underline" dir="ltr">{contact.email}</a>}
         {contact.whatsapp && <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="text-primary underline">WhatsApp <ExternalLink className="inline size-3" /></a>}
         {contact.website && <a href={contact.website} target="_blank" rel="noreferrer" className="text-primary underline">Website <ExternalLink className="inline size-3" /></a>}
+        {contact.channels?.map((channel) => channel.url ? <a key={channel.url} href={channel.url} target="_blank" rel="noreferrer" className="text-primary underline">{channel.label || c.contact} <ExternalLink className="inline size-3" /></a> : null)}
         <Link to="/contact" className="text-primary underline">{c.contact}</Link>
       </div>
       {!contact.phone && !contact.email && !contact.whatsapp && !contact.website && <p className="mt-3 text-xs text-muted-foreground">{c.noContact}</p>}
@@ -305,7 +307,7 @@ function VisibilityTrialPage() {
               <div>
                 <p className="text-xs font-medium text-primary">{c.report}</p>
                 <h2 className="mt-1 font-display text-2xl font-bold">{result.entity.name}</h2>
-                <p className="mt-1 text-xs text-muted-foreground">{result.entity.type === "person" ? c.entityPerson : result.entity.type === "organization" ? c.entityOrg : c.entityUnknown} · {result.sample.note}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{result.entity.type === "person" ? c.entityPerson : result.entity.type === "organization" ? c.entityOrg : c.entityUnknown}</p>
               </div>
               <div className="text-end text-xs text-muted-foreground">{c.expires}:<br /><time dir="ltr">{new Date(expiresAt || result.result_expires_at).toLocaleString()}</time></div>
             </div>
