@@ -8,7 +8,9 @@ import {
   verifyTrialIpRisk,
 } from "./visibility-trial.server";
 
-const previousSecret = process.env.TRIAL_IDENTITY_SECRET;\nconst previousIpUrl = process.env.IP_RISK_CHECK_URL;\nconst previousIpToken = process.env.IP_RISK_CHECK_TOKEN;
+const previousSecret = process.env.TRIAL_IDENTITY_SECRET;
+const previousIpUrl = process.env.IP_RISK_CHECK_URL;
+const previousIpToken = process.env.IP_RISK_CHECK_TOKEN;
 
 afterEach(() => {
   if (previousSecret === undefined) delete process.env.TRIAL_IDENTITY_SECRET;
