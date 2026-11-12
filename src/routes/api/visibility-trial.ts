@@ -432,7 +432,7 @@ export const Route = createFileRoute("/api/visibility-trial")({
               note: blindPrompt
                 ? "Blind discovery excludes the target entity name. This is a limited three-engine sample, not a market-wide measurement."
                 : category
-                  ? "The supplied category contained the target entity name, so blind discovery was skipped to avoid priming."
+                  ? "The supplied category or market contained the target entity name, so blind discovery was skipped to avoid priming."
                   : "No category was supplied, so unprompted discovery and organic mention metrics were not measured.",
             },
             metrics: {
