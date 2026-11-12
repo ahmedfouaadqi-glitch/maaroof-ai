@@ -49,7 +49,7 @@ The configured endpoint receives `POST { "ip": "..." }` with `Authorization: Bea
 All three booleans and a risk value of `low`, `medium`, or `high` are required. The route rejects the trial when the provider is missing, times out, returns malformed data, or flags VPN/proxy/Tor/high risk. This adapter intentionally does not assume a vendor-specific API or invent an integration.
 
 ## Migration order
-Apply the migrations in timestamp order from `20261113010000` through `20261113080000` in a non-production environment first. The homepage counter stays unavailable until the first migration is applied. Do not run production migrations as part of this branch work.
+Apply the migrations in timestamp order from `20261113010000` through `20261113090000` in a non-production environment first. The homepage counter stays unavailable until the first migration is applied. Do not run production migrations as part of this branch work.
 
 ## Operational limitations
 - Entity identity currently uses Unicode-normalized names (including Arabic diacritic/Alef/Ya normalization); transliteration and unrelated aliases are not guaranteed to collapse to one entity. Browser device identifiers are signals, not unforgeable hardware identity; a browser cannot read a MAC address.
