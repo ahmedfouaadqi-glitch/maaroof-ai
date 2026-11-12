@@ -69,6 +69,13 @@ function safeUrls(value: unknown): string[] {
   }).slice(0, 5);
 }
 
+function safeHttpUrl(value: unknown): string {
+  try {
+    const url = new URL(cleanText(value, 300));
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
+  } catch { return ""; }
+}
+
 function buildRecognitionPrompt(input: {
   name: string; category: string; description: string; market: string; language: string;
   entityType: string; assets: string[];
@@ -143,7 +150,7 @@ async function getContactSettings(admin: any) {
       website: "",
       channels: ["facebook", "instagram", "twitter", "linkedin", "telegram"]
         .filter((key) => typeof v[key] === "string" && String(v[key]).trim())
-        .map((key) => ({ label: key, url: cleanText(v[key], 300) })),
+        .map((key) => ({ label: key, url: safeHttpUrl(v[key]) })).filter((channel) => channel.url),
       fallbackPath: "/contact",
     };
   } catch {
