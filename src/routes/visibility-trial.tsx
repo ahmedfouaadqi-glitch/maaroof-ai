@@ -19,8 +19,8 @@ export const Route = createFileRoute("/visibility-trial")({
 });
 
 type EngineResult = {
-  engine: string; name: string; status: string; mentioned?: boolean;
-  recommendation?: string; confidence?: string; summary?: string; discovery_answer?: string; mentioned?: boolean | null;
+  engine: string; name: string; status: string; mentioned?: boolean | null;
+  recommendation?: string; confidence?: string; summary?: string; discovery_answer?: string;
   evidence_basis?: string; strengths?: string[]; gaps?: string[];
   recommendations?: string[]; sources?: string[];
 };
@@ -328,7 +328,7 @@ function VisibilityTrialPage() {
                 <article key={engine.engine} className="rounded-xl border border-border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{engine.name}</h3><span className="text-xs text-muted-foreground">{engine.status === "answered" ? c.answered : c.error}</span></div>
                   {engine.status === "answered" && <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned ? c.yes : c.no}</span>
+                    <span className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned === null || engine.mentioned === undefined ? c.unknown : engine.mentioned ? c.yes : c.no}</span>
                     <span className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
                     <span className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence || c.unknown}</span>
                   </div>}
