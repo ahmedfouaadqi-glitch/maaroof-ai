@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { AuthGate } from "@/components/AuthGate";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 
 export const Route = createFileRoute("/visibility-trial")({
   head: () => ({
@@ -150,10 +150,10 @@ function VisibilityTrialPage() {
     return () => window.clearInterval(id);
   }, [expiresAt, c.unavailableText]);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!session?.access_token || busy || !deviceId || !sessionId) return;
-    setBusy(true); setMessage(null); setContact(null); setResult(null); setRetrievalUsed(false);
+    setBusy(true); setMessage(null); setContact(null); setRetryAt(null); setResult(null); setRetrievalUsed(false);
     const requestKey = crypto.randomUUID();
     requestKeyRef.current = requestKey;
     try {
