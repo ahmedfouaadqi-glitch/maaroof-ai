@@ -1,44 +1,64 @@
-# MAAROOF free AI visibility trial — implementation notes
+# MAAROOF free AI visibility trial — implementation and deployment notes
 
-## Current baseline (main, 2026-11-13)
-- The existing `src/lib/trial.ts` is deliberately disabled and returns zero remaining trials.
-- `POST /api/visibility` currently runs the paid live probe, charges tokens, requires an official website, and records `visibility_probe` operations. It must not be repurposed as the free trial endpoint or counted as a free attempt.
-- The current live probe uses the ten-engine catalogue and model/provider fallback metadata. This trial must use a separately verified three-engine allow-list without changing the ten-engine catalogue or paid path.
-- The current landing page has three static metrics and obtains public data through `getLandingData`.
-
-## Agreed trial policy
-- Manual entity type selection and automatic entity-type discovery are both supported.
-- Website, social accounts, URLs and all other digital assets are optional.
-- Trial result data is isolated from MCI reuse and any shared/stale answer cache.
-- One genuine first run; one result re-open/retrieval; further attempts before the next eligible time route to the contact screen.
-- Result payload and evidence expire after 72 hours.
-- A new run may start only after an additional 5-hour cooldown: eligibility is 77 hours after the previous genuine run started. This cycle repeats without a lifetime cap.
-- Account and entity locks both apply. Device/session signals and IP risk signals are supplementary; browser JavaScript cannot read a real MAC address.
-- VPN/proxy/Tor classification must be performed server-side. If classification is unavailable, the trial must not start; uncertain classifications should be rechecked rather than silently treated as clean.
-- Contact details come from admin-managed settings, never hardcoded invented phone numbers or email addresses.
-- The user-facing engine names are shown; provider and backend model identifiers remain internal.
-- The paid visibility flow and ten-engine catalogue remain unchanged.
-
-## Counter semantics
-The homepage counter means **genuine free-trial runs started**, not page views, CTA clicks, reservations, paid probes, retries of the same HTTP request, or report re-opens.
-The database function `mark_visibility_trial_attempt_started` increments the aggregate exactly once when an attempt transitions from `reserved` to `running`, immediately before the first real engine request.
-A public landing query reads only the aggregate row; it never exposes user IDs, entity names, IPs, device fingerprints or attempt details.
+## Agreed behavior
+- Manual entity type selection or conservative automatic classification.
+- Website, social accounts and digital assets are optional; the form accepts none.
+- The free route is isolated from the paid `POST /api/visibility` endpoint, MCI answer reuse and shared answer caches.
+- Exactly three model routes are selected only when the resolved model IDs prove three distinct provider namespaces: OpenAI, Google, and one additional configured provider. The user-facing report displays engine labels only; provider and backend model IDs are not returned.
+- A run is counted only when a reserved attempt transitions to running immediately before the first live model request.
+- Report data is valid for 72 hours; exactly one additional report retrieval is allowed during that period.
+- The next trial can start 77 hours after the prior genuine start (72-hour report period plus 5-hour cooldown), repeating without a lifetime cap.
+- Account and canonical entity locks are atomic; device/session locks are supplementary; IP is an abuse-risk signal and is not a blanket lock for shared networks.
+- VPN, proxy and Tor are checked server-side. Missing or uncertain IP intelligence fails closed.
+- The contact handoff reads the existing admin-managed `app_settings.contact_info`; no contact details are hardcoded into the trial.
+- The 10-engine catalogue and paid path remain unchanged.
 
 ## Implemented in this branch
-1. Added a private trial-attempt table and public-safe aggregate counter.
-2. Added an idempotent database transition that increments the aggregate only once per reserved attempt.
-3. Exposed the aggregate through a read-only server function and a homepage metric that refreshes periodically.
-4. Kept the existing paid `/api/visibility` path untouched.
+- Landing page vector illustration and a multilingual link to the trial page.
+- Live homepage aggregate counter backed by `visibility_trial_stats`, refreshed every 10 seconds.
+- Private attempt ledger, RLS restrictions, idempotent start counter and atomic reservation/retrieval/completion RPCs.
+- Account/entity/device/session advisory locks and an IP multi-account risk threshold.
+- 72-hour result expiry, 77-hour cooldown and one-time report retrieval.
+- Opportunistic expiry cleanup plus optional `pg_cron` scheduling when the extension is installed.
+- Authenticated `POST /api/visibility-trial` with a separate live model route; it never calls the paid endpoint.
+- Three-route selection fails closed unless three different configured provider namespaces are available.
+- Arabic, English and Kurdish trial UI, optional assets and report display.
+- Unit tests for timing, entity normalization, HMAC separation and conservative classification.
 
-## Not yet complete — do not enable the trial CTA
-- Atomic reservation and account/entity lock RPCs with concurrency protection.
-- A separate authenticated `/api/visibility-trial` execution path.
-- Verified three-engine allow-list and live route checks (do not infer native product identity from the display name).
-- Entity taxonomy, no-asset prompt construction, evidence-quality handling and trial-specific result storage.
-- One-time result retrieval, expiry purge, 77-hour re-eligibility and indefinite cycle handling.
-- Server-side VPN/proxy/Tor classification and fail-closed behavior.
-- Admin-managed contact screen configuration.
-- Unit, database-concurrency, integration and UI tests; migration deployment and production verification.
+## Required server environment
+These values must be configured in the target deployment environment; do not commit them:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENROUTER_API_KEY`
+- `TRIAL_IDENTITY_SECRET` — random secret of at least 32 characters used for HMAC hashes of entity/device/session/IP signals.
+- `IP_RISK_CHECK_URL` — HTTPS endpoint for the organization's chosen IP intelligence provider.
+- `IP_RISK_CHECK_TOKEN` — secret token for that provider.
+- `APP_URL` — optional application URL sent as OpenRouter referer.
 
-## Visual direction
-Use the existing MAAROOF visual identity and motion primitives. Refine toward Linear's restrained information hierarchy and precise vector geometry, with React Bits-inspired motion used only for meaningful state transitions. Preserve Arabic, English and Kurdish; honor reduced-motion preferences; keep mobile layouts light; do not add a heavyweight animation dependency.
+### IP intelligence adapter contract
+The configured endpoint receives `POST { "ip": "..." }` with `Authorization: Bearer <token>` and must return JSON:
+```json
+{
+  "vpn": false,
+  "proxy": false,
+  "tor": false,
+  "risk": "low"
+}
+```
+All three booleans and a risk value of `low`, `medium`, or `high` are required. The route rejects the trial when the provider is missing, times out, returns malformed data, or flags VPN/proxy/Tor/high risk. This adapter intentionally does not assume a vendor-specific API or invent an integration.
+
+## Migration order
+Apply the migrations in timestamp order from `20261113010000` through `20261113050000` in a non-production environment first. The homepage counter stays unavailable until the first migration is applied. Do not run production migrations as part of this branch work.
+
+## Operational limitations
+- Browser device identifiers are signals, not unforgeable hardware identity; a browser cannot read a MAC address.
+- IP risk services are probabilistic and cannot guarantee detection of every VPN or proxy.
+- The third distinct provider is configuration-dependent. If the model registry does not resolve three provider-distinct model IDs, no trial starts and the counter does not increase.
+- The model requests are live inference calls; they are not evidence of native first-party access to each named consumer product. The report is explicitly labelled a three-response sample, not a market-wide visibility measurement.
+- A scheduled purge runs only when `pg_cron` is installed and permitted. Otherwise the API runs opportunistic cleanup on each trial request; expired reports remain inaccessible even before physical cleanup.
+
+## Not done here
+- No migration was deployed to Supabase.
+- No environment secrets or IP intelligence vendor credentials were configured.
+- No production model requests or production deployment were run.
+- The pull request remains draft and `main` remains untouched.
