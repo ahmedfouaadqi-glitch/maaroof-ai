@@ -258,6 +258,23 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
+        {/* 2. Live, server-backed stats */}
+        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
+          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
+            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
+              <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
+                {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
+                {n === null ? (
+                  <span className="relative font-display text-3xl font-bold text-muted-foreground md:text-4xl" aria-live="polite">—</span>
+                ) : (
+                  <CountUp to={n} className="relative font-display text-3xl font-bold text-gradient md:text-4xl" />
+                )}
+                <div className="relative mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* 2. Engines loop */}
         <section className="mx-auto max-w-5xl px-4 pb-14">
           <p className="mb-3 text-center text-xs text-muted-foreground">{c.engines}</p>
@@ -380,22 +397,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 9. Live, server-backed stats */}
-        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
-          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
-            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
-              <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
-                {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
-                {n === null ? (
-                  <span className="relative font-display text-3xl font-bold text-muted-foreground md:text-4xl" aria-live="polite">—</span>
-                ) : (
-                  <CountUp to={n} className="relative font-display text-3xl font-bold text-gradient md:text-4xl" />
-                )}
-                <div className="relative mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+
 
         {/* 10. FAQ + final CTA */}
         <section className="mx-auto max-w-3xl px-4 pb-20">
