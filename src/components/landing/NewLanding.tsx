@@ -19,19 +19,15 @@ import { ModelInsights } from "@/components/landing/ModelInsights";
 type L = "ar" | "en" | "ku";
 
 function HeroPulses() {
-  const [dots, setDots] = useState<{ x: number; y: number; d: number; s: number }[]>([]);
-  useEffect(() => {
-    const gen = () => Array.from({ length: 6 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, d: Math.random() * 3, s: 6 + Math.random() * 8 }));
-    setDots(gen());
-    const id = setInterval(() => setDots(gen()), 6000);
-    return () => clearInterval(id);
-  }, []);
   return (
-    <div aria-hidden className="relative mx-auto h-10 w-56">
-      {dots.map((p, i) => (
-        <span key={i} className="absolute rounded-full bg-primary motion-safe:animate-ping transition-all duration-[2000ms]"
-          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, animationDelay: `${p.d}s`, animationDuration: "2.4s", opacity: 0.7 }} />
-      ))}
+    <div aria-hidden className="mx-auto flex h-10 w-56 items-center justify-center gap-3 text-primary">
+      <span className="size-1.5 rounded-full bg-current opacity-35" />
+      <span className="h-px w-7 bg-current opacity-20" />
+      <span className="size-2 rounded-full border border-current opacity-65" />
+      <span className="h-px w-7 bg-current opacity-20" />
+      <span className="size-2.5 rounded-full bg-current opacity-80 motion-safe:animate-pulse" />
+      <span className="h-px w-7 bg-current opacity-20" />
+      <span className="size-1.5 rounded-full bg-current opacity-35" />
     </div>
   );
 }
