@@ -226,7 +226,7 @@ export const Route = createFileRoute("/api/visibility-trial")({
           if (latestError) return jsonError("trial_storage_unavailable", 503);
           if (!latest) return Response.json({ ok: true, available: false }, { headers: { "Cache-Control": "no-store" } });
           const resultValid = ["completed", "partial"].includes(latest.status) && Number(latest.result_view_count) >= 1 && !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() > Date.now();
-          const retrievalExhausted = resultValid && Number(latest.result_view_count) >= 2;
+          const retrievalExhausted = Number(latest.result_view_count) >= 2 && !!latest.next_eligible_at && new Date(latest.next_eligible_at).getTime() > Date.now();
           return Response.json({
             ok: true,
             available: true,
