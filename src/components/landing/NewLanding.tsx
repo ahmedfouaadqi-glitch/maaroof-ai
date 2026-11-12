@@ -74,7 +74,7 @@ const COPY = {
     title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
     rotPrefix: "نحسّن ظهورك عبر",
     brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
-    cta: "ابدأ مساحة العمل", pro: "واجهة المحترفين",
+    cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
     core: "الجوهر الخماسي",
@@ -102,7 +102,7 @@ const COPY = {
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
     skills: "المهارات المتاحة",
-    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "تجارب مجانية منفذة"],
+    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
@@ -117,7 +117,7 @@ const COPY = {
     title: "Make your brand a source answer engines cite",
     rotPrefix: "We improve your visibility through",
     brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
-    cta: "Start the workspace", pro: "Professional interface",
+    cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
     core: "The five pillars",
@@ -145,7 +145,7 @@ const COPY = {
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
     skills: "Available skills",
-    stats: ["AI engines", "Ready skills", "Supported languages", "Free trials run"],
+    stats: ["AI engines", "Ready skills", "Supported languages", "Free trial runs"],
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
@@ -160,7 +160,7 @@ const COPY = {
     title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
     brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
-    cta: "دەستپێکردنی شوێنی کار", pro: "ڕووکاری پسپۆڕان",
+    cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
     core: "پێنج کۆڵەکەکە",
@@ -188,7 +188,7 @@ const COPY = {
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
     skills: "کارامەییە بەردەستەکان",
-    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "تاقیکردنەوە خۆڕاییە ئەنجامدراوەکان"],
+    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
@@ -252,6 +252,9 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             </p>
             <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong className="font-display text-xl font-extrabold text-primary md:text-2xl">{c.brandName}</strong> — {c.sub}</p>
             <VisibilityVector />
+            <div className="mt-6 flex justify-center">
+              <Link to="/visibility-trial" className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10">{c.trialCta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
+            </div>
             <div className="mt-8">
               <ModelInsights lang={l} />
             </div>
