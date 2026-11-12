@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getLandingData } from "@/lib/landing.functions";
+import { getFreeVisibilityTrialUsage, getLandingData } from "@/lib/landing.functions";
 import { truthCardCompleteness, type PublicTruthCard } from "@/lib/landing-data";
 import { COUNTRY_NAMES } from "@/lib/entity-consistency";
 import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Globe2, Link2 } from "lucide-react";
@@ -70,7 +70,7 @@ const COPY = {
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
     skills: "المهارات المتاحة",
-    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة"],
+    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "تجارب مجانية منفذة"],
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
@@ -113,7 +113,7 @@ const COPY = {
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
     skills: "Available skills",
-    stats: ["AI models", "Ready skills", "Supported languages"],
+    stats: ["AI engines", "Ready skills", "Supported languages", "Free trials run"],
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
@@ -156,7 +156,7 @@ const COPY = {
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
     skills: "کارامەییە بەردەستەکان",
-    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو"],
+    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "تاقیکردنەوە خۆڕاییە ئەنجامدراوەکان"],
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
@@ -176,7 +176,17 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const l: L = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[l];
   const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
+  const [freeTrialAttempts, setFreeTrialAttempts] = useState<number | null>(null);
   useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => getFreeVisibilityTrialUsage()
+      .then((result) => { if (active) setFreeTrialAttempts(result.available ? result.totalStarted : null); })
+      .catch(() => { if (active) setFreeTrialAttempts(null); });
+    void refresh();
+    const interval = window.setInterval(refresh, 10_000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, []);
   const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
   const [openSkill, setOpenSkill] = useState<string | null>(null);
   const card = data?.card ?? null;
@@ -337,13 +347,18 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 9. Real stats */}
-        <section className="mx-auto max-w-4xl px-4 pb-16">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            {[ENGINES.length, skills.length, 3].map((n, i) => (
-              <div key={i} className="rounded-2xl border border-border bg-card/40 p-4">
-                <CountUp to={n} className="font-display text-3xl font-bold text-gradient md:text-4xl" />
-                <div className="mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
+        {/* 9. Live, server-backed stats */}
+        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
+          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
+            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
+              <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
+                {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
+                {n === null ? (
+                  <span className="relative font-display text-3xl font-bold text-muted-foreground md:text-4xl" aria-live="polite">—</span>
+                ) : (
+                  <CountUp to={n} className="relative font-display text-3xl font-bold text-gradient md:text-4xl" />
+                )}
+                <div className="relative mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
               </div>
             ))}
           </div>
