@@ -310,7 +310,11 @@ export const Route = createFileRoute("/api/visibility-trial")({
         const timer = setTimeout(() => controller.abort(), 45_000);
         const startedAt = Date.now();
         const recognitionPrompt = buildRecognitionPrompt({ name, category, description, market, language: lang, entityType, assets });
-        const blindPrompt = category ? buildBlindDiscoveryPrompt(category, market, lang) : null;
+        const normalizedTargetForBlind = normalizeTrialEntityName(name);
+        const normalizedCategoryForBlind = normalizeTrialEntityName(category);
+        const blindPrompt = category && !normalizedCategoryForBlind.includes(normalizedTargetForBlind)
+          ? buildBlindDiscoveryPrompt(category, market, lang)
+          : null;
         try {
           const settled = await Promise.allSettled(models.map(async (item) => {
             const [recognitionResult, blindResult] = await Promise.allSettled([
