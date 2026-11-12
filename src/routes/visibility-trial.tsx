@@ -304,7 +304,7 @@ function VisibilityTrialPage() {
         {contact.whatsapp && <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="text-primary underline">WhatsApp <ExternalLink className="inline size-3" /></a>}
         {contact.website && <a href={contact.website} target="_blank" rel="noreferrer" className="text-primary underline">Website <ExternalLink className="inline size-3" /></a>}
         {contact.channels?.map((channel) => channel.url ? <a key={channel.url} href={channel.url} target="_blank" rel="noreferrer" className="text-primary underline">{channel.label || c.contact} <ExternalLink className="inline size-3" /></a> : null)}
-        <Link to="/contact" className="text-primary underline">{c.contact}</Link>
+        {(contact.phone || contact.email || contact.whatsapp || contact.website || contact.channels?.length) && <Link to="/contact" className="text-primary underline">{c.contact}</Link>}
       </div>
       {!contact.phone && !contact.email && !contact.whatsapp && !contact.website && !contact.channels?.length && <p className="mt-3 text-xs text-muted-foreground">{c.noContact}</p>}
     </section>
