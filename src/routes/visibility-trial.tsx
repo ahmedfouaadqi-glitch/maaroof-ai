@@ -20,15 +20,15 @@ export const Route = createFileRoute("/visibility-trial")({
 
 type EngineResult = {
   engine: string; name: string; status: string; mentioned?: boolean;
-  recommendation?: string; confidence?: string; summary?: string;
+  recommendation?: string; confidence?: string; summary?: string; discovery_answer?: string; mentioned?: boolean | null;
   evidence_basis?: string; strengths?: string[]; gaps?: string[];
   recommendations?: string[]; sources?: string[];
 };
 type TrialResult = {
   attempt_id: string;
   entity: { name: string; type: string; type_detection: string; category: string | null; market: string | null };
-  sample: { planned_engines: number; answered_engines: number; is_market_measurement: boolean; note: string };
-  metrics: { mention_rate_percent: number; recommendation_rate_percent: number; answered_engines: number };
+  sample: { planned_engines: number; answered_engines: number; blind_sample_count: number; has_blind_discovery: boolean; is_market_measurement: boolean; note: string };
+  metrics: { mention_rate_percent: number | null; recommendation_rate_percent: number | null; blind_sample_count: number; answered_engines: number };
   engines: EngineResult[];
   generated_at: string;
   result_expires_at: string;
@@ -47,7 +47,7 @@ const COPY = {
     security: "يتم التحقق من الاتصال وأهلية التجربة قبل بدء الفحص. لا نستخدم إجابات فحوصات سابقة.",
     unavailable: "التجربة غير متاحة حالياً", unavailableText: "لم يتم التحقق من ثلاثة مسارات مستقلة أو من إعدادات الحماية. لم يبدأ الفحص ولم يُحتسب كاستخدام.", expiredText: "انتهت صلاحية هذا التقرير وحُذفت بياناته المؤقتة.",
     failed: "تعذر إكمال الفحص", retry: "أعد المحاولة بعد التحقق من الاتصال والإعدادات.",
-    report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت", mentionStatus: "ذكر الكيان", recommendationStatus: "التوصية", confidenceStatus: "الثقة", yes: "نعم", no: "لا", conditional: "مشروطة", unknown: "غير محسوم",
+    report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت", noCategoryMeasurement: "لم تُحدّد فئة للكيان؛ لذلك لم تُقَس عملية الاكتشاف غير الموجّه أو الظهور العضوي.", discovery: "نتيجة الاكتشاف غير الموجّه", mentionStatus: "ذكر الكيان", recommendationStatus: "التوصية", confidenceStatus: "الثقة", yes: "نعم", no: "لا", conditional: "مشروطة", unknown: "غير محسوم",
     sample: "هذه عينة من ثلاث استجابات حية وليست قياساً شاملاً للسوق أو ترتيباً عاماً.",
     known: "ملخص الاستجابة", basis: "أساس الأدلة", strengths: "إشارات إيجابية", gaps: "المعلومات غير المحسومة", actions: "تحسينات مقترحة", sources: "روابط ذكرتها الاستجابة (غير متحققة مستقلاً)",
     retrieval: "استرجاع التقرير مرة واحدة", retrievalDone: "تم استخدام الاسترجاع الإضافي", expires: "تنتهي صلاحية التقرير", contact: "التواصل مع معروف",
@@ -68,7 +68,7 @@ const COPY = {
     security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
     unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.", expiredText: "This report has expired. Its temporary report data is no longer available.",
     failed: "The probe could not be completed", retry: "Retry after checking connection and configuration.",
-    report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered", mentionStatus: "Entity mention", recommendationStatus: "Recommendation", confidenceStatus: "Confidence", yes: "Yes", no: "No", conditional: "Conditional", unknown: "Unknown",
+    report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered", noCategoryMeasurement: "No category was supplied, so unprompted discovery and organic visibility were not measured.", discovery: "Unprompted discovery response", mentionStatus: "Entity mention", recommendationStatus: "Recommendation", confidenceStatus: "Confidence", yes: "Yes", no: "No", conditional: "Conditional", unknown: "Unknown",
     sample: "This is a three-response live sample, not a market-wide measurement or general ranking.",
     known: "Response summary", basis: "Evidence basis", strengths: "Positive signals", gaps: "Unresolved information", actions: "Suggested improvements", sources: "URLs named in the response (not independently verified)",
     retrieval: "Retrieve report once", retrievalDone: "Additional retrieval used", expires: "Report expires", contact: "Contact MAAROOF",
@@ -89,7 +89,7 @@ const COPY = {
     security: "پێش پشکنین پەیوەندی و شایستەیی پشتڕاست دەکرێتەوە. وەڵامی پشکنینی پێشووتر بەکارناهێنین.",
     unavailable: "تاقیکردنەوە ئێستا بەردەست نییە", unavailableText: "سێ ڕێڕەوی جیاواز یان خزمەتگوزاری پاراستن پشتڕاست نەکرایەوە. پشکنین دەستی پێنەکرد و حساب نەکرا.", expiredText: "ماوەی ئەم ڕاپۆرتە تەواو بووە و داتاکانی کاتی سڕاونەتەوە.",
     failed: "پشکنین تەواو نەبوو", retry: "دوای پشتڕاستکردنەوەی پەیوەندی و ڕێکخستنەکان دووبارە هەوڵ بدە.",
-    report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان", mentionStatus: "باسکردنی قەوارە", recommendationStatus: "پێشنیار", confidenceStatus: "متمانە", yes: "بەڵێ", no: "نەخێر", conditional: "بە مەرج", unknown: "نادیار",
+    report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان", noCategoryMeasurement: "پۆلی قەوارە دیاری نەکراوە؛ بۆیە دۆزینەوەی بێ ئاراستە و دەرکەوتنی سروشتی نەپیوراوە.", discovery: "وەڵامی دۆزینەوەی بێ ئاراستە", mentionStatus: "باسکردنی قەوارە", recommendationStatus: "پێشنیار", confidenceStatus: "متمانە", yes: "بەڵێ", no: "نەخێر", conditional: "بە مەرج", unknown: "نادیار",
     sample: "ئەمە نموونەیەکی سێ وەڵامی ڕاستەوخۆیە، نەک پێوانەی گشتی بازاڕ.",
     known: "پوختەی وەڵام", basis: "بنەمای بەڵگە", strengths: "نیشانە ئەرێنییەکان", gaps: "زانیاریی نادیار", actions: "باشترکردنی پێشنیارکراو", sources: "بەستەرە باسکراوەکان (بە سەربەخۆیی پشتڕاست نەکراونەتەوە)",
     retrieval: "وەرگرتنەوەی ڕاپۆرت یەک جار", retrievalDone: "وەرگرتنەوەی زیادە بەکارهاتووە", expires: "کۆتایی هاتنی ڕاپۆرت", contact: "پەیوەندی بە مەعروف",
@@ -317,12 +317,12 @@ function VisibilityTrialPage() {
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {[
-                [c.mention, result.metrics.mention_rate_percent + "%"],
-                [c.recommend, result.metrics.recommendation_rate_percent + "%"],
+                [c.mention, result.metrics.mention_rate_percent === null ? "—" : result.metrics.mention_rate_percent + "%"],
+                [c.recommend, result.metrics.recommendation_rate_percent === null ? "—" : result.metrics.recommendation_rate_percent + "%"],
                 [c.engines, result.sample.answered_engines + "/3"],
               ].map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-background p-4"><div className="font-display text-2xl font-bold">{value}</div><div className="mt-1 text-xs text-muted-foreground">{label}</div></div>)}
             </div>
-            <p className="mt-4 rounded-lg bg-muted/40 p-3 text-xs leading-6 text-muted-foreground">{c.sample}</p>
+            <p className="mt-4 rounded-lg bg-muted/40 p-3 text-xs leading-6 text-muted-foreground">{result.sample.has_blind_discovery ? c.sample + " (" + result.sample.blind_sample_count + "/3 " + c.engines + ")" : c.noCategoryMeasurement}</p>
             <div className="mt-6 space-y-4">
               {result.engines.map((engine) => (
                 <article key={engine.engine} className="rounded-xl border border-border p-4">
@@ -332,6 +332,7 @@ function VisibilityTrialPage() {
                     <span className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
                     <span className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence || c.unknown}</span>
                   </div>}
+                  {engine.discovery_answer && <div className="mt-3 rounded-lg bg-muted/30 p-3 text-xs leading-6"><strong>{c.discovery}</strong><p className="mt-1">{engine.discovery_answer}</p></div>}
                   {engine.summary && <p className="mt-3 text-sm leading-7">{engine.summary}</p>}
                   {engine.evidence_basis && <div className="mt-3 text-xs leading-6 text-muted-foreground"><strong>{c.basis}: </strong>{engine.evidence_basis}</div>}
                   {engine.strengths?.length ? <div className="mt-3 text-xs leading-6"><strong>{c.strengths}</strong><ul className="ms-5 list-disc">{engine.strengths.map((x, i) => <li key={i}>{x}</li>)}</ul></div> : null}
