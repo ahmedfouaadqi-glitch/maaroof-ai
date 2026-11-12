@@ -340,7 +340,6 @@ export const Route = createFileRoute("/api/visibility-trial")({
             const allowedType = ["person", "organization", "unknown"].includes(value.entity_type) ? value.entity_type : "unknown";
             const blindBrands = Array.isArray(blind?.brands) ? blind.brands.map((x: unknown) => cleanText(x, 160)).filter(Boolean) : [];
             const blindAnswer = cleanText(blind?.answer, 1400);
-            const normalizedBlindAnswer = normalizeTrialEntityName(blindAnswer);
             const canonicalTarget = " " + targetName + " ";
             const containsTarget = (value: string) => (" " + normalizeTrialEntityName(value) + " ").includes(canonicalTarget);
             const mentioned = entry.value.blind_status === "answered"
