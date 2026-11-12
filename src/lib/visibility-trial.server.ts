@@ -24,7 +24,8 @@ export function normalizeTrialEntityName(input: string): string {
 export function trialEntityFingerprint(name: string, type: TrialEntityType): string {
   const canonical = normalizeTrialEntityName(name);
   if (canonical.length < 2) throw new Error("entity_name_invalid");
-  void type;\n  return hashTrialSignal(canonical, "entity");
+  void type;
+  return hashTrialSignal(canonical, "entity");
 }
 
 /**
