@@ -53,6 +53,7 @@ Apply the migrations in timestamp order from `20261113010000` through `202611130
 
 ## Operational limitations
 - Entity identity currently uses Unicode-normalized names (including Arabic diacritic/Alef/Ya normalization); transliteration and unrelated aliases are not guaranteed to collapse to one entity. Browser device identifiers are signals, not unforgeable hardware identity; a browser cannot read a MAC address.
+- The current IP address is sent over HTTPS to the configured IP-intelligence endpoint for classification; only its HMAC hash is retained in the trial ledger. Select a provider whose privacy and retention terms are acceptable.
 - IP risk services are probabilistic and cannot guarantee detection of every VPN or proxy.
 - The third distinct provider is configuration-dependent. If the model registry does not resolve three provider-distinct model IDs, no trial starts and the counter does not increase.
 - The model requests are live inference calls; they are not evidence of native first-party access to each named consumer product. The report is explicitly labelled a three-response sample, not a market-wide visibility measurement.
