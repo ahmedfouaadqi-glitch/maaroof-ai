@@ -235,9 +235,13 @@ function VisibilityTrialPage() {
       const data = await response.json();
       if (!response.ok || !data.ok) {
         if (data.contact) setContact(data.contact);
-        setMessage({ kind: "error", text: data.error === "retrieval_exhausted" ? c.contactDesc : data.error === "expired" ? c.expiredText : c.unavailableText });
+        setMessage({ kind: data.error === "in_progress" ? "info" : "error", text:
+          data.error === "retrieval_exhausted" ? c.contactDesc :
+          data.error === "expired" ? c.expiredText :
+          data.error === "in_progress" ? c.requestInProgress :
+          data.error === "failed" ? c.failed : c.unavailableText });
         if (data.error === "retrieval_exhausted") setRetrievalUsed(true);
-        if (data.error === "expired") {
+        if (data.error === "expired" || data.error === "failed") {
           setAttemptId(null);
           try { localStorage.removeItem("maaroof_trial_last_attempt"); } catch {}
         }
