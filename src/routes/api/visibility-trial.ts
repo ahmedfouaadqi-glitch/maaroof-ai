@@ -344,7 +344,10 @@ export const Route = createFileRoute("/api/visibility-trial")({
         const recognitionPrompt = buildRecognitionPrompt({ name, category, description, market, language: lang, entityType, assets });
         const normalizedTargetForBlind = normalizeTrialEntityName(name);
         const normalizedCategoryForBlind = normalizeTrialEntityName(category);
-        const blindPrompt = category && !normalizedCategoryForBlind.includes(normalizedTargetForBlind)
+        const normalizedMarketForBlind = normalizeTrialEntityName(market);
+        const blindPrompt = category &&
+          !normalizedCategoryForBlind.includes(normalizedTargetForBlind) &&
+          !normalizedMarketForBlind.includes(normalizedTargetForBlind)
           ? buildBlindDiscoveryPrompt(category, market, lang)
           : null;
         try {
