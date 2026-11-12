@@ -218,14 +218,14 @@ export const Route = createFileRoute("/api/visibility-trial")({
 
         if (body.action === "latest") {
           const { data: latest, error: latestError } = await admin.from("visibility_trial_attempts")
-            .select("id,status,result_expires_at,next_eligible_at,result_view_count,result_payload")
+            .select("id,status,result_expires_at,next_eligible_at,result_view_count")
             .eq("user_id", userId)
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
           if (latestError) return jsonError("trial_storage_unavailable", 503);
           if (!latest) return Response.json({ ok: true, available: false }, { headers: { "Cache-Control": "no-store" } });
-          const resultValid = !!latest.result_payload && !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() > Date.now();
+          const resultValid = ["completed", "partial"].includes(latest.status) && Number(latest.result_view_count) >= 1 && !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() > Date.now();
           const retrievalExhausted = resultValid && Number(latest.result_view_count) >= 2;
           return Response.json({
             ok: true,
