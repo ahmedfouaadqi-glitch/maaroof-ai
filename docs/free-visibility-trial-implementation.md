@@ -15,17 +15,18 @@
 
 ## Implemented in this branch
 - Landing page vector illustration and a multilingual link to the trial page.
-- Live homepage aggregate counter backed by `visibility_trial_stats`, refreshed every 10 seconds.
+- Live homepage aggregate counter backed by `visibility_trial_stats`, exposed through a public-safe `Cache-Control: no-store` endpoint and refreshed every 5 seconds plus on window focus.
 - Private attempt ledger, RLS restrictions, idempotent start counter and atomic reservation/retrieval/completion RPCs.
 - Account/entity/device/session advisory locks and an IP multi-account risk threshold.
 - 72-hour result expiry, 77-hour cooldown and one-time report retrieval.
 - Opportunistic expiry cleanup plus optional `pg_cron` scheduling when the extension is installed.
 - Authenticated `POST /api/visibility-trial` with a separate live model route; it never calls the paid endpoint.
+- Blind category discovery uses a separate prompt that omits the target entity name and all brand-linked assets. Organic mention/recommendation metrics are not reported when no category is supplied; if the blind request fails, that engine is excluded from the blind metric denominator.
 - Three-route selection fails closed unless three different configured provider namespaces are available.
 - Arabic, English and Kurdish trial UI, optional assets and report display.
 - Unit tests for timing, entity normalization, HMAC separation and conservative classification.
 
-## Required server environment
+## Public counter route\n`GET /api/visibility-trial-usage` returns only the aggregate total and an availability flag. It does not expose attempt records, account IDs, entity names, IP hashes, device hashes or session hashes.\n\n## Required server environment
 These values must be configured in the target deployment environment; do not commit them:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
