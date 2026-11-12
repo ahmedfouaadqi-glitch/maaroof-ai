@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getFreeVisibilityTrialUsage, getLandingData } from "@/lib/landing.functions";
+import { getLandingData } from "@/lib/landing.functions";
 import { truthCardCompleteness, type PublicTruthCard } from "@/lib/landing-data";
 import { COUNTRY_NAMES } from "@/lib/entity-consistency";
 import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Globe2, Link2 } from "lucide-react";
@@ -212,8 +212,9 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
   useEffect(() => {
     let active = true;
-    const refresh = () => getFreeVisibilityTrialUsage()
-      .then((result) => { if (active) setFreeTrialAttempts(result.available ? result.totalStarted : null); })
+    const refresh = () => fetch("/api/visibility-trial-usage", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => { if (active) setFreeTrialAttempts(result.available ? Number(result.totalStarted) : null); })
       .catch(() => { if (active) setFreeTrialAttempts(null); });
     void refresh();
     const interval = window.setInterval(refresh, 10_000);
