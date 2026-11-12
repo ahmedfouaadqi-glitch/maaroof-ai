@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { AuthGate } from "@/components/AuthGate";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -122,7 +121,6 @@ function VisibilityTrialPage() {
   const [retryAt, setRetryAt] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const requestKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -142,6 +140,8 @@ function VisibilityTrialPage() {
     const check = () => {
       if (Date.now() >= new Date(expiresAt).getTime()) {
         setResult(null);
+        setAttemptId(null);
+        try { localStorage.removeItem("maaroof_trial_last_attempt"); } catch {}
         setMessage({ kind: "info", text: c.unavailableText });
       }
     };
@@ -155,7 +155,6 @@ function VisibilityTrialPage() {
     if (!session?.access_token || busy || !deviceId || !sessionId) return;
     setBusy(true); setMessage(null); setContact(null); setRetryAt(null); setResult(null); setRetrievalUsed(false);
     const requestKey = crypto.randomUUID();
-    requestKeyRef.current = requestKey;
     try {
       const response = await fetch("/api/visibility-trial", {
         method: "POST",
