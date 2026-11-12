@@ -50,7 +50,7 @@ export async function verifyTrialIpRisk(ip: string): Promise<IpRisk> {
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({ ip }),
       signal: controller.signal,
-      cache: "no-store",
+      cache: "no-store",\n      redirect: "error",
     });
     if (!response.ok) throw new Error("ip_risk_service_unavailable");
     const value: any = await response.json();
