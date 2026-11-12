@@ -276,6 +276,14 @@ export const Route = createFileRoute("/api/visibility-trial")({
           await admin.from("visibility_trial_attempts").delete().eq("id", attemptId).eq("user_id", userId).eq("status", "reserved");
           return jsonError("trial_start_failed", 503);
         }
+        const { data: timing, error: timingError } = await admin.from("visibility_trial_attempts")
+          .select("result_expires_at,next_eligible_at")
+          .eq("id", attemptId).eq("user_id", userId).maybeSingle();
+        if (timingError || !timing?.result_expires_at) {
+          await admin.rpc("complete_visibility_trial_attempt", { p_attempt_id: attemptId, p_user_id: userId, p_result: null, p_status: "failed" });
+          return jsonError("trial_timing_unavailable", 503, { counted_as_started: true });
+        }
+        const resultExpiresAt = String(timing.result_expires_at);
 
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 45_000);
@@ -328,7 +336,7 @@ export const Route = createFileRoute("/api/visibility-trial")({
             summary: "A limited live sample from the three configured, provider-distinct model routes.",
             engines: results,
             generated_at: new Date().toISOString(),
-            result_expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+            result_expires_at: resultExpiresAt,
             free_trial_counter: Number(counter || 0),
           };
           const completeStatus = answered.length === 3 ? "completed" : "partial";
@@ -336,7 +344,7 @@ export const Route = createFileRoute("/api/visibility-trial")({
             p_attempt_id: attemptId, p_user_id: userId, p_result: result, p_status: completeStatus,
           });
           if (completeError || completed !== true) return jsonError("trial_result_persistence_failed", 500, { attempt_id: attemptId, counted_as_started: true });
-          return Response.json({ ok: true, attempt_id: attemptId, result, result_expires_at: result.result_expires_at, free_trial_counter: Number(counter || 0), duration_ms: Date.now() - startedAt }, { headers: { "Cache-Control": "no-store" } });
+          return Response.json({ ok: true, attempt_id: attemptId, result, result_expires_at: resultExpiresAt, free_trial_counter: Number(counter || 0), duration_ms: Date.now() - startedAt }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           await admin.rpc("complete_visibility_trial_attempt", { p_attempt_id: attemptId, p_user_id: userId, p_result: null, p_status: "failed" });
           console.error("[visibility-trial] run failed", error);
