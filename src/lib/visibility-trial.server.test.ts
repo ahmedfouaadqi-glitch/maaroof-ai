@@ -5,6 +5,7 @@ import {
   hashTrialSignal,
   normalizeTrialEntityName,
   trialEntityFingerprint,
+  verifyTrialIpRisk,
 } from "./visibility-trial.server";
 
 const previousSecret = process.env.TRIAL_IDENTITY_SECRET;\nconst previousIpUrl = process.env.IP_RISK_CHECK_URL;\nconst previousIpToken = process.env.IP_RISK_CHECK_TOKEN;
@@ -12,6 +13,10 @@ const previousSecret = process.env.TRIAL_IDENTITY_SECRET;\nconst previousIpUrl =
 afterEach(() => {
   if (previousSecret === undefined) delete process.env.TRIAL_IDENTITY_SECRET;
   else process.env.TRIAL_IDENTITY_SECRET = previousSecret;
+  if (previousIpUrl === undefined) delete process.env.IP_RISK_CHECK_URL;
+  else process.env.IP_RISK_CHECK_URL = previousIpUrl;
+  if (previousIpToken === undefined) delete process.env.IP_RISK_CHECK_TOKEN;
+  else process.env.IP_RISK_CHECK_TOKEN = previousIpToken;
 });
 
 describe("visibility trial identity and risk helpers", () => {
