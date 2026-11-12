@@ -58,7 +58,7 @@ function parseModelJson(content: unknown): any {
   if (first >= 0 && last > first) {
     try { return JSON.parse(cleaned.slice(first, last + 1)); } catch {}
   }
-  return { summary: cleaned.slice(0, 1800), answer: cleaned.slice(0, 5000) };
+  return null;
 }
 
 function safeUrls(value: unknown): string[] {
