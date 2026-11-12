@@ -156,6 +156,35 @@ function VisibilityTrialPage() {
     return () => window.clearInterval(id);
   }, [expiresAt, c.unavailableText]);
 
+  useEffect(() => {
+    if (!session?.access_token) return;
+    let active = true;
+    void fetch("/api/visibility-trial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+      body: JSON.stringify({ action: "latest" }),
+    }).then((response) => response.json()).then((data) => {
+      if (!active || !data.ok || !data.available) return;
+      setAttemptId(data.attempt_id);
+      try { localStorage.setItem("maaroof_trial_last_attempt", data.attempt_id); } catch {}
+      if (data.next_eligible_at) setRetryAt(data.next_eligible_at);
+      if (data.retrieval_exhausted) {
+        setRetrievalUsed(true);
+        setContact(data.contact || null);
+      } else if (data.expired) {
+        setAttemptId(null);
+        try { localStorage.removeItem("maaroof_trial_last_attempt"); } catch {}
+        setMessage({ kind: "info", text: c.expiredText });
+      } else if (data.status === "failed") {
+        setRetrievalUsed(true);
+        setMessage({ kind: "error", text: c.failed });
+      } else if (data.status === "running" || data.status === "reserved") {
+        setMessage({ kind: "info", text: c.requestInProgress });
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [session?.access_token, c.expiredText, c.failed, c.requestInProgress]);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!session?.access_token || busy || !deviceId || !sessionId) return;
