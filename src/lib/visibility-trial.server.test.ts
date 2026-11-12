@@ -7,7 +7,7 @@ import {
   trialEntityFingerprint,
 } from "./visibility-trial.server";
 
-const previousSecret = process.env.TRIAL_IDENTITY_SECRET;
+const previousSecret = process.env.TRIAL_IDENTITY_SECRET;\nconst previousIpUrl = process.env.IP_RISK_CHECK_URL;\nconst previousIpToken = process.env.IP_RISK_CHECK_TOKEN;
 
 afterEach(() => {
   if (previousSecret === undefined) delete process.env.TRIAL_IDENTITY_SECRET;
@@ -46,5 +46,11 @@ describe("visibility trial identity and risk helpers", () => {
     expect(getTrustedClientIp(new Request("https://example.com", { headers: { "cf-connecting-ip": "203.0.113.4" } }))).toBe("203.0.113.4");
     expect(getTrustedClientIp(new Request("https://example.com", { headers: { "x-real-ip": "203.0.113.4, 10.0.0.1" } }))).toBeNull();
     expect(getTrustedClientIp(new Request("https://example.com"))).toBeNull();
+  });
+
+  it("fails closed when no server-side IP intelligence provider is configured", async () => {
+    delete process.env.IP_RISK_CHECK_URL;
+    delete process.env.IP_RISK_CHECK_TOKEN;
+    await expect(verifyTrialIpRisk("203.0.113.4")).rejects.toThrow("ip_risk_service_not_configured");
   });
 });
