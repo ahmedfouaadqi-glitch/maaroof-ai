@@ -341,17 +341,13 @@ export const Route = createFileRoute("/api/visibility-trial")({
             const blindBrands = Array.isArray(blind?.brands) ? blind.brands.map((x: unknown) => cleanText(x, 160)).filter(Boolean) : [];
             const blindAnswer = cleanText(blind?.answer, 1400);
             const normalizedBlindAnswer = normalizeTrialEntityName(blindAnswer);
+            const canonicalTarget = " " + targetName + " ";
+            const containsTarget = (value: string) => (" " + normalizeTrialEntityName(value) + " ").includes(canonicalTarget);
             const mentioned = entry.value.blind_status === "answered"
-              ? (normalizedBlindAnswer.includes(targetName) || blindBrands.some((brand: string) => {
-                  const normalizedBrand = normalizeTrialEntityName(brand);
-                  return normalizedBrand === targetName || normalizedBrand.includes(targetName);
-                }))
+              ? (containsTarget(blindAnswer) || blindBrands.some((brand: string) => containsTarget(brand)))
               : null;
             const recommended = entry.value.blind_status === "answered"
-              ? blindBrands.some((brand: string) => {
-                  const normalizedBrand = normalizeTrialEntityName(brand);
-                  return normalizedBrand === targetName || normalizedBrand.includes(targetName);
-                })
+              ? blindBrands.some((brand: string) => containsTarget(brand))
               : false;
             return {
               engine: model.key, name: ENGINE_LABELS[model.key], status: "answered",
