@@ -13,7 +13,7 @@ import {
 } from "@/lib/visibility-trial.server";
 
 type StartBody = {
-  action?: "start" | "retrieve";
+  action?: "start" | "retrieve" | "latest";
   request_key?: string;
   attempt_id?: string;
   entity_name?: string;
@@ -215,6 +215,31 @@ export const Route = createFileRoute("/api/visibility-trial")({
         const { admin, userId } = auth;
         // Opportunistic cleanup: report payloads are erased at 72h and lock rows at 77h.
         await admin.rpc("purge_expired_visibility_trial_data").catch(() => null);
+
+        if (body.action === "latest") {
+          const { data: latest, error: latestError } = await admin.from("visibility_trial_attempts")
+            .select("id,status,result_expires_at,next_eligible_at,result_view_count,result_payload")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestError) return jsonError("trial_storage_unavailable", 503);
+          if (!latest) return Response.json({ ok: true, available: false }, { headers: { "Cache-Control": "no-store" } });
+          const resultValid = !!latest.result_payload && !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() > Date.now();
+          const retrievalExhausted = resultValid && Number(latest.result_view_count) >= 2;
+          return Response.json({
+            ok: true,
+            available: true,
+            attempt_id: latest.id,
+            status: latest.status,
+            result_expires_at: latest.result_expires_at,
+            next_eligible_at: latest.next_eligible_at,
+            retrieval_available: resultValid && Number(latest.result_view_count) === 1,
+            retrieval_exhausted: retrievalExhausted,
+            expired: !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() <= Date.now(),
+            contact: retrievalExhausted ? await getContactSettings(admin) : undefined,
+          }, { headers: { "Cache-Control": "no-store" } });
+        }
 
         if (body.action === "retrieve") {
           if (!body.attempt_id || !/^[0-9a-f-]{36}$/i.test(body.attempt_id)) return jsonError("attempt_id_invalid", 400);
