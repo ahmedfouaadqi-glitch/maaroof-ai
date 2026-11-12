@@ -107,16 +107,19 @@ function buildTrialPrompt(input: {
 
 async function getContactSettings(admin: any) {
   try {
-    const { data } = await admin.from("app_settings").select("value").eq("key", "free_visibility_trial_contact").maybeSingle();
+    const { data } = await admin.from("app_settings").select("value").eq("key", "contact_info").maybeSingle();
     const v = data?.value && typeof data.value === "object" ? data.value as Record<string, unknown> : {};
+    const whatsappNumber = cleanText(v.whatsapp_number, 32).replace(/[^0-9]/g, "");
     return {
-      title: cleanText(v.title, 120),
-      message: cleanText(v.message, 500),
+      title: "MAAROOF Ai",
+      message: "",
       email: cleanText(v.email, 200),
-      phone: cleanText(v.phone, 80),
-      whatsapp: cleanText(v.whatsapp, 300),
-      website: cleanText(v.website, 300),
-      channels: Array.isArray(v.channels) ? v.channels.filter((x) => typeof x === "object").slice(0, 8) : [],
+      phone: cleanText(v.phone_display, 80),
+      whatsapp: whatsappNumber ? "https://wa.me/" + whatsappNumber : "",
+      website: "",
+      channels: ["facebook", "instagram", "twitter", "linkedin", "telegram"]
+        .filter((key) => typeof v[key] === "string" && String(v[key]).trim())
+        .map((key) => ({ label: key, url: cleanText(v[key], 300) })),
       fallbackPath: "/contact",
     };
   } catch {
@@ -186,6 +189,8 @@ export const Route = createFileRoute("/api/visibility-trial")({
         const auth = await getAdmin(request).catch(() => ({ error: "server_not_configured" as const }));
         if ("error" in auth) return jsonError(auth.error, auth.error === "auth_required" ? 401 : 503);
         const { admin, userId } = auth;
+        // Opportunistic cleanup: report payloads are erased at 72h and lock rows at 77h.
+        await admin.rpc("purge_expired_visibility_trial_data").catch(() => null);
 
         if (body.action === "retrieve") {
           if (!body.attempt_id || !/^[0-9a-f-]{36}$/i.test(body.attempt_id)) return jsonError("attempt_id_invalid", 400);
