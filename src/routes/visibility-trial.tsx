@@ -164,7 +164,13 @@ function VisibilityTrialPage() {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
       body: JSON.stringify({ action: "latest" }),
     }).then((response) => response.json()).then((data) => {
-      if (!active || !data.ok || !data.available) return;
+      if (!active || !data.ok) return;
+      if (!data.available) {
+        setAttemptId(null);
+        setRetryAt(null);
+        try { localStorage.removeItem("maaroof_trial_last_attempt"); } catch {}
+        return;
+      }
       setAttemptId(data.attempt_id);
       try { localStorage.setItem("maaroof_trial_last_attempt", data.attempt_id); } catch {}
       if (data.next_eligible_at) setRetryAt(data.next_eligible_at);
