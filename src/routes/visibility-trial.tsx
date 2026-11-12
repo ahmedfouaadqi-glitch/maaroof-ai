@@ -46,7 +46,7 @@ const COPY = {
     start: "ابدأ التجربة المجانية", working: "جارٍ تنفيذ الفحص المباشر", auth: "سجّل الدخول للمتابعة",
     security: "يتم التحقق من الاتصال وأهلية التجربة قبل بدء الفحص. لا نستخدم إجابات فحوصات سابقة.",
     unavailable: "التجربة غير متاحة حالياً", unavailableText: "لم يتم التحقق من ثلاثة مسارات مستقلة أو من إعدادات الحماية. لم يبدأ الفحص ولم يُحتسب كاستخدام.", expiredText: "انتهت صلاحية هذا التقرير وحُذفت بياناته المؤقتة.",
-    failed: "تعذر إكمال الفحص", retry: "أعد المحاولة بعد التحقق من الاتصال والإعدادات.",
+    failed: "تعذر إكمال الفحص", retry: "أعد المحاولة بعد التحقق من الاتصال والإعدادات.", requestInProgress: "هذه المحاولة بدأت بالفعل. يمكنك استرجاع تقريرها مرة واحدة عند اكتمالها.",
     report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت", noCategoryMeasurement: "لم تتوفر فئة محايدة لا تتضمن اسم الكيان؛ لذلك لم يُقَس الاكتشاف غير الموجّه أو الظهور العضوي.", discovery: "نتيجة الاكتشاف غير الموجّه", mentionStatus: "ذكر الكيان", recommendationStatus: "التوصية", confidenceStatus: "الثقة", yes: "نعم", no: "لا", conditional: "مشروطة", unknown: "غير محسوم",
     sample: "هذه عينة من ثلاث استجابات حية وليست قياساً شاملاً للسوق أو ترتيباً عاماً.",
     known: "ملخص الاستجابة", basis: "أساس الأدلة", strengths: "إشارات إيجابية", gaps: "المعلومات غير المحسومة", actions: "تحسينات مقترحة", sources: "روابط ذكرتها الاستجابة (غير متحققة مستقلاً)",
@@ -67,7 +67,7 @@ const COPY = {
     start: "Start free trial", working: "Running the live probe", auth: "Sign in to continue",
     security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
     unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.", expiredText: "This report has expired. Its temporary report data is no longer available.",
-    failed: "The probe could not be completed", retry: "Retry after checking connection and configuration.",
+    failed: "The probe could not be completed", retry: "Retry after checking connection and configuration.", requestInProgress: "This request has already started. You can retrieve its report once after it finishes.",
     report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered", noCategoryMeasurement: "No neutral category was supplied, or the category included the target name; unprompted discovery and organic visibility were not measured.", discovery: "Unprompted discovery response", mentionStatus: "Entity mention", recommendationStatus: "Recommendation", confidenceStatus: "Confidence", yes: "Yes", no: "No", conditional: "Conditional", unknown: "Unknown",
     sample: "This is a three-response live sample, not a market-wide measurement or general ranking.",
     known: "Response summary", basis: "Evidence basis", strengths: "Positive signals", gaps: "Unresolved information", actions: "Suggested improvements", sources: "URLs named in the response (not independently verified)",
@@ -88,7 +88,7 @@ const COPY = {
     start: "دەستپێکردنی تاقیکردنەوە", working: "پشکنینی ڕاستەوخۆ ئەنجام دەدرێت", auth: "بچۆ ژوورەوە بۆ بەردەوامبوون",
     security: "پێش پشکنین پەیوەندی و شایستەیی پشتڕاست دەکرێتەوە. وەڵامی پشکنینی پێشووتر بەکارناهێنین.",
     unavailable: "تاقیکردنەوە ئێستا بەردەست نییە", unavailableText: "سێ ڕێڕەوی جیاواز یان خزمەتگوزاری پاراستن پشتڕاست نەکرایەوە. پشکنین دەستی پێنەکرد و حساب نەکرا.", expiredText: "ماوەی ئەم ڕاپۆرتە تەواو بووە و داتاکانی کاتی سڕاونەتەوە.",
-    failed: "پشکنین تەواو نەبوو", retry: "دوای پشتڕاستکردنەوەی پەیوەندی و ڕێکخستنەکان دووبارە هەوڵ بدە.",
+    failed: "پشکنین تەواو نەبوو", retry: "دوای پشتڕاستکردنەوەی پەیوەندی و ڕێکخستنەکان دووبارە هەوڵ بدە.", requestInProgress: "ئەم داواکارییە دەستی پێکردووە. دوای تەواوبوونی دەتوانیت ڕاپۆرتەکە یەک جار وەربگریتەوە.",
     report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان", noCategoryMeasurement: "پۆلێکی بێلایەن کە ناوی قەوارەکەی تێدا نەبێت بەردەست نەبوو؛ بۆیە دۆزینەوەی بێ ئاراستە و دەرکەوتنی سروشتی نەپیوراوە.", discovery: "وەڵامی دۆزینەوەی بێ ئاراستە", mentionStatus: "باسکردنی قەوارە", recommendationStatus: "پێشنیار", confidenceStatus: "متمانە", yes: "بەڵێ", no: "نەخێر", conditional: "بە مەرج", unknown: "نادیار",
     sample: "ئەمە نموونەیەکی سێ وەڵامی ڕاستەوخۆیە، نەک پێوانەی گشتی بازاڕ.",
     known: "پوختەی وەڵام", basis: "بنەمای بەڵگە", strengths: "نیشانە ئەرێنییەکان", gaps: "زانیاریی نادیار", actions: "باشترکردنی پێشنیارکراو", sources: "بەستەرە باسکراوەکان (بە سەربەخۆیی پشتڕاست نەکراونەتەوە)",
@@ -99,6 +99,12 @@ const COPY = {
     retryAt: "کاتی شایستەبوونی داهاتوو", entityPerson: "کەس", entityOrg: "دامەزراوە", entityUnknown: "دیاری نەکراو",
   },
 } as const;
+
+async function trialPayloadSignature(value: Record<string, unknown>): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((part) => part.toString(16).padStart(2, "0")).join("");
+}
 
 function VisibilityTrialPage() {
   const { lang } = useI18n();
@@ -154,7 +160,22 @@ function VisibilityTrialPage() {
     event.preventDefault();
     if (!session?.access_token || busy || !deviceId || !sessionId) return;
     setBusy(true); setMessage(null); setContact(null); setRetryAt(null); setResult(null); setRetrievalUsed(false);
-    const requestKey = crypto.randomUUID();
+    const payload = {
+      action: "start", entity_name: entityName, entity_type: entityType,
+      category, description, market, language: l,
+      assets: assetsText.split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
+    };
+    let requestKey = crypto.randomUUID();
+    try {
+      const signature = await trialPayloadSignature(payload);
+      const savedSignature = sessionStorage.getItem("maaroof_trial_pending_signature");
+      const savedKey = sessionStorage.getItem("maaroof_trial_pending_key");
+      if (savedSignature === signature && savedKey) requestKey = savedKey;
+      else {
+        sessionStorage.setItem("maaroof_trial_pending_signature", signature);
+        sessionStorage.setItem("maaroof_trial_pending_key", requestKey);
+      }
+    } catch {}
     try {
       const response = await fetch("/api/visibility-trial", {
         method: "POST",
@@ -164,16 +185,22 @@ function VisibilityTrialPage() {
           "X-Trial-Device": deviceId,
           "X-Trial-Session": sessionId,
         },
-        body: JSON.stringify({
-          action: "start", request_key: requestKey, entity_name: entityName,
-          entity_type: entityType, category, description, market, language: l,
-          assets: assetsText.split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
-        }),
+        body: JSON.stringify({ ...payload, request_key: requestKey }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
         if (data.contact) setContact(data.contact);
         if (data.retry_at) setRetryAt(data.retry_at);
+        if (data.error === "request_already_started" && data.attempt_id) {
+          setAttemptId(data.attempt_id);
+          try {
+            localStorage.setItem("maaroof_trial_last_attempt", data.attempt_id);
+            sessionStorage.removeItem("maaroof_trial_pending_signature");
+            sessionStorage.removeItem("maaroof_trial_pending_key");
+          } catch {}
+          setMessage({ kind: "info", text: c.requestInProgress });
+          return;
+        }
         const errorText = data.error === "three_verified_engine_routes_unavailable" || data.error === "ip_verification_unavailable" || data.error === "trial_security_not_configured"
           ? c.unavailableText
           : data.error === "account_cooldown" || data.error === "entity_cooldown" || data.error === "device_cooldown" || data.error === "session_cooldown" || data.error === "ip_risk_review" || data.error === "connection_not_eligible"
@@ -181,6 +208,10 @@ function VisibilityTrialPage() {
         setMessage({ kind: "error", text: errorText });
         return;
       }
+      try {
+        sessionStorage.removeItem("maaroof_trial_pending_signature");
+        sessionStorage.removeItem("maaroof_trial_pending_key");
+      } catch {}
       setResult(data.result as TrialResult);
       setAttemptId(data.attempt_id);
       setExpiresAt(data.result_expires_at);
