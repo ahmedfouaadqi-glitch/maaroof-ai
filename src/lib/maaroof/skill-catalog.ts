@@ -193,6 +193,42 @@ export const MAAROOF_SKILLS: MaaroofSkill[] = [
     keywords: ["منافس", "المنافسين", "السوق", "مقارنة", "فجوات", "رقابت", "بازاڕ", "بەراورد", "competitor", "market", "compare", "gap"],
   },
   {
+    key: "entity_knowledge_graph",
+    icon: "target",
+    label: { ar: "تحسين الكيانات والرسم المعرفي", en: "Entity & Knowledge Graph Optimization", ku: "باشترکردنی ناسنامە و نەخشەی زانیاری" },
+    description: {
+      ar: "يفحص إشارات هوية الكيان والروابط وبيانات Schema.org وJSON-LD المتاحة فعلياً. لا يدّعي إدراج الكيان في Knowledge Graph دون دليل.",
+      en: "Audits observable entity identity, relationships and Schema.org/JSON-LD markup. It does not claim Knowledge Graph inclusion without evidence.",
+      ku: "ناسنامە و پەیوەندییەکان و Schema.org/JSON-LD دەپشکنێت؛ بەبێ بەڵگە بانگەشەی تۆمارکردن لە Knowledge Graph ناکات."
+    },
+    tools: ["analyze", "known", "brand_authority"],
+    keywords: ["entity", "knowledge graph", "kgo", "schema.org", "json-ld", "sameas", "كيان", "الرسم المعرفي", "البيانات المنظمة"]
+  },
+  {
+    key: "rag_ingestion_readiness",
+    icon: "search",
+    label: { ar: "جاهزية المحتوى للاسترجاع التوليدي", en: "RAG & LLM Ingestion Readiness", ku: "ئامادەیی ناوەڕۆک بۆ RAG" },
+    description: {
+      ar: "يقيّم قابلية استخراج الحقائق من المحتوى العام وتنظيمه للاسترجاع. لا ينفّذ فهرسة BM25 أو Vector Search داخل قاعدة بيانات العميل.",
+      en: "Assesses whether public content exposes extractable facts and retrieval-friendly structure. It does not build a BM25 or vector index in the customer's database.",
+      ku: "ئامادەیی ناوەڕۆکی گشتی بۆ دەرهێنانی زانیاری دەپێوێت؛ فهرستی BM25 یان Vector Search لە بنکەدراوەی کڕیار دروست ناکات."
+    },
+    tools: ["analyze", "research", "known"],
+    keywords: ["rag", "graphrag", "bm25", "vector search", "hnsw", "retrieval", "ingestion", "الاسترجاع", "الاستيعاب", "جاهزية المحتوى"]
+  },
+  {
+    key: "eeat_sxo_audit",
+    icon: "chart",
+    label: { ar: "تدقيق الثقة وتجربة البحث", en: "E-E-A-T & SXO Audit", ku: "پشکنینی متمانە و ئەزموونی گەڕان" },
+    description: {
+      ar: "يراجع إشارات الخبرة والتخصص والمصادر ووضوح الإجابة وتجربة الصفحة من الأدلة المتاحة. لا يحوّل E-E-A-T إلى عامل ترتيب رقمي مباشر.",
+      en: "Reviews experience, expertise, sourcing, answer clarity and page-experience evidence. It does not treat E-E-A-T as a direct numeric ranking factor.",
+      ku: "بەڵگەکانی ئەزموون و پسپۆڕی و سەرچاوە و ڕوونی وەڵام و ئەزموونی پەڕە دەپشکنێت؛ E-E-A-T وەک فاکتەری ڕاستەوخۆی ڕیزبەندی ناژمێرێت."
+    },
+    tools: ["analyze", "known", "research"],
+    keywords: ["e-e-a-t", "eeat", "sxo", "trust", "experience", "expertise", "authoritativeness", "credibility", "الخبرة", "الموثوقية", "تجربة البحث"]
+  },
+  {
     key: "machine_readability",
     icon: "target",
     label: { ar: "ملفات قراءة الآلة", en: "Machine-Readable Files", ku: "فایلەکانی خوێندنەوەی ئامێر" },
