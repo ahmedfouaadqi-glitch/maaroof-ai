@@ -820,7 +820,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         const mission = String(ctx.goal).slice(0, 240);
         const { agent, reused } = await getOrCreateAgent({
           userId: ctx.userId,
-          workspaceId: ctx.workspaceId || null,
+          workspaceId: siteAuditUrl ? null : ctx.workspaceId || null,
           role,
           mission,
           dna,
