@@ -3,11 +3,12 @@ import { MAAROOF_SKILLS, skillFramework } from "./skill-catalog";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 
 describe("skill catalog", () => {
-  it("has 18 skills", () => expect(MAAROOF_SKILLS.length).toBe(18));
+  it("has 21 skills", () => expect(MAAROOF_SKILLS.length).toBe(21));
   it("includes the four new skills", () => {
     const keys = MAAROOF_SKILLS.map((s) => s.key);
     for (const k of ["continuous_monitoring", "citation_fix", "smart_competitor", "machine_readability"]) expect(keys).toContain(k);
     expect(keys).toContain("search_visibility_strategy");
+    for (const k of ["entity_knowledge_graph", "rag_ingestion_readiness", "eeat_sxo_audit"]) expect(keys).toContain(k);
   });
   it("every skill uses only existing tools", () => {
     const tools = new Set((TOOL_CATALOG as any[]).map((t) => t.key));
