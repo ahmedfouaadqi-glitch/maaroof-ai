@@ -87,7 +87,7 @@ const COPY = {
     badge: "مساحة العمل الذكية",
     title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
     rotPrefix: "نحسّن ظهورك عبر منظومة",
-    brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
+    brandName: "معروف", sub: "يرصد كيف تظهر علامتك في محركات البحث ومحركات الإجابة، ويقيس حضورك، ويحوّل الفجوات إلى فرص تحسين قابلة للتنفيذ.",
     cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
@@ -96,8 +96,9 @@ const COPY = {
       ["SEO", "البنية", "صفحات قابلة للزحف وبيانات منظمة تفهمها الآلة."],
       ["AEO", "الإجابات المباشرة", "محتوى يجيب عن السؤال في أول سطرين."],
       ["GEO", "كثافة الحقائق", "إحصاءات واقتباسات تجعل النماذج تستشهد بك."],
-      ["SGE", "تلخيصات البحث", "حضور داخل الملخصات التوليدية أعلى نتائج البحث."],
-      ["GSEO", "اتساق الهوية", "هوية واحدة متطابقة عبر كل المحركات والمنصات."],
+      ["SGE", "تلخيصات البحث", "تحسين فرص الظهور داخل الملخصات التوليدية في البحث."],
+      ["SGEO", "مؤشر تكاملي", "مؤشر مشتق يربط SEO وAEO وGEO وSGE، وليس معياراً مستقلاً موحداً."],
+      ["GSEO", "اتساق الهوية", "منهجية نعرّفها في معروف لاتساق الهوية عبر المحركات والمنصات."],
     ],
     vsTitle: "البحث التقليدي مقابل محركات الإجابة",
     vsCols: ["البحث التقليدي", "محركات الإجابة التوليدية"],
@@ -130,7 +131,7 @@ const COPY = {
     badge: "Smart Workspace",
     title: "Make your brand a source answer engines cite",
     rotPrefix: "We strengthen your visibility across",
-    brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
+    brandName: "Maaroof", sub: "tracks how your brand appears across search and answer engines, measures its presence, and turns gaps into actionable improvements.",
     cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
@@ -139,8 +140,9 @@ const COPY = {
       ["SEO", "Structure", "Crawlable pages and machine-readable structured data."],
       ["AEO", "Direct answers", "Content that answers the question in its first lines."],
       ["GEO", "Fact density", "Statistics and quotes that make models cite you."],
-      ["SGE", "Search summaries", "Presence inside generative summaries at the top of search."],
-      ["GSEO", "Identity consistency", "One matching identity across every engine and platform."],
+      ["SGE", "Search summaries", "Improve eligibility for visibility in generative search summaries."],
+      ["SGEO", "Integrated index", "A derived overlap index across SEO, AEO, GEO and SGE—not a universal standalone standard."],
+      ["GSEO", "Identity consistency", "Maaroof-defined approach to identity consistency across engines and platforms."],
     ],
     vsTitle: "Traditional search vs answer engines",
     vsCols: ["Traditional search", "Generative answer engines"],
@@ -173,7 +175,7 @@ const COPY = {
     badge: "شوێنی کاری زیرەک",
     title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
     rotPrefix: "دەرکەوتنت لە ڕێگەی ئەم سیستەمە باشتر دەکەین",
-    brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
+    brandName: "مەعروف", sub: "شوێن دەکەوێت کە براندەکەت لە بزوێنەرەکانی گەڕان و وەڵامدا چۆن دەردەکەوێت، ئامادەبوونت دەپێوێت و بۆشاییەکان دەکاتە هەنگاوی باشترکردن.",
     cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
@@ -182,8 +184,9 @@ const COPY = {
       ["SEO", "پێکهاتە", "پەڕەی خوێندراوە و داتای ڕێکخراو بۆ ئامێر."],
       ["AEO", "وەڵامی ڕاستەوخۆ", "ناوەڕۆکێک لە یەکەم دێڕدا وەڵام دەداتەوە."],
       ["GEO", "چڕی ڕاستییەکان", "ئامار و وتە کە مۆدێلەکان ئاماژەت پێ دەکەن."],
-      ["SGE", "پوختەی گەڕان", "ئامادەبوون لە پوختە زیرەکەکانی سەرەوەی گەڕان."],
-      ["GSEO", "یەکگرتوویی ناسنامە", "یەک ناسنامە لە هەموو بزوێنەر و پلاتفۆرمەکان."],
+      ["SGE", "پوختەی گەڕان", "باشترکردنی هەلی دەرکەوتن لە پوختە زیرەکەکانی گەڕان."],
+      ["SGEO", "پێوەری تێکەڵ", "پێوەرێکی مشتەقە لە SEO و AEO و GEO و SGE؛ ستانداردێکی سەربەخۆی جیهانی نییە."],
+      ["GSEO", "یەکگرتوویی ناسنامە", "ڕێبازێک کە لە معروفدا بۆ یەکگرتوویی ناسنامە پێناسە دەکرێت."],
     ],
     vsTitle: "گەڕانی ئاسایی بەرامبەر بزوێنەرەکانی وەڵام",
     vsCols: ["گەڕانی ئاسایی", "بزوێنەرە زیرەکەکانی وەڵام"],
@@ -324,7 +327,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         {/* 5. Five pillars */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {c.pillars.map(([k, t, d], n) => (
               <Reveal key={k} delay={n * 60}>
                 <SpotlightCard className="h-full p-4">
