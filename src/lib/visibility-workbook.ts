@@ -1,3 +1,4 @@
+import { DOMAIN_ONTOLOGY } from "@/lib/maaroof/domain-ontology";
 /**
  * Pure builder for the three-sheet visibility workbook.
  * Every value comes from the recorded probe; missing evidence reads "not measured" with a reason.
@@ -106,7 +107,14 @@ export function buildVisibilityWorkbook(brand: string, probe: ProbeLike, lang: W
       ...(links.size ? [...links].map(([u, t]) => [u, t || "—"]) : [[NM, L(lang, "لم تُسجَّل روابط في هذا الفحص", "No links recorded in this run", "هیچ بەستەرێک تۆمار نەکراوە")]]),
     ],
   };
-  return [summary, competitors, evidence];
+  const glossary: WbSheet = {
+    name: L(lang, "المعجم الاصطلاحي", "Terminology glossary", "فەرهەنگی زاراوەکان"),
+    rows: [
+      [L(lang, "الاختصار", "Acronym", "کورتکراوە"), L(lang, "الاسم الكامل", "Full name", "ناوی تەواو"), L(lang, "التعريف", "Definition", "پێناسە"), L(lang, "حالة المصطلح", "Terminology status", "دۆخی زاراوە")],
+      ...DOMAIN_ONTOLOGY.map((entry) => [entry.acronym, entry.full_name_en, entry.definition_en, entry.terminology_status]),
+    ],
+  };
+  return [summary, competitors, evidence, glossary];
 }
 
 export async function downloadVisibilityWorkbook(title: string, sheets: WbSheet[], rtl: boolean) {
