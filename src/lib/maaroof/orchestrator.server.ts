@@ -210,7 +210,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   if (siteAuditUrl && ctx.executionMode !== "simulation" && ctx.executionMode !== "recommendation") {
     try {
       const { fcScrape } = await import("@/lib/firecrawl");
-      const read: any = await fcScrape(siteAuditUrl, { deep: true }, { userId: ctx.userId, toolKey: "site_intake" });
+      const read: any = await fcScrape(siteAuditUrl, { deep: true, allowDirectHttp: false }, { userId: ctx.userId, toolKey: "site_intake" });
       const page = read?.data ?? read;
       const metadata = page?.metadata || {};
       const site = extractDiscoveredSite(siteAuditUrl, {
