@@ -33,7 +33,7 @@ import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
-import { extractSiteUrlFromGoal } from "@/lib/maaroof/site-intake";
+import { extractDiscoveredSite, extractSiteUrlFromGoal } from "@/lib/maaroof/site-intake";
 import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 import { buildExecutionEvidencePack } from "./execution-evidence-pack";
@@ -203,6 +203,27 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
   const isExternalSiteAudit = /\\b(?:audit|analy[sz]e|check|review|crawl|inspect)\\b|تدقيق|افحص|فحص|حلل|تحليل|راجع|مراجعة/i.test(ctx.goal);
   const siteAuditUrl = isExternalSiteAudit ? extractSiteUrlFromGoal(ctx.goal) : null;
+  let siteDiscovery: { site: NonNullable<ReturnType<typeof extractDiscoveredSite>>; markdown: string } | null = null;
+  let siteDiscoveryIssue: string | null = null;
+  if (siteAuditUrl && ctx.executionMode !== "simulation" && ctx.executionMode !== "recommendation") {
+    try {
+      const { fcScrape } = await import("@/lib/firecrawl");
+      const read: any = await fcScrape(siteAuditUrl, { deep: true }, { userId: ctx.userId, toolKey: "site_intake" });
+      const page = read?.data ?? read;
+      const metadata = page?.metadata || {};
+      const site = extractDiscoveredSite(siteAuditUrl, {
+        title: metadata.title || "", description: metadata.description || "",
+        markdown: page?.markdown || "", html: page?.html || "",
+        statusCode: metadata.statusCode ?? null, source: read?.fetch_source || null,
+      });
+      if (!site) throw new Error("site_identity_extraction_failed");
+      siteDiscovery = { site, markdown: String(page?.markdown || "").slice(0, 7800) };
+      await ctx.emit("site_discovery", { discovery: site, evidence: { markdown_available: Boolean(page?.markdown), html_available: Boolean(page?.html), status_code: metadata.statusCode ?? null, source: read?.fetch_source || null } });
+    } catch (error: any) {
+      siteDiscoveryIssue = String(error?.readIssue || error?.message || "site_read_failed").slice(0, 120);
+      await ctx.emit("site_discovery_error", { url: siteAuditUrl, issue: siteDiscoveryIssue });
+    }
+  }
 
   // Load workspace profile if scoped — used by envision/plan/council.
   let workspaceProfile: any = null;
@@ -387,7 +408,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = siteAuditUrl ? [] : await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (workspaceProfile ?
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (siteDiscovery ? `\\n\\n[EXTERNAL SITE DISCOVERY — isolated ephemeral evidence]\\n${JSON.stringify(siteDiscovery.site)}\\n[PAGE CONTENT — scraped from target URL only]\\n${siteDiscovery.markdown}` : siteDiscoveryIssue ? `\\n\\n[EXTERNAL SITE DISCOVERY FAILED]\\nThe target website could not be read: ${siteDiscoveryIssue}. Do not invent its identity, sector, country, products or visibility.` : "") + (workspaceProfile ?
       "\n\n[WORKSPACE ENTITY TRUTH CARD — values are user-supplied and not verified unless marked otherwise]\n" + JSON.stringify(workspaceProfile.entity_truth_card || {}).slice(0, 5000) +
       "\n\n[WORKSPACE ONBOARDING CONTEXT]\n" + JSON.stringify(workspaceProfile.onboarding || {}).slice(0, 3000) +
       "\n\n[WORKSPACE SETTINGS]\n" + JSON.stringify(workspaceProfile.settings || {}).slice(0, 1500) : "");
@@ -481,7 +502,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     //      behaviour when disabled.
     const decisionLog: any[] = [];
     let envision: any = null;
-    if (settings.council?.envision_enabled !== false) {
+    if (settings.council?.envision_enabled !== false && !siteAuditUrl) {
       try {
         await ctx.emit("phase", { phase: "envision" }); try { const _n = (await import("./narration")).narratePhase("envision", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "envision", text: _n }); } catch {}
         const eResp = await call("envision", [
@@ -571,7 +592,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       externalActionRequested: reasoningContext.externalActionRequested,
       signals: reasoningContext.signals,
     });
-    const planUserMsg = reasoningGuidance + "\\n\\n" + mciHintLine + historyLine +
+    const siteAuditPlanningHint = siteAuditUrl ? `\\n\\n[MANDATORY TARGETED WEBSITE AUDIT] Target URL: ${siteAuditUrl}. Do not create content, marketing posts, rewrites, competitor campaigns or unrelated strategy tasks. Use only the target page evidence discovered above. Brand name, sector and country must be taken from the site discovery evidence; if a field is not established, leave it unknown.\\n` : "";\n    const planUserMsg = siteAuditPlanningHint + reasoningGuidance + "\\n\\n" + mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "...", "depends_on": ["<prior tool key whose output is required>"] } ], "final_answer_hint": "..." }. Set depends_on only when the step consumes output from an earlier step; use only tool keys that already appear earlier in the plan. Independent steps may omit it.\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     let planResp: { text: string; tokens: number; usd: number };
@@ -862,7 +883,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       } catch {}
     }
 
-    if (settings.council?.enabled && ctx.useSubagents !== false) {
+    if (settings.council?.enabled && ctx.useSubagents !== false && !siteAuditUrl) {
       await ctx.emit("phase", { phase: "council" }); try { const _n = (await import("./narration")).narratePhase("council", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "council", text: _n }); } catch {}
       const requiredCaps = new Set<Capability>();
       for (const s of steps) {
