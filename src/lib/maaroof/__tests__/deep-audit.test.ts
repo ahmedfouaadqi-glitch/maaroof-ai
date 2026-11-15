@@ -50,6 +50,7 @@ describe("deep audit scoring", () => {
     expect(f.find((x) => x.axis === "gseo")!.score).toBeLessThanOrEqual(60);
     expect(f.find((x) => x.axis === "aeo")!.score).toBeLessThanOrEqual(80);
     expect(f.every((x) => x.reason === "measured_on_page_readiness_only" || x.score === null)).toBe(true);
+    expect(f.filter((x) => x.evidence.length > 0).every((x) => x.evidence_refs.some((ref) => ref.source_url === off.url && ref.signals.length === x.evidence.length))).toBe(true);
   });
   it("aggregate ignores unmeasured axes", () => {
     expect(aggregateAxes([scoreTarget(off, null, "x")]).seo).toBeNull();
