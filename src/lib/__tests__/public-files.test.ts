@@ -21,7 +21,7 @@ describe("public discovery + app-link files", () => {
   });
 
   it("includes the methodology page in the sitemap", () => {
-    const sitemap = readFileSync("src/routes/sitemap[.]xml.ts", "utf8");
+    const sitemap = readFileSync("src/lib/public-sitemap.ts", "utf8");
     expect(sitemap).toContain('path: "/methodology"');
   });
 });
