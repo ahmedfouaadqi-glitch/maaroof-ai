@@ -57,7 +57,7 @@ export function normalizePublicSiteUrl(value: string): string | null {
 }
 
 export function isExternalSiteAuditGoal(goal: string): boolean {
-  return /\\b(?:audit|analy[sz]e|check|review|crawl|inspect)\\b|تدقيق|افحص|فحص|حلل|تحليل|راجع|مراجعة/i.test(String(goal || ""));
+  return /\b(?:audit|analy[sz]e|check|review|crawl|inspect)\b|تدقيق|افحص|فحص|حلل|تحليل|راجع|مراجعة/i.test(String(goal || ""));
 }
 
 export function extractSiteUrlFromGoal(goal: string): string | null {
