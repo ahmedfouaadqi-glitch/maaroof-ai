@@ -1,3 +1,4 @@
+import { extractSiteUrlFromGoal, isExternalSiteAuditGoal } from "@/lib/maaroof/site-intake";
 // Maaroof chat mode. GET → history; POST { message, lang } → grounded reply; DELETE → clear.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
@@ -80,6 +81,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         }
         const lang = (["ar", "en", "ku"].includes(body?.lang) ? body.lang : "ar") as "ar" | "en" | "ku";
         const axisAuditRequest = detectFiveAxisAuditRequest(message);
+        const siteAuditUrl = isExternalSiteAuditGoal(message) ? extractSiteUrlFromGoal(message) : null;
         const geoScope = normalizeGeoScope(body?.geo_scope);
         const geo = effectiveGeo(detectGeoFromRequest(request), geoScope);
         const { chatAllowed, parseReply, groundedSystemPrompt } = await import("@/lib/maaroof/chat-policy");
@@ -100,7 +102,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         // Optional context from an earlier task in the SAME workspace only (full isolation).
         let taskCtx: string[] = [];
         const taskId = typeof body?.task_id === "string" ? body.task_id : "";
-        if (taskId && /^[0-9a-f-]{36}$/i.test(taskId)) {
+        if (!siteAuditUrl && taskId && /^[0-9a-f-]{36}$/i.test(taskId)) {
           const { data: job } = await scopeWorkspace(admin.from("maaroof_jobs")
             .select("goal, status")
             .eq("id", taskId).eq("user_id", userId), workspaceId).maybeSingle();
@@ -123,27 +125,29 @@ export const Route = createFileRoute("/api/maaroof-chat")({
 
         // Knowledge actually held for this user — the only ground Maaroof speaks from.
         const [{ data: kf }, { data: iv }, { data: ws }, { data: hist }] = await Promise.all([
-          scopeWorkspace(admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(120),
-          workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
-          workspaceId ? admin.from("workspaces").select("name, space_kind, profile, goals, entity_truth_card, onboarding, settings, brand_url, brand_summary, keywords, country, city").eq("owner_id", userId).eq("id", workspaceId).limit(1) : Promise.resolve({ data: [] as any[] }),
-          threadId ? byThread(scopeWorkspace(admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId), workspaceId), threadId).order("created_at", { ascending: false }).limit(40) : Promise.resolve({ data: [] as any[] }),
+          siteAuditUrl ? Promise.resolve({ data: [] as any[] }) : scopeWorkspace(admin.from("knowledge_facts").select("source, fact, confidence, created_at, expires_at").eq("user_id", userId), workspaceId).order("created_at", { ascending: false }).limit(120),
+          siteAuditUrl || workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("knowledge_space_interviews").select("question, answer, answered_at, created_at").eq("user_id", userId).not("answer", "is", null).limit(60),
+          siteAuditUrl || !workspaceId ? Promise.resolve({ data: [] as any[] }) : admin.from("workspaces").select("name, space_kind, profile, goals, entity_truth_card, onboarding, settings, brand_url, brand_summary, keywords, country, city").eq("owner_id", userId).eq("id", workspaceId).limit(1),
+          siteAuditUrl || !threadId ? Promise.resolve({ data: [] as any[] }) : byThread(scopeWorkspace(admin.from("maaroof_chat_messages").select("role, content").eq("user_id", userId), workspaceId), threadId).order("created_at", { ascending: false }).limit(40),
         ]);
         const id = ownerIdentity(p);
         const conf = id.verified ? "evidence" : "unverified profile entry";
         const knowledge: string[] = [
-          ...(!workspaceId ? id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`) : []),
+          ...(!workspaceId && !siteAuditUrl ? id.known.map((k) => `[profile, ${conf}] ${k}: ${typeof p[k] === "object" ? JSON.stringify(p[k]) : p[k]}`) : []),
           ...(ws || []).map((w: any) => `[workspace identity — user-entered, not independently verified] ${w.space_kind}: ${w.name}; profile=${JSON.stringify(w.profile || {})}; truth_card=${JSON.stringify(w.entity_truth_card || {})}; onboarding=${JSON.stringify(w.onboarding || {})}; settings=${JSON.stringify(w.settings || {})}; goals=${JSON.stringify(w.goals || [])}; website=${w.brand_url || ""}; sector=${w.brand_summary || ""}; keywords=${JSON.stringify(w.keywords || [])}; country=${w.country || ""}; city=${w.city || ""}`),
           ...freshFacts((kf || []) as any[]).map((f: any) => `[${f.source}, ${f.confidence}] ${String(f.fact).slice(0, 300)}`),
           ...interviewFacts((iv || []) as any).map((f) => `[interview] ${f.fact.slice(0, 300)}`),
         ].slice(0, 120);
-        knowledge.unshift(
+        if (!siteAuditUrl) knowledge.unshift(
           `[geographic scope] ${geo.label}; country=${geo.country || "not resolved"}; city=${geo.city || "not resolved"}. Respect this selected scope. If visitor location is unavailable, do not infer or invent a country.`,
           ...taskCtx,
         );
+        else knowledge.push(`[isolated external site audit] target_url=${siteAuditUrl}; ignore all profile, workspace, thread-history, memory and previous-client identity data. Derive target identity only from the public website after the approved site-intake step.`);
 
         // Attached spreadsheets / Google Sheets links: full structured data for the model (not saved into history).
         let fileCtx = ""; const sheetCards: any[] = [];
         try {
+          if (siteAuditUrl) throw new Error("isolated_external_site_audit");
           const ids = (Array.isArray(body?.attachment_ids) ? body.attachment_ids : []).filter((x: any) => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 5);
           if (ids.length) {
             const { data: atts } = await scopeWorkspace(admin.from("task_attachments").select("id, name, analysis, structure, status").eq("user_id", userId).in("id", ids), workspaceId);
@@ -200,6 +204,13 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         }
         if (directDone) {
           // reply already set from a real tool run
+        } else if (siteAuditUrl) {
+          const text = lang === "en"
+            ? `I identified the public website URL: ${siteAuditUrl}. The audit will discover the name, sector and market from the website page metadata and structured data. No other profile or workspace identity will be used. Review and approve the task to start the website read and evidence-based audit.`
+            : lang === "ku"
+              ? `بەستەری ماڵپەڕ دۆزرایەوە: ${siteAuditUrl}. ناو و بواری کار و بازاڕ تەنها لە بەڵگەی ماڵپەڕەکە دەردەهێنرێت. هیچ ناسنامەی تر بەکارناهێنرێت. بۆ دەستپێکردن ئەرکەکە پەسەند بکە.`
+              : `تم تحديد رابط الموقع العام: ${siteAuditUrl}. سيبدأ التدقيق باكتشاف اسم الموقع وقطاعه وسوقه من بيانات الصفحة والمخطط المنظم نفسه. لن تُستخدم هوية الملف الشخصي أو مساحة العمل أو أي عميل آخر. راجع المهمة ووافق لبدء قراءة الموقع والتدقيق المبني على الأدلة.`;
+          reply = { text, needsTask: true, task: { kind: "scan", goal: `${message}\n\n[external_site_audit_url: ${siteAuditUrl}]\n[isolated_ephemeral_site_context: true]` } };
         } else if (!axisAuditRequest && !fileCtx && detectCouncilRequest(message)) {
           // Ten-engine council runs as a real approved task (live probe, charged only for answering engines).
           const t = lang === "en"
@@ -244,7 +255,7 @@ export const Route = createFileRoute("/api/maaroof-chat")({
           const charge = await chargeTokens({ userId, toolKey: "maaroof.chat", meta: { chars: message.length } });
           if (!charge.ok) return Response.json(chargeFailureBody(charge.reason, (charge as any).left), { status: 402 });
         }
-        const grounded = { council, knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo, axis_audit_request: axisAuditRequest };
+        const grounded = { council, knowledge_items: knowledge.length, needs_task: reply.needsTask, task: reply.task, geo_scope: geo, axis_audit_request: axisAuditRequest, external_site_audit_url: siteAuditUrl, isolated_ephemeral_site_context: Boolean(siteAuditUrl) };
         if (!threadId) {
           const { data: th, error: thErr } = await admin.from("chat_threads").insert({ user_id: userId, workspace_id: workspaceId, title: message.replace(/\s+/g, " ").slice(0, 60) }).select("id").single();
           if (thErr) console.error("[maaroof-chat] thread create failed", thErr.message);
