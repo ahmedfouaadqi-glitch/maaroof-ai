@@ -18,6 +18,13 @@ describe("domain ontology", () => {
     expect(DOMAIN_ONTOLOGY_BY_ACRONYM.get("gseo")?.terminology_status).toBe("variable");
     expect(DOMAIN_ONTOLOGY_BY_ACRONYM.get("sge")?.terminology_status).toBe("historical");
   });
+  it("defines SGEO as Maaroof's integrated index concept without claiming a universal standard", () => {
+    const sgeo = DOMAIN_ONTOLOGY_BY_ACRONYM.get("sgeo");
+    expect(sgeo?.full_name_en).toBe("Maaroof Search Generative Ecosystem Index");
+    expect(sgeo?.semantic_signals).toEqual(expect.arrayContaining(["axis_overlap", "semantic_similarity", "divergence", "complementarity"]));
+    expect(sgeo?.terminology_status).toBe("variable");
+    expect(sgeo?.notes).toContain("not proof of worldwide novelty");
+  });
   it("retrieves terminology from acronym and semantic context", () => {
     expect(findDomainTerms("GraphRAG BM25 vector search").map((x) => x.acronym)).toContain("BM25");
     expect(findDomainTerms("بيانات منظمة JSON-LD").map((x) => x.acronym)).toContain("JSON-LD");
