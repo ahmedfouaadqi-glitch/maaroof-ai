@@ -442,10 +442,10 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.faq}</h2>
           <div className="mt-6 space-y-2">
             {c.faqs.map(([q, a]) => (
-              <details key={q} className="group rounded-xl border border-border bg-card/40 p-4">
-                <summary className="cursor-pointer text-sm font-semibold">{q}</summary>
+              <article key={q} className="rounded-xl border border-border bg-card/40 p-4">
+                <h3 className="text-sm font-semibold">{q}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{a}</p>
-              </details>
+              </article>
             ))}
           </div>
           <div className="mt-12 text-center">

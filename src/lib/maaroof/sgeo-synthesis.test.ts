@@ -78,4 +78,15 @@ describe("SGEO shared-evidence synthesis", () => {
     expect(one.axisCoverage.seo).toBe(2);
     expect(one.axisCoverage.aeo).toBe(1);
   });
+
+  it("recognizes the real evidence keys produced by the deep audit scorer", async () => {
+    const { scoreTarget, auditTargets } = await import("@/lib/maaroof/deep-audit");
+    const t = auditTargets(["maaroofai.com"])[0];
+    const md = "# MAAROOF Ai\n\nMAAROOF Ai measures 10 AI engines across 5 axes for brands in 3 languages worldwide today.\n\n## FAQ\n\n### What is it?\n\nAnswer: a platform that measures brand presence inside AI answers.\n\n## Sections\n- item";
+    const html = '<h1>x</h1><script type="application/ld+json">{"@type":"Organization","@type2":"x"}</script><script type="application/ld+json">{"@type":"FAQPage"}</script>';
+    const f = scoreTarget(t, { markdown: md, html, title: "MAAROOF Ai", description: "MAAROOF Ai measures brand visibility in AI engines" }, "MAAROOF Ai");
+    const r = synthesizeSgeo([f]);
+    expect(r.score).toBeGreaterThan(0);
+    expect(r.sharedPillars).toContain("machine_extractability");
+  });
 });

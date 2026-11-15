@@ -39,30 +39,32 @@ export type SgeoSynthesis = {
 
 type PillarSupport = Record<SgeoCoreAxis, RegExp>;
 
+// Signals below are the exact evidence keys emitted by scoreTarget (deep-audit.ts),
+// plus legacy keys kept for older stored findings. A pillar counts only on real evidence.
 const PILLAR_SUPPORT: Record<SgeoPillarKey, PillarSupport> = {
   entity_clarity: {
-    seo: /^(title:|description:|h1$)/i,
-    aeo: /^(questions:\d+|faq)$/i,
-    geo: /^(brand_in_opening|brand_in_profile|brand_in_profile_title|brand_in_profile_description|brand_mentioned)$/i,
-    sge: /^concise_lead$/i,
+    seo: /^(title_present|meta_description_present|h1_present|title:|description:|h1$)/i,
+    aeo: /^(explicit_answer_blocks|question_answer_pairs|faqpage_schema|questions:\d+|faq)$/i,
+    geo: /^(brand_in_opening|organization_schema|sameas_entity_links|brand_in_profile|brand_in_profile_title|brand_in_profile_description|brand_mentioned)$/i,
+    sge: /^(concise_lead_15_80_words|concise_lead)$/i,
   },
   answer_structure: {
-    seo: /^h1$/i,
-    aeo: /^(questions:\d+|faq|lists)$/i,
-    geo: /^(structured_data|facts_first_150:\d+)$/i,
-    sge: /^(sections|concise_lead)$/i,
+    seo: /^(h1_present|section_headings_present|h1)$/i,
+    aeo: /^(explicit_answer_blocks|question_answer_pairs|faq_section_heading|questions:\d+|faq|lists)$/i,
+    geo: /^(organization_schema|product_schema|verifiable_numeric_claims_first_150:\d+|structured_data|facts_first_150:\d+)$/i,
+    sge: /^(structured_sections:\d+|structured_list|concise_lead_15_80_words|sections|concise_lead)$/i,
   },
   factual_content: {
-    seo: /^words:\d+$/i,
-    aeo: /^(questions:\d+|faq|lists)$/i,
-    geo: /^facts_first_150:\d+$/i,
-    sge: /^(concise_lead|sections)$/i,
+    seo: /^(substantive_body|words:\d+)$/i,
+    aeo: /^(answer_context_depth|explicit_answer_blocks|question_answer_pairs|questions:\d+|faq|lists)$/i,
+    geo: /^(verifiable_numeric_claims_first_150:\d+|source_urls_in_content|facts_first_150:\d+)$/i,
+    sge: /^(supporting_context|source_urls_in_content|comparison_table|concise_lead|sections)$/i,
   },
   machine_extractability: {
-    seo: /^(title:|description:|h1$)/i,
-    aeo: /^(faq|lists)$/i,
-    geo: /^structured_data$/i,
-    sge: /^sections$/i,
+    seo: /^(title_present|meta_description_present|h1_present|canonical_present|title:|description:|h1$)/i,
+    aeo: /^(faqpage_schema|explicit_answer_blocks|faq|lists)$/i,
+    geo: /^(organization_schema|product_schema|sameas_entity_links|structured_data)$/i,
+    sge: /^(structured_sections:\d+|structured_list|comparison_table|sections)$/i,
   },
 };
 
