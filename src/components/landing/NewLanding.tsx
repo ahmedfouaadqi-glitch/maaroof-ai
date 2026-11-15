@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeC
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
+import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
 import { useAuth } from "@/lib/auth";
@@ -59,6 +60,9 @@ function VisibilityVector() {
         <circle cx="42" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
         <circle cx="502" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
         <circle cx="272" cy="66" r="24" stroke="var(--primary)" strokeOpacity=".12" strokeWidth="1" className="motion-safe:animate-pulse" />
+        <circle r="2.8" fill="var(--primary)" className="visibility-vector-flow visibility-vector-flow-a"><animateMotion dur="4.8s" repeatCount="indefinite" path="M42 66H502" /></circle>
+        <circle r="2.4" fill="var(--primary)" className="visibility-vector-flow visibility-vector-flow-b"><animateMotion dur="4.8s" begin="-1.6s" repeatCount="indefinite" path="M42 66H502" /></circle>
+        <circle r="2.2" fill="var(--primary)" className="visibility-vector-flow visibility-vector-flow-c"><animateMotion dur="4.8s" begin="-3.2s" repeatCount="indefinite" path="M502 66H42" /></circle>
       </svg>
     </div>
   );
@@ -67,9 +71,9 @@ function VisibilityVector() {
 const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
-    title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
+    title: "نعزّز ظهور علامتك الرقمية عبر منظومة البحث والذكاء الاصطناعي",
     rotPrefix: "نحسّن ظهورك عبر",
-    brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
+    brandName: "معروف", sub: "يحلل حضورك الرقمي ويقيس ظهورك عبر محركات البحث ومحركات الإجابة ومنصات الذكاء الاصطناعي، ويحدد فرص التحسين المدعومة بالأدلة.",
     cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
@@ -99,7 +103,7 @@ const COPY = {
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
     skills: "المهارات المتاحة",
-    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
+    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "أدوات مسجلة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
@@ -111,9 +115,9 @@ const COPY = {
   },
   en: {
     badge: "Smart Workspace",
-    title: "Make your brand a source answer engines cite",
+    title: "Strengthen your digital visibility across search and AI ecosystems",
     rotPrefix: "We improve your visibility through",
-    brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
+    brandName: "Maaroof", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
     cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
@@ -143,7 +147,7 @@ const COPY = {
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
     skills: "Available skills",
-    stats: ["AI engines", "Ready skills", "Supported languages", "Free trial runs"],
+    stats: ["AI engines", "Ready skills", "Registered tools", "Supported languages", "Free trial runs"],
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
@@ -155,9 +159,9 @@ const COPY = {
   },
   ku: {
     badge: "شوێنی کاری زیرەک",
-    title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
+    title: "دەرکەوتنی دیجیتاڵی براندەکەت لە گەڕان و زیرەکی دەستکرددا بەهێز بکە",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
-    brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
+    brandName: "مەعروف", sub: "ئامادەبوونی دیجیتاڵییەکەت لە بزوێنەرەکانی گەڕان و وەڵام و پلاتفۆرمەکانی زیرەکی دەستکرد شیدەکاتەوە و هەلەکانی باشترکردن دیاری دەکات.",
     cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
@@ -187,7 +191,7 @@ const COPY = {
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
     skills: "کارامەییە بەردەستەکان",
-    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
+    stats: ["مۆدێلەکانی زیرەک", "کارامەیی ئامادە", "ئامرازە تۆمارکراوەکان", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
@@ -224,6 +228,22 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const card = data?.card ?? null;
   const typeLabel = (t: string | null) => t === "person" ? ({ ar: "شخص", en: "Person", ku: "کەس" } as const)[l] : ({ ar: "منشأة", en: "Organization", ku: "دامەزراوە" } as const)[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
+  const taxonomyGroups = l === "ar" ? [
+    { title: "مجالات التخصص", terms: "SEO · GEO · ASO · AIO", note: "مجالات مرتبطة بتحسين الظهور والاكتشاف عبر البحث والمنصات." },
+    { title: "منهجيات التحسين", terms: "AEO · SGEO · GSEO", note: "أطر وأساليب تشغيلية؛ SGEO وGSEO لهما تعريفهما داخل معروف وليسا معيارين عالميين موحدين." },
+    { title: "بيئات البحث", terms: "SGE · AI Search · LLMs", note: "واجهات وتجارب ومحركات تُرصد فيها إجابات ومظاهر الظهور." },
+    { title: "التقنيات المعرفية", terms: "RAG · KG · Entity Intelligence", note: "مفاهيم وتقنيات لدعم الاسترجاع المعرفي وتمثيل الكيانات والعلاقات." },
+  ] : l === "ku" ? [
+    { title: "بواری پسپۆڕی", terms: "SEO · GEO · ASO · AIO", note: "بواری پەیوەندیدار بە باشترکردنی دەرکەوتن لە گەڕان و پلاتفۆرمەکان." },
+    { title: "میتۆدۆلۆژیای باشترکردن", terms: "AEO · SGEO · GSEO", note: "چوارچێوە و شێوازی کار؛ SGEO و GSEO لە معروف پێناسەی تایبەتیان هەیە و ستانداردی جیهانی یەکگرتوو نین." },
+    { title: "ژینگەکانی گەڕان", terms: "SGE · AI Search · LLMs", note: "ڕووکار و ئەزموون و بزوێنەرەکانی گەڕان کە وەڵام و دەرکەوتن تێیاندا چاودێری دەکرێت." },
+    { title: "تەکنەلۆژیای زانیاری", terms: "RAG · KG · Entity Intelligence", note: "چەمک و تەکنەلۆژیا بۆ گەڕاندنەوەی زانیاری و نوێنەرایەتی قەوارە و پەیوەندییەکان." },
+  ] : [
+    { title: "Specialty areas", terms: "SEO · GEO · ASO · AIO", note: "Domains concerned with visibility and discovery across search and platforms." },
+    { title: "Optimization methodologies", terms: "AEO · SGEO · GSEO", note: "Operational approaches; SGEO and GSEO have Maaroof-specific definitions, not universally standardized meanings." },
+    { title: "Search environments", terms: "SGE · AI Search · LLMs", note: "Interfaces, experiences and engines where answers and visibility can be observed." },
+    { title: "Knowledge technologies", terms: "RAG · KG · Entity Intelligence", note: "Concepts and technologies for retrieval, knowledge representation and entity relationships." },
+  ];
 
   const ctaClass = "inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]";
   const Cta = () => (
@@ -262,11 +282,11 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         </section>
 
         {/* 2. Live, server-backed stats */}
-        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
-          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
-            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
+        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[4]}>
+          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-3 lg:grid-cols-3">
+            {[ENGINES.length, skills.length, TOOL_CATALOG.filter((tool) => tool.group === "tools").length, 3, freeTrialAttempts].map((n, i) => (
               <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
-                {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
+                {i === 4 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
                 {n === null ? (
                   <span className="relative font-display text-3xl font-bold text-muted-foreground md:text-4xl" aria-live="polite">—</span>
                 ) : (
@@ -306,7 +326,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 5. Five pillars */}
+        {/* 5. Search and AI visibility disciplines */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -322,7 +342,22 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 6. Comparison */}
+        {/* 6. Classification: domains, methods, environments and technologies */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {taxonomyGroups.map((group) => (
+              <Reveal key={group.title}>
+                <SpotlightCard className="h-full p-5">
+                  <h3 className="text-sm font-semibold text-muted-foreground">{group.title}</h3>
+                  <p className="mt-3 font-mono text-lg font-bold tracking-wide text-primary">{group.terms}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{group.note}</p>
+                </SpotlightCard>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* 7. Comparison */}
         <section className="mx-auto max-w-4xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.vsTitle}</h2>
           <Reveal>

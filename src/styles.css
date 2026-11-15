@@ -1130,3 +1130,23 @@
     max-width: 100%;
   }
 }
+
+
+/* Lightweight visibility-vector signal flow; disabled for reduced-motion users. */
+@media (prefers-reduced-motion: no-preference) {
+  .visibility-vector-flow {
+    opacity: 0.82;
+    filter: drop-shadow(0 0 3px hsl(var(--primary)));
+  }
+  .visibility-vector-flow-a { animation: visibility-vector-fade 4.8s ease-in-out infinite; }
+  .visibility-vector-flow-b { animation: visibility-vector-fade 4.8s ease-in-out -1.6s infinite; }
+  .visibility-vector-flow-c { animation: visibility-vector-fade 4.8s ease-in-out -3.2s infinite; }
+  @keyframes visibility-vector-fade {
+    0%, 100% { opacity: 0.18; }
+    18%, 72% { opacity: 0.95; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visibility-vector-flow { display: none; }
+}
