@@ -5,11 +5,61 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 
 type L = "ar" | "en" | "ku";
-const T = {
-  ar: { start: "ابدأ الفحص العميق", confirm: "موافق، ابدأ", cancel: "إلغاء", est: "الكلفة التقديرية", bal: "رصيدك", per: "لكل رابط", note: "يُخصم فقط عن الروابط التي قُرئت فعلاً. الفشل لا يُحسب.", running: "جارٍ الفحص في الخلفية — يمكنك متابعة التصفح", done: "نتيجة الفحص", overall: "الدرجة المرجّحة", un: "لم يُقَس بعد", failed: "تعذّر الفحص", charged: "خُصم", read: "قُرئ", of: "من", nolinks: "أضف روابط لتفعيل الفحص.", unpriced: "لم يُسعَّر الفحص لحسابك بعد." },
-  en: { start: "Start deep audit", confirm: "Approve & start", cancel: "Cancel", est: "Estimated cost", bal: "Your balance", per: "per link", note: "Charged only for links actually read. Failures are free.", running: "Auditing in the background — keep browsing", done: "Audit result", overall: "Weighted score", un: "Not measured yet", failed: "Audit failed", charged: "Charged", read: "Read", of: "of", nolinks: "Add links to enable the audit.", unpriced: "The audit is not priced for your account yet." },
-  ku: { start: "دەستپێکردنی پشکنینی قووڵ", confirm: "ڕازیم، دەست پێبکە", cancel: "هەڵوەشاندنەوە", est: "تێچووی خەمڵێنراو", bal: "باڵانس", per: "بۆ هەر بەستەرێک", note: "تەنها بۆ بەستەرە خوێنراوەکان دەبڕدرێت.", running: "پشکنین لە پاشبنەمادا — بەردەوام بە", done: "ئەنجامی پشکنین", overall: "نمرەی کێشدار", un: "هێشتا نەپێوراوە", failed: "پشکنین سەرنەکەوت", charged: "بڕدرا", read: "خوێنرایەوە", of: "لە", nolinks: "بەستەر زیاد بکە.", unpriced: "نرخ دانەنراوە." },
+const AXIS_CAP: Record<string, number> = { seo: 85, aeo: 80, geo: 80, sge: 75, gseo: 60 };
+const AXIS_NAME: Record<string, Record<L, string>> = {
+  seo: { ar: "SEO · جاهزية الصفحة التقنية", en: "SEO · On-page technical readiness", ku: "SEO · ئامادەیی تەکنیکی پەڕە" },
+  aeo: { ar: "AEO · قابلية استخراج الإجابات", en: "AEO · Answer extraction readiness", ku: "AEO · ئامادەیی دەرهێنانی وەڵام" },
+  geo: { ar: "GEO · إشارات المحتوى والكيان", en: "GEO · Content and entity signals", ku: "GEO · نیشانەکانی ناوەڕۆک و قەوارە" },
+  sge: { ar: "SGE · قابلية تنظيم المحتوى للبحث التوليدي", en: "SGE · Generative-search content structure", ku: "SGE · پێکهاتەی ناوەڕۆک بۆ گەڕانی زایەندراو" },
+  gseo: { ar: "GSEO · اتساق إشارات العلامة (تعريف معروف)", en: "GSEO · Brand-signal consistency (Maaroof-defined)", ku: "GSEO · یەکگرتوویی نیشانەکانی براند (پێناسەی مەعروف)" },
 };
+const SIGNAL: Record<string, Record<L, string>> = {
+  title_present: { ar: "عنوان الصفحة موجود", en: "Page title is present", ku: "ناونیشانی پەڕە هەیە" },
+  meta_description_present: { ar: "الوصف التعريفي موجود", en: "Meta description is present", ku: "وەسفی مێتا هەیە" },
+  h1_present: { ar: "عنوان رئيسي H1 موجود", en: "Main H1 heading is present", ku: "سەردێڕی سەرەکی H1 هەیە" },
+  section_headings_present: { ar: "عناوين الأقسام موجودة", en: "Section headings are present", ku: "سەردێڕەکانی بەشەکان هەن" },
+  canonical_present: { ar: "رابط Canonical موجود", en: "Canonical URL is present", ku: "بەستەری Canonical هەیە" },
+  robots_directive_present: { ar: "توجيهات Robots موجودة", en: "Robots directives are present", ku: "ڕێنماییەکانی Robots هەن" },
+  substantive_body: { ar: "محتوى نصي كافٍ مرصود", en: "Substantive page text detected", ku: "دەقی ناوەڕۆکی بەڕێژە دۆزرایەوە" },
+  product_schema_present: { ar: "بيانات منظمة للمنتج موجودة", en: "Product structured data is present", ku: "داتای ڕێکخراوی بەرهەم هەیە" },
+  explicit_answer_blocks: { ar: "كتل إجابة مباشرة مرصودة", en: "Direct-answer blocks detected", ku: "بلۆکی وەڵامی ڕاستەوخۆ دۆزرایەوە" },
+  question_answer_pairs: { ar: "أزواج سؤال وجواب مرصودة", en: "Question-and-answer pairs detected", ku: "جووتی پرسیار و وەڵام دۆزرایەوە" },
+  faqpage_schema: { ar: "مخطط FAQPage موجود", en: "FAQPage schema is present", ku: "سکیمای FAQPage هەیە" },
+  faq_section_heading: { ar: "عنوان قسم الأسئلة الشائعة موجود", en: "FAQ section heading is present", ku: "سەردێڕی بەشی پرسیارە باوەکان هەیە" },
+  answer_context_depth: { ar: "سياق نصي داعم كافٍ", en: "Sufficient supporting answer context", ku: "کۆنتێکستی پشتگیریکەری وەڵام بەسە" },
+  brand_in_opening: { ar: "اسم العلامة وارد في بداية المحتوى", en: "Brand name appears near the content opening", ku: "ناوی براند لە سەرەتای ناوەڕۆکدا هەیە" },
+  organization_schema: { ar: "مخطط Organization موجود", en: "Organization schema is present", ku: "سکیمای Organization هەیە" },
+  product_schema: { ar: "مخطط Product/Offer موجود", en: "Product/Offer schema is present", ku: "سکیمای Product/Offer هەیە" },
+  sameas_entity_links: { ar: "روابط sameAs للهوية موجودة", en: "sameAs identity links are present", ku: "بەستەرەکانی ناسنامەی sameAs هەن" },
+  source_urls_in_content: { ar: "روابط مصادر واردة في المحتوى", en: "Source URLs appear in the content", ku: "بەستەری سەرچاوە لە ناوەڕۆکدا هەن" },
+  descriptive_metadata: { ar: "بيانات وصفية موجودة", en: "Descriptive metadata is present", ku: "داتای وەسفی هەیە" },
+  concise_lead_15_80_words: { ar: "مقدمة موجزة بطول 15–80 كلمة", en: "Concise 15–80 word lead detected", ku: "پێشەکییەکی کورت لە 15–80 وشەدا دۆزرایەوە" },
+  structured_list: { ar: "قائمة منظمة مرصودة", en: "Structured list detected", ku: "لیستی ڕێکخراو دۆزرایەوە" },
+  comparison_table: { ar: "جدول مقارنة مرصود", en: "Comparison table detected", ku: "خشتەی بەراورد دۆزرایەوە" },
+  supporting_context: { ar: "سياق داعم إضافي مرصود", en: "Additional supporting context detected", ku: "کۆنتێکستی پشتگیریکەری زیادە دۆزرایەوە" },
+  brand_in_title: { ar: "اسم العلامة وارد في العنوان", en: "Brand name appears in the title", ku: "ناوی براند لە ناونیشاندا هەیە" },
+  brand_in_description: { ar: "اسم العلامة وارد في الوصف", en: "Brand name appears in the description", ku: "ناوی براند لە وەسفدا هەیە" },
+  brand_in_body: { ar: "اسم العلامة وارد في متن الصفحة", en: "Brand name appears in page content", ku: "ناوی براند لە دەقی پەڕەدا هەیە" },
+};
+const T = {
+  ar: { start: "ابدأ الفحص العميق", confirm: "موافق، ابدأ", cancel: "إلغاء", est: "الكلفة التقديرية", bal: "رصيدك", per: "لكل رابط", note: "يُخصم فقط عن الروابط التي قُرئت فعلاً. الفشل لا يُحسب.", running: "جارٍ الفحص في الخلفية — يمكنك متابعة التصفح", done: "نتيجة الفحص", overall: "مؤشر نقاط الجاهزية المرجّح (ليس نسبة مئوية)", un: "لم يُقَس بعد", failed: "تعذّر الفحص", charged: "خُصم", read: "قُرئ", of: "من", nolinks: "أضف روابط لتفعيل الفحص.", unpriced: "لم يُسعَّر الفحص لحسابك بعد." },
+  en: { start: "Start deep audit", confirm: "Approve & start", cancel: "Cancel", est: "Estimated cost", bal: "Your balance", per: "per link", note: "Charged only for links actually read. Failures are free.", running: "Auditing in the background — keep browsing", done: "Audit result", overall: "Weighted readiness points (not a percentage)", un: "Not measured yet", failed: "Audit failed", charged: "Charged", read: "Read", of: "of", nolinks: "Add links to enable the audit.", unpriced: "The audit is not priced for your account yet." },
+  ku: { start: "دەستپێکردنی پشکنینی قووڵ", confirm: "ڕازیم، دەست پێبکە", cancel: "هەڵوەشاندنەوە", est: "تێچووی خەمڵێنراو", bal: "باڵانس", per: "بۆ هەر بەستەرێک", note: "تەنها بۆ بەستەرە خوێنراوەکان دەبڕدرێت.", running: "پشکنین لە پاشبنەمادا — بەردەوام بە", done: "ئەنجامی پشکنین", overall: "خاڵی کێشدار بۆ ئامادەیی (ڕێژە نییە)", un: "هێشتا نەپێوراوە", failed: "پشکنین سەرنەکەوت", charged: "بڕدرا", read: "خوێنرایەوە", of: "لە", nolinks: "بەستەر زیاد بکە.", unpriced: "نرخ دانەنراوە." },
+};
+const EXPLAIN: Record<L, { basis: string; notProof: string; numericCaveat: string }> = {
+  ar: { basis: "هذه نقاط استدلالية لتهيئة الصفحة ومحتواها وفق إشارات مرصودة. لكل محور سقف نقاط مختلف موضح بجانب الدرجة؛ لذلك لا تُقارن الأرقام الخام بين المحاور كأنها نسب مئوية.", notProof: "لا يثبت هذا الفحص الفهرسة أو الترتيب أو الاقتباس أو الظهور الفعلي في محركات الذكاء الاصطناعي. يلزم فحص مستقل لكل محرك لإثبات ذلك.", numericCaveat: "أرقام مرصودة في النص؛ لم يتم التحقق من صحتها أو مصادرها." },
+  en: { basis: "These are heuristic page-readiness points based on detected signals. Each axis has a different maximum shown beside its score; raw points must not be compared as if they were percentages.", notProof: "This audit does not prove indexing, ranking, citations, or actual AI-engine visibility. Separate engine-level probes are required.", numericCaveat: "Numeric strings detected in text; their accuracy and sources were not verified." },
+  ku: { basis: "ئەم خاڵانە خەمڵاندنی ئامادەیی پەڕەن؛ هەر تەوەرێک سنووری خاڵی جیاوازی هەیە کە لە تەنیشت نمرەکەدا پیشان دەدرێت، بۆیە نابێت وەک ڕێژەی سەدی بەراورد بکرێن.", notProof: "ئەم پشکنینە فهرستکردن، ڕیزبەندی، ئاماژەپێدان یان دەرکەوتنی ڕاستەقینە لە بزوێنەرەکانی زیرەکی دەستکرد ناسەلمێنێت.", numericCaveat: "ژمارە لە دەقدا دۆزراونەتەوە؛ دروستی و سەرچاوەکانیان پشتڕاست نەکراونەتەوە." },
+};
+function explainSignal(raw: string, lang: L): string {
+  const exact = SIGNAL[raw]?.[lang];
+  if (exact) return exact;
+  const count = raw.match(/^(verifiable_numeric_claims_first_150):(\d+)$/);
+  if (count) return `${EXPLAIN[lang].numericCaveat} (${count[2]})`;
+  const sections = raw.match(/^structured_sections:(\d+)$/);
+  if (sections) return lang === "ar" ? `عدد عناوين الأقسام المرصودة: ${sections[1]}` : lang === "ku" ? `ژمارەی سەردێڕە دۆزراوەکان: ${sections[1]}` : `Section headings detected: ${sections[1]}`;
+  return raw.replace(/_/g, " ");
+}
 const VERDICT: Record<string, Record<L, string>> = {
   good: { ar: "جيد", en: "Good", ku: "باش" }, weak: { ar: "ضعيف", en: "Weak", ku: "لاواز" },
   missing: { ar: "غائب", en: "Missing", ku: "نییە" }, unmeasured: { ar: "لم يُقَس", en: "Unmeasured", ku: "نەپێوراو" },
@@ -67,7 +117,7 @@ export function DeepAuditRunner({ lang, hasLinks }: { lang: L; hasLinks: boolean
   }
 
   const running = status === "running" || status === "queued";
-  const axisRows = result ? Object.entries(result.axes || {}).map(([k, v]) => [k.toUpperCase(), v == null ? t.un : `${v}/100`] as [string, string]) : [];
+  const axisRows = result ? Object.entries(result.axes || {}).map(([k, v]) => [AXIS_NAME[k]?.[lang] || k.toUpperCase(), v == null ? t.un : `${v}/${AXIS_CAP[k] ?? "—"}`] as [string, string]) : [];
 
   if (!hasLinks) return <p className="mt-2 text-muted-foreground">{t.nolinks}</p>;
   return (
@@ -102,18 +152,19 @@ export function DeepAuditRunner({ lang, hasLinks }: { lang: L; hasLinks: boolean
       {result && (
         <div className="space-y-2 rounded-lg border border-border bg-background/60 p-2">
           <div className="font-semibold">{t.done} — {t.overall}: {result.overall ?? t.un}</div>
+          <p className="text-xs leading-5 text-muted-foreground">{EXPLAIN[lang].basis}</p>\n          <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs leading-5">{EXPLAIN[lang].notProof}</p>
           <div className="text-muted-foreground">{t.read} {result.succeeded} {t.of} {result.total} · {t.charged} {result.charged}</div>
           <div className="grid grid-cols-5 gap-1 text-center">{axisRows.map(([k, v]) => <div key={k} className="rounded bg-muted p-1"><div className="font-semibold">{k}</div><div>{v}</div></div>)}</div>
           {result.targets.map((tg: any) => (
             <div key={tg.url} className="border-t border-border pt-1">
               <div dir="ltr" className="truncate font-medium">{tg.url}</div>
-              {tg.findings.map((f: any) => <div key={f.axis} className="text-muted-foreground">{f.axis.toUpperCase()}: {VERDICT[f.verdict][lang]}{f.score != null ? ` (${f.score})` : ""}{f.evidence.length ? ` — ${f.evidence.join("، ")}` : ""}</div>)}
+              {tg.findings.map((f: any) => <div key={f.axis} className="text-muted-foreground">{AXIS_NAME[f.axis]?.[lang] || f.axis.toUpperCase()}: {VERDICT[f.verdict]?.[lang] || f.verdict}{f.score != null ? ` (${f.score}/${AXIS_CAP[f.axis] ?? "—"})` : ""}{f.evidence.length ? ` — ${f.evidence.map((signal: string) => explainSignal(signal, lang)).join(" · ")}` : ""}</div>)}
             </div>
           ))}
           <ExportButtons build={() => ({
             title: t.done, lang, sections: [
               { heading: t.overall, kind: "kv", rows: [[t.overall, result.overall ?? t.un], ...axisRows] },
-              ...result.targets.map((tg: any) => ({ heading: tg.url, kind: "table" as const, table: { columns: ["Axis", "Score", "Verdict", "Evidence"], data: tg.findings.map((f: any) => [f.axis.toUpperCase(), f.score ?? "—", VERDICT[f.verdict][lang], f.evidence.join(", ")]) } })),
+              ...result.targets.map((tg: any) => ({ heading: tg.url, kind: "table" as const, table: { columns: [lang === "ar" ? "المحور" : lang === "ku" ? "تەوەر" : "Axis", lang === "ar" ? "الدرجة" : lang === "ku" ? "نمرە" : "Score", lang === "ar" ? "التقييم" : lang === "ku" ? "هەڵسەنگاندن" : "Verdict", lang === "ar" ? "الإشارات المرصودة (ليست إثبات ظهور)" : lang === "ku" ? "نیشانە دۆزراوەکان" : "Detected signals (not visibility proof)"], data: tg.findings.map((f: any) => [AXIS_NAME[f.axis]?.[lang] || f.axis.toUpperCase(), f.score == null ? "—" : `${f.score}/${AXIS_CAP[f.axis] ?? "—"}`, VERDICT[f.verdict][lang], f.evidence.map((signal: string) => explainSignal(signal, lang)).join(", ")]) } })),
             ],
           }) as any} />
         </div>
