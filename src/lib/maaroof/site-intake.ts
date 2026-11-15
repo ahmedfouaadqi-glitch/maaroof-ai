@@ -154,7 +154,8 @@ export function extractDiscoveredSite(urlValue: string, page: SiteDiscoveryEvide
   const title = plain(page.title);
   const description = plain(page.description);
   const schemaName = plain(organization?.name);
-  const titleName = title.split(/\s+[|–—-]\s+/)[0].trim();
+  const titleNameCandidate = title.split(/\s+[|–—-]\s+/)[0].trim();
+  const titleName = /^(home|homepage|welcome|untitled|404|page not found|online store)$/i.test(titleNameCandidate) ? "" : titleNameCandidate;
   const brand = schemaName || titleName || null;
   const brandStatus: DiscoveredSite["brand_name_status"] = schemaName
     ? "verified_from_structured_data"
