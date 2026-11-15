@@ -53,9 +53,9 @@ const EXPLAIN: Record<L, { basis: string; notProof: string; numericCaveat: strin
 function explainSignal(raw: string, lang: L): string {
   const exact = SIGNAL[raw]?.[lang];
   if (exact) return exact;
-  const count = raw.match(/^(verifiable_numeric_claims_first_150):(\\d+)$/);
+  const count = raw.match(/^(verifiable_numeric_claims_first_150):(\d+)$/);
   if (count) return `${EXPLAIN[lang].numericCaveat} (${count[2]})`;
-  const sections = raw.match(/^structured_sections:(\\d+)$/);
+  const sections = raw.match(/^structured_sections:(\d+)$/);
   if (sections) return lang === "ar" ? `عدد عناوين الأقسام المرصودة: ${sections[1]}` : lang === "ku" ? `ژمارەی سەردێڕە دۆزراوەکان: ${sections[1]}` : `Section headings detected: ${sections[1]}`;
   return raw.replace(/_/g, " ");
 }
