@@ -42,6 +42,14 @@ const TEXT = {
   },
 } as const;
 
+const KURDISH_DEFINITIONS: Record<string, string> = {
+  GEO: "باشترکردنی دۆزینەوە و تێگەیشتنی براند لە سیستەمەکانی وەڵامی دروستکراو و سەرچاوەهێنان.",
+  AEO: "ڕێکخستنی ناوەڕۆکی باوەڕپێکراو بۆ ئەوەی سیستەمەکانی وەڵام بتوانن وەڵامی ڕاستەوخۆ وەربگرن.",
+  KGO: "باشترکردنی یەکگرتوویی و پەیوەندییە خوێندراوەکانی کەسایەتی و پەیوەندییەکانیان.",
+  "E-E-A-T": "چەمکەکانی ئەزموون، پسپۆڕی، دەسەڵاتی زانیاری و متمانە؛ نمرەیەکی ڕاستەوخۆی ڕیزبەندی نین.",
+  RAG: "بەستنەوەی وەڵامی مۆدێل بە بەڵگەی دۆزراوە لە سەرچاوە ناوخۆیی یان دەرەکییەکان.",
+  "Schema.org": "فەرهەنگێکی هاوبەش بۆ وەسفکردنی کەسایەتی و ناوەڕۆک بە داتای ڕێکخراو.",
+};
 const TERMS = ["GEO", "AEO", "KGO", "E-E-A-T", "RAG", "Schema.org"] as const;
 
 export function TrialKnowledgeSignals({ lang, entity }: Props) {
@@ -87,7 +95,7 @@ export function TrialKnowledgeSignals({ lang, entity }: Props) {
               </summary>
               <div className="mt-2 max-w-sm rounded-lg border border-border bg-card p-3 text-xs shadow-sm">
                 <p className="font-semibold">{lang === "en" ? term!.full_name_en : term!.full_name_ar}</p>
-                <p className="mt-1 leading-5 text-muted-foreground">{lang === "en" ? term!.definition_en : term!.definition_ar}</p>
+                <p className="mt-1 leading-5 text-muted-foreground">{lang === "en" ? term!.definition_en : lang === "ku" ? KURDISH_DEFINITIONS[term!.acronym] || term!.definition_ar : term!.definition_ar}</p>
               </div>
             </details>
           ))}
