@@ -206,7 +206,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
   // Load workspace profile if scoped — used by envision/plan/council.
   let workspaceProfile: any = null;
-  if (ctx.workspaceId) {
+  if (ctx.workspaceId && !siteAuditUrl) {
     try {
       const { data } = await db()
         .from("workspaces")
@@ -219,7 +219,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
   // Use the active workspace's identity only while that workspace is selected.
   let entityProfile: any = null;
-  if (ctx.workspaceId) {
+  if (ctx.workspaceId && !siteAuditUrl) {
     const truth = workspaceProfile?.entity_truth_card && typeof workspaceProfile.entity_truth_card === "object" ? workspaceProfile.entity_truth_card : {};
     const links = Array.isArray(truth.links) ? truth.links : (workspaceProfile?.brand_url ? [{ url: workspaceProfile.brand_url, type: "official" }] : []);
     entityProfile = {
