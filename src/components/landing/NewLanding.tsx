@@ -273,7 +273,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong className="font-display text-xl font-extrabold text-primary md:text-2xl">{c.brandName}</strong> — {c.sub}</p>
             <VisibilityVector />
             <div className="mt-6 flex justify-center">
-              <Link to="/visibility-trial" className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10">{c.trialCta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
+              <Link to="/free-audit" search={{}} className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10">{c.trialCta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
             </div>
             <div className="mt-8">
               <ModelInsights lang={l} />

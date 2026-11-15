@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 import { ENGINE_KEYS, ENGINE_CATALOG, type EngineKey } from "@/lib/ai-engines";
 import { resolveEngineModels } from "@/lib/ai-engines.server";
+import { pickTrialModels } from "@/lib/trial-models";
 import {
   classifyEntityType,
   getTrustedClientIp,
@@ -25,19 +26,6 @@ type StartBody = {
   assets?: string[];
 };
 
-const PROVIDER_PREFIX: Partial<Record<EngineKey, string>> = {
-  chatgpt: "openai/",
-  gemini: "google/",
-  claude: "anthropic/",
-  perplexity: "perplexity/",
-  copilot: "microsoft/",
-  grok: "x-ai/",
-  mistral: "mistralai/",
-  deepseek: "deepseek/",
-  kimi: "moonshotai/",
-  qwen: "qwen/",
-};
-const CANDIDATE_ORDER: EngineKey[] = ["chatgpt", "gemini", "claude", "grok", "mistral", "deepseek", "kimi", "qwen", "perplexity", "copilot"];
 const ENGINE_LABELS: Record<EngineKey, string> = Object.fromEntries(
   ENGINE_KEYS.map((key) => [key, ENGINE_CATALOG[key].name]),
 ) as Record<EngineKey, string>;
@@ -169,19 +157,7 @@ async function getAdmin(request: Request) {
 
 async function chooseThreeVerifiedModels() {
   const resolved = await resolveEngineModels([...ENGINE_KEYS]);
-  const selected: Array<{ key: EngineKey; model: string }> = [];
-  const providers = new Set<string>();
-  const models = new Set<string>();
-  for (const key of CANDIDATE_ORDER) {
-    const model = String(resolved[key]?.model || "");
-    const prefix = PROVIDER_PREFIX[key];
-    if (!prefix || !model.startsWith(prefix) || providers.has(prefix) || models.has(model)) continue;
-    providers.add(prefix);
-    models.add(model);
-    selected.push({ key, model });
-    if (selected.length === 3) break;
-  }
-  return selected.length === 3 ? selected : null;
+  return pickTrialModels(resolved, !!process.env.OPENROUTER_API_KEY) as Array<{ key: EngineKey; model: string }> | null;
 }
 
 async function parseGatewayResponse(response: Response) {

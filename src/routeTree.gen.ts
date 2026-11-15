@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ClassicRouteImport } from './routes/classic'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FreeAuditRouteImport } from './routes/free-audit'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as MaaroofRouteImport } from './routes/maaroof'
 import { Route as MarketsRouteImport } from './routes/markets'
@@ -107,6 +108,11 @@ const ContactRoute = ContactRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FreeAuditRoute = FreeAuditRouteImport.update({
+  id: '/free-audit',
+  path: '/free-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuideRoute = GuideRouteImport.update({
@@ -407,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/classic': typeof ClassicRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/free-audit': typeof FreeAuditRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
   '/markets': typeof MarketsRoute
@@ -473,6 +480,7 @@ export interface FileRoutesByTo {
   '/classic': typeof ClassicRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/free-audit': typeof FreeAuditRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
   '/markets': typeof MarketsRoute
@@ -540,6 +548,7 @@ export interface FileRoutesById {
   '/classic': typeof ClassicRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/free-audit': typeof FreeAuditRoute
   '/guide': typeof GuideRouteWithChildren
   '/maaroof': typeof MaaroofRouteWithChildren
   '/markets': typeof MarketsRoute
@@ -608,6 +617,7 @@ export interface FileRouteTypes {
     | '/classic'
     | '/contact'
     | '/dashboard'
+    | '/free-audit'
     | '/guide'
     | '/maaroof'
     | '/markets'
@@ -674,6 +684,7 @@ export interface FileRouteTypes {
     | '/classic'
     | '/contact'
     | '/dashboard'
+    | '/free-audit'
     | '/guide'
     | '/maaroof'
     | '/markets'
@@ -740,6 +751,7 @@ export interface FileRouteTypes {
     | '/classic'
     | '/contact'
     | '/dashboard'
+    | '/free-audit'
     | '/guide'
     | '/maaroof'
     | '/markets'
@@ -807,6 +819,7 @@ export interface RootRouteChildren {
   ClassicRoute: typeof ClassicRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
+  FreeAuditRoute: typeof FreeAuditRoute
   GuideRoute: typeof GuideRouteWithChildren
   MaaroofRoute: typeof MaaroofRouteWithChildren
   MarketsRoute: typeof MarketsRoute
@@ -911,6 +924,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/free-audit': {
+      id: '/free-audit'
+      path: '/free-audit'
+      fullPath: '/free-audit'
+      preLoaderRoute: typeof FreeAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -1348,6 +1368,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClassicRoute: ClassicRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
+  FreeAuditRoute: FreeAuditRoute,
   GuideRoute: GuideRouteWithChildren,
   MaaroofRoute: MaaroofRouteWithChildren,
   MarketsRoute: MarketsRoute,
