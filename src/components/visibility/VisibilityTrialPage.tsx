@@ -7,7 +7,7 @@ import { computeFingerprint } from "@/lib/fingerprint";
 import { AuthGate } from "@/components/AuthGate";
 import { TrialKnowledgeSignals } from "@/components/visibility/TrialKnowledgeSignals";
 import { FreeAuditHeader } from "@/components/visibility/FreeAuditHeader";
-import { ArrowLeft, CheckCircle2, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 
 type EngineResult = {
   engine: string; name: string; status: string; mentioned?: boolean | null;
