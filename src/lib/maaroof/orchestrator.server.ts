@@ -614,7 +614,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         { role: "user", content: planUserMsg },
       ]);
       }
-    }    } catch (e: any) {
+    } catch (e: any) {
       if (ctx.signal?.aborted) throw e;
       // Both models failed: continue with the skill's own tools instead of stopping.
       if (!ctx.selectedSkills?.length) throw e;
