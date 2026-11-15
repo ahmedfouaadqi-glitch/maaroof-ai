@@ -4,6 +4,7 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { AuthGate } from "@/components/AuthGate";
+import { TrialKnowledgeSignals } from "@/components/visibility/TrialKnowledgeSignals";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ArrowLeft, CheckCircle2, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 
@@ -392,6 +393,7 @@ function VisibilityTrialPage() {
               ].map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-background p-4"><div className="font-display text-2xl font-bold">{value}</div><div className="mt-1 text-xs text-muted-foreground">{label}</div></div>)}
             </div>
             <p className="mt-4 rounded-lg bg-muted/40 p-3 text-xs leading-6 text-muted-foreground">{result.sample.has_blind_discovery ? c.sample + " (" + result.sample.blind_sample_count + "/3 " + c.engines + ")" : c.noCategoryMeasurement}</p>
+            <TrialKnowledgeSignals lang={l as "ar" | "en" | "ku"} entity={result.entity} metrics={result.metrics} />
             <div className="mt-6 space-y-4">
               {result.engines.map((engine) => (
                 <article key={engine.engine} className="rounded-xl border border-border p-4">
