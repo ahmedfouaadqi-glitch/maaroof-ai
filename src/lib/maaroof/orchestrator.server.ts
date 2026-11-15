@@ -33,6 +33,8 @@ import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
+import { extractDiscoveredSite, extractSiteUrlFromGoal, isExternalSiteAuditGoal } from "@/lib/maaroof/site-intake";
+import { factsFromDiscoveredSite } from "@/lib/maaroof/site-facts";
 import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 import { buildExecutionEvidencePack } from "./execution-evidence-pack";
@@ -200,10 +202,49 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
+  const isExternalSiteAudit = isExternalSiteAuditGoal(ctx.goal);
+  const siteAuditUrl = isExternalSiteAudit ? extractSiteUrlFromGoal(ctx.goal) : null;
+  // External URLs are independent audit subjects: do not attach their jobs, agents or evidence to the currently selected customer workspace.
+  if (siteAuditUrl) ctx.workspaceId = null;
+  let siteDiscovery: { site: NonNullable<ReturnType<typeof extractDiscoveredSite>>; markdown: string } | null = null;
+  let siteDiscoveryIssue: string | null = null;
+  if (siteAuditUrl && ctx.executionMode !== "simulation" && ctx.executionMode !== "recommendation") {
+    try {
+      const { fcScrape } = await import("@/lib/firecrawl");
+      const read: any = await fcScrape(siteAuditUrl, { deep: true, allowDirectHttp: false }, { userId: ctx.userId, toolKey: "site_intake" });
+      const page = read?.data ?? read;
+      const metadata = page?.metadata || {};
+      const site = extractDiscoveredSite(siteAuditUrl, {
+        title: metadata.title || "", description: metadata.description || "",
+        markdown: page?.markdown || "", html: page?.html || "",
+        statusCode: metadata.statusCode ?? null, source: read?.fetch_source || null,
+      });
+      if (!site) throw new Error("site_identity_extraction_failed");
+      const discoveredFacts = factsFromDiscoveredSite(
+        site,
+        new Date().toISOString(),
+        read?.fetch_source || "public_site_crawl",
+      );
+      siteDiscovery = { site, markdown: String(page?.markdown || "").slice(0, 7800) };
+      await ctx.emit("site_discovery", {
+        discovery: site,
+        discovered_facts: discoveredFacts,
+        evidence: {
+          markdown_available: Boolean(page?.markdown),
+          html_available: Boolean(page?.html),
+          status_code: metadata.statusCode ?? null,
+          source: read?.fetch_source || null,
+        },
+      });
+    } catch (error: any) {
+      siteDiscoveryIssue = String(error?.readIssue || error?.message || "site_read_failed").slice(0, 120);
+      await ctx.emit("site_discovery_error", { url: siteAuditUrl, issue: siteDiscoveryIssue });
+    }
+  } else if (siteAuditUrl) siteDiscoveryIssue = "site_read_skipped_in_safe_mode";
 
   // Load workspace profile if scoped — used by envision/plan/council.
   let workspaceProfile: any = null;
-  if (ctx.workspaceId) {
+  if (ctx.workspaceId && !siteAuditUrl) {
     try {
       const { data } = await db()
         .from("workspaces")
@@ -216,7 +257,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
   // Use the active workspace's identity only while that workspace is selected.
   let entityProfile: any = null;
-  if (ctx.workspaceId) {
+  if (ctx.workspaceId && !siteAuditUrl) {
     const truth = workspaceProfile?.entity_truth_card && typeof workspaceProfile.entity_truth_card === "object" ? workspaceProfile.entity_truth_card : {};
     const links = Array.isArray(truth.links) ? truth.links : (workspaceProfile?.brand_url ? [{ url: workspaceProfile.brand_url, type: "official" }] : []);
     entityProfile = {
@@ -228,7 +269,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       specialty_scope: truth.sector || workspaceProfile?.brand_summary || null,
       entity_links: links,
     };
-  } else {
+  } else if (!siteAuditUrl) {
     try {
       const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
       entityProfile = data || null;
@@ -236,6 +277,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
   // Saved clarification answers (only stored with the user's memory consent): reuse instead of asking again.
   try {
+    if (siteAuditUrl) throw new Error("isolated_external_site_audit");
     const fresh = Object.entries(ctx.clarifications || {}).filter(([k, v]) => k !== "tools" && String(v || "").trim());
     for (const [k, v] of fresh) await remember({ userId: ctx.userId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
     let clarifyQuery = db().from("maaroof_memory").select("content").eq("user_id", ctx.userId);
@@ -381,10 +423,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   let activeAgent: MaaroofAgent | null = null;
   try {
     // 2) Recall memory (workspace-scoped when available)
-    const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
+    const memories = siteAuditUrl ? [] : await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (workspaceProfile ?
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (siteDiscovery ? `\n\n[EXTERNAL SITE DISCOVERY — isolated ephemeral evidence]\n${JSON.stringify(siteDiscovery.site)}\n[PAGE CONTENT — scraped from target URL only]\n${siteDiscovery.markdown}` : siteDiscoveryIssue ? `\n\n[EXTERNAL SITE DISCOVERY FAILED]\nThe target website could not be read: ${siteDiscoveryIssue}. Do not invent its identity, sector, country, products or visibility.` : "") + (workspaceProfile ?
       "\n\n[WORKSPACE ENTITY TRUTH CARD — values are user-supplied and not verified unless marked otherwise]\n" + JSON.stringify(workspaceProfile.entity_truth_card || {}).slice(0, 5000) +
       "\n\n[WORKSPACE ONBOARDING CONTEXT]\n" + JSON.stringify(workspaceProfile.onboarding || {}).slice(0, 3000) +
       "\n\n[WORKSPACE SETTINGS]\n" + JSON.stringify(workspaceProfile.settings || {}).slice(0, 1500) : "");
@@ -425,14 +467,14 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 2.4) Learned expert snapshots (Part 9) + living knowledge (Part 11).
     //      Both are additive prompt blocks: disabled ⇒ byte-identical prompt.
     let learnedBlock = "";
-    if (settings.experts?.enabled && settings.experts?.use_snapshots) {
+    if (settings.experts?.enabled && settings.experts?.use_snapshots && !siteAuditUrl) {
       try {
         const { readExpertSnapshots, snapshotPromptBlock } = await import("./experts.server");
         const snaps = await readExpertSnapshots(settings.enabled_tools || []);
         learnedBlock += snapshotPromptBlock(snaps);
       } catch {}
     }
-    if (settings.knowledge?.enabled && settings.knowledge?.recall_enabled) {
+    if (settings.knowledge?.enabled && settings.knowledge?.recall_enabled && !siteAuditUrl) {
       try {
         const { recallKnowledge, knowledgePromptBlock } = await import("./knowledge.server");
         const nodes = await recallKnowledge({
@@ -454,7 +496,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
     // Prompt 22 — inherited institutional knowledge from approved Knowledge Spaces.
-    if (ctx.userId) {
+    if (ctx.userId && !siteAuditUrl) {
       try {
         const { inheritedKnowledgeBlock } = await import("./teaching.server");
         const inherited = await inheritedKnowledgeBlock({
@@ -478,7 +520,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     //      behaviour when disabled.
     const decisionLog: any[] = [];
     let envision: any = null;
-    if (settings.council?.envision_enabled !== false) {
+    if (settings.council?.envision_enabled !== false && !siteAuditUrl) {
       try {
         await ctx.emit("phase", { phase: "envision" }); try { const _n = (await import("./narration")).narratePhase("envision", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "envision", text: _n }); } catch {}
         const eResp = await call("envision", [
@@ -511,6 +553,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // MCI planning hints (additive, fail-open): tools with a fresh result for this user.
     let mciHintLine = "";
     try {
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
       const { mciPlanningHints } = await import("@/lib/mci/resolver.server");
       const hints = await mciPlanningHints(db() as any, ctx.userId);
       if (hints.length) {
@@ -520,6 +563,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     // Facts learned from earlier tasks (MCI memory) — read-only, fail-open.
     try {
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
       const { freshFacts, factsContextLine } = await import("@/lib/knowledge-facts");
       let factsQuery = (db() as any).from("knowledge_facts").select("fact, source, expires_at").eq("user_id", ctx.userId);
       factsQuery = ctx.workspaceId ? factsQuery.eq("workspace_id", ctx.workspaceId) : factsQuery.is("workspace_id", null);
@@ -528,6 +572,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     // Files the user uploaded in this space during the last 24h: read first, never search the web for them.
     try {
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
       let aq = (db() as any).from("task_attachments").select("name, analysis, structure").eq("user_id", ctx.userId).eq("status", "done").gte("created_at", new Date(Date.now() - 86400000).toISOString());
       aq = ctx.workspaceId ? aq.eq("workspace_id", ctx.workspaceId) : aq.is("workspace_id", null);
       const { data: atts } = await aq.order("created_at", { ascending: false }).limit(3);
@@ -540,8 +585,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // User's own recent tool runs (saved results + chosen options) — read-only, fail-open.
     let historyLine = "";
     try {
-      const { data: hist } = await db().from("report_drafts").select("tool_key, title, payload, created_at")
-        .eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(30);
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
+      let histQuery = db().from("report_drafts").select("tool_key, title, payload, created_at").eq("user_id", ctx.userId);
+      histQuery = ctx.workspaceId ? histQuery.eq("workspace_id", ctx.workspaceId) : histQuery.is("workspace_id", null);
+      const { data: hist } = await histQuery.order("created_at", { ascending: false }).limit(30);
       const seen = new Set<string>(); const lines: string[] = [];
       for (const h of (hist as any[]) || []) {
         if (seen.has(h.tool_key) || lines.length >= 8) continue; seen.add(h.tool_key);
@@ -563,15 +610,29 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       externalActionRequested: reasoningContext.externalActionRequested,
       signals: reasoningContext.signals,
     });
-    const planUserMsg = reasoningGuidance + "\\n\\n" + mciHintLine + historyLine +
+    const siteAuditPlanningHint = siteAuditUrl ? "\n\n[MANDATORY TARGETED WEBSITE AUDIT] Target URL: " + siteAuditUrl + ". Do not create content, marketing posts, rewrites, competitor campaigns or unrelated strategy tasks. Use only the target page evidence discovered above. Brand name, sector and country must come from site evidence; unknown fields remain unknown.\n" : "";
+    const planUserMsg = siteAuditPlanningHint + reasoningGuidance + "\n\n" + mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "...", "depends_on": ["<prior tool key whose output is required>"] } ], "final_answer_hint": "..." }. Set depends_on only when the step consumes output from an earlier step; use only tool keys that already appear earlier in the plan. Independent steps may omit it.\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     let planResp: { text: string; tokens: number; usd: number };
     try {
+      if (siteAuditUrl && siteDiscovery) {
+        const discoveredBrand = siteDiscovery.site.brand_name;
+        const siteScope = siteDiscovery.site.country ? { scope: "country", country: siteDiscovery.site.country } : { scope: "world" };
+        const allowed = (key: string) => !settings.enabled_tools?.length || settings.enabled_tools.includes(key);
+        const targetedSteps: PlanStep[] = [];
+        if (siteDiscovery.markdown.length >= 20 && allowed("analyze")) targetedSteps.push({ tool: "analyze", input: { text: siteDiscovery.markdown, lang: ctx.language, scope: siteScope }, reason: "تحليل محتوى الصفحة العامة المستخرج من الرابط المستهدف." });
+        if (discoveredBrand && allowed("known")) targetedSteps.push({ tool: "known", input: { brand: discoveredBrand, website: siteAuditUrl, url: siteAuditUrl }, reason: "التحقق من هوية الكيان وروابطه العامة من بيانات الموقع." });
+        if (discoveredBrand && ctx.liveProbe !== false && allowed("visibility")) targetedSteps.push({ tool: "visibility", input: { brand: discoveredBrand, official_website: siteAuditUrl, keywords: siteDiscovery.site.sector || "", lang: ctx.language, scope: siteScope }, reason: "قياس الظهور الفعلي للعلامة المكتشفة عبر محركات الذكاء الاصطناعي." });
+        planResp = { text: JSON.stringify({ steps: targetedSteps.slice(0, Math.max(1, MAX_STEPS)), final_answer_hint: discoveredBrand ? "Separate on-page readiness from live engine observations. Unknown identity fields remain unknown; no score is a ranking guarantee." : "The site did not provide a reliable brand name. Report page evidence, leave brand visibility unmeasured and request brand confirmation before live engine probes." }), tokens: 0, usd: 0 };
+      } else if (siteAuditUrl && siteDiscoveryIssue) {
+        planResp = { text: JSON.stringify({ steps: [], final_answer_hint: "The website could not be read. Report the failed read and ask for a publicly accessible URL; do not infer identity or sector." }), tokens: 0, usd: 0 };
+      } else {
       planResp = await call("planning", [
         { role: "system", content: systemPrompt },
         { role: "user", content: planUserMsg },
       ]);
+      }
     } catch (e: any) {
       if (ctx.signal?.aborted) throw e;
       // Both models failed: continue with the skill's own tools instead of stopping.
@@ -589,18 +650,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     );
     let steps: PlanStep[] = initialPlanValidation.steps.map((step) => ({ ...step }));
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
-    if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
+    if (!siteAuditUrl && /(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
     // User-edited tool list (from the pre-execution catalog card) wins over the planner.
     const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && k !== "competitor_monitor");
-    if (userTools.length) {
+    if (userTools.length && !siteAuditUrl) {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
       steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
     }
     // Skill tools (selected or inferred from the task text) are guaranteed in the plan.
-    if (!userTools.length && ctx.selectedSkills?.length) {
+    if (!userTools.length && ctx.selectedSkills?.length && !siteAuditUrl) {
       try {
         const { executableToolsFor } = await import("./skill-inference");
         for (const k of executableToolsFor(ctx.selectedSkills)) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "مطلوبة للمهارة المختارة لهذه المهمة." } as PlanStep);
@@ -773,10 +834,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         };
         // Pick a concise role from the goal (first ~48 chars) — evolvable later.
         const role = (workspaceProfile?.name ? `${workspaceProfile.name} Executive` : "Maaroof Executive").slice(0, 80);
-        const mission = String(ctx.goal).slice(0, 240);
+        const mission = siteAuditUrl ? "Run an isolated public website audit using only per-run site evidence." : String(ctx.goal).slice(0, 240);
         const { agent, reused } = await getOrCreateAgent({
           userId: ctx.userId,
-          workspaceId: ctx.workspaceId || null,
+          workspaceId: siteAuditUrl ? null : ctx.workspaceId || null,
           role,
           mission,
           dna,
@@ -810,7 +871,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           await ctx.emit("personality", { agentId: activeAgent.id, traits: p, version: activeAgent.personality_version || 1 });
         } catch {}
       }
-      if (exec.genome_enabled && ctx.workspaceId) {
+      if (exec.genome_enabled && ctx.workspaceId && !siteAuditUrl) {
         try {
           const g = await readWorkspaceGenome(ctx.workspaceId);
           effectivePrompt += genomePromptBlock(g);
@@ -854,7 +915,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       } catch {}
     }
 
-    if (settings.council?.enabled && ctx.useSubagents !== false) {
+    if (settings.council?.enabled && ctx.useSubagents !== false && !siteAuditUrl) {
       await ctx.emit("phase", { phase: "council" }); try { const _n = (await import("./narration")).narratePhase("council", ctx.language as any); if (_n) await ctx.emit("narration", { phase: "council", text: _n }); } catch {}
       const requiredCaps = new Set<Capability>();
       for (const s of steps) {
@@ -1000,7 +1061,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           decisionLog.push(finalEntry);
           await ctx.emit("decision", finalEntry);
           await logMsg("decision", finalEntry, dResp.tokens, dResp.usd);
-          if (settings.council.log_decisions) {
+          if (settings.council.log_decisions && !siteAuditUrl) {
             try {
               await remember({
                 userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "decision",
@@ -1144,6 +1205,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
             const { taskFact } = await import("@/lib/knowledge-facts");
             let saved = 0;
             for (const line of prior.slice(0, 8)) {
+              if (siteAuditUrl) continue;
               const f = taskFact(ctx.goal, line);
               if (!f) continue;
               const { error } = await (db() as any).from("knowledge_facts").insert({ user_id: ctx.userId, workspace_id: ctx.workspaceId || null, source: "task", source_ref: runId, ...f });
@@ -1186,7 +1248,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         try {
           const def = TOOL_CATALOG.find((t) => t.key === step.tool);
           const { agent, reused } = await getOrCreateAgent({
-            userId: ctx.userId, workspaceId: ctx.workspaceId, role: `specialist:${step.tool}`,
+            userId: ctx.userId, workspaceId: siteAuditUrl ? null : ctx.workspaceId, role: `specialist:${step.tool}`,
             mission: `Run ${step.tool} with correct tabs/options: ${describeToolOptions(step.tool)}`.slice(0, 500),
             dna: { capabilities: (def?.capabilities as string[]) || [step.tool] } as any,
             warmReuse: true, minSuccessRate: 0.5,
@@ -1788,11 +1850,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       });
     } catch {}
 
-    await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
-    if (geo.country) await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+    if (!siteAuditUrl) {
+      await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
+      if (geo.country) await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+    }
 
     // 6.5) Capture the run into the living knowledge graph (Part 11).
-    if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {
+    if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled && !siteAuditUrl) {
       try {
         const { upsertKnowledgeNode } = await import("./knowledge.server");
         const conf = Math.round((((qualityScore as any)?.overall ?? 0.7) as number) * 100) || 70;
@@ -1834,7 +1898,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
 
       // Part 7 — evolve executive personality from this run's signals.
-      if (exec.enabled && exec.personality_enabled) {
+      if (exec.enabled && exec.personality_enabled && !siteAuditUrl) {
         const traits = await evolvePersonality({
           agentId: activeAgent.id,
           signals: {

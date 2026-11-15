@@ -11,6 +11,7 @@ const finding = (
   score,
   verdict: score == null ? "unmeasured" : score >= 70 ? "good" : score >= 40 ? "weak" : "missing",
   evidence,
+  evidence_refs: [],
   reason: score == null ? "no_public_content" : evidence.length ? "measured" : "no_signal",
   next: score != null && score >= 70 ? "keep" : `improve_${axis}`,
 });

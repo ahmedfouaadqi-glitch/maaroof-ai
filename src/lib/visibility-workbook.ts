@@ -1,5 +1,7 @@
+import { DOMAIN_ONTOLOGY } from "@/lib/maaroof/domain-ontology";
+import { DOMAIN_KNOWLEDGE_BY_ACRONYM } from "@/lib/maaroof/domain-knowledge";
 /**
- * Pure builder for the three-sheet visibility workbook.
+ * Pure builder for the visibility workbook.
  * Every value comes from the recorded probe; missing evidence reads "not measured" with a reason.
  */
 export type WbLang = "ar" | "en" | "ku";
@@ -106,7 +108,35 @@ export function buildVisibilityWorkbook(brand: string, probe: ProbeLike, lang: W
       ...(links.size ? [...links].map(([u, t]) => [u, t || "—"]) : [[NM, L(lang, "لم تُسجَّل روابط في هذا الفحص", "No links recorded in this run", "هیچ بەستەرێک تۆمار نەکراوە")]]),
     ],
   };
-  return [summary, competitors, evidence];
+  const glossary: WbSheet = {
+    name: L(lang, "المعجم الاصطلاحي", "Terminology glossary", "فەرهەنگی زاراوەکان"),
+    rows: [
+      [
+        L(lang, "الاختصار", "Acronym", "کورتکراوە"),
+        L(lang, "الاسم الكامل", "Full name", "ناوی تەواو"),
+        L(lang, "التعريف الأولي", "Glossary definition", "پێناسەی سەرەتایی"),
+        L(lang, "تصنيف المعرفة", "Knowledge classification", "پۆلێنی زانیاری"),
+        L(lang, "درجة النضج", "Evidence maturity", "ئاستی پێگەیشتن"),
+        L(lang, "طرق القياس", "Measurement methods", "ڕێگاکانی پێوانەکردن"),
+        L(lang, "القيود", "Limitations", "سنووردارییەکان"),
+        L(lang, "المراجع", "Sources", "سەرچاوەکان"),
+      ],
+      ...DOMAIN_ONTOLOGY.map((entry) => {
+        const knowledge = DOMAIN_KNOWLEDGE_BY_ACRONYM.get(entry.acronym.toLowerCase());
+        return [
+          entry.acronym,
+          L(lang, entry.full_name_ar, entry.full_name_en, entry.full_name_ar),
+          L(lang, entry.definition_ar, entry.definition_en, entry.definition_ar),
+          knowledge?.knowledge_kind || L(lang, "تصنيف غير موسّع بعد", "Not yet classified", "هێشتا پۆلێن نەکراوە"),
+          knowledge?.maturity || entry.terminology_status,
+          knowledge?.measurement_methods.join("; ") || "—",
+          knowledge?.limitations.join("; ") || "—",
+          knowledge?.sources.map((source) => source.url).join("\n") || "—",
+        ];
+      }),
+    ],
+  };
+  return [summary, competitors, evidence, glossary];
 }
 
 export async function downloadVisibilityWorkbook(title: string, sheets: WbSheet[], rtl: boolean) {

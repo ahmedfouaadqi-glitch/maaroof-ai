@@ -19,19 +19,47 @@ import { ModelInsights } from "@/components/landing/ModelInsights";
 type L = "ar" | "en" | "ku";
 
 function HeroPulses() {
-  const [dots, setDots] = useState<{ x: number; y: number; d: number; s: number }[]>([]);
-  useEffect(() => {
-    const gen = () => Array.from({ length: 6 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, d: Math.random() * 3, s: 6 + Math.random() * 8 }));
-    setDots(gen());
-    const id = setInterval(() => setDots(gen()), 6000);
-    return () => clearInterval(id);
-  }, []);
   return (
-    <div aria-hidden className="relative mx-auto h-10 w-56">
-      {dots.map((p, i) => (
-        <span key={i} className="absolute rounded-full bg-primary motion-safe:animate-ping transition-all duration-[2000ms]"
-          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, animationDelay: `${p.d}s`, animationDuration: "2.4s", opacity: 0.7 }} />
-      ))}
+    <div aria-hidden className="mx-auto flex h-10 w-56 items-center justify-center gap-3 text-primary">
+      <span className="size-1.5 rounded-full bg-current opacity-35" />
+      <span className="h-px w-7 bg-current opacity-20" />
+      <span className="size-2 rounded-full border border-current opacity-65" />
+      <span className="h-px w-7 bg-current opacity-20" />
+      <span className="size-2.5 rounded-full bg-current opacity-80 motion-safe:animate-pulse" />
+      <span className="h-px w-7 bg-current opacity-20" />
+      <span className="size-1.5 rounded-full bg-current opacity-35" />
+    </div>
+  );
+}
+
+function VisibilityVector() {
+  return (
+    <div aria-hidden className="mx-auto mt-8 w-full max-w-[34rem]">
+      <svg viewBox="0 0 544 132" fill="none" className="h-auto w-full overflow-visible">
+        <defs>
+          <linearGradient id="visibility-line" x1="28" y1="66" x2="516" y2="66" gradientUnits="userSpaceOnUse">
+            <stop stopColor="currentColor" stopOpacity=".08" />
+            <stop offset=".5" stopColor="currentColor" stopOpacity=".42" />
+            <stop offset="1" stopColor="currentColor" stopOpacity=".08" />
+          </linearGradient>
+        </defs>
+        <path d="M42 66H502M132 66V34H204M132 66V98H204M412 34H458V66M412 98H458V66" stroke="url(#visibility-line)" strokeWidth="1.2" />
+        <path d="M204 34H238M204 98H238M306 34H340M306 98H340" stroke="currentColor" strokeOpacity=".18" strokeWidth="1.2" strokeDasharray="3 5" />
+        <rect x="238.5" y="39.5" width="67" height="53" rx="14" fill="currentColor" fillOpacity=".035" stroke="currentColor" strokeOpacity=".22" />
+        <circle cx="272" cy="66" r="13" stroke="var(--primary)" strokeWidth="1.5" />
+        <circle cx="272" cy="66" r="4" fill="var(--primary)" />
+        <circle cx="132" cy="66" r="5" fill="var(--background)" stroke="currentColor" strokeOpacity=".42" strokeWidth="1.4" />
+        <circle cx="204" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="204" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="340" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="340" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="412" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="412" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
+        <circle cx="458" cy="66" r="5" fill="var(--background)" stroke="var(--primary)" strokeOpacity=".7" strokeWidth="1.4" />
+        <circle cx="42" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
+        <circle cx="502" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
+        <circle cx="272" cy="66" r="24" stroke="var(--primary)" strokeOpacity=".12" strokeWidth="1" className="motion-safe:animate-pulse" />
+      </svg>
     </div>
   );
 }
@@ -42,7 +70,7 @@ const COPY = {
     title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
     rotPrefix: "نحسّن ظهورك عبر",
     brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
-    cta: "ابدأ مساحة العمل", pro: "واجهة المحترفين",
+    cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
     core: "الجوهر الخماسي",
@@ -70,7 +98,7 @@ const COPY = {
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
     skills: "المهارات المتاحة",
-    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة"],
+    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
@@ -85,7 +113,7 @@ const COPY = {
     title: "Make your brand a source answer engines cite",
     rotPrefix: "We improve your visibility through",
     brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
-    cta: "Start the workspace", pro: "Professional interface",
+    cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
     core: "The five pillars",
@@ -113,7 +141,7 @@ const COPY = {
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
     skills: "Available skills",
-    stats: ["AI models", "Ready skills", "Supported languages"],
+    stats: ["AI engines", "Ready skills", "Supported languages", "Free trial runs"],
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
@@ -128,7 +156,7 @@ const COPY = {
     title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
     brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
-    cta: "دەستپێکردنی شوێنی کار", pro: "ڕووکاری پسپۆڕان",
+    cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
     core: "پێنج کۆڵەکەکە",
@@ -156,7 +184,7 @@ const COPY = {
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
     skills: "کارامەییە بەردەستەکان",
-    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو"],
+    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
@@ -176,7 +204,18 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const l: L = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[l];
   const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
+  const [freeTrialAttempts, setFreeTrialAttempts] = useState<number | null>(null);
   useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => fetch("/api/visibility-trial-usage", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => { if (active) setFreeTrialAttempts(result.available ? Number(result.totalStarted) : null); })
+      .catch(() => { if (active) setFreeTrialAttempts(null); });
+    void refresh();
+    const interval = window.setInterval(refresh, 10_000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, []);
   const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
   const [openSkill, setOpenSkill] = useState<string | null>(null);
   const card = data?.card ?? null;
@@ -209,13 +248,34 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               {c.rotPrefix} <RotatingText words={PILLAR_WORDS} className="text-primary" />
             </p>
             <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg"><strong className="font-display text-xl font-extrabold text-primary md:text-2xl">{c.brandName}</strong> — {c.sub}</p>
+            <VisibilityVector />
+            <div className="mt-6 flex justify-center">
+              <Link to="/visibility-trial" className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10">{c.trialCta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
+            </div>
             <div className="mt-8">
               <ModelInsights lang={l} />
             </div>
           </div>
         </section>
 
-        {/* 2. Engines loop */}
+        {/* 2. Live, server-backed stats */}
+        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
+          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
+            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
+              <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
+                {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
+                {n === null ? (
+                  <span className="relative font-display text-3xl font-bold text-muted-foreground md:text-4xl" aria-live="polite">—</span>
+                ) : (
+                  <CountUp to={n} className="relative font-display text-3xl font-bold text-gradient md:text-4xl" />
+                )}
+                <div className="relative mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 3. Engines loop */}
         <section className="mx-auto max-w-5xl px-4 pb-14">
           <p className="mb-3 text-center text-xs text-muted-foreground">{c.engines}</p>
           <LogoLoop>
@@ -227,7 +287,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </LogoLoop>
         </section>
 
-        {/* 3. How it works */}
+        {/* 4. How it works */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.how}</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -243,7 +303,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 4. Five pillars */}
+        {/* 5. Five pillars */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -259,7 +319,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 5. Comparison */}
+        {/* 6. Comparison */}
         <section className="mx-auto max-w-4xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.vsTitle}</h2>
           <Reveal>
@@ -277,7 +337,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </Reveal>
         </section>
 
-        {/* 6. Truth card */}
+        {/* 7. Truth card */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <div className="grid items-center gap-8 md:grid-cols-2">
             <div>
@@ -304,7 +364,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 7. Account types */}
+        {/* 8. Account types */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.types}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -319,7 +379,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 8. Skills */}
+        {/* 9. Skills */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -337,17 +397,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 9. Real stats */}
-        <section className="mx-auto max-w-4xl px-4 pb-16">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            {[ENGINES.length, skills.length, 3].map((n, i) => (
-              <div key={i} className="rounded-2xl border border-border bg-card/40 p-4">
-                <CountUp to={n} className="font-display text-3xl font-bold text-gradient md:text-4xl" />
-                <div className="mt-1 text-xs text-muted-foreground">{c.stats[i]}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+
 
         {/* 10. FAQ + final CTA */}
         <section className="mx-auto max-w-3xl px-4 pb-20">

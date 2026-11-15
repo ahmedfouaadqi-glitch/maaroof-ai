@@ -5881,6 +5881,90 @@ export type Database = {
         }
         Relationships: []
       }
+      visibility_trial_attempts: {
+        Row: {
+          created_at: string
+          device_hash: string | null
+          entity_fingerprint: string
+          entity_name: string
+          entity_type: string
+          id: string
+          ip_hash: string | null
+          next_eligible_at: string | null
+          report_retrieved_at: string | null
+          request_key: string | null
+          result_expires_at: string | null
+          result_payload: Json | null
+          result_view_count: number
+          risk_metadata: Json
+          session_hash: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_hash?: string | null
+          entity_fingerprint: string
+          entity_name: string
+          entity_type: string
+          id: string
+          ip_hash?: string | null
+          next_eligible_at?: string | null
+          report_retrieved_at?: string | null
+          request_key?: string | null
+          result_expires_at?: string | null
+          result_payload?: Json | null
+          result_view_count?: number
+          risk_metadata?: Json
+          session_hash?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_hash?: string | null
+          entity_fingerprint?: string
+          entity_name?: string
+          entity_type?: string
+          id?: string
+          ip_hash?: string | null
+          next_eligible_at?: string | null
+          report_retrieved_at?: string | null
+          request_key?: string | null
+          result_expires_at?: string | null
+          result_payload?: Json | null
+          result_view_count?: number
+          risk_metadata?: Json
+          session_hash?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      visibility_trial_stats: {
+        Row: {
+          id: number
+          total_started: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          total_started?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          total_started?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatif_scenarios: {
         Row: {
           axes: Json | null
@@ -6300,6 +6384,19 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_visibility_trial_result: {
+        Args: { p_attempt_id: string; p_user_id: string }
+        Returns: Json
+      }
+      complete_visibility_trial_attempt: {
+        Args: {
+          p_attempt_id: string
+          p_result: Json
+          p_status?: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       ensure_trial_subscription: { Args: never; Returns: string }
       generate_username_from_email: {
         Args: { _email: string }
@@ -6315,6 +6412,10 @@ export type Database = {
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      mark_visibility_trial_attempt_started: {
+        Args: { p_attempt_id: string }
+        Returns: number
       }
       profile_privileged_fields_unchanged: {
         Args: {
@@ -6338,6 +6439,22 @@ export type Database = {
           _tool_geo_scopes: Json
         }
         Returns: boolean
+      }
+      purge_expired_visibility_trial_data: { Args: never; Returns: number }
+      reserve_visibility_trial_attempt: {
+        Args: {
+          p_attempt_id: string
+          p_device_hash: string
+          p_entity_fingerprint: string
+          p_entity_name: string
+          p_entity_type: string
+          p_ip_hash: string
+          p_request_key: string
+          p_risk_metadata?: Json
+          p_session_hash: string
+          p_user_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

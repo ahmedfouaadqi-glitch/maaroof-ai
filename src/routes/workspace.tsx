@@ -26,6 +26,8 @@ import { canStartTask, AUTO_RUN_OPTIONS } from "@/lib/maaroof/dardasha";
 import { LiveSkillHints } from "@/components/workspace/LiveSkillHints";
 import { DebateCard } from "@/components/workspace/DebateCard";
 import { LivePipeline } from "@/components/workspace/LivePipeline";
+import { SiteFactsPanel } from "@/components/workspace/SiteFactsPanel";
+import { SiteAuditReviewPanel } from "@/components/workspace/SiteAuditReviewPanel";
 import { domainsInText } from "@/lib/knowledge-facts";
 import { OnboardingTour } from "@/components/workspace/OnboardingTour";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
@@ -861,6 +863,8 @@ function WorkspacePage() {
             </div>
 
             {(running || events.length > 0) && <LivePipeline events={events} running={running} lang={locale as any} />}
+            <SiteFactsPanel events={events} lang={locale as "ar" | "en" | "ku"} />
+            <SiteAuditReviewPanel events={events} lang={locale as "ar" | "en" | "ku"} />
 
             {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</div>}
 

@@ -26,6 +26,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as VisibilityTrialRouteImport } from './routes/visibility-trial'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as ApiAnalyzeRouteImport } from './routes/api/analyze'
 import { Route as ApiAppliedRankingRouteImport } from './routes/api/applied-ranking'
@@ -56,6 +57,8 @@ import { Route as ApiSocialAnalysisRouteImport } from './routes/api/social-analy
 import { Route as ApiSuggestRouteImport } from './routes/api/suggest'
 import { Route as ApiVisibilityRouteImport } from './routes/api/visibility'
 import { Route as ApiVisibilityBaselineRouteImport } from './routes/api/visibility-baseline'
+import { Route as ApiVisibilityTrialRouteImport } from './routes/api/visibility-trial'
+import { Route as ApiVisibilityTrialUsageRouteImport } from './routes/api/visibility-trial-usage'
 import { Route as ApiWhatIfRouteImport } from './routes/api/what-if'
 import { Route as GuideArabicKurdishGeoRouteImport } from './routes/guide.arabic-kurdish-geo'
 import { Route as GuideGeoVsAeoRouteImport } from './routes/guide.geo-vs-aeo'
@@ -154,6 +157,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VisibilityTrialRoute = VisibilityTrialRouteImport.update({
+  id: '/visibility-trial',
+  path: '/visibility-trial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -307,6 +315,16 @@ const ApiVisibilityBaselineRoute = ApiVisibilityBaselineRouteImport.update({
   path: '/api/visibility-baseline',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVisibilityTrialRoute = ApiVisibilityTrialRouteImport.update({
+  id: '/api/visibility-trial',
+  path: '/api/visibility-trial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVisibilityTrialUsageRoute = ApiVisibilityTrialUsageRouteImport.update({
+  id: '/api/visibility-trial-usage',
+  path: '/api/visibility-trial-usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWhatIfRoute = ApiWhatIfRouteImport.update({
   id: '/api/what-if',
   path: '/api/what-if',
@@ -399,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/visibility-trial': typeof VisibilityTrialRoute
   '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
@@ -429,6 +448,8 @@ export interface FileRoutesByFullPath {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/visibility-baseline': typeof ApiVisibilityBaselineRoute
+  '/api/visibility-trial': typeof ApiVisibilityTrialRoute
+  '/api/visibility-trial-usage': typeof ApiVisibilityTrialUsageRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
@@ -462,6 +483,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/visibility-trial': typeof VisibilityTrialRoute
   '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
@@ -492,6 +514,8 @@ export interface FileRoutesByTo {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/visibility-baseline': typeof ApiVisibilityBaselineRoute
+  '/api/visibility-trial': typeof ApiVisibilityTrialRoute
+  '/api/visibility-trial-usage': typeof ApiVisibilityTrialUsageRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
@@ -526,6 +550,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/visibility-trial': typeof VisibilityTrialRoute
   '/workspace': typeof WorkspaceRoute
   '/api/analyze': typeof ApiAnalyzeRoute
   '/api/applied-ranking': typeof ApiAppliedRankingRoute
@@ -556,6 +581,8 @@ export interface FileRoutesById {
   '/api/suggest': typeof ApiSuggestRoute
   '/api/visibility': typeof ApiVisibilityRoute
   '/api/visibility-baseline': typeof ApiVisibilityBaselineRoute
+  '/api/visibility-trial': typeof ApiVisibilityTrialRoute
+  '/api/visibility-trial-usage': typeof ApiVisibilityTrialUsageRoute
   '/api/what-if': typeof ApiWhatIfRoute
   '/guide/arabic-kurdish-geo': typeof GuideArabicKurdishGeoRoute
   '/guide/geo-vs-aeo': typeof GuideGeoVsAeoRoute
@@ -591,6 +618,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/visibility-trial'
     | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
@@ -621,6 +649,8 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/api/visibility-baseline'
+    | '/api/visibility-trial'
+    | '/api/visibility-trial-usage'
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
@@ -654,6 +684,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/visibility-trial'
     | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
@@ -684,6 +715,8 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/api/visibility-baseline'
+    | '/api/visibility-trial'
+    | '/api/visibility-trial-usage'
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
@@ -717,6 +750,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
+    | '/visibility-trial'
     | '/workspace'
     | '/api/analyze'
     | '/api/applied-ranking'
@@ -747,6 +781,8 @@ export interface FileRouteTypes {
     | '/api/suggest'
     | '/api/visibility'
     | '/api/visibility-baseline'
+    | '/api/visibility-trial'
+    | '/api/visibility-trial-usage'
     | '/api/what-if'
     | '/guide/arabic-kurdish-geo'
     | '/guide/geo-vs-aeo'
@@ -781,6 +817,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  VisibilityTrialRoute: typeof VisibilityTrialRoute
   WorkspaceRoute: typeof WorkspaceRoute
   ApiAnalyzeRoute: typeof ApiAnalyzeRoute
   ApiAppliedRankingRoute: typeof ApiAppliedRankingRoute
@@ -811,6 +848,8 @@ export interface RootRouteChildren {
   ApiSuggestRoute: typeof ApiSuggestRoute
   ApiVisibilityRoute: typeof ApiVisibilityRoute
   ApiVisibilityBaselineRoute: typeof ApiVisibilityBaselineRoute
+  ApiVisibilityTrialRoute: typeof ApiVisibilityTrialRoute
+  ApiVisibilityTrialUsageRoute: typeof ApiVisibilityTrialUsageRoute
   ApiWhatIfRoute: typeof ApiWhatIfRoute
   PSlugRoute: typeof PSlugRoute
   ToolsSlugRoute: typeof ToolsSlugRoute
@@ -942,6 +981,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/visibility-trial': {
+      id: '/visibility-trial'
+      path: '/visibility-trial'
+      fullPath: '/visibility-trial'
+      preLoaderRoute: typeof VisibilityTrialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace': {
@@ -1154,6 +1200,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVisibilityBaselineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/visibility-trial': {
+      id: '/api/visibility-trial'
+      path: '/api/visibility-trial'
+      fullPath: '/api/visibility-trial'
+      preLoaderRoute: typeof ApiVisibilityTrialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/visibility-trial-usage': {
+      id: '/api/visibility-trial-usage'
+      path: '/api/visibility-trial-usage'
+      fullPath: '/api/visibility-trial-usage'
+      preLoaderRoute: typeof ApiVisibilityTrialUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/what-if': {
       id: '/api/what-if'
       path: '/api/what-if'
@@ -1298,6 +1358,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  VisibilityTrialRoute: VisibilityTrialRoute,
   WorkspaceRoute: WorkspaceRoute,
   ApiAnalyzeRoute: ApiAnalyzeRoute,
   ApiAppliedRankingRoute: ApiAppliedRankingRoute,
@@ -1328,6 +1389,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuggestRoute: ApiSuggestRoute,
   ApiVisibilityRoute: ApiVisibilityRoute,
   ApiVisibilityBaselineRoute: ApiVisibilityBaselineRoute,
+  ApiVisibilityTrialRoute: ApiVisibilityTrialRoute,
+  ApiVisibilityTrialUsageRoute: ApiVisibilityTrialUsageRoute,
   ApiWhatIfRoute: ApiWhatIfRoute,
   PSlugRoute: PSlugRoute,
   ToolsSlugRoute: ToolsSlugRoute,

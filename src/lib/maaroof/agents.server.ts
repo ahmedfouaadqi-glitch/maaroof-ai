@@ -87,6 +87,7 @@ export async function pickWarmAgent(opts: {
       .order("success_rate", { ascending: false, nullsFirst: false })
       .limit(5);
     if (opts.workspaceId) q = q.eq("workspace_id", opts.workspaceId);
+    else q = q.is("workspace_id", null);
     const { data } = await q;
     const rows = (data as MaaroofAgent[]) || [];
     const needed = new Set(opts.capabilities.filter(Boolean));

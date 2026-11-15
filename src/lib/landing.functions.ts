@@ -31,3 +31,4 @@ export const getLandingData = createServerFn({ method: "GET" }).handler(async ()
   } catch { card = null; }
   return { skills, card };
 });
+

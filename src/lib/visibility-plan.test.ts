@@ -21,9 +21,10 @@ describe("dual probe rates", () => {
 });
 
 describe("workbook", () => {
-  it("has three sheets and lists unanswered engines as not measured", () => {
+  it("has four sheets including the terminology glossary and lists unanswered engines as not measured", () => {
     const s = buildVisibilityWorkbook("Mengotti", { asked: ["a", "b", "c"], answers }, "en");
-    expect(s).toHaveLength(3);
+    expect(s).toHaveLength(4);
+    expect(s[3].name).toBe("Terminology glossary");
     expect(s[1].rows.some((r) => r[0] === "c" && r[1] === "Not measured")).toBe(true);
     expect(s[2].rows[1][0]).toBe("Not measured");
   });

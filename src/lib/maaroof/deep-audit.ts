@@ -157,83 +157,104 @@ export function weightedScore(scores: Partial<Record<Axis, number | null>>, kind
 
 // ---------- Evidence-based scoring (pure). Input is real fetched page content only. ----------
 export type PageEvidence = { markdown?: string | null; title?: string | null; description?: string | null; html?: string | null; statusCode?: number | null };
-export type AxisFinding = { axis: Axis; score: number | null; verdict: "good" | "weak" | "missing" | "unmeasured"; evidence: string[]; reason: string; next: string };
+export type AxisFinding = { axis: Axis; score: number | null; verdict: "good" | "weak" | "missing" | "unmeasured"; evidence: string[]; evidence_refs: Array<{ source_url: string; signals: string[] }>; reason: string; next: string };
 
 function words(s: string) { return s.split(/\s+/).filter(Boolean); }
 const verdictOf = (s: number | null): AxisFinding["verdict"] => s == null ? "unmeasured" : s >= 70 ? "good" : s >= 40 ? "weak" : "missing";
+const capped = (value: number, maximum: number) => Math.max(0, Math.min(maximum, value));
 
-/** Scores only axes this target requires, using only signals present in the evidence. No content -> every axis unmeasured. */
+/**
+ * Scores on-page readiness only. A page scrape cannot prove Google indexing,
+ * organic ranking, citations, or actual AI-engine visibility. The deliberate
+ * axis caps prevent a content heuristic from being presented as 100% visibility.
+ */
 export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: string): AxisFinding[] {
   const md = String(ev?.markdown || "").trim();
   const html = String(ev?.html || "");
   const title = String(ev?.title || "").trim();
   const desc = String(ev?.description || "").trim();
   const hasBody = md.length > 40;
-  // Social/profile scrapers often return Open Graph metadata but little markdown.
-  // Metadata is enough for entity identity (GEO/GSEO), not for claims about FAQ or section structure.
   const hasMetadata = title.length >= 3 && desc.length >= 20;
   const combined = [title, desc, md].join("\n");
-  const blockedChallenge = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn't available)/i.test(combined);
-  const genericLogin = /(log in or sign up to view|sign in to view|log in to see|sign in to see|instagram\.com\/accounts\/login)/i.test([title, desc].join("\n"));
-  const genericLoginShell = /(log in to instagram|sign in to instagram)/i.test([title, md].join("\n")) && !hasMetadata;
-  const has = !(blockedChallenge || genericLogin || genericLoginShell) && (hasBody || hasMetadata);
+  const blocked = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn't available|access denied)/i.test(combined);
+  const loginShell = /(log in or sign up to view|sign in to view|log in to see|sign in to see)/i.test(combined);
+  const statusOk = ev?.statusCode == null || (ev.statusCode >= 200 && ev.statusCode < 400);
+  const has = statusOk && !blocked && !loginShell && (hasBody || hasMetadata);
   const normalizedBrand = brand.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const normalizeMatch = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const brandIn = (s: string) => !!normalizedBrand && normalizeMatch(s).includes(normalizedBrand);
   const bodyWords = words(md);
   const first = (hasBody ? bodyWords.slice(0, 150).join(" ") : [title, desc].filter(Boolean).join(" ")).trim();
-  const facts = (first.match(/\d[\d.,%]*/g) || []).length;
+  const firstFacts = (first.match(/\b\d[\d,.%]*/g) || []).length;
+  const schemaBlocks = html.match(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+  const schemaText = schemaBlocks.join("\n");
+  const hasOrgSchema = /"@type"\s*:\s*"(?:Organization|LocalBusiness|Store|Corporation)"/i.test(schemaText);
+  const hasProductSchema = /"@type"\s*:\s*"(?:Product|Offer)"/i.test(schemaText);
+  const hasFaqSchema = /"@type"\s*:\s*"FAQPage"/i.test(schemaText);
+  const hasCanonical = /<link\b[^>]*rel\s*=\s*["']canonical["']/i.test(html);
+  const hasRobots = /<meta\b[^>]*name\s*=\s*["']robots["']/i.test(html);
+  const hasH1 = /^#\s/m.test(md) || /<h1\b/i.test(html);
+  const hasH2 = /^#{2,3}\s/m.test(md) || /<h2\b/i.test(html);
+  const hasCitedSource = /https?:\/\//i.test(md);
+  const directAnswers = (md.match(/(?:^|\n)\s*(?:answer|الإجابة|الجواب)\s*[:：-]/gim) || []).length;
+  const qaPairs = (md.match(/(?:^|\n)\s*(?:#{1,6}\s*)?[^\n?؟]{3,120}[?؟]\s*\n+[^#\n][^\n]{20,}/g) || []).length;
+  const paragraphs = md.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const lead = paragraphs.find((p) => words(p).length >= 15) || "";
+  const headings = (md.match(/^#{2,3}\s/gm) || []).length;
+  const normalized = normalizeMatch(combined);
 
   return t.axes.map((axis): AxisFinding => {
-    if (!has) return { axis, score: null, verdict: "unmeasured", evidence: [], reason: "no_public_content", next: "retry_or_public" };
-    if (!hasBody && (axis === "aeo" || axis === "sge")) {
-      return { axis, score: null, verdict: "unmeasured", evidence: [title ? "profile_title_available" : "", desc ? "profile_description_available" : ""].filter(Boolean), reason: "insufficient_content_for_axis", next: "needs_full_page_content" };
+    if (!has) return { axis, score: null, verdict: "unmeasured", evidence: [], evidence_refs: [], reason: ev?.statusCode && ev.statusCode >= 400 ? "http_error" : blocked ? "blocked_or_challenge" : "no_public_content", next: "retry_or_public" };
+    if (!hasBody && ["aeo", "sge"].includes(axis)) {
+      return { axis, score: null, verdict: "unmeasured", evidence: ["metadata_only"], evidence_refs: [{ source_url: t.url, signals: ["metadata_only"] }], reason: "insufficient_content_for_axis", next: "needs_full_page_content" };
     }
-
-    const ev2: string[] = [];
-    let s = 0;
+    const evidence: string[] = [];
+    let raw = 0;
     if (axis === "seo") {
-      if (title) { s += 30; ev2.push(`title:${title.slice(0, 80)}`); }
-      if (desc) { s += 30; ev2.push(`description:${desc.slice(0, 80)}`); }
-      if (/^#\s/m.test(md)) { s += 20; ev2.push("h1"); }
-      if (bodyWords.length > 300) { s += 20; ev2.push(`words:${bodyWords.length}`); }
+      if (title) { raw += 20; evidence.push("title_present"); }
+      if (desc) { raw += 15; evidence.push("meta_description_present"); }
+      if (hasH1) { raw += 15; evidence.push("h1_present"); }
+      if (hasH2) { raw += 10; evidence.push("section_headings_present"); }
+      if (hasCanonical) { raw += 10; evidence.push("canonical_present"); }
+      if (hasRobots) { raw += 5; evidence.push("robots_directive_present"); }
+      if (bodyWords.length >= 150) { raw += 10; evidence.push("substantive_body"); }
+      if (t.kind === "commerce" || hasProductSchema) {
+        if (hasProductSchema) { raw += 10; evidence.push("product_schema_present"); }
+      }
+      // Crawl and index status are not established by a page fetch.
     } else if (axis === "aeo") {
-      const q = (md.match(/[?؟]/g) || []).length;
-      if (q >= 3) { s += 40; ev2.push(`questions:${q}`); } else if (q) s += 15;
-      if (/faq|الأسئلة|پرسیار/i.test(md + html)) { s += 30; ev2.push("faq"); }
-      if (/^\s*[-*]\s/m.test(md)) { s += 30; ev2.push("lists"); }
+      if (directAnswers > 0) { raw += Math.min(30, directAnswers * 15); evidence.push("explicit_answer_blocks"); }
+      if (qaPairs > 0) { raw += Math.min(25, qaPairs * 10); evidence.push("question_answer_pairs"); }
+      if (hasFaqSchema) { raw += 15; evidence.push("faqpage_schema"); }
+      if (/^#{1,3}\s.*(?:faq|frequently asked|الأسئلة الشائعة)/im.test(md)) { raw += 5; evidence.push("faq_section_heading"); }
+      if (hasBody && bodyWords.length >= 250) { raw += 5; evidence.push("answer_context_depth"); }
     } else if (axis === "geo") {
-      if (hasBody) {
-        s += Math.min(50, facts * 10);
-        if (facts) ev2.push(`facts_first_150:${facts}`);
-        if (brandIn(first)) { s += 30; ev2.push("brand_in_opening"); }
-        if (/application\/ld\+json|schema\.org/i.test(html)) { s += 20; ev2.push("structured_data"); }
-      } else {
-        // Metadata-only evidence indicates profile identity completeness, not full generative visibility.
-        if (brandIn(title)) { s += 25; ev2.push("brand_in_profile_title"); }
-        if (brandIn(desc)) { s += 20; ev2.push("brand_in_profile_description"); }
-        if (desc) { s += 10; ev2.push("public_profile_description"); }
-        if (words(desc).length >= 12) { s += 5; ev2.push("descriptive_profile_bio"); }
-      }
+      if (brandIn(first)) { raw += 20; evidence.push("brand_in_opening"); }
+      if (firstFacts >= 2) { raw += 15; evidence.push(`verifiable_numeric_claims_first_150:${firstFacts}`); }
+      if (hasOrgSchema) { raw += 20; evidence.push("organization_schema"); }
+      if (hasProductSchema) { raw += 10; evidence.push("product_schema"); }
+      if (/"sameAs"\s*:/i.test(schemaText)) { raw += 10; evidence.push("sameas_entity_links"); }
+      if (hasCitedSource) { raw += 10; evidence.push("source_urls_in_content"); }
+      if (desc) { raw += 5; evidence.push("descriptive_metadata"); }
     } else if (axis === "sge") {
-      const fp = md.split(/\n{2,}/).find((p) => words(p).length > 15) || "";
-      if (fp && words(fp).length <= 80) { s += 50; ev2.push("concise_lead"); } else if (fp) s += 20;
-      if ((md.match(/^#{2,3}\s/gm) || []).length >= 2) { s += 50; ev2.push("sections"); }
+      const leadWords = words(lead).length;
+      if (leadWords >= 15 && leadWords <= 80) { raw += 25; evidence.push("concise_lead_15_80_words"); }
+      if (headings >= 2) { raw += 20; evidence.push(`structured_sections:${headings}`); }
+      if (/^\s*[-*]\s/m.test(md)) { raw += 10; evidence.push("structured_list"); }
+      if (/^\|.+\|$/m.test(md)) { raw += 10; evidence.push("comparison_table"); }
+      if (hasCitedSource) { raw += 10; evidence.push("source_urls_in_content"); }
+      if (bodyWords.length >= 250) { raw += 5; evidence.push("supporting_context"); }
     } else {
-      if (hasBody) {
-        if (brandIn(title) || brandIn(desc)) { s += 50; ev2.push("brand_in_profile"); }
-        if (brandIn(md)) { s += 30; ev2.push("brand_mentioned"); }
-        if (desc) { s += 20; ev2.push("bio"); }
-      } else {
-        // A title and bio do not prove that answer engines surface the brand.
-        if (brandIn(title)) { s += 25; ev2.push("brand_in_profile_title"); }
-        if (brandIn(desc)) { s += 20; ev2.push("brand_in_profile_description"); }
-        if (desc) { s += 10; ev2.push("public_profile_bio"); }
-      }
+      if (brandIn(title)) { raw += 20; evidence.push("brand_in_title"); }
+      if (brandIn(desc)) { raw += 15; evidence.push("brand_in_description"); }
+      if (brandIn(md)) { raw += 15; evidence.push("brand_in_body"); }
+      if (hasOrgSchema) { raw += 10; evidence.push("organization_schema"); }
+      if (/"sameAs"\s*:/i.test(schemaText)) { raw += 10; evidence.push("sameas_entity_links"); }
     }
-    if (!hasBody) s = Math.min(60, s);
-    s = Math.min(100, s);
-    return { axis, score: s, verdict: verdictOf(s), evidence: ev2, reason: ev2.length ? "measured" : "no_signal", next: s >= 70 ? "keep" : `improve_${axis}` };
+    const axisCap = axis === "seo" ? 85 : axis === "aeo" ? 80 : axis === "geo" ? 80 : axis === "sge" ? 75 : 60;
+    const score = capped(raw, axisCap);
+    const reason = evidence.length ? "measured_on_page_readiness_only" : "no_signal";
+    return { axis, score, verdict: verdictOf(score), evidence, evidence_refs: evidence.length ? [{ source_url: t.url, signals: [...evidence] }] : [], reason, next: score >= 70 ? "keep_on_page_readiness" : `improve_${axis}` };
   });
 }
 
