@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 
 type L = "ar" | "en" | "ku";
-const AXIS_CAP: Record<string, number> = { seo: 85, aeo: 80, geo: 80, sge: 75, gseo: 60 };\nconst AXIS_NAME: Record<string, Record<L, string>> = {
+const AXIS_CAP: Record<string, number> = { seo: 85, aeo: 80, geo: 80, sge: 75, gseo: 60 };
+const AXIS_NAME: Record<string, Record<L, string>> = {
   seo: { ar: "SEO · جاهزية الصفحة التقنية", en: "SEO · On-page technical readiness", ku: "SEO · ئامادەیی تەکنیکی پەڕە" },
   aeo: { ar: "AEO · قابلية استخراج الإجابات", en: "AEO · Answer extraction readiness", ku: "AEO · ئامادەیی دەرهێنانی وەڵام" },
   geo: { ar: "GEO · إشارات المحتوى والكيان", en: "GEO · Content and entity signals", ku: "GEO · نیشانەکانی ناوەڕۆک و قەوارە" },
