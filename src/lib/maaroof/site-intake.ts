@@ -56,6 +56,10 @@ export function normalizePublicSiteUrl(value: string): string | null {
   }
 }
 
+export function isExternalSiteAuditGoal(goal: string): boolean {
+  return /\\b(?:audit|analy[sz]e|check|review|crawl|inspect)\\b|تدقيق|افحص|فحص|حلل|تحليل|راجع|مراجعة/i.test(String(goal || ""));
+}
+
 export function extractSiteUrlFromGoal(goal: string): string | null {
   const matches = goal.match(/(?:https?:\/\/)?(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]{2,})+(?::\d{1,5})?(?:\/[a-z0-9._~:/?#[\]@!$&'()*+,;=%-]*)?/gi) || [];
   for (const candidate of matches) {
