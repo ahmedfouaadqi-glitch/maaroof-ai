@@ -203,6 +203,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
   const isExternalSiteAudit = isExternalSiteAuditGoal(ctx.goal);
   const siteAuditUrl = isExternalSiteAudit ? extractSiteUrlFromGoal(ctx.goal) : null;
+  // External URLs are independent audit subjects: do not attach their jobs, agents or evidence to the currently selected customer workspace.
+  if (siteAuditUrl) ctx.workspaceId = null;
   let siteDiscovery: { site: NonNullable<ReturnType<typeof extractDiscoveredSite>>; markdown: string } | null = null;
   let siteDiscoveryIssue: string | null = null;
   if (siteAuditUrl && ctx.executionMode !== "simulation" && ctx.executionMode !== "recommendation") {
