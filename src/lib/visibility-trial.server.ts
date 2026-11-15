@@ -36,7 +36,8 @@ export function trialEntityFingerprint(name: string, type: TrialEntityType): str
 export async function verifyTrialIpRisk(ip: string): Promise<IpRisk> {
   const endpoint = process.env.IP_RISK_CHECK_URL;
   const token = process.env.IP_RISK_CHECK_TOKEN;
-  if (!endpoint && !token) return { verified: false, vpn: false, proxy: false, tor: false, risk: "unknown" };\n  if (!endpoint || !token) throw new Error("ip_risk_service_incomplete");
+  if (!endpoint && !token) return { verified: false, vpn: false, proxy: false, tor: false, risk: "unknown" };
+  if (!endpoint || !token) throw new Error("ip_risk_service_incomplete");
   let url: URL;
   try { url = new URL(endpoint); } catch { throw new Error("ip_risk_service_invalid"); }
   if (url.protocol !== "https:" || url.hostname === "localhost" || url.hostname.endsWith(".local")) {
