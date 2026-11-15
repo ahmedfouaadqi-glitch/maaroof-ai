@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { AuthGate } from "@/components/AuthGate";
 import { TrialKnowledgeSignals } from "@/components/visibility/TrialKnowledgeSignals";
-import { SiteHeader } from "@/components/SiteHeader";
+import { FreeAuditHeader } from "@/components/visibility/FreeAuditHeader";
 import { ArrowLeft, CheckCircle2, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 
 type EngineResult = {
@@ -304,7 +304,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
 
   return (
     <div className="min-h-screen">
-      <SiteHeader />
+      <FreeAuditHeader />
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-12">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4 rtl:rotate-180" /> {c.back}

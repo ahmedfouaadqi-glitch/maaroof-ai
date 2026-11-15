@@ -6,8 +6,8 @@ export const TRIAL_CANDIDATE_ORDER = ["chatgpt", "gemini", "claude", "grok", "mi
 const providerOf = (model: string) => (model.includes("/") ? model.split("/")[0] : "");
 
 /**
- * Governed/catalog model first when it already belongs to the engine's own provider;
- * otherwise, only when OpenRouter is configured, the engine's real council model.
+ * With OpenRouter: the engine's real council model. Without it: the governed/catalog model
+ * only when it belongs to the engine's own provider.
  * Returns null unless three distinct providers are available (no fake fill-ins).
  */
 export function pickTrialModels(
@@ -21,8 +21,10 @@ export function pickTrialModels(
     const own = providerOf(council);
     const governed = String(resolved[key]?.model || "");
     let model = "";
-    if (governed && providerOf(governed) === own) model = governed;
-    else if (hasOpenRouter && council) model = council;
+    // Council models are fast non-reasoning models; reasoning models (e.g. gpt-5) can spend the
+    // whole token budget thinking and return empty content, so prefer the council model.
+    if (hasOpenRouter && council) model = council;
+    else if (governed && providerOf(governed) === own) model = governed;
     const p = providerOf(model);
     if (!model || !p || providers.has(p)) continue;
     providers.add(p);

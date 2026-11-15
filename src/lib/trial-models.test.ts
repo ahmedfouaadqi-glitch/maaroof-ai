@@ -8,6 +8,9 @@ describe("pickTrialModels", () => {
     const r = pickTrialModels(catalog, true)!;
     expect(r.map((m) => m.model.split("/")[0])).toEqual(["openai", "google", "anthropic"]);
   });
+  it("uses a fast non-reasoning model for ChatGPT when OpenRouter is available", () => {
+    expect(pickTrialModels(catalog, true)![0].model).toBe("openai/gpt-4o-mini");
+  });
   it("refuses with only two real providers", () => {
     expect(pickTrialModels(catalog, false)).toBeNull();
   });
