@@ -260,6 +260,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   }
   // Saved clarification answers (only stored with the user's memory consent): reuse instead of asking again.
   try {
+    if (siteAuditUrl) throw new Error("isolated_external_site_audit");
     const fresh = Object.entries(ctx.clarifications || {}).filter(([k, v]) => k !== "tools" && String(v || "").trim());
     for (const [k, v] of fresh) await remember({ userId: ctx.userId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `clarify:${k}=${String(v).trim().slice(0, 300)}`, importance: 3, source: "clarify" });
     let clarifyQuery = db().from("maaroof_memory").select("content").eq("user_id", ctx.userId);
@@ -456,7 +457,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         learnedBlock += snapshotPromptBlock(snaps);
       } catch {}
     }
-    if (settings.knowledge?.enabled && settings.knowledge?.recall_enabled) {
+    if (settings.knowledge?.enabled && settings.knowledge?.recall_enabled && !siteAuditUrl) {
       try {
         const { recallKnowledge, knowledgePromptBlock } = await import("./knowledge.server");
         const nodes = await recallKnowledge({
@@ -478,7 +479,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
 
     // Prompt 22 — inherited institutional knowledge from approved Knowledge Spaces.
-    if (ctx.userId) {
+    if (ctx.userId && !siteAuditUrl) {
       try {
         const { inheritedKnowledgeBlock } = await import("./teaching.server");
         const inherited = await inheritedKnowledgeBlock({
@@ -853,7 +854,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           await ctx.emit("personality", { agentId: activeAgent.id, traits: p, version: activeAgent.personality_version || 1 });
         } catch {}
       }
-      if (exec.genome_enabled && ctx.workspaceId) {
+      if (exec.genome_enabled && ctx.workspaceId && !siteAuditUrl) {
         try {
           const g = await readWorkspaceGenome(ctx.workspaceId);
           effectivePrompt += genomePromptBlock(g);
@@ -1043,7 +1044,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           decisionLog.push(finalEntry);
           await ctx.emit("decision", finalEntry);
           await logMsg("decision", finalEntry, dResp.tokens, dResp.usd);
-          if (settings.council.log_decisions) {
+          if (settings.council.log_decisions && !siteAuditUrl) {
             try {
               await remember({
                 userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "decision",
@@ -1187,6 +1188,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
             const { taskFact } = await import("@/lib/knowledge-facts");
             let saved = 0;
             for (const line of prior.slice(0, 8)) {
+              if (siteAuditUrl) continue;
               const f = taskFact(ctx.goal, line);
               if (!f) continue;
               const { error } = await (db() as any).from("knowledge_facts").insert({ user_id: ctx.userId, workspace_id: ctx.workspaceId || null, source: "task", source_ref: runId, ...f });
@@ -1229,7 +1231,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         try {
           const def = TOOL_CATALOG.find((t) => t.key === step.tool);
           const { agent, reused } = await getOrCreateAgent({
-            userId: ctx.userId, workspaceId: ctx.workspaceId, role: `specialist:${step.tool}`,
+            userId: ctx.userId, workspaceId: siteAuditUrl ? null : ctx.workspaceId, role: `specialist:${step.tool}`,
             mission: `Run ${step.tool} with correct tabs/options: ${describeToolOptions(step.tool)}`.slice(0, 500),
             dna: { capabilities: (def?.capabilities as string[]) || [step.tool] } as any,
             warmReuse: true, minSuccessRate: 0.5,
@@ -1831,11 +1833,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       });
     } catch {}
 
-    await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
-    if (geo.country) await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+    if (!siteAuditUrl) {
+      await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "summary", content: `Goal: ${ctx.goal}\nResult: ${String(finalResp.text).slice(0, 500)}`, importance: 3 });
+      if (geo.country) await remember({ userId: ctx.userId, runId, workspaceId: ctx.workspaceId || null, scope: ctx.workspaceId ? "workspace" : "user", kind: "preference", content: `User location: ${geo.label}`, importance: 4 });
+    }
 
     // 6.5) Capture the run into the living knowledge graph (Part 11).
-    if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled) {
+    if (settings.knowledge?.enabled && settings.knowledge?.capture_enabled && !siteAuditUrl) {
       try {
         const { upsertKnowledgeNode } = await import("./knowledge.server");
         const conf = Math.round((((qualityScore as any)?.overall ?? 0.7) as number) * 100) || 70;
