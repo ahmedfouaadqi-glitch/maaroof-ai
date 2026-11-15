@@ -1,3 +1,4 @@
+import { neutralizeCsvFormula } from "@/lib/exports";
 import { useEffect, useMemo, useState } from "react";
 import { strToU8, zipSync } from "fflate";
 import { ToolResultExport } from "@/components/ToolResultExport";
@@ -852,7 +853,7 @@ function PropagationPanel({ workspaceId = null }: { workspaceId?: string | null 
   const exportCsv = () => {
     const rows = [["bot_name", "type", "verification_status", "verified_hostname", "verification_method", "source", "user_agent", "path", "hit_at"]];
     for (const h of hits) rows.push([h.bot_name || "Unknown", catLabel(h.bot_name), h.verification_status || "user_agent_only", h.verified_hostname || "", h.verification_method || "", packLabel(h.brand_slug), h.user_agent || "", h.path || "", h.hit_at || ""]);
-    const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${neutralizeCsvFormula(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     downloadFile(`crawler-hits-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
   };
 
@@ -1213,7 +1214,7 @@ function LogsPanel({ workspaceId = null }: { workspaceId?: string | null }) {
       const m = r.metadata || {};
       head.push([r.created_at, r.action, String(m.brand || ""), JSON.stringify(m)]);
     }
-    const csv = head.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = head.map((r) => r.map((c) => `"${neutralizeCsvFormula(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     downloadFile(`activity-log-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
   };
 

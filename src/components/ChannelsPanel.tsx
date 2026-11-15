@@ -126,6 +126,7 @@ export function ChannelsPanel({ onChanged }: { onChanged?: () => void }) {
         if (poll !== undefined) window.clearInterval(poll);
       };
       const onMsg = (e: MessageEvent) => {
+        if (e.origin !== window.location.origin || e.source !== popup) return;
         const d: any = e.data;
         if (!d || (d.type !== "channelLinkComplete" && d.type !== "channelLinkFailed")) return;
         if (d.provider !== provider) return;

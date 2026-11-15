@@ -236,9 +236,15 @@ const CSV_HEADERS: Record<ExportLang, string[]> = {
   ku: ["جۆری تۆمار", "بەش", "بابەت", "پێوەر", "بەها", "نمرە", "دۆخ", "بەڵگە", "تێبینی"],
 };
 
+/** Neutralize spreadsheet formula injection (cells starting with = + - @ tab CR). */
+export function neutralizeCsvFormula(value: unknown): string {
+  const text = String(value ?? "");
+  if (/^[\t\r ]*[=+@\t\r]/.test(text) || /^[\t\r ]*-(?![\d.]+$)/.test(text)) return "'" + text;
+  return text;
+}
+
 function csvCell(value: unknown): string {
-  let text = String(value ?? "");
-  if (/^[\t\r ]*[=+@]/.test(text) || /^[\t\r ]*-[=+@]/.test(text)) text = "'" + text;
+  const text = neutralizeCsvFormula(value);
   return /[",\n;\r]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 

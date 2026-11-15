@@ -1,3 +1,4 @@
+import { normalizePublicSiteUrl } from "@/lib/maaroof/site-intake";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { describeMarket, type GeoScope } from "@/lib/geo-scope.server";
@@ -169,9 +170,10 @@ export const Route = createFileRoute("/api/applied-ranking")({
           // Live evidence gathering — geographic-scope aware
           let websiteScrape = "";
           let websiteMeta: any = null;
-          if (body.website && /^https?:\/\//i.test(body.website)) {
+          const safeWebsite = body.website ? normalizePublicSiteUrl(String(body.website)) : null;
+          if (safeWebsite) {
             try {
-              const sc: any = await fcScrape(body.website);
+              const sc: any = await fcScrape(safeWebsite);
               const md = sc?.data?.markdown || sc?.markdown || "";
               websiteScrape = String(md).slice(0, 4000);
               websiteMeta = sc?.data?.metadata || sc?.metadata || null;

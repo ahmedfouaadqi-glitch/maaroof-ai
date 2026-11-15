@@ -40,12 +40,8 @@ export const Route = createFileRoute("/u/$username")({
           .order("updated_at", { ascending: false })
           .limit(50);
 
-        const { data: history } = await admin
-          .from("entity_history")
-          .select("field, old_value, changed_at")
-          .eq("user_id", (profile as any).id)
-          .order("changed_at", { ascending: false })
-          .limit(10);
+        // Previous entity values are private to the owner; never expose them publicly.
+        const history: any[] = [];
 
         // Log crawler hit (non-blocking)
         const ua = request.headers.get("user-agent") || "";

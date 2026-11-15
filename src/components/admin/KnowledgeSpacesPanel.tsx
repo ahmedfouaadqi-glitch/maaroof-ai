@@ -1,3 +1,4 @@
+import { neutralizeCsvFormula } from "@/lib/exports";
 import { useEffect, useMemo, useState } from "react";
 import { adminListKnowledgeSpaces } from "@/lib/admin.functions";
 import { useI18n } from "@/lib/i18n";
@@ -99,7 +100,7 @@ export function KnowledgeSpacesPanel() {
       created_at: space.created_at, updated_at: space.updated_at,
     }));
     const csvCell = (value: unknown) => {
-      const text = value == null ? "" : String(value);
+      const text = neutralizeCsvFormula(value);
       return `"${text.replace(/"/g, '""')}"`;
     };
     const content = format === "json"
