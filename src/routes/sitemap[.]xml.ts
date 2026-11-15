@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { canonicalBrandSlug } from "@/lib/brand-slug-aliases";
 
 const BASE_URL = "https://maaroofai.com";
 
@@ -72,7 +73,7 @@ export const Route = createFileRoute("/sitemap.xml")({
               .limit(5000);
             for (const b of bpacks || []) {
               const s = String((b as any).brand_slug || "").trim();
-              if (s) entries.push({ path: `/api/public/brand/${encodeURIComponent(s)}`, changefreq: "weekly", priority: "0.5" });
+              if (s && !canonicalBrandSlug(s)) entries.push({ path: `/api/public/brand/${encodeURIComponent(s)}`, changefreq: "weekly", priority: "0.5" });
             }
           }
         } catch {

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { canonicalBrandSlug } from "@/lib/brand-slug-aliases";
 import { detectBot } from "@/lib/crawler-bots";
 import { trustedClientIp, verifyCrawlerIdentity } from "@/lib/crawler-verification.server";
 
@@ -20,6 +21,13 @@ export const Route = createFileRoute("/api/public/brand/$slug")({
 
         const slug = String(params.slug || "").toLowerCase().slice(0, 80);
         if (!slug) return new Response("not found", { status: 404 });
+        const canonical = canonicalBrandSlug(slug);
+        if (canonical) {
+          return new Response(null, {
+            status: 301,
+            headers: { Location: `/api/public/brand/${encodeURIComponent(canonical)}`, "Cache-Control": "public, max-age=86400" },
+          });
+        }
 
         const admin = createClient(SUPABASE_URL, SERVICE);
         const { data: pack } = await admin
