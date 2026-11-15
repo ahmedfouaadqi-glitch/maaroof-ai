@@ -554,6 +554,33 @@ export type Database = {
         }
         Relationships: []
       }
+      archived_client_records: {
+        Row: {
+          archived_at: string
+          client_label: string
+          id: string
+          payload: Json
+          source_id: string | null
+          source_table: string
+        }
+        Insert: {
+          archived_at?: string
+          client_label: string
+          id?: string
+          payload: Json
+          source_id?: string | null
+          source_table: string
+        }
+        Update: {
+          archived_at?: string
+          client_label?: string
+          id?: string
+          payload?: Json
+          source_id?: string | null
+          source_table?: string
+        }
+        Relationships: []
+      }
       benchmark_results: {
         Row: {
           benchmark_id: string

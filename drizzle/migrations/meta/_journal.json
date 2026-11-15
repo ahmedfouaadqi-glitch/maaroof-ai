@@ -218,6 +218,13 @@
       "when": 1794782052712,
       "tag": "0030_visibility_trial_archive",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794783357483,
+      "tag": "0031_archived_client_records",
+      "breakpoints": true
     }
   ]
 }
