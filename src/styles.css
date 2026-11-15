@@ -1146,3 +1146,7 @@
     18%, 72% { opacity: 0.95; }
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .visibility-vector-flow { display: none; }
+}
