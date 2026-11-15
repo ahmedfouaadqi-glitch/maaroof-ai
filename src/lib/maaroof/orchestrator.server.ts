@@ -817,7 +817,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         };
         // Pick a concise role from the goal (first ~48 chars) — evolvable later.
         const role = (workspaceProfile?.name ? `${workspaceProfile.name} Executive` : "Maaroof Executive").slice(0, 80);
-        const mission = String(ctx.goal).slice(0, 240);
+        const mission = siteAuditUrl ? "Run an isolated public website audit using only per-run site evidence." : String(ctx.goal).slice(0, 240);
         const { agent, reused } = await getOrCreateAgent({
           userId: ctx.userId,
           workspaceId: siteAuditUrl ? null : ctx.workspaceId || null,
@@ -1881,7 +1881,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       await ctx.emit("agent_finalized", { id: activeAgent.id, success, lifecycle_state: success ? "standby" : "archived" });
 
       // Part 7 — evolve executive personality from this run's signals.
-      if (exec.enabled && exec.personality_enabled) {
+      if (exec.enabled && exec.personality_enabled && !siteAuditUrl) {
         const traits = await evolvePersonality({
           agentId: activeAgent.id,
           signals: {
