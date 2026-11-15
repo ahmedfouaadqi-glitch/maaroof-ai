@@ -13,7 +13,7 @@ const TEXT = {
     type: "تصنيف الكيان", person: "شخص", organization: "مؤسسة / منظمة", unknown: "غير محسوم",
     category: "الفئة المقدمة", market: "السوق المقدم", notProvided: "غير متوفر في المدخلات",
     schema: "بيانات Schema.org", notChecked: "لم تُفحص — لم يُجرَ زحف للموقع أو تحليل لشفرة الصفحة",
-    confirmed: "مدخل مقدم", model: "تصنيف النموذج", unavailable: "غير متحقق",
+    confirmed: "مدخل مقدم", model: "تصنيف النموذج", heuristic: "تصنيف أولي بالقواعد", unavailable: "غير متحقق",
     glossary: "مفاهيم التقرير",
     scope: "حدود العينة",
     scopeText: "هذه عينة استكشافية من ثلاثة مسارات نموذجية فقط من أصل عشرة في كتالوج معروف. النتيجة ليست تدقيق SEO أو فحص Schema.org أو قياساً شاملاً للسوق.",
@@ -24,7 +24,7 @@ const TEXT = {
     type: "Entity classification", person: "Person", organization: "Organization", unknown: "Undetermined",
     category: "Provided category", market: "Provided market", notProvided: "Not supplied",
     schema: "Schema.org data", notChecked: "Not checked — no website crawl or page-source inspection was performed",
-    confirmed: "User-provided input", model: "Model classification", unavailable: "Unverified",
+    confirmed: "User-provided input", model: "Model consensus classification", heuristic: "Heuristic classification", unavailable: "Unverified",
     glossary: "Report concepts",
     scope: "Sample boundaries",
     scopeText: "This is an exploratory sample from three model routes out of Maaroof's ten-engine catalogue. It is not an SEO audit, Schema.org inspection, or comprehensive market measurement.",
@@ -35,7 +35,7 @@ const TEXT = {
     type: "پۆلێنی کەسایەتی", person: "کەس", organization: "دامەزراوە / ڕێکخراو", unknown: "دیاری نەکراوە",
     category: "پۆلی پێدراو", market: "بازاڕی پێدراو", notProvided: "لە زانیارییەکاندا نییە",
     schema: "داتای Schema.org", notChecked: "پشکنین نەکراوە — هیچ وێبسایتێک نەخراوەتە ژێر پشکنین",
-    confirmed: "زانیاریی پێدراو", model: "پۆلێنی مۆدێل", unavailable: "پشتڕاست نەکراوەتەوە",
+    confirmed: "زانیاریی پێدراو", model: "پۆلێنی هاوڕایی مۆدێلەکان", heuristic: "پۆلێنی سەرەتایی بە یاساکان", unavailable: "پشتڕاست نەکراوەتەوە",
     glossary: "چەمکەکانی ڕاپۆرت",
     scope: "سنووری نموونە",
     scopeText: "ئەمە تەنها نموونەیەکی لێکۆڵینەوەییە لە سێ ڕێڕەوی مۆدێل لە کۆی دە مۆدێلی معروف. پشکنینی SEO، پشکنینی Schema.org یان پێوانەی تەواوی بازاڕ نییە.",
@@ -47,7 +47,7 @@ const TERMS = ["GEO", "AEO", "KGO", "E-E-A-T", "RAG", "Schema.org"] as const;
 export function TrialKnowledgeSignals({ lang, entity }: Props) {
   const t = TEXT[lang] || TEXT.ar;
   const type = entity.type === "person" ? t.person : entity.type === "organization" ? t.organization : t.unknown;
-  const detection = entity.type_detection === "manual" ? t.confirmed : t.model;
+  const detection = entity.type_detection === "manual" ? t.confirmed : entity.type_detection === "heuristic" ? t.heuristic : t.model;
   const glossary = TERMS.map((key) => DOMAIN_ONTOLOGY_BY_ACRONYM.get(key.toLowerCase())).filter(Boolean);
   return (
     <section className="mt-6 rounded-xl border border-border bg-background p-4" aria-labelledby="trial-signals-title">
