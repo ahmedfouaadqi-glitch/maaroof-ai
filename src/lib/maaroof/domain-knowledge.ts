@@ -18,6 +18,7 @@ export type KnowledgeKind =
   | "specification"
   | "industry_practice"
   | "evaluation_framework"
+  | "vocabulary"
   | "product_or_interface";
 
 export type EvidenceMaturity =
@@ -162,7 +163,7 @@ export const DOMAIN_KNOWLEDGE: readonly DomainKnowledgeRecord[] = [
     maturity: "well_established",
     definition: "JSON-LD is a JSON-based serialization format for expressing Linked Data. It can express RDF data and is commonly used to publish Schema.org structured data in web pages.",
     foundations: ["JSON", "RDF data model", "linked data contexts", "web serialization"],
-    operational_dimensions: ["@context", "@type", identifiers", "properties", "entity relationships"],
+    operational_dimensions: ["@context", "@type", "identifiers", "properties", "entity relationships"],
     measurement_methods: ["JSON syntax validation", "JSON-LD processor validation", "Google Rich Results Test where applicable", "visible-content parity and policy review"],
     limitations: ["Valid JSON-LD does not guarantee a rich result or ranking benefit.", "Markup must accurately describe visible page content.", "Search engines may support only subsets of vocabularies and properties."],
     related_concepts: ["RDF", "Schema.org", "structured data", "KG"],
