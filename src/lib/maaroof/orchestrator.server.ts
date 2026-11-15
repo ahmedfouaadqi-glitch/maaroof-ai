@@ -452,7 +452,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // 2.4) Learned expert snapshots (Part 9) + living knowledge (Part 11).
     //      Both are additive prompt blocks: disabled ⇒ byte-identical prompt.
     let learnedBlock = "";
-    if (settings.experts?.enabled && settings.experts?.use_snapshots) {
+    if (settings.experts?.enabled && settings.experts?.use_snapshots && !siteAuditUrl) {
       try {
         const { readExpertSnapshots, snapshotPromptBlock } = await import("./experts.server");
         const snaps = await readExpertSnapshots(settings.enabled_tools || []);
