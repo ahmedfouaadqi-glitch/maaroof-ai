@@ -151,13 +151,14 @@ export function DeepAuditRunner({ lang, hasLinks }: { lang: L; hasLinks: boolean
       )}
       {result && (
         <div className="space-y-2 rounded-lg border border-border bg-background/60 p-2">
-          <div className="font-semibold">{t.done} — {t.overall}: {result.overall ?? t.un}</div>\n          <p className="text-xs leading-5 text-muted-foreground">{EXPLAIN[lang].basis}</p>\n          <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs leading-5">{EXPLAIN[lang].notProof}</p>
+          <div className="font-semibold">{t.done} — {t.overall}: {result.overall ?? t.un}</div>
+          <p className="text-xs leading-5 text-muted-foreground">{EXPLAIN[lang].basis}</p>\n          <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs leading-5">{EXPLAIN[lang].notProof}</p>
           <div className="text-muted-foreground">{t.read} {result.succeeded} {t.of} {result.total} · {t.charged} {result.charged}</div>
           <div className="grid grid-cols-5 gap-1 text-center">{axisRows.map(([k, v]) => <div key={k} className="rounded bg-muted p-1"><div className="font-semibold">{k}</div><div>{v}</div></div>)}</div>
           {result.targets.map((tg: any) => (
             <div key={tg.url} className="border-t border-border pt-1">
               <div dir="ltr" className="truncate font-medium">{tg.url}</div>
-              {tg.findings.map((f: any) => <div key={f.axis} className="text-muted-foreground">{f.axis.toUpperCase()}: {VERDICT[f.verdict][lang]}{f.score != null ? ` (${f.score}/${AXIS_CAP[f.axis] ?? "—"})` : ""}{f.evidence.length ? ` — ${f.evidence.map((signal: string) => explainSignal(signal, lang)).join(" · ")}` : ""}</div>)}
+              {tg.findings.map((f: any) => <div key={f.axis} className="text-muted-foreground">{AXIS_NAME[f.axis]?.[lang] || f.axis.toUpperCase()}: {VERDICT[f.verdict]?.[lang] || f.verdict}{f.score != null ? ` (${f.score}/${AXIS_CAP[f.axis] ?? "—"})` : ""}{f.evidence.length ? ` — ${f.evidence.map((signal: string) => explainSignal(signal, lang)).join(" · ")}` : ""}</div>)}
             </div>
           ))}
           <ExportButtons build={() => ({
