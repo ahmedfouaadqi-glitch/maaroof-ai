@@ -7,6 +7,8 @@ import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeC
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
+import { TOOL_CATALOG } from "@/lib/tool-catalog";
+import { motion, useReducedMotion } from "motion/react";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
 import { useAuth } from "@/lib/auth";
@@ -33,6 +35,13 @@ function HeroPulses() {
 }
 
 function VisibilityVector() {
+  const reducedMotion = useReducedMotion();
+  const flowTransition = (delay: number) => ({
+    duration: 2.8,
+    delay,
+    repeat: reducedMotion ? 0 : Infinity,
+    ease: "linear" as const,
+  });
   return (
     <div aria-hidden className="mx-auto mt-8 w-full max-w-[34rem]">
       <svg viewBox="0 0 544 132" fill="none" className="h-auto w-full overflow-visible">
@@ -42,12 +51,18 @@ function VisibilityVector() {
             <stop offset=".5" stopColor="currentColor" stopOpacity=".42" />
             <stop offset="1" stopColor="currentColor" stopOpacity=".08" />
           </linearGradient>
+          <radialGradient id="visibility-core">
+            <stop stopColor="var(--primary)" stopOpacity=".28" />
+            <stop offset="1" stopColor="var(--primary)" stopOpacity="0" />
+          </radialGradient>
         </defs>
         <path d="M42 66H502M132 66V34H204M132 66V98H204M412 34H458V66M412 98H458V66" stroke="url(#visibility-line)" strokeWidth="1.2" />
         <path d="M204 34H238M204 98H238M306 34H340M306 98H340" stroke="currentColor" strokeOpacity=".18" strokeWidth="1.2" strokeDasharray="3 5" />
         <rect x="238.5" y="39.5" width="67" height="53" rx="14" fill="currentColor" fillOpacity=".035" stroke="currentColor" strokeOpacity=".22" />
+        <circle cx="272" cy="66" r="34" fill="url(#visibility-core)" />
         <circle cx="272" cy="66" r="13" stroke="var(--primary)" strokeWidth="1.5" />
         <circle cx="272" cy="66" r="4" fill="var(--primary)" />
+        <motion.circle cx="272" cy="66" r="22" stroke="var(--primary)" strokeOpacity=".28" strokeWidth="1" animate={reducedMotion ? undefined : { r: [18, 31, 18], opacity: [.15, .5, .15] }} transition={{ duration: 3.2, repeat: reducedMotion ? 0 : Infinity, ease: "easeInOut" }} />
         <circle cx="132" cy="66" r="5" fill="var(--background)" stroke="currentColor" strokeOpacity=".42" strokeWidth="1.4" />
         <circle cx="204" cy="34" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
         <circle cx="204" cy="98" r="4" fill="var(--background)" stroke="currentColor" strokeOpacity=".32" strokeWidth="1.2" />
@@ -58,7 +73,10 @@ function VisibilityVector() {
         <circle cx="458" cy="66" r="5" fill="var(--background)" stroke="var(--primary)" strokeOpacity=".7" strokeWidth="1.4" />
         <circle cx="42" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
         <circle cx="502" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
-        <circle cx="272" cy="66" r="24" stroke="var(--primary)" strokeOpacity=".12" strokeWidth="1" className="motion-safe:animate-pulse" />
+        <motion.circle cx="42" cy="66" r="2.8" fill="var(--primary)" animate={reducedMotion ? undefined : { cx: [42, 272], opacity: [0, 1, 0] }} transition={flowTransition(0)} />
+        <motion.circle cx="42" cy="66" r="2.8" fill="var(--primary)" animate={reducedMotion ? undefined : { cx: [42, 272], opacity: [0, 1, 0] }} transition={flowTransition(1.4)} />
+        <motion.circle cx="502" cy="66" r="2.8" fill="var(--primary)" animate={reducedMotion ? undefined : { cx: [502, 272], opacity: [0, 1, 0] }} transition={flowTransition(.7)} />
+        <motion.circle cx="502" cy="66" r="2.8" fill="var(--primary)" animate={reducedMotion ? undefined : { cx: [502, 272], opacity: [0, 1, 0] }} transition={flowTransition(2.1)} />
       </svg>
     </div>
   );
@@ -68,7 +86,7 @@ const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
     title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
-    rotPrefix: "نحسّن ظهورك عبر",
+    rotPrefix: "نحسّن ظهورك عبر منظومة",
     brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
     cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
@@ -98,7 +116,7 @@ const COPY = {
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
     skills: "المهارات المتاحة",
-    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
+    stats: ["محركات ذكاء اصطناعي", "مهارات متاحة", "أدوات تنفيذية", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
@@ -111,7 +129,7 @@ const COPY = {
   en: {
     badge: "Smart Workspace",
     title: "Make your brand a source answer engines cite",
-    rotPrefix: "We improve your visibility through",
+    rotPrefix: "We strengthen your visibility across",
     brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
     cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
@@ -141,7 +159,7 @@ const COPY = {
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
     skills: "Available skills",
-    stats: ["AI engines", "Ready skills", "Supported languages", "Free trial runs"],
+    stats: ["AI engines", "Available skills", "Execution tools", "Supported languages", "Free trial runs"],
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
@@ -154,7 +172,7 @@ const COPY = {
   ku: {
     badge: "شوێنی کاری زیرەک",
     title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
-    rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
+    rotPrefix: "دەرکەوتنت لە ڕێگەی ئەم سیستەمە باشتر دەکەین",
     brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
     cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
@@ -184,7 +202,7 @@ const COPY = {
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
     skills: "کارامەییە بەردەستەکان",
-    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
+    stats: ["بزوێنەرەکانی زیرەکی دەستکرد", "کارامەییە بەردەستەکان", "ئامرازەکانی جێبەجێکردن", "زمانە پشتگیریکراوەکان", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
@@ -196,7 +214,7 @@ const COPY = {
   },
 } as const;
 
-const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "GSEO"];
+const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "SGEO", "GSEO"];
 
 export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { lang } = useI18n();
@@ -260,8 +278,8 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
 
         {/* 2. Live, server-backed stats */}
         <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
-          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
-            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
+          <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-3 lg:grid-cols-5">
+            {[ENGINES.length, skills.length, TOOL_CATALOG.filter((tool) => tool.group === "tools").length, 3, freeTrialAttempts].map((n, i) => (
               <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
                 {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
                 {n === null ? (
