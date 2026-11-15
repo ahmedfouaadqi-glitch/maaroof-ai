@@ -33,6 +33,7 @@ import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
+import { extractSiteUrlFromGoal } from "@/lib/maaroof/site-intake";
 import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 import { buildExecutionEvidencePack } from "./execution-evidence-pack";
@@ -200,6 +201,8 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
+  const isExternalSiteAudit = /\\b(?:audit|analy[sz]e|check|review|crawl|inspect)\\b|تدقيق|افحص|فحص|حلل|تحليل|راجع|مراجعة/i.test(ctx.goal);
+  const siteAuditUrl = isExternalSiteAudit ? extractSiteUrlFromGoal(ctx.goal) : null;
 
   // Load workspace profile if scoped — used by envision/plan/council.
   let workspaceProfile: any = null;
@@ -228,7 +231,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       specialty_scope: truth.sector || workspaceProfile?.brand_summary || null,
       entity_links: links,
     };
-  } else {
+  } else if (!siteAuditUrl) {
     try {
       const { data } = await db().from("profiles").select("brand_name, brand_keywords, hq_country, entity_type, target_markets, specialty_scope, entity_links").eq("id", ctx.userId).maybeSingle();
       entityProfile = data || null;
@@ -381,7 +384,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
   let activeAgent: MaaroofAgent | null = null;
   try {
     // 2) Recall memory (workspace-scoped when available)
-    const memories = await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
+    const memories = siteAuditUrl ? [] : await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
     const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (workspaceProfile ?
@@ -511,6 +514,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // MCI planning hints (additive, fail-open): tools with a fresh result for this user.
     let mciHintLine = "";
     try {
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
       const { mciPlanningHints } = await import("@/lib/mci/resolver.server");
       const hints = await mciPlanningHints(db() as any, ctx.userId);
       if (hints.length) {
@@ -520,6 +524,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     // Facts learned from earlier tasks (MCI memory) — read-only, fail-open.
     try {
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
       const { freshFacts, factsContextLine } = await import("@/lib/knowledge-facts");
       let factsQuery = (db() as any).from("knowledge_facts").select("fact, source, expires_at").eq("user_id", ctx.userId);
       factsQuery = ctx.workspaceId ? factsQuery.eq("workspace_id", ctx.workspaceId) : factsQuery.is("workspace_id", null);
@@ -528,6 +533,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     } catch {}
     // Files the user uploaded in this space during the last 24h: read first, never search the web for them.
     try {
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
       let aq = (db() as any).from("task_attachments").select("name, analysis, structure").eq("user_id", ctx.userId).eq("status", "done").gte("created_at", new Date(Date.now() - 86400000).toISOString());
       aq = ctx.workspaceId ? aq.eq("workspace_id", ctx.workspaceId) : aq.is("workspace_id", null);
       const { data: atts } = await aq.order("created_at", { ascending: false }).limit(3);
@@ -540,8 +546,10 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     // User's own recent tool runs (saved results + chosen options) — read-only, fail-open.
     let historyLine = "";
     try {
-      const { data: hist } = await db().from("report_drafts").select("tool_key, title, payload, created_at")
-        .eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(30);
+      if (siteAuditUrl) throw new Error("isolated_external_site_audit");
+      let histQuery = db().from("report_drafts").select("tool_key, title, payload, created_at").eq("user_id", ctx.userId);
+      histQuery = ctx.workspaceId ? histQuery.eq("workspace_id", ctx.workspaceId) : histQuery.is("workspace_id", null);
+      const { data: hist } = await histQuery.order("created_at", { ascending: false }).limit(30);
       const seen = new Set<string>(); const lines: string[] = [];
       for (const h of (hist as any[]) || []) {
         if (seen.has(h.tool_key) || lines.length >= 8) continue; seen.add(h.tool_key);
