@@ -11,7 +11,7 @@ const fact = (predicate: string, value: string): ReturnType<typeof discoverFact>
 const insight = evaluateInsightRules(
   [fact("checkout", "present"), fact("payment_policy", "missing")],
   [{ id: "rule-1", kind: "risk", title: "Payment policy gap", explanation: "The crawl did not find a payment policy.", requiredPredicates: ["checkout", "payment_policy"], expectedValues: { payment_policy: "missing" } }],
-)[0];
+)[0]!;
 
 describe("insight, recommendation and action policy", () => {
   it("creates only rules whose required evidence predicates match", () => {
