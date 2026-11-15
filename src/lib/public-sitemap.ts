@@ -42,7 +42,7 @@ export function buildPublicSitemapXml(): string {
     `    <changefreq>${entry.changefreq}</changefreq>`,
     `    <priority>${entry.priority}</priority>`,
     "  </url>",
-  ].join("\\n"));
+  ].join("\n"));
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -50,5 +50,5 @@ export function buildPublicSitemapXml(): string {
     ...urls,
     "</urlset>",
     "",
-  ].join("\\n");
+  ].join("\n");
 }
