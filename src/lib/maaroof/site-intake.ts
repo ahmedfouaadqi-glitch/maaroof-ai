@@ -124,21 +124,21 @@ function classifySector(text: string, schemaTypes: string[]): { sector: string |
 function countryEvidence(text: string, hostname: string): { country: string | null; status: DiscoveredSite["country_status"] } {
   const t = text.toLowerCase();
   const explicit: Array<[RegExp, string]> = [
-    [/\\b(lebanon|lebanese|beirut|tripoli,? lebanon)\\b/i, "Lebanon"],
-    [/\\b(iraq|iraqi|baghdad)\\b/i, "Iraq"],
-    [/\\b(united arab emirates|uae|dubai|abu dhabi)\\b/i, "United Arab Emirates"],
-    [/\\b(saudi arabia|saudi|riyadh)\\b/i, "Saudi Arabia"],
-    [/\\b(united kingdom|\\buk\\b|london)\\b/i, "United Kingdom"],
-    [/\\b(united states|\\busa\\b)\\b/i, "United States"],
+    [/\b(lebanon|lebanese|beirut|tripoli,? lebanon)\b/i, "Lebanon"],
+    [/\b(iraq|iraqi|baghdad)\b/i, "Iraq"],
+    [/\b(united arab emirates|uae|dubai|abu dhabi)\b/i, "United Arab Emirates"],
+    [/\b(saudi arabia|saudi|riyadh)\b/i, "Saudi Arabia"],
+    [/\b(united kingdom|\buk\b|london)\b/i, "United Kingdom"],
+    [/\b(united states|\busa\b)\b/i, "United States"],
   ];
   for (const [pattern, country] of explicit) if (pattern.test(t)) return { country, status: "explicit_site_evidence" };
   const phoneCodes: Array<[RegExp, string]> = [
-    [/\\+961[\\s().-]*\\d{1,3}/, "Lebanon"],
-    [/\\+964[\\s().-]*\\d{1,3}/, "Iraq"],
-    [/\\+971[\\s().-]*\\d{1,3}/, "United Arab Emirates"],
-    [/\\+966[\\s().-]*\\d{1,3}/, "Saudi Arabia"],
-    [/\\+44[\\s().-]*\\d{2,}/, "United Kingdom"],
-    [/\\+1[\\s().-]*\\d{3}[\\s().-]*\\d{3,4}/, "United States"],
+    [/\+961[\s().-]*\d{1,3}/, "Lebanon"],
+    [/\+964[\s().-]*\d{1,3}/, "Iraq"],
+    [/\+971[\s().-]*\d{1,3}/, "United Arab Emirates"],
+    [/\+966[\s().-]*\d{1,3}/, "Saudi Arabia"],
+    [/\+44[\s().-]*\d{2,}/, "United Kingdom"],
+    [/\+1[\s().-]*\d{3}[\s().-]*\d{3,4}/, "United States"],
   ];
   for (const [pattern, country] of phoneCodes) if (pattern.test(t)) return { country, status: "explicit_site_evidence" };
   const tld = hostname.split(".").pop()?.toLowerCase();
