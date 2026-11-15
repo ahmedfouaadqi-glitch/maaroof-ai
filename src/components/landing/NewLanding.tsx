@@ -60,6 +60,9 @@ function VisibilityVector() {
         <circle cx="42" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
         <circle cx="502" cy="66" r="3" fill="var(--primary)" fillOpacity=".6" />
         <circle cx="272" cy="66" r="24" stroke="var(--primary)" strokeOpacity=".12" strokeWidth="1" className="motion-safe:animate-pulse" />
+        <circle r="2.8" fill="var(--primary)" className="visibility-vector-flow visibility-vector-flow-a"><animateMotion dur="4.8s" repeatCount="indefinite" path="M42 66H502" /></circle>
+        <circle r="2.4" fill="var(--primary)" className="visibility-vector-flow visibility-vector-flow-b"><animateMotion dur="4.8s" begin="-1.6s" repeatCount="indefinite" path="M42 66H502" /></circle>
+        <circle r="2.2" fill="var(--primary)" className="visibility-vector-flow visibility-vector-flow-c"><animateMotion dur="4.8s" begin="-3.2s" repeatCount="indefinite" path="M502 66H42" /></circle>
       </svg>
     </div>
   );
@@ -225,6 +228,22 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const card = data?.card ?? null;
   const typeLabel = (t: string | null) => t === "person" ? ({ ar: "شخص", en: "Person", ku: "کەس" } as const)[l] : ({ ar: "منشأة", en: "Organization", ku: "دامەزراوە" } as const)[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
+  const taxonomyGroups = l === "ar" ? [
+    { title: "مجالات التخصص", terms: "SEO · GEO · ASO · AIO", note: "مجالات مرتبطة بتحسين الظهور والاكتشاف عبر البحث والمنصات." },
+    { title: "منهجيات التحسين", terms: "AEO · SGEO · GSEO", note: "أطر وأساليب تشغيلية؛ SGEO وGSEO لهما تعريفهما داخل معروف وليسا معيارين عالميين موحدين." },
+    { title: "بيئات البحث", terms: "SGE · AI Search · LLMs", note: "واجهات وتجارب ومحركات تُرصد فيها إجابات ومظاهر الظهور." },
+    { title: "التقنيات المعرفية", terms: "RAG · KG · Entity Intelligence", note: "مفاهيم وتقنيات لدعم الاسترجاع المعرفي وتمثيل الكيانات والعلاقات." },
+  ] : l === "ku" ? [
+    { title: "بواری پسپۆڕی", terms: "SEO · GEO · ASO · AIO", note: "بواری پەیوەندیدار بە باشترکردنی دەرکەوتن لە گەڕان و پلاتفۆرمەکان." },
+    { title: "میتۆدۆلۆژیای باشترکردن", terms: "AEO · SGEO · GSEO", note: "چوارچێوە و شێوازی کار؛ SGEO و GSEO لە معروف پێناسەی تایبەتیان هەیە و ستانداردی جیهانی یەکگرتوو نین." },
+    { title: "ژینگەکانی گەڕان", terms: "SGE · AI Search · LLMs", note: "ڕووکار و ئەزموون و بزوێنەرەکانی گەڕان کە وەڵام و دەرکەوتن تێیاندا چاودێری دەکرێت." },
+    { title: "تەکنەلۆژیای زانیاری", terms: "RAG · KG · Entity Intelligence", note: "چەمک و تەکنەلۆژیا بۆ گەڕاندنەوەی زانیاری و نوێنەرایەتی قەوارە و پەیوەندییەکان." },
+  ] : [
+    { title: "Specialty areas", terms: "SEO · GEO · ASO · AIO", note: "Domains concerned with visibility and discovery across search and platforms." },
+    { title: "Optimization methodologies", terms: "AEO · SGEO · GSEO", note: "Operational approaches; SGEO and GSEO have Maaroof-specific definitions, not universally standardized meanings." },
+    { title: "Search environments", terms: "SGE · AI Search · LLMs", note: "Interfaces, experiences and engines where answers and visibility can be observed." },
+    { title: "Knowledge technologies", terms: "RAG · KG · Entity Intelligence", note: "Concepts and technologies for retrieval, knowledge representation and entity relationships." },
+  ];
 
   const ctaClass = "inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]";
   const Cta = () => (
@@ -323,7 +342,22 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 6. Comparison */}
+        {/* 6. Classification: domains, methods, environments and technologies */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {taxonomyGroups.map((group) => (
+              <Reveal key={group.title}>
+                <SpotlightCard className="h-full p-5">
+                  <h3 className="text-sm font-semibold text-muted-foreground">{group.title}</h3>
+                  <p className="mt-3 font-mono text-lg font-bold tracking-wide text-primary">{group.terms}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{group.note}</p>
+                </SpotlightCard>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* 7. Comparison */}
         <section className="mx-auto max-w-4xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.vsTitle}</h2>
           <Reveal>
