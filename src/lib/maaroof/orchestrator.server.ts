@@ -600,11 +600,12 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     try {
       if (siteAuditUrl && siteDiscovery) {
         const discoveredBrand = siteDiscovery.site.brand_name;
+        const siteScope = siteDiscovery.site.country ? { scope: "country", country: siteDiscovery.site.country } : { scope: "world" };
         const allowed = (key: string) => !settings.enabled_tools?.length || settings.enabled_tools.includes(key);
         const targetedSteps: PlanStep[] = [];
-        if (siteDiscovery.markdown.length >= 20 && allowed("analyze")) targetedSteps.push({ tool: "analyze", input: { text: siteDiscovery.markdown, lang: ctx.language }, reason: "تحليل محتوى الصفحة العامة المستخرج من الرابط المستهدف." });
+        if (siteDiscovery.markdown.length >= 20 && allowed("analyze")) targetedSteps.push({ tool: "analyze", input: { text: siteDiscovery.markdown, lang: ctx.language, scope: siteScope }, reason: "تحليل محتوى الصفحة العامة المستخرج من الرابط المستهدف." });
         if (discoveredBrand && allowed("known")) targetedSteps.push({ tool: "known", input: { brand: discoveredBrand, website: siteAuditUrl, url: siteAuditUrl }, reason: "التحقق من هوية الكيان وروابطه العامة من بيانات الموقع." });
-        if (discoveredBrand && ctx.liveProbe !== false && allowed("visibility")) targetedSteps.push({ tool: "visibility", input: { brand: discoveredBrand, official_website: siteAuditUrl, keywords: siteDiscovery.site.sector || "", lang: ctx.language }, reason: "قياس الظهور الفعلي للعلامة المكتشفة عبر محركات الذكاء الاصطناعي." });
+        if (discoveredBrand && ctx.liveProbe !== false && allowed("visibility")) targetedSteps.push({ tool: "visibility", input: { brand: discoveredBrand, official_website: siteAuditUrl, keywords: siteDiscovery.site.sector || "", lang: ctx.language, scope: siteScope }, reason: "قياس الظهور الفعلي للعلامة المكتشفة عبر محركات الذكاء الاصطناعي." });
         planResp = { text: JSON.stringify({ steps: targetedSteps.slice(0, Math.max(1, MAX_STEPS)), final_answer_hint: "Separate on-page readiness from live engine observations. Unknown identity fields remain unknown; no score is a ranking guarantee." }), tokens: 0, usd: 0 };
       } else if (siteAuditUrl && siteDiscoveryIssue) {
         planResp = { text: JSON.stringify({ steps: [], final_answer_hint: "The website could not be read. Report the failed read and ask for a publicly accessible URL; do not infer identity or sector." }), tokens: 0, usd: 0 };
