@@ -46,8 +46,10 @@ describe("deep audit scoring", () => {
   it("real content yields measured scores with evidence", () => {
     const md = "# Maaroof\n\nMaaroof serves 120 brands in 9 countries with 10 engines measured weekly across the region.\n\n## FAQ\n- What? yes\n- Why? because\n- How? like this";
     const f = scoreTarget(off, { markdown: md, title: "Maaroof", description: "GEO platform" }, "Maaroof");
-    expect(f.find((x) => x.axis === "seo")!.score).toBe(80);
-    expect(f.find((x) => x.axis === "gseo")!.score).toBe(100);
+    expect(f.find((x) => x.axis === "seo")!.score).toBeLessThanOrEqual(85);
+    expect(f.find((x) => x.axis === "gseo")!.score).toBeLessThanOrEqual(60);
+    expect(f.find((x) => x.axis === "aeo")!.score).toBeLessThanOrEqual(80);
+    expect(f.every((x) => x.reason === "measured_on_page_readiness_only" || x.score === null)).toBe(true);
   });
   it("aggregate ignores unmeasured axes", () => {
     expect(aggregateAxes([scoreTarget(off, null, "x")]).seo).toBeNull();
@@ -140,3 +142,27 @@ describe("metadata-only social profile measurement", () => {
   });
 });
 
+
+describe("evidence score guardrails", () => {
+  const official = auditTargets(["https://shop.example"])[0];
+  it("never infers crawl or index success from on-page content", () => {
+    const findings = scoreTarget(official, {
+      statusCode: 200,
+      title: "Shop Example",
+      description: "An online store with product catalogues and customer support.",
+      markdown: "# Shop Example\\n\\nShop Example offers 125 products in 8 categories with detailed specifications.\\n\\n## Products\\n\\nProduct details and specifications.\\n\\n## Frequently Asked Questions\\n\\nWhat is shipping?\\nShipping takes three days.",
+      html: '<link rel="canonical" href="https://shop.example"><script type="application/ld+json">{"@type":"Organization","name":"Shop Example","sameAs":["https://example.com"]}</script><script type="application/ld+json">{"@type":"Product","name":"Item"}</script>'
+    }, "Shop Example");
+    expect(findings.find((x) => x.axis === "seo")!.score).toBeLessThanOrEqual(85);
+    expect(findings.find((x) => x.axis === "geo")!.score).toBeLessThanOrEqual(80);
+    expect(findings.find((x) => x.axis === "gseo")!.score).toBeLessThanOrEqual(60);
+  });
+  it("marks non-success HTTP responses as unmeasured", () => {
+    const findings = scoreTarget(official, { statusCode: 503, title: "Temporary error", description: "Please retry later." }, "Shop");
+    expect(findings.every((x) => x.score === null && x.reason === "http_error")).toBe(true);
+  });
+  it("does not award AEO points for question marks and bullets alone", () => {
+    const findings = scoreTarget(official, { statusCode: 200, title: "Shop", description: "Online store description with enough words to qualify as page metadata.", markdown: "# Shop\\n\\nWhat is this?\\n- Item one\\n- Item two\\n- Item three" }, "Shop");
+    expect(findings.find((x) => x.axis === "aeo")!.score).toBe(0);
+  });
+});
