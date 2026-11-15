@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 import { ENGINE_KEYS, ENGINE_CATALOG, type EngineKey } from "@/lib/ai-engines";
 import { resolveEngineModels } from "@/lib/ai-engines.server";
 import {
@@ -187,28 +188,56 @@ async function chooseThreeVerifiedModels() {
   return selected.length === 3 ? selected : null;
 }
 
-async function runOneEngine(model: string, prompt: string, apiKey: string, signal: AbortSignal) {
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + apiKey,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.APP_URL || "https://maaroof.ai",
-      "X-Title": "MAAROOF AI Free Visibility Trial",
-    },
-    body: JSON.stringify({ model, max_tokens: 1100, messages: [
-      { role: "system", content: "You are a cautious factual analyst. Do not fabricate evidence. Return valid JSON only." },
-      { role: "user", content: prompt },
-    ] }),
-    signal,
-    cache: "no-store",
-  });
+async function parseGatewayResponse(response: Response) {
   if (!response.ok) throw new Error("engine_http_" + response.status);
   const data: any = await response.json();
-  const content = data?.choices?.[0]?.message?.content;
-  const parsed = parseModelJson(content);
+  const parsed = parseModelJson(data?.choices?.[0]?.message?.content);
   if (!parsed) throw new Error("engine_empty_response");
   return parsed;
+}
+
+/** OpenRouter is primary; Lovable AI Gateway is a fallback only when configured. */
+async function runOneEngine(
+  model: string,
+  prompt: string,
+  openRouterKey: string | null,
+  lovableKey: string | null,
+  signal: AbortSignal,
+) {
+  const body = JSON.stringify({ model, max_tokens: 1100, messages: [
+    { role: "system", content: "You are a cautious factual analyst. Do not fabricate evidence. Return valid JSON only." },
+    { role: "user", content: prompt },
+  ] });
+  let primaryError: unknown = null;
+  if (openRouterKey) {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + openRouterKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.APP_URL || "https://maaroof.ai",
+          "X-Title": "MAAROOF AI Free Visibility Trial",
+        },
+        body, signal, cache: "no-store",
+      });
+      return await parseGatewayResponse(response);
+    } catch (error) { primaryError = error; }
+  }
+  if (lovableKey) {
+    try {
+      const response = await fetch(LOVABLE_AI_CHAT_COMPLETIONS_URL, {
+        method: "POST",
+        headers: lovableAiHeaders(lovableKey),
+        body, signal, cache: "no-store",
+      });
+      return await parseGatewayResponse(response);
+    } catch (fallbackError) {
+      throw new Error("all_trial_gateways_failed:" + String(fallbackError instanceof Error ? fallbackError.message : fallbackError).slice(0, 100));
+    }
+  }
+  if (primaryError) throw primaryError;
+  throw new Error("trial_gateway_not_configured");
 }
 
 export const Route = createFileRoute("/api/visibility-trial")({
@@ -297,8 +326,9 @@ export const Route = createFileRoute("/api/visibility-trial")({
         } catch { return jsonError("trial_security_not_configured", 503); }
 
         const models = await chooseThreeVerifiedModels().catch(() => null);
-        const openRouterKey = process.env.OPENROUTER_API_KEY;
-        if (!models || !openRouterKey) return jsonError("three_verified_engine_routes_unavailable", 503, { retryable: true });
+        const openRouterKey = process.env.OPENROUTER_API_KEY || null;
+        const lovableKey = process.env.LOVABLE_API_KEY || null;
+        if (!models || (!openRouterKey && !lovableKey)) return jsonError("three_verified_engine_routes_unavailable", 503, { retryable: true });
 
         const attemptId = crypto.randomUUID();
         let entityHash: string;
@@ -353,8 +383,8 @@ export const Route = createFileRoute("/api/visibility-trial")({
         try {
           const settled = await Promise.allSettled(models.map(async (item) => {
             const [recognitionResult, blindResult] = await Promise.allSettled([
-              runOneEngine(item.model, recognitionPrompt, openRouterKey, controller.signal),
-              blindPrompt ? runOneEngine(item.model, blindPrompt, openRouterKey, controller.signal) : Promise.resolve(null),
+              runOneEngine(item.model, recognitionPrompt, openRouterKey, lovableKey, controller.signal),
+              blindPrompt ? runOneEngine(item.model, blindPrompt, openRouterKey, lovableKey, controller.signal) : Promise.resolve(null),
             ]);
             if (recognitionResult.status === "rejected") throw recognitionResult.reason;
             return {
