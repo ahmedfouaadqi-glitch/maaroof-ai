@@ -33,7 +33,7 @@ import { DecisionTracer, chooseAlternative } from "./decisions.server";
 import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
-import { extractDiscoveredSite, extractSiteUrlFromGoal } from "@/lib/maaroof/site-intake";
+import { extractDiscoveredSite, extractSiteUrlFromGoal, isExternalSiteAuditGoal } from "@/lib/maaroof/site-intake";
 import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 import { buildExecutionEvidencePack } from "./execution-evidence-pack";
@@ -201,7 +201,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
 
   const MAX_STEPS = settings.max_steps;
   const geo = effectiveGeo(ctx.detectedGeo, ctx.geoScope);
-  const isExternalSiteAudit = /\\b(?:audit|analy[sz]e|check|review|crawl|inspect)\\b|تدقيق|افحص|فحص|حلل|تحليل|راجع|مراجعة/i.test(ctx.goal);
+  const isExternalSiteAudit = isExternalSiteAuditGoal(ctx.goal);
   const siteAuditUrl = isExternalSiteAudit ? extractSiteUrlFromGoal(ctx.goal) : null;
   let siteDiscovery: { site: NonNullable<ReturnType<typeof extractDiscoveredSite>>; markdown: string } | null = null;
   let siteDiscoveryIssue: string | null = null;
@@ -408,7 +408,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     const memories = siteAuditUrl ? [] : await recall(ctx.userId, ctx.goal, 10, { workspaceId: ctx.workspaceId || null });
     if (memories.length) await ctx.emit("memory", { items: memories });
 
-    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (siteDiscovery ? `\\n\\n[EXTERNAL SITE DISCOVERY — isolated ephemeral evidence]\\n${JSON.stringify(siteDiscovery.site)}\\n[PAGE CONTENT — scraped from target URL only]\\n${siteDiscovery.markdown}` : siteDiscoveryIssue ? `\\n\\n[EXTERNAL SITE DISCOVERY FAILED]\\nThe target website could not be read: ${siteDiscoveryIssue}. Do not invent its identity, sector, country, products or visibility.` : "") + (workspaceProfile ?
+    const baseSystemPrompt = buildSystemPrompt(ctx, geo, memories, workspaceProfile) + (siteDiscovery ? `\n\n[EXTERNAL SITE DISCOVERY — isolated ephemeral evidence]\n${JSON.stringify(siteDiscovery.site)}\n[PAGE CONTENT — scraped from target URL only]\n${siteDiscovery.markdown}` : siteDiscoveryIssue ? `\n\n[EXTERNAL SITE DISCOVERY FAILED]\nThe target website could not be read: ${siteDiscoveryIssue}. Do not invent its identity, sector, country, products or visibility.` : "") + (workspaceProfile ?
       "\n\n[WORKSPACE ENTITY TRUTH CARD — values are user-supplied and not verified unless marked otherwise]\n" + JSON.stringify(workspaceProfile.entity_truth_card || {}).slice(0, 5000) +
       "\n\n[WORKSPACE ONBOARDING CONTEXT]\n" + JSON.stringify(workspaceProfile.onboarding || {}).slice(0, 3000) +
       "\n\n[WORKSPACE SETTINGS]\n" + JSON.stringify(workspaceProfile.settings || {}).slice(0, 1500) : "");
@@ -592,16 +592,29 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       externalActionRequested: reasoningContext.externalActionRequested,
       signals: reasoningContext.signals,
     });
-    const siteAuditPlanningHint = siteAuditUrl ? `\\n\\n[MANDATORY TARGETED WEBSITE AUDIT] Target URL: ${siteAuditUrl}. Do not create content, marketing posts, rewrites, competitor campaigns or unrelated strategy tasks. Use only the target page evidence discovered above. Brand name, sector and country must be taken from the site discovery evidence; if a field is not established, leave it unknown.\\n` : "";\n    const planUserMsg = siteAuditPlanningHint + reasoningGuidance + "\\n\\n" + mciHintLine + historyLine +
+    const siteAuditPlanningHint = siteAuditUrl ? "\n\n[MANDATORY TARGETED WEBSITE AUDIT] Target URL: " + siteAuditUrl + ". Do not create content, marketing posts, rewrites, competitor campaigns or unrelated strategy tasks. Use only the target page evidence discovered above. Brand name, sector and country must come from site evidence; unknown fields remain unknown.\n" : "";
+    const planUserMsg = siteAuditPlanningHint + reasoningGuidance + "\n\n" + mciHintLine + historyLine +
       (envision ? `Future goal: ${envision.future_goal || ""}\nBackward chain: ${JSON.stringify(envision.backward_chain || []).slice(0, 1200)}\n\n` : "") +
       `Goal: ${ctx.goal}\n${ctx.selectedSkills?.length ? `Skills for this task (cover their tools): ${ctx.selectedSkills.join(", ")}\n` : ""}\nProduce a JSON plan: { "steps": [ { "tool": "<one of the available tool keys>", "input": { ... }, "reason": "...", "depends_on": ["<prior tool key whose output is required>"] } ], "final_answer_hint": "..." }. Set depends_on only when the step consumes output from an earlier step; use only tool keys that already appear earlier in the plan. Independent steps may omit it.\n${ctx.runOptions?.focusedPlan ? "The user asked for a focused plan: choose only the tools essential to this goal." : "Use as many steps as the task needs (up to the platform limit)."} Only use tool keys from the list. Return JSON only.`;
     let planResp: { text: string; tokens: number; usd: number };
     try {
+      if (siteAuditUrl && siteDiscovery) {
+        const discoveredBrand = siteDiscovery.site.brand_name;
+        const allowed = (key: string) => !settings.enabled_tools?.length || settings.enabled_tools.includes(key);
+        const targetedSteps: PlanStep[] = [];
+        if (siteDiscovery.markdown.length >= 20 && allowed("analyze")) targetedSteps.push({ tool: "analyze", input: { text: siteDiscovery.markdown, lang: ctx.language }, reason: "تحليل محتوى الصفحة العامة المستخرج من الرابط المستهدف." });
+        if (discoveredBrand && allowed("known")) targetedSteps.push({ tool: "known", input: { brand: discoveredBrand, website: siteAuditUrl, url: siteAuditUrl }, reason: "التحقق من هوية الكيان وروابطه العامة من بيانات الموقع." });
+        if (discoveredBrand && ctx.liveProbe !== false && allowed("visibility")) targetedSteps.push({ tool: "visibility", input: { brand: discoveredBrand, official_website: siteAuditUrl, keywords: siteDiscovery.site.sector || "", lang: ctx.language }, reason: "قياس الظهور الفعلي للعلامة المكتشفة عبر محركات الذكاء الاصطناعي." });
+        planResp = { text: JSON.stringify({ steps: targetedSteps.slice(0, Math.max(1, MAX_STEPS)), final_answer_hint: "Separate on-page readiness from live engine observations. Unknown identity fields remain unknown; no score is a ranking guarantee." }), tokens: 0, usd: 0 };
+      } else if (siteAuditUrl && siteDiscoveryIssue) {
+        planResp = { text: JSON.stringify({ steps: [], final_answer_hint: "The website could not be read. Report the failed read and ask for a publicly accessible URL; do not infer identity or sector." }), tokens: 0, usd: 0 };
+      } else {
       planResp = await call("planning", [
         { role: "system", content: systemPrompt },
         { role: "user", content: planUserMsg },
       ]);
-    } catch (e: any) {
+      }
+    }    } catch (e: any) {
       if (ctx.signal?.aborted) throw e;
       // Both models failed: continue with the skill's own tools instead of stopping.
       if (!ctx.selectedSkills?.length) throw e;
@@ -618,18 +631,18 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     );
     let steps: PlanStep[] = initialPlanValidation.steps.map((step) => ({ ...step }));
     // Website/technical-check requests must include the analyze tool (deterministic guarantee).
-    if (/(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
+    if (!siteAuditUrl && /(فحص|موقع|صفحات|تقني|تقنية|seo|website|site audit|technical|crawl|pages)/i.test(ctx.goal) && !steps.some((st) => st.tool === "analyze") && steps.length < MAX_STEPS) {
       steps = [{ tool: "analyze", input: {}, reason: "طلبت فحص الموقع/الصفحات تقنياً فأُضيفت أداة التحليل تلقائياً." } as PlanStep, ...steps];
     }
     // User-edited tool list (from the pre-execution catalog card) wins over the planner.
     const userTools = String(ctx.clarifications?.tools || "").split(",").map((s) => s.trim()).filter((k) => TOOL_OPTIONS[k] && k !== "competitor_monitor");
-    if (userTools.length) {
+    if (userTools.length && !siteAuditUrl) {
       steps = steps.filter((st) => userTools.includes(st.tool));
       for (const k of userTools) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "أضافها المستخدم قبل التنفيذ." } as PlanStep);
       steps = steps.slice(0, Math.max(MAX_STEPS, userTools.length));
     }
     // Skill tools (selected or inferred from the task text) are guaranteed in the plan.
-    if (!userTools.length && ctx.selectedSkills?.length) {
+    if (!userTools.length && ctx.selectedSkills?.length && !siteAuditUrl) {
       try {
         const { executableToolsFor } = await import("./skill-inference");
         for (const k of executableToolsFor(ctx.selectedSkills)) if (!steps.some((st) => st.tool === k)) steps.push({ tool: k, input: {}, reason: "مطلوبة للمهارة المختارة لهذه المهمة." } as PlanStep);
