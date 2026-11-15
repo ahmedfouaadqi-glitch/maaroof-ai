@@ -124,14 +124,23 @@ function classifySector(text: string, schemaTypes: string[]): { sector: string |
 function countryEvidence(text: string, hostname: string): { country: string | null; status: DiscoveredSite["country_status"] } {
   const t = text.toLowerCase();
   const explicit: Array<[RegExp, string]> = [
-    [/\b(lebanon|lebanese|beirut|tripoli,? lebanon|lbp|\+?961)\b/i, "Lebanon"],
-    [/\b(iraq|iraqi|baghdad|iqd|\+?964)\b/i, "Iraq"],
-    [/\b(united arab emirates|uae|dubai|abu dhabi|aed|\+?971)\b/i, "United Arab Emirates"],
-    [/\b(saudi arabia|saudi|riyadh|sar|\+?966)\b/i, "Saudi Arabia"],
-    [/\b(united kingdom|\buk\b|london|gbp|\+?44)\b/i, "United Kingdom"],
-    [/\b(united states|\busa\b|\busd\b|\+?1)\b/i, "United States"],
+    [/\\b(lebanon|lebanese|beirut|tripoli,? lebanon)\\b/i, "Lebanon"],
+    [/\\b(iraq|iraqi|baghdad)\\b/i, "Iraq"],
+    [/\\b(united arab emirates|uae|dubai|abu dhabi)\\b/i, "United Arab Emirates"],
+    [/\\b(saudi arabia|saudi|riyadh)\\b/i, "Saudi Arabia"],
+    [/\\b(united kingdom|\\buk\\b|london)\\b/i, "United Kingdom"],
+    [/\\b(united states|\\busa\\b)\\b/i, "United States"],
   ];
   for (const [pattern, country] of explicit) if (pattern.test(t)) return { country, status: "explicit_site_evidence" };
+  const phoneCodes: Array<[RegExp, string]> = [
+    [/\\+961[\\s().-]*\\d{1,3}/, "Lebanon"],
+    [/\\+964[\\s().-]*\\d{1,3}/, "Iraq"],
+    [/\\+971[\\s().-]*\\d{1,3}/, "United Arab Emirates"],
+    [/\\+966[\\s().-]*\\d{1,3}/, "Saudi Arabia"],
+    [/\\+44[\\s().-]*\\d{2,}/, "United Kingdom"],
+    [/\\+1[\\s().-]*\\d{3}[\\s().-]*\\d{3,4}/, "United States"],
+  ];
+  for (const [pattern, country] of phoneCodes) if (pattern.test(t)) return { country, status: "explicit_site_evidence" };
   const tld = hostname.split(".").pop()?.toLowerCase();
   const cc: Record<string, string> = { lb: "Lebanon", iq: "Iraq", ae: "United Arab Emirates", sa: "Saudi Arabia", uk: "United Kingdom", us: "United States" };
   return cc[tld || ""] ? { country: cc[tld || ""], status: "country_code_domain" } : { country: null, status: "not_established" };
