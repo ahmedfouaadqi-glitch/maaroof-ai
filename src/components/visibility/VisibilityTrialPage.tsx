@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { computeFingerprint } from "@/lib/fingerprint";
 import { AuthGate } from "@/components/AuthGate";
 import { TrialKnowledgeSignals } from "@/components/visibility/TrialKnowledgeSignals";
+import { GeoScopeSelector, type GeoScope } from "@/components/GeoScopeSelector";
+import { FreeAuditTour } from "@/components/visibility/FreeAuditTour";
 import { FreeAuditHeader } from "@/components/visibility/FreeAuditHeader";
 import { ArrowLeft, Clock3, ExternalLink, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 
@@ -32,7 +34,7 @@ const COPY = {
     intro: "فحص مباشر محدود بثلاثة مسارات نموذجية مستقلة عند توافرها. لا تحتاج إلى موقع إلكتروني أو حسابات تواصل.",
     name: "اسم الشخص أو العلامة أو المؤسسة", nameHint: "اكتب الاسم المعروف الذي تريد فحصه.",
     type: "نوع الكيان", auto: "اكتشاف تلقائي", person: "شخص", org: "مؤسسة / علامة تجارية",
-    category: "التخصص أو الفئة (اختياري)", description: "وصف مختصر (اختياري)", market: "السوق المستهدف (اختياري)",
+    category: "التخصص أو الفئة (اختياري)", description: "وصف مختصر (اختياري)", market: "النطاق الجغرافي (اختياري)", langNote: "لغة التقرير: العربية. ستُجيب النماذج بهذه اللغة فقط؛ غيّرها من زر اللغة أعلى الصفحة قبل الفحص.",
     assets: "روابط رقمية (اختياري)", assetsHint: "يمكن تركها فارغة. ضع كل رابط في سطر منفصل.",
     start: "ابدأ التجربة المجانية", working: "جارٍ تنفيذ الفحص المباشر", auth: "سجّل الدخول للمتابعة",
     security: "يتم التحقق من الاتصال وأهلية التجربة قبل بدء الفحص. لا نستخدم إجابات فحوصات سابقة.",
@@ -53,7 +55,7 @@ const COPY = {
     intro: "A limited live sample across three independently configured model routes. No website or social accounts are required.",
     name: "Person, brand or organization name", nameHint: "Enter the name people use to identify this entity.",
     type: "Entity type", auto: "Detect automatically", person: "Person", org: "Organization / brand",
-    category: "Sector or category (optional)", description: "Short description (optional)", market: "Target market (optional)",
+    category: "Sector or category (optional)", description: "Short description (optional)", market: "Geographic scope (optional)", langNote: "Report language: English. Models answer in this language only; change it from the language button at the top before running.",
     assets: "Digital links (optional)", assetsHint: "Leave empty if none. Enter one URL per line.",
     start: "Start free trial", working: "Running the live probe", auth: "Sign in to continue",
     security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
@@ -74,7 +76,7 @@ const COPY = {
     intro: "نموونەیەکی سنوورداری ڕاستەوخۆ لە سێ ڕێڕەوی مۆدێلی جیاواز. ماڵپەڕ یان هەژماری تۆڕی کۆمەڵایەتی پێویست نییە.",
     name: "ناوی کەس یان براند یان دامەزراوە", nameHint: "ئەو ناوە بنووسە کە خەڵک پێی دەناسن.",
     type: "جۆری قەوارە", auto: "دۆزینەوەی خۆکار", person: "کەس", org: "دامەزراوە / براند",
-    category: "پسپۆڕی یان پۆل (ئارەزوومەندانە)", description: "پوختەیەکی کورت (ئارەزوومەندانە)", market: "بازاڕی ئامانج (ئارەزوومەندانە)",
+    category: "پسپۆڕی یان پۆل (ئارەزوومەندانە)", description: "پوختەیەکی کورت (ئارەزوومەندانە)", market: "بواری جوگرافی (ئارەزوومەندانە)", langNote: "زمانی ڕاپۆرت: کوردی. مۆدێلەکان تەنها بەم زمانە وەڵام دەدەنەوە؛ پێش پشکنین لە دوگمەی زمان لە سەرەوە بیگۆڕە.",
     assets: "بەستەری دیجیتاڵ (ئارەزوومەندانە)", assetsHint: "ئەگەر نییە بەتاڵی بهێڵەوە. هەر بەستەرێک لە دێڕێکی جیاواز.",
     start: "دەستپێکردنی تاقیکردنەوە", working: "پشکنینی ڕاستەوخۆ ئەنجام دەدرێت", auth: "بچۆ ژوورەوە بۆ بەردەوامبوون",
     security: "پێش پشکنین پەیوەندی و شایستەیی پشتڕاست دەکرێتەوە. وەڵامی پشکنینی پێشووتر بەکارناهێنین.",
@@ -114,7 +116,8 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   const [entityType, setEntityType] = useState<"auto" | "person" | "organization">("auto");
   const [category, setCategory] = useState(prefill.category?.slice(0, 180) || "");
   const [description, setDescription] = useState("");
-  const [market, setMarket] = useState(prefill.market?.slice(0, 120) || "");
+  const [geo, setGeo] = useState<GeoScope>(prefill.market ? { scope: "country", country: prefill.market.slice(0, 120) } : { scope: "world" });
+  const market = geo.scope === "world" ? "Global" : geo.scope === "auto" ? "" : [geo.city, geo.region, geo.country].filter(Boolean).join(", ").slice(0, 120);
   const [assetsText, setAssetsText] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "error" | "info"; text: string } | null>(null);
@@ -342,15 +345,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
               <label className="block text-sm font-medium">{c.category}
                 <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={180} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
               </label>
-              <label className="block text-sm font-medium">{c.market}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {GEO_SCOPES[l as "ar" | "en" | "ku"].map((g) => (
-                    <button type="button" key={g} onClick={() => setMarket(g)} aria-pressed={market === g} className={"rounded-full border px-2.5 py-1 text-[11px] font-medium " + (market === g ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary")}>{g}</button>
-                  ))}
-                </div>
-                <input value={market} onChange={(e) => setMarket(e.target.value)} maxLength={120} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
-              </label>
+              <div className="block text-sm font-medium" data-tour="scope">{c.market}
+                <div className="mt-2"><GeoScopeSelector compact toolKey="free_audit" value={geo} onChange={setGeo} /></div>
+              </div>
             </div>
+            <p data-tour="lang" className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs leading-6">{c.langNote}</p>
             <label className="mt-5 block text-sm font-medium">{c.description}
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={600} rows={3} className="mt-2 w-full resize-y rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             </label>
@@ -420,6 +419,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
           </section>
         )}
         <FreeAuditMarketing lang={l} part="bottom" />
+        <FreeAuditTour lang={l} />
       </main>
     </div>
   );
