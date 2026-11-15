@@ -34,6 +34,7 @@ import { dispatchToolInProcess } from "./direct-tool-dispatch.server";
 import { createInternalAuthHeader } from "@/lib/internal-auth.server";
 import { isFiveAxisAuditGoal } from "@/lib/maaroof/chat-axis-audit";
 import { extractDiscoveredSite, extractSiteUrlFromGoal, isExternalSiteAuditGoal } from "@/lib/maaroof/site-intake";
+import { factsFromDiscoveredSite } from "@/lib/maaroof/site-facts";
 import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 import { buildExecutionEvidencePack } from "./execution-evidence-pack";
@@ -219,8 +220,22 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         statusCode: metadata.statusCode ?? null, source: read?.fetch_source || null,
       });
       if (!site) throw new Error("site_identity_extraction_failed");
+      const discoveredFacts = factsFromDiscoveredSite(
+        site,
+        new Date().toISOString(),
+        read?.fetch_source || "public_site_crawl",
+      );
       siteDiscovery = { site, markdown: String(page?.markdown || "").slice(0, 7800) };
-      await ctx.emit("site_discovery", { discovery: site, evidence: { markdown_available: Boolean(page?.markdown), html_available: Boolean(page?.html), status_code: metadata.statusCode ?? null, source: read?.fetch_source || null } });
+      await ctx.emit("site_discovery", {
+        discovery: site,
+        discovered_facts: discoveredFacts,
+        evidence: {
+          markdown_available: Boolean(page?.markdown),
+          html_available: Boolean(page?.html),
+          status_code: metadata.statusCode ?? null,
+          source: read?.fetch_source || null,
+        },
+      });
     } catch (error: any) {
       siteDiscoveryIssue = String(error?.readIssue || error?.message || "site_read_failed").slice(0, 120);
       await ctx.emit("site_discovery_error", { url: siteAuditUrl, issue: siteDiscoveryIssue });
