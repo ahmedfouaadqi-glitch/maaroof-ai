@@ -157,7 +157,7 @@ export function weightedScore(scores: Partial<Record<Axis, number | null>>, kind
 
 // ---------- Evidence-based scoring (pure). Input is real fetched page content only. ----------
 export type PageEvidence = { markdown?: string | null; title?: string | null; description?: string | null; html?: string | null; statusCode?: number | null };
-export type AxisFinding = { axis: Axis; score: number | null; verdict: "good" | "weak" | "missing" | "unmeasured"; evidence: string[]; reason: string; next: string };
+export type AxisFinding = { axis: Axis; score: number | null; verdict: "good" | "weak" | "missing" | "unmeasured"; evidence: string[]; evidence_refs: Array<{ source_url: string; signals: string[] }>; reason: string; next: string };
 
 function words(s: string) { return s.split(/\s+/).filter(Boolean); }
 const verdictOf = (s: number | null): AxisFinding["verdict"] => s == null ? "unmeasured" : s >= 70 ? "good" : s >= 40 ? "weak" : "missing";
@@ -204,9 +204,9 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
   const normalized = normalizeMatch(combined);
 
   return t.axes.map((axis): AxisFinding => {
-    if (!has) return { axis, score: null, verdict: "unmeasured", evidence: [], reason: ev?.statusCode && ev.statusCode >= 400 ? "http_error" : blocked ? "blocked_or_challenge" : "no_public_content", next: "retry_or_public" };
+    if (!has) return { axis, score: null, verdict: "unmeasured", evidence: [], evidence_refs: [], reason: ev?.statusCode && ev.statusCode >= 400 ? "http_error" : blocked ? "blocked_or_challenge" : "no_public_content", next: "retry_or_public" };
     if (!hasBody && ["aeo", "sge"].includes(axis)) {
-      return { axis, score: null, verdict: "unmeasured", evidence: ["metadata_only"], reason: "insufficient_content_for_axis", next: "needs_full_page_content" };
+      return { axis, score: null, verdict: "unmeasured", evidence: ["metadata_only"], evidence_refs: [{ source_url: t.url, signals: ["metadata_only"] }], reason: "insufficient_content_for_axis", next: "needs_full_page_content" };
     }
     const evidence: string[] = [];
     let raw = 0;
@@ -254,7 +254,7 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
     const axisCap = axis === "seo" ? 85 : axis === "aeo" ? 80 : axis === "geo" ? 80 : axis === "sge" ? 75 : 60;
     const score = capped(raw, axisCap);
     const reason = evidence.length ? "measured_on_page_readiness_only" : "no_signal";
-    return { axis, score, verdict: verdictOf(score), evidence, reason, next: score >= 70 ? "keep_on_page_readiness" : `improve_${axis}` };
+    return { axis, score, verdict: verdictOf(score), evidence, evidence_refs: evidence.length ? [{ source_url: t.url, signals: [...evidence] }] : [], reason, next: score >= 70 ? "keep_on_page_readiness" : `improve_${axis}` };
   });
 }
 
