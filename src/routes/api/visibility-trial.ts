@@ -234,7 +234,6 @@ export const Route = createFileRoute("/api/visibility-trial")({
           if (latestError) return jsonError("trial_storage_unavailable", 503);
           if (!latest) return Response.json({ ok: true, available: false }, { headers: { "Cache-Control": "no-store" } });
           const resultValid = !!latest.result_payload && !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() > Date.now();
-          const retrievalExhausted = Number(latest.result_view_count) >= 2 && !!latest.next_eligible_at && new Date(latest.next_eligible_at).getTime() > Date.now();
           return Response.json({
             ok: true,
             available: true,
@@ -242,21 +241,25 @@ export const Route = createFileRoute("/api/visibility-trial")({
             status: latest.status,
             result_expires_at: latest.result_expires_at,
             next_eligible_at: latest.next_eligible_at,
-            retrieval_available: resultValid && Number(latest.result_view_count) === 1,
-            retrieval_exhausted: retrievalExhausted,
+            retrieval_available: resultValid,
+            retrieval_exhausted: false,
             expired: !!latest.result_expires_at && new Date(latest.result_expires_at).getTime() <= Date.now(),
-            contact: retrievalExhausted ? await getContactSettings(admin) : undefined,
+            
           }, { headers: { "Cache-Control": "no-store" } });
         }
 
         if (body.action === "retrieve") {
           if (!body.attempt_id || !/^[0-9a-f-]{36}$/i.test(body.attempt_id)) return jsonError("attempt_id_invalid", 400);
-          const { data, error } = await admin.rpc("claim_visibility_trial_result", { p_attempt_id: body.attempt_id, p_user_id: userId });
+          // Unlimited retrieval while the 72h result is valid; owner-scoped read.
+          const { data: row, error } = await admin.from("visibility_trial_attempts")
+            .select("id,status,result_payload,result_expires_at")
+            .eq("id", body.attempt_id).eq("user_id", userId).maybeSingle();
           if (error) return jsonError("trial_storage_unavailable", 503);
-          const result = data as any;
-          if (result?.status === "retrieved") return Response.json({ ok: true, result: result.result, result_expires_at: result.result_expires_at, retrieval_exhausted: true, contact: await getContactSettings(admin) }, { headers: { "Cache-Control": "no-store" } });
-          if (result?.status === "retrieval_exhausted") return Response.json({ ok: false, error: result.status, contact: await getContactSettings(admin) }, { status: 403, headers: { "Cache-Control": "no-store" } });
-          return jsonError(result?.status || "result_unavailable", 410);
+          if (!row) return jsonError("result_unavailable", 410);
+          if (row.status === "failed") return jsonError("failed", 410);
+          if (row.status === "running" || row.status === "reserved") return jsonError("in_progress", 409);
+          if (!row.result_payload || !row.result_expires_at || new Date(row.result_expires_at).getTime() <= Date.now()) return jsonError("expired", 410);
+          return Response.json({ ok: true, result: row.result_payload, result_expires_at: row.result_expires_at, retrieval_exhausted: false }, { headers: { "Cache-Control": "no-store" } });
         }
 
         if (body.action !== "start") return jsonError("action_invalid", 400);

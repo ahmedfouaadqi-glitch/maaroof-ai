@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, MessageCircle, SearchX, ShieldCheck } from "lucide-react";
+import { MessageCircle, SearchX, Sparkles } from "lucide-react";
 import { ENGINE_KEYS, ENGINE_CATALOG } from "@/lib/ai-engines";
 
 type L = "ar" | "en" | "ku";
@@ -13,9 +13,9 @@ const T = {
     cta: "القياس الكامل يغطي المحركات العشرة، الأسواق، الكلمات المفتاحية، ومصادر الاقتباس مع خطة تحسين.",
     start: "ابدأ القياس الكامل", contact: "تحدّث مع فريق معروف",
     faq: [
-      ["هل الفحص مجاني فعلا؟", "نعم، تجربة واحدة لكل فترة أهلية دون أي خصم من رصيد."],
-      ["هل النتائج حقيقية؟", "كل إجابة تأتي من محرك حي في لحظة الفحص. إن لم يُجب محرك يُكتب ذلك ولا يُقدَّر."],
-      ["ماذا يحدث لبياناتي؟", "التقرير يُحذف تلقائيا بعد 72 ساعة، وهو منفصل تماما عن أي مساحة عمل."],
+      ["القرار يُحسم قبل الزيارة", "عملاؤك يسألون الذكاء الاصطناعي أولا. من يُذكر في الإجابة يُختار."],
+      ["السلطة قبل الروابط", "المحركات تثق بالكيان الموثّق الواضح، لا بعدد الروابط."],
+      ["فحص حيّ بلا تخمين", "إجابات حقيقية من النماذج لحظة الفحص، دون درجات تقديرية."],
     ],
   },
   en: {
@@ -26,9 +26,9 @@ const T = {
     cta: "The full measurement covers all ten engines, markets, keywords and citation sources, with an improvement plan.",
     start: "Start full measurement", contact: "Talk to the Maaroof team",
     faq: [
-      ["Is it really free?", "Yes — one trial per eligibility window, with no balance charged."],
-      ["Are the results real?", "Every answer comes from a live engine at probe time. If an engine doesn't answer, that is shown, never estimated."],
-      ["What happens to my data?", "The report is deleted automatically after 72 hours and is fully separate from any workspace."],
+      ["The decision happens before the visit", "Customers ask AI first. Whoever is named in the answer gets chosen."],
+      ["Authority beats links", "Engines trust a clear, verified entity — not link counts."],
+      ["Live probe, no guessing", "Real model answers at probe time, with no estimated scores."],
     ],
   },
   ku: {
@@ -39,9 +39,9 @@ const T = {
     cta: "پێوانەی تەواو هەموو دە بزوێنەرەکە، بازاڕەکان، وشە سەرەکییەکان و سەرچاوەکان دەگرێتەوە لەگەڵ پلانی باشترکردن.",
     start: "دەستپێکردنی پێوانەی تەواو", contact: "قسە لەگەڵ تیمی مەعروف",
     faq: [
-      ["ئایا بەڕاستی خۆڕاییە؟", "بەڵێ، یەک تاقیکردنەوە بۆ هەر ماوەیەکی شایستەیی بەبێ بڕینی باڵانس."],
-      ["ئایا ئەنجامەکان ڕاستەقینەن؟", "هەر وەڵامێک لە بزوێنەرێکی ڕاستەوخۆوە دێت. ئەگەر وەڵام نەدرێتەوە، ئەوە پیشان دەدرێت."],
-      ["داتاکانم چی لێ دێت؟", "ڕاپۆرتەکە دوای 72 کاتژمێر خۆکارانە دەسڕێتەوە."],
+      ["بڕیار پێش سەردان دەدرێت", "کڕیاران سەرەتا پرسیار لە زیرەکی دەستکرد دەکەن. ئەوەی ناوی بێت هەڵدەبژێردرێت."],
+      ["دەسەڵات پێش بەستەرەکان", "بزوێنەرەکان متمانە بە کیانی ڕوون و پشتڕاستکراو دەکەن."],
+      ["پشکنینی ڕاستەوخۆ بێ گومان", "وەڵامی ڕاستەقینەی مۆدێلەکان، بێ نمرەی خەمڵێنراو."],
     ],
   },
 } as const;
@@ -74,7 +74,7 @@ export function FreeAuditMarketing({ lang, part }: { lang: L; part: "top" | "bot
       <div className="grid gap-3 md:grid-cols-3">
         {t.faq.map(([q, a]) => (
           <div key={q} className="rounded-xl border border-border bg-card/60 p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4 text-primary" />{q}</h3>
+            <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-primary" />{q}</h3>
             <p className="mt-2 text-xs leading-6 text-muted-foreground">{a}</p>
           </div>
         ))}
@@ -90,8 +90,7 @@ export function FreeAuditResultCta({ lang }: { lang: L }) {
       <h3 className="font-display text-lg font-bold">{t.ctaTitle}</h3>
       <p className="mt-2 text-sm leading-7 text-muted-foreground">{t.cta}</p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">{t.start} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
-        <Link to="/contact" className="inline-flex items-center gap-2 rounded-xl border border-primary/40 px-5 py-3 text-sm font-semibold text-primary hover:bg-primary/10"><MessageCircle className="size-4" />{t.contact}</Link>
+        <Link to="/contact" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"><MessageCircle className="size-4" />{t.contact}</Link>
       </div>
     </div>
   );

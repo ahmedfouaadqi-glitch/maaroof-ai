@@ -41,7 +41,7 @@ const COPY = {
     report: "تقرير الرؤية المحدود", mention: "معدل ذكر الكيان", recommend: "معدل التوصية", engines: "المسارات التي أجابت", noCategoryMeasurement: "لم تتوفر فئة وسوق محايدان لا يتضمنان اسم الكيان؛ لذلك لم يُقَس الاكتشاف غير الموجّه أو الظهور العضوي.", discovery: "نتيجة الاكتشاف غير الموجّه", mentionStatus: "ذكر الكيان", recommendationStatus: "التوصية", confidenceStatus: "الثقة", high: "مرتفعة", medium: "متوسطة", low: "منخفضة", yes: "نعم", no: "لا", conditional: "مشروطة", unknown: "غير محسوم",
     sample: "هذه عينة من ثلاث استجابات نموذجية حية، وليست قياساً شاملاً للسوق أو تحققاً من فهارس البحث والاستشهادات المباشرة لكل منتج.",
     known: "ملخص الاستجابة", basis: "أساس الأدلة", strengths: "إشارات إيجابية", gaps: "المعلومات غير المحسومة", actions: "تحسينات مقترحة", sources: "روابط ذكرتها الاستجابة (غير متحققة مستقلاً)",
-    retrieval: "استرجاع التقرير مرة واحدة", retrievalDone: "تم استخدام الاسترجاع الإضافي", expires: "تنتهي صلاحية التقرير", contact: "التواصل مع معروف",
+    retrieval: "استرجاع التقرير", retrievalDone: "تم استخدام الاسترجاع الإضافي", expires: "تنتهي صلاحية التقرير", contact: "التواصل مع معروف",
     contactDesc: "تعذر فتح تجربة جديدة ضمن فترة الأهلية الحالية. يمكنك التواصل مع فريق معروف.",
     cooldown: "التجربة غير مؤهلة حالياً", retryAt: "موعد الأهلية التالي",
     noContact: "لم تُضبط قنوات التواصل في إعدادات الإدارة بعد.",
@@ -62,7 +62,7 @@ const COPY = {
     report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered", noCategoryMeasurement: "No neutral category/market was supplied, or the category/market included the target name; unprompted discovery and organic visibility were not measured.", discovery: "Unprompted discovery response", mentionStatus: "Entity mention", recommendationStatus: "Recommendation", confidenceStatus: "Confidence", high: "High", medium: "Medium", low: "Low", yes: "Yes", no: "No", conditional: "Conditional", unknown: "Unknown",
     sample: "This is a live three-model response sample, not a market-wide measurement or verification of each product's live search index or citations.",
     known: "Response summary", basis: "Evidence basis", strengths: "Positive signals", gaps: "Unresolved information", actions: "Suggested improvements", sources: "URLs named in the response (not independently verified)",
-    retrieval: "Retrieve report once", retrievalDone: "Additional retrieval used", expires: "Report expires", contact: "Contact MAAROOF",
+    retrieval: "Retrieve report", retrievalDone: "Additional retrieval used", expires: "Report expires", contact: "Contact MAAROOF",
     contactDesc: "A new trial is not eligible during the current access window. You can contact the MAAROOF team.",
     cooldown: "Trial is not eligible yet", retryAt: "Next eligible time",
     noContact: "No contact channels have been configured in Admin yet.",
@@ -83,7 +83,7 @@ const COPY = {
     report: "ڕاپۆرتی سنوورداری دەرکەوتن", mention: "ڕێژەی باسکردنی قەوارە", recommend: "ڕێژەی پێشنیار", engines: "ڕێڕەوە وەڵامدەرەکان", noCategoryMeasurement: "پۆل و بازاڕێکی بێلایەن کە ناوی قەوارەکەیان تێدا نەبێت بەردەست نەبوو؛ بۆیە دۆزینەوەی بێ ئاراستە و دەرکەوتنی سروشتی نەپیوراوە.", discovery: "وەڵامی دۆزینەوەی بێ ئاراستە", mentionStatus: "باسکردنی قەوارە", recommendationStatus: "پێشنیار", confidenceStatus: "متمانە", high: "بەرز", medium: "مامناوەند", low: "نزم", yes: "بەڵێ", no: "نەخێر", conditional: "بە مەرج", unknown: "نادیار",
     sample: "ئەمە نموونەیەکی سێ وەڵامی مۆدێلی ڕاستەوخۆیە، نەک پێوانەی گشتی بازاڕ یان پشتڕاستکردنەوەی ئیندێکسی گەڕان و ئاماژەپێدانی ڕاستەوخۆی هەر بەرهەمێک.",
     known: "پوختەی وەڵام", basis: "بنەمای بەڵگە", strengths: "نیشانە ئەرێنییەکان", gaps: "زانیاریی نادیار", actions: "باشترکردنی پێشنیارکراو", sources: "بەستەرە باسکراوەکان (بە سەربەخۆیی پشتڕاست نەکراونەتەوە)",
-    retrieval: "وەرگرتنەوەی ڕاپۆرت یەک جار", retrievalDone: "وەرگرتنەوەی زیادە بەکارهاتووە", expires: "کۆتایی هاتنی ڕاپۆرت", contact: "پەیوەندی بە مەعروف",
+    retrieval: "وەرگرتنەوەی ڕاپۆرت", retrievalDone: "وەرگرتنەوەی زیادە بەکارهاتووە", expires: "کۆتایی هاتنی ڕاپۆرت", contact: "پەیوەندی بە مەعروف",
     contactDesc: "لە ماوەی ئێستادا تاقیکردنەوەی نوێ شایستە نییە. دەتوانیت پەیوەندی بە تیمی مەعروفەوە بکەیت.",
     noContact: "هێشتا هیچ ڕێگایەکی پەیوەندی لە ڕێکخستنەکانی بەڕێوەبەر دیاری نەکراوە.",
     back: "گەڕانەوە بۆ سەرەتا", status: "دۆخ", answered: "وەڵام دراوە", error: "وەڵام نەگەیشت",
@@ -96,6 +96,12 @@ async function trialPayloadSignature(value: Record<string, unknown>): Promise<st
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest)).map((part) => part.toString(16).padStart(2, "0")).join("");
 }
+
+const GEO_SCOPES = {
+  ar: ["العراق", "السعودية", "الإمارات", "الخليج", "مصر", "الأردن", "عالمي"],
+  en: ["Iraq", "Saudi Arabia", "UAE", "Gulf", "Egypt", "Jordan", "Global"],
+  ku: ["عێراق", "سعودیە", "ئیمارات", "کەنداو", "میسر", "ئوردن", "جیهانی"],
+} as const;
 
 export type TrialPrefill = { entity?: string; category?: string; market?: string };
 
@@ -337,6 +343,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
                 <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={180} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
               </label>
               <label className="block text-sm font-medium">{c.market}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {GEO_SCOPES[l as "ar" | "en" | "ku"].map((g) => (
+                    <button type="button" key={g} onClick={() => setMarket(g)} aria-pressed={market === g} className={"rounded-full border px-2.5 py-1 text-[11px] font-medium " + (market === g ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary")}>{g}</button>
+                  ))}
+                </div>
                 <input value={market} onChange={(e) => setMarket(e.target.value)} maxLength={120} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
               </label>
             </div>
@@ -359,12 +370,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
             <div className="flex items-center gap-2 text-sm font-semibold"><LockKeyhole className="size-4 text-primary" />{c.security.split(".")[0]}</div>
             <p className="mt-3 text-xs leading-6 text-muted-foreground">{c.sample}</p>
             <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="size-4" />72h report · 5h cooldown</div>
-            {attemptId && !retrievalUsed && (
+            {attemptId && (
               <button type="button" onClick={retrieve} disabled={busy} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-xs font-semibold text-primary disabled:opacity-50">
                 <RefreshCw className="size-3.5" />{c.retrieval}
               </button>
             )}
-            {retrievalUsed && <p className="mt-5 text-xs text-muted-foreground"><CheckCircle2 className="me-1 inline size-4 text-primary" />{c.retrievalDone}</p>}
           </aside>
         </div>
 
