@@ -111,7 +111,7 @@ export function buildVisibilityWorkbook(brand: string, probe: ProbeLike, lang: W
     name: L(lang, "المعجم الاصطلاحي", "Terminology glossary", "فەرهەنگی زاراوەکان"),
     rows: [
       [L(lang, "الاختصار", "Acronym", "کورتکراوە"), L(lang, "الاسم الكامل", "Full name", "ناوی تەواو"), L(lang, "التعريف", "Definition", "پێناسە"), L(lang, "حالة المصطلح", "Terminology status", "دۆخی زاراوە")],
-      ...DOMAIN_ONTOLOGY.map((entry) => [entry.acronym, entry.full_name_en, entry.definition_en, entry.terminology_status]),
+      ...DOMAIN_ONTOLOGY.map((entry) => [entry.acronym, L(lang, entry.full_name_ar, entry.full_name_en, entry.full_name_ar), L(lang, entry.definition_ar, entry.definition_en, entry.definition_ar), entry.terminology_status]),
     ],
   };
   return [summary, competitors, evidence, glossary];
