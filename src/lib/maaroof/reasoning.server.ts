@@ -1,3 +1,4 @@
+import { findDomainTerms } from "@/lib/maaroof/domain-ontology";
 import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
 
 export type ReasoningIntent =
@@ -91,6 +92,7 @@ export function classifyReasoningIntent(goal: string): ReasoningContext {
       ...(evidenceRequired ? ["evidence_required"] : []),
       ...(externalActionRequested ? ["external_action_review"] : []),
       ...(highRisk ? ["high_risk_review"] : []),
+      ...findDomainTerms(text, 8).map((entry) => "domain_term:" + entry.acronym),
       ...(signalText.length < 12 ? ["short_or_underspecified_request"] : []),
     ],
   };
@@ -150,6 +152,7 @@ export function buildReasoningGuidance(context: ReasoningContext): string {
     "- Risk: " + context.risk,
     "- Evidence required: " + (context.evidenceRequired ? "yes" : "no"),
     "- External action requested: " + (context.externalActionRequested ? "yes; keep existing approval gates" : "no"),
+    "- Matched domain vocabulary: " + context.signals.filter((signal) => signal.startsWith("domain_term:")).map((signal) => signal.slice(12)).join(", "),
     "Plan only with available existing tools. Prefer the smallest sufficient plan. If required facts or inputs are absent, request clarification rather than fabricate them. Distinguish observations, assumptions, estimates and recommendations. Treat this classifier as a hint, not ground truth.",
   ].join("\n");
 }
