@@ -14,6 +14,7 @@ export const Route = createFileRoute("/free-audit")({
       { name: "description", content: "See live whether ChatGPT, Gemini and other AI engines mention and recommend your brand — free, no website required." },
       { property: "og:title", content: "Free AI Visibility Audit · Maaroof AI" },
       { property: "og:description", content: "A live sample from three independent AI engines showing whether your brand is mentioned and recommended." },
+      { name: "robots", content: "noindex,nofollow,noai,noimageai" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

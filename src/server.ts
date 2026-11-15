@@ -67,12 +67,27 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
+function withTrialHeaders(request: Request, response: Response): Response {
+  const path = new URL(request.url).pathname;
+  if (!/^\/(free-audit|visibility-trial|api\/visibility-trial)/.test(path)) return response;
+  try {
+    const r = new Response(response.body, response);
+    r.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
+    r.headers.set("X-Frame-Options", "DENY");
+    r.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+    return r;
+  } catch {
+    return response;
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await requestCtx.run(ctx as any, () => handler.fetch(request, env, ctx));
-      return await normalizeCatastrophicSsrResponse(response);
+      const out = await normalizeCatastrophicSsrResponse(response);
+      return withTrialHeaders(request, out);
     } catch (error) {
       console.error(error);
       return brandedErrorResponse();

@@ -1,3 +1,4 @@
+import { isBlockedUserAgent, isSuspiciousSubmission } from "@/lib/bot-guard";
 import { createFileRoute } from "@tanstack/react-router";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders } from "@/lib/lovable-ai";
 import { ENGINE_KEYS, ENGINE_CATALOG, type EngineKey } from "@/lib/ai-engines";
@@ -232,8 +233,10 @@ export const Route = createFileRoute("/api/visibility-trial")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        if (isBlockedUserAgent(request.headers.get("user-agent"))) return jsonError("automation_not_allowed", 403);
         let body: StartBody;
         try { body = await request.json() as StartBody; } catch { return jsonError("invalid_json", 400); }
+        if (body.action === "start" && isSuspiciousSubmission(body as any)) return jsonError("automation_not_allowed", 403);
         const auth = await getAdmin(request).catch(() => ({ error: "server_not_configured" as const }));
         if ("error" in auth && auth.error) return jsonError(auth.error, 503);
         const { admin, userId } = auth as { admin: NonNullable<typeof auth.admin>; userId: string };

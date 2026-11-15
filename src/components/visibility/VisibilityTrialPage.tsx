@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { FreeAuditMarketing, FreeAuditResultCta } from "@/components/visibility/FreeAuditMarketing";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent , useRef} from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { computeFingerprint } from "@/lib/fingerprint";
@@ -111,6 +111,8 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   
   const l = lang === "ar" || lang === "ku" ? lang : "en";
   const c = COPY[l];
+  const [honeypot, setHoneypot] = useState("");
+  const formStartRef = useRef<number>(Date.now());
   const [entityName, setEntityName] = useState(prefill.entity?.slice(0, 180) || "");
   const [entityType, setEntityType] = useState<"auto" | "person" | "organization">("auto");
   const [category, setCategory] = useState(prefill.category?.slice(0, 180) || "");
@@ -199,6 +201,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
     const payload = {
       action: "start", entity_name: entityName, entity_type: entityType,
       category, description, market, language: l,
+      honeypot, fill_ms: Date.now() - formStartRef.current,
       assets: assetsText.split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
     };
     let requestKey: string = crypto.randomUUID();
@@ -326,6 +329,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
         <FreeAuditMarketing lang={l} part="top" />
         <div id="audit-form" className="mx-auto mt-10 grid max-w-4xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <form onSubmit={submit} className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm md:p-7">
+            <input type="text" name="company_website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
             <label className="block text-sm font-medium">{c.name}
               <input value={entityName} onChange={(e) => setEntityName(e.target.value)} required minLength={2} maxLength={180} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" placeholder={c.nameHint} />
             </label>
