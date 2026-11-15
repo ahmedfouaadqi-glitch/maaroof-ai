@@ -223,7 +223,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       siteDiscoveryIssue = String(error?.readIssue || error?.message || "site_read_failed").slice(0, 120);
       await ctx.emit("site_discovery_error", { url: siteAuditUrl, issue: siteDiscoveryIssue });
     }
-  }
+  } else if (siteAuditUrl) siteDiscoveryIssue = "site_read_skipped_in_safe_mode";
 
   // Load workspace profile if scoped — used by envision/plan/council.
   let workspaceProfile: any = null;
@@ -607,7 +607,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
         if (siteDiscovery.markdown.length >= 20 && allowed("analyze")) targetedSteps.push({ tool: "analyze", input: { text: siteDiscovery.markdown, lang: ctx.language, scope: siteScope }, reason: "تحليل محتوى الصفحة العامة المستخرج من الرابط المستهدف." });
         if (discoveredBrand && allowed("known")) targetedSteps.push({ tool: "known", input: { brand: discoveredBrand, website: siteAuditUrl, url: siteAuditUrl }, reason: "التحقق من هوية الكيان وروابطه العامة من بيانات الموقع." });
         if (discoveredBrand && ctx.liveProbe !== false && allowed("visibility")) targetedSteps.push({ tool: "visibility", input: { brand: discoveredBrand, official_website: siteAuditUrl, keywords: siteDiscovery.site.sector || "", lang: ctx.language, scope: siteScope }, reason: "قياس الظهور الفعلي للعلامة المكتشفة عبر محركات الذكاء الاصطناعي." });
-        planResp = { text: JSON.stringify({ steps: targetedSteps.slice(0, Math.max(1, MAX_STEPS)), final_answer_hint: "Separate on-page readiness from live engine observations. Unknown identity fields remain unknown; no score is a ranking guarantee." }), tokens: 0, usd: 0 };
+        planResp = { text: JSON.stringify({ steps: targetedSteps.slice(0, Math.max(1, MAX_STEPS)), final_answer_hint: discoveredBrand ? "Separate on-page readiness from live engine observations. Unknown identity fields remain unknown; no score is a ranking guarantee." : "The site did not provide a reliable brand name. Report page evidence, leave brand visibility unmeasured and request brand confirmation before live engine probes." }), tokens: 0, usd: 0 };
       } else if (siteAuditUrl && siteDiscoveryIssue) {
         planResp = { text: JSON.stringify({ steps: [], final_answer_hint: "The website could not be read. Report the failed read and ask for a publicly accessible URL; do not infer identity or sector." }), tokens: 0, usd: 0 };
       } else {
