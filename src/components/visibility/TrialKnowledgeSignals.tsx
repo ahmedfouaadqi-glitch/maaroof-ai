@@ -4,7 +4,6 @@ type Lang = "ar" | "en" | "ku";
 type Props = {
   lang: Lang;
   entity: { type: string; type_detection?: string; category?: string | null; market?: string | null };
-  metrics: { mention_rate_percent: number | null; recommendation_rate_percent: number | null };
 };
 
 const TEXT = {
@@ -45,7 +44,7 @@ const TEXT = {
 
 const TERMS = ["GEO", "AEO", "KGO", "E-E-A-T", "RAG", "Schema.org"] as const;
 
-export function TrialKnowledgeSignals({ lang, entity, metrics }: Props) {
+export function TrialKnowledgeSignals({ lang, entity }: Props) {
   const t = TEXT[lang] || TEXT.ar;
   const type = entity.type === "person" ? t.person : entity.type === "organization" ? t.organization : t.unknown;
   const detection = entity.type_detection === "manual" ? t.confirmed : t.model;
