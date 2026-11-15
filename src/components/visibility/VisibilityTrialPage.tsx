@@ -2,9 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { FreeAuditMarketing, FreeAuditResultCta } from "@/components/visibility/FreeAuditMarketing";
 import { useEffect, useState, type FormEvent } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { AuthProvider } from "@/lib/auth";
 import { computeFingerprint } from "@/lib/fingerprint";
-import { AuthGate } from "@/components/AuthGate";
 import { TrialKnowledgeSignals } from "@/components/visibility/TrialKnowledgeSignals";
 import { GeoScopeSelector, type GeoScope } from "@/components/GeoScopeSelector";
 import { FreeAuditTour } from "@/components/visibility/FreeAuditTour";
@@ -109,7 +108,7 @@ export type TrialPrefill = { entity?: string; category?: string; market?: string
 
 export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill } = {}) {
   const { lang } = useI18n();
-  const { user, session, loading } = useAuth();
+  
   const l = lang === "ar" || lang === "ku" ? lang : "en";
   const c = COPY[l];
   const [entityName, setEntityName] = useState(prefill.entity?.slice(0, 180) || "");
@@ -159,11 +158,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   }, [expiresAt, c.expiredText]);
 
   useEffect(() => {
-    if (!session?.access_token) return;
+    if (!sessionId) return;
     let active = true;
     void fetch("/api/visibility-trial", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+      headers: { "Content-Type": "application/json", "X-Trial-Session": sessionId },
       body: JSON.stringify({ action: "latest" }),
     }).then((response) => response.json()).then((data) => {
       if (!active || !data.ok) return;
@@ -191,11 +190,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
       }
     }).catch(() => {});
     return () => { active = false; };
-  }, [session?.access_token, c.expiredText, c.failed, c.requestInProgress]);
+  }, [sessionId, c.expiredText, c.failed, c.requestInProgress]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!session?.access_token || busy || !deviceId || !sessionId) return;
+    if (busy || !deviceId || !sessionId) return;
     setBusy(true); setMessage(null); setContact(null); setRetryAt(null); setResult(null); setRetrievalUsed(false);
     const payload = {
       action: "start", entity_name: entityName, entity_type: entityType,
@@ -218,7 +217,6 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer " + session.access_token,
           "X-Trial-Device": deviceId,
           "X-Trial-Session": sessionId,
         },
@@ -261,12 +259,12 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   };
 
   const retrieve = async () => {
-    if (!attemptId || !session?.access_token || busy) return;
+    if (!attemptId || !sessionId || busy) return;
     setBusy(true); setMessage(null);
     try {
       const response = await fetch("/api/visibility-trial", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+        headers: { "Content-Type": "application/json", "X-Trial-Session": sessionId },
         body: JSON.stringify({ action: "retrieve", attempt_id: attemptId }),
       });
       const data = await response.json();
@@ -293,8 +291,6 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
     } finally { setBusy(false); }
   };
 
-  if (loading) return <AuthGate state="loading" title={c.eyebrow} redirect="/free-audit" />;
-  if (!user) return <AuthGate state="signed-out" title={c.eyebrow} redirect="/free-audit" />;
 
   const contactPanel = contact && (
     <section className="mt-6 rounded-2xl border border-border bg-card p-5">

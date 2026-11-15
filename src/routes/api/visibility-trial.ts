@@ -155,13 +155,20 @@ async function getContactSettings(admin: any) {
   }
 }
 
+/** No sign-in: the visitor is a stable server-derived UUID from the browser's trial session id. */
 async function getAdmin(request: Request) {
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return { error: "auth_required" as const };
-  const { data } = await admin.auth.getUser(auth.slice(7));
-  if (!data.user?.id) return { error: "auth_required" as const };
-  return { admin, userId: data.user.id };
+  const sessionSignal = cleanText(request.headers.get("x-trial-session"), 200);
+  if (!/^[0-9a-f-]{36}$/i.test(sessionSignal)) return { error: "session_verification_unavailable" as const };
+  let h: string;
+  try { h = hashTrialSignal(sessionSignal, "visitor"); } catch { return { error: "trial_security_not_configured" as const }; }
+  const hex = h.replace(/[^0-9a-f]/gi, "").padEnd(32, "0").slice(0, 32);
+  const userId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  return { admin, userId };
+}
+
+async function archiveTrial(admin: any, row: Record<string, unknown>) {
+  try { await admin.from("visibility_trial_archive").insert(row); } catch { /* archive is best-effort */ }
 }
 
 async function chooseThreeVerifiedModels() {
@@ -228,7 +235,7 @@ export const Route = createFileRoute("/api/visibility-trial")({
         let body: StartBody;
         try { body = await request.json() as StartBody; } catch { return jsonError("invalid_json", 400); }
         const auth = await getAdmin(request).catch(() => ({ error: "server_not_configured" as const }));
-        if ("error" in auth && auth.error) return jsonError(auth.error, auth.error === "auth_required" ? 401 : 503);
+        if ("error" in auth && auth.error) return jsonError(auth.error, 503);
         const { admin, userId } = auth as { admin: NonNullable<typeof auth.admin>; userId: string };
         // Opportunistic cleanup: report payloads are erased at 72h and lock rows at 77h.
         try { await admin.rpc("purge_expired_visibility_trial_data"); } catch { /* opportunistic */ }
@@ -422,7 +429,8 @@ export const Route = createFileRoute("/api/visibility-trial")({
           });
           const answered = results.filter((x) => x.status === "answered");
           if (!answered.length) {
-            await admin.rpc("complete_visibility_trial_attempt", { p_attempt_id: attemptId, p_user_id: userId, p_result: null, p_status: "failed" });
+            await archiveTrial(admin, { attempt_id: attemptId, visitor_id: userId, entity_name: name, entity_type: entityType, category, description, market, language: lang, assets, status: "failed", models, result: { engines: results }, duration_ms: Date.now() - startedAt });
+                      await admin.rpc("complete_visibility_trial_attempt", { p_attempt_id: attemptId, p_user_id: userId, p_result: null, p_status: "failed" });
             return jsonError("all_engine_routes_failed", 502, { attempt_id: attemptId, counted_as_started: true });
           }
           const autoTypes = results.filter((x) => x.status === "answered" && x.entity_type && x.entity_type !== "unknown").map((x) => x.entity_type);
@@ -465,11 +473,14 @@ export const Route = createFileRoute("/api/visibility-trial")({
           const { data: completed, error: completeError } = await admin.rpc("complete_visibility_trial_attempt", {
             p_attempt_id: attemptId, p_user_id: userId, p_result: result, p_status: completeStatus,
           });
+          await archiveTrial(admin, { attempt_id: attemptId, visitor_id: userId, entity_name: name, entity_type: entityType, category, description, market, language: lang, assets, status: completeStatus, models, result: result, duration_ms: Date.now() - startedAt });
           if (completeError || completed !== true) return jsonError("trial_result_persistence_failed", 500, { attempt_id: attemptId, counted_as_started: true });
           return Response.json({ ok: true, attempt_id: attemptId, result, result_expires_at: resultExpiresAt, free_trial_counter: Number(counter || 0), duration_ms: Date.now() - startedAt }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           await admin.rpc("complete_visibility_trial_attempt", { p_attempt_id: attemptId, p_user_id: userId, p_result: null, p_status: "failed" });
           console.error("[visibility-trial] run failed", error);
+          await archiveTrial(admin, { attempt_id: attemptId, visitor_id: userId, entity_name: name, entity_type: entityType, category, description, market, language: lang, assets, status: "failed", models, result: { error: String(error instanceof Error ? error.message : error).slice(0, 300) }, duration_ms: Date.now() - startedAt });
+          
           return jsonError(controller.signal.aborted ? "trial_timeout" : "trial_execution_failed", controller.signal.aborted ? 504 : 502, { attempt_id: attemptId, counted_as_started: true });
         } finally {
           clearTimeout(timer);

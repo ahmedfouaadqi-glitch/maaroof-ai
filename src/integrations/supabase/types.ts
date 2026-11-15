@@ -5881,6 +5881,60 @@ export type Database = {
         }
         Relationships: []
       }
+      visibility_trial_archive: {
+        Row: {
+          assets: Json | null
+          attempt_id: string
+          category: string | null
+          created_at: string
+          description: string | null
+          duration_ms: number | null
+          entity_name: string | null
+          entity_type: string | null
+          id: string
+          language: string | null
+          market: string | null
+          models: Json | null
+          result: Json | null
+          status: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          assets?: Json | null
+          attempt_id: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_ms?: number | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string
+          language?: string | null
+          market?: string | null
+          models?: Json | null
+          result?: Json | null
+          status?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          assets?: Json | null
+          attempt_id?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_ms?: number | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string
+          language?: string | null
+          market?: string | null
+          models?: Json | null
+          result?: Json | null
+          status?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
       visibility_trial_attempts: {
         Row: {
           created_at: string
