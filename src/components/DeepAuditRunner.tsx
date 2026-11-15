@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 
 type L = "ar" | "en" | "ku";
-const AXIS_NAME: Record<string, Record<L, string>> = {
+const AXIS_CAP: Record<string, number> = { seo: 85, aeo: 80, geo: 80, sge: 75, gseo: 60 };\nconst AXIS_NAME: Record<string, Record<L, string>> = {
   seo: { ar: "SEO · جاهزية الصفحة التقنية", en: "SEO · On-page technical readiness", ku: "SEO · ئامادەیی تەکنیکی پەڕە" },
   aeo: { ar: "AEO · قابلية استخراج الإجابات", en: "AEO · Answer extraction readiness", ku: "AEO · ئامادەیی دەرهێنانی وەڵام" },
   geo: { ar: "GEO · إشارات المحتوى والكيان", en: "GEO · Content and entity signals", ku: "GEO · نیشانەکانی ناوەڕۆک و قەوارە" },
@@ -41,14 +41,14 @@ const SIGNAL: Record<string, Record<L, string>> = {
   brand_in_body: { ar: "اسم العلامة وارد في متن الصفحة", en: "Brand name appears in page content", ku: "ناوی براند لە دەقی پەڕەدا هەیە" },
 };
 const T = {
-  ar: { start: "ابدأ الفحص العميق", confirm: "موافق، ابدأ", cancel: "إلغاء", est: "الكلفة التقديرية", bal: "رصيدك", per: "لكل رابط", note: "يُخصم فقط عن الروابط التي قُرئت فعلاً. الفشل لا يُحسب.", running: "جارٍ الفحص في الخلفية — يمكنك متابعة التصفح", done: "نتيجة الفحص", overall: "مؤشر جاهزية الصفحة المرجّح", un: "لم يُقَس بعد", failed: "تعذّر الفحص", charged: "خُصم", read: "قُرئ", of: "من", nolinks: "أضف روابط لتفعيل الفحص.", unpriced: "لم يُسعَّر الفحص لحسابك بعد." },
-  en: { start: "Start deep audit", confirm: "Approve & start", cancel: "Cancel", est: "Estimated cost", bal: "Your balance", per: "per link", note: "Charged only for links actually read. Failures are free.", running: "Auditing in the background — keep browsing", done: "Audit result", overall: "Weighted page-readiness indicator", un: "Not measured yet", failed: "Audit failed", charged: "Charged", read: "Read", of: "of", nolinks: "Add links to enable the audit.", unpriced: "The audit is not priced for your account yet." },
-  ku: { start: "دەستپێکردنی پشکنینی قووڵ", confirm: "ڕازیم، دەست پێبکە", cancel: "هەڵوەشاندنەوە", est: "تێچووی خەمڵێنراو", bal: "باڵانس", per: "بۆ هەر بەستەرێک", note: "تەنها بۆ بەستەرە خوێنراوەکان دەبڕدرێت.", running: "پشکنین لە پاشبنەمادا — بەردەوام بە", done: "ئەنجامی پشکنین", overall: "پێوەری کێشدار بۆ ئامادەیی پەڕە", un: "هێشتا نەپێوراوە", failed: "پشکنین سەرنەکەوت", charged: "بڕدرا", read: "خوێنرایەوە", of: "لە", nolinks: "بەستەر زیاد بکە.", unpriced: "نرخ دانەنراوە." },
+  ar: { start: "ابدأ الفحص العميق", confirm: "موافق، ابدأ", cancel: "إلغاء", est: "الكلفة التقديرية", bal: "رصيدك", per: "لكل رابط", note: "يُخصم فقط عن الروابط التي قُرئت فعلاً. الفشل لا يُحسب.", running: "جارٍ الفحص في الخلفية — يمكنك متابعة التصفح", done: "نتيجة الفحص", overall: "مؤشر نقاط الجاهزية المرجّح (ليس نسبة مئوية)", un: "لم يُقَس بعد", failed: "تعذّر الفحص", charged: "خُصم", read: "قُرئ", of: "من", nolinks: "أضف روابط لتفعيل الفحص.", unpriced: "لم يُسعَّر الفحص لحسابك بعد." },
+  en: { start: "Start deep audit", confirm: "Approve & start", cancel: "Cancel", est: "Estimated cost", bal: "Your balance", per: "per link", note: "Charged only for links actually read. Failures are free.", running: "Auditing in the background — keep browsing", done: "Audit result", overall: "Weighted readiness points (not a percentage)", un: "Not measured yet", failed: "Audit failed", charged: "Charged", read: "Read", of: "of", nolinks: "Add links to enable the audit.", unpriced: "The audit is not priced for your account yet." },
+  ku: { start: "دەستپێکردنی پشکنینی قووڵ", confirm: "ڕازیم، دەست پێبکە", cancel: "هەڵوەشاندنەوە", est: "تێچووی خەمڵێنراو", bal: "باڵانس", per: "بۆ هەر بەستەرێک", note: "تەنها بۆ بەستەرە خوێنراوەکان دەبڕدرێت.", running: "پشکنین لە پاشبنەمادا — بەردەوام بە", done: "ئەنجامی پشکنین", overall: "خاڵی کێشدار بۆ ئامادەیی (ڕێژە نییە)", un: "هێشتا نەپێوراوە", failed: "پشکنین سەرنەکەوت", charged: "بڕدرا", read: "خوێنرایەوە", of: "لە", nolinks: "بەستەر زیاد بکە.", unpriced: "نرخ دانەنراوە." },
 };
 const EXPLAIN: Record<L, { basis: string; notProof: string; numericCaveat: string }> = {
-  ar: { basis: "هذه درجات استدلالية لتهيئة الصفحة ومحتواها وفق إشارات تقنية مرصودة، وليست قياساً لترتيب Google أو ظهور العلامة في إجابات نماذج الذكاء الاصطناعي.", notProof: "لا يثبت هذا الفحص الفهرسة أو الترتيب أو الاقتباس أو الظهور الفعلي في محركات الذكاء الاصطناعي. يلزم فحص مستقل لكل محرك لإثبات ذلك.", numericCaveat: "أرقام مرصودة في النص؛ لم يتم التحقق من صحتها أو مصادرها." },
-  en: { basis: "These are heuristic page-readiness scores based on detected technical and content signals, not Google rankings or measured brand visibility in AI answers.", notProof: "This audit does not prove indexing, ranking, citations, or actual AI-engine visibility. Separate engine-level probes are required.", numericCaveat: "Numeric strings detected in text; their accuracy and sources were not verified." },
-  ku: { basis: "ئەم نمرانە خەمڵاندنی ئامادەیی پەڕەن لەسەر بنەمای نیشانە تەکنیکی و ناوەڕۆکییە دۆزراوەکان، نەک ڕیزبەندی گووگڵ یان دەرکەوتنی پێوراو لە وەڵامی زیرەکی دەستکرد.", notProof: "ئەم پشکنینە فهرستکردن، ڕیزبەندی، ئاماژەپێدان یان دەرکەوتنی ڕاستەقینە لە بزوێنەرەکانی زیرەکی دەستکرد ناسەلمێنێت.", numericCaveat: "ژمارە لە دەقدا دۆزراونەتەوە؛ دروستی و سەرچاوەکانیان پشتڕاست نەکراونەتەوە." },
+  ar: { basis: "هذه نقاط استدلالية لتهيئة الصفحة ومحتواها وفق إشارات مرصودة. لكل محور سقف نقاط مختلف موضح بجانب الدرجة؛ لذلك لا تُقارن الأرقام الخام بين المحاور كأنها نسب مئوية.", notProof: "لا يثبت هذا الفحص الفهرسة أو الترتيب أو الاقتباس أو الظهور الفعلي في محركات الذكاء الاصطناعي. يلزم فحص مستقل لكل محرك لإثبات ذلك.", numericCaveat: "أرقام مرصودة في النص؛ لم يتم التحقق من صحتها أو مصادرها." },
+  en: { basis: "These are heuristic page-readiness points based on detected signals. Each axis has a different maximum shown beside its score; raw points must not be compared as if they were percentages.", notProof: "This audit does not prove indexing, ranking, citations, or actual AI-engine visibility. Separate engine-level probes are required.", numericCaveat: "Numeric strings detected in text; their accuracy and sources were not verified." },
+  ku: { basis: "ئەم خاڵانە خەمڵاندنی ئامادەیی پەڕەن؛ هەر تەوەرێک سنووری خاڵی جیاوازی هەیە کە لە تەنیشت نمرەکەدا پیشان دەدرێت، بۆیە نابێت وەک ڕێژەی سەدی بەراورد بکرێن.", notProof: "ئەم پشکنینە فهرستکردن، ڕیزبەندی، ئاماژەپێدان یان دەرکەوتنی ڕاستەقینە لە بزوێنەرەکانی زیرەکی دەستکرد ناسەلمێنێت.", numericCaveat: "ژمارە لە دەقدا دۆزراونەتەوە؛ دروستی و سەرچاوەکانیان پشتڕاست نەکراونەتەوە." },
 };
 function explainSignal(raw: string, lang: L): string {
   const exact = SIGNAL[raw]?.[lang];
@@ -116,7 +116,7 @@ export function DeepAuditRunner({ lang, hasLinks }: { lang: L; hasLinks: boolean
   }
 
   const running = status === "running" || status === "queued";
-  const axisRows = result ? Object.entries(result.axes || {}).map(([k, v]) => [AXIS_NAME[k]?.[lang] || k.toUpperCase(), v == null ? t.un : `${v}/100`] as [string, string]) : [];
+  const axisRows = result ? Object.entries(result.axes || {}).map(([k, v]) => [AXIS_NAME[k]?.[lang] || k.toUpperCase(), v == null ? t.un : `${v}/${AXIS_CAP[k] ?? "—"}`] as [string, string]) : [];
 
   if (!hasLinks) return <p className="mt-2 text-muted-foreground">{t.nolinks}</p>;
   return (
@@ -150,19 +150,19 @@ export function DeepAuditRunner({ lang, hasLinks }: { lang: L; hasLinks: boolean
       )}
       {result && (
         <div className="space-y-2 rounded-lg border border-border bg-background/60 p-2">
-          <div className="font-semibold">{t.done} — {t.overall}: {result.overall ?? t.un}/100</div>\n          <p className="text-xs leading-5 text-muted-foreground">{EXPLAIN[lang].basis}</p>\n          <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs leading-5">{EXPLAIN[lang].notProof}</p>
+          <div className="font-semibold">{t.done} — {t.overall}: {result.overall ?? t.un}</div>\n          <p className="text-xs leading-5 text-muted-foreground">{EXPLAIN[lang].basis}</p>\n          <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs leading-5">{EXPLAIN[lang].notProof}</p>
           <div className="text-muted-foreground">{t.read} {result.succeeded} {t.of} {result.total} · {t.charged} {result.charged}</div>
           <div className="grid grid-cols-5 gap-1 text-center">{axisRows.map(([k, v]) => <div key={k} className="rounded bg-muted p-1"><div className="font-semibold">{k}</div><div>{v}</div></div>)}</div>
           {result.targets.map((tg: any) => (
             <div key={tg.url} className="border-t border-border pt-1">
               <div dir="ltr" className="truncate font-medium">{tg.url}</div>
-              {tg.findings.map((f: any) => <div key={f.axis} className="text-muted-foreground">{f.axis.toUpperCase()}: {VERDICT[f.verdict][lang]}{f.score != null ? ` (${f.score})` : ""}{f.evidence.length ? ` — ${f.evidence.map((signal: string) => explainSignal(signal, lang)).join(" · ")}` : ""}</div>)}
+              {tg.findings.map((f: any) => <div key={f.axis} className="text-muted-foreground">{f.axis.toUpperCase()}: {VERDICT[f.verdict][lang]}{f.score != null ? ` (${f.score}/${AXIS_CAP[f.axis] ?? "—"})` : ""}{f.evidence.length ? ` — ${f.evidence.map((signal: string) => explainSignal(signal, lang)).join(" · ")}` : ""}</div>)}
             </div>
           ))}
           <ExportButtons build={() => ({
             title: t.done, lang, sections: [
               { heading: t.overall, kind: "kv", rows: [[t.overall, result.overall ?? t.un], ...axisRows] },
-              ...result.targets.map((tg: any) => ({ heading: tg.url, kind: "table" as const, table: { columns: [lang === "ar" ? "المحور" : lang === "ku" ? "تەوەر" : "Axis", lang === "ar" ? "الدرجة" : lang === "ku" ? "نمرە" : "Score", lang === "ar" ? "التقييم" : lang === "ku" ? "هەڵسەنگاندن" : "Verdict", lang === "ar" ? "الإشارات المرصودة (ليست إثبات ظهور)" : lang === "ku" ? "نیشانە دۆزراوەکان" : "Detected signals (not visibility proof)"], data: tg.findings.map((f: any) => [AXIS_NAME[f.axis]?.[lang] || f.axis.toUpperCase(), f.score ?? "—", VERDICT[f.verdict][lang], f.evidence.map((signal: string) => explainSignal(signal, lang)).join(", ")]) } })),
+              ...result.targets.map((tg: any) => ({ heading: tg.url, kind: "table" as const, table: { columns: [lang === "ar" ? "المحور" : lang === "ku" ? "تەوەر" : "Axis", lang === "ar" ? "الدرجة" : lang === "ku" ? "نمرە" : "Score", lang === "ar" ? "التقييم" : lang === "ku" ? "هەڵسەنگاندن" : "Verdict", lang === "ar" ? "الإشارات المرصودة (ليست إثبات ظهور)" : lang === "ku" ? "نیشانە دۆزراوەکان" : "Detected signals (not visibility proof)"], data: tg.findings.map((f: any) => [AXIS_NAME[f.axis]?.[lang] || f.axis.toUpperCase(), f.score == null ? "—" : `${f.score}/${AXIS_CAP[f.axis] ?? "—"}`, VERDICT[f.verdict][lang], f.evidence.map((signal: string) => explainSignal(signal, lang)).join(", ")]) } })),
             ],
           }) as any} />
         </div>
