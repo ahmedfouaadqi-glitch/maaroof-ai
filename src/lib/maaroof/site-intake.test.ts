@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { extractDiscoveredSite, extractSiteUrlFromGoal, normalizePublicSiteUrl } from "./site-intake";
+import { extractDiscoveredSite, extractSiteUrlFromGoal, normalizePublicSiteUrl, isExternalSiteAuditGoal } from "./site-intake";
 
 describe("site URL intake", () => {
   it("extracts and normalizes a URL from natural-language audit requests", () => {
     expect(extractSiteUrlFromGoal("can u audit this website : https://shopandbeyondlb.com")).toBe("https://shopandbeyondlb.com");
     expect(extractSiteUrlFromGoal("افحص https://example.com/products?x=1.")).toBe("https://example.com/products?x=1");
+  });
+  it("recognizes audit intent without treating every URL as an audit", () => {
+    expect(isExternalSiteAuditGoal("can u audit this website: https://shopandbeyondlb.com")).toBe(true);
+    expect(isExternalSiteAuditGoal("please translate https://example.com")).toBe(false);
   });
   it("rejects local, private and credential-bearing URLs", () => {
     expect(normalizePublicSiteUrl("http://localhost:3000")).toBeNull();
