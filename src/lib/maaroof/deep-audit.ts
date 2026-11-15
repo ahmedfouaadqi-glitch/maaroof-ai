@@ -174,7 +174,7 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
   const title = String(ev?.title || "").trim();
   const desc = String(ev?.description || "").trim();
   const hasBody = md.length > 40;
-  const hasMetadata = title.length >= 3 || desc.length >= 20;
+  const hasMetadata = title.length >= 3 && desc.length >= 20;
   const combined = [title, desc, md].join("\n");
   const blocked = /(challenge_required|verify (?:that )?you(?:'re| are) human|sorry, this page isn't available|access denied)/i.test(combined);
   const loginShell = /(log in or sign up to view|sign in to view|log in to see|sign in to see)/i.test(combined);
