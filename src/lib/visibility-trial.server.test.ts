@@ -55,9 +55,17 @@ describe("visibility trial identity and risk helpers", () => {
     expect(getTrustedClientIp(new Request("https://example.com"))).toBeNull();
   });
 
-  it("fails closed when no server-side IP intelligence provider is configured", async () => {
+  it("uses an explicitly unverified local-lock fallback when IP intelligence is not configured", async () => {
     delete process.env.IP_RISK_CHECK_URL;
     delete process.env.IP_RISK_CHECK_TOKEN;
-    await expect(verifyTrialIpRisk("203.0.113.4")).rejects.toThrow("ip_risk_service_not_configured");
+    await expect(verifyTrialIpRisk("203.0.113.4")).resolves.toEqual({
+      verified: false, vpn: false, proxy: false, tor: false, risk: "unknown",
+    });
+  });
+
+  it("rejects a partially configured IP intelligence provider", async () => {
+    delete process.env.IP_RISK_CHECK_URL;
+    process.env.IP_RISK_CHECK_TOKEN = "configured-token";
+    await expect(verifyTrialIpRisk("203.0.113.4")).rejects.toThrow("ip_risk_service_incomplete");
   });
 });
