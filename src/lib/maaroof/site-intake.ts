@@ -176,7 +176,7 @@ export function extractDiscoveredSite(urlValue: string, page: SiteDiscoveryEvide
   const evidence: DiscoveredSite["evidence"] = [];
   if (schemaName) evidence.push({ field: "brand_name", source: "json_ld_organization", excerpt: schemaName.slice(0, 160) });
   else if (titleName) evidence.push({ field: "brand_name", source: "page_title", excerpt: titleName.slice(0, 160) });
-  else evidence.push({ field: "display_name", source: "domain", excerpt: parsed.hostname });
+  // A domain-derived display label is presentation metadata, not evidence of a business fact.
   if (sector.sector) evidence.push({ field: "sector", source: schemaTypes.length ? "schema_and_page_content" : "page_content", excerpt: sector.sector });
   if (country.country) evidence.push({ field: "country", source: country.status, excerpt: country.country });
   const confidence: DiscoveredSite["confidence"] = schemaName && sector.sector && country.country ? "high"
