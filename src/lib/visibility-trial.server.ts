@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 
 export type TrialEntityType = "person" | "organization" | "unknown";
-export type IpRisk = { verified: true; vpn: boolean; proxy: boolean; tor: boolean; risk: "low" | "medium" | "high" };
+export type IpRisk = { verified: boolean; vpn: boolean; proxy: boolean; tor: boolean; risk: "low" | "medium" | "high" | "unknown" };
 
 function secret() {
   const value = process.env.TRIAL_IDENTITY_SECRET;
@@ -31,12 +31,12 @@ export function trialEntityFingerprint(name: string, type: TrialEntityType): str
 /**
  * Uses a server-configured IP intelligence adapter. The adapter contract is:
  * POST {ip} with Bearer token; JSON response {vpn:boolean,proxy:boolean,tor:boolean,risk:"low"|"medium"|"high"}.
- * Missing or malformed intelligence is deliberately fail-closed.
+ * If no provider is configured, the caller can continue with the existing atomic\n * trial reservation locks; the IP signal remains explicitly unverified. Configured\n * provider failures and malformed responses still fail closed.
  */
 export async function verifyTrialIpRisk(ip: string): Promise<IpRisk> {
   const endpoint = process.env.IP_RISK_CHECK_URL;
   const token = process.env.IP_RISK_CHECK_TOKEN;
-  if (!endpoint || !token) throw new Error("ip_risk_service_not_configured");
+  if (!endpoint && !token) return { verified: false, vpn: false, proxy: false, tor: false, risk: "unknown" };\n  if (!endpoint || !token) throw new Error("ip_risk_service_incomplete");
   let url: URL;
   try { url = new URL(endpoint); } catch { throw new Error("ip_risk_service_invalid"); }
   if (url.protocol !== "https:" || url.hostname === "localhost" || url.hostname.endsWith(".local")) {
