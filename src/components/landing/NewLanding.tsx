@@ -73,13 +73,14 @@ const COPY = {
     cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
-    core: "الجوهر الخماسي",
+    core: "منظومة الظهور ومؤشرها التكاملي",
     pillars: [
       ["SEO", "البنية", "صفحات قابلة للزحف وبيانات منظمة تفهمها الآلة."],
       ["AEO", "الإجابات المباشرة", "محتوى يجيب عن السؤال في أول سطرين."],
       ["GEO", "كثافة الحقائق", "إحصاءات واقتباسات تجعل النماذج تستشهد بك."],
       ["SGE", "تلخيصات البحث", "حضور داخل الملخصات التوليدية أعلى نتائج البحث."],
-      ["GSEO", "اتساق الهوية", "هوية واحدة متطابقة عبر كل المحركات والمنصات."],
+      ["GSEO", "اتساق الهوية", "هوية واحدة متسقة عبر المحركات والمنصات."],
+      ["SGEO", "مؤشر معروف التكاملي", "يقيس التقاطع والتشابه والاختلاف بين SEO وAEO وGEO وSGE، ويعرض تكاملها دون إخفاء نتيجة كل محور."],
     ],
     vsTitle: "البحث التقليدي مقابل محركات الإجابة",
     vsCols: ["البحث التقليدي", "محركات الإجابة التوليدية"],
@@ -116,13 +117,14 @@ const COPY = {
     cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
-    core: "The five pillars",
+    core: "Visibility ecosystem and its integrated index",
     pillars: [
       ["SEO", "Structure", "Crawlable pages and machine-readable structured data."],
       ["AEO", "Direct answers", "Content that answers the question in its first lines."],
       ["GEO", "Fact density", "Statistics and quotes that make models cite you."],
       ["SGE", "Search summaries", "Presence inside generative summaries at the top of search."],
-      ["GSEO", "Identity consistency", "One matching identity across every engine and platform."],
+      ["GSEO", "Identity consistency", "A consistent identity across engines and platforms."],
+      ["SGEO", "Maaroof Integrated Index", "Measures overlap, similarity and divergence across SEO, AEO, GEO and SGE, then reads how they work together without hiding each axis result."],
     ],
     vsTitle: "Traditional search vs answer engines",
     vsCols: ["Traditional search", "Generative answer engines"],
@@ -159,13 +161,14 @@ const COPY = {
     cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
-    core: "پێنج کۆڵەکەکە",
+    core: "سیستەمی دەرکەوتن و پێوەری تێکەڵی",
     pillars: [
       ["SEO", "پێکهاتە", "پەڕەی خوێندراوە و داتای ڕێکخراو بۆ ئامێر."],
       ["AEO", "وەڵامی ڕاستەوخۆ", "ناوەڕۆکێک لە یەکەم دێڕدا وەڵام دەداتەوە."],
       ["GEO", "چڕی ڕاستییەکان", "ئامار و وتە کە مۆدێلەکان ئاماژەت پێ دەکەن."],
       ["SGE", "پوختەی گەڕان", "ئامادەبوون لە پوختە زیرەکەکانی سەرەوەی گەڕان."],
-      ["GSEO", "یەکگرتوویی ناسنامە", "یەک ناسنامە لە هەموو بزوێنەر و پلاتفۆرمەکان."],
+      ["GSEO", "یەکگرتوویی ناسنامە", "ناسنامەیەکی یەکگرتوو لە بزوێنەر و پلاتفۆرمەکان."],
+      ["SGEO", "پێوەری تێکەڵی معروف", "هاوبەشی، لێکچوون و جیاوازیی SEO و AEO و GEO و SGE دەپێوێت و کاریگەریی تێکەڵبوونیان دەخوێنێتەوە."],
     ],
     vsTitle: "گەڕانی ئاسایی بەرامبەر بزوێنەرەکانی وەڵام",
     vsCols: ["گەڕانی ئاسایی", "بزوێنەرە زیرەکەکانی وەڵام"],
@@ -196,7 +199,7 @@ const COPY = {
   },
 } as const;
 
-const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "GSEO"];
+const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"];
 
 export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { lang } = useI18n();
