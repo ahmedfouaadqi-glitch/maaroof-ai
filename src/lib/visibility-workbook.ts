@@ -131,7 +131,7 @@ export function buildVisibilityWorkbook(brand: string, probe: ProbeLike, lang: W
           knowledge?.maturity || entry.terminology_status,
           knowledge?.measurement_methods.join("; ") || "—",
           knowledge?.limitations.join("; ") || "—",
-          knowledge?.sources.map((source) => source.url).join("\\n") || "—",
+          knowledge?.sources.map((source) => source.url).join("\n") || "—",
         ];
       }),
     ],
