@@ -204,6 +204,13 @@
       "when": 1794762087465,
       "tag": "0028_visibility_trial",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794762295690,
+      "tag": "0029_scope_tool_plan_access",
+      "breakpoints": true
     }
   ]
 }
