@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeC
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
+import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
 import { useAuth } from "@/lib/auth";
@@ -67,9 +68,9 @@ function VisibilityVector() {
 const COPY = {
   ar: {
     badge: "مساحة العمل الذكية",
-    title: "اجعل علامتك مصدراً تقتبسه محركات الإجابة",
+    title: "نعزّز ظهور علامتك الرقمية عبر منظومة البحث والذكاء الاصطناعي",
     rotPrefix: "نحسّن ظهورك عبر",
-    brandName: "معروف", sub: "يعرف كيف تراك محركات البحث التوليدية، يقيس حضورك، يحسّن ظهورك، ويجعلك أنت الإجابة.",
+    brandName: "معروف", sub: "يحلل حضورك الرقمي ويقيس ظهورك عبر محركات البحث ومحركات الإجابة ومنصات الذكاء الاصطناعي، ويحدد فرص التحسين المدعومة بالأدلة.",
     cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
@@ -99,7 +100,7 @@ const COPY = {
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
     skills: "المهارات المتاحة",
-    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
+    stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "أدوات مسجلة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
@@ -111,9 +112,9 @@ const COPY = {
   },
   en: {
     badge: "Smart Workspace",
-    title: "Make your brand a source answer engines cite",
+    title: "Strengthen your digital visibility across search and AI ecosystems",
     rotPrefix: "We improve your visibility through",
-    brandName: "Maaroof", sub: "knows how generative engines see you, measures your presence, and makes you the answer.",
+    brandName: "Maaroof", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
     cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
@@ -143,7 +144,7 @@ const COPY = {
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
     skills: "Available skills",
-    stats: ["AI engines", "Ready skills", "Supported languages", "Free trial runs"],
+    stats: ["AI engines", "Ready skills", "Registered tools", "Supported languages", "Free trial runs"],
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
@@ -155,9 +156,9 @@ const COPY = {
   },
   ku: {
     badge: "شوێنی کاری زیرەک",
-    title: "براندەکەت بکە بە سەرچاوەیەک کە بزوێنەرەکانی وەڵام وەریدەگرن",
+    title: "دەرکەوتنی دیجیتاڵی براندەکەت لە گەڕان و زیرەکی دەستکرددا بەهێز بکە",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
-    brandName: "مەعروف", sub: "دەزانێت بزوێنەرە بەرهەمهێنەرەکان چۆن دەتبینن، ئامادەبوونت دەپێوێت، دەرکەوتنت باشتر دەکات و دەتکاتە وەڵامەکە.",
+    brandName: "مەعروف", sub: "ئامادەبوونی دیجیتاڵییەکەت لە بزوێنەرەکانی گەڕان و وەڵام و پلاتفۆرمەکانی زیرەکی دەستکرد شیدەکاتەوە و هەلەکانی باشترکردن دیاری دەکات.",
     cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
@@ -187,7 +188,7 @@ const COPY = {
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
     skills: "کارامەییە بەردەستەکان",
-    stats: ["مۆدێلی زیرەک", "کارامەیی ئامادە", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
+    stats: ["مۆدێلەکانی زیرەک", "کارامەیی ئامادە", "ئامرازە تۆمارکراوەکان", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
@@ -262,11 +263,11 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         </section>
 
         {/* 2. Live, server-backed stats */}
-        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[3]}>
-          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
-            {[ENGINES.length, skills.length, 3, freeTrialAttempts].map((n, i) => (
+        <section className="mx-auto max-w-5xl px-4 pb-16" aria-label={c.stats[4]}>
+          <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-3 lg:grid-cols-3">
+            {[ENGINES.length, skills.length, TOOL_CATALOG.filter((tool) => tool.group === "tools").length, 3, freeTrialAttempts].map((n, i) => (
               <div key={i} className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-4 shadow-sm transition-colors duration-200 hover:border-primary/40">
-                {i === 3 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
+                {i === 4 && <div aria-hidden className="pointer-events-none absolute -end-5 -top-5 size-20 rounded-full border border-primary/15 transition-transform duration-500 group-hover:scale-125" />}
                 {n === null ? (
                   <span className="relative font-display text-3xl font-bold text-muted-foreground md:text-4xl" aria-live="polite">—</span>
                 ) : (
@@ -306,7 +307,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </div>
         </section>
 
-        {/* 5. Five pillars */}
+        {/* 5. Search and AI visibility disciplines */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
           <h2 className="text-center font-display text-3xl font-bold">{c.core}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
