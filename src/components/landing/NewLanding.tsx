@@ -70,7 +70,7 @@ const COPY = {
     badge: "مساحة العمل الذكية",
     title: "نعزّز ظهور علامتك الرقمية عبر منظومة البحث والذكاء الاصطناعي",
     rotPrefix: "نحسّن ظهورك عبر",
-    brandName: "MAAROOF Ai", sub: "An AI visibility and entity intelligence platform that helps brands structure verifiable identity signals and assess how they appear across search and AI answer experiences.",
+    brandName: "MAAROOF Ai", sub: "منصة لذكاء الظهور والكيانات، تساعد العلامات التجارية على تنظيم إشارات هويتها القابلة للتحقق وتقييم ظهورها في محركات البحث وتجارب إجابات الذكاء الاصطناعي.",
     cta: "اتصل بنا", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
@@ -158,7 +158,7 @@ const COPY = {
     badge: "شوێنی کاری زیرەک",
     title: "دەرکەوتنی دیجیتاڵی براندەکەت لە گەڕان و زیرەکی دەستکرددا بەهێز بکە",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
-    brandName: "MAAROOF Ai", sub: "An AI visibility and entity intelligence platform that helps brands structure verifiable identity signals and assess how they appear across search and AI answer experiences.",
+    brandName: "MAAROOF Ai", sub: "پلاتفۆرمێک بۆ زیرەکی دەرکەوتن و قەوارەکانە؛ یارمەتی براندەکان دەدات نیشانەکانی ناسنامەی پشتڕاستکراو ڕێکبخەن و دەرکەوتنیان لە گەڕان و وەڵامەکانی زیرەکی دەستکرد هەڵبسەنگێنن.",
     cta: "پەیوەندیمان پێوە بکە", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
@@ -478,10 +478,17 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             <h3 className="font-display text-2xl font-bold">{c.final}</h3>
             <div className="mt-5 flex justify-center"><Cta /></div>
           </div>
-          <p className="mt-10 text-center text-xs tracking-wide text-muted-foreground">
-            {l === "en" ? "Supported and sponsored by" : l === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"}
-            <span className="mx-1.5 font-semibold text-foreground/80">Joint Media House Holding</span>
-          </p>
+          <div className="mt-10 flex flex-col items-center gap-2 text-center">
+            <div className="flex items-center justify-center gap-3">
+              <span className="size-12 shrink-0 overflow-hidden" aria-hidden="true">
+                <img src="/joint-media-house-holding-mark.png" alt="" className="h-12 w-auto max-w-none" />
+              </span>
+              <span className="text-sm font-semibold tracking-wide text-foreground/80">Joint Media House Holding</span>
+            </div>
+            <p className="text-xs tracking-wide text-muted-foreground">
+              {l === "en" ? "Supported and sponsored by" : l === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"}
+            </p>
+          </div>
         </section>
       </main>
     </div>
