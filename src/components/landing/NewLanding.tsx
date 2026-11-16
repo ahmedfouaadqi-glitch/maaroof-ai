@@ -74,7 +74,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "منصة لذكاء الظهور والكيانات، تساعد العلامات التجارية على تنظيم إشارات هويتها القابلة للتحقق وتقييم ظهورها في محركات البحث وتجارب إجابات الذكاء الاصطناعي.",
     cta: "اتصل بنا", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
-    how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
+    how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيار كل أداة قبل البدء."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
     core: "منظومة الظهور ومؤشرها التكاملي",
     pillars: [
       ["SEO", "البنية", "صفحات قابلة للزحف وبيانات منظمة تفهمها الآلة."],
@@ -105,7 +105,7 @@ const COPY = {
     faq: "أسئلة شائعة",
     faqs: [
       ["هل الإجابات حقيقية؟", "نعم، كل نتيجة تأتي من سؤال فعلي للنماذج مع حالة وسبب واضحين، ولا نختلق نتائج."],
-      ["متى يُخصم الرصيد؟", "بعد نجاح العملية فقط، ونعرض الكلفة قبل التنفيذ."],
+      ["كيف أعرف إن كانت النماذج تذكر علامتي؟", "نسأل المحركات العشرة عن علامتك ونعرض إجابة كل محرك وهل ذكرك أو أوصى بك."],
       ["هل أحتاج موقعاً؟", "لا، نعمل أيضاً مع صناع المحتوى والأفراد بلا موقع أو حسابات."],
     ],
     final: "ابدأ الآن واعرف كيف تراك النماذج العشرة",
@@ -118,7 +118,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
     cta: "Contact us", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
-    how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
+    how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools and why each one was picked before starting."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
     core: "Visibility ecosystem and its integrated index",
     pillars: [
       ["SEO", "Structure", "Crawlable pages and machine-readable structured data."],
@@ -149,7 +149,7 @@ const COPY = {
     faq: "FAQ",
     faqs: [
       ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
-      ["When is my balance charged?", "Only after success, and the cost is shown before running."],
+      ["How do I know if AI models mention my brand?", "We ask all ten engines about your brand and show each answer, and whether it mentioned or recommended you."],
       ["Do I need a website?", "No. We also work with creators and individuals without a site or accounts."],
     ],
     final: "Start now and see how the ten models see you",
@@ -193,7 +193,7 @@ const COPY = {
     faq: "پرسیارە باوەکان",
     faqs: [
       ["وەڵامەکان ڕاستەقینەن؟", "بەڵێ، هەر ئەنجامێک لە پرسیارێکی ڕاستەقینەوە دێت بە دۆخ و هۆکاری ڕوون."],
-      ["کەی باڵانس دەبڕدرێت؟", "تەنها دوای سەرکەوتن، و تێچوو پێشتر پیشان دەدرێت."],
+      ["چۆن بزانم مۆدێلەکان ناوی براندەکەم دەهێنن؟", "لە هەر دە بزوێنەرەکە دەپرسین و وەڵامی هەریەکە پیشان دەدەین، ئایا ناویان هێنایت یان پێشنیاریان کردیت."],
       ["پێویستم بە ماڵپەڕە؟", "نەخێر، لەگەڵ دروستکەران و تاکەکانی بێ ماڵپەڕیش کار دەکەین."],
     ],
     final: "ئێستا دەست پێبکە و بزانە دە مۆدێلەکە چۆن دەتبینن",

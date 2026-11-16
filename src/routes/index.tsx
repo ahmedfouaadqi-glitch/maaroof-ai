@@ -52,7 +52,7 @@ export const Route = createFileRoute("/")({
             mainEntity: [
               ["What is MAAROOF Ai?", "MAAROOF Ai asks 10 AI models (ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Mistral, DeepSeek, Kimi, Qwen) about your brand and measures your presence across 5 axes: SEO, AEO, GEO, SGE and GSEO, in 3 languages."],
               ["Are the answers real?", "Yes. Every result comes from a real query with a clear status and reason. Nothing is fabricated."],
-              ["When is my balance charged?", "Only after success, and the cost is shown before running."],
+              ["How do I know if AI models mention my brand?", "MAAROOF Ai asks all ten engines about your brand and shows each answer, and whether it mentioned or recommended you."],
               ["Do I need a website?", "No. MAAROOF Ai also works with creators and individuals without a site or accounts."],
               ["Which countries does MAAROOF Ai serve?", "MAAROOF Ai serves brands in any country and market worldwide."],
               ["Which languages are supported?", "Arabic, English and Kurdish."],
