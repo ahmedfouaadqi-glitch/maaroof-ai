@@ -1183,3 +1183,25 @@
 .free-audit-page[lang="en"] li {
   text-wrap: pretty;
 }
+
+
+/* Free trial: keep the page shell LTR while directing only language-bearing text. */
+.free-audit-page {
+  direction: ltr;
+}
+
+.free-audit-page > header,
+.free-audit-page > header > div {
+  direction: ltr;
+}
+
+.free-audit-page[lang="ar"] :where(p, h1, h2, h3, label, legend, summary, li, input, textarea, [role="alert"]),
+.free-audit-page[lang="ku"] :where(p, h1, h2, h3, label, legend, summary, li, input, textarea, [role="alert"]) {
+  direction: rtl;
+  text-align: start;
+}
+
+.free-audit-page[lang="en"] :where(p, h1, h2, h3, label, legend, summary, li, input, textarea, [role="alert"]) {
+  direction: ltr;
+  text-align: start;
+}
