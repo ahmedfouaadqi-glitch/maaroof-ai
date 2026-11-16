@@ -29,6 +29,9 @@ describe("public discovery + app-link files", () => {
       "src/routes/guide.arabic-kurdish-geo.tsx",
       "src/routes/methodology.tsx",
       "src/routes/contact.tsx",
+      "src/routes/markets.tsx",
+      "src/routes/privacy.tsx",
+      "src/routes/terms.tsx",
     ];
     for (const path of paths) {
       const source = readFileSync(path, "utf8");
