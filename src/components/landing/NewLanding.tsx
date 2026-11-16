@@ -74,7 +74,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "منصة لذكاء الظهور والكيانات، تساعد العلامات التجارية على تنظيم إشارات هويتها القابلة للتحقق وتقييم ظهورها في محركات البحث وتجارب إجابات الذكاء الاصطناعي.",
     cta: "اتصل بنا", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
-    eqTitle: "معادلة الظهور في عصر محركات الإجابة", eq: [["أزمة البحث الصفري (Zero-Click)", "أكثر من 60% من عمليات البحث تنتهي دون نقرة واحدة؛ يكتفي المستخدم بإجابة الذكاء الاصطناعي ولا يزور الروابط التقليدية."], ["خسارة الفرصة لصالح المنافس", "غيابك يعني توجيه العميل لمنافسك؛ صمت النماذج عن علامتك يدفعها لاقتراح البدائل المقتبسة في ذاكرتها."], ["كثافة الحقائق الموثقة", "النماذج تبحث عن أرقام وإحصاءات وبيانات واضحة في أول 100 كلمة، وليس نصوصاً تسويقية عامة."], ["اتساق بطاقة الكيان", "تطابق اسم علامتك وخدماتك وفروعك في سجلات الآلة وشبكات المعرفة دون تناقض."], ["خريطة الفجوات والمنافسين", "كشف الكلمات والموضوعات التي اقتبست فيها النماذج منافسيك وغابت عنها علامتك."]] as [string, string][], eqSource: "المصدر: دراسات البحث الصفري، SparkToro/Datos 2024",
+    eqTitle: "معادلة الظهور في عصر محركات الإجابة", eq: [["أزمة البحث الصفري (Zero-Click)", "أكثر من 60% من عمليات البحث تنتهي دون نقرة واحدة؛ يكتفي المستخدم بإجابة الذكاء الاصطناعي ولا يزور الروابط التقليدية."], ["خسارة الفرصة لصالح المنافس", "غيابك يعني توجيه العميل لمنافسك؛ صمت النماذج عن علامتك يدفعها لاقتراح البدائل المقتبسة في ذاكرتها."], ["كثافة الحقائق الموثقة", "النماذج تبحث عن أرقام وإحصاءات وبيانات واضحة في أول 100 كلمة، وليس نصوصاً تسويقية عامة."], ["اتساق بطاقة الكيان", "تطابق اسم علامتك وخدماتك وفروعك في سجلات الآلة وشبكات المعرفة دون تناقض."], ["خريطة الفجوات والمنافسين", "كشف الكلمات والموضوعات التي اقتبست فيها النماذج منافسيك وغابت عنها علامتك."]] as [string, string][],
     core: "منظومة الظهور ومؤشرها التكاملي",
     pillars: [
       ["SEO", "البنية", "صفحات قابلة للزحف وبيانات منظمة تفهمها الآلة."],
@@ -118,7 +118,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
     cta: "Contact us", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
-    eqTitle: "The visibility equation in the answer-engine era", eq: [["The zero-click crisis", "Over 60% of searches end without a single click; users settle for the AI answer and never visit traditional links."], ["Losing the lead to competitors", "Your absence sends the customer to a competitor; when models are silent about you, they suggest the alternatives in their memory."], ["Density of verified facts", "Models look for numbers, statistics and clear data in the first 100 words, not generic marketing copy."], ["Entity card consistency", "Your brand name, services and branches match across machine records and knowledge graphs, with no contradictions."], ["Gaps and competitors map", "Reveals the keywords and topics where models cited your competitors and left your brand out."]] as [string, string][], eqSource: "Source: zero-click studies, SparkToro/Datos 2024",
+    eqTitle: "The visibility equation in the answer-engine era", eq: [["The zero-click crisis", "Over 60% of searches end without a single click; users settle for the AI answer and never visit traditional links."], ["Losing the lead to competitors", "Your absence sends the customer to a competitor; when models are silent about you, they suggest the alternatives in their memory."], ["Density of verified facts", "Models look for numbers, statistics and clear data in the first 100 words, not generic marketing copy."], ["Entity card consistency", "Your brand name, services and branches match across machine records and knowledge graphs, with no contradictions."], ["Gaps and competitors map", "Reveals the keywords and topics where models cited your competitors and left your brand out."]] as [string, string][],
     core: "Visibility ecosystem and its integrated index",
     pillars: [
       ["SEO", "Structure", "Crawlable pages and machine-readable structured data."],
@@ -162,7 +162,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "پلاتفۆرمێک بۆ زیرەکی دەرکەوتن و قەوارەکانە؛ یارمەتی براندەکان دەدات نیشانەکانی ناسنامەی پشتڕاستکراو ڕێکبخەن و دەرکەوتنیان لە گەڕان و وەڵامەکانی زیرەکی دەستکرد هەڵبسەنگێنن.",
     cta: "پەیوەندیمان پێوە بکە", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
-    eqTitle: "هاوکێشەی دەرکەوتن لە سەردەمی بزوێنەرەکانی وەڵام", eq: [["قەیرانی گەڕانی بێ کلیک", "زیاتر لە 60%ی گەڕانەکان بێ یەک کلیک کۆتایی دێن؛ بەکارهێنەر بە وەڵامی زیرەکی دەستکرد ڕازی دەبێت."], ["لەدەستدانی دەرفەت بۆ ڕکابەر", "نەبوونت کڕیار بەرەو ڕکابەرەکەت دەبات؛ بێدەنگی مۆدێلەکان دەیانخاتە پێشنیارکردنی جێگرەوەکان."], ["چڕی ڕاستییە پشتڕاستکراوەکان", "مۆدێلەکان لە یەکەم 100 وشەدا بەدوای ژمارە و ئامار و داتای ڕووندا دەگەڕێن، نەک دەقی بازاڕکردنی گشتی."], ["یەکگرتوویی کارتی قەوارە", "ناو و خزمەتگوزاری و لقەکانی براندەکەت لە تۆمارەکانی ئامێر و تۆڕەکانی زانیاریدا بێ ناکۆکی یەک دەگرنەوە."], ["نەخشەی کەلێن و ڕکابەران", "ئەو وشە و بابەتانە ئاشکرا دەکات کە مۆدێلەکان ڕکابەرەکانتیان تێدا هێناوە و براندەکەت ونە."]] as [string, string][], eqSource: "سەرچاوە: لێکۆڵینەوەکانی گەڕانی بێ کلیک، SparkToro/Datos 2024",
+    eqTitle: "هاوکێشەی دەرکەوتن لە سەردەمی بزوێنەرەکانی وەڵام", eq: [["قەیرانی گەڕانی بێ کلیک", "زیاتر لە 60%ی گەڕانەکان بێ یەک کلیک کۆتایی دێن؛ بەکارهێنەر بە وەڵامی زیرەکی دەستکرد ڕازی دەبێت."], ["لەدەستدانی دەرفەت بۆ ڕکابەر", "نەبوونت کڕیار بەرەو ڕکابەرەکەت دەبات؛ بێدەنگی مۆدێلەکان دەیانخاتە پێشنیارکردنی جێگرەوەکان."], ["چڕی ڕاستییە پشتڕاستکراوەکان", "مۆدێلەکان لە یەکەم 100 وشەدا بەدوای ژمارە و ئامار و داتای ڕووندا دەگەڕێن، نەک دەقی بازاڕکردنی گشتی."], ["یەکگرتوویی کارتی قەوارە", "ناو و خزمەتگوزاری و لقەکانی براندەکەت لە تۆمارەکانی ئامێر و تۆڕەکانی زانیاریدا بێ ناکۆکی یەک دەگرنەوە."], ["نەخشەی کەلێن و ڕکابەران", "ئەو وشە و بابەتانە ئاشکرا دەکات کە مۆدێلەکان ڕکابەرەکانتیان تێدا هێناوە و براندەکەت ونە."]] as [string, string][],
     core: "سیستەمی دەرکەوتن و پێوەری تێکەڵی",
     pillars: [
       ["SEO", "پێکهاتە", "پەڕەی خوێندراوە و داتای ڕێکخراو بۆ ئامێر."],
@@ -330,7 +330,6 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               </Reveal>
             ))}
           </div>
-          <p className="mt-3 text-center text-xs text-muted-foreground">{c.eqSource}</p>
         </section>
 
         {/* 5. Search and AI visibility disciplines */}
