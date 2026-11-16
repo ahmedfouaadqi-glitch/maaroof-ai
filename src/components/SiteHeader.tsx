@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, Menu, X, Volume2, VolumeX, Phone } from "lucide-react";
+import { LogOut, Menu, X, Phone } from "lucide-react";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
 import { HexBadge } from "@/components/HexBadge";
 import { useAuth } from "@/lib/auth";
@@ -12,7 +12,6 @@ import { CountryBadge } from "@/components/CountryBadge";
 import { Widget } from "@/lib/visibility";
 import { useHeaderConfig, type ExtraLink, type ExtraPhone } from "@/lib/content";
 
-import { isSoundEnabled, setSoundEnabled, playClick } from "@/lib/sound";
 import { supabase } from "@/integrations/supabase/client";
 
 function linkLabel(l: ExtraLink, lang: Lang): string {
@@ -26,11 +25,11 @@ export function SiteHeader() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [sound, setSound] = useState(true);
+
   const [workbenchPath, setWorkbenchPath] = useState<"/workspace" | "/maaroof">("/workspace");
   const [interfacePolicy, setInterfacePolicy] = useState<{ available_interfaces: string[]; allow_user_interface_choice: boolean; show_professional_link: boolean; default_ui: "workbench" | "professional" }>({ available_interfaces: ["workbench", "professional"], allow_user_interface_choice: true, show_professional_link: true, default_ui: "workbench" });
   const hdr = useHeaderConfig();
-  useEffect(() => { setSound(isSoundEnabled()); }, []);
+
   useEffect(() => {
     let active = true;
     supabase.from("app_settings").select("value").eq("key", "user_interface_policy").maybeSingle().then(async ({ data }) => {
@@ -51,12 +50,6 @@ export function SiteHeader() {
   try { auth = useAuth(); } catch { /* not in provider */ }
 
   const close = () => setOpen(false);
-  const toggleSound = () => {
-    const next = !sound;
-    setSound(next);
-    setSoundEnabled(next);
-    if (next) playClick();
-  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -107,16 +100,7 @@ export function SiteHeader() {
           <LanguageSwitcher />
           <ThemeToggle />
           <Widget k="alerts_bell"><AlertsBell /></Widget>
-          <button
-            type="button"
-            onClick={toggleSound}
-            aria-label={sound ? t("sound_off") : t("sound_on")}
-            title={sound ? t("sound_off") : t("sound_on")}
-            className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground"
-          >
-            {sound ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
-          </button>
-          {auth?.user ? (
+{auth?.user ? (
             <button onClick={() => auth!.signOut()} className="hidden items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:inline-flex">
               <LogOut className="size-3" /> {t("nav_signout")}
             </button>
