@@ -39,6 +39,14 @@ describe("public discovery + app-link files", () => {
     }
   });
 
+  it("uses one organization identifier on the homepage and contact page", () => {
+    const home = readFileSync("src/routes/index.tsx", "utf8");
+    const contact = readFileSync("src/routes/contact.tsx", "utf8");
+    expect(home).toContain('"@id": "https://maaroofai.com/#org"');
+    expect(contact).toContain('"@id": "https://maaroofai.com/#org"');
+    expect(contact).not.toContain('"@type": "LocalBusiness"');
+  });
+
   it("does not advertise a stale nine-engine count in the GEO vs AEO guide", () => {
     const guide = readFileSync("src/routes/guide.geo-vs-aeo.tsx", "utf8");
     expect(guide).not.toMatch(/across 9 AI engines/i);
