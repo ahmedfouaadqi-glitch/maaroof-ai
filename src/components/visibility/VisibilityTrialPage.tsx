@@ -387,7 +387,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
           </form>
 
           <aside className="h-fit rounded-2xl border border-border/70 bg-card/50 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold"><LockKeyhole className="size-4 text-primary" />{c.security.split(".")[0]}</div>
+            <div className="flex flex-row items-center gap-2 text-sm font-semibold"><LockKeyhole className="size-4 text-primary" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.security.split(".")[0]}</span></div>
             <p className="mt-3 text-xs leading-6 text-muted-foreground">{c.sample}</p>
             <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="size-4" />72h report · 5h cooldown</div>
             {attemptId && (
@@ -420,11 +420,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
             <div className="mt-6 space-y-4">
               {result.engines.map((engine) => (
                 <article key={engine.engine} className="rounded-xl border border-border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{engine.name}</h3><span className="text-xs text-muted-foreground">{engine.status === "answered" ? c.answered : c.error}</span></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{engine.name}</h3><span className="text-xs text-muted-foreground" dir={l === "en" ? "ltr" : "rtl"}>{engine.status === "answered" ? c.answered : c.error}</span></div>
                   {engine.status === "answered" && <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned === null || engine.mentioned === undefined ? c.unknown : engine.mentioned ? c.yes : c.no}</span>
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence === "high" ? c.high : engine.confidence === "medium" ? c.medium : engine.confidence === "low" ? c.low : c.unknown}</span>
+                    <span dir={l === "en" ? "ltr" : "rtl"} className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned === null || engine.mentioned === undefined ? c.unknown : engine.mentioned ? c.yes : c.no}</span>
+                    <span dir={l === "en" ? "ltr" : "rtl"} className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
+                    <span dir={l === "en" ? "ltr" : "rtl"} className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence === "high" ? c.high : engine.confidence === "medium" ? c.medium : engine.confidence === "low" ? c.low : c.unknown}</span>
                   </div>}
                   {engine.discovery_answer && <div className="mt-3 rounded-lg bg-muted/30 p-3 text-xs leading-6"><strong>{c.discovery}</strong><p className="mt-1">{engine.discovery_answer}</p></div>}
                   {engine.summary && <p className="mt-3 text-sm leading-7">{engine.summary}</p>}
