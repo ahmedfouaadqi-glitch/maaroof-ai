@@ -19,15 +19,15 @@ export type ContactInfo = {
 };
 
 export const DEFAULT_CONTACT_INFO: ContactInfo = {
-  whatsapp_number: "9647733570130",
-  phone_display: "+964 773 357 0130",
-  email: "ahmedfouaad.qi@gmail.com",
-  address_ar: "بغداد، العراق",
-  address_en: "Baghdad, Iraq",
-  address_ku: "بەغدا، عێراق",
+  whatsapp_number: "9613421964",
+  phone_display: "+9613421964",
+  email: "mark@jointmediahouse.agency",
+  address_ar: "بيروت، لبنان",
+  address_en: "Beirut, Lebanon",
+  address_ku: "بەیروت، لوبنان",
   hours_ar: "السبت – الخميس · 9 ص – 6 م",
-  hours_en: "Sat – Thu · 9 AM – 6 PM",
-  hours_ku: "شەممە – پێنجشەممە · ٩ ب.ن – ٦ د.ن",
+  hours_en: "Saturday – Thursday · 9 AM – 6 PM",
+  hours_ku: "شەممە – پێنجشەممە · ٩ی بەیانی – ٦ی ئێوارە",
   facebook: "",
   instagram: "",
   twitter: "",

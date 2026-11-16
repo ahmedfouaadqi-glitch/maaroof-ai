@@ -94,7 +94,7 @@ export const ar: Dict = {
   contact_phone: "رقم التواصل",
   whatsapp_cta: "واتساب",
   call_cta: "اتصال",
-  footer_contact: "للتواصل: +964 773 357 0130",
+  footer_contact: "للتواصل: +9613421964",
   auth_email: "البريد الإلكتروني",
   auth_password: "كلمة المرور",
   auth_forgot: "نسيت كلمة المرور؟",

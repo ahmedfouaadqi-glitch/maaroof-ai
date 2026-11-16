@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getLandingData } from "@/lib/landing.functions";
-import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Phone, Mail, MapPin, ChevronDown, Mouse } from "lucide-react";
+import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Phone, Mail, MapPin, Clock, MessageCircle, ChevronDown, Mouse } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";

@@ -132,7 +132,7 @@ export const ku: Dict = {
   contact_phone: "ژمارەی پەیوەندی",
   whatsapp_cta: "واتسئەپ",
   call_cta: "پەیوەندی",
-  footer_contact: "پەیوەندی: +964 773 357 0130",
+  footer_contact: "پەیوەندی: +9613421964",
   auth_email: "ئیمەیڵ",
   auth_password: "وشەی نهێنی",
   auth_forgot: "وشەی نهێنیت لەبیر چووە؟",

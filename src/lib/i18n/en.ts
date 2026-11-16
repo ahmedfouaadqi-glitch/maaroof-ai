@@ -94,7 +94,7 @@ export const en: Dict = {
   contact_phone: "Contact phone",
   whatsapp_cta: "WhatsApp",
   call_cta: "Call",
-  footer_contact: "Contact: +964 773 357 0130",
+  footer_contact: "Contact: +9613421964",
   auth_email: "Email",
   auth_password: "Password",
   auth_forgot: "Forgot password?",

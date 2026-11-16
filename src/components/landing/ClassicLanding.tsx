@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles, Globe2, Bot, Phone, Mail, MapPin, ChevronDown } from "lucide-react";
+import { ArrowRight, Sparkles, Globe2, Bot, Phone, Mail, MapPin, Clock, MessageCircle, ChevronDown } from "lucide-react";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
 import { BlurText } from "@/components/motion/BlurText";
 import { ENGINES } from "@/components/engine-logos";
