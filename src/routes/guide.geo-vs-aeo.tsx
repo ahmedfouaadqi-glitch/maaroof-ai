@@ -121,9 +121,8 @@ function Page() {
 
         <h2 className="text-2xl font-semibold mt-8 mb-3">How MAAROOF Ai bridges both</h2>
         <p>
-          MAAROOF Ai measures your brand's recall across 9 AI engines, audits your on-site signals
-          (schema, content depth, citations), and generates AEO-friendly Q&amp;A blocks alongside
-          GEO-optimized articles in EN, AR and KU.
+          MAAROOF Ai helps assess brand presence across supported AI engines, review on-site signals
+          such as structured data and content, and plan improvements for English, Arabic and Kurdish.
         </p>
 
         <p className="mt-8">
