@@ -323,7 +323,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   );
 
   return (
-    <div className="free-audit-page min-h-screen" lang={l}>
+    <div className="free-audit-page min-h-screen" lang={l} dir="ltr">
       <FreeAuditHeader />
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-12">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
