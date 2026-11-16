@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles, Globe2, Bot, Phone } from "lucide-react";
+import { ArrowRight, Sparkles, Globe2, Bot, Phone, Mail, MapPin, ChevronDown } from "lucide-react";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
 import { BlurText } from "@/components/motion/BlurText";
 import { ENGINES } from "@/components/engine-logos";
@@ -102,9 +102,15 @@ export function ClassicLanding() {
               </div>
 
               <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
-                  {t("hero_cta_primary")} <ArrowRight className="size-4" />
-                </Link>
+                <details className="group relative">
+                  <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">{lang === "en" ? "Contact us" : lang === "ku" ? "پەیوەندیمان پێوە بکە" : "اتصل بنا"} <ChevronDown className="size-4 transition-transform group-open:rotate-180" /></summary>
+                  <div className="absolute bottom-full start-1/2 z-50 mb-3 w-[min(19rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-primary/25 bg-card/95 p-4 text-start text-foreground shadow-2xl backdrop-blur-xl">
+                    <div className="mb-3 text-sm font-semibold">MAAROOF Ai · Contact</div>
+                    <a href="tel:+9647733570130" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Phone className="size-4 text-primary" /> +964 773 357 0130</a>
+                    <a href="mailto:ahmedfouaad.qi@gmail.com" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Mail className="size-4 text-primary" /> ahmedfouaad.qi@gmail.com</a>
+                    <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground"><MapPin className="size-4 text-primary" /> Beirut, Lebanon</div>
+                  </div>
+                </details>
 
               </div>
             </div>
