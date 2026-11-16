@@ -13,6 +13,7 @@ import type { InterfacePolicy } from "@/lib/interface-policy";
 import { Reveal } from "@/components/motion/Reveal";
 import { SpotlightCard, CountUp, RotatingText, ShinyText, LogoLoop, Magnetic } from "@/components/motion/effects";
 import { ModelInsights } from "@/components/landing/ModelInsights";
+import { AnimatedLogoMark } from "@/components/AnimatedLogoMark";
 
 type L = "ar" | "en" | "ku";
 
@@ -478,16 +479,14 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             <h3 className="font-display text-2xl font-bold">{c.final}</h3>
             <div className="mt-5 flex justify-center"><Cta /></div>
           </div>
-          <div className="mt-10 flex flex-col items-center gap-2 text-center">
-            <div className="flex items-center justify-center gap-3">
-              <span className="size-12 shrink-0 overflow-hidden" aria-hidden="true">
-                <img src="/joint-media-house-holding-mark.png" alt="" className="h-12 w-auto max-w-none" />
-              </span>
-              <span className="text-sm font-semibold tracking-wide text-foreground/80">Joint Media House Holding</span>
-            </div>
-            <p className="text-xs tracking-wide text-muted-foreground">
+          <div className="joint-media-partner mt-10 flex flex-col items-center gap-2 text-center">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground">
               {l === "en" ? "Supported and sponsored by" : l === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"}
             </p>
+            <div className="joint-media-partner-mark" aria-label="Joint Media House Holding">
+              <AnimatedLogoMark src="/joint-media-house-holding-mark.png" alt="Joint Media House Holding logo" />
+            </div>
+            <span className="text-sm font-semibold tracking-wide text-foreground/80">Joint Media House Holding</span>
           </div>
         </section>
       </main>

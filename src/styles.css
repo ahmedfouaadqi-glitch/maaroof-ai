@@ -1218,3 +1218,25 @@
 .free-audit-page :where([dir="rtl"]) {
   unicode-bidi: plaintext;
 }
+
+
+/* Joint Media House Holding partner mark: preserve the complete source artwork
+   while applying the shared animated-logo treatment at a larger display size. */
+.joint-media-partner-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  overflow: visible;
+}
+.joint-media-partner-mark .maaroof-logo-motion {
+  width: 88px;
+  height: 64px;
+  flex: 0 0 88px;
+}
+.joint-media-partner-mark .maaroof-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
