@@ -41,6 +41,8 @@ export const Route = createFileRoute("/")({
             name: "MAAROOF Ai",
             alternateName: "معروف",
             url: "https://maaroofai.com/",
+            logo: { "@type": "ImageObject", url: "https://maaroofai.com/icon-512.png" },
+            contactPoint: { "@type": "ContactPoint", telephone: "+964 773 357 0130", email: "ahmedfouaad.qi@gmail.com", contactType: "customer support" },
             areaServed: "Worldwide",
             knowsLanguage: ["ar", "en", "ku"],
           },
