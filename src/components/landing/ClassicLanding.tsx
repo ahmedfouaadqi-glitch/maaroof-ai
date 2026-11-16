@@ -105,9 +105,7 @@ export function ClassicLanding() {
                 <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:scale-[1.03]">
                   {t("hero_cta_primary")} <ArrowRight className="size-4" />
                 </Link>
-                <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-6 py-3 text-sm font-semibold text-foreground/90 backdrop-blur transition hover:border-primary/60 hover:bg-card/80">
-                  {t("hero_cta_secondary")}
-                </Link>
+
               </div>
             </div>
 
@@ -124,7 +122,7 @@ export function ClassicLanding() {
             <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span><h3 className="mt-3 font-semibold">{t("home_step2_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step2_desc")}</p></div>
             <div className="rounded-xl border border-border bg-card/40 p-5"><span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</span><h3 className="mt-3 font-semibold">{t("home_step3_title")}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{t("home_step3_desc")}</p></div>
           </div>
-          <div className="mt-6 flex flex-wrap justify-center gap-3"><Link to="/guide" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:border-primary/50">{t("hero_cta_guide")}</Link><Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10">{t("hero_cta_secondary")}</Link></div>
+
         </section>
 
         {/* Crawlable, server-rendered summary so the homepage has substantive content for search engines */}
@@ -149,11 +147,7 @@ export function ClassicLanding() {
               <p className="mt-1 text-sm text-muted-foreground">Generate llms.txt and Schema.org JSON-LD so your brand identity stays consistent everywhere.</p>
             </div>
           </div>
-          <p className="mt-6 text-sm text-muted-foreground">
-            <Link to="/pricing" className="text-primary hover:underline">See plans and pricing</Link>
-            {" · "}
-            <Link to="/guide" className="text-primary hover:underline">Read the user guide</Link>
-          </p>
+
         </section>
       </main>
 
@@ -166,8 +160,7 @@ export function ClassicLanding() {
           </Link>
           <Link to="/privacy" className="hover:text-primary">{t("footer_privacy")}</Link>
           <Link to="/terms" className="hover:text-primary">{t("footer_terms")}</Link>
-          <Link to="/pricing" className="hover:text-primary">{t("footer_pricing")}</Link>
-          <Link to="/guide" className="hover:text-primary">{t("guide_title")}</Link>
+
         </div>
       </footer>
     </div>
