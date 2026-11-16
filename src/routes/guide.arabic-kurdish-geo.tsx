@@ -20,6 +20,9 @@ export const Route = createFileRoute("/guide/arabic-kurdish-geo")({
           "A practical Generative Engine Optimization guide for the MENA market: schema, language signals, and citation patterns for AR and KU queries.",
       },
       { property: "og:type", content: "article" },
+      { property: "og:image", content: "https://maaroofai.com/og-maaroof.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://maaroofai.com/og-maaroof.png" },
       { property: "og:url", content: "https://maaroofai.com/guide/arabic-kurdish-geo" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/guide/arabic-kurdish-geo" }],
@@ -102,8 +105,8 @@ function Page() {
 
         <h2>Why Arabic &amp; Kurdish GEO is a real opportunity</h2>
         <ul>
-          <li>Most GEO playbooks are written for English. Competition for AR/KU citations is far lower.</li>
-          <li>AI engines have thinner training data in Arabic and Kurdish, so a single authoritative source can dominate citations.</li>
+          <li>Many GEO resources focus on English-language examples; Arabic and Kurdish content should be evaluated using language- and market-specific evidence.</li>
+          <li>Coverage and citation patterns for Arabic and Kurdish vary by engine, topic and query; publish original, verifiable material rather than assuming low competition.</li>
           <li>Local entities (Iraqi cities, ministries, brands) are under-represented in English knowledge bases — your content fills the gap.</li>
         </ul>
 
