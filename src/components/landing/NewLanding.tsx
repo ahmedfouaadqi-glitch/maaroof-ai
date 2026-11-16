@@ -74,7 +74,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "منصة لذكاء الظهور والكيانات، تساعد العلامات التجارية على تنظيم إشارات هويتها القابلة للتحقق وتقييم ظهورها في محركات البحث وتجارب إجابات الذكاء الاصطناعي.",
     cta: "اتصل بنا", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
-    how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيار كل أداة قبل البدء."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
+    eqTitle: "معادلة الظهور في عصر محركات الإجابة", eq: [["أزمة البحث الصفري (Zero-Click)", "أكثر من 60% من عمليات البحث تنتهي دون نقرة واحدة؛ يكتفي المستخدم بإجابة الذكاء الاصطناعي ولا يزور الروابط التقليدية."], ["خسارة الفرصة لصالح المنافس", "غيابك يعني توجيه العميل لمنافسك؛ صمت النماذج عن علامتك يدفعها لاقتراح البدائل المقتبسة في ذاكرتها."], ["كثافة الحقائق الموثقة", "النماذج تبحث عن أرقام وإحصاءات وبيانات واضحة في أول 100 كلمة، وليس نصوصاً تسويقية عامة."], ["اتساق بطاقة الكيان", "تطابق اسم علامتك وخدماتك وفروعك في سجلات الآلة وشبكات المعرفة دون تناقض."], ["خريطة الفجوات والمنافسين", "كشف الكلمات والموضوعات التي اقتبست فيها النماذج منافسيك وغابت عنها علامتك."]] as [string, string][], eqSource: "المصدر: دراسات البحث الصفري، SparkToro/Datos 2024",
     core: "منظومة الظهور ومؤشرها التكاملي",
     pillars: [
       ["SEO", "البنية", "صفحات قابلة للزحف وبيانات منظمة تفهمها الآلة."],
@@ -118,7 +118,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
     cta: "Contact us", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
-    how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools and why each one was picked before starting."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
+    eqTitle: "The visibility equation in the answer-engine era", eq: [["The zero-click crisis", "Over 60% of searches end without a single click; users settle for the AI answer and never visit traditional links."], ["Losing the lead to competitors", "Your absence sends the customer to a competitor; when models are silent about you, they suggest the alternatives in their memory."], ["Density of verified facts", "Models look for numbers, statistics and clear data in the first 100 words, not generic marketing copy."], ["Entity card consistency", "Your brand name, services and branches match across machine records and knowledge graphs, with no contradictions."], ["Gaps and competitors map", "Reveals the keywords and topics where models cited your competitors and left your brand out."]] as [string, string][], eqSource: "Source: zero-click studies, SparkToro/Datos 2024",
     core: "Visibility ecosystem and its integrated index",
     pillars: [
       ["SEO", "Structure", "Crawlable pages and machine-readable structured data."],
@@ -162,7 +162,7 @@ const COPY = {
     brandName: "MAAROOF Ai", sub: "پلاتفۆرمێک بۆ زیرەکی دەرکەوتن و قەوارەکانە؛ یارمەتی براندەکان دەدات نیشانەکانی ناسنامەی پشتڕاستکراو ڕێکبخەن و دەرکەوتنیان لە گەڕان و وەڵامەکانی زیرەکی دەستکرد هەڵبسەنگێنن.",
     cta: "پەیوەندیمان پێوە بکە", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
-    how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
+    eqTitle: "هاوکێشەی دەرکەوتن لە سەردەمی بزوێنەرەکانی وەڵام", eq: [["قەیرانی گەڕانی بێ کلیک", "زیاتر لە 60%ی گەڕانەکان بێ یەک کلیک کۆتایی دێن؛ بەکارهێنەر بە وەڵامی زیرەکی دەستکرد ڕازی دەبێت."], ["لەدەستدانی دەرفەت بۆ ڕکابەر", "نەبوونت کڕیار بەرەو ڕکابەرەکەت دەبات؛ بێدەنگی مۆدێلەکان دەیانخاتە پێشنیارکردنی جێگرەوەکان."], ["چڕی ڕاستییە پشتڕاستکراوەکان", "مۆدێلەکان لە یەکەم 100 وشەدا بەدوای ژمارە و ئامار و داتای ڕووندا دەگەڕێن، نەک دەقی بازاڕکردنی گشتی."], ["یەکگرتوویی کارتی قەوارە", "ناو و خزمەتگوزاری و لقەکانی براندەکەت لە تۆمارەکانی ئامێر و تۆڕەکانی زانیاریدا بێ ناکۆکی یەک دەگرنەوە."], ["نەخشەی کەلێن و ڕکابەران", "ئەو وشە و بابەتانە ئاشکرا دەکات کە مۆدێلەکان ڕکابەرەکانتیان تێدا هێناوە و براندەکەت ونە."]] as [string, string][], eqSource: "سەرچاوە: لێکۆڵینەوەکانی گەڕانی بێ کلیک، SparkToro/Datos 2024",
     core: "سیستەمی دەرکەوتن و پێوەری تێکەڵی",
     pillars: [
       ["SEO", "پێکهاتە", "پەڕەی خوێندراوە و داتای ڕێکخراو بۆ ئامێر."],
@@ -316,20 +316,21 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </LogoLoop>
         </section>
 
-        {/* 4. How it works */}
+        {/* 4. Visibility equation */}
         <section className="mx-auto max-w-5xl px-4 pb-16">
-          <h2 className="text-center font-display text-3xl font-bold">{c.how}</h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {[{ i: Target, t: c.s1 }, { i: ShieldCheck, t: c.s2 }, { i: Sparkles, t: c.s3 }].map((s, n) => (
-              <Reveal key={n} delay={n * 80}>
+          <h2 className="text-center font-display text-3xl font-bold">{c.eqTitle}</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-6">
+            {c.eq.map(([t, d], n) => (
+              <Reveal key={n} delay={n * 70} className={n < 3 ? "md:col-span-2" : "md:col-span-3"}>
                 <SpotlightCard className="h-full p-5">
-                  <s.i className="size-5 text-primary" />
-                  <h3 className="mt-3 font-semibold">{n + 1}. {s.t[0]}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{s.t[1]}</p>
+                  <span className="font-display text-sm font-bold text-primary">0{n + 1}</span>
+                  <h3 className="mt-2 font-semibold">{t}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{d}</p>
                 </SpotlightCard>
               </Reveal>
             ))}
           </div>
+          <p className="mt-3 text-center text-xs text-muted-foreground">{c.eqSource}</p>
         </section>
 
         {/* 5. Search and AI visibility disciplines */}
