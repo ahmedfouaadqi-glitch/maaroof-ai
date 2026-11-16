@@ -132,6 +132,7 @@ export function ClassicLanding() {
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
         <div>{t("footer")}</div>
+        <div className="mt-2 text-[11px] text-muted-foreground">{lang === "en" ? "Supported and sponsored by" : lang === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"} <span className="font-semibold text-foreground/80">Joint Media House Holding</span></div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <Link to="/contact" className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-primary">
             <Phone className="size-3.5" /> {t("nav_contact")}
