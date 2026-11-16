@@ -1150,3 +1150,36 @@
 @media (prefers-reduced-motion: reduce) {
   .visibility-vector-flow { display: none; }
 }
+
+
+/* MAAROOF free-trial page: English-only typography. Arabic and Kurdish retain site typography. */
+.free-audit-page[lang="en"] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-synthesis: none;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.006em;
+}
+
+.free-audit-page[lang="en"] .font-display,
+.free-audit-page[lang="en"] h1,
+.free-audit-page[lang="en"] h2,
+.free-audit-page[lang="en"] h3 {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.free-audit-page[lang="en"] input,
+.free-audit-page[lang="en"] textarea,
+.free-audit-page[lang="en"] button,
+.free-audit-page[lang="en"] summary {
+  font-family: inherit;
+}
+
+.free-audit-page[lang="en"] p,
+.free-audit-page[lang="en"] label,
+.free-audit-page[lang="en"] li {
+  text-wrap: pretty;
+}
