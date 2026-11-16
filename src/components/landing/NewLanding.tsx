@@ -7,7 +7,6 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
-import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
 import { useCountry } from "@/lib/use-country";
 import type { InterfacePolicy } from "@/lib/interface-policy";
 import { Reveal } from "@/components/motion/Reveal";
@@ -100,7 +99,7 @@ const COPY = {
       ["فرد", "هوية رقمية واضحة تبدأ من الصفر."],
       ["وكالة تسويقية لديها عملاء", "مساحات منفصلة لكل عميل بهويته."],
     ],
-    skills: "المهارات المتاحة",
+    skills: "المهارات",
     stats: ["نماذج ذكاء اصطناعي", "مهارات جاهزة", "أدوات مسجلة", "لغات مدعومة", "مرات استخدام التجربة المجانية"],
     faq: "أسئلة شائعة",
     faqs: [
@@ -144,7 +143,7 @@ const COPY = {
       ["Individual", "A clear digital identity from scratch."],
       ["Agency with clients", "Separate spaces for each client and identity."],
     ],
-    skills: "Available skills",
+    skills: "Skills",
     stats: ["AI engines", "Ready skills", "Registered tools", "Supported languages", "Free trial runs"],
     faq: "FAQ",
     faqs: [
@@ -188,7 +187,7 @@ const COPY = {
       ["تاک", "ناسنامەیەکی دیجیتاڵی ڕوون لە سفرەوە."],
       ["ئاژانسی بازاڕگەری بە کڕیارەوە", "شوێنی جیا بۆ هەر کڕیارێک."],
     ],
-    skills: "کارامەییە بەردەستەکان",
+    skills: "کارامەییەکان",
     stats: ["مۆدێلەکانی زیرەک", "کارامەیی ئامادە", "ئامرازە تۆمارکراوەکان", "زمانی پشتگیریکراو", "ژمارەی بەکارهێنانی تاقیکردنەوەی خۆڕایی"],
     faq: "پرسیارە باوەکان",
     faqs: [
@@ -221,7 +220,6 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
     return () => { active = false; window.clearInterval(interval); };
   }, []);
   const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
-  const [openSkill, setOpenSkill] = useState<string | null>(null);
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
   const taxonomyGroups = l === "ar" ? [
     { title: "مجالات التخصص", terms: "SEO · GEO · ASO · AIO", note: "مجالات مرتبطة بتحسين الظهور والاكتشاف عبر البحث والمنصات." },
@@ -430,15 +428,11 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           <h2 className="text-center font-display text-3xl font-bold">{c.skills}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {skills.map((s) => (
-              <button key={s.key} type="button" onClick={() => setOpenSkill(s.key)} className="block h-full text-start">
-                <SpotlightCard className="h-full p-4 transition hover:border-primary/40">
-                  <div className="text-sm font-semibold">{s.label[l]}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">{s.description[l]}</p>
-                </SpotlightCard>
-              </button>
+              <SpotlightCard key={s.key} className="h-full p-4">
+                <div className="text-sm font-semibold">{s.label[l]}</div>
+              </SpotlightCard>
             ))}
           </div>
-          <SkillDetailsDialog skillKey={openSkill} l={l} onClose={() => setOpenSkill(null)} />
           <div className="hidden">
           </div>
         </section>
