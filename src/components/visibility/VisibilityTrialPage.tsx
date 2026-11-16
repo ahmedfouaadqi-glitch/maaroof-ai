@@ -34,7 +34,7 @@ const COPY = {
     name: "اسم الشخص أو العلامة أو المؤسسة", nameHint: "اكتب الاسم المعروف الذي تريد فحصه.",
     type: "نوع الكيان", auto: "اكتشاف تلقائي", person: "شخص", org: "مؤسسة / علامة تجارية",
     category: "التخصص أو الفئة (اختياري)", description: "وصف مختصر (اختياري)", market: "النطاق الجغرافي (اختياري)", langNote: "لغة التقرير: العربية. ستُجيب النماذج بهذه اللغة فقط؛ غيّرها من زر اللغة أعلى الصفحة قبل الفحص.",
-    assets: "روابط رقمية (اختياري)", assetsHint: "يمكن تركها فارغة. ضع كل رابط في سطر منفصل.",
+    assets: "روابط رقمية (اختياري)", assetsHint: "يمكن تركها فارغة. ضع كل رابط في سطر منفصل.", usageTitle: "إجمالي مرات بدء التجربة", usageNote: "عداد مباشر للمحاولات التي بدأها النظام فعلياً.", geoExpand: "تحديد النطاق الجغرافي (اختياري)",
     start: "ابدأ التجربة المجانية", working: "جارٍ تنفيذ الفحص المباشر", auth: "سجّل الدخول للمتابعة",
     security: "يتم التحقق من الاتصال وأهلية التجربة قبل بدء الفحص. لا نستخدم إجابات فحوصات سابقة.",
     unavailable: "التجربة غير متاحة حالياً", unavailableText: "لم يتم التحقق من ثلاثة مسارات مستقلة أو من إعدادات الحماية. لم يبدأ الفحص ولم يُحتسب كاستخدام.", expiredText: "انتهت صلاحية هذا التقرير وحُذفت بياناته المؤقتة.",
@@ -55,7 +55,7 @@ const COPY = {
     name: "Person, brand or organization name", nameHint: "Enter the name people use to identify this entity.",
     type: "Entity type", auto: "Detect automatically", person: "Person", org: "Organization / brand",
     category: "Sector or category (optional)", description: "Short description (optional)", market: "Geographic scope (optional)", langNote: "Report language: English. Models answer in this language only; change it from the language button at the top before running.",
-    assets: "Digital links (optional)", assetsHint: "Leave empty if none. Enter one URL per line.",
+    assets: "Digital links (optional)", assetsHint: "Leave empty if none. Enter one URL per line.", usageTitle: "Total trial starts", usageNote: "Live count of trials actually started by the system.", geoExpand: "Choose geographic scope (optional)",
     start: "Start free trial", working: "Running the live probe", auth: "Sign in to continue",
     security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
     unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.", expiredText: "This report has expired. Its temporary report data is no longer available.",
@@ -76,7 +76,7 @@ const COPY = {
     name: "ناوی کەس یان براند یان دامەزراوە", nameHint: "ئەو ناوە بنووسە کە خەڵک پێی دەناسن.",
     type: "جۆری قەوارە", auto: "دۆزینەوەی خۆکار", person: "کەس", org: "دامەزراوە / براند",
     category: "پسپۆڕی یان پۆل (ئارەزوومەندانە)", description: "پوختەیەکی کورت (ئارەزوومەندانە)", market: "بواری جوگرافی (ئارەزوومەندانە)", langNote: "زمانی ڕاپۆرت: کوردی. مۆدێلەکان تەنها بەم زمانە وەڵام دەدەنەوە؛ پێش پشکنین لە دوگمەی زمان لە سەرەوە بیگۆڕە.",
-    assets: "بەستەری دیجیتاڵ (ئارەزوومەندانە)", assetsHint: "ئەگەر نییە بەتاڵی بهێڵەوە. هەر بەستەرێک لە دێڕێکی جیاواز.",
+    assets: "بەستەری دیجیتاڵ (ئارەزوومەندانە)", assetsHint: "ئەگەر نییە بەتاڵی بهێڵەوە. هەر بەستەرێک لە دێڕێکی جیاواز.", usageTitle: "کۆی دەستپێکردنی تاقیکردنەوە", usageNote: "ژمارەی ڕاستەوخۆی ئەو تاقیکردنەوانەی بەڕاستی دەستیان پێکردووە.", geoExpand: "دیاریکردنی بواری جوگرافی (ئارەزوومەندانە)",
     start: "دەستپێکردنی تاقیکردنەوە", working: "پشکنینی ڕاستەوخۆ ئەنجام دەدرێت", auth: "بچۆ ژوورەوە بۆ بەردەوامبوون",
     security: "پێش پشکنین پەیوەندی و شایستەیی پشتڕاست دەکرێتەوە. وەڵامی پشکنینی پێشووتر بەکارناهێنین.",
     unavailable: "تاقیکردنەوە ئێستا بەردەست نییە", unavailableText: "سێ ڕێڕەوی جیاواز یان خزمەتگوزاری پاراستن پشتڕاست نەکرایەوە. پشکنین دەستی پێنەکرد و حساب نەکرا.", expiredText: "ماوەی ئەم ڕاپۆرتە تەواو بووە و داتاکانی کاتی سڕاونەتەوە.",
@@ -130,6 +130,18 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   const [retryAt, setRetryAt] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState("");
   const [sessionId, setSessionId] = useState("");
+  const [freeTrialAttempts, setFreeTrialAttempts] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = () => fetch("/api/visibility-trial-usage", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => { if (active) setFreeTrialAttempts(data.available ? Number(data.totalStarted) : null); })
+      .catch(() => { if (active) setFreeTrialAttempts(null); });
+    void refresh();
+    const interval = window.setInterval(refresh, 10_000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -326,6 +338,14 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
           </div>
         </div>
 
+        <section aria-label={c.usageTitle} className="mx-auto mt-6 flex max-w-3xl items-center justify-center gap-4 rounded-2xl border border-primary/20 bg-primary/[0.04] px-5 py-4 text-center">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-background text-primary"><Sparkles className="size-5" /></div>
+          <div className="min-w-0 text-start">
+            <p className="text-xs font-semibold text-foreground">{c.usageTitle}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">{c.usageNote}</p>
+          </div>
+          <div className="ms-auto min-w-16 font-display text-3xl font-bold tabular-nums text-primary" aria-live="polite">{freeTrialAttempts === null ? "—" : freeTrialAttempts.toLocaleString(l === "ar" ? "ar-IQ" : l === "ku" ? "ku" : "en-US")}</div>
+        </section>
         <FreeAuditMarketing lang={l} part="top" />
         <div id="audit-form" className="mx-auto mt-10 grid max-w-4xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <form onSubmit={submit} className="rounded-2xl border border-border bg-card/80 p-5 shadow-sm md:p-7">
@@ -345,9 +365,10 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
               <label className="block text-sm font-medium">{c.category}
                 <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={180} className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
               </label>
-              <div className="block text-sm font-medium" data-tour="scope">{c.market}
-                <div className="mt-2"><GeoScopeSelector compact toolKey="free_audit" value={geo} onChange={setGeo} /></div>
-              </div>
+              <details className="rounded-xl border border-border/70 bg-background/40 p-3" data-tour="scope">
+                <summary className="cursor-pointer list-none text-sm font-medium">{c.geoExpand}<span className="ms-2 text-xs font-normal text-muted-foreground">{c.market}</span></summary>
+                <div className="mt-3"><GeoScopeSelector compact toolKey="free_audit" value={geo} onChange={setGeo} /></div>
+              </details>
             </div>
             <p data-tour="lang" className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs leading-6">{c.langNote}</p>
             <label className="mt-5 block text-sm font-medium">{c.description}
@@ -360,8 +381,8 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
             {message && <div role="alert" className={`mt-5 flex gap-2 rounded-xl border p-3 text-sm ${message.kind === "error" ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}`}><TriangleAlert className="mt-0.5 size-4 shrink-0" />{message.text}</div>}
             {contactPanel}
             {retryAt && <p className="mt-3 text-xs text-muted-foreground">{c.retryAt}: <time dir="ltr">{new Date(retryAt).toLocaleString()}</time></p>}
-            <button type="submit" disabled={busy || !entityName.trim() || !deviceId || !sessionId} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
-              {busy ? <><Loader2 className="size-4 animate-spin" />{c.working}</> : <><Sparkles className="size-4" />{c.start}</>}
+            <button type="submit" disabled={busy || !entityName.trim() || !deviceId || !sessionId} className="group relative mt-6 isolate inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_28px_-12px_hsl(var(--primary)/.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_34px_-10px_hsl(var(--primary)/.7)] active:translate-y-0 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50">
+              {<span aria-hidden className="pointer-events-none absolute inset-y-0 -start-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[420%] group-active:translate-x-[520%]" />}<span aria-hidden className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-70 transition-all duration-300 group-active:inset-x-1 group-active:opacity-100" />}{busy ? <><Loader2 className="size-4 animate-spin" />{c.working}</> : <><Sparkles className="size-4 transition-transform duration-300 group-hover:rotate-12 group-active:scale-110" />{c.start}</>}
             </button>
           </form>
 
