@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ArrowRight, Sparkles, Globe2, Bot, Phone, Mail, MapPin, ChevronDown } from "lucide-react";
+import { ArrowRight, Sparkles, Globe2, Bot, Phone, Mail, MapPin, Clock, MessageCircle, ChevronDown } from "lucide-react";
 import { EnginesOrbit } from "@/components/EnginesOrbit";
 import { BlurText } from "@/components/motion/BlurText";
 import { ENGINES } from "@/components/engine-logos";
 import { useCountry } from "@/lib/use-country";
+import { AnimatedLogoMark } from "@/components/AnimatedLogoMark";
 
 export function ClassicLanding() {
   const { t, lang } = useI18n();
@@ -132,7 +133,15 @@ export function ClassicLanding() {
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
         <div>{t("footer")}</div>
-        <div className="mt-2 text-[11px] text-muted-foreground">{lang === "en" ? "Supported and sponsored by" : lang === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"} <span className="font-semibold text-foreground/80">Joint Media House Holding</span></div>
+        <div className="joint-media-partner mt-4 flex flex-col items-center gap-2 text-center">
+          <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
+            {lang === "en" ? "Supported and sponsored by" : lang === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"}
+          </p>
+          <div className="joint-media-partner-mark" aria-label="Joint Media House Holding">
+            <AnimatedLogoMark src="/joint-media-house-holding-mark.png" alt="Joint Media House Holding logo" />
+          </div>
+          <span className="text-xs font-semibold tracking-wide text-foreground/80">Joint Media House Holding</span>
+        </div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <Link to="/contact" className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-primary">
             <Phone className="size-3.5" /> {t("nav_contact")}
