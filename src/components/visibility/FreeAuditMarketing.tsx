@@ -80,7 +80,7 @@ export function FreeAuditMarketing({ lang, part }: { lang: L; part: "top" | "bot
       <div className="grid gap-3 md:grid-cols-3">
         {t.faq.map(([q, a]) => (
           <div key={q} className="rounded-xl border border-border bg-card/60 p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-primary" />{q}</h3>
+            <h3 className="flex flex-row items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-primary" /><span dir={lang === "en" ? "ltr" : "rtl"}>{q}</span></h3>
             <p className="mt-2 text-xs leading-6 text-muted-foreground">{a}</p>
           </div>
         ))}
@@ -96,7 +96,7 @@ export function FreeAuditResultCta({ lang }: { lang: L }) {
       <h3 className="font-display text-lg font-bold">{t.ctaTitle}</h3>
       <p className="mt-2 text-sm leading-7 text-muted-foreground">{t.cta}</p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Link to="/contact" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"><MessageCircle className="size-4" />{t.contact}</Link>
+        <Link to="/contact" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"><MessageCircle className="size-4" /><span dir={lang === "en" ? "ltr" : "rtl"}>{t.contact}</span></Link>
       </div>
     </div>
   );

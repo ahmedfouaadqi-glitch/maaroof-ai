@@ -1195,13 +1195,26 @@
   direction: ltr;
 }
 
-.free-audit-page[lang="ar"] :where(p, h1, h2, h3, label, legend, summary, li, input, textarea, [role="alert"]),
-.free-audit-page[lang="ku"] :where(p, h1, h2, h3, label, legend, summary, li, input, textarea, [role="alert"]) {
+.free-audit-page[lang="ar"] :where(p, h1, h2, h3, h4, label, legend, summary, li, dt, dd, input, textarea, select, option, [role="alert"]),
+.free-audit-page[lang="ku"] :where(p, h1, h2, h3, h4, label, legend, summary, li, dt, dd, input, textarea, select, option, [role="alert"]) {
   direction: rtl;
-  text-align: start;
+  text-align: inherit;
 }
 
-.free-audit-page[lang="en"] :where(p, h1, h2, h3, label, legend, summary, li, input, textarea, [role="alert"]) {
+.free-audit-page[lang="en"] :where(p, h1, h2, h3, h4, label, legend, summary, li, dt, dd, input, textarea, select, option, [role="alert"]) {
   direction: ltr;
-  text-align: start;
+  text-align: inherit;
+}
+
+.free-audit-page[lang="ar"] button:not(.flex):not(.inline-flex),
+.free-audit-page[lang="ku"] button:not(.flex):not(.inline-flex) {
+  direction: rtl;
+}
+
+.free-audit-page[lang="en"] button:not(.flex):not(.inline-flex) {
+  direction: ltr;
+}
+
+.free-audit-page :where([dir="rtl"]) {
+  unicode-bidi: plaintext;
 }

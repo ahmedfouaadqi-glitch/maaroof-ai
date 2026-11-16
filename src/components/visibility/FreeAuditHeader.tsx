@@ -24,7 +24,7 @@ export function FreeAuditHeader() {
           <ThemeToggle />
           <LanguageSwitcher />
           <Link to="/contact" className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-            <MessageCircle className="size-3.5" />{contact}
+            <MessageCircle className="size-3.5" /><span dir={lang === "en" ? "ltr" : "rtl"}>{contact}</span>
           </Link>
         </div>
       </div>

@@ -327,14 +327,14 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
       <FreeAuditHeader />
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-12">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4 rtl:rotate-180" /> {c.back}
+          <ArrowLeft className="size-4 rtl:rotate-180" /> <span dir={l === "en" ? "ltr" : "rtl"}>{c.back}</span>
         </Link>
         <div className="mx-auto mt-8 max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"><Sparkles className="size-3.5" />{c.eyebrow}</div>
+          <div className="inline-flex flex-row items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"><Sparkles className="size-3.5" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.eyebrow}</span></div>
           <h1 className="mt-5 font-display text-3xl font-bold tracking-tight md:text-5xl">{c.title}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">{c.intro}</p>
           <div className="mx-auto mt-6 max-w-xl rounded-xl border border-border/70 bg-card/60 p-3 text-start text-xs leading-6 text-muted-foreground">
-            <ShieldCheck className="me-2 inline size-4 text-primary" />{c.security}
+            <ShieldCheck className="me-2 inline size-4 text-primary" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.security}</span>
           </div>
         </div>
 
@@ -357,7 +357,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
               <legend className="text-sm font-medium">{c.type}</legend>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {([{ value: "auto", label: c.auto }, { value: "person", label: c.person }, { value: "organization", label: c.org }] as const).map((item) => (
-                  <button key={item.value} type="button" onClick={() => setEntityType(item.value)} className={`rounded-xl border px-3 py-2.5 text-xs transition-colors ${entityType === item.value ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:border-primary/40"}`}>{item.label}</button>
+                  <button key={item.value} type="button" onClick={() => setEntityType(item.value)} className={`rounded-xl border px-3 py-2.5 text-xs transition-colors ${entityType === item.value ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:border-primary/40"}`}><span dir={l === "en" ? "ltr" : "rtl"}>{item.label}</span></button>
                 ))}
               </div>
             </fieldset>
@@ -382,17 +382,17 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
             {contactPanel}
             {retryAt && <p className="mt-3 text-xs text-muted-foreground">{c.retryAt}: <time dir="ltr">{new Date(retryAt).toLocaleString()}</time></p>}
             <button type="submit" disabled={busy || !entityName.trim() || !deviceId || !sessionId} className="group relative mt-6 isolate inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_28px_-12px_hsl(var(--primary)/.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_34px_-10px_hsl(var(--primary)/.7)] active:translate-y-0 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50">
-              <span aria-hidden className="pointer-events-none absolute inset-y-0 -start-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[420%] group-active:translate-x-[520%]" /><span aria-hidden className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-70 transition-all duration-300 group-active:inset-x-1 group-active:opacity-100" />{busy ? <><Loader2 className="size-4 animate-spin" />{c.working}</> : <><Sparkles className="size-4 transition-transform duration-300 group-hover:rotate-12 group-active:scale-110" />{c.start}</>}
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -start-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[420%] group-active:translate-x-[520%]" /><span aria-hidden className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-70 transition-all duration-300 group-active:inset-x-1 group-active:opacity-100" />{busy ? <><Loader2 className="size-4 animate-spin" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.working}</span></> : <><Sparkles className="size-4 transition-transform duration-300 group-hover:rotate-12 group-active:scale-110" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.start}</span></>}
             </button>
           </form>
 
           <aside className="h-fit rounded-2xl border border-border/70 bg-card/50 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold"><LockKeyhole className="size-4 text-primary" />{c.security.split(".")[0]}</div>
+            <div className="flex flex-row items-center gap-2 text-sm font-semibold"><LockKeyhole className="size-4 text-primary" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.security.split(".")[0]}</span></div>
             <p className="mt-3 text-xs leading-6 text-muted-foreground">{c.sample}</p>
             <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="size-4" />72h report · 5h cooldown</div>
             {attemptId && (
               <button type="button" onClick={retrieve} disabled={busy} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-xs font-semibold text-primary disabled:opacity-50">
-                <RefreshCw className="size-3.5" />{c.retrieval}
+                <RefreshCw className="size-3.5" /><span dir={l === "en" ? "ltr" : "rtl"}>{c.retrieval}</span>
               </button>
             )}
           </aside>
@@ -420,11 +420,11 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
             <div className="mt-6 space-y-4">
               {result.engines.map((engine) => (
                 <article key={engine.engine} className="rounded-xl border border-border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{engine.name}</h3><span className="text-xs text-muted-foreground">{engine.status === "answered" ? c.answered : c.error}</span></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{engine.name}</h3><span className="text-xs text-muted-foreground" dir={l === "en" ? "ltr" : "rtl"}>{engine.status === "answered" ? c.answered : c.error}</span></div>
                   {engine.status === "answered" && <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned === null || engine.mentioned === undefined ? c.unknown : engine.mentioned ? c.yes : c.no}</span>
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
-                    <span className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence === "high" ? c.high : engine.confidence === "medium" ? c.medium : engine.confidence === "low" ? c.low : c.unknown}</span>
+                    <span dir={l === "en" ? "ltr" : "rtl"} className="rounded-full border border-border px-2.5 py-1">{c.mentionStatus}: {engine.mentioned === null || engine.mentioned === undefined ? c.unknown : engine.mentioned ? c.yes : c.no}</span>
+                    <span dir={l === "en" ? "ltr" : "rtl"} className="rounded-full border border-border px-2.5 py-1">{c.recommendationStatus}: {engine.recommendation === "yes" ? c.yes : engine.recommendation === "no" ? c.no : engine.recommendation === "conditional" ? c.conditional : c.unknown}</span>
+                    <span dir={l === "en" ? "ltr" : "rtl"} className="rounded-full border border-border px-2.5 py-1">{c.confidenceStatus}: {engine.confidence === "high" ? c.high : engine.confidence === "medium" ? c.medium : engine.confidence === "low" ? c.low : c.unknown}</span>
                   </div>}
                   {engine.discovery_answer && <div className="mt-3 rounded-lg bg-muted/30 p-3 text-xs leading-6"><strong>{c.discovery}</strong><p className="mt-1">{engine.discovery_answer}</p></div>}
                   {engine.summary && <p className="mt-3 text-sm leading-7">{engine.summary}</p>}
