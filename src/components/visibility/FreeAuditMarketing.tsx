@@ -14,9 +14,9 @@ const T = {
     cta: "التجربة المجانية تقدم عينة محدودة من ثلاث استجابات. أما العمل الموسّع فيتناول نطاقات وأسئلة ومصادر إضافية وفق خطة متفق عليها.",
     start: "ابدأ القياس الكامل", contact: "تحدّث مع فريق معروف",
     faq: [
-      ["القرار يُحسم قبل الزيارة", "عملاؤك يسألون الذكاء الاصطناعي أولا. من يُذكر في الإجابة يُختار."],
-      ["السلطة قبل الروابط", "المحركات تثق بالكيان الموثّق الواضح، لا بعدد الروابط."],
-      ["فحص حيّ بلا تخمين", "إجابات حقيقية من النماذج لحظة الفحص، دون درجات تقديرية."],
+      ["الظهور يؤثر في الاكتشاف", "قد تدخل إجابات الذكاء الاصطناعي ضمن رحلة البحث والمقارنة، بحسب السؤال والمحرك."],
+      ["وضوح الهوية يدعم الفهم", "المعلومات المتسقة والموثقة تساعد على تمييز الكيان وتقليل الالتباس."],
+      ["فحص مباشر بنتائج محدودة", "نعرض الاستجابات التي وصلت فعلاً ونوضح المسارات التي لم تجب."],
     ],
   },
   en: {
@@ -27,9 +27,9 @@ const T = {
     cta: "The free trial provides a limited sample of three responses. Broader work can examine additional scopes, questions and sources under an agreed plan.",
     start: "Start full measurement", contact: "Talk to the Maaroof team",
     faq: [
-      ["The decision happens before the visit", "Customers ask AI first. Whoever is named in the answer gets chosen."],
-      ["Authority beats links", "Engines trust a clear, verified entity — not link counts."],
-      ["Live probe, no guessing", "Real model answers at probe time, with no estimated scores."],
+      ["Visibility can shape discovery", "AI answers may influence research and comparison, depending on the query and engine."],
+      ["Clear identity supports understanding", "Consistent, verifiable information helps distinguish an entity and reduce ambiguity."],
+      ["A live sample with clear limits", "We show the responses actually received and identify routes that did not answer."],
     ],
   },
   ku: {
@@ -40,9 +40,9 @@ const T = {
     cta: "تاقیکردنەوەی خۆڕایی نموونەیەکی سنووردار لە سێ وەڵام پێشکەش دەکات؛ هەنگاوی فراوانتر دەتوانێت بازاڕ و پرسیار و سەرچاوەی زیاتر بپشکنێت.",
     start: "دەستپێکردنی پێوانەی تەواو", contact: "قسە لەگەڵ تیمی مەعروف",
     faq: [
-      ["بڕیار پێش سەردان دەدرێت", "کڕیاران سەرەتا پرسیار لە زیرەکی دەستکرد دەکەن. ئەوەی ناوی بێت هەڵدەبژێردرێت."],
-      ["دەسەڵات پێش بەستەرەکان", "بزوێنەرەکان متمانە بە کیانی ڕوون و پشتڕاستکراو دەکەن."],
-      ["پشکنینی ڕاستەوخۆ بێ گومان", "وەڵامی ڕاستەقینەی مۆدێلەکان، بێ نمرەی خەمڵێنراو."],
+      ["دەرکەوتن کاریگەری لە دۆزینەوەدا هەیە", "وەڵامەکانی زیرەکی دەستکرد دەتوانن کاریگەری لە گەڕان و بەراوردکردندا هەبێت، بە پێی پرسیار و بزوێنەر."],
+      ["ناسنامەی ڕوون یارمەتی تێگەیشتن دەدات", "زانیاریی یەکگرتوو و پشتڕاستکراو جیاکردنەوەی قەوارە و کەمکردنەوەی ناڕوونی ئاسان دەکات."],
+      ["نموونەی ڕاستەوخۆ بە سنووری دیار", "ئەو وەڵامانە پیشان دەدەین کە بەڕاستی گەیشتوون و ئەو ڕێڕەوانە دیاری دەکەین کە وەڵامیان نەداوەتەوە."],
     ],
   },
 } as const;
