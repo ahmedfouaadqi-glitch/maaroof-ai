@@ -14,6 +14,9 @@ export const Route = createFileRoute("/contact")({
       { property: "og:title", content: "Contact MAAROOF Ai · Talk to the AI Visibility Team" },
       { property: "og:description", content: "Reach the MAAROOF Ai team in Baghdad by WhatsApp or phone to ask about plans, the AI visibility agent, or onboarding for brands in Iraq." },
       { property: "og:url", content: "https://maaroofai.com/contact" },
+      { property: "og:image", content: "https://maaroofai.com/og-maaroof.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://maaroofai.com/og-maaroof.png" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/contact" }],
     scripts: [
