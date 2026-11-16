@@ -225,17 +225,17 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
   const taxonomyGroups = l === "ar" ? [
     { title: "مجالات التخصص", terms: "SEO · GEO · ASO · AIO", note: "مجالات مرتبطة بتحسين الظهور والاكتشاف عبر البحث والمنصات." },
-    { title: "منهجيات التحسين", terms: "AEO · SGEO · GSEO", note: "أطر وأساليب تشغيلية؛ SGEO وGSEO لهما تعريفهما داخل معروف وليسا معيارين عالميين موحدين." },
+    { title: "منهجيات التحسين", terms: "AEO · SGEO · GSEO", note: "أطر وأساليب تشغيلية." },
     { title: "بيئات البحث", terms: "SGE · AI Search · LLMs", note: "واجهات وتجارب ومحركات تُرصد فيها إجابات ومظاهر الظهور." },
     { title: "التقنيات المعرفية", terms: "RAG · KG · Entity Intelligence", note: "مفاهيم وتقنيات لدعم الاسترجاع المعرفي وتمثيل الكيانات والعلاقات." },
   ] : l === "ku" ? [
     { title: "بواری پسپۆڕی", terms: "SEO · GEO · ASO · AIO", note: "بواری پەیوەندیدار بە باشترکردنی دەرکەوتن لە گەڕان و پلاتفۆرمەکان." },
-    { title: "میتۆدۆلۆژیای باشترکردن", terms: "AEO · SGEO · GSEO", note: "چوارچێوە و شێوازی کار؛ SGEO و GSEO لە معروف پێناسەی تایبەتیان هەیە و ستانداردی جیهانی یەکگرتوو نین." },
+    { title: "میتۆدۆلۆژیای باشترکردن", terms: "AEO · SGEO · GSEO", note: "چوارچێوە و شێوازی کار." },
     { title: "ژینگەکانی گەڕان", terms: "SGE · AI Search · LLMs", note: "ڕووکار و ئەزموون و بزوێنەرەکانی گەڕان کە وەڵام و دەرکەوتن تێیاندا چاودێری دەکرێت." },
     { title: "تەکنەلۆژیای زانیاری", terms: "RAG · KG · Entity Intelligence", note: "چەمک و تەکنەلۆژیا بۆ گەڕاندنەوەی زانیاری و نوێنەرایەتی قەوارە و پەیوەندییەکان." },
   ] : [
     { title: "Specialty areas", terms: "SEO · GEO · ASO · AIO", note: "Domains concerned with visibility and discovery across search and platforms." },
-    { title: "Optimization methodologies", terms: "AEO · SGEO · GSEO", note: "Operational approaches; SGEO and GSEO have Maaroof-specific definitions, not universally standardized meanings." },
+    { title: "Optimization methodologies", terms: "AEO · SGEO · GSEO", note: "Operational approaches." },
     { title: "Search environments", terms: "SGE · AI Search · LLMs", note: "Interfaces, experiences and engines where answers and visibility can be observed." },
     { title: "Knowledge technologies", terms: "RAG · KG · Entity Intelligence", note: "Concepts and technologies for retrieval, knowledge representation and entity relationships." },
   ];
