@@ -484,7 +484,7 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               {l === "en" ? "Supported and sponsored by" : l === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"}
             </p>
             <div className="joint-media-partner-mark" aria-label="Joint Media House Holding">
-              <AnimatedLogoMark src="/joint-media-house-holding-mark.png" alt="Joint Media House Holding logo" />
+              <AnimatedLogoMark src="/joint-media-house-holding-mark.svg" alt="Joint Media House Holding logo" />
             </div>
             <span className="text-sm font-semibold tracking-wide text-foreground/80">Joint Media House Holding</span>
           </div>
