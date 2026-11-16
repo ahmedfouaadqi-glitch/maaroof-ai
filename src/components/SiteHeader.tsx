@@ -102,7 +102,7 @@ export function SiteHeader() {
           <div className="leading-tight min-w-0">
             <div className="truncate font-display text-sm font-bold sm:text-base">MAAROOF Ai</div>
             <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">GEO AGENCY</div>
-            <div className="hidden max-w-[12rem] truncate text-[9px] uppercase tracking-[0.12em] text-muted-foreground sm:block">AI VISIBILITY · ENTITY INTELLIGENCE</div>
+            <div className="hidden max-w-[12rem] truncate text-[9px] uppercase tracking-[0.12em] text-muted-foreground sm:block">ECOSYSTEM</div>
           </div>
         </Link>
         <nav className="hidden items-center gap-5 text-sm text-muted-foreground lg:flex xl:gap-6">
