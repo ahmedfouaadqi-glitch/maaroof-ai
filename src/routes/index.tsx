@@ -11,9 +11,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "MAAROOF Ai — AI Visibility & Generative Engine Optimization" },
-      { name: "description", content: "MAAROOF Ai analyzes your brand visibility across AI answer engines, improve content readiness, and explore GEO tools in Arabic, Kurdish and English." },
+      { name: "description", content: "MAAROOF Ai helps businesses assess brand visibility across search and AI answer experiences, review content readiness, and explore GEO workflows in Arabic, Kurdish and English." },
       { property: "og:title", content: "MAAROOF Ai — AI Visibility & GEO Tools" },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://maaroofai.com/og-maaroof.png" },
+      { name: "twitter:image", content: "https://maaroofai.com/og-maaroof.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:description", content: "MAAROOF Ai: tools to analyze brand visibility, improve content readiness and build a consistent machine-readable brand identity." },
       { property: "og:url", content: "https://maaroofai.com/" },
