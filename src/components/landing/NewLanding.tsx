@@ -1,9 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getLandingData } from "@/lib/landing.functions";
-import { truthCardCompleteness, type PublicTruthCard } from "@/lib/landing-data";
-import { COUNTRY_NAMES } from "@/lib/entity-consistency";
-import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Globe2, Link2, Phone, Mail, MapPin, ChevronDown, Mouse } from "lucide-react";
+import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Phone, Mail, MapPin, ChevronDown, Mouse } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
@@ -208,9 +206,9 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { lang } = useI18n();
   const l: L = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[l];
-  const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
+  const [data, setData] = useState<{ skills: string[] | null } | null>(null);
   const [freeTrialAttempts, setFreeTrialAttempts] = useState<number | null>(null);
-  useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
+  useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null })); }, []);
   useEffect(() => {
     let active = true;
     const refresh = () => fetch("/api/visibility-trial-usage", { cache: "no-store" })
@@ -223,8 +221,6 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   }, []);
   const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
   const [openSkill, setOpenSkill] = useState<string | null>(null);
-  const card = data?.card ?? null;
-  const typeLabel = (t: string | null) => t === "person" ? ({ ar: "شخص", en: "Person", ku: "کەس" } as const)[l] : ({ ar: "منشأة", en: "Organization", ku: "دامەزراوە" } as const)[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
   const taxonomyGroups = l === "ar" ? [
     { title: "مجالات التخصص", terms: "SEO · GEO · ASO · AIO", note: "مجالات مرتبطة بتحسين الظهور والاكتشاف عبر البحث والمنصات." },
