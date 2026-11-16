@@ -10,7 +10,6 @@ import { ENGINES } from "@/components/engine-logos";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
-import { useAuth } from "@/lib/auth";
 import { useCountry } from "@/lib/use-country";
 import type { InterfacePolicy } from "@/lib/interface-policy";
 import { Reveal } from "@/components/motion/Reveal";
@@ -207,7 +206,6 @@ const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"];
 
 export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { lang } = useI18n();
-  const { user } = useAuth();
   const l: L = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[l];
   const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
