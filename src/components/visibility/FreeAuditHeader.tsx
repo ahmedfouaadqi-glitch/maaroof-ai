@@ -16,7 +16,7 @@ export function FreeAuditHeader() {
         <div className="flex min-w-0 items-center gap-2">
           <AnimatedLogoMark src={maaroofMark} alt="MAAROOF Ai logo" />
           <div className="leading-tight">
-            <div className="truncate font-display text-sm font-bold sm:text-base">{t("brand")}</div>
+            <div className="truncate font-display text-sm font-bold sm:text-base" dir="ltr">Maaroof AI</div>
             <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">GEO AGENCY</div>
           </div>
         </div>
