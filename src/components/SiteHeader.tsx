@@ -161,7 +161,7 @@ export function SiteHeader() {
             {auth?.user && proOn && uiPolicy.show_professional_link && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
             {auth?.user && (wsOn || hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{maaroofSpace}</Link>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
-            {hdr.show_contact && <ContactPopover info={contactInfo} lang={lang} label={t("nav_contact")} message={contactMessage} mobile onOpen={close} />}
+            {hdr.show_contact && <ContactPopover info={contactInfo} lang={lang} label={t("nav_contact")} message={contactMessage} mobile />}
             {hdr.extra_links.filter((l) => !["/pricing", "/guide", "/markets"].includes(l.href.split("?")[0])).map((l, i) => (
               <a key={i} href={l.href} onClick={close} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
                 className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{linkLabel(l, lang)}</a>
