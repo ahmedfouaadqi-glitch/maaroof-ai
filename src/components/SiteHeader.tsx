@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { LogOut, Menu, X, Phone } from "lucide-react";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
 import { AnimatedLogoMark } from "@/components/AnimatedLogoMark";
@@ -24,6 +24,7 @@ function phoneDesc(p: ExtraPhone, lang: Lang): string {
 export function SiteHeader() {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
+  const isHome = useLocation({ select: (l) => l.pathname }) === "/";
   const hdr = useHeaderConfig();
   const { policy: uiPolicy } = useInterfacePolicy();
   const wsOn = uiPolicy.available_interfaces.includes("workbench");
@@ -78,7 +79,7 @@ export function SiteHeader() {
             <button onClick={() => auth!.signOut()} className="hidden items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:inline-flex">
               <LogOut className="size-3" /> {t("nav_signout")}
             </button>
-          ) : (
+          ) : isHome ? null : (
             <Link to="/auth" search={{ mode: "signin" }}
               className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-[var(--shadow-glow)] sm:px-4 sm:py-2 sm:text-xs">
               {t("nav_signin")}

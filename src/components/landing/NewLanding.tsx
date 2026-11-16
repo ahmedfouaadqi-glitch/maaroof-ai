@@ -247,9 +247,11 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
         <summary className={ctaClass + " cursor-pointer list-none"}>{c.cta} <ChevronDown className="size-4 transition-transform group-open:rotate-180" /></summary>
         <div className="absolute bottom-full start-1/2 z-50 mb-3 w-[min(19rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-primary/25 bg-card/95 p-4 text-start shadow-2xl backdrop-blur-xl">
           <div className="mb-3 text-sm font-semibold">MAAROOF Ai · Contact</div>
-          <a href="tel:+9647733570130" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Phone className="size-4 text-primary" /> +964 773 357 0130</a>
-          <a href="mailto:ahmedfouaad.qi@gmail.com" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Mail className="size-4 text-primary" /> ahmedfouaad.qi@gmail.com</a>
-          <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground"><MapPin className="size-4 text-primary" /> Beirut, Lebanon</div>
+          <a href="tel:+9613421964" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Phone className="size-4 text-primary" /> +9613421964</a>
+          <a href="mailto:mark@jointmediahouse.agency" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Mail className="size-4 text-primary" /> mark@jointmediahouse.agency</a>
+          <a href="https://wa.me/9613421964" target="_blank" rel="noreferrer" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Phone className="size-4 text-primary" /> WhatsApp</a>
+          <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground"><MapPin className="size-4 text-primary" /> {lang === "ar" ? "بيروت، لبنان" : "Beirut, Lebanon"}</div>
+          <div className="px-2 py-1 text-xs text-muted-foreground">{lang === "ar" ? "السبت – الخميس · 9 ص – 6 م" : "Saturday – Thursday · 9 AM – 6 PM"}</div>
         </div>
       </details>
     </Magnetic>
