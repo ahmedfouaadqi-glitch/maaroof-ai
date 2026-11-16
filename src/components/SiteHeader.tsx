@@ -51,21 +51,16 @@ export function SiteHeader() {
 
 
           <div className="leading-tight min-w-0">
-            <div className="truncate font-display text-sm font-bold sm:text-base">{t("brand")}</div>
-            <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-              GEO AGENCY
-            </div>
-            <div className="hidden truncate text-[10px] uppercase tracking-widest text-muted-foreground sm:block">{t("ecosystem")}</div>
+            <div className="truncate font-display text-sm font-bold sm:text-base">MAAROOF Ai</div>
+            <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">GEO AGENCY</div>
+            <div className="hidden max-w-[12rem] truncate text-[9px] uppercase tracking-[0.12em] text-muted-foreground sm:block">AI VISIBILITY · ENTITY INTELLIGENCE</div>
           </div>
         </Link>
         <nav className="hidden items-center gap-5 text-sm text-muted-foreground lg:flex xl:gap-6">
           
-          {hdr.show_pricing && <Link to="/pricing" className="hover:text-foreground">{t("nav_pricing")}</Link>}
           {auth?.user && proOn && uiPolicy.show_professional_link && hdr.show_dashboard && <Link to="/dashboard" className="hover:text-foreground">{t("nav_dashboard")}</Link>}
           {auth?.user && (wsOn || hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" className="font-semibold text-primary hover:text-foreground">{maaroofSpace}</Link>}
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
-          {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
-          <Link to="/markets" className="hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
           {hdr.show_contact && <Link to="/contact" className="hover:text-foreground">{t("nav_contact")}</Link>}
           {hdr.extra_links.map((l, i) => (
             l.href.startsWith("http")
@@ -122,12 +117,9 @@ export function SiteHeader() {
         <div className="border-t border-border/60 bg-background/95 backdrop-blur-xl lg:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3 text-sm">
             
-            {hdr.show_pricing && <Link to="/pricing" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_pricing")}</Link>}
             {auth?.user && proOn && uiPolicy.show_professional_link && hdr.show_dashboard && <Link to="/dashboard" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_dashboard")}</Link>}
             {auth?.user && (wsOn || hdr.show_maaroof || hdr.show_agent) && <Link to="/workspace" onClick={close} className="rounded-md px-2 py-2 font-semibold text-primary hover:bg-muted/40">{maaroofSpace}</Link>}
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
-            {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
-            <Link to="/markets" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
             {hdr.show_contact && <Link to="/contact" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_contact")}</Link>}
             {hdr.extra_links.map((l, i) => (
               <a key={i} href={l.href} onClick={close} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
