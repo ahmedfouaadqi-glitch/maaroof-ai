@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@tanstack/react-router";
-import { LogOut, Menu, X, Phone } from "lucide-react";
+import { LogOut, Menu, X, Phone, Mail, MapPin, Clock, MessageCircle, ChevronDown } from "lucide-react";
 import maaroofMark from "@/assets/maaroof-ai-mark.png";
 import { HexBadge } from "@/components/HexBadge";
 import { useAuth } from "@/lib/auth";
@@ -12,6 +12,7 @@ import { CountryBadge } from "@/components/CountryBadge";
 import { Widget } from "@/lib/visibility";
 import { useInterfacePolicy } from "@/lib/use-interface-policy";
 import { useHeaderConfig, type ExtraLink, type ExtraPhone } from "@/lib/content";
+import { useContactInfo, whatsappLinkFromInfo, type ContactInfo } from "@/lib/contact-info";
 
 function linkLabel(l: ExtraLink, lang: Lang): string {
   return (l as any)[`label_${lang}`] || l.label_en || l.label_ar || l.label_ku || l.href;
@@ -20,11 +21,70 @@ function phoneDesc(p: ExtraPhone, lang: Lang): string {
   return (p as any)[`desc_${lang}`] || p.desc_en || p.desc_ar || p.desc_ku || "";
 }
 
+function ContactPopover({ info, lang, label, message, mobile = false, onOpen }: {
+  info: ContactInfo;
+  lang: Lang;
+  label: string;
+  message: string;
+  mobile?: boolean;
+  onOpen?: () => void;
+}) {
+  const address = lang === "ar" ? info.address_ar : lang === "ku" ? info.address_ku : info.address_en;
+  const hours = lang === "ar" ? info.hours_ar : lang === "ku" ? info.hours_ku : info.hours_en;
+  return (
+    <details className={mobile ? "group relative w-full" : "group relative"}>
+      <summary
+        onClick={onOpen}
+        className={mobile
+          ? "flex w-full cursor-pointer list-none items-center justify-between rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          : "inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-muted-foreground transition hover:text-foreground"}
+      >
+        {label}
+        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className={mobile
+        ? "absolute start-0 top-full z-[60] mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-primary/25 bg-card/95 p-4 text-start text-foreground shadow-2xl backdrop-blur-xl"
+        : "absolute end-0 top-full z-[60] mt-3 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-primary/25 bg-card/95 p-4 text-start text-foreground shadow-2xl backdrop-blur-xl"}
+      >
+        <div className="mb-3 text-sm font-semibold">MAAROOF Ai · {lang === "ar" ? "اتصل بنا" : lang === "ku" ? "پەیوەندی" : "Contact"}</div>
+        {info.phone_display && (
+          <a href={`tel:+${info.whatsapp_number}`} dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60">
+            <Phone className="size-4 shrink-0 text-primary" /> {info.phone_display}
+          </a>
+        )}
+        {info.email && (
+          <a href={`mailto:${info.email}`} dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60">
+            <Mail className="size-4 shrink-0 text-primary" /> {info.email}
+          </a>
+        )}
+        {info.whatsapp_number && (
+          <a href={whatsappLinkFromInfo(info, message)} target="_blank" rel="noreferrer" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60">
+            <MessageCircle className="size-4 shrink-0 text-primary" /> WhatsApp
+          </a>
+        )}
+        {address && (
+          <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
+            <MapPin className="size-4 shrink-0 text-primary" /> {address}
+          </div>
+        )}
+        {hours && (
+          <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground">
+            <Clock className="size-3.5 shrink-0 text-primary" /> {hours}
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+
 export function SiteHeader() {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
 
   const hdr = useHeaderConfig();
+  const contactInfo = useContactInfo();
+  const contactMessage = t("whatsapp_msg");
   const { policy: uiPolicy } = useInterfacePolicy();
   const wsOn = uiPolicy.available_interfaces.includes("workbench");
   const proOn = uiPolicy.available_interfaces.includes("professional");
@@ -61,7 +121,7 @@ export function SiteHeader() {
           {auth?.user && hdr.show_profile && <Link to="/profile" className="hover:text-foreground">{t("nav_profile")}</Link>}
           {hdr.show_guide && <Link to="/guide" className="hover:text-foreground">{t("nav_guide")}</Link>}
           <Link to="/markets" className="hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
-          {hdr.show_contact && <Link to="/contact" className="hover:text-foreground">{t("nav_contact")}</Link>}
+          {hdr.show_contact && <ContactPopover info={contactInfo} lang={lang} label={t("nav_contact")} message={contactMessage} />}
           {hdr.extra_links.map((l, i) => (
             l.href.startsWith("http")
               ? <a key={i} href={l.href} target="_blank" rel="noreferrer" className="hover:text-foreground">{linkLabel(l, lang)}</a>
@@ -84,15 +144,10 @@ export function SiteHeader() {
           <LanguageSwitcher />
           <ThemeToggle />
           <Widget k="alerts_bell"><AlertsBell /></Widget>
-{auth?.user ? (
+{auth?.user && (
             <button onClick={() => auth!.signOut()} className="hidden items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:inline-flex">
               <LogOut className="size-3" /> {t("nav_signout")}
             </button>
-          ) : (
-            <Link to="/auth" search={{ mode: "signin" }}
-              className="rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-[var(--shadow-glow)] sm:px-4 sm:py-2 sm:text-xs">
-              {t("nav_signin")}
-            </Link>
           )}
           <button
             type="button"
@@ -115,7 +170,7 @@ export function SiteHeader() {
             {auth?.user && hdr.show_profile && <Link to="/profile" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_profile")}</Link>}
             {hdr.show_guide && <Link to="/guide" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_guide")}</Link>}
             <Link to="/markets" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{lang === "en" ? "Markets" : lang === "ku" ? "بازاڕەکان" : "الأسواق"}</Link>
-            {hdr.show_contact && <Link to="/contact" onClick={close} className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{t("nav_contact")}</Link>}
+            {hdr.show_contact && <ContactPopover info={contactInfo} lang={lang} label={t("nav_contact")} message={contactMessage} mobile />}
             {hdr.extra_links.map((l, i) => (
               <a key={i} href={l.href} onClick={close} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
                 className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground">{linkLabel(l, lang)}</a>
