@@ -20,6 +20,39 @@ describe("public discovery + app-link files", () => {
     expect(robots).toMatch(/Sitemap: https:\/\/maaroofai\.com\/sitemap\.xml/);
   });
 
+  it("keeps core public pages aligned with the official social preview image", () => {
+    const paths = [
+      "src/routes/index.tsx",
+      "src/routes/pricing.tsx",
+      "src/routes/guide.geo-vs-aeo.tsx",
+      "src/routes/guide.what-is-geo.tsx",
+      "src/routes/guide.arabic-kurdish-geo.tsx",
+      "src/routes/methodology.tsx",
+      "src/routes/contact.tsx",
+      "src/routes/markets.tsx",
+      "src/routes/privacy.tsx",
+      "src/routes/terms.tsx",
+    ];
+    for (const path of paths) {
+      const source = readFileSync(path, "utf8");
+      expect(source, path).toContain("https://maaroofai.com/og-maaroof.png");
+    }
+  });
+
+  it("uses one organization identifier on the homepage and contact page", () => {
+    const home = readFileSync("src/routes/index.tsx", "utf8");
+    const contact = readFileSync("src/routes/contact.tsx", "utf8");
+    expect(home).toContain('"@id": "https://maaroofai.com/#org"');
+    expect(contact).toContain('"@id": "https://maaroofai.com/#org"');
+    expect(contact).not.toContain('"@type": "LocalBusiness"');
+  });
+
+  it("does not advertise a stale nine-engine count in the GEO vs AEO guide", () => {
+    const guide = readFileSync("src/routes/guide.geo-vs-aeo.tsx", "utf8");
+    expect(guide).not.toMatch(/across 9 AI engines/i);
+    expect(guide).toContain("supported AI engines");
+  });
+
   it("includes the methodology page in the sitemap", () => {
     const sitemap = readFileSync("src/lib/public-sitemap.ts", "utf8");
     expect(sitemap).toContain('path: "/methodology"');

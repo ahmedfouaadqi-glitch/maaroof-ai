@@ -11,15 +11,18 @@ export const Route = createFileRoute("/guide/geo-vs-aeo")({
       {
         name: "description",
         content:
-          "Compare GEO and AEO: what each optimizes, which engines cite you, and how MAAROOF Ai bridges both to win citations across the AI ecosystem.",
+          "Compare Answer Engine Optimization (AEO) and Generative Engine Optimization (GEO), their goals, content practices and relationship to traditional search.",
       },
       { property: "og:title", content: "GEO vs AEO — Generative vs Answer Engine Optimization" },
       {
         property: "og:description",
         content:
-          "Side-by-side comparison of GEO and AEO: what each optimizes and how to win citations across AI engines.",
+          "A practical comparison of AEO and GEO, including their distinct goals and overlapping content practices.",
       },
       { property: "og:type", content: "article" },
+      { property: "og:image", content: "https://maaroofai.com/og-maaroof.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://maaroofai.com/og-maaroof.png" },
       { property: "og:url", content: "https://maaroofai.com/guide/geo-vs-aeo" },
     ],
     links: [{ rel: "canonical", href: "https://maaroofai.com/guide/geo-vs-aeo" }],
@@ -118,9 +121,8 @@ function Page() {
 
         <h2 className="text-2xl font-semibold mt-8 mb-3">How MAAROOF Ai bridges both</h2>
         <p>
-          MAAROOF Ai measures your brand's recall across 9 AI engines, audits your on-site signals
-          (schema, content depth, citations), and generates AEO-friendly Q&amp;A blocks alongside
-          GEO-optimized articles in EN, AR and KU.
+          MAAROOF Ai helps assess brand presence across supported AI engines, review on-site signals
+          such as structured data and content, and plan improvements for English, Arabic and Kurdish.
         </p>
 
         <p className="mt-8">
