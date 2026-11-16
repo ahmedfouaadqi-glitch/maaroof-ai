@@ -1,16 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getLandingData } from "@/lib/landing.functions";
-import { truthCardCompleteness, type PublicTruthCard } from "@/lib/landing-data";
-import { COUNTRY_NAMES } from "@/lib/entity-consistency";
-import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Globe2, Link2 } from "lucide-react";
+import { ArrowRight, Sparkles, Target, ShieldCheck, LayoutGrid, Check, X, BadgeCheck, Phone, Mail, MapPin, ChevronDown, Mouse } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ENGINES } from "@/components/engine-logos";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import { MAAROOF_SKILLS } from "@/lib/maaroof/skill-catalog";
 import { SkillDetailsDialog } from "@/components/landing/SkillDetailsDialog";
-import { useAuth } from "@/lib/auth";
 import { useCountry } from "@/lib/use-country";
 import type { InterfacePolicy } from "@/lib/interface-policy";
 import { Reveal } from "@/components/motion/Reveal";
@@ -73,8 +70,8 @@ const COPY = {
     badge: "مساحة العمل الذكية",
     title: "نعزّز ظهور علامتك الرقمية عبر منظومة البحث والذكاء الاصطناعي",
     rotPrefix: "نحسّن ظهورك عبر",
-    brandName: "معروف", sub: "يحلل حضورك الرقمي ويقيس ظهورك عبر محركات البحث ومحركات الإجابة ومنصات الذكاء الاصطناعي، ويحدد فرص التحسين المدعومة بالأدلة.",
-    cta: "ابدأ مساحة العمل", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
+    brandName: "MAAROOF Ai", sub: "An AI visibility and entity intelligence platform that helps brands structure verifiable identity signals and assess how they appear across search and AI answer experiences.",
+    cta: "اتصل بنا", trialCta: "جرّب فحص الظهور مجاناً", pro: "واجهة المحترفين",
     engines: "يُسأل كل محرك من المحركات العشرة",
     how: "كيف يعمل", s1: ["حدّد هدفك", "اكتب ما تريده بلغتك وبأي مدة."], s2: ["راجع الخطة والكلفة", "نعرض الأدوات المختارة وسبب اختيارها وكلفتها مقابل رصيدك."], s3: ["تابع التنفيذ والأدلة", "كل نموذج وحالته وسبب كل نتيجة أمامك."],
     core: "منظومة الظهور ومؤشرها التكاملي",
@@ -89,8 +86,8 @@ const COPY = {
     vsTitle: "البحث التقليدي مقابل محركات الإجابة",
     vsCols: ["البحث التقليدي", "محركات الإجابة التوليدية"],
     vsRows: [["قائمة روابط", "إجابة مباشرة واحدة"], ["النجاح = نقرة", "النجاح = اقتباس"], ["كلمات مفتاحية", "حقائق وكيانات"], ["ترتيب الصفحة", "ثقة المصدر واتساقه"]],
-    truth: "بطاقة حقيقة الكيان",
-    truthSub: "مصدر واحد لهويتك تعتمد عليه كل الأدوات والوكيل. هذه بطاقة معروف الحقيقية كما هي محفوظة الآن.",
+    truth: "هوية واضحة. حضور يُفهم.",
+    truthSub: "نحوّل معلومات علامتك إلى هوية رقمية منظمة، قابلة للفهم والتحقق عبر بيئات البحث والذكاء الاصطناعي.",
     truthFields: { name: "الاسم", type: "النوع", country: "البلد", links: "الروابط الرسمية", consistency: "اكتمال البطاقة", markets: "الأسواق المستهدفة" },
     types: "لكل نوع حساب طريقه",
     accountTypes: [
@@ -117,8 +114,8 @@ const COPY = {
     badge: "Smart Workspace",
     title: "Strengthen your digital visibility across search and AI ecosystems",
     rotPrefix: "We improve your visibility through",
-    brandName: "Maaroof", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
-    cta: "Start the workspace", trialCta: "Try free AI visibility", pro: "Professional interface",
+    brandName: "MAAROOF Ai", sub: "analyzes your digital presence across search engines, answer engines and AI platforms, then identifies evidence-led opportunities for improvement.",
+    cta: "Contact us", trialCta: "Try free AI visibility", pro: "Professional interface",
     engines: "Each of the ten engines is asked",
     how: "How it works", s1: ["Set your goal", "Write what you want, in your language, for any duration."], s2: ["Review plan and cost", "See the chosen tools, why, and their cost against your balance."], s3: ["Follow execution and evidence", "Every model, its status and the reason behind each result."],
     core: "Visibility ecosystem and its integrated index",
@@ -133,8 +130,8 @@ const COPY = {
     vsTitle: "Traditional search vs answer engines",
     vsCols: ["Traditional search", "Generative answer engines"],
     vsRows: [["List of links", "One direct answer"], ["Success = a click", "Success = a citation"], ["Keywords", "Facts and entities"], ["Page ranking", "Source trust and consistency"]],
-    truth: "Entity Truth Card",
-    truthSub: "One source for your identity that every tool and the agent rely on. This is Maaroof's real card as stored now.",
+    truth: "Make your identity understood.",
+    truthSub: "Turn your brand information into a structured, verifiable digital identity across search and AI environments.",
     truthFields: { name: "Name", type: "Type", country: "Country", links: "Official links", consistency: "Card completeness", markets: "Target markets" },
     types: "Every account type has its path",
     accountTypes: [
@@ -161,8 +158,8 @@ const COPY = {
     badge: "شوێنی کاری زیرەک",
     title: "دەرکەوتنی دیجیتاڵی براندەکەت لە گەڕان و زیرەکی دەستکرددا بەهێز بکە",
     rotPrefix: "دەرکەوتنت باشتر دەکەین لە ڕێگەی",
-    brandName: "مەعروف", sub: "ئامادەبوونی دیجیتاڵییەکەت لە بزوێنەرەکانی گەڕان و وەڵام و پلاتفۆرمەکانی زیرەکی دەستکرد شیدەکاتەوە و هەلەکانی باشترکردن دیاری دەکات.",
-    cta: "دەستپێکردنی شوێنی کار", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
+    brandName: "MAAROOF Ai", sub: "An AI visibility and entity intelligence platform that helps brands structure verifiable identity signals and assess how they appear across search and AI answer experiences.",
+    cta: "پەیوەندیمان پێوە بکە", trialCta: "تاقیکردنەوەی خۆڕایی دەرکەوتن", pro: "ڕووکاری پسپۆڕان",
     engines: "هەر دە بزوێنەرەکە پرسیاریان لێ دەکرێت",
     how: "چۆن کار دەکات", s1: ["ئامانج دیاری بکە", "بە زمانی خۆت و بۆ هەر ماوەیەک بنووسە."], s2: ["پلان و تێچوو ببینە", "ئامرازە هەڵبژێردراوەکان و هۆکار و تێچوویان ببینە."], s3: ["جێبەجێکردن و بەڵگە", "هەر مۆدێلێک و دۆخی و هۆکاری هەر ئەنجامێک."],
     core: "سیستەمی دەرکەوتن و پێوەری تێکەڵی",
@@ -177,8 +174,8 @@ const COPY = {
     vsTitle: "گەڕانی ئاسایی بەرامبەر بزوێنەرەکانی وەڵام",
     vsCols: ["گەڕانی ئاسایی", "بزوێنەرە زیرەکەکانی وەڵام"],
     vsRows: [["لیستی بەستەر", "یەک وەڵامی ڕاستەوخۆ"], ["سەرکەوتن = کلیک", "سەرکەوتن = ئاماژەپێدان"], ["وشەی سەرەکی", "ڕاستی و قەوارە"], ["ڕیزبەندی پەڕە", "متمانە و یەکگرتوویی سەرچاوە"]],
-    truth: "کارتی ڕاستی قەوارە",
-    truthSub: "یەک سەرچاوە بۆ ناسنامەت کە هەموو ئامرازەکان پشتی پێ دەبەستن. ئەمە کارتی ڕاستەقینەی مەعروفە.",
+    truth: "ناسنامەیەکی ڕوون. دەرکەوتنێکی تێگەیشتوو.",
+    truthSub: "زانیاریی براندەکەت دەگۆڕین بۆ ناسنامەیەکی دیجیتاڵی ڕێکخراو و پشتڕاستکراو لە ژینگەکانی گەڕان و زیرەکی دەستکرد.",
     truthFields: { name: "ناو", type: "جۆر", country: "وڵات", links: "بەستەرە فەرمییەکان", consistency: "تەواوبوونی کارت", markets: "بازاڕە ئامانجەکان" },
     types: "هەر جۆرە هەژمارێک ڕێگای خۆی هەیە",
     accountTypes: [
@@ -207,12 +204,11 @@ const PILLAR_WORDS = ["SEO", "AEO", "GEO", "SGE", "GSEO", "SGEO"];
 
 export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const { lang } = useI18n();
-  const { user } = useAuth();
   const l: L = lang === "en" || lang === "ku" ? lang : "ar";
   const c = COPY[l];
-  const [data, setData] = useState<{ skills: string[] | null; card: PublicTruthCard | null } | null>(null);
+  const [data, setData] = useState<{ skills: string[] | null } | null>(null);
   const [freeTrialAttempts, setFreeTrialAttempts] = useState<number | null>(null);
-  useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null, card: null })); }, []);
+  useEffect(() => { getLandingData().then(setData).catch(() => setData({ skills: null })); }, []);
   useEffect(() => {
     let active = true;
     const refresh = () => fetch("/api/visibility-trial-usage", { cache: "no-store" })
@@ -225,8 +221,6 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   }, []);
   const skills = data?.skills ? MAAROOF_SKILLS.filter((s) => data.skills!.includes(s.key)) : MAAROOF_SKILLS;
   const [openSkill, setOpenSkill] = useState<string | null>(null);
-  const card = data?.card ?? null;
-  const typeLabel = (t: string | null) => t === "person" ? ({ ar: "شخص", en: "Person", ku: "کەس" } as const)[l] : ({ ar: "منشأة", en: "Organization", ku: "دامەزراوە" } as const)[l];
   const showPro = policy.available_interfaces.includes("professional") && policy.show_professional_link;
   const taxonomyGroups = l === "ar" ? [
     { title: "مجالات التخصص", terms: "SEO · GEO · ASO · AIO", note: "مجالات مرتبطة بتحسين الظهور والاكتشاف عبر البحث والمنصات." },
@@ -248,11 +242,15 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
   const ctaClass = "inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]";
   const Cta = () => (
     <Magnetic>
-      {user ? (
-        <Link to="/workspace" className={ctaClass}>{c.cta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
-      ) : (
-        <Link to="/auth" search={{ mode: "signup", redirect: "/workspace" }} className={ctaClass}>{c.cta} <ArrowRight className="size-4 rtl:rotate-180" /></Link>
-      )}
+      <details className="group relative inline-block text-start">
+        <summary className={ctaClass + " cursor-pointer list-none"}>{c.cta} <ChevronDown className="size-4 transition-transform group-open:rotate-180" /></summary>
+        <div className="absolute bottom-full start-1/2 z-50 mb-3 w-[min(19rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-primary/25 bg-card/95 p-4 text-start shadow-2xl backdrop-blur-xl">
+          <div className="mb-3 text-sm font-semibold">MAAROOF Ai · Contact</div>
+          <a href="tel:+9647733570130" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Phone className="size-4 text-primary" /> +964 773 357 0130</a>
+          <a href="mailto:ahmedfouaad.qi@gmail.com" dir="ltr" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/60"><Mail className="size-4 text-primary" /> ahmedfouaad.qi@gmail.com</a>
+          <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground"><MapPin className="size-4 text-primary" /> Beirut, Lebanon</div>
+        </div>
+      </details>
     </Magnetic>
   );
 
@@ -278,6 +276,11 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             <div className="mt-8">
               <ModelInsights lang={l} />
             </div>
+            <a href="#marketing-entity" className="group mt-10 inline-flex flex-col items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/75 transition hover:text-primary">
+              <span>{l === "en" ? "Scroll to discover" : l === "ku" ? "بۆ دۆزینەوە بڕۆ خوارەوە" : "مرّر لاكتشاف المزيد"}</span>
+              <span aria-hidden className="relative h-9 w-px overflow-hidden bg-border"><span className="absolute inset-x-0 top-0 h-3 bg-primary motion-safe:animate-bounce" /></span>
+              <Mouse className="size-4 opacity-70 transition-transform group-hover:translate-y-1" />
+            </a>
           </div>
         </section>
 
@@ -375,30 +378,32 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
           </Reveal>
         </section>
 
-        {/* 7. Truth card */}
-        <section className="mx-auto max-w-5xl px-4 pb-16">
+        {/* 7. Marketing entity identity card */}
+        <section id="marketing-entity" className="mx-auto max-w-5xl scroll-mt-24 px-4 pb-16">
           <div className="grid items-center gap-8 md:grid-cols-2">
             <div>
-              <h2 className="font-display text-3xl font-bold">{c.truth}</h2>
-              <p className="mt-3 text-muted-foreground">{c.truthSub}</p>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary"><Sparkles className="size-3.5" /> {l === "en" ? "Entity intelligence" : l === "ku" ? "زیرەکی قەوارە" : "ذكاء الكيانات"}</div>
+              <h2 className="font-display text-3xl font-bold md:text-4xl">{c.truth}</h2>
+              <p className="mt-3 max-w-xl text-muted-foreground">{c.truthSub}</p>
+              <p className="mt-5 text-sm font-semibold text-foreground/90">{l === "en" ? "Identity → Evidence → Understanding → Visibility" : l === "ku" ? "ناسنامە ← بەڵگە ← تێگەیشتن ← دەرکەوتن" : "هوية ← أدلة ← فهم ← ظهور"}</p>
             </div>
-            {card && (
             <Reveal>
-              <SpotlightCard className="glass p-5">
-                <div className="flex items-center gap-2 text-sm font-semibold"><BadgeCheck className="size-5 text-primary" />{card.name}</div>
-                <dl className="mt-4 space-y-2 text-sm">
-                  <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{c.truthFields.type}</dt><dd>{typeLabel(card.entity_type)}</dd></div>
-                  {card.hq_country && <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Globe2 className="size-3.5" />{c.truthFields.country}</dt><dd>{COUNTRY_NAMES[card.hq_country]?.[l] || card.hq_country}</dd></div>}
-                  <div className="flex justify-between gap-3"><dt className="flex items-center gap-1 text-muted-foreground"><Link2 className="size-3.5" />{c.truthFields.links}</dt><dd dir="ltr">{card.website || "—"}{card.links_count > 1 ? ` +${card.links_count - 1}` : ""}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{c.truthFields.markets}</dt><dd>{card.markets_count}</dd></div>
-                </dl>
-                <div className="mt-4">
-                  <div className="flex justify-between text-xs"><span>{c.truthFields.consistency}</span><CountUp to={truthCardCompleteness(card)} suffix="%" /></div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${truthCardCompleteness(card)}%` }} /></div>
+              <SpotlightCard className="relative isolate overflow-hidden rounded-3xl border border-primary/25 bg-[#080d19] p-6 text-white shadow-[0_24px_90px_-35px_rgba(245,178,35,0.35)]">
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-70">
+                  <svg viewBox="0 0 520 300" className="absolute inset-0 h-full w-full" fill="none">
+                    <g stroke="#E9AD27" strokeOpacity=".28" strokeWidth="1"><path d="M10 220 105 90 205 150 315 48 500 110M105 90 140 270 315 48 390 250 500 110M10 220 140 270 390 250M205 150 390 250" /></g>
+                    {[[10,220],[105,90],[205,150],[315,48],[500,110],[140,270],[390,250]].map(([x,y],idx)=><circle key={idx} cx={x} cy={y} r="3" fill="#F5B323" className="motion-safe:animate-pulse" />)}
+                    <circle cx="260" cy="150" r="34" stroke="#F5B323" strokeOpacity=".45" /><circle cx="260" cy="150" r="5" fill="#F5B323" /><circle cx="260" cy="150" r="54" stroke="#F5B323" strokeOpacity=".18" strokeDasharray="3 8" />
+                  </svg>
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent motion-safe:animate-pulse" />
+                </div>
+                <div className="relative">
+                  <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold tracking-[0.22em] text-amber-300">MAAROOF Ai</span><BadgeCheck className="size-5 text-amber-300" /></div>
+                  <div className="mt-12"><p className="max-w-sm text-2xl font-bold leading-tight md:text-3xl">{l === "en" ? "Be understood. Be discoverable." : l === "ku" ? "بفهمرێ. بدۆزرێیتەوە." : "كن مفهوماً. كن قابلاً للاكتشاف."}</p><p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">{l === "en" ? "A coherent identity gives people and AI systems a clearer picture of who you are." : l === "ku" ? "ناسنامەیەکی یەکگرتوو وێنەیەکی ڕوونتر لە تۆ بۆ خەڵک و سیستەمە زیرەکەکان دروست دەکات." : "هوية متسقة تمنح الأشخاص وأنظمة الذكاء الاصطناعي صورة أوضح عنك."}</p></div>
+                  <div className="mt-8 grid grid-cols-3 gap-2 border-t border-white/10 pt-4">{[["01",l === "en" ? "Identity" : l === "ku" ? "ناسنامە" : "الهوية"],["02",l === "en" ? "Evidence" : l === "ku" ? "بەڵگە" : "الأدلة"],["03",l === "en" ? "Visibility" : l === "ku" ? "دەرکەوتن" : "الظهور"]].map(([num,label])=><div key={num}><span className="block text-[10px] text-amber-300">{num}</span><span className="mt-1 block text-[11px] font-medium text-slate-200">{label}</span></div>)}</div>
                 </div>
               </SpotlightCard>
             </Reveal>
-            )}
           </div>
         </section>
 
@@ -469,15 +474,14 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            {l === "en" ? "Sources:" : l === "ku" ? "سەرچاوەکان:" : "المصادر:"}{" "}
-            <a className="underline" href="https://maaroofai.com/llms.txt">https://maaroofai.com/llms.txt</a>{" · "}
-            <a className="underline" href="https://maaroofai.com/api/public/brand/maaroof-ai">https://maaroofai.com/api/public/brand/maaroof-ai</a>
-          </p>
           <div className="mt-12 text-center">
             <h3 className="font-display text-2xl font-bold">{c.final}</h3>
             <div className="mt-5 flex justify-center"><Cta /></div>
           </div>
+          <p className="mt-10 text-center text-xs tracking-wide text-muted-foreground">
+            {l === "en" ? "Supported and sponsored by" : l === "ku" ? "بە پشتگیری و ڕەعایەتی" : "بدعم ورعاية"}
+            <span className="mx-1.5 font-semibold text-foreground/80">Joint Media House Holding</span>
+          </p>
         </section>
       </main>
     </div>
