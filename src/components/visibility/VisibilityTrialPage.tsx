@@ -50,18 +50,18 @@ const COPY = {
     entityPerson: "شخص", entityOrg: "مؤسسة", entityUnknown: "غير محسوم",
   },
   en: {
-    eyebrow: "Free AI Visibility Trial", title: "See how your identity appears in AI answers",
-    intro: "A limited live sample across three independently configured model routes. No website or social accounts are required.",
-    name: "Person, brand or organization name", nameHint: "Enter the name people use to identify this entity.",
+    eyebrow: "Free AI Visibility Check", title: "See what AI models say about your brand",
+    intro: "Run a live, limited sample across three independently configured model routes. Get a clearer view of what was said, what was missing and where evidence may help. No website or social accounts required.",
+    name: "What should we check?", nameHint: "Enter the name customers or audiences use.",
     type: "Entity type", auto: "Detect automatically", person: "Person", org: "Organization / brand",
     category: "Sector or category (optional)", description: "Short description (optional)", market: "Geographic scope (optional)", langNote: "Report language: English. Models answer in this language only; change it from the language button at the top before running.",
-    assets: "Digital links (optional)", assetsHint: "Leave empty if none. Enter one URL per line.", usageTitle: "Total trial starts", usageNote: "Live count of trials actually started by the system.", geoExpand: "Choose geographic scope (optional)",
-    start: "Start free trial", working: "Running the live probe", auth: "Sign in to continue",
-    security: "Connection and eligibility are checked before the probe starts. Previous probe answers are not reused.",
+    assets: "Digital links (optional)", assetsHint: "Leave empty if none. Enter one URL per line.", usageTitle: "Free checks started", usageNote: "Live count of checks successfully started by the system.", geoExpand: "Choose geographic scope (optional)",
+    start: "Run my free check", working: "Running your live check", auth: "Sign in to continue",
+    security: "We verify availability and trial eligibility before starting. Previous answers are not reused.",
     unavailable: "Trial is temporarily unavailable", unavailableText: "Three independent routes or security services could not be verified. The probe did not start and was not counted.", expiredText: "This report has expired. Its temporary report data is no longer available.",
     failed: "The probe could not be completed", retry: "Retry after checking connection and configuration.", requestInProgress: "This request has already started. You can retrieve its report once after it finishes.",
     report: "Limited visibility report", mention: "Entity mention rate", recommend: "Recommendation rate", engines: "Routes that answered", noCategoryMeasurement: "No neutral category/market was supplied, or the category/market included the target name; unprompted discovery and organic visibility were not measured.", discovery: "Unprompted discovery response", mentionStatus: "Entity mention", recommendationStatus: "Recommendation", confidenceStatus: "Confidence", high: "High", medium: "Medium", low: "Low", yes: "Yes", no: "No", conditional: "Conditional", unknown: "Unknown",
-    sample: "This is a live three-model response sample, not a market-wide measurement or verification of each product's live search index or citations.",
+    sample: "Your report is a limited sample of up to three model responses. It is not a market-wide measurement or proof of live search rankings, indexing or citations.",
     known: "Response summary", basis: "Evidence basis", strengths: "Positive signals", gaps: "Unresolved information", actions: "Suggested improvements", sources: "URLs named in the response (not independently verified)",
     retrieval: "Retrieve report", retrievalDone: "Additional retrieval used", expires: "Report expires", contact: "Contact MAAROOF",
     contactDesc: "A new trial is not eligible during the current access window. You can contact the MAAROOF team.",
@@ -323,7 +323,7 @@ export function VisibilityTrialPage({ prefill = {} }: { prefill?: TrialPrefill }
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="free-audit-page min-h-screen" lang={l}>
       <FreeAuditHeader />
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-12">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
