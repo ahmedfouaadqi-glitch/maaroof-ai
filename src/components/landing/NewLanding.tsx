@@ -444,10 +444,36 @@ export function NewLanding({ policy }: { policy: InterfacePolicy }) {
             {c.faqs.map(([q, a]) => (
               <article key={q} className="rounded-xl border border-border bg-card/40 p-4">
                 <h3 className="text-sm font-semibold">{q}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{a}</p>
+                <p className="mt-2 text-sm text-muted-foreground"><strong className="text-foreground">{l === "en" ? "Answer:" : l === "ku" ? "وەڵام:" : "الإجابة:"}</strong> {a}</p>
               </article>
             ))}
           </div>
+          <div className="mt-10 overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40">
+                <tr>
+                  <th className="p-3 text-start">{l === "en" ? "Aspect" : l === "ku" ? "لایەن" : "الجانب"}</th>
+                  <th className="p-3 text-start">{l === "en" ? "Traditional SEO" : l === "ku" ? "SEOی باو" : "تحسين محركات البحث التقليدي"}</th>
+                  <th className="p-3 text-start">MAAROOF AI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(l === "en"
+                  ? [["Goal", "Rank in search results", "Be mentioned and cited inside AI answers"], ["Measurement", "Keyword rank", "Real questions to ten AI engines"], ["Machine-readable files", "Sitemap", "llms.txt and Organization JSON-LD"]]
+                  : l === "ku"
+                  ? [["ئامانج", "پلەبەندی لە ئەنجامی گەڕان", "ناوهێنان لە وەڵامی زیرەکی دەستکرد"], ["پێوان", "پلەی وشە", "پرسیاری ڕاستەقینە بۆ دە مۆدێل"], ["فایلی خوێندنەوەی ئامێر", "Sitemap", "llms.txt و JSON-LD"]]
+                  : [["الهدف", "الترتيب في نتائج البحث", "الذكر والاقتباس داخل إجابات الذكاء الاصطناعي"], ["القياس", "ترتيب الكلمة المفتاحية", "أسئلة حقيقية لعشرة نماذج ذكاء اصطناعي"], ["ملفات قراءة الآلة", "خريطة الموقع", "llms.txt وبيانات Organization JSON-LD"]]
+                ).map(([a, b, c2]) => (
+                  <tr key={a} className="border-t border-border"><td className="p-3 font-medium">{a}</td><td className="p-3 text-muted-foreground">{b}</td><td className="p-3">{c2}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            {l === "en" ? "Sources:" : l === "ku" ? "سەرچاوەکان:" : "المصادر:"}{" "}
+            <a className="underline" href="https://maaroofai.com/llms.txt">https://maaroofai.com/llms.txt</a>{" · "}
+            <a className="underline" href="https://maaroofai.com/api/public/brand/maaroof-ai">https://maaroofai.com/api/public/brand/maaroof-ai</a>
+          </p>
           <div className="mt-12 text-center">
             <h3 className="font-display text-2xl font-bold">{c.final}</h3>
             <div className="mt-5 flex justify-center"><Cta /></div>

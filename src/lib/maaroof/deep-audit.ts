@@ -251,8 +251,9 @@ export function scoreTarget(t: AuditTarget, ev: PageEvidence | null, brand: stri
       if (hasOrgSchema) { raw += 10; evidence.push("organization_schema"); }
       if (/"sameAs"\s*:/i.test(schemaText)) { raw += 10; evidence.push("sameas_entity_links"); }
     }
-    const axisCap = axis === "seo" ? 85 : axis === "aeo" ? 80 : axis === "geo" ? 80 : axis === "sge" ? 75 : 60;
-    const score = capped(raw, axisCap);
+    // Score = share of this axis's observable evidence points found on the page (no artificial ceiling).
+    const axisMax = axis === "seo" ? (t.kind === "commerce" ? 95 : 85) : axis === "aeo" ? 80 : axis === "geo" ? 90 : axis === "sge" ? 80 : 70;
+    const score = capped(Math.round((raw * 100) / axisMax), 100);
     const reason = evidence.length ? "measured_on_page_readiness_only" : "no_signal";
     return { axis, score, verdict: verdictOf(score), evidence, evidence_refs: evidence.length ? [{ source_url: t.url, signals: [...evidence] }] : [], reason, next: score >= 70 ? "keep_on_page_readiness" : `improve_${axis}` };
   });

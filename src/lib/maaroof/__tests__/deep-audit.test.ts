@@ -154,9 +154,25 @@ describe("evidence score guardrails", () => {
       markdown: "# Shop Example\n\nShop Example offers 125 products in 8 categories with detailed specifications.\n\n## Products\n\nProduct details and specifications.\n\n## Frequently Asked Questions\n\nWhat is shipping?\nShipping takes three days.",
       html: '<link rel="canonical" href="https://shop.example"><script type="application/ld+json">{"@type":"Organization","name":"Shop Example","sameAs":["https://example.com"]}</script><script type="application/ld+json">{"@type":"Product","name":"Item"}</script>'
     }, "Shop Example");
-    expect(findings.find((x) => x.axis === "seo")!.score).toBeLessThanOrEqual(85);
-    expect(findings.find((x) => x.axis === "geo")!.score).toBeLessThanOrEqual(80);
-    expect(findings.find((x) => x.axis === "gseo")!.score).toBeLessThanOrEqual(60);
+    // Missing robots directive and short body: SEO cannot be full.
+    expect(findings.find((x) => x.axis === "seo")!.score).toBeLessThan(100);
+  });
+  it("reaches 100 when every identity signal is observed (no artificial ceiling)", () => {
+    const f = scoreTarget(official, {
+      statusCode: 200, title: "Shop Example store", description: "Shop Example sells products online with support.",
+      markdown: "# Shop Example\n\nShop Example is an online store.",
+      html: '<script type="application/ld+json">{"@type":"Organization","name":"Shop Example","sameAs":["https://x.com/shop"]}</script>',
+    }, "Shop Example");
+    expect(f.find((x) => x.axis === "gseo")!.score).toBe(100);
+  });
+  it("loses exactly the missing item's share of points", () => {
+    const f = scoreTarget(official, {
+      statusCode: 200, title: "Shop Example store", description: "Shop Example sells products online with support.",
+      markdown: "# Shop Example\n\nShop Example is an online store.",
+      html: '<script type="application/ld+json">{"@type":"Organization","name":"Shop Example"}</script>',
+    }, "Shop Example");
+    // sameAs is 10 of 70 identity points -> 60/70 = 86
+    expect(f.find((x) => x.axis === "gseo")!.score).toBe(86);
   });
   it("marks non-success HTTP responses as unmeasured", () => {
     const findings = scoreTarget(official, { statusCode: 503, title: "Temporary error", description: "Please retry later." }, "Shop");
