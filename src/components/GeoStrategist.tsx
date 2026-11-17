@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 import { fromStrategist } from "@/lib/engine-card-adapters";
 import { ToolResultExport } from "@/components/ToolResultExport";
