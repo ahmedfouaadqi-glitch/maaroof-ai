@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 export type ShareReportKind = "client" | "technical";
 export type ShareGrant = {
@@ -67,5 +67,7 @@ export function shareGrantStatus(grant: ShareGrant, now = new Date().toISOString
 
 export function matchesShareToken(grant: ShareGrant, token: string): boolean {
   if (!token || !/^[A-Za-z0-9_-]{40,60}$/.test(token)) return false;
-  return hashShareToken(token) === grant.tokenHash;
+  const expected = Buffer.from(grant.tokenHash, "hex");
+  const actual = Buffer.from(hashShareToken(token), "hex");
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
