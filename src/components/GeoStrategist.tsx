@@ -20,18 +20,26 @@ const GOALS = [
   { id: "local", label: "auto.local_focus" },
 ];
 
-export function GeoStrategist() {
+export function GeoStrategist({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t } = useI18n();
   const { lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
-  const [brand, setBrand] = useState((auth?.profile as any)?.brand_name ?? "");
+  const [brand, setBrand] = useState(String(workspaceId ? workspace?.entity_truth_card?.entity_name || workspace?.name || "" : (auth?.profile as any)?.brand_name || ""));
   const [keywords, setKeywords] = useState("");
   const [selected, setSelected] = useState<string[]>(["awareness"]);
   const [budget, setBudget] = useState("low");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<any>(null);
+
+  useEffect(() => {
+    setBrand(workspaceId
+      ? workspace?.id === workspaceId ? String(workspace?.entity_truth_card?.entity_name || workspace?.name || "") : ""
+      : String((auth?.profile as any)?.brand_name || ""));
+    setRes(null);
+    setErr("");
+  }, [workspaceId, workspace, (auth?.profile as any)?.brand_name]);
 
   function toggle(id: string) {
     setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
@@ -45,7 +53,7 @@ export function GeoStrategist() {
       const r = await apiFetch("/api/geo-strategist", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ brand, keywords, lang, goals: { types: selected, budget } }),
+        body: JSON.stringify({ brand, keywords, lang, goals: { types: selected, budget }, workspace_id: workspaceId }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error || "failed");
