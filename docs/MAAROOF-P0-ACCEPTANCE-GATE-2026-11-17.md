@@ -48,3 +48,13 @@ An excluded area is not a passed control. All related ownership/isolation/securi
 The immediate blockers are the incomplete semantic inventory, incomplete permitted dependency/test mapping, lack of current-head CI completion, and inability to verify Supabase-backed data isolation/retention under the user's explicit prohibition. The tracked `.env` path also requires a safe secret-exposure check without revealing its contents.
 
 Once permitted P0 evidence is complete and exclusions are resolved or explicitly accepted as permanent scope limitations, the owner can approve the gate transition. No transition is implied by this document.
+
+
+## 5. CI update (2026-11-17)
+
+The current gate document commit `72b255d61f663be272eb18f2ea3b28c47d586e84` passed GitHub Actions run `44053173735`:
+- Dependency installation: success.
+- Unit tests: success.
+- Production build: success.
+
+This updates the CI row from PENDING to PASS for the tested head. It does not close P0: the inventory and architecture remain partial, and excluded Supabase-backed controls remain unverified. Lint/typecheck and browser/round-trip export validation were not demonstrated by this workflow.
