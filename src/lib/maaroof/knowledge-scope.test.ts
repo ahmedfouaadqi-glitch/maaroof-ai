@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { knowledgeRecallScopeFilter } from "./knowledge-scope";
+import { isKnowledgeScopeValid, knowledgeRecallScopeFilter } from "./knowledge-scope";
+
+describe("isKnowledgeScopeValid", () => {
+  it("requires a workspace id and a null user id for workspace-owned nodes", () => {
+    expect(isKnowledgeScopeValid("workspace", null, "workspace-a")).toBe(true);
+    expect(isKnowledgeScopeValid("workspace", "user-a", "workspace-a")).toBe(false);
+    expect(isKnowledgeScopeValid("workspace", null, null)).toBe(false);
+  });
+
+  it("requires a user id and null workspace id for account-level nodes", () => {
+    expect(isKnowledgeScopeValid("user", "user-a", null)).toBe(true);
+    expect(isKnowledgeScopeValid("user", "user-a", "workspace-a")).toBe(false);
+    expect(isKnowledgeScopeValid("user", null, null)).toBe(false);
+  });
+
+  it("keeps platform nodes free of user and workspace ownership", () => {
+    expect(isKnowledgeScopeValid("platform", null, null)).toBe(true);
+    expect(isKnowledgeScopeValid("platform", "user-a", null)).toBe(false);
+  });
+});
 
 describe("knowledgeRecallScopeFilter", () => {
   it("allows platform and only the exact workspace partition for a client run", () => {
