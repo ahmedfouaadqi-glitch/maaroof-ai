@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe, Wrench } from "lucide-react";
+import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe, Wrench } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
@@ -7,11 +7,11 @@ export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "inter
 
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
+// Owner workspace navigation omits balance/subscription surfaces; accounting data and token logic remain intact.
 const NAV: NavItem[] = [
   { tab: "main", icon: BrainCircuit, label: { ar: "مساحة معروف", en: "Maaroof Space", ku: "شوێنی معروف" } },
   { tab: "tools", icon: Wrench, label: { ar: "الأدوات المباشرة", en: "Direct tools", ku: "ئامرازەکان" } },
   { tab: "history", icon: History, label: { ar: "المهام السابقة", en: "Previous tasks", ku: "ئەرکە پێشووەکان" } },
-  { tab: "balance", icon: Wallet, label: { ar: "الرصيد", en: "Balance", ku: "باڵانس" } },
   { tab: "knowledge", icon: Brain, label: { ar: "مساحة المعرفة", en: "Knowledge", ku: "زانیاری" } },
   { tab: "interview", icon: MessagesSquare, label: { ar: "المقابلة", en: "Interview", ku: "چاوپێکەوتن" } },
   { tab: "pulse", icon: Activity, label: { ar: "نبض حسابك", en: "Account pulse", ku: "لێدانی هەژمار" } },
