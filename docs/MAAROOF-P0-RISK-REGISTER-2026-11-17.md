@@ -61,3 +61,23 @@ This register is incomplete until all permitted routes, components, libraries, t
 - If it does not fit, the code does not increment `omitted` or add a limitations-truncated marker; the final omitted note counts successful results only.
 - Existing test covers one small failed step and successful-output overflow, not failure-section overflow.
 - Add an explicit failed-limitations omission count/marker and regression test before relying on this pack as a complete limitations record.
+
+
+## 7. R-01 evidence strengthened — tracked environment file
+
+**Reclassified: confirmed public-repository exposure of a tracked `.env` file; contents intentionally not inspected.**
+- The recursive Git tree at current branch head contains a root `.env` blob (685 bytes).
+- The repository is public.
+- The tracked `.gitignore` does not contain an `.env` ignore rule.
+- Git path history shows `.env` commits dated 2026-05-07 and 2026-06-05.
+- No file content, key names, values or credentials were opened, copied or emitted.
+- This proves the environment file is tracked in the public repository; it does **not** establish which values are valid or whether they are secrets.
+
+**Required incident response (not executed):**
+1. Treat every credential that may have been present in this file as potentially exposed.
+2. Rotate/revoke affected API keys, database credentials, signing secrets and provider tokens through their owning services.
+3. Replace the tracked file with a non-secret example template and add appropriate ignore rules in a separately approved remediation change.
+4. Consider repository-history cleanup only after rotation and with a coordinated plan; rewriting public history is not a substitute for rotation.
+5. Do not paste the file contents into chat, logs, tickets or reports.
+
+The audit did not perform credential rotation, file deletion, history rewrite or secret scanning. Those actions require owner-controlled service access and explicit authorization.
