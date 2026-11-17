@@ -1,0 +1,1 @@
+- Executive reports live in reports/report_branding/report_share_grants (workspace-scoped RLS); report HTML is built server-side from the escaped tool payload (src/lib/reports/payload-report-html.ts) and public links read only via get_shared_report(token_hash) — why: no stored user HTML, no cross-workspace reads, revocable links.
